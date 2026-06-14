@@ -18,6 +18,7 @@ In addition to the 12 pipeline phases (linear, with gates), Karvey has a **cross
 | `karvey-retro` | Retrospective | Cycle closure: velocity, test health, per person, improvement opportunities. | retro |
 | `karvey-scrape` | Web extractor | Extract data from a website and encode the scrape as a reusable skill. | scrape, skillify |
 | `karvey-benchmark-models` | Model benchmark | Compare models (latency/tokens/cost/quality) for a skill or task. | benchmark-models |
+| `karvey-import` | Migration | Convert existing Kiro (`.kiro/specs/*`) or gstack specs into Karvey's `docs/spec/` structure. Non-destructive on the source. | — |
 
 ## Invocation rules
 

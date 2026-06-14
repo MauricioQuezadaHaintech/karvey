@@ -2,6 +2,18 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.1.0] - 2026-06-14
+
+### Added
+- **`karvey-import`** support skill: converts existing **Kiro** (`.kiro/specs/*` + steering) and **gstack** specs into Karvey's `docs/spec/` structure (prd.md, requirements.md, architecture.md, tasks.md, spec.json/project.json). Non-destructive on the source; missing Karvey-required sections become `> TODO` placeholders; all gates imported as not-approved for re-validation. Registered in the orchestrator, support-skills rule and coverage table.
+
+### Why
+Let teams already using Kiro or gstack adopt Karvey without rewriting their existing specs by hand.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 4.8
+> 🔗 Karvey phase: support skill addition · Apache 2.0
+
 ## [3.0.0] - 2026-06-14
 
 ### Added

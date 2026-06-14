@@ -68,6 +68,7 @@ These are not phases; they do not advance `spec.json:phase`. See `rules/support-
 /karvey-retro              → Retrospective (velocity, test health, per person)
 /karvey-scrape             → Extract web data + encode it as a skill
 /karvey-benchmark-models   → Compare models (latency/tokens/cost/quality)
+/karvey-import             → Convert Kiro/gstack specs into Karvey (docs/spec/)
 ```
 
 Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue.
@@ -234,6 +235,7 @@ Karvey absorbs the value of both. What in gstack are standalone commands lives h
 | scrape, skillify | `karvey-scrape` |
 | benchmark-models | `karvey-benchmark-models` |
 | ios-qa, ios-fix, ios-design-review | generalized via `targets.md` (real runtime per target) |
+| existing `.kiro/specs/*` / gstack specs (migration) | `karvey-import --from kiro\|gstack` |
 
 N/A (gstack-proprietary, with a generic equivalent): `open-gstack-browser` → `karvey-browse` runtime; `gstack-upgrade` → N/A; `pair-agent`/`gbrain` → `knowledge-sync`.
 
@@ -245,7 +247,7 @@ N/A (gstack-proprietary, with a generic equivalent): `open-gstack-browser` → `
 Phases: grill init requirements mockup design-graphic architecture infra
         tasks impl test qa deploy archive
 Support: investigate second-opinion health browse checkpoint diagram
-        docs guard devex retro scrape benchmark-models
+        docs guard devex retro scrape benchmark-models import
 ```
 
 ---
