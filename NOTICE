@@ -1,26 +1,26 @@
-Karvey — Método de desarrollo de negocio spec-driven
-Copyright (c) HainTech. Todos los derechos reservados sobre la marca "Karvey".
+Karvey — Spec-driven development business method
+Copyright (c) HainTech. All rights reserved over the "Karvey" trademark.
 
-Creado por Mauricio Quezada Ibáñez (HainTech). Propiedad de HainTech.
+Created by Mauricio Quezada Ibáñez (HainTech). Owned by HainTech.
 
-Licenciado bajo la Apache License, Version 2.0 (la "Licencia").
-No puedes usar este trabajo salvo en cumplimiento de la Licencia.
-Puedes obtener una copia de la Licencia en:
+Licensed under the Apache License, Version 2.0 (the "License").
+You may not use this work except in compliance with the License.
+You may obtain a copy of the License at:
 
     http://www.apache.org/licenses/LICENSE-2.0
 
-Salvo que lo requiera la ley aplicable o se acuerde por escrito, el software
-distribuido bajo la Licencia se distribuye "TAL CUAL", SIN GARANTÍAS NI
-CONDICIONES DE NINGÚN TIPO, expresas o implícitas.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 ---
 
-"Karvey" es una palabra ona/selknam que significa *Afán*.
+"Karvey" is an Ona/Selknam word meaning *Afán* (zeal / drive).
 
-Karvey sintetiza la experiencia propia de Mauricio Quezada Ibáñez (HainTech)
-con ideas conceptuales de los métodos Kiro (spec-driven development / cc-sdd)
-y gstack (Garry Tan). Es una síntesis e inspiración conceptual; NO incorpora
-código de esos proyectos.
+Karvey synthesizes Mauricio Quezada Ibáñez's (HainTech) own experience with
+conceptual ideas from the Kiro (spec-driven development / cc-sdd) and gstack
+(Garry Tan) methods. It is a synthesis and conceptual inspiration; it does NOT
+incorporate code from those projects.
 
-El nombre "Karvey" y la convención de nombres "karvey-*" son marca de HainTech.
-Ver TRADEMARK.md para la política de uso de la marca.
+The "Karvey" name and the "karvey-*" naming convention are trademarks of
+HainTech. See TRADEMARK.md for the trademark usage policy.

@@ -1,75 +1,75 @@
 ---
 name: karvey-context
-description: Read-only dashboard of the current project spec state: project config (project.json), capabilities, active/archived changes, sprint status, and a deploy-queue / landing report (qué cambios están en dev, en prod, listos para liberar, y versiones por repo). Use at any point in the Karvey pipeline. Triggers include "karvey context", "estado del proyecto", "qué specs hay", "cambios activos", "cola de despliegue", "landing report", "qué hay en dev", "qué falta liberar".
+description: Read-only dashboard of the current project spec state: project config (project.json), capabilities, active/archived changes, sprint status, and a deploy-queue / landing report (which changes are in dev, in prod, ready to release, and versions per repo). Use at any point in the Karvey pipeline. Triggers include "karvey context", "estado del proyecto", "project status", "qué specs hay", "what specs exist", "cambios activos", "active changes", "cola de despliegue", "deploy queue", "landing report", "qué hay en dev", "what's in dev", "qué falta liberar", "what's left to release".
 allowed-tools: Read, Bash, Glob, Grep
-argument-hint: [--capability <nombre>] [--change <change-id>]
+argument-hint: [--capability <name>] [--change <change-id>]
 ---
 
 # Karvey Context
 
-## Propósito
+## Purpose
 
-Vista rápida del estado completo del proyecto: config del proyecto (`project.json`), capabilities documentados, cambios en curso, archivados, sprint actual, cobertura de specs y la **cola de despliegue / landing report** (estado de despliegue por cambio y versiones por componente/repo).
+Quick view of the project's complete state: project config (`project.json`), documented capabilities, in-progress changes, archived changes, current sprint, spec coverage, and the **deploy queue / landing report** (deploy status per change and versions per component/repo).
 
-> **Solo lectura.** Este dashboard NUNCA escribe, modifica, despliega ni ejecuta git que altere estado (sin `commit`, `push`, `merge`, `fetch`, `pull`). Solo lee archivos del repo (`project.json`, `spec.json`, `CHANGELOG.md`) y, opcionalmente, `git log` local. Para desplegar, usar `karvey-deploy`.
+> **Read-only.** This dashboard NEVER writes, modifies, deploys, or runs git that alters state (no `commit`, `push`, `merge`, `fetch`, `pull`). It only reads repo files (`project.json`, `spec.json`, `CHANGELOG.md`) and, optionally, local `git log`. To deploy, use `karvey-deploy`.
 
-## Pasos de ejecución
+## Execution steps
 
-### Si se especifica --capability
+### If --capability is specified
 
-Mostrar detalle del capability:
+Show the capability detail:
 ```bash
 cat docs/spec/specs/{capability}/spec.md
 grep -c "### Requirement:" docs/spec/specs/{capability}/spec.md
 grep -c "#### Scenario:" docs/spec/specs/{capability}/spec.md
 ```
 
-### Si se especifica --change
+### If --change is specified
 
-Mostrar detalle del cambio:
+Show the change detail:
 ```bash
 cat docs/spec/changes/{change-id}/spec.json
 cat docs/spec/changes/{change-id}/proposal.md
-# Estado de aprobaciones
+# Approval status
 ```
 
-### Si no se especifica nada — Dashboard completo
+### If nothing is specified — Full dashboard
 
-#### Config del proyecto (si existe `docs/spec/project.json`)
+#### Project config (if `docs/spec/project.json` exists)
 
 ```bash
-# Leer config a nivel proyecto
+# Read project-level config
 cat docs/spec/project.json 2>/dev/null
 ```
 
-Si existe, mostrar un encabezado con su contenido (ver formato más abajo). Si NO existe, indicar "sin project.json (correr karvey-init)" y continuar con el resto del dashboard de todos modos. Esta vista es **solo lectura**: nunca escribir ni modificar `project.json`.
+If it exists, show a header with its content (see format below). If it does NOT exist, indicate "no project.json (run karvey-init)" and continue with the rest of the dashboard anyway. This view is **read-only**: never write or modify `project.json`.
 
 ```bash
 # Capabilities
 find docs/spec/specs -mindepth 1 -maxdepth 1 -type d 2>/dev/null
 
-# Requirements por capability
+# Requirements per capability
 for cap in docs/spec/specs/*/; do
   name=$(basename "$cap")
   reqs=$(grep -c "### Requirement:" "$cap/spec.md" 2>/dev/null || echo "0")
   echo "$name: $reqs requirements"
 done
 
-# Cambios activos
+# Active changes
 find docs/spec/changes -maxdepth 1 -type d -not -path "docs/spec/changes" -not -path "*/archive" 2>/dev/null
 
-# Cambios archivados
+# Archived changes
 ls docs/spec/changes/archive/ 2>/dev/null | wc -l
 ```
 
-#### Cola de despliegue / Landing report (solo lectura)
+#### Deploy queue / Landing report (read-only)
 
-Snapshot del estado de despliegue por cambio. **No ejecuta git, no despliega, no escribe nada** — solo lee el repo principal y los `repos` de `project.json` para inferir el estado. Es el equivalente Karvey al "landing report".
+Snapshot of the deploy status per change. **It does not run git, does not deploy, does not write anything** — it only reads the main repo and the `repos` from `project.json` to infer the status. It is the Karvey equivalent of the "landing report".
 
-Por cada cambio activo, derivar su estado de despliegue desde `spec.json` (campos `phase` y `approvals.deploy`):
+For each active change, derive its deploy status from `spec.json` (`phase` and `approvals.deploy` fields):
 
 ```bash
-# Estado de fase/deploy por cambio activo
+# Phase/deploy status per active change
 for ch in $(find docs/spec/changes -maxdepth 1 -mindepth 1 -type d -not -name archive 2>/dev/null); do
   id=$(basename "$ch")
   phase=$(grep -o '"phase"[^,]*' "$ch/spec.json" 2>/dev/null | head -1)
@@ -79,106 +79,106 @@ for ch in $(find docs/spec/changes -maxdepth 1 -mindepth 1 -type d -not -name ar
 done
 ```
 
-Mapeo de estado (solo lectura, inferido — **no es verdad de la nube, es lo que dice el spec**):
-- **Listo para liberar**: `approvals.qa.approved=true` y `approvals.deploy.approved=false` (QA OK, aún sin desplegar).
-- **En dev**: `phase` indica deploy en curso a integración, o `approvals.deploy.generated=true` con merge a `integration` hecho y PR a `production` aún abierto/sin mergear.
-- **En prod**: `approvals.deploy.approved=true` (merge a `production` con OK humano) o el cambio ya está archivado.
-- **No listo**: cualquier otro estado (QA pendiente o gate de liberación incompleto).
+Status mapping (read-only, inferred — **it is not the cloud's truth, it is what the spec says**):
+- **Ready to release**: `approvals.qa.approved=true` and `approvals.deploy.approved=false` (QA OK, not yet deployed).
+- **In dev**: `phase` indicates an in-progress deploy to integration, or `approvals.deploy.generated=true` with the merge to `integration` done and the PR to `production` still open/unmerged.
+- **In prod**: `approvals.deploy.approved=true` (merge to `production` with human OK) or the change is already archived.
+- **Not ready**: any other state (QA pending or incomplete release gate).
 
-Versiones desplegadas por componente/repo — leer el `CHANGELOG.md` de cada repo de `project.json:repos` (la versión tope del changelog es la última liberada de ese componente). **Solo lectura, sin `git`:**
+Deployed versions per component/repo — read the `CHANGELOG.md` of each repo in `project.json:repos` (the top version of the changelog is the last released for that component). **Read-only, no `git`:**
 
 ```bash
-# Versión actual por repo (desde su CHANGELOG.md)
-# REPOS proviene de project.json:repos
+# Current version per repo (from its CHANGELOG.md)
+# REPOS comes from project.json:repos
 for repo in $REPOS; do
   ver=$(grep -m1 -oE '\[?[0-9]+\.[0-9]+\.[0-9]+\]?' "$repo/CHANGELOG.md" 2>/dev/null)
-  echo "$repo: ${ver:-sin CHANGELOG}"
+  echo "$repo: ${ver:-no CHANGELOG}"
 done
 ```
 
-Si `git` está disponible y se quiere afinar qué está en dev vs prod por repo (opcional, **solo lectura**, sin `fetch`/`pull`):
+If `git` is available and you want to refine what is in dev vs prod per repo (optional, **read-only**, no `fetch`/`pull`):
 
 ```bash
-# Diferencia dev↔prod ya conocida localmente (no hace fetch)
-# integration/production provienen de project.json:branch_flow
+# dev↔prod difference already known locally (does not fetch)
+# integration/production come from project.json:branch_flow
 git -C "$repo" log --oneline {production}..{integration} 2>/dev/null | wc -l
-# >0 ⇒ hay commits en integración aún no liberados a producción
+# >0 ⇒ there are commits in integration not yet released to production
 ```
 
-Mostrar al usuario:
+Show to the user:
 
 ```
-📊 Karvey Context — {fecha}
+📊 Karvey Context — {date}
 
-PROYECTO  (docs/spec/project.json)
+PROJECT  (docs/spec/project.json)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{nombre del proyecto}
-  Targets: {targets}            Nube: {cloud.provider} / IaC: {iac_tool}
+{project name}
+  Targets: {targets}            Cloud: {cloud.provider} / IaC: {iac_tool}
   Git: {git_platform}           Knowledge sync: {knowledge_sync}
-  Repos ({N}): {repo1, repo2, …}  (principal: {spec_repo})
+  Repos ({N}): {repo1, repo2, …}  (main: {spec_repo})
   Branch flow: {feature_prefix} → {integration} → {production}
   Enforcement: git_flow_hook={on|off}  plan_gate_hook={on|off}
-  (si no existe project.json → "sin project.json — correr karvey-init")
+  (if no project.json → "no project.json — run karvey-init")
 
 CAPABILITIES ({N} total)
 ━━━━━━━━━━━━━━━━━━━━━━━━
 {capability-1}: {N} requirements, {N} scenarios
 {capability-2}: {N} requirements, {N} scenarios
 
-CAMBIOS ACTIVOS ({N})
+ACTIVE CHANGES ({N})
 ━━━━━━━━━━━━━━━━━━━━
 {change-id-1}
-  Fase: {phase}
+  Phase: {phase}
   Capability: {capability}
   Security Tier: {N}
-  Gestión: {ClickUp Epic E{n} | Markdown}
-  Aprobaciones: requirements={✅|⬜} mockup={✅|⬜} design={✅|⬜} arch={✅|⬜} tasks={✅|⬜}
+  Management: {ClickUp Epic E{n} | Markdown}
+  Approvals: requirements={✅|⬜} mockup={✅|⬜} design={✅|⬜} arch={✅|⬜} tasks={✅|⬜}
 
 {change-id-2}
   ...
 
-CAMBIOS ARCHIVADOS: {N}
-Último archivado: {fecha-change-id}
+ARCHIVED CHANGES: {N}
+Last archived: {date-change-id}
 
-COLA DE DESPLIEGUE / LANDING REPORT  (solo lectura)
+DEPLOY QUEUE / LANDING REPORT  (read-only)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Estado de despliegue por cambio (inferido de spec.json — no es verdad de la nube):
+Deploy status per change (inferred from spec.json — it is not the cloud's truth):
 
-  🟢 LISTO PARA LIBERAR ({N})
-    {change-id}  — QA OK, deploy pendiente  (capability: {capability})
+  🟢 READY TO RELEASE ({N})
+    {change-id}  — QA OK, deploy pending  (capability: {capability})
 
-  🟡 EN DEV ({N})
-    {change-id}  — desplegado a {integration}, PR a {production} pendiente
+  🟡 IN DEV ({N})
+    {change-id}  — deployed to {integration}, PR to {production} pending
 
-  🔵 EN PROD ({N})
-    {change-id}  — liberado a {production}  ({fecha})
+  🔵 IN PROD ({N})
+    {change-id}  — released to {production}  ({date})
 
-  ⬜ NO LISTO ({N})
-    {change-id}  — {QA pendiente | gate de liberación incompleto}
+  ⬜ NOT READY ({N})
+    {change-id}  — {QA pending | incomplete release gate}
 
-Versiones desplegadas por componente/repo (tope de CHANGELOG.md):
-    {repo1}: {x.y.z}   {repo2}: {x.y.z}   {repo3}: {sin CHANGELOG}
-    (si hay git local: "{repo}: {N} commits en {integration} sin liberar a {production}")
+Deployed versions per component/repo (top of CHANGELOG.md):
+    {repo1}: {x.y.z}   {repo2}: {x.y.z}   {repo3}: {no CHANGELOG}
+    (if local git is available: "{repo}: {N} commits in {integration} not released to {production}")
 
-SPRINT ACTIVO
+ACTIVE SPRINT
 ━━━━━━━━━━━━
-{verificar con clickup_get_workspace_hierarchy o indicar "no aplica (markdown)"}
+{verify with clickup_get_workspace_hierarchy or indicate "not applicable (markdown)"}
 ```
 
-### Para el sprint activo (si ClickUp disponible)
+### For the active sprint (if ClickUp is available)
 
 ```
 clickup_get_workspace_hierarchy
   max_depth: 2
 ```
 
-Buscar el folder "Dev Sprints Metodo Karvey" y el sprint activo.
+Look for the "Dev Sprints Metodo Karvey" folder and the active sprint.
 
-Mostrar:
+Show:
 ```
-Sprint activo: Sprint {N} (hasta {fecha})
-Tasks del sprint: {total} | En progreso: {N} | Listo para PAP: {N} | Bloqueado: {N}
+Active sprint: Sprint {N} (until {date})
+Sprint tasks: {total} | In progress: {N} | Ready for PAP: {N} | Blocked: {N}
 ```
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

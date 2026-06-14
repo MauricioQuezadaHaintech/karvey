@@ -1,221 +1,221 @@
 ---
 name: karvey-requirements
-description: Generate EARS-format requirements and spec-delta for a Karvey spec. Creates Features in ClickUp or updates PLAN.md. Use after karvey-init. Triggers include "karvey requirements", "generar requisitos", "especificar requisitos".
+description: Generate EARS-format requirements and spec-delta for a Karvey spec. Creates Features in ClickUp or updates PLAN.md. Use after karvey-init. Triggers include "karvey requirements", "generar requisitos", "generate requirements", "especificar requisitos", "specify requirements".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, WebSearch, AskUserQuestion
 argument-hint: <change-id> [-y]
 ---
 
 # Karvey Requirements
 
-## Propósito
+## Purpose
 
-Generar requisitos en formato EARS para el cambio, producir el spec-delta con operaciones ADDED/MODIFIED/REMOVED, y registrar los Features en ClickUp o PLAN.md.
+Generate requirements in EARS format for the change, produce the spec-delta with ADDED/MODIFIED/REMOVED operations, and register the Features in ClickUp or PLAN.md.
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 1 — Cargar contexto
+### Step 1 — Load context
 
-Leer:
+Read:
 - `docs/spec/changes/{change-id}/spec.json`
-- `docs/spec/changes/{change-id}/prd.md` (PRD generado en karvey-init)
+- `docs/spec/changes/{change-id}/prd.md` (PRD generated in karvey-init)
 - `docs/spec/changes/{change-id}/proposal.md`
-- `docs/spec/specs/{capability}/spec.md` (living spec actual)
+- `docs/spec/specs/{capability}/spec.md` (current living spec)
 - `rules/ears-format.md`
 - `rules/living-specs.md`
 - `rules/security-tiers.md`
 
-Los requirements deben derivar del PRD y cubrir sus objetivos y criterios de aceptación.
+The requirements must derive from the PRD and cover its objectives and acceptance criteria.
 
-Si hay brief de `karvey-grill` en la conversación, incorporarlo.
+If there's a `karvey-grill` brief in the conversation, incorporate it.
 
-Si el codebase es brownfield: despachar subagente para explorar implementaciones existentes:
-> "Explora el codebase buscando funcionalidad relacionada con {capability}. Resumí: (1) qué existe, (2) interfaces/endpoints relevantes, (3) patrones que los nuevos requisitos deben respetar. Menos de 100 líneas."
+If the codebase is brownfield: dispatch a subagent to explore existing implementations:
+> "Explore the codebase looking for functionality related to {capability}. Summarize: (1) what exists, (2) relevant interfaces/endpoints, (3) patterns the new requirements must respect. Less than 100 lines."
 
-### Paso 2 — Clarificar alcance antes de generar
+### Step 2 — Clarify scope before generating
 
-Para cada área funcional identificada en `proposal.md`, preguntar si hay ambigüedad de alcance o comportamiento de borde. Hacer solo las preguntas necesarias — no preguntar lo que ya está claro.
+For each functional area identified in `proposal.md`, ask whether there's any scope ambiguity or edge-case behavior. Ask only the necessary questions — don't ask about what's already clear.
 
-**No preguntar sobre**: tecnología, arquitectura, patrones de implementación (eso va en karvey-architecture).
+**Don't ask about**: technology, architecture, implementation patterns (that goes in karvey-architecture).
 
-### Paso 3 — Generar borrador de requirements.md
+### Step 3 — Generate a draft of requirements.md
 
-Generar agrupando requisitos por área funcional. Aplicar formato EARS estricto.
-Mantener como borrador en memoria — NO escribir aún.
+Generate it grouping requirements by functional area. Apply strict EARS format.
+Keep it as a draft in memory — do NOT write it yet.
 
-Estructura del documento:
+Document structure:
 ```markdown
 # Requirements: {change-id}
 
-## Descripción del proyecto
-{2-3 líneas del problema y objetivo}
+## Project description
+{2-3 lines of the problem and objective}
 
-## Requirement 1: {Nombre del área funcional}
+## Requirement 1: {Functional area name}
 
-### 1.1 {Nombre del requisito}
-WHEN {evento},
-the {sistema} SHALL {comportamiento observable}.
+### 1.1 {Requirement name}
+WHEN {event},
+the {system} SHALL {observable behavior}.
 
-Traza a PRD: {sección u objetivo del PRD}
+Traces to PRD: {PRD section or objective}
 
-#### Scenario: {Caso exitoso}
-GIVEN {precondición}
-WHEN {acción}
-THEN {resultado observable}
+#### Scenario: {Success case}
+GIVEN {precondition}
+WHEN {action}
+THEN {observable result}
 
-#### Scenario: {Caso de error}
-GIVEN {precondición}
-WHEN {acción inválida}
-THEN the system {respuesta de error específica}
+#### Scenario: {Error case}
+GIVEN {precondition}
+WHEN {invalid action}
+THEN the system {specific error response}
 
-### 1.2 {Siguiente requisito}
+### 1.2 {Next requirement}
 ...
 
-## Requirement 2: {Siguiente área}
+## Requirement 2: {Next area}
 ...
 
-## Exclusiones explícitas
-- {Qué no está en scope y por qué}
-- {Comportamiento que no cambia}
+## Explicit exclusions
+- {What is not in scope and why}
+- {Behavior that does not change}
 ```
 
-### Paso 4 — Review gate (antes de escribir)
+### Step 4 — Review gate (before writing)
 
-Verificar el borrador:
-- [ ] Cada requisito es testeable y no contiene ambigüedad
-- [ ] Cada requirement traza a una sección u objetivo del PRD
-- [ ] Todos los objetivos del PRD están cubiertos por al menos un requirement
-- [ ] Ningún requisito menciona tecnología de implementación
-- [ ] Los IDs son numéricos (1.1, 1.2, 2.1...)
-- [ ] Cada requisito tiene al menos un scenario de éxito y uno de error
-- [ ] Las exclusiones explícitas cubren los bordes más probables
-- [ ] Los requisitos de seguridad reflejan el Security Tier declarado en spec.json
+Check the draft:
+- [ ] Each requirement is testable and contains no ambiguity
+- [ ] Each requirement traces to a section or objective of the PRD
+- [ ] All PRD objectives are covered by at least one requirement
+- [ ] No requirement mentions implementation technology
+- [ ] The IDs are numeric (1.1, 1.2, 2.1...)
+- [ ] Each requirement has at least one success scenario and one error scenario
+- [ ] The explicit exclusions cover the most likely edges
+- [ ] The security requirements reflect the Security Tier declared in spec.json
 
-Si hay issues locales al borrador: corregir y re-verificar (máximo 2 iteraciones).
-Si hay ambigüedad real que requiere decisión del usuario: preguntar antes de continuar.
+If there are issues local to the draft: fix and re-check (maximum 2 iterations).
+If there's a real ambiguity that requires a user decision: ask before continuing.
 
-### Paso 5 — Escribir requirements.md
+### Step 5 — Write requirements.md
 
 ```
 docs/spec/changes/{change-id}/requirements.md
 ```
 
-Actualizar `spec.json`:
+Update `spec.json`:
 - `phase: "requirements-generated"`
 - `approvals.requirements.generated: true`
 - `updated_at: {timestamp}`
 
-### Paso 6 — Generar spec-delta.md
+### Step 6 — Generate spec-delta.md
 
-Comparar los nuevos requisitos contra `docs/spec/specs/{capability}/spec.md`.
+Compare the new requirements against `docs/spec/specs/{capability}/spec.md`.
 
-Para cada requisito nuevo: sección `## ADDED Requirements`
-Para cada requisito que modifica uno existente: sección `## MODIFIED Requirements`
-Para cada requisito que elimina uno existente: sección `## REMOVED Requirements`
+For each new requirement: `## ADDED Requirements` section
+For each requirement that modifies an existing one: `## MODIFIED Requirements` section
+For each requirement that removes an existing one: `## REMOVED Requirements` section
 
-Si el capability es nuevo (spec.md vacío), todo es ADDED.
+If the capability is new (empty spec.md), everything is ADDED.
 
-Escribir `docs/spec/changes/{change-id}/specs/{capability}/spec-delta.md`.
+Write `docs/spec/changes/{change-id}/specs/{capability}/spec-delta.md`.
 
-### Paso 7 — Presentar para aprobación
+### Step 7 — Present for approval
 
-Mostrar resumen:
+Show a summary:
 ```
-📋 Requirements generados: docs/spec/changes/{change-id}/requirements.md
+📋 Requirements generated: docs/spec/changes/{change-id}/requirements.md
 
-Áreas cubiertas:
-  - Requirement 1: {nombre} ({N} requisitos)
-  - Requirement 2: {nombre} ({N} requisitos)
+Areas covered:
+  - Requirement 1: {name} ({N} requirements)
+  - Requirement 2: {name} ({N} requirements)
 
 Spec-delta:
-  - ADDED: {N} requisitos
-  - MODIFIED: {N} requisitos
-  - REMOVED: {N} requisitos
+  - ADDED: {N} requirements
+  - MODIFIED: {N} requirements
+  - REMOVED: {N} requirements
 
-Review gate: ✅ pasado
+Review gate: ✅ passed
 
-¿Aprobás los requisitos para continuar?
+Do you approve the requirements to continue?
 ```
 
-Si el flag `-y` está presente: auto-aprobar.
+If the `-y` flag is present: auto-approve.
 
-Si el usuario aprueba: actualizar `spec.json` con `approvals.requirements.approved: true`.
+If the user approves: update `spec.json` with `approvals.requirements.approved: true`.
 
-### Paso 8A — Crear Features en ClickUp (si management=clickup)
+### Step 8A — Create Features in ClickUp (if management=clickup)
 
-Leer `spec.json` para obtener `clickup.epic_id` y `clickup.backlog_list_id`.
-Crear un Feature por cada área funcional de requirements.md:
+Read `spec.json` to get `clickup.epic_id` and `clickup.backlog_list_id`.
+Create one Feature per functional area in requirements.md:
 
 ```
 clickup_create_task
-  name: "E{n}.F{n} {Nombre del Feature}"
+  name: "E{n}.F{n} {Feature name}"
   list_id: "{backlog_list_id}"
   task_type: "Feature"
   tags: ["{client_tag}"]
-  description: (ver formato)
+  description: (see format)
 ```
 
-Formato de descripción del Feature:
+Feature description format:
 ```
-E{n}.F{n}: {Nombre del Feature}
+E{n}.F{n}: {Feature name}
 
-Descripción:
-{qué hace, valor para el usuario, flujo funcional}
+Description:
+{what it does, value to the user, functional flow}
 
-Permisos:
-{quién puede usar: ejecutivo/supervisor/admin/sistema}
+Permissions:
+{who can use it: agent/supervisor/admin/system}
 
-Flujo:
-1. {paso 1}
-2. {paso 2}
+Flow:
+1. {step 1}
+2. {step 2}
 
-Requirements cubiertos: {N.N, N.N, ...}
+Requirements covered: {N.N, N.N, ...}
 Security Tier: {N}
 
-Tasks: (pendiente — karvey-tasks)
-Tiempo estimado: (pendiente)
+Tasks: (pending — karvey-tasks)
+Estimated time: (pending)
 ```
 
-Crear dependencia Epic ← Feature via REST API:
+Create the Epic ← Feature dependency via REST API:
 ```bash
 curl -s -X POST "https://api.clickup.com/api/v2/task/{EPIC_ID}/dependency" \
   -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
   -d '{"depends_on":"{FEATURE_ID}"}'
 ```
 
-Actualizar `spec.json` con `clickup.feature_ids`.
+Update `spec.json` with `clickup.feature_ids`.
 
-### Paso 8B — Actualizar PLAN.md (si management=markdown)
+### Step 8B — Update PLAN.md (if management=markdown)
 
-Agregar sección Features en `PLAN.md` con la lista de features y sus requisitos cubiertos.
+Add a Features section in `PLAN.md` with the list of features and their covered requirements.
 
-### Paso 8C — Actualizar grafo de conocimiento
+### Step 8C — Update the knowledge graph
 
-Sincronizar el conocimiento según `karvey/rules/knowledge-sync.md` (Obsidian si está disponible; mínimo `/graphify docs/spec/ --update`) para reflejar los documentos creados o modificados.
-Si `docs/spec/graphify-out/` no existe, invocar `/graphify docs/spec/` sin `--update`.
+Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the documents created or modified.
+If `docs/spec/graphify-out/` doesn't exist, invoke `/graphify docs/spec/` without `--update`.
 
-### Paso 9 — Output final
+### Step 9 — Final output
 
 ```
-✅ Requirements aprobados
+✅ Requirements approved
 
-Archivos creados/actualizados:
+Files created/updated:
   - docs/spec/changes/{change-id}/requirements.md
   - docs/spec/changes/{change-id}/specs/{capability}/spec-delta.md
-  - spec.json actualizado
+  - spec.json updated
 
-Gestión: {Features E{n}.F1..F{n} creados en ClickUp | PLAN.md actualizado}
+Management: {Features E{n}.F1..F{n} created in ClickUp | PLAN.md updated}
 
-Siguiente paso:
+Next step:
 /karvey-mockup {change-id}
 ```
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase Mockup ahora?»
-- Si confirma → ejecutá `/karvey-mockup {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Mockup phase now?"
+- If they confirm → run `/karvey-mockup {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (a gate of the method).
+- If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

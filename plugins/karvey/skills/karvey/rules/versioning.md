@@ -1,40 +1,40 @@
-# Regla: Versionado semántico y changelog en despliegue
+# Rule: Semantic versioning and changelog on deployment
 
-Define cómo Karvey versiona y documenta cada cambio. La aplican `karvey-impl` (durante el desarrollo) y `karvey-deploy` (FASE 11), y la verifica `karvey-qa` (Dimensión 6). Complementa `changelog-policy.md`.
+Defines how Karvey versions and documents each change. It is applied by `karvey-impl` (during development) and `karvey-deploy` (PHASE 11), and verified by `karvey-qa` (Dimension 6). Complements `changelog-policy.md`.
 
-## Versionado semántico — `major.minor.rev`
+## Semantic versioning — `major.minor.rev`
 
-Cada componente desplegable lleva versión **`major.minor.rev`** (semver):
+Each deployable component carries a **`major.minor.rev`** (semver) version:
 
-| Segmento | Cuándo se incrementa |
+| Segment | When it is incremented |
 |----------|----------------------|
-| **major** | Breaking change: rompe compatibilidad (API, contrato, esquema, comportamiento). |
-| **minor** | Feature nueva compatible hacia atrás. |
-| **rev** | Fix, ajuste o cambio menor sin nueva feature. |
+| **major** | Breaking change: breaks compatibility (API, contract, schema, behavior). |
+| **minor** | New backward-compatible feature. |
+| **rev** | Fix, adjustment or minor change without a new feature. |
 
-**Regla dura:** **NUNCA se despliega sin incrementar la versión.** Todo cambio que llega a deploy sube al menos `rev`. La versión se incrementa **cada vez**, no se reutiliza.
+**Hard rule:** **NEVER deploy without incrementing the version.** Every change that reaches deploy bumps at least `rev`. The version is incremented **every time**, it is not reused.
 
-El archivo de versión depende del stack (detectarlo): `package.json`, `pyproject.toml`, `*.csproj`, `VERSION`, git tags, etc.
+The version file depends on the stack (detect it): `package.json`, `pyproject.toml`, `*.csproj`, `VERSION`, git tags, etc.
 
-## Changelog por componente Y por repositorio
+## Changelog per component AND per repository
 
-- **Por repositorio:** cada repo de `project.json:repos` con cambios lleva su propio `CHANGELOG.md`.
-- **Por componente:** si un repo contiene varios componentes desplegables (p. ej. múltiples Azure Functions, microservicios, paquetes), cada componente lleva su entrada/sección de changelog con su propia versión.
+- **Per repository:** each repo of `project.json:repos` with changes carries its own `CHANGELOG.md`.
+- **Per component:** if a repo contains several deployable components (e.g. multiple Azure Functions, microservices, packages), each component carries its changelog entry/section with its own version.
 
-Cada entrada sigue el formato de `changelog-policy.md` (humano responsable + modelo de IA + el **por qué**, no solo el qué) e indica el segmento semver que se incrementó y por qué.
+Each entry follows the format of `changelog-policy.md` (human owner + AI model + the **why**, not just the what) and indicates the semver segment that was incremented and why.
 
-## Versión visible en el frontend (recomendación)
+## Version visible in the frontend (recommendation)
 
-Si el proyecto tiene **frontend**, se **recomienda exponer la versión en la UI** (footer, pantalla "Acerca de", o similar) para trazabilidad visible en producción:
-- Inyectar la versión en build (ej. `VITE_APP_VERSION`, variable de entorno, o lectura del archivo de versión).
-- Mostrarla en un lugar discreto pero accesible.
+If the project has a **frontend**, it is **recommended to expose the version in the UI** (footer, "About" screen, or similar) for visible traceability in production:
+- Inject the version at build time (e.g. `VITE_APP_VERSION`, environment variable, or reading the version file).
+- Show it in a discreet but accessible place.
 
-`karvey-deploy` debe **recomendar esto al usuario** cuando detecte que el proyecto tiene capa frontend y la versión no esté visible.
+`karvey-deploy` must **recommend this to the user** when it detects that the project has a frontend layer and the version is not visible.
 
-## En el paso a paso de despliegue (`karvey-deploy`)
+## In the step-by-step deployment (`karvey-deploy`)
 
-Antes del push a la rama de integración (parte del checklist de 6 pasos):
-1. Determinar el segmento a incrementar (major/minor/rev) según la naturaleza del cambio.
-2. Bump de versión en cada componente/repo afectado.
-3. Documentar los cambios: actualizar `CHANGELOG.md` por componente y por repo.
-4. (Si hay front) verificar/recomendar versión visible en la UI.
+Before the push to the integration branch (part of the 6-step checklist):
+1. Determine the segment to increment (major/minor/rev) according to the nature of the change.
+2. Bump the version in each affected component/repo.
+3. Document the changes: update `CHANGELOG.md` per component and per repo.
+4. (If there is a front) verify/recommend a visible version in the UI.

@@ -1,99 +1,99 @@
 ---
 name: karvey-design-graphic
-description: Define the graphic design specification for an approved mockup. Uses impeccable-inspired design laws to establish color system, typography, layout, and motion. Updates the mockup HTML with the visual system. Triggers include "karvey design-graphic", "diseño gráfico", "especificación visual", "sistema de diseño".
+description: Define the graphic design specification for an approved mockup. Uses impeccable-inspired design laws to establish color system, typography, layout, and motion. Updates the mockup HTML with the visual system. Triggers include "karvey design-graphic", "diseño gráfico", "graphic design", "especificación visual", "visual specification", "sistema de diseño", "design system".
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 argument-hint: <change-id>
 ---
 
 # Karvey Design Graphic
 
-## Propósito
+## Purpose
 
-Con el mockup aprobado como wireframe estructural, definir la especificación completa del diseño visual: color, tipografía, layout, motion y micro-interacciones. Actualizar el mockup HTML con el sistema visual definido.
+With the approved mockup as the structural wireframe, define the complete visual design specification: color, typography, layout, motion, and micro-interactions. Update the mockup HTML with the defined visual system.
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 1 — Cargar contexto
+### Step 1 — Load context
 
-Leer:
+Read:
 - `docs/spec/changes/{change-id}/spec.json`
 - `docs/spec/changes/{change-id}/mockup.html`
 - `docs/spec/changes/{change-id}/proposal.md`
 
-Verificar `approvals.mockup.approved = true`. Si no, detener.
+Verify `approvals.mockup.approved = true`. If not, stop.
 
-Buscar si existe `PRODUCT.md` o `DESIGN.md` en el proyecto para entender el brand existente.
+Check whether a `PRODUCT.md` or `DESIGN.md` exists in the project to understand the existing brand.
 
-### Paso 2 — Identificar el registro de diseño
+### Step 2 — Identify the design register
 
-Determinar el tipo de producto:
+Determine the product type:
 
-**Producto empresarial (B2B, herramienta interna):**
-- Paleta contenida, funcionalidad sobre expresividad
-- Tipografía de alta legibilidad
-- Motion mínimo y no distractor
-- Densidad de información alta
+**Enterprise product (B2B, internal tool):**
+- Restrained palette, function over expressiveness
+- High-legibility typography
+- Minimal, non-distracting motion
+- High information density
 
-**Producto de consumo (B2C, experiencia de usuario):**
-- Paleta más expresiva y de marca
-- Tipografía con más personalidad
-- Motion como parte de la experiencia
-- Densidad de información moderada
+**Consumer product (B2C, user experience):**
+- More expressive, brand-driven palette
+- Typography with more personality
+- Motion as part of the experience
+- Moderate information density
 
-Inferir del `proposal.md` y `spec.json.capability`.
+Infer from `proposal.md` and `spec.json.capability`.
 
-**Agnosticismo de target (NO asumir web).** La guía de diseño depende del target declarado en `docs/spec/project.json` (ver `karvey/rules/targets.md`):
+**Target agnosticism (do NOT assume web).** The design guidance depends on the target declared in `docs/spec/project.json` (see `karvey/rules/targets.md`):
 
-- **web** → **WCAG** (contraste, foco, semántica, navegación por teclado)
-- **iOS** → **Apple Human Interface Guidelines (HIG)** (tipografía Dynamic Type, safe areas, gestos, controles nativos)
-- **Android** → **Material Design** (elevación, componentes Material, touch targets, theming)
-- **desktop** → convenciones de escritorio (densidad, menús, ventanas, atajos del SO)
-- **cli/terminal** → convenciones de terminal (ancho de columnas, color ANSI, legibilidad monoespaciada, sin asumir GUI)
+- **web** → **WCAG** (contrast, focus, semantics, keyboard navigation)
+- **iOS** → **Apple Human Interface Guidelines (HIG)** (Dynamic Type typography, safe areas, gestures, native controls)
+- **Android** → **Material Design** (elevation, Material components, touch targets, theming)
+- **desktop** → desktop conventions (density, menus, windows, OS shortcuts)
+- **cli/terminal** → terminal conventions (column width, ANSI color, monospaced legibility, no assuming a GUI)
 
-Las dimensiones de color, tipografía, layout y motion de los pasos siguientes se interpretan según la guía del target. Si el proyecto tiene varios targets, definir el sistema visual para cada uno respetando su guía. Ninguna fase asume "web" por defecto.
+The color, typography, layout, and motion dimensions in the following steps are interpreted according to the target's guidance. If the project has multiple targets, define the visual system for each one while respecting its guidance. No phase assumes "web" by default.
 
-### Paso 3 — Definir sistema de color (OKLCH)
+### Step 3 — Define color system (OKLCH)
 
-Elegir estrategia de paleta:
+Choose a palette strategy:
 
-**Restrained (recomendado para B2B):**
-- 1 color de acento, el resto neutros
-- Acento: `oklch(55% 0.18 {hue})`
-- Neutros: escala de grays `oklch(98% 0 0)` → `oklch(15% 0 0)`
+**Restrained (recommended for B2B):**
+- 1 accent color, the rest neutrals
+- Accent: `oklch(55% 0.18 {hue})`
+- Neutrals: gray scale `oklch(98% 0 0)` → `oklch(15% 0 0)`
 
 **Committed:**
-- 1 color primario + 1 de apoyo
-- Primario: `oklch(50% 0.20 {hue})`
-- Apoyo: `oklch(55% 0.15 {hue complementario})`
+- 1 primary color + 1 supporting color
+- Primary: `oklch(50% 0.20 {hue})`
+- Supporting: `oklch(55% 0.15 {complementary hue})`
 
 **Full palette:**
-- Color primario, secundario, acento y semánticos
-- Apropiado para productos con roles visuales diferenciados
+- Primary, secondary, accent, and semantic colors
+- Appropriate for products with differentiated visual roles
 
-Definir siempre:
-- `--color-primary`: acción principal, CTA
-- `--color-surface`: fondo de tarjetas/paneles
-- `--color-background`: fondo de página
-- `--color-border`: bordes sutiles
-- `--color-text-primary`: texto principal
-- `--color-text-secondary`: texto de apoyo
+Always define:
+- `--color-primary`: primary action, CTA
+- `--color-surface`: card/panel background
+- `--color-background`: page background
+- `--color-border`: subtle borders
+- `--color-text-primary`: primary text
+- `--color-text-secondary`: supporting text
 - `--color-semantic-success`: `oklch(62% 0.17 145)`
 - `--color-semantic-error`: `oklch(55% 0.22 25)`
 - `--color-semantic-warning`: `oklch(75% 0.18 80)`
 
-### Paso 4 — Definir tipografía
+### Step 4 — Define typography
 
-Elegir 1-2 fuentes de Google Fonts (o system fonts para B2B):
+Choose 1-2 Google Fonts (or system fonts for B2B):
 
-**Para B2B empresarial:**
-- Display/heading: Inter, DM Sans, o system-ui
-- Body: misma familia, distintos pesos
+**For enterprise B2B:**
+- Display/heading: Inter, DM Sans, or system-ui
+- Body: same family, different weights
 
-**Para B2C:**
-- Display: fuente con carácter (Fraunces, Instrument Serif, Plus Jakarta Sans)
-- Body: fuente de alta legibilidad (Inter, DM Sans)
+**For B2C:**
+- Display: a font with character (Fraunces, Instrument Serif, Plus Jakarta Sans)
+- Body: a high-legibility font (Inter, DM Sans)
 
-Escala tipográfica:
+Type scale:
 ```
 --text-xs:   0.75rem / 1rem
 --text-sm:   0.875rem / 1.25rem
@@ -104,19 +104,19 @@ Escala tipográfica:
 --text-3xl:  1.875rem / 2.25rem
 ```
 
-### Paso 5 — Definir layout y spacing
+### Step 5 — Define layout and spacing
 
-Sistema de espaciado base 4px:
+4px-based spacing system:
 ```
 --space-1: 4px   --space-2: 8px   --space-3: 12px
 --space-4: 16px  --space-6: 24px  --space-8: 32px
 --space-12: 48px --space-16: 64px --space-24: 96px
 ```
 
-Grid del producto:
-- Sidebar: fijo 240px (o 64px colapsado)
-- Content area: fluid con max-width según densidad
-- Columnas de contenido: 12 columnas con gap de 24px
+Product grid:
+- Sidebar: fixed 240px (or 64px collapsed)
+- Content area: fluid with max-width based on density
+- Content columns: 12 columns with a 24px gap
 
 Border radius:
 ```
@@ -124,9 +124,9 @@ Border radius:
 --radius-lg: 12px  --radius-xl: 16px  --radius-full: 9999px
 ```
 
-### Paso 6 — Definir motion
+### Step 6 — Define motion
 
-Para B2B: motion funcional, no decorativo
+For B2B: functional motion, not decorative
 ```css
 --duration-fast: 100ms
 --duration-base: 200ms
@@ -136,171 +136,171 @@ Para B2B: motion funcional, no decorativo
 --ease-exit: cubic-bezier(0.4, 0, 1, 1)
 ```
 
-Regla: usar `--duration-fast` para feedback, `--duration-base` para transiciones, `--duration-slow` para overlays.
+Rule: use `--duration-fast` for feedback, `--duration-base` for transitions, `--duration-slow` for overlays.
 
-### Paso 7 — Verificar anti-patrones prohibidos
+### Step 7 — Check for forbidden anti-patterns
 
-Antes de escribir el design-spec, confirmar que el sistema NO incluye:
-- ❌ Side-stripe borders decorativos (borde de color solo en un lado de tarjetas)
-- ❌ Gradient text (texto con gradiente de color)
-- ❌ Glassmorphism decorativo (blur/transparencia sin función)
-- ❌ Card grids con todas las tarjetas idénticas sin variación de énfasis
-- ❌ Hero metrics (número grande en el centro de una pantalla como único contenido)
-- ❌ Fondos con patrones de ruido o textura excesiva
-- ❌ Animaciones de más de 500ms en interacciones frecuentes
+Before writing the design-spec, confirm the system does NOT include:
+- ❌ Decorative side-stripe borders (a color border on only one side of cards)
+- ❌ Gradient text (text with a color gradient)
+- ❌ Decorative glassmorphism (blur/transparency with no function)
+- ❌ Card grids where every card is identical with no emphasis variation
+- ❌ Hero metrics (a large number in the center of a screen as the only content)
+- ❌ Backgrounds with noise patterns or excessive texture
+- ❌ Animations longer than 500ms on frequent interactions
 
-### Paso 7B — Scoring de diseño 0-10 por dimensiones
+### Step 7B — Design scoring 0-10 by dimension
 
-Antes de cerrar el sistema visual, evaluar el design-spec/mockup con una **calificación 0-10 por cada dimensión de diseño relevante**. Las dimensiones se interpretan según la guía del target (Paso 2): WCAG para web, HIG para iOS, Material para Android, convenciones de escritorio/terminal según corresponda. No todas las dimensiones aplican a todos los targets (ej. "color/contraste" en una CLI se evalúa sobre color ANSI; "motion" puede no aplicar en terminal).
+Before finalizing the visual system, evaluate the design-spec/mockup with a **0-10 score for each relevant design dimension**. The dimensions are interpreted according to the target's guidance (Step 2): WCAG for web, HIG for iOS, Material for Android, desktop/terminal conventions as applicable. Not all dimensions apply to all targets (e.g., "color/contrast" in a CLI is assessed over ANSI color; "motion" may not apply in a terminal).
 
-Dimensiones sugeridas (ajustar al target):
+Suggested dimensions (adjust to the target):
 
-- **Jerarquía visual** — el ojo encuentra primero lo importante; énfasis claro entre primario/secundario/terciario
-- **Tipografía** — escala coherente, pesos con propósito, legibilidad; en iOS respeta Dynamic Type, en CLI legibilidad monoespaciada
-- **Color / contraste** — paleta intencional; contraste suficiente (WCAG AA/AAA en web; equivalente del target)
-- **Espaciado / ritmo** — sistema base consistente, agrupación por proximidad, respiración visual
-- **Consistencia** — tokens reutilizados, componentes uniformes, sin valores ad-hoc
-- **Accesibilidad** — foco visible, navegación por teclado, targets táctiles, semántica; según checklist de la plataforma
-- **Motion** — funcional y no distractor, duraciones razonables, respeta `prefers-reduced-motion` (o equivalente del target)
+- **Visual hierarchy** — the eye finds what matters first; clear emphasis between primary/secondary/tertiary
+- **Typography** — coherent scale, weights with purpose, legibility; on iOS respects Dynamic Type, in CLI monospaced legibility
+- **Color / contrast** — intentional palette; sufficient contrast (WCAG AA/AAA on web; the target's equivalent)
+- **Spacing / rhythm** — consistent base system, grouping by proximity, visual breathing room
+- **Consistency** — reused tokens, uniform components, no ad-hoc values
+- **Accessibility** — visible focus, keyboard navigation, touch targets, semantics; per the platform's checklist
+- **Motion** — functional and non-distracting, reasonable durations, respects `prefers-reduced-motion` (or the target's equivalent)
 
-Para **cada dimensión**:
+For **each dimension**:
 
-1. Asignar una **calificación 0-10**.
-2. **Explicar explícitamente qué sería un 10** en esa dimensión para este diseño y target (la barra concreta de excelencia, no genérica).
-3. Indicar **qué falta para llegar al 10** desde la calificación actual (gap accionable).
+1. Assign a **0-10 score**.
+2. **Explicitly explain what a 10 would be** in that dimension for this design and target (the concrete bar for excellence, not a generic one).
+3. State **what is missing to reach a 10** from the current score (actionable gap).
 
-Tabla de scoring:
+Scoring table:
 
-| Dimensión | Nota (0-10) | Qué sería un 10 | Qué falta para llegar |
+| Dimension | Score (0-10) | What a 10 would be | What is missing to get there |
 |-----------|-------------|-----------------|-----------------------|
-| Jerarquía visual | | | |
-| Tipografía | | | |
-| Color / contraste | | | |
-| Espaciado / ritmo | | | |
-| Consistencia | | | |
-| Accesibilidad | | | |
+| Visual hierarchy | | | |
+| Typography | | | |
+| Color / contrast | | | |
+| Spacing / rhythm | | | |
+| Consistency | | | |
+| Accessibility | | | |
 | Motion | | | |
 
-**Umbral aceptable:** promedio ≥ 8 y ninguna dimensión < 7. Si no se alcanza, **iterar el design-spec/mockup** (volver a los pasos 3-6 según la dimensión floja) y re-evaluar. Repetir hasta cumplir el umbral o hasta que el gap restante sea una decisión consciente de alcance documentada en el design-spec.
+**Acceptable threshold:** average ≥ 8 and no dimension < 7. If not met, **iterate the design-spec/mockup** (return to steps 3-6 depending on the weak dimension) and re-evaluate. Repeat until the threshold is met or until the remaining gap is a conscious scope decision documented in the design-spec.
 
-### Paso 8 — Escribir design-spec.md
+### Step 8 — Write design-spec.md
 
 ```markdown
 # Design Spec: {change-id}
 
-## Registro de diseño
-{B2B empresarial | B2C consumo} — {justificación}
+## Design register
+{enterprise B2B | consumer B2C} — {rationale}
 
-## Sistema de color (OKLCH)
-Estrategia: {Restrained | Committed | Full palette}
+## Color system (OKLCH)
+Strategy: {Restrained | Committed | Full palette}
 
-| Token | Valor OKLCH | Uso |
+| Token | OKLCH value | Use |
 |-------|-------------|-----|
-| --color-primary | oklch(...) | {uso} |
-| --color-surface | oklch(...) | {uso} |
+| --color-primary | oklch(...) | {use} |
+| --color-surface | oklch(...) | {use} |
 ...
 
-## Tipografía
-| Token | Fuente | Peso | Uso |
+## Typography
+| Token | Font | Weight | Use |
 |-------|--------|------|-----|
-| Heading | {fuente} | 600-700 | Títulos de página y sección |
-| Body | {fuente} | 400-500 | Texto de contenido |
-| Caption | {fuente} | 400 | Metadatos, labels |
+| Heading | {font} | 600-700 | Page and section titles |
+| Body | {font} | 400-500 | Content text |
+| Caption | {font} | 400 | Metadata, labels |
 
-## Escala tipográfica
-(tabla completa)
+## Type scale
+(full table)
 
 ## Layout
-- Sidebar: {fijo N px | colapsable | sin sidebar}
-- Grid: {descripción}
-- Max-width content: {N px}
+- Sidebar: {fixed N px | collapsible | no sidebar}
+- Grid: {description}
+- Content max-width: {N px}
 
 ## Spacing
-(tabla base 4px)
+(4px base table)
 
 ## Border radius
-(tabla)
+(table)
 
 ## Motion
-(tabla de variables)
+(variables table)
 
-## Componentes clave y su tratamiento visual
-| Componente | Superficie | Borde | Shadow | Estado hover |
+## Key components and their visual treatment
+| Component | Surface | Border | Shadow | Hover state |
 |------------|-----------|-------|--------|--------------|
-| Botón primario | | | | |
-| Botón secundario | | | | |
-| Tarjeta de datos | | | | |
-| Input de formulario | | | | |
-| Row de tabla | | | | |
+| Primary button | | | | |
+| Secondary button | | | | |
+| Data card | | | | |
+| Form input | | | | |
+| Table row | | | | |
 | Modal overlay | | | | |
 
-## Anti-patrones evitados
-(lista de los que se verificaron)
+## Anti-patterns avoided
+(list of those that were checked)
 
-## Scoring de diseño (0-10 por dimensión)
-Target evaluado: {web (WCAG) | iOS (HIG) | Android (Material) | desktop | cli/terminal}
+## Design scoring (0-10 by dimension)
+Target evaluated: {web (WCAG) | iOS (HIG) | Android (Material) | desktop | cli/terminal}
 
-| Dimensión | Nota (0-10) | Qué sería un 10 | Qué falta para llegar |
+| Dimension | Score (0-10) | What a 10 would be | What is missing to get there |
 |-----------|-------------|-----------------|-----------------------|
-| Jerarquía visual | | | |
-| Tipografía | | | |
-| Color / contraste | | | |
-| Espaciado / ritmo | | | |
-| Consistencia | | | |
-| Accesibilidad | | | |
+| Visual hierarchy | | | |
+| Typography | | | |
+| Color / contrast | | | |
+| Spacing / rhythm | | | |
+| Consistency | | | |
+| Accessibility | | | |
 | Motion | | | |
 
-Promedio: {N}/10 — Umbral (≥8, ninguna <7): {cumple | no cumple}
-Iteraciones realizadas: {N} — Gaps aceptados conscientemente: {descripción o "ninguno"}
+Average: {N}/10 — Threshold (≥8, none <7): {met | not met}
+Iterations performed: {N} — Consciously accepted gaps: {description or "none"}
 ```
 
-Escribir a `docs/spec/changes/{change-id}/design-spec.md`.
+Write to `docs/spec/changes/{change-id}/design-spec.md`.
 
-### Paso 9 — Actualizar mockup.html con el sistema visual
+### Step 9 — Update mockup.html with the visual system
 
-Editar `mockup.html` para:
-1. Agregar las CSS custom properties (`:root { --color-primary: ...; ... }`)
-2. Reemplazar colores hardcodeados por las variables
-3. Agregar la fuente vía `@import` de Google Fonts
-4. Aplicar el sistema de motion a transiciones existentes
-5. Actualizar el banner: `🎨 MOCKUP CON DISEÑO GRÁFICO — {change-id} — {fecha}`
+Edit `mockup.html` to:
+1. Add the CSS custom properties (`:root { --color-primary: ...; ... }`)
+2. Replace hardcoded colors with the variables
+3. Add the font via Google Fonts `@import`
+4. Apply the motion system to existing transitions
+5. Update the banner: `🎨 MOCKUP WITH GRAPHIC DESIGN — {change-id} — {date}`
 
-### Paso 9B — Actualizar grafo de conocimiento
+### Step 9B — Update knowledge graph
 
-Sincronizar el conocimiento según `karvey/rules/knowledge-sync.md` (Obsidian si está disponible; mínimo `/graphify docs/spec/ --update`) para reflejar `design-spec.md` y el `mockup.html` actualizado.
-Si `docs/spec/graphify-out/` no existe, invocar `/graphify docs/spec/` sin `--update`.
+Sync the knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect `design-spec.md` and the updated `mockup.html`.
+If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
 
-### Paso 10 — Output
+### Step 10 — Output
 
 ```
-✅ Design spec generada
+✅ Design spec generated
 
-Archivos creados/actualizados:
+Files created/updated:
   - docs/spec/changes/{change-id}/design-spec.md
-  - docs/spec/changes/{change-id}/mockup.html (actualizado con sistema visual)
+  - docs/spec/changes/{change-id}/mockup.html (updated with visual system)
 
-Sistema de diseño:
-  - Registro: {B2B/B2C}
-  - Estrategia de color: {nombre}
-  - Tipografía: {fuente(s)}
-  - Anti-patrones verificados: ✅
-  - Scoring de diseño: {N}/10 promedio (umbral ≥8, ninguna <7) — {cumple | no cumple}
+Design system:
+  - Register: {B2B/B2C}
+  - Color strategy: {name}
+  - Typography: {font(s)}
+  - Anti-patterns checked: ✅
+  - Design scoring: {N}/10 average (threshold ≥8, none <7) — {met | not met}
 
-Actualizar spec.json: approvals.design_graphic = true
+Update spec.json: approvals.design_graphic = true
 
-Siguiente paso:
+Next step:
 /karvey-architecture {change-id}
 ```
 
-Actualizar `spec.json`: `approvals.design_graphic.approved: true`, `phase: "design-graphic-approved"`.
+Update `spec.json`: `approvals.design_graphic.approved: true`, `phase: "design-graphic-approved"`.
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase Arquitectura ahora?»
-- Si confirma → ejecutá `/karvey-architecture {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Architecture phase now?"
+- If they confirm → run `/karvey-architecture {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
+- If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

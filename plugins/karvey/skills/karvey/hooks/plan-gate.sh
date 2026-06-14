@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Karvey™ — Hook plan-gate (PreToolUse sobre Edit/Write/Bash destructivo)
-# Exige plan aprobado en TODO el flujo: bloquea modificaciones si no hay marca de aprobación.
-# Plantilla instalada (opt-in) por karvey-init / gestionada por karvey-guard.
+# Karvey™ — plan-gate hook (PreToolUse on Edit/Write/destructive Bash)
+# Requires an approved plan throughout the flow: blocks modifications if there is no approval marker.
+# Template installed (opt-in) by karvey-init / managed by karvey-guard.
 #
-# Override: tras presentar y aprobar el plan, crear la marca de aprobación
-#   (por defecto: touch "$KARVEY_PLAN_FLAG"). El hook deja pasar mientras exista.
+# Override: after presenting and approving the plan, create the approval marker
+#   (default: touch "$KARVEY_PLAN_FLAG"). The hook lets things through while it exists.
 set -euo pipefail
 
 FLAG="${KARVEY_PLAN_FLAG:-/tmp/claude-plan-approved}"
@@ -18,18 +18,18 @@ else
   cmd="$(printf '%s' "$input" | grep -o '"command"[^,]*' | head -1)"
 fi
 
-block() { echo "🚫 [Karvey plan-gate] $1 Presentá el plan, esperá aprobación y creá la marca: touch $FLAG" >&2; exit 2; }
+block() { echo "🚫 [Karvey plan-gate] $1 Present the plan, wait for approval and create the marker: touch $FLAG" >&2; exit 2; }
 
-# Si ya hay plan aprobado, dejar pasar.
+# If a plan is already approved, let it through.
 [ -f "$FLAG" ] && exit 0
 
 case "$tool" in
   Edit|Write|NotebookEdit)
-    block "Cambio de archivos sin plan aprobado." ;;
+    block "File change without an approved plan." ;;
   Bash)
-    # Comandos destructivos sin plan
+    # Destructive commands without a plan
     if printf '%s' "$cmd" | grep -Eq '\brm +-rf?\b|\bDROP +TABLE\b|\bTRUNCATE\b|git +push +--force|git +reset +--hard|>[^>]'; then
-      block "Comando destructivo sin plan aprobado."
+      block "Destructive command without an approved plan."
     fi ;;
 esac
 

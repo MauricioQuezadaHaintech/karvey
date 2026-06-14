@@ -1,253 +1,253 @@
 ---
 name: karvey-tasks
-description: Generate implementation tasks from approved architecture. Creates Tasks in ClickUp (E{n}.F{n}.T{n}) with dependencies, or updates PLAN.md checklist. Triggers include "karvey tasks", "generar tareas", "planificar implementación".
+description: Generate implementation tasks from approved architecture. Creates Tasks in ClickUp (E{n}.F{n}.T{n}) with dependencies, or updates PLAN.md checklist. Triggers include "karvey tasks", "generar tareas", "generate tasks", "planificar implementación", "plan implementation".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: <change-id> [-y] [--sequential]
 ---
 
 # Karvey Tasks
 
-## Propósito
+## Purpose
 
-Generar el plan de tareas de implementación desde la arquitectura aprobada. Registrar en ClickUp (Epic > Feature > Tasks con dependencias) o en PLAN.md checklist. Tamaño objetivo: 10–30 minutos por task (tiempos IA).
+Generate the implementation task plan from the approved architecture. Record it in ClickUp (Epic > Feature > Tasks with dependencies) or in a PLAN.md checklist. Target size: 10–30 minutes per task (AI timings).
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 1 — Cargar contexto
+### Step 1 — Load context
 
-Leer:
+Read:
 - `docs/spec/changes/{change-id}/spec.json`
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/architecture.md`
 - `docs/spec/changes/{change-id}/infra.md`
 - `rules/clickup-protocol.md`
 
-Verificar `approvals.infra.approved = true`. Si no, detener.
+Verify `approvals.infra.approved = true`. If not, stop.
 
-Determinar modo secuencial: si `--sequential`, no usar marcadores de paralelismo.
+Determine sequential mode: if `--sequential`, do not use parallelism markers.
 
-### Paso 2 — Generar borrador de tasks.md
+### Step 2 — Generate tasks.md draft
 
-Para cada Feature identificado en architecture.md, generar tasks por capa siguiendo el File Structure Plan.
+For each Feature identified in architecture.md, generate tasks per layer following the File Structure Plan.
 
-**Reglas de granularidad:**
-- 1 task = 1 unidad de trabajo ejecutable por un agente IA
-- Tiempo estimado: 10–30 minutos (tiempos IA)
-- Máximo 1h por task. Si excede, dividir.
-- Cada task produce un artefacto verificable (SP, endpoint, componente, test)
-- El criterio de "done" debe ser observable (no "implementar X", sino "SP funciona y retorna {Y}")
+**Granularity rules:**
+- 1 task = 1 unit of work executable by an AI agent
+- Estimated time: 10–30 minutes (AI timings)
+- Maximum 1h per task. If it exceeds that, split it.
+- Each task produces a verifiable artifact (SP, endpoint, component, test)
+- The "done" criterion must be observable (not "implement X", but "the SP works and returns {Y}")
 
-**Orden de ejecución obligatorio:**
+**Mandatory execution order:**
 ```
-[BD] → [Backend] → [Frontend]
+[DB] → [Backend] → [Frontend]
 ```
-Tasks de la misma capa dentro de un Feature pueden marcarse `(P)` si son independientes.
+Tasks of the same layer within a Feature can be marked `(P)` if they are independent.
 
-**Etiquetas de capa válidas:** `[BD/Backend/Frontend/Infra]`. Se permiten tasks de tipo `Infra` para ajustes de IaC/pipeline que surjan durante la implementación (la infra base ya viene definida en `infra.md`).
+**Valid layer labels:** `[DB/Backend/Frontend/Infra]`. `Infra`-type tasks are allowed for IaC/pipeline adjustments that come up during implementation (the base infra is already defined in `infra.md`).
 
-**Estructura de tasks.md:**
+**Structure of tasks.md:**
 ```markdown
 # Tasks: {change-id}
 
-## Feature F1: {Nombre}
-Requirements cubiertos: {N.N, N.N}
-Tiempo total estimado: {suma}
+## Feature F1: {Name}
+Requirements covered: {N.N, N.N}
+Total estimated time: {sum}
 
-### F1.T1 [BD] {Descripción}
-**Estimación:** 15min
-**Artefacto:** `{db_path}/{sp_nombre}.sql`
-**Done cuando:** SP / query compila sin errores, ejecuta con parámetros de prueba y retorna {resultado esperado}
-- Crear `{schema}.{sp_nombre}` con parámetros: `@{contextKey}`, `@{param2}`
-- Validar contexto de usuario en la primera línea
-- Retornar {estructura de resultado}
+### F1.T1 [DB] {Description}
+**Estimate:** 15min
+**Artifact:** `{db_path}/{sp_name}.sql`
+**Done when:** the SP / query compiles without errors, runs with test parameters, and returns {expected result}
+- Create `{schema}.{sp_name}` with parameters: `@{contextKey}`, `@{param2}`
+- Validate the user context on the first line
+- Return {result structure}
 - Requirements: {N.N}
 
-### F1.T2 [Backend] {Descripción} — _Depends: F1.T1_
-**Estimación:** 20min
-**Artefacto:** `{backend_path}/{nombre}`
-**Done cuando:** Endpoint retorna 200 con {estructura} para request válido, 401 sin auth, 422 con input inválido
-- Crear endpoint `{nombre}`
-- Validar auth token y extraer contexto de usuario
-- Llamar BD con `{db_helper()}`
-- Manejar errores sin exponer stack trace
+### F1.T2 [Backend] {Description} — _Depends: F1.T1_
+**Estimate:** 20min
+**Artifact:** `{backend_path}/{name}`
+**Done when:** the endpoint returns 200 with {structure} for a valid request, 401 without auth, 422 with invalid input
+- Create endpoint `{name}`
+- Validate the auth token and extract the user context
+- Call the DB with `{db_helper()}`
+- Handle errors without exposing the stack trace
 - Requirements: {N.N}
 
-### F1.T3 [Frontend] {Descripción} — _Depends: F1.T2_ (P)
-**Estimación:** 25min
-**Artefacto:** `{frontend_path}/{nombre}`
-**Done cuando:** Componente renderiza datos del endpoint, maneja estado loading/error/empty
-- Crear componente `{nombre}`
-- Consumir endpoint via `{api_layer}/{servicio}`
-- Implementar estados: loading, error, vacío, con datos
+### F1.T3 [Frontend] {Description} — _Depends: F1.T2_ (P)
+**Estimate:** 25min
+**Artifact:** `{frontend_path}/{name}`
+**Done when:** the component renders data from the endpoint, handles loading/error/empty states
+- Create component `{name}`
+- Consume the endpoint via `{api_layer}/{service}`
+- Implement states: loading, error, empty, with data
 - Requirements: {N.N}
 ```
 
-### Paso 3 — Review gate
+### Step 3 — Review gate
 
-Verificar antes de escribir:
-- [ ] Cada requirement tiene al menos una task que lo implementa
-- [ ] Cada componente del File Structure Plan tiene su task correspondiente
-- [ ] El orden BD→Backend→Frontend se respeta con dependencias explícitas
-- [ ] Cada task tiene un criterio de done observable
-- [ ] Ninguna task supera 1h de estimación
-- [ ] Tasks [BD] no modifican código de aplicación y viceversa
-- [ ] Las tasks de testing están incluidas (al menos una por Feature)
+Verify before writing:
+- [ ] Every requirement has at least one task that implements it
+- [ ] Every component of the File Structure Plan has its corresponding task
+- [ ] The DB→Backend→Frontend order is respected with explicit dependencies
+- [ ] Every task has an observable done criterion
+- [ ] No task exceeds a 1h estimate
+- [ ] [DB] tasks do not modify application code and vice versa
+- [ ] Testing tasks are included (at least one per Feature)
 
-Si hay gaps: corregir y re-verificar. Máximo 2 iteraciones.
+If there are gaps: fix and re-verify. Maximum 2 iterations.
 
-### Paso 4 — Escribir tasks.md
+### Step 4 — Write tasks.md
 
 ```
 docs/spec/changes/{change-id}/tasks.md
 ```
 
-Actualizar `spec.json`: `phase: "tasks-generated"`, `approvals.tasks.generated: true`.
+Update `spec.json`: `phase: "tasks-generated"`, `approvals.tasks.generated: true`.
 
-### Paso 4B — Actualizar grafo de conocimiento
+### Step 4B — Update knowledge graph
 
-Sincronizar el conocimiento según `karvey/rules/knowledge-sync.md` (Obsidian si está disponible; mínimo `/graphify docs/spec/ --update`) para reflejar el `tasks.md` creado.
-Si `docs/spec/graphify-out/` no existe, invocar `/graphify docs/spec/` sin `--update`.
+Sync the knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the created `tasks.md`.
+If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
 
-### Paso 5 — Presentar para aprobación
+### Step 5 — Present for approval
 
-Si flag `-y`: auto-aprobar.
+If flag `-y`: auto-approve.
 
-Mostrar resumen:
+Show a summary:
 ```
-📋 Tasks generadas: docs/spec/changes/{change-id}/tasks.md
+📋 Tasks generated: docs/spec/changes/{change-id}/tasks.md
 
-Resumen:
+Summary:
   Features: {N}
-  Tasks totales: {N} ({N} BD, {N} Backend, {N} Frontend, {N} Test)
-  Tiempo estimado total: {suma}
+  Total tasks: {N} ({N} DB, {N} Backend, {N} Frontend, {N} Test)
+  Total estimated time: {sum}
 
-Cobertura:
-  Requirements cubiertos: {N}/{N}
-  Componentes del File Structure Plan: {N}/{N}
+Coverage:
+  Requirements covered: {N}/{N}
+  File Structure Plan components: {N}/{N}
 
-¿Aprobás las tasks para continuar?
+Do you approve the tasks to continue?
 ```
 
-### Paso 6A — Crear Tasks en ClickUp (si management=clickup)
+### Step 6A — Create Tasks in ClickUp (if management=clickup)
 
-Leer `spec.json` para `clickup.epic_id`, `clickup.feature_ids`, `clickup.backlog_list_id`.
+Read `spec.json` for `clickup.epic_id`, `clickup.feature_ids`, `clickup.backlog_list_id`.
 
-Leer credenciales de `.connections.json` (ver `rules/clickup-protocol.md`). Si no existe, crearlo y agregarlo al `.gitignore` antes de continuar.
+Read credentials from `.connections.json` (see `rules/clickup-protocol.md`). If it does not exist, create it and add it to `.gitignore` before continuing.
 
-Para cada task, crear en ClickUp:
+For each task, create it in ClickUp:
 ```
 clickup_create_task
-  name: "E{n}.F{n}.T{n} [Capa] {Descripción}"
+  name: "E{n}.F{n}.T{n} [Layer] {Description}"
   list_id: "{backlog_list_id}"
   tags: ["{client_tag}"]
-  description: (ver formato)
+  description: (see format)
   priority: "normal"
   start_date: "YYYY-MM-DD"
   due_date: "YYYY-MM-DD"
 ```
 
-Formato de descripción de task:
+Task description format:
 ```
-E{n}.F{n}.T{n}: [Capa] {Nombre}
+E{n}.F{n}.T{n}: [Layer] {Name}
 
-Feature padre: E{n}.F{n} {Nombre del Feature}
+Parent feature: E{n}.F{n} {Feature name}
 
-Descripción:
-{qué hacer en detalle para que un agente IA lo ejecute}
+Description:
+{what to do in detail so that an AI agent can execute it}
 
-Criterios de aceptación:
-- [ ] {criterio 1}
-- [ ] {criterio 2}
+Acceptance criteria:
+- [ ] {criterion 1}
+- [ ] {criterion 2}
 
-Dependencias:
-- Depende de: {lista de tasks previas}
-- Bloquea: {lista de tasks que esperan esta}
+Dependencies:
+- Depends on: {list of previous tasks}
+- Blocks: {list of tasks waiting on this one}
 
-Estimación: {N}min
+Estimate: {N}min
 
-Al terminar:
-1. Detener time tracking
-2. Comentar: resumen de lo hecho, archivos modificados
-3. Cambiar estado a "listo! para pap"
+When finished:
+1. Stop time tracking
+2. Comment: a summary of what was done, modified files
+3. Change status to "listo! para pap"
 
-Realizado con Método Karvey
+Done with the Karvey Method
 ```
 
-Inmediatamente después de crear cada task:
+Immediately after creating each task:
 ```
 clickup_add_tag_to_task(task_id, "{client_tag}")
 ```
 
-Actualizar `time_estimate` via REST API (MCP no lo guarda):
+Update `time_estimate` via the REST API (the MCP does not save it):
 ```bash
 curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
   -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
   -d '{"time_estimate": {MIN * 60000}}'
 ```
 
-Crear dependencias via REST API:
+Create dependencies via the REST API:
 ```bash
-# Task B depende de Task A: B espera a A
+# Task B depends on Task A: B waits for A
 curl -s -X POST "https://api.clickup.com/api/v2/task/{B_ID}/dependency" \
   -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
   -d '{"depends_on":"{A_ID}"}'
 ```
 
-Dependencias a crear:
-- Feature ← sus Tasks (Feature depende de que todas las Tasks terminen)
-- Epic ← sus Features
-- [Backend] → [BD] dentro de cada Feature
-- [Frontend] → [Backend] dentro de cada Feature
+Dependencies to create:
+- Feature ← its Tasks (the Feature depends on all its Tasks finishing)
+- Epic ← its Features
+- [Backend] → [DB] within each Feature
+- [Frontend] → [Backend] within each Feature
 
-Verificar sprint activo y agregar tasks:
+Check the active sprint and add the tasks:
 ```bash
 curl -s -X POST "https://api.clickup.com/api/v2/list/{SPRINT_LIST_ID}/task/{TASK_ID}" \
   -H "Authorization: $API_KEY" -H "Content-Type: application/json"
 ```
 
-Actualizar `spec.json` con IDs de tasks creadas.
+Update `spec.json` with the IDs of the created tasks.
 
-### Paso 6B — Actualizar PLAN.md (si management=markdown)
+### Step 6B — Update PLAN.md (if management=markdown)
 
-Reemplazar la sección "Tasks" y "Estado de tareas" con el checklist completo:
+Replace the "Tasks" and "Task status" sections with the full checklist:
 
 ```markdown
 ## Tasks
 
-### Feature F1: {Nombre}
+### Feature F1: {Name}
 
-- [ ] F1.T1 [BD] {descripción} — est: 15min
-- [ ] F1.T2 [Backend] {descripción} — est: 20min (depende F1.T1)
-- [ ] F1.T3 [Frontend] {descripción} — est: 25min (depende F1.T2)
+- [ ] F1.T1 [DB] {description} — est: 15min
+- [ ] F1.T2 [Backend] {description} — est: 20min (depends F1.T1)
+- [ ] F1.T3 [Frontend] {description} — est: 25min (depends F1.T2)
 
-## Estado de tareas
-| Task | Estado | Estimado | Real | Notas |
+## Task status
+| Task | Status | Estimate | Actual | Notes |
 |------|--------|----------|------|-------|
-| F1.T1 [BD] | ⬜ pendiente | 15min | — | |
-| F1.T2 [Backend] | ⬜ pendiente | 20min | — | |
-| F1.T3 [Frontend] | ⬜ pendiente | 25min | — | |
+| F1.T1 [DB] | ⬜ pending | 15min | — | |
+| F1.T2 [Backend] | ⬜ pending | 20min | — | |
+| F1.T3 [Frontend] | ⬜ pending | 25min | — | |
 ```
 
-### Paso 7 — Output final
+### Step 7 — Final output
 
-Al aprobar: `approvals.tasks.approved: true`, `phase: "tasks-approved"`.
+On approval: `approvals.tasks.approved: true`, `phase: "tasks-approved"`.
 
 ```
-✅ Tasks aprobadas
+✅ Tasks approved
 
-Gestión: {N tasks creadas en ClickUp con dependencias | PLAN.md actualizado}
+Management: {N tasks created in ClickUp with dependencies | PLAN.md updated}
 
-Siguiente paso:
+Next step:
 /karvey-impl {change-id}
 ```
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase Implementación ahora?»
-- Si confirma → ejecutá `/karvey-impl {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Implementation phase now?"
+- If they confirm → run `/karvey-impl {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
+- If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

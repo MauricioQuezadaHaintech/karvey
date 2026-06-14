@@ -1,35 +1,35 @@
-# Regla: Sincronización de conocimiento entre iteraciones
+# Rule: Knowledge synchronization across iterations
 
-Para que las iteraciones del método sean consistentes (cada fase conoce las dependencias y decisiones de las anteriores), Karvey mantiene un grafo de conocimiento. El mecanismo depende de `knowledge_sync` en `docs/spec/project.json`.
+So that the method's iterations stay consistent (each phase knows the dependencies and decisions of the previous ones), Karvey maintains a knowledge graph. The mechanism depends on `knowledge_sync` in `docs/spec/project.json`.
 
-## Decisión del mecanismo
+## Choosing the mechanism
 
-Se decide **una vez** en `karvey-init` y se guarda en `project.json`:
+It is decided **once** in `karvey-init` and stored in `project.json`:
 
-1. **¿El usuario tiene Obsidian con MCP integrado disponible en la sesión?**
-   - Detectar si hay herramientas MCP de Obsidian disponibles (ej. tools cuyo nombre contiene `obsidian`).
-   - Si **sí** → `knowledge_sync = "obsidian"`.
-   - Si **no** → `knowledge_sync = "graphify"` (mínimo, siempre).
+1. **Does the user have Obsidian with MCP integrated available in the session?**
+   - Detect whether there are Obsidian MCP tools available (e.g. tools whose name contains `obsidian`).
+   - If **yes** → `knowledge_sync = "obsidian"`.
+   - If **no** → `knowledge_sync = "graphify"` (minimum, always).
 
-> Regla de oro: **jamás quedarse sin sincronización**. Si Obsidian no está disponible, se usa graphify como piso mínimo para no perder el conocimiento de dependencias.
+> Golden rule: **never go without synchronization**. If Obsidian is not available, graphify is used as the minimum floor so dependency knowledge is not lost.
 
-## Paso de sincronización (invocado al final de cada fase)
+## Sync step (invoked at the end of each phase)
 
-Cada skill que produce o modifica documentos en `docs/spec/` ejecuta este paso al terminar:
+Every skill that produces or modifies documents in `docs/spec/` runs this step when it finishes:
 
-### Si `knowledge_sync = "obsidian"`
-- Sincronizar los documentos creados/modificados al vault vía el MCP de Obsidian (crear/actualizar las notas correspondientes y sus enlaces de dependencia).
-- Si el MCP de Obsidian falla o no responde, **degradar a graphify** automáticamente para no perder la actualización.
+### If `knowledge_sync = "obsidian"`
+- Sync the created/modified documents to the vault via the Obsidian MCP (create/update the corresponding notes and their dependency links).
+- If the Obsidian MCP fails or does not respond, **degrade to graphify** automatically so the update is not lost.
 
-### Si `knowledge_sync = "graphify"`
-- Invocar `/graphify docs/spec/ --update` para reflejar los documentos creados o modificados.
-- Si `docs/spec/graphify-out/` no existe (primera vez en el proyecto), invocar `/graphify docs/spec/` sin `--update`.
-- En proyectos **multi-repo**: además de `docs/spec/`, ejecutar graphify en cada repo de `project.json:repos` que haya tenido cambios de código en la fase actual, para mantener el grafo de dependencias del código alineado con la spec.
+### If `knowledge_sync = "graphify"`
+- Invoke `/graphify docs/spec/ --update` to reflect the created or modified documents.
+- If `docs/spec/graphify-out/` does not exist (first time in the project), invoke `/graphify docs/spec/` without `--update`.
+- In **multi-repo** projects: in addition to `docs/spec/`, run graphify in each repo of `project.json:repos` that had code changes in the current phase, to keep the code's dependency graph aligned with the spec.
 
-## Resumen
+## Summary
 
-| Condición | Acción |
+| Condition | Action |
 |-----------|--------|
-| Obsidian MCP disponible | Sync vía Obsidian (fallback a graphify si falla) |
-| Sin Obsidian | `/graphify docs/spec/ --update` (mínimo garantizado) |
-| Multi-repo con cambios de código | graphify también en los repos afectados |
+| Obsidian MCP available | Sync via Obsidian (fallback to graphify if it fails) |
+| No Obsidian | `/graphify docs/spec/ --update` (guaranteed minimum) |
+| Multi-repo with code changes | graphify also in the affected repos |

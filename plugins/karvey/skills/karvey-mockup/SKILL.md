@@ -1,221 +1,223 @@
 ---
 name: karvey-mockup
-description: Generate a navigable HTML mockup with 3 levels of depth from approved requirements. Iterate with user until approved, then advance to graphic design. Triggers include "karvey mockup", "generar mockup", "crear prototipo", "wireframe".
+description: Generate a navigable HTML mockup with 3 levels of depth from approved requirements. Iterate with user until approved, then advance to graphic design. Triggers include "karvey mockup", "generar mockup", "generate mockup", "crear prototipo", "create prototype", "wireframe".
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 argument-hint: <change-id> [--iteration N] [--shotgun | --variants N]
 ---
 
-# Karvey Mockup — Prototipo Navegable HTML
+# Karvey Mockup — Navigable HTML Prototype
 
-## Propósito
+## Purpose
 
-Generar un archivo HTML navegable con 3 niveles de profundidad antes de definir el diseño gráfico. El ingeniero navega el mockup en el browser, da feedback, y se itera hasta aprobación. Solo después se avanza a diseño gráfico y arquitectura.
+Generate a navigable HTML file with 3 levels of depth before defining the graphic design. The engineer navigates the mockup in the browser, gives feedback, and it's iterated until approval. Only afterward does it advance to graphic design and architecture.
 
-## Agnosticismo de target
+## Target agnosticism
 
-El mockup **se adapta al target declarado** en `docs/spec/project.json` (campo `targets`) — ver `karvey/rules/targets.md`. **No asumir web por defecto:**
+The mockup **adapts to the target declared** in `docs/spec/project.json` (the `targets` field) — see `karvey/rules/targets.md`. **Don't assume web by default:**
 
-- **web** → HTML navegable (App Shell + vistas + overlays, como se describe abajo)
-- **mobile (ios/android)** → flujo de pantallas (secuencia de pantallas con transiciones, no sidebar de escritorio)
-- **cli** → transcript de comandos (entrada/salida de terminal de ejemplo)
-- **api/backend** → ejemplos request/response (payloads de muestra por endpoint)
+- **web** → navigable HTML (App Shell + views + overlays, as described below)
+- **mobile (ios/android)** → screen flow (a sequence of screens with transitions, not a desktop sidebar)
+- **cli** → command transcript (example terminal input/output)
+- **api/backend** → request/response examples (sample payloads per endpoint)
 
-Los niveles, reglas y estructura HTML de las secciones siguientes aplican al target **web**. Para otros targets, generar el artefacto equivalente del target y guardar igualmente bajo `docs/spec/changes/{change-id}/` (ajustando la extensión cuando corresponda, ej. `mockup.md` para transcript CLI o ejemplos API). El resto del flujo (iteración, aprobación, sincronización de conocimiento) es idéntico.
+The levels, rules, and HTML structure in the following sections apply to the **web** target. For other targets, generate the target's equivalent artifact and likewise save it under `docs/spec/changes/{change-id}/` (adjusting the extension where appropriate, e.g. `mockup.md` for a CLI transcript or API examples). The rest of the flow (iteration, approval, knowledge sync) is identical.
 
-## Modos de generación
+## Generation modes
 
-- **Modo normal (default)**: una sola propuesta de mockup, que se itera con el usuario hasta aprobación (Pasos 1 a 6).
-- **Modo shotgun (opt-in)**: generar **N variantes** del mockup de una vez (default **3**) con enfoques de diseño distintos, y ofrecer un **board comparativo** para que el usuario elija una o combine elementos de varias. Se activa con flag `--shotgun` (3 variantes) o `--variants N` (N variantes). Inspirado en `/design-shotgun`. Ver **Paso 3B**.
+- **Normal mode (default)**: a single mockup proposal, iterated with the user until approval (Steps 1 to 6).
+- **Shotgun mode (opt-in)**: generate **N variants** of the mockup at once (default **3**) with distinct design approaches, and offer a **comparison board** so the user can pick one or combine elements from several. Activated with the `--shotgun` flag (3 variants) or `--variants N` (N variants). Inspired by `/design-shotgun`. See **Step 3B**.
 
-Si el usuario no pasa flag, usar siempre el modo normal.
+If the user doesn't pass a flag, always use normal mode.
 
-## Niveles de navegación
+## Navigation levels
 
-- **Nivel 1 — App Shell**: Navegación principal (sidebar/topbar con secciones del producto)
-- **Nivel 2 — Sección**: Vistas de cada sección (listados, formularios, dashboards)
-- **Nivel 3 — Detalle**: Vistas de detalle (modales, paneles laterales, subvistas, wizards)
+- **Level 1 — App Shell**: Main navigation (sidebar/topbar with the product's sections)
+- **Level 2 — Section**: Views of each section (lists, forms, dashboards)
+- **Level 3 — Detail**: Detail views (modals, side panels, sub-views, wizards)
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 1 — Cargar contexto
+### Step 1 — Load context
 
-Leer:
+Read:
 - `docs/spec/changes/{change-id}/spec.json`
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/proposal.md`
 
-Verificar que `approvals.requirements.approved = true`. Si no, detener y pedir aprobar requirements primero.
+Verify that `approvals.requirements.approved = true`. If not, stop and ask to approve requirements first.
 
-**Verificar si aplica UI:** Leer `spec.json` → campo `layers`. Si solo incluye `[BD]` y/o `[Backend]` sin `[Frontend]`, preguntar al usuario: "Este cambio no parece tener interfaz de usuario. ¿Requiere mockup visual o pasamos directo a arquitectura?" Si no requiere, saltar a karvey-architecture.
+**Check whether a UI applies:** Read `spec.json` → the `layers` field. If it only includes `[DB]` and/or `[Backend]` without `[Frontend]`, ask the user: "This change doesn't seem to have a user interface. Does it need a visual mockup or do we go straight to architecture?" If it doesn't need one, skip to karvey-architecture.
 
-Detectar iteración: si existe `docs/spec/changes/{change-id}/mockup.html`, incrementar el número de iteración.
+Detect iteration: if `docs/spec/changes/{change-id}/mockup.html` exists, increment the iteration number.
 
-### Paso 2 — Mapear pantallas desde requirements
+### Step 2 — Map screens from requirements
 
-Construir el mapa de pantallas leyendo los requirements:
+Build the screen map by reading the requirements:
 
 ```
-Nivel 1 (Navegación):
-  - {Sección A} → requirements {N.N, N.N}
-  - {Sección B} → requirements {N.N, N.N}
+Level 1 (Navigation):
+  - {Section A} → requirements {N.N, N.N}
+  - {Section B} → requirements {N.N, N.N}
 
-Nivel 2 (Vistas por sección):
-  Sección A:
-    - Vista Lista: {qué muestra}
-    - Vista Formulario: {qué captura}
-  Sección B:
-    - Vista Dashboard: {qué muestra}
+Level 2 (Views per section):
+  Section A:
+    - List View: {what it shows}
+    - Form View: {what it captures}
+  Section B:
+    - Dashboard View: {what it shows}
 
-Nivel 3 (Detalles):
-  - Modal confirmación
-  - Panel detalle
-  - Wizard paso a paso
+Level 3 (Details):
+  - Confirmation modal
+  - Detail panel
+  - Step-by-step wizard
 ```
 
-### Paso 3 — Generar mockup.html
+### Step 3 — Generate mockup.html
 
-Generar un único archivo HTML autocontenido:
+Generate a single self-contained HTML file:
 
-**Estructura del HTML:**
+**HTML structure:**
 ```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>MOCKUP — {change-id} — Iteración {N}</title>
-  <!-- Tailwind CDN — solo para prototipado, no implica su uso en el proyecto real -->
+  <title>MOCKUP — {change-id} — Iteration {N}</title>
+  <!-- Tailwind CDN — for prototyping only, does not imply its use in the real project -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>/* estilos adicionales */</style>
+  <style>/* additional styles */</style>
 </head>
 <body>
-  <!-- Banner de mockup siempre visible -->
-  <!-- App Shell con navegación Nivel 1 -->
-  <!-- Contenedor de vistas Nivel 2 (cambia con navegación) -->
-  <!-- Overlays de Nivel 3 (modales, paneles) -->
-  <!-- JavaScript de navegación -->
+  <!-- Mockup banner, always visible -->
+  <!-- App Shell with Level 1 navigation -->
+  <!-- Level 2 views container (changes with navigation) -->
+  <!-- Level 3 overlays (modals, panels) -->
+  <!-- Navigation JavaScript -->
 </body>
 </html>
 ```
 
-**Reglas de construcción:**
+> Set `lang` on `<html>` to the project's language (per spec.json `language`).
 
-1. **Banner persistente** en top: `🔧 MOCKUP — {change-id} — Iteración {N} — {fecha}`
-2. **Navegación Nivel 1**: sidebar o topbar con íconos de placeholder (círculos grises) y nombres de sección
-3. **Vistas Nivel 2**: representar cada pantalla como una vista con:
-   - Título de la pantalla
-   - Tabla/lista con columnas reales (labels reales, datos de ejemplo coherentes con el dominio)
-   - Botones con labels reales ("Transferir llamada", "Confirmar", no "Button 1")
-   - Formularios con campos reales y tipos correctos
-   - Estados de carga representados con skeletons grises
-4. **Nivel 3**: modales y paneles implementados como overlays que se muestran/ocultan con JS puro
-5. **Navegación JS**: `showView(viewId)`, `showModal(modalId)`, `closeModal(modalId)` — sin dependencias externas
-6. **Paleta neutral**: grays únicamente. El color y el design system del proyecto real vendrán en karvey-design-graphic.
-7. **Responsive básico**: funcionar en 1280px+ de ancho mínimo
-8. **Datos de ejemplo**: usar datos ficticios pero coherentes con el dominio (nombres de tenant, tipos de llamada reales, etc.)
+**Construction rules:**
 
-**Elementos prohibidos en el mockup:**
-- Lorem ipsum (usar texto real del dominio)
-- "Button 1", "Section A" (usar labels reales)
-- Imágenes externas (usar divs con bg-gray-300)
-- Frameworks JS pesados (solo Tailwind CDN y JS nativo)
+1. **Persistent banner** at the top: `🔧 MOCKUP — {change-id} — Iteration {N} — {date}`
+2. **Level 1 navigation**: sidebar or topbar with placeholder icons (gray circles) and section names
+3. **Level 2 views**: represent each screen as a view with:
+   - The screen title
+   - A table/list with real columns (real labels, example data coherent with the domain)
+   - Buttons with real labels ("Transfer call", "Confirm", not "Button 1")
+   - Forms with real fields and correct types
+   - Loading states represented with gray skeletons
+4. **Level 3**: modals and panels implemented as overlays shown/hidden with pure JS
+5. **Navigation JS**: `showView(viewId)`, `showModal(modalId)`, `closeModal(modalId)` — no external dependencies
+6. **Neutral palette**: grays only. The real project's color and design system will come in karvey-design-graphic.
+7. **Basic responsive**: work at a minimum width of 1280px+
+8. **Example data**: use fictitious but domain-coherent data (tenant names, real call types, etc.)
 
-### Paso 3B — Modo shotgun (solo si `--shotgun` o `--variants N`)
+**Forbidden elements in the mockup:**
+- Lorem ipsum (use real domain text)
+- "Button 1", "Section A" (use real labels)
+- External images (use divs with bg-gray-300)
+- Heavy JS frameworks (only Tailwind CDN and native JS)
 
-Reemplaza al Paso 3/4 cuando el modo shotgun está activo. En vez de un solo mockup, generar **N variantes** (default 3) que exploren enfoques de diseño distintos sobre el **mismo** mapa de pantallas del Paso 2 (mismas pantallas, datos y labels reales — varía el enfoque, no el alcance). Ejemplos de ejes de variación: densidad de información (compacto vs. espacioso), patrón de navegación (sidebar vs. topbar vs. tabs), jerarquía visual, flujo de la tarea principal.
+### Step 3B — Shotgun mode (only if `--shotgun` or `--variants N`)
 
-1. **Cargar preferencias de taste** (si existen): leer `docs/spec/changes/{change-id}/taste.md` y/o `docs/spec/taste.md`. Aplicar esas preferencias a todas las variantes para no repetir enfoques ya descartados.
-2. **Generar N variantes**, cada una autocontenida y siguiendo todas las "Reglas de construcción" del Paso 3 (paleta neutral, datos reales, JS nativo, banner, etc.):
+Replaces Step 3/4 when shotgun mode is active. Instead of a single mockup, generate **N variants** (default 3) that explore distinct design approaches over the **same** screen map from Step 2 (same screens, real data, and labels — the approach varies, not the scope). Examples of variation axes: information density (compact vs. spacious), navigation pattern (sidebar vs. topbar vs. tabs), visual hierarchy, the main task's flow.
+
+1. **Load taste preferences** (if they exist): read `docs/spec/changes/{change-id}/taste.md` and/or `docs/spec/taste.md`. Apply those preferences to all variants so as not to repeat already-discarded approaches.
+2. **Generate N variants**, each self-contained and following all the "Construction rules" from Step 3 (neutral palette, real data, native JS, banner, etc.):
    ```
    docs/spec/changes/{change-id}/mockup-variant-1.html
    docs/spec/changes/{change-id}/mockup-variant-2.html
    docs/spec/changes/{change-id}/mockup-variant-N.html
    ```
-   El banner de cada variante incluye su enfoque: `🔧 MOCKUP — {change-id} — Variante {k}/{N}: {enfoque} — {fecha}`.
-3. **Generar board comparativo** `docs/spec/changes/{change-id}/mockup-board.html`: una página autocontenida que muestra las N variantes lado a lado en `<iframe>` (o tarjetas con captura/enlace a cada archivo), cada una con su nombre de enfoque y un resumen de 1 línea de en qué se diferencia. El board permite abrir cada variante en grande.
-4. Actualizar `spec.json` (ver Paso 4) con `approvals.mockup.variants: N` además de los campos normales.
+   Each variant's banner includes its approach: `🔧 MOCKUP — {change-id} — Variant {k}/{N}: {approach} — {date}`.
+3. **Generate a comparison board** `docs/spec/changes/{change-id}/mockup-board.html`: a self-contained page that shows the N variants side by side in `<iframe>`s (or cards with a screenshot/link to each file), each with its approach name and a 1-line summary of how it differs. The board lets you open each variant full size.
+4. Update `spec.json` (see Step 4) with `approvals.mockup.variants: N` in addition to the normal fields.
 
-**Elección y taste:** ofrecer al usuario abrir el board (`open docs/spec/changes/{change-id}/mockup-board.html`) y pedirle que elija una variante o indique qué combinar ("la navegación de la 1 con las tablas de la 3"). Al recibir la elección:
-- Consolidar la variante elegida (o el combinado) como `mockup.html`, que pasa a ser el mockup de trabajo para el ciclo de iteración normal (Paso 6).
-- **Recordar el taste**: anexar a `docs/spec/changes/{change-id}/taste.md` qué enfoque/elementos prefirió y cuáles descartó, en bullets cortos, para guiar futuras iteraciones y futuros shotgun de este change.
+**Choice and taste:** offer the user to open the board (`open docs/spec/changes/{change-id}/mockup-board.html`) and ask them to choose a variant or indicate what to combine ("the navigation from #1 with the tables from #3"). On receiving the choice:
+- Consolidate the chosen variant (or the combination) as `mockup.html`, which becomes the working mockup for the normal iteration cycle (Step 6).
+- **Remember the taste**: append to `docs/spec/changes/{change-id}/taste.md` which approach/elements they preferred and which they discarded, in short bullets, to guide future iterations and future shotgun runs for this change.
 
-### Paso 4 — Escribir archivo
+### Step 4 — Write the file
 
 ```
 docs/spec/changes/{change-id}/mockup.html
 ```
 
-Actualizar `spec.json`:
+Update `spec.json`:
 - `phase: "mockup-generated"`
 - `approvals.mockup.generated: true`
 - `updated_at: {timestamp}`
 
-### Paso 4B — Actualizar grafo de conocimiento
+### Step 4B — Update the knowledge graph
 
-Sincronizar el conocimiento según `karvey/rules/knowledge-sync.md` (Obsidian si está disponible; mínimo `/graphify docs/spec/ --update`) para reflejar el `mockup.html` creado o modificado.
-Si `docs/spec/graphify-out/` no existe, invocar `/graphify docs/spec/` sin `--update`.
+Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the `mockup.html` created or modified.
+If `docs/spec/graphify-out/` doesn't exist, invoke `/graphify docs/spec/` without `--update`.
 
-### Paso 5 — Presentar al usuario
+### Step 5 — Present to the user
 
-**Modo shotgun:** presentar el board comparativo en vez de un único archivo (`open docs/spec/changes/{change-id}/mockup-board.html`), listar las N variantes con su enfoque, y pedir al usuario que elija una o indique qué combinar. Tras la elección, continuar con el ciclo de iteración normal (Paso 6) sobre el `mockup.html` consolidado.
+**Shotgun mode:** present the comparison board instead of a single file (`open docs/spec/changes/{change-id}/mockup-board.html`), list the N variants with their approach, and ask the user to choose one or indicate what to combine. After the choice, continue with the normal iteration cycle (Step 6) on the consolidated `mockup.html`.
 
-**Modo normal:**
+**Normal mode:**
 
 ```
-🖥️ Mockup generado — Iteración {N}
+🖥️ Mockup generated — Iteration {N}
 
-Archivo: docs/spec/changes/{change-id}/mockup.html
-Abrir con: open docs/spec/changes/{change-id}/mockup.html
+File: docs/spec/changes/{change-id}/mockup.html
+Open with: open docs/spec/changes/{change-id}/mockup.html
 
-Pantallas incluidas ({N} total):
-  Nivel 1 — Navegación:
-    - {sección 1}
-    - {sección 2}
-  Nivel 2 — Vistas:
-    - {sección 1}: {vista A}, {vista B}
-    - {sección 2}: {vista C}
-  Nivel 3 — Detalles:
+Screens included ({N} total):
+  Level 1 — Navigation:
+    - {section 1}
+    - {section 2}
+  Level 2 — Views:
+    - {section 1}: {view A}, {view B}
+    - {section 2}: {view C}
+  Level 3 — Details:
     - {modal/panel 1}
     - {modal/panel 2}
 
-¿Qué feedback tenés? Describí los cambios y genero la Iteración {N+1}.
-O escribí "aprobado" para avanzar a diseño gráfico.
+What feedback do you have? Describe the changes and I'll generate Iteration {N+1}.
+Or type "approved" to advance to graphic design.
 ```
 
-### Paso 6 — Ciclo de iteración
+### Step 6 — Iteration cycle
 
-Si el usuario da feedback:
-1. Leer el feedback detalladamente
-2. Identificar qué pantallas/componentes cambiar
-3. Editar `mockup.html` aplicando los cambios
-4. Incrementar el número de iteración en el banner
-5. Sincronizar el conocimiento según `karvey/rules/knowledge-sync.md` (Obsidian si está disponible; mínimo `/graphify docs/spec/ --update`)
-6. Volver al Paso 5
+If the user gives feedback:
+1. Read the feedback in detail
+2. Identify which screens/components to change
+3. Edit `mockup.html` applying the changes
+4. Increment the iteration number in the banner
+5. Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`)
+6. Return to Step 5
 
-Si el usuario aprueba:
-- Actualizar `spec.json`: `approvals.mockup.approved: true`
+If the user approves:
+- Update `spec.json`: `approvals.mockup.approved: true`
 - Output:
 ```
-✅ Mockup aprobado — Iteración {N}
+✅ Mockup approved — Iteration {N}
 
-Siguiente paso:
+Next step:
 /karvey-design-graphic {change-id}
 ```
 
 ## Safety
 
-- Verificar que requirements estén aprobados antes de generar
-- Si el mockup tiene >20 pantallas, preguntar si dividir en módulos
-- En modo shotgun, si `--variants N` pide más de 5 variantes, preguntar antes (costo/ruido); cada variante y el board deben abrir sin errores en browser moderno
-- El archivo HTML debe abrir sin errores en browser moderno (Chrome/Safari/Firefox)
-- No usar `document.write` ni `eval` en el JS generado
+- Verify that requirements are approved before generating
+- If the mockup has >20 screens, ask whether to split it into modules
+- In shotgun mode, if `--variants N` requests more than 5 variants, ask first (cost/noise); each variant and the board must open without errors in a modern browser
+- The HTML file must open without errors in a modern browser (Chrome/Safari/Firefox)
+- Don't use `document.write` or `eval` in the generated JS
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase Diseño gráfico ahora?»
-- Si confirma → ejecutá `/karvey-design-graphic {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Graphic Design phase now?"
+- If they confirm → run `/karvey-design-graphic {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (a gate of the method).
+- If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

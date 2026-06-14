@@ -1,97 +1,97 @@
 ---
 name: karvey-docs
-description: Documentation engineer for the Karvey method. Generates Diataxis docs (tutorial/how-to/reference/explanation) from code, updates stale project docs to match what shipped, and exports markdown to publication-quality PDF. Triggers include "karvey docs", "documentación", "diataxis", "actualizar docs", "generar documentación", "exportar PDF", "README".
+description: Documentation engineer for the Karvey method. Generates Diataxis docs (tutorial/how-to/reference/explanation) from code, updates stale project docs to match what shipped, and exports markdown to publication-quality PDF. Triggers include "karvey docs", "documentación", "documentation", "diataxis", "actualizar docs", "update docs", "generar documentación", "generate documentation", "exportar PDF", "export PDF", "README".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [generate | release | pdf] [<feature o archivo>]
+argument-hint: [generate | release | pdf] [<feature or file>]
 ---
 
-# karvey-docs — Doc Engineer (Método Karvey™)
+# karvey-docs — Doc Engineer (Karvey™ Method)
 
-## Propósito
+## Purpose
 
-Skill **transversal** del Método Karvey: capa de apoyo, **NO una fase**. **NO modifica** `spec.json:phase` ni hace avanzar el flujo. Se puede invocar en cualquier punto del ciclo, las veces que haga falta.
+A **cross-cutting** skill of the Karvey Method: a support layer, **NOT a phase**. It **does NOT modify** `spec.json:phase` and does not advance the flow. It can be invoked at any point in the cycle, as many times as needed.
 
-Rol: **Doc Engineer**. Inspirado en `gstack /document-generate`, `/document-release` y `/make-pdf`. Su trabajo es producir y mantener la documentación de **proyecto / usuario** con calidad publicable.
+Role: **Doc Engineer**. Inspired by `gstack /document-generate`, `/document-release`, and `/make-pdf`. Its job is to produce and maintain **project / user** documentation at publication quality.
 
-**Distinción crítica — dos universos de documentación:**
+**Critical distinction — two universes of documentation:**
 
-| Tipo | Qué es | Dónde vive | A cargo de |
-|------|--------|------------|------------|
-| **Docs de PROYECTO / USUARIO** | Tutoriales, guías, referencias y explicaciones para quien usa/mantiene el producto | Donde el proyecto las tenga (típicamente `docs/` del repo) | **Esta skill** |
-| **Specs internas del método** | Artefactos del ciclo Karvey (requisitos, arquitectura, tareas, etc.) | `docs/spec/` | El resto de skills Karvey (fases) — **NO** esta |
+| Type | What it is | Where it lives | Owned by |
+|------|------------|----------------|----------|
+| **PROJECT / USER docs** | Tutorials, guides, references, and explanations for whoever uses/maintains the product | Wherever the project keeps them (typically the repo's `docs/`) | **This skill** |
+| **Internal method specs** | Karvey cycle artifacts (requirements, architecture, tasks, etc.) | `docs/spec/` | The rest of the Karvey skills (phases) — **NOT** this one |
 
-Esta skill **nunca** toca `docs/spec/`. Si detecta que el usuario quiere editar specs internas, redirige a la fase correspondiente.
+This skill **never** touches `docs/spec/`. If it detects that the user wants to edit internal specs, it redirects to the corresponding phase.
 
-Modos disponibles (según el primer argumento): `generate`, `release`, `pdf`.
-
----
-
-## Modo `generate` — Documentación Diataxis desde el código
-
-Genera (o completa) la documentación de una feature siguiendo el framework **Diataxis**, a partir del código que existe en el repo. Cuatro cuadrantes, propósitos distintos, no se mezclan:
-
-| Cuadrante | Orientado a | Responde a | Tono |
-|-----------|-------------|------------|------|
-| **Tutorial** | Aprendizaje | "Llévame de la mano la primera vez" | Paso a paso, resultado garantizado |
-| **How-to (guía)** | Tarea concreta | "¿Cómo logro X?" | Receta, asume contexto |
-| **Reference** | Información | "¿Qué parámetros/contratos/errores tiene?" | Exhaustivo, seco, exacto |
-| **Explanation** | Comprensión | "¿Por qué funciona así?" | Contexto, decisiones, trade-offs |
-
-### Pasos
-
-1. **Resolver el objetivo.** Tomar el segundo argumento (`<feature o archivo>`). Si no se entrega, preguntar qué feature documentar o inferir desde el último cambio relevante (`git log`, `git diff`).
-2. **Leer el código fuente real.** Usar Glob/Grep/Read sobre los archivos de la feature: funciones, firmas, endpoints, parámetros, tipos, errores, side effects. **La documentación describe lo que el código hace, no lo que se deseaba.** Cero invención.
-3. **Ubicar el destino.** Detectar la carpeta de docs del proyecto (`docs/`, `documentation/`, etc.). Si no existe convención, proponer `docs/` y respetar la estructura ya presente. **Nunca** escribir en `docs/spec/`.
-4. **Decidir qué cuadrantes aplican.** No toda feature necesita los cuatro. Una utilidad interna puede llevar solo reference + explanation; un feature de cara al usuario suele llevar tutorial + how-to.
-5. **Redactar cada cuadrante** respetando su tono y propósito. Code snippets reales y verificables; comandos copy-paste; tablas para parámetros y errores.
-6. **Enlazar.** Index/README de la sección con links a los cuadrantes generados. Mantener navegación coherente.
-7. **Reportar** las rutas absolutas de cada archivo creado o modificado.
+Available modes (based on the first argument): `generate`, `release`, `pdf`.
 
 ---
 
-## Modo `release` — Actualizar docs stale tras el deploy
+## `generate` mode — Diataxis documentation from code
 
-Detecta y corrige documentación desactualizada (stale) para que refleje **lo que se acaba de desplegar**. Es la pasada de saneamiento post-release.
+Generates (or completes) the documentation of a feature following the **Diataxis** framework, based on the code that exists in the repo. Four quadrants, distinct purposes, never mixed:
 
-### Pasos
+| Quadrant | Oriented to | Answers | Tone |
+|----------|-------------|---------|------|
+| **Tutorial** | Learning | "Walk me through it the first time" | Step by step, guaranteed result |
+| **How-to (guide)** | A concrete task | "How do I achieve X?" | Recipe, assumes context |
+| **Reference** | Information | "What parameters/contracts/errors does it have?" | Exhaustive, dry, exact |
+| **Explanation** | Understanding | "Why does it work this way?" | Context, decisions, trade-offs |
 
-1. **Determinar el delta de lo desplegado.** Revisar qué cambió: `git log` / `git diff` desde el último release o tag, CHANGELOG, archivos nuevos/movidos/borrados.
-2. **Inventariar docs candidatas.** Buscar READMEs y docs de proyecto que probablemente quedaron stale (Glob de `**/README.md`, `docs/**/*.md`). Excluir `docs/spec/`.
-3. **Detectar staleness concreta.** Buscar y cotejar contra la realidad del repo:
-   - **Rutas de archivos** mencionadas que ya no existen o se movieron.
-   - **Listas de comandos / scripts** (npm scripts, CLI, Makefile) que cambiaron.
-   - **Árbol de estructura** del proyecto (bloques de `tree`/listados de carpetas) que ya no coincide.
-   - **Snippets y ejemplos** que referencian APIs/firmas modificadas.
-   - **Versiones, badges, enlaces** rotos o desactualizados.
-4. **Actualizar con Edit** cada doc para que coincida con el estado real. Solo cambios respaldados por el código/estructura actual; no reescribir secciones que siguen correctas.
-5. **Reportar** un resumen de qué docs se actualizaron y qué staleness se corrigió, con rutas absolutas.
+### Steps
 
----
-
-## Modo `pdf` — Exportar markdown a PDF de calidad publicable
-
-Convierte un archivo markdown a un PDF con presentación profesional.
-
-### Pasos
-
-1. **Resolver el markdown de entrada** (segundo argumento o el doc recién generado).
-2. **Detectar herramienta disponible** (en este orden de preferencia): `pandoc` (con motor LaTeX como `xelatex`/`tectonic`), o alternativas como `md-to-pdf` / `weasyprint` / `prince`. Verificar con `command -v` antes de usar.
-3. **Configurar calidad de salida:**
-   - Márgenes razonables y tipografía legible.
-   - **Números de página.**
-   - **Tabla de contenidos (TOC) clickeable** con enlaces internos.
-   - **Diagramas Mermaid / Excalidraw renderizados como vectores** (no bitmaps borrosos) cuando la cadena de herramientas lo permita.
-4. **Generar el PDF** junto al markdown (o donde indique el usuario).
-5. **Degradación con aviso.** Si **no hay** herramienta de PDF disponible, **no fallar en silencio**: avisar explícitamente al usuario qué falta (ej. "no se encontró `pandoc`; instalar con `brew install pandoc`") y ofrecer la mejor alternativa posible (ej. HTML autocontenido). Nunca producir un PDF degradado sin avisar.
-6. **Reportar** la ruta absoluta del PDF (o del fallback) y la herramienta usada.
+1. **Resolve the target.** Take the second argument (`<feature or file>`). If not provided, ask which feature to document or infer it from the latest relevant change (`git log`, `git diff`).
+2. **Read the actual source code.** Use Glob/Grep/Read over the feature's files: functions, signatures, endpoints, parameters, types, errors, side effects. **The documentation describes what the code does, not what was intended.** Zero invention.
+3. **Locate the destination.** Detect the project's docs folder (`docs/`, `documentation/`, etc.). If there's no convention, propose `docs/` and respect the structure already in place. **Never** write to `docs/spec/`.
+4. **Decide which quadrants apply.** Not every feature needs all four. An internal utility may only need reference + explanation; a user-facing feature usually needs tutorial + how-to.
+5. **Write each quadrant** respecting its tone and purpose. Real, verifiable code snippets; copy-paste commands; tables for parameters and errors.
+6. **Link.** Index/README for the section with links to the generated quadrants. Maintain coherent navigation.
+7. **Report** the absolute paths of each file created or modified.
 
 ---
 
-## Enganche con el ciclo Karvey
+## `release` mode — Update stale docs after the deploy
 
-- **No avanza la fase.** Invocable en cualquier momento sin alterar `spec.json:phase`.
-- **Engancha con `karvey-archive` (FASE 12):** la documentación post-release forma parte del cierre. Tras archivar, usar `karvey-docs release` para dejar las docs de usuario alineadas con lo entregado, y opcionalmente `karvey-docs pdf` para entregables.
-- Las **specs internas** (`docs/spec/`) son responsabilidad de las skills de fase, no de esta.
+Detects and fixes stale documentation so it reflects **what was just deployed**. It's the post-release cleanup pass.
+
+### Steps
+
+1. **Determine the delta of what was deployed.** Review what changed: `git log` / `git diff` since the last release or tag, CHANGELOG, new/moved/deleted files.
+2. **Inventory candidate docs.** Look for READMEs and project docs that likely went stale (Glob of `**/README.md`, `docs/**/*.md`). Exclude `docs/spec/`.
+3. **Detect concrete staleness.** Search and cross-check against the repo's reality:
+   - **File paths** mentioned that no longer exist or were moved.
+   - **Command / script lists** (npm scripts, CLI, Makefile) that changed.
+   - **Structure tree** of the project (`tree` blocks / folder listings) that no longer matches.
+   - **Snippets and examples** that reference modified APIs/signatures.
+   - **Versions, badges, links** that are broken or outdated.
+4. **Update with Edit** each doc so it matches the real state. Only changes backed by the current code/structure; do not rewrite sections that are still correct.
+5. **Report** a summary of which docs were updated and what staleness was fixed, with absolute paths.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+
+## `pdf` mode — Export markdown to publication-quality PDF
+
+Converts a markdown file into a PDF with professional presentation.
+
+### Steps
+
+1. **Resolve the input markdown** (second argument or the doc just generated).
+2. **Detect available tooling** (in this order of preference): `pandoc` (with a LaTeX engine such as `xelatex`/`tectonic`), or alternatives like `md-to-pdf` / `weasyprint` / `prince`. Verify with `command -v` before using.
+3. **Configure output quality:**
+   - Reasonable margins and legible typography.
+   - **Page numbers.**
+   - **Clickable table of contents (TOC)** with internal links.
+   - **Mermaid / Excalidraw diagrams rendered as vectors** (not blurry bitmaps) when the toolchain allows it.
+4. **Generate the PDF** next to the markdown (or wherever the user indicates).
+5. **Degrade with a warning.** If **no** PDF tool is available, **do not fail silently**: explicitly warn the user what's missing (e.g., "`pandoc` not found; install with `brew install pandoc`") and offer the best possible alternative (e.g., self-contained HTML). Never produce a degraded PDF without warning.
+6. **Report** the absolute path of the PDF (or the fallback) and the tool used.
+
+---
+
+## Hook into the Karvey cycle
+
+- **Does not advance the phase.** Invocable at any time without altering `spec.json:phase`.
+- **Hooks into `karvey-archive` (PHASE 12):** post-release documentation is part of the closeout. After archiving, use `karvey-docs release` to bring the user docs in line with what shipped, and optionally `karvey-docs pdf` for deliverables.
+- The **internal specs** (`docs/spec/`) are the responsibility of the phase skills, not this one.
+
+---
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

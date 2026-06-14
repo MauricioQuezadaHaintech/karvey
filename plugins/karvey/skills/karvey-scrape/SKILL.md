@@ -1,48 +1,48 @@
 ---
 name: karvey-scrape
-description: Web data extractor for the Karvey method. Pulls data from a web page; first call prototypes the extraction, then codifies it into a reusable, tested script/skill for fast re-runs. Triggers include "karvey scrape", "scraping", "extraer datos web", "scrapear", "codificar skill", "skillify".
+description: Web data extractor for the Karvey method. Pulls data from a web page; first call prototypes the extraction, then codifies it into a reusable, tested script/skill for fast re-runs. Triggers include "karvey scrape", "scraping", "extraer datos web", "extract web data", "scrapear", "scrape", "codificar skill", "codify skill", "skillify".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [url] [--codify]
 ---
 
 # karvey-scrape
 
-**Skill transversal del Método Karvey™.** Es una **capa de apoyo, NO una fase**. No cambia `spec.json:phase` ni hace avanzar el flujo del método. Se puede invocar desde cualquier fase cuando necesitas extraer datos de una página web y, opcionalmente, dejar esa extracción codificada como un artefacto reutilizable.
+**CROSS-CUTTING SKILL of the Karvey™ Method.** It is a **support layer, NOT a phase**. It does not change `spec.json:phase` or advance the method's flow. It can be invoked from any phase when you need to extract data from a web page and, optionally, leave that extraction codified as a reusable artifact.
 
-Inspirada en `/scrape` + `/skillify` de gstack: combina un **extractor web** (prototipo rápido) con un **codificador de skills** (script + test + fixture reutilizable).
+Inspired by gstack's `/scrape` + `/skillify`: it combines a **web extractor** (quick prototype) with a **skill codifier** (reusable script + test + fixture).
 
-## Propósito
+## Purpose
 
-- **Prototipar**: en la primera llamada, extraer los datos pedidos de la página objetivo. Cuando el contenido sea dinámico o requiera interacción (JS, login, paginación, scroll), usar el runtime de browse disponible; para HTML estático basta con `curl`/`fetch` + parseo.
-- **Codificar (`--codify` / skillify)**: sintetizar a partir del prototipo un **script reutilizable + test + fixture**, correr el test, y **pedir confirmación antes de commitear**.
-- **Resultado**: extracciones repetibles y rápidas para intents que se repiten, sin tener que re-descubrir selectores ni lógica cada vez.
+- **Prototype**: on the first call, extract the requested data from the target page. When the content is dynamic or requires interaction (JS, login, pagination, scroll), use the available browse runtime; for static HTML, `curl`/`fetch` + parsing is enough.
+- **Codify (`--codify` / skillify)**: synthesize from the prototype a **reusable script + test + fixture**, run the test, and **ask for confirmation before committing**.
+- **Result**: repeatable, fast extractions for recurring intents, without having to rediscover selectors or logic each time.
 
-## Pasos
+## Steps
 
-### 1. Prototipar (primera llamada)
+### 1. Prototype (first call)
 
-1. Recibir la `[url]` y la descripción de los datos a extraer.
-2. Determinar la naturaleza de la página:
-   - **Estática** → descargar HTML y parsear (selectores CSS/XPath, regex acotado, JSON embebido).
-   - **Dinámica / con interacción** → usar el runtime de browse (navegar, esperar selectores, scroll, paginación, login si corresponde).
-3. Extraer los datos solicitados y presentarlos al usuario en un formato estructurado (JSON/tabla).
-4. Registrar los detalles relevantes de la extracción: URL, selectores/queries, pasos de navegación, formato de salida. Esto es la base para la codificación.
+1. Receive the `[url]` and the description of the data to extract.
+2. Determine the nature of the page:
+   - **Static** → download HTML and parse (CSS/XPath selectors, scoped regex, embedded JSON).
+   - **Dynamic / interactive** → use the browse runtime (navigate, wait for selectors, scroll, pagination, login if applicable).
+3. Extract the requested data and present it to the user in a structured format (JSON/table).
+4. Record the relevant details of the extraction: URL, selectors/queries, navigation steps, output format. This is the basis for codification.
 
-### 2. Codificar (`--codify` / skillify)
+### 2. Codify (`--codify` / skillify)
 
-Cuando se pasa `--codify` (o el usuario pide "codificar skill" / "skillify"):
+When `--codify` is passed (or the user asks to "codify skill" / "skillify"):
 
-1. **Sintetizar el script reutilizable** a partir del prototipo: parametrizar URL/inputs, encapsular selectores y pasos de navegación, definir el contrato de salida.
-2. **Generar un test** que valide la extracción contra un **fixture** (snapshot del HTML/respuesta capturado en el prototipo), de modo que el test sea determinista y no dependa de la red.
-3. **Correr el test** y ajustar hasta que pase.
-4. **Pedir confirmación explícita antes de commitear** el script + test + fixture.
+1. **Synthesize the reusable script** from the prototype: parameterize URL/inputs, encapsulate selectors and navigation steps, define the output contract.
+2. **Generate a test** that validates the extraction against a **fixture** (snapshot of the HTML/response captured in the prototype), so the test is deterministic and does not depend on the network.
+3. **Run the test** and adjust until it passes.
+4. **Ask for explicit confirmation before committing** the script + test + fixture.
 
-## Reglas
+## Rules
 
-- **Respetar términos de uso y `robots.txt`** de los sitios. No usar esta skill para scraping abusivo, evasión de protecciones, ni recolección masiva no autorizada.
-- **No avanza la fase.** Es capa de apoyo; nunca modificar `spec.json:phase` desde aquí.
-- Mantener los fixtures acotados y los tests deterministas (sin llamadas de red en el test).
-- No commitear nada sin confirmación del usuario.
+- **Respect sites' terms of use and `robots.txt`.** Do not use this skill for abusive scraping, evasion of protections, or unauthorized mass collection.
+- **Does not advance the phase.** It's a support layer; never modify `spec.json:phase` from here.
+- Keep fixtures scoped and tests deterministic (no network calls in the test).
+- Do not commit anything without the user's confirmation.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

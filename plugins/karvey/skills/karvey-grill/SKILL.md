@@ -1,203 +1,203 @@
 ---
 name: karvey-grill
-description: Pre-spec interrogation. Interviews the engineer relentlessly about their problem before writing any spec. Use at the start of every new feature or initiative — before karvey-init. Triggers include "grill me", "entrevístame", "quiero especificar algo", "tengo una idea", "necesito una feature", "spec-driven", "SDD", "kiro", "gstack", "Garry Tan", "office hours", "producto 10 estrellas", "reframe", "PRD", "método de desarrollo".
+description: Pre-spec interrogation. Interviews the engineer relentlessly about their problem before writing any spec. Use at the start of every new feature or initiative — before karvey-init. Triggers include "grill me", "entrevístame", "interview me", "quiero especificar algo", "I want to spec something", "tengo una idea", "I have an idea", "necesito una feature", "I need a feature", "spec-driven", "SDD", "kiro", "gstack", "Garry Tan", "office hours", "producto 10 estrellas", "10-star product", "reframe", "PRD", "método de desarrollo", "development method".
 allowed-tools: Read, Bash, Glob, Grep
 argument-hint: [descripción breve del problema o idea]
 ---
 
 # Karvey Grill — Pre-Spec Interrogation
 
-## Propósito
+## Purpose
 
-Antes de escribir una sola línea de spec, este skill te entrevista en profundidad hasta que el problema esté completamente comprendido. Una pregunta a la vez. Con recomendación incluida en cada una.
+Before writing a single line of spec, this skill interviews you in depth until the problem is fully understood. One question at a time. With a recommendation included in each one.
 
-## Instrucciones de ejecución
+## Execution instructions
 
-### Paso 0 — Reframe 10-estrellas (opcional)
+### Step 0 — 10-star reframe (optional)
 
-> **Modo opcional.** Este paso va ANTES (o al inicio) de la interrogación. Su objetivo NO es especificar lo pedido, sino encontrar la **mejor versión del producto** escondida en el pedido. Inspirado en `/office-hours` + `/plan-ceo-review`.
+> **Optional mode.** This step comes BEFORE (or at the start of) the interrogation. Its goal is NOT to specify what was asked for, but to find the **best version of the product** hidden in the request. Inspired by `/office-hours` + `/plan-ceo-review`.
 >
-> **Cuándo saltarlo:** si el usuario ya tiene total claridad del producto que quiere, o pide explícitamente ir directo a la interrogación, saltar a Paso 1. Ofrecerlo, no imponerlo.
+> **When to skip it:** if the user already has full clarity on the product they want, or explicitly asks to go straight to the interrogation, jump to Step 1. Offer it, don't impose it.
 
-Antes de arrancar, preguntar:
-
-```
-¿Querés hacer el reframe 10-estrellas primero (encontrar la mejor versión del producto), o vamos directo a la interrogación?
-
-*Mi recomendación:* {hacerlo si el pedido es vago/ambicioso/estratégico; saltarlo si es un cambio acotado y bien definido}
-```
-
-Si el usuario acepta, recorrer las **seis preguntas forzadas**, **una pregunta a la vez, con recomendación** (mismas reglas del entrevistador). Cada pregunta reformula el producto antes de especificarlo:
-
-1. **Desafiar la premisa.** ¿El problema planteado es el problema real, o un síntoma? ¿Qué pasaría si la premisa estuviera equivocada?
-2. **Producto 10 estrellas.** Si esto fuera una experiencia perfecta (10/10), ¿cómo se vería? ¿Qué versión escondida del pedido deleitaría al usuario?
-3. **Scope expansion (10x).** ¿Qué lo haría 10x mejor, no 10% mejor? ¿Qué capacidad adyacente lo transforma de "útil" a "imprescindible"?
-4. **Selective expansion.** De esas ideas grandes, ¿cuáles valen la pena de verdad y caben en este esfuerzo? (separar el "wow" viable del "wow" fantasía)
-5. **Hold scope.** ¿Qué dejamos deliberadamente para después (v2) aunque sea tentador? Marcar el límite consciente.
-6. **Reduction.** ¿Qué sobra del pedido original? ¿Qué se puede quitar sin perder valor, o que incluso mejora el producto al sacarlo?
-
-Al cerrar las seis, sintetizar un **mini design-doc / visión** (ver Paso 4: sección "Visión 10-estrellas"). Este documento **alimenta el PRD junto con la síntesis de la interrogación normal**: el reframe define el "qué deberíamos construir" y la interrogación define el "cómo lo construimos".
-
-> Si se hizo el reframe, usar su visión para enfocar y afinar las preguntas de las ramas A–F (no repetir lo ya resuelto).
-
-### Paso 1 — Contexto inicial
-
-Si el usuario dio una descripción en `$ARGUMENTS`, usarla como punto de partida.
-Si no, hacer la primera pregunta abierta: "¿Qué problema querés resolver y para quién?"
-
-Antes de preguntar algo que pueda responderse explorando el codebase, **explorar primero**:
-- Buscar si ya existe funcionalidad similar (`grep`, `find`)
-- Leer archivos de configuración o specs existentes en `docs/spec/`
-- Si encontrás la respuesta, presentarla como contexto y avanzar a la siguiente pregunta
-
-### Paso 2 — Árbol de interrogación
-
-Recorrer sistemáticamente estas ramas, **una pregunta a la vez**:
-
-#### Rama A: El problema
-1. ¿Quién tiene el problema? (persona/sistema/rol)
-2. ¿Cuál es la situación actual que causa fricción?
-3. ¿Qué tan frecuente ocurre? ¿Cuál es el impacto?
-4. ¿Intentaron resolverlo antes? ¿Qué falló?
-
-#### Rama B: El alcance
-5. ¿Qué está DENTRO del alcance de esta iniciativa?
-6. ¿Qué está FUERA del alcance explícitamente?
-7. ¿Qué otros sistemas o componentes se ven afectados?
-8. ¿Qué datos nuevos se necesitan? ¿Qué datos existentes se modifican?
-
-#### Rama C: Restricciones técnicas
-9. ¿En qué capa(s) opera esto: BD / Backend / Frontend / Infra?
-10. ¿Hay integraciones externas involucradas?
-11. ¿Qué nivel de seguridad requiere? (datos públicos / autenticado / datos sensibles / crítico con audit trail)
-12. ¿Hay restricciones de performance o SLA?
-
-#### Rama F: Stack tecnológico
-> Antes de preguntar, explorar el codebase: `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `Gemfile`, `Cargo.toml`, archivos de config de BD, etc. Solo preguntar lo que no se pueda inferir.
-
-13. ¿Cuál es el lenguaje y framework del backend? (Node/Express, Python/FastAPI, Go, Java/Spring, Ruby/Rails, etc.)
-14. ¿Qué base de datos usa y cómo accede a ella? (PostgreSQL/ORM, MySQL/queries, MongoDB, Oracle/SPs, Redis, etc.)
-15. ¿El cambio tiene UI? ¿Con qué framework? (React, Vue, Angular, Svelte, server-rendered, no aplica, etc.)
-16. ¿Qué protocolo de API usa? (REST, GraphQL, gRPC, mensajería, WebSockets, etc.)
-17. ¿Cómo se versionan los releases? (package.json, pyproject.toml, archivo VERSION, git tags, ninguno, etc.)
-18. ¿Hay convenciones de git establecidas? (Conventional Commits, gitflow, trunk-based, squash, etc.)
-19. ¿Plataforma de código/CI: GitHub o Azure DevOps? (dónde viven los repos y corren los pipelines)
-
-    *Mi recomendación:* {detectar por remotes git / archivos de pipeline — `.github/workflows`, `azure-pipelines.yml` — y confirmar dónde corren los pipelines}
-20. ¿Proveedor de nube: Azure, GCP, AWS, mixto o ninguno? Si es mixto, ¿qué parte en qué nube?
-
-    *Mi recomendación:* {inferir por SDKs/CLIs y archivos de IaC presentes; si es mixto, pedir el desglose de qué componente vive en qué nube}
-21. ¿Herramienta de IaC: Terraform, Bicep, Pulumi o ninguna (infra manual)?
-
-    *Mi recomendación:* {buscar `*.tf`, `*.bicep`, `Pulumi.yaml`; si no hay, asumir infra manual y confirmarlo}
-
-> **Nota:** la decisión de sincronización de conocimiento (Obsidian vs graphify) NO se pregunta aquí — la resuelve karvey-init según la disponibilidad del MCP de Obsidian (ver `karvey/rules/knowledge-sync.md`).
-
-#### Rama D: Criterios de éxito
-22. ¿Cómo sabremos que esto funciona correctamente?
-23. ¿Cuáles son los casos de error críticos que deben manejarse?
-24. ¿Qué NO debe cambiar del comportamiento actual?
-
-#### Rama E: Dependencias y riesgos
-25. ¿Qué debe estar listo ANTES de empezar esto?
-26. ¿Qué bloquea este trabajo si no se resuelve primero?
-27. ¿Cuál es el riesgo más grande de esta iniciativa?
-
-### Paso 3 — Formato de cada pregunta
+Before starting, ask:
 
 ```
-**Pregunta N/~27:** {pregunta clara y específica}
+Do you want to do the 10-star reframe first (find the best version of the product), or go straight to the interrogation?
 
-*Mi recomendación:* {tu respuesta sugerida basada en lo que ya sabés del contexto}
+*My recommendation:* {do it if the request is vague/ambitious/strategic; skip it if it's a well-defined, narrow change}
 ```
 
-Adaptar las preguntas según las respuestas anteriores. Si una rama ya está clara, saltarla.
-Si una respuesta genera sub-preguntas, profundizar antes de avanzar.
+If the user accepts, walk through the **six forced questions**, **one question at a time, with a recommendation** (same rules as the interviewer). Each question reframes the product before specifying it:
 
-### Paso 4 — Síntesis final
+1. **Challenge the premise.** Is the stated problem the real problem, or a symptom? What if the premise were wrong?
+2. **10-star product.** If this were a perfect experience (10/10), what would it look like? What hidden version of the request would delight the user?
+3. **Scope expansion (10x).** What would make it 10x better, not 10% better? What adjacent capability turns it from "useful" into "indispensable"?
+4. **Selective expansion.** Of those big ideas, which ones are truly worth it and fit within this effort? (separate the viable "wow" from the fantasy "wow")
+5. **Hold scope.** What do we deliberately leave for later (v2) even if it's tempting? Mark the conscious boundary.
+6. **Reduction.** What's surplus in the original request? What can be removed without losing value, or that even improves the product by taking it out?
 
-Cuando el árbol esté cubierto (o el usuario indique que terminó), generar un resumen:
+After closing the six, synthesize a **mini design-doc / vision** (see Step 4: "10-star vision" section). This document **feeds the PRD alongside the synthesis from the normal interrogation**: the reframe defines "what we should build" and the interrogation defines "how we build it".
 
-> Este resumen es el **insumo del PRD** (`prd.md`) que generará karvey-init. Mantenerlo completo y fiel: lo que falte aquí, faltará en el PRD.
+> If the reframe was done, use its vision to focus and sharpen the questions in branches A–F (don't repeat what's already resolved).
+
+### Step 1 — Initial context
+
+If the user gave a description in `$ARGUMENTS`, use it as the starting point.
+If not, ask the first open question: "What problem do you want to solve, and for whom?"
+
+Before asking anything that could be answered by exploring the codebase, **explore first**:
+- Search for whether similar functionality already exists (`grep`, `find`)
+- Read existing configuration files or specs in `docs/spec/`
+- If you find the answer, present it as context and move to the next question
+
+### Step 2 — Interrogation tree
+
+Systematically walk through these branches, **one question at a time**:
+
+#### Branch A: The problem
+1. Who has the problem? (person/system/role)
+2. What is the current situation causing friction?
+3. How frequently does it happen? What is the impact?
+4. Did they try to solve it before? What failed?
+
+#### Branch B: The scope
+5. What is IN scope for this initiative?
+6. What is explicitly OUT of scope?
+7. What other systems or components are affected?
+8. What new data is needed? What existing data is modified?
+
+#### Branch C: Technical constraints
+9. Which layer(s) does this operate on: DB / Backend / Frontend / Infra?
+10. Are there external integrations involved?
+11. What level of security does it require? (public data / authenticated / sensitive data / critical with audit trail)
+12. Are there performance or SLA constraints?
+
+#### Branch F: Technology stack
+> Before asking, explore the codebase: `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `Gemfile`, `Cargo.toml`, DB config files, etc. Only ask what can't be inferred.
+
+13. What is the backend language and framework? (Node/Express, Python/FastAPI, Go, Java/Spring, Ruby/Rails, etc.)
+14. What database does it use and how does it access it? (PostgreSQL/ORM, MySQL/queries, MongoDB, Oracle/SPs, Redis, etc.)
+15. Does the change have a UI? With what framework? (React, Vue, Angular, Svelte, server-rendered, not applicable, etc.)
+16. What API protocol does it use? (REST, GraphQL, gRPC, messaging, WebSockets, etc.)
+17. How are releases versioned? (package.json, pyproject.toml, VERSION file, git tags, none, etc.)
+18. Are there established git conventions? (Conventional Commits, gitflow, trunk-based, squash, etc.)
+19. Code/CI platform: GitHub or Azure DevOps? (where the repos live and the pipelines run)
+
+    *My recommendation:* {detect from git remotes / pipeline files — `.github/workflows`, `azure-pipelines.yml` — and confirm where the pipelines run}
+20. Cloud provider: Azure, GCP, AWS, mixed, or none? If mixed, which part on which cloud?
+
+    *My recommendation:* {infer from the SDKs/CLIs and IaC files present; if mixed, ask for the breakdown of which component lives on which cloud}
+21. IaC tool: Terraform, Bicep, Pulumi, or none (manual infra)?
+
+    *My recommendation:* {look for `*.tf`, `*.bicep`, `Pulumi.yaml`; if there's none, assume manual infra and confirm it}
+
+> **Note:** the knowledge-sync decision (Obsidian vs graphify) is NOT asked here — karvey-init resolves it based on the availability of the Obsidian MCP (see `karvey/rules/knowledge-sync.md`).
+
+#### Branch D: Success criteria
+22. How will we know this works correctly?
+23. What are the critical error cases that must be handled?
+24. What about the current behavior must NOT change?
+
+#### Branch E: Dependencies and risks
+25. What must be ready BEFORE starting this?
+26. What blocks this work if it isn't resolved first?
+27. What is the biggest risk of this initiative?
+
+### Step 3 — Format of each question
+
+```
+**Question N/~27:** {clear and specific question}
+
+*My recommendation:* {your suggested answer based on what you already know about the context}
+```
+
+Adapt the questions based on the previous answers. If a branch is already clear, skip it.
+If an answer raises sub-questions, dig deeper before moving on.
+
+### Step 4 — Final synthesis
+
+When the tree is covered (or the user signals they're done), generate a summary:
+
+> This summary is the **input to the PRD** (`prd.md`) that karvey-init will generate. Keep it complete and faithful: whatever is missing here will be missing in the PRD.
 
 ```markdown
-## Resumen Pre-Spec: {nombre tentativo del cambio}
+## Pre-Spec Summary: {tentative name of the change}
 
-### Visión 10-estrellas (si se hizo Paso 0)
-> Mini design-doc del reframe. Omitir esta sección si el Paso 0 se saltó.
-- **Premisa reencuadrada:** {el problema real vs. el síntoma planteado}
-- **Producto 10 estrellas:** {cómo se ve la experiencia perfecta}
-- **Expansión seleccionada:** {ideas 10x que SÍ entran en este esfuerzo}
-- **Scope en espera (v2):** {lo grande que se deja deliberadamente para después}
-- **Reducción:** {qué se quita del pedido original y por qué}
+### 10-star vision (if Step 0 was done)
+> Mini design-doc from the reframe. Omit this section if Step 0 was skipped.
+- **Reframed premise:** {the real problem vs. the stated symptom}
+- **10-star product:** {what the perfect experience looks like}
+- **Selected expansion:** {10x ideas that DO fit within this effort}
+- **Held scope (v2):** {the big stuff deliberately left for later}
+- **Reduction:** {what's removed from the original request and why}
 
-### El problema
-{quién, situación actual, impacto}
+### The problem
+{who, current situation, impact}
 
-### Lo que cambia
-{qué entra en scope, qué queda fuera}
+### What changes
+{what's in scope, what's out}
 
-### Stack detectado
-- Backend: {lenguaje/framework}
-- Base de datos: {BD y patrón de acceso}
-- Frontend: {framework o "no aplica"}
-- API: {protocolo}
-- Versionamiento: {mecanismo}
-- Git: {convenciones}
+### Detected stack
+- Backend: {language/framework}
+- Database: {DB and access pattern}
+- Frontend: {framework or "not applicable"}
+- API: {protocol}
+- Versioning: {mechanism}
+- Git: {conventions}
 
-### Plataforma & Despliegue
-- Plataforma git: {GitHub | Azure DevOps}
-- Proveedor(es) de nube: {Azure | GCP | AWS | mixto | ninguno — si es mixto, qué parte en qué nube}
-- Herramienta IaC: {Terraform | Bicep | Pulumi | ninguna (infra manual)}
+### Platform & Deployment
+- Git platform: {GitHub | Azure DevOps}
+- Cloud provider(s): {Azure | GCP | AWS | mixed | none — if mixed, which part on which cloud}
+- IaC tool: {Terraform | Bicep | Pulumi | none (manual infra)}
 
-> Sincronización de conocimiento (Obsidian vs graphify): la decide karvey-init según disponibilidad del MCP de Obsidian (ver `karvey/rules/knowledge-sync.md`).
+> Knowledge sync (Obsidian vs graphify): decided by karvey-init based on the availability of the Obsidian MCP (see `karvey/rules/knowledge-sync.md`).
 
-### Restricciones clave
-- Capas: {BD/Backend/Frontend/Infra}
-- Seguridad: {nivel — justificación}
-- Integraciones externas: {lista}
-- Restricciones técnicas: {lista}
+### Key constraints
+- Layers: {DB/Backend/Frontend/Infra}
+- Security: {level — justification}
+- External integrations: {list}
+- Technical constraints: {list}
 
-### Criterios de éxito
-{cómo se verifica que funciona}
+### Success criteria
+{how it's verified that it works}
 
-### Casos de error críticos
-{lista}
+### Critical error cases
+{list}
 
-### Riesgos principales
-{lista}
+### Main risks
+{list}
 
-### Dependencias previas
-{qué debe existir antes}
+### Prerequisite dependencies
+{what must exist beforehand}
 
-### Change ID sugerido
-`{add|fix|update|remove}-{nombre-descriptivo}` — {rationale}
+### Suggested Change ID
+`{add|fix|update|remove}-{descriptive-name}` — {rationale}
 ```
 
-### Paso 5 — Transición
+### Step 5 — Transition
 
-Al terminar, indicar:
+When done, indicate:
 ```
-✅ Interrogación completa. Siguiente paso:
-/karvey-init {change-id-sugerido}
+✅ Interrogation complete. Next step:
+/karvey-init {suggested-change-id}
 ```
 
-## Reglas del entrevistador
+## Interviewer rules
 
-- **Una pregunta a la vez**. Nunca hacer dos preguntas en el mismo mensaje.
-- **Siempre incluir recomendación** en cada pregunta.
-- **Explorar el codebase** antes de preguntar algo que pueda descubrirse solo.
-- **No asumir** tecnología, escala ni usuarios sin confirmar.
-- **No avanzar** a especificación hasta que el árbol esté cubierto.
-- El tono es colaborativo, no inquisitorial. El objetivo es construir entendimiento compartido.
+- **One question at a time**. Never ask two questions in the same message.
+- **Always include a recommendation** in each question.
+- **Explore the codebase** before asking something that can be discovered on your own.
+- **Don't assume** technology, scale, or users without confirming.
+- **Don't advance** to specification until the tree is covered.
+- The tone is collaborative, not inquisitorial. The goal is to build shared understanding.
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase Init (crear el cambio) ahora?»
-- Si confirma → ejecutá `/karvey-init {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Init phase (create the change) now?"
+- If they confirm → run `/karvey-init {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (a gate of the method).
+- If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

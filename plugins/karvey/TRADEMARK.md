@@ -1,33 +1,33 @@
-# Política de Marca — Karvey™
+# Trademark Policy — Karvey™
 
-## La marca
+## The trademark
 
-**"Karvey"** es una marca de **HainTech**. Es una palabra **ona/selknam** que significa ***Afán***.
+**"Karvey"** is a trademark of **HainTech**. It is an **Ona/Selknam** word meaning ***Afán*** (zeal / drive).
 
-El **método** y su **código** (las skills `karvey-*`, reglas y plantillas) se publican bajo **Apache License 2.0** — cualquiera puede usarlos, modificarlos, adaptarlos y crear derivados, incluso con fines comerciales, respetando la licencia (ver `LICENSE` y `NOTICE`).
+The **method** and its **code** (the `karvey-*` skills, rules and templates) are published under the **Apache License 2.0** — anyone may use, modify, adapt and create derivatives, even commercially, while complying with the license (see `LICENSE` and `NOTICE`).
 
-**Pero la licencia de código NO otorga derechos sobre la marca.** El nombre "Karvey" y la convención de nombres "karvey-*" quedan reservados a HainTech.
+**But the code license does NOT grant rights over the trademark.** The "Karvey" name and the "karvey-*" naming convention remain reserved to HainTech.
 
-## Qué puedes hacer
+## What you may do
 
-- ✅ Usar, modificar y adaptar el método y las skills `karvey-*` (Apache 2.0).
-- ✅ Crear extensiones o variantes con el prefijo `karvey-*`, **siempre que**:
-  - Conserves la atribución a **Mauricio Quezada Ibáñez / HainTech** (ver `NOTICE`).
-  - No impliques que tu variante es la versión oficial ni que cuenta con el endoso de HainTech (salvo permiso por escrito).
-- ✅ Referirte al método como "Karvey" para describir compatibilidad o linaje (uso nominativo honesto).
+- ✅ Use, modify and adapt the method and the `karvey-*` skills (Apache 2.0).
+- ✅ Create extensions or variants with the `karvey-*` prefix, **as long as**:
+  - You keep attribution to **Mauricio Quezada Ibáñez / HainTech** (see `NOTICE`).
+  - You do not imply your variant is the official version or endorsed by HainTech (unless granted in writing).
+- ✅ Refer to the method as "Karvey" to describe compatibility or lineage (honest nominative use).
 
-## Qué requiere permiso de HainTech
+## What requires HainTech's permission
 
-- ❌ Usar la marca "Karvey" como nombre de un producto/servicio comercial propio que sugiera origen o endoso oficial.
-- ❌ Registrar "Karvey" (o marcas confundibles) como marca propia.
-- ❌ Presentar un fork como "el Karvey oficial".
+- ❌ Using the "Karvey" trademark as the name of your own commercial product/service in a way that suggests official origin or endorsement.
+- ❌ Registering "Karvey" (or confusingly similar marks) as your own trademark.
+- ❌ Presenting a fork as "the official Karvey".
 
-## Atribución requerida
+## Required attribution
 
-Todo uso o derivado debe conservar, en su documentación:
+Any use or derivative must keep, in its documentation:
 
-> Basado en el **Método Karvey™** — creado por Mauricio Quezada Ibáñez, © HainTech. Licenciado bajo Apache 2.0. "Karvey" (selknam: *Afán*) es marca de HainTech.
+> Based on the **Karvey™ Method** — created by Mauricio Quezada Ibáñez, © HainTech. Licensed under Apache 2.0. "Karvey" (Selknam: *Afán*) is a trademark of HainTech.
 
-## Contacto
+## Contact
 
-Para permisos de marca o consultas: HainTech (vía Mauricio Quezada Ibáñez).
+For trademark permissions or inquiries: HainTech (via Mauricio Quezada Ibáñez).

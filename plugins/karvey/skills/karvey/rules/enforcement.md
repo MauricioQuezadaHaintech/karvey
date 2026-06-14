@@ -1,36 +1,36 @@
-# Regla: Enforcement por hooks (git-flow + plan-gate)
+# Rule: Hook-based enforcement (git-flow + plan-gate)
 
-Una skill es **guía** que el modelo sigue voluntariamente — no garantiza nada. Para **forzar** comportamiento de forma determinista se usan **hooks** del harness (`PreToolUse`), que sí bloquean. Karvey **provee e instala (opt-in)** dos hooks que cierran los dos agujeros más comunes:
+A skill is **guidance** that the model follows voluntarily — it guarantees nothing. To **force** behavior deterministically, harness **hooks** (`PreToolUse`) are used, which do block. Karvey **provides and installs (opt-in)** two hooks that close the two most common holes:
 
-1. **git-flow** — evita que se salte el flujo (push directo a master, commit en dev/master).
-2. **plan-gate** — evita cambios sin plan aprobado.
+1. **git-flow** — prevents skipping the flow (direct push to master, commit on dev/master).
+2. **plan-gate** — prevents changes without an approved plan.
 
-## Instalación (opt-in por proyecto)
+## Installation (opt-in per project)
 
-- `karvey-init` pregunta si activar el enforcement. Si sí, escribe los hooks en el `settings.json` del proyecto (o el `.claude/settings.json` correspondiente), parametrizados con `project.json:branch_flow`.
-- `karvey-guard` los gestiona después: **instalar**, **desactivar**, o conceder **override** temporal.
-- Las plantillas viven en `karvey/hooks/` (`git-flow-guard.sh`, `plan-gate.sh`).
+- `karvey-init` asks whether to activate enforcement. If yes, it writes the hooks into the project's `settings.json` (or the corresponding `.claude/settings.json`), parameterized with `project.json:branch_flow`.
+- `karvey-guard` manages them afterward: **install**, **disable**, or grant a temporary **override**.
+- The templates live in `karvey/hooks/` (`git-flow-guard.sh`, `plan-gate.sh`).
 
-## Hook 1 — git-flow-guard (PreToolUse sobre Bash)
+## Hook 1 — git-flow-guard (PreToolUse on Bash)
 
-Intercepta comandos `git`:
-- **Bloquea** `git push` directo a la rama de producción (`branch_flow.production`, default `master`) y a la de integración cuando no viene de merge del flujo.
-- **Bloquea** `git commit` cuando la rama actual es `dev`/`master` (debe ser `feature/*`).
-- **Bloquea** deploy manual (`func azure functionapp publish` y equivalentes) — el deploy lo hacen los CI/CD.
-- Flujo permitido: `feature/* → dev → PR → master`. Ver `deploy-workflow.md`.
+Intercepts `git` commands:
+- **Blocks** `git push` directly to the production branch (`branch_flow.production`, default `master`) and to the integration branch when it does not come from a flow merge.
+- **Blocks** `git commit` when the current branch is `dev`/`master` (it must be `feature/*`).
+- **Blocks** manual deploy (`func azure functionapp publish` and equivalents) — the deploy is done by CI/CD.
+- Permitted flow: `feature/* → dev → PR → master`. See `deploy-workflow.md`.
 
-## Hook 2 — plan-gate (PreToolUse sobre Edit/Write/Bash destructivo)
+## Hook 2 — plan-gate (PreToolUse on destructive Edit/Write/Bash)
 
-- **Exige plan aprobado en TODO el flujo**: cualquier `Edit`, `Write` o comando destructivo se bloquea si no existe la marca de aprobación.
-- **Override**: el usuario aprueba el plan y se crea la marca (patrón `touch <flag>`); el hook deja pasar hasta que se consuma/expire.
-- Mensaje de bloqueo claro indicando que falta presentar y aprobar el plan.
+- **Requires an approved plan throughout the whole flow**: any `Edit`, `Write` or destructive command is blocked if the approval marker does not exist.
+- **Override**: the user approves the plan and the marker is created (`touch <flag>` pattern); the hook lets things through until it is consumed/expires.
+- Clear block message indicating that the plan still needs to be presented and approved.
 
-## Override y reversión
+## Override and reversion
 
-- **Override puntual**: crear la marca de aprobación (definida en el hook) tras presentar el plan.
-- **Desactivar**: `karvey-guard --disable-hooks` quita los hooks del `settings.json` del proyecto.
-- Los hooks son **reversibles** y **por proyecto**; nunca se imponen globalmente sin que el usuario lo decida.
+- **One-off override**: create the approval marker (defined in the hook) after presenting the plan.
+- **Disable**: `karvey-guard --disable-hooks` removes the hooks from the project's `settings.json`.
+- The hooks are **reversible** and **per-project**; they are never imposed globally without the user deciding so.
 
-## Relación con guardrails de gstack
+## Relationship with gstack guardrails
 
-Absorbe el valor de `/careful`, `/freeze`, `/guard`: `karvey-guard` también ofrece **edit-lock a un directorio** (bloquea Edit/Write fuera de un boundary) para trabajo sensible o debugging.
+It absorbs the value of `/careful`, `/freeze`, `/guard`: `karvey-guard` also offers an **edit-lock on a directory** (blocks Edit/Write outside a boundary) for sensitive work or debugging.

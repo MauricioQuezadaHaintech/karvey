@@ -1,192 +1,192 @@
 ---
 name: karvey-impl
-description: Execute implementation tasks sequentially with ClickUp time tracking or PLAN.md updates. Read → execute → test → validate cycle per task. Triggers include "karvey impl", "implementar", "ejecutar tasks", "desarrollar".
+description: Execute implementation tasks sequentially with ClickUp time tracking or PLAN.md updates. Read → execute → test → validate cycle per task. Triggers include "karvey impl", "implementar", "implement", "ejecutar tasks", "execute tasks", "desarrollar", "develop".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 argument-hint: <change-id> [F{n}.T{n}] [--from F{n}.T{n}]
 ---
 
 # Karvey Impl
 
-## Propósito
+## Purpose
 
-Ejecutar las tasks de implementación en orden BD→Backend→Frontend. Ciclo por task: read → execute → test → validate. Actualizar ClickUp o PLAN.md en tiempo real.
+Execute the implementation tasks in DB→Backend→Frontend order. Per-task cycle: read → execute → test → validate. Update ClickUp or PLAN.md in real time.
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 1 — Cargar contexto
+### Step 1 — Load context
 
-Leer:
+Read:
 - `docs/spec/changes/{change-id}/spec.json`
 - `docs/spec/changes/{change-id}/tasks.md`
 - `docs/spec/changes/{change-id}/architecture.md`
 - `docs/spec/changes/{change-id}/requirements.md`
 
-Verificar `approvals.tasks.approved = true`. Si no, detener.
+Verify `approvals.tasks.approved = true`. If not, stop.
 
-Si se especifica una task específica (`F{n}.T{n}`): ejecutar solo esa.
-Si se especifica `--from F{n}.T{n}`: comenzar desde esa task y continuar secuencialmente.
-Si no se especifica: comenzar desde la primera task pendiente.
+If a specific task is given (`F{n}.T{n}`): execute only that one.
+If `--from F{n}.T{n}` is given: start from that task and continue sequentially.
+If nothing is specified: start from the first pending task.
 
-### Paso 2 — Seleccionar task a ejecutar
+### Step 2 — Select the task to execute
 
-Identificar la próxima task pendiente respetando dependencias:
-- No ejecutar [Backend] hasta que su [BD] dependiente esté completada
-- No ejecutar [Frontend] hasta que su [Backend] dependiente esté completada
-- Tareas marcadas `(P)` pueden ejecutarse en paralelo con subagentes
+Identify the next pending task while respecting dependencies:
+- Do not execute [Backend] until its dependent [DB] is completed
+- Do not execute [Frontend] until its dependent [Backend] is completed
+- Tasks marked `(P)` can be executed in parallel with subagents
 
-### Paso 3 — Iniciar task en gestión
+### Step 3 — Start the task in management
 
-**Si ClickUp:**
+**If ClickUp:**
 ```
 clickup_update_task(task_id, status="in progress")
 clickup_start_time_tracking(task_id)
 ```
 
-**Si Markdown:**
-Editar `PLAN.md`, cambiar `⬜ pendiente` → `🔄 en progreso` para la task.
+**If Markdown:**
+Edit `PLAN.md`, change `⬜ pending` → `🔄 in progress` for the task.
 
-### Paso 4 — Ejecutar la task
+### Step 4 — Execute the task
 
-Leer la descripción completa de la task y sus criterios de aceptación.
-Ejecutar el trabajo técnico: crear/modificar archivos según el File Structure Plan.
+Read the full task description and its acceptance criteria.
+Do the technical work: create/modify files per the File Structure Plan.
 
-**Reglas de ejecución:**
-- Respetar el boundary de la task — no tocar código fuera de su scope
-- Seguir los patrones del stack existente (leer archivos similares del codebase antes de escribir)
-- No hardcodear secretos ni credenciales
-- Validar contexto de usuario/autenticación en cada endpoint y acceso a datos, según el patrón del proyecto
+**Execution rules:**
+- Respect the task's boundary — do not touch code outside its scope
+- Follow the existing stack's patterns (read similar files from the codebase before writing)
+- Do not hardcode secrets or credentials
+- Validate the user context/authentication on every endpoint and data access, per the project's pattern
 
-**Reglas de branching (ver `karvey/rules/deploy-workflow.md`):**
-- Antes de empezar: hacer `git pull` y trabajar en la rama `feature/{change-id}` (usar el `feature_prefix` de `docs/spec/project.json` si difiere). Crear la rama si no existe.
-- NUNCA hacer commit directo en `dev` ni `master`.
-- 1 commit por task en la feature branch, con mensaje descriptivo siguiendo las convenciones de git del proyecto.
-- Si el proyecto es multi-repo (`project.json:repos`): aplicar el branching y el registro en `CHANGELOG.md` en cada repo que reciba cambios.
+**Branching rules (see `karvey/rules/deploy-workflow.md`):**
+- Before starting: do a `git pull` and work on the `feature/{change-id}` branch (use the `feature_prefix` from `docs/spec/project.json` if it differs). Create the branch if it does not exist.
+- NEVER commit directly to `dev` or `master`.
+- 1 commit per task on the feature branch, with a descriptive message following the project's git conventions.
+- If the project is multi-repo (`project.json:repos`): apply the branching and the `CHANGELOG.md` entry in each repo that receives changes.
 
-**Bump de versión (si el proyecto lo gestiona):**
-Detectar el mecanismo de versionamiento leyendo `architecture.md` o explorando el proyecto:
-- `package.json` → actualizar campo `version`
-- `pyproject.toml` / `setup.py` → actualizar `version`
-- Archivo `VERSION` → actualizar valor
-- `git tags` → crear tag al final del Epic
-- Si hay `CHANGELOG.md` o equivalente → agregar entrada con la versión, fecha y descripción
-- Si el proyecto no tiene versionamiento → omitir este paso
+**Version bump (if the project manages it):**
+Detect the versioning mechanism by reading `architecture.md` or exploring the project:
+- `package.json` → update the `version` field
+- `pyproject.toml` / `setup.py` → update `version`
+- `VERSION` file → update the value
+- `git tags` → create a tag at the end of the Epic
+- If there is a `CHANGELOG.md` or equivalent → add an entry with the version, date, and description
+- If the project has no versioning → skip this step
 
-ADEMÁS del bump, registrar una entrada en `CHANGELOG.md` siguiendo la política `karvey/rules/changelog-policy.md`. La entrada DEBE incluir:
-- **Humano responsable**: tomado de `git config user.name` / `git config user.email`. Nunca dejarlo vacío ni reemplazarlo por la IA.
-- **Modelo de IA** usado para el cambio.
-- **El por qué** del cambio (motivación / objetivo, no solo el qué).
+IN ADDITION to the bump, record an entry in `CHANGELOG.md` following the `karvey/rules/changelog-policy.md` policy. The entry MUST include:
+- **Responsible human**: taken from `git config user.name` / `git config user.email`. Never leave it empty nor replace it with the AI.
+- **AI model** used for the change.
+- **The why** of the change (motivation / objective, not just the what).
 
-### Paso 5 — Test inmediato
+### Step 5 — Immediate test
 
-Ejecutar verificación antes de marcar como completada:
+Run a verification before marking it as completed:
 
-**Para tasks [BD]:**
-- Ejecutar la query, SP, migración o función con datos de prueba
-- Confirmar que retorna la estructura esperada y no produce errores
+**For [DB] tasks:**
+- Run the query, SP, migration, or function with test data
+- Confirm it returns the expected structure and produces no errors
 
-**Para tasks [Backend]:**
-- Ejecutar el endpoint/función localmente o en dev si disponible
-- Verificar respuesta correcta para input válido, error de auth sin credenciales, y error de validación con input inválido (según el protocolo del proyecto: HTTP status codes, errores GraphQL, etc.)
+**For [Backend] tasks:**
+- Run the endpoint/function locally or on dev if available
+- Verify the correct response for valid input, an auth error without credentials, and a validation error with invalid input (per the project's protocol: HTTP status codes, GraphQL errors, etc.)
 
-**Para tasks [Frontend]:**
-- Verificar que el componente/vista renderiza sin errores
-- Verificar estados: loading, error, vacío, con datos
+**For [Frontend] tasks:**
+- Verify the component/view renders without errors
+- Verify states: loading, error, empty, with data
 
-Si el test falla: corregir en la misma task antes de avanzar.
+If the test fails: fix it within the same task before advancing.
 
-### Paso 6 — Completar task en gestión
+### Step 6 — Complete the task in management
 
-**Si ClickUp:**
+**If ClickUp:**
 ```
 clickup_stop_time_tracking()
 clickup_create_task_comment(task_id,
-  "✅ COMPLETADA\n\nRealizado:\n- {qué se hizo}\n\nArchivos:\n- {lista}\n\nResultado: OK")
+  "✅ COMPLETED\n\nDone:\n- {what was done}\n\nFiles:\n- {list}\n\nResult: OK")
 clickup_update_task(task_id, status="listo! para pap")
 ```
 
-Actualizar tiempo real via REST API:
+Update the actual time via the REST API:
 ```bash
 curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
   -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
-  -d '{"time_estimate": {tiempo_real_ms}}'
+  -d '{"time_estimate": {actual_time_ms}}'
 ```
 
-**Cascada de estados ClickUp:**
-Cuando TODAS las tasks de un Feature están en "listo! para pap":
+**ClickUp status cascade:**
+When ALL tasks of a Feature are in "listo! para pap":
 ```
-clickup_create_task_comment(feature_id, "Todas las tasks de {capa} completadas.")
-# Solo cambiar Feature si TODAS las capas terminaron
-clickup_update_task(feature_id, status="listo! para pap")  # si aplica
+clickup_create_task_comment(feature_id, "All {layer} tasks completed.")
+# Only change the Feature if ALL layers are finished
+clickup_update_task(feature_id, status="listo! para pap")  # if applicable
 ```
 
-**Si Markdown:**
-Editar `PLAN.md`:
-- Cambiar `🔄 en progreso` → `✅ completado`
-- Actualizar tiempo real en la tabla de estado
-- Actualizar fecha en historial
+**If Markdown:**
+Edit `PLAN.md`:
+- Change `🔄 in progress` → `✅ completed`
+- Update the actual time in the status table
+- Update the date in the history
 
-### Paso 7 — Continuar con siguiente task
+### Step 7 — Continue with the next task
 
-Repetir pasos 2–6 hasta que todas las tasks estén completadas.
+Repeat steps 2–6 until all tasks are completed.
 
-Si hay tasks `(P)`: despachar subagentes paralelos para ejecutarlas simultáneamente.
+If there are `(P)` tasks: dispatch parallel subagents to execute them simultaneously.
 
-### Paso 8 — Completar Epic
+### Step 8 — Complete the Epic
 
-Cuando TODOS los Features estén en "listo! para pap":
+When ALL Features are in "listo! para pap":
 
-**Si ClickUp:**
+**If ClickUp:**
 ```
-clickup_create_task_comment(epic_id, "Todos los Features completados. Epic listo para QA.")
+clickup_create_task_comment(epic_id, "All Features completed. Epic ready for QA.")
 clickup_update_task(epic_id, status="listo! para pap")
 ```
 
-**Si Markdown:**
-Actualizar `PLAN.md`: estado general `✅ Implementación completa`.
+**If Markdown:**
+Update `PLAN.md`: overall status `✅ Implementation complete`.
 
-### Paso 9 — Output final
+### Step 9 — Final output
 
 ```
-✅ Implementación completa
+✅ Implementation complete
 
-Tasks ejecutadas: {N}/{N}
-Tiempo total estimado: {suma} | Tiempo real: {suma}
+Tasks executed: {N}/{N}
+Total estimated time: {sum} | Actual time: {sum}
 
-Archivos creados/modificados:
-  BD: {lista}
-  Backend: {lista}
-  Frontend: {lista}
+Files created/modified:
+  DB: {list}
+  Backend: {list}
+  Frontend: {list}
 
-Commits realizados: {N}
-Versión: {nueva versión}
+Commits made: {N}
+Version: {new version}
 
-Siguiente paso:
+Next step:
 /karvey-test {change-id}
 ```
 
-## Manejo de bloqueos
+## Handling blockers
 
-Si una task no puede completarse:
+If a task cannot be completed:
 
-**Si ClickUp:**
+**If ClickUp:**
 ```
 clickup_stop_time_tracking()
-clickup_create_task_comment(task_id, "BLOQUEADO: {descripción del bloqueo}\n\nNecesito: {qué se necesita para desbloquear}")
+clickup_create_task_comment(task_id, "BLOCKED: {description of the blocker}\n\nI need: {what is needed to unblock}")
 clickup_update_task(task_id, status="blocked")
 ```
 
-**Si Markdown:**
-Marcar `⛔ bloqueado` + nota en PLAN.md.
+**If Markdown:**
+Mark `⛔ blocked` + a note in PLAN.md.
 
-Reportar al usuario con el bloqueo específico y esperar desbloqueo.
+Report to the user with the specific blocker and wait for it to be unblocked.
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase Testing ahora?»
-- Si confirma → ejecutá `/karvey-test {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Testing phase now?"
+- If they confirm → run `/karvey-test {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
+- If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

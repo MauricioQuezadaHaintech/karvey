@@ -7,102 +7,102 @@ argument-hint: [save | restore] [<change-id>]
 
 # Karvey Checkpoint
 
-Skill **transversal** del Método Karvey: una capa de apoyo, **NO una fase**. No avanza ni modifica el ciclo de vida del cambio. En particular, **NO toca `spec.json:phase`** ni ningún campo de fase.
+A **cross-cutting** skill of the Karvey Method: a support layer, **NOT a phase**. It does not advance or modify the change's lifecycle. In particular, it **does NOT touch `spec.json:phase`** nor any phase field.
 
-Inspirada en `gstack /context-save` + `/context-restore`, su único trabajo es que el trabajo en curso no se pierda entre sesiones ni en un handoff a otra persona.
+Inspired by `gstack /context-save` + `/context-restore`, its only job is to ensure that work in progress is not lost between sessions or in a handoff to another person.
 
-## Objetivo
+## Goal
 
-Que el trabajo en curso **no se pierda entre sesiones / handoffs**. Cuando una sesión termina a medias, o cuando otra persona (u otro agente, en otra máquina) debe retomar, el checkpoint deja por escrito dónde quedó todo: el estado de git, las decisiones tomadas, el trabajo pendiente y el siguiente paso concreto.
+That work in progress **is not lost between sessions / handoffs**. When a session ends half-finished, or when another person (or another agent, on another machine) must take over, the checkpoint writes down where everything stood: the git state, the decisions made, the pending work and the concrete next step.
 
-Esta skill **complementa, no reemplaza**, las living specs ni `spec.json`. Las specs siguen siendo la fuente de verdad del cambio; el checkpoint es solo una foto del trabajo-en-progreso para poder retomar limpiamente.
+This skill **complements, does not replace**, the living specs or `spec.json`. The specs remain the source of truth for the change; the checkpoint is just a snapshot of the work-in-progress to be able to resume cleanly.
 
-## Modos
+## Modes
 
-La skill recibe un modo (`save` o `restore`) y, opcionalmente, un `<change-id>`. Si no se entrega `change-id`, se intenta detectar el cambio activo (ver "Resolución del change-id").
+The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`. If no `change-id` is given, the active change is detected (see "Resolving the change-id").
 
-### Modo `save` — guardar estado
+### `save` mode — save state
 
-Captura el estado actual y lo escribe en un archivo de checkpoint. Pasos:
+Captures the current state and writes it to a checkpoint file. Steps:
 
-1. **Resolver el change-id** (ver sección "Resolución del change-id").
-2. **Capturar el estado de git** del repo en el que se está trabajando:
-   - Rama actual:
+1. **Resolve the change-id** (see the "Resolving the change-id" section).
+2. **Capture the git state** of the repo being worked on:
+   - Current branch:
      ```bash
      git rev-parse --abbrev-ref HEAD
      ```
-   - Estado del working tree (archivos modificados, staged, untracked):
+   - Working tree state (modified, staged, untracked files):
      ```bash
      git status --short
      ```
-   - Último commit (hash corto + asunto):
+   - Last commit (short hash + subject):
      ```bash
      git log -1 --pretty='%h %s'
      ```
-   - (Opcional, si ayuda al handoff) diff resumido:
+   - (Optional, if it helps the handoff) summarized diff:
      ```bash
      git diff --stat
      ```
-3. **Recolectar el contexto humano** de la sesión: decisiones tomadas, por qué, qué quedó pendiente y cuál es el siguiente paso concreto para retomar.
-4. **Escribir el checkpoint** en:
-   - `docs/spec/changes/{change-id}/checkpoint.md` si hay un cambio activo, o
-   - un checkpoint a nivel de proyecto (p. ej. `docs/spec/checkpoint.md`) si **no** hay change activo.
+3. **Collect the human context** of the session: decisions made, why, what is left pending and what the concrete next step is to resume.
+4. **Write the checkpoint** to:
+   - `docs/spec/changes/{change-id}/checkpoint.md` if there is an active change, or
+   - a project-level checkpoint (e.g. `docs/spec/checkpoint.md`) if there is **no** active change.
 
-   Usa la plantilla de la sección "Formato del checkpoint".
-5. **Integrar con knowledge-sync**: tras guardar, aplica las reglas de `karvey/rules/knowledge-sync.md` para mantener sincronizado el conocimiento del repo (memoria, índices, referencias). El checkpoint es un punto natural para gatillar este sync.
-6. **NO** modificar `spec.json:phase` ni avanzar la fase. Confirmar al usuario la ruta del checkpoint escrito.
+   Use the template from the "Checkpoint format" section.
+5. **Integrate with knowledge-sync**: after saving, apply the rules of `karvey/rules/knowledge-sync.md` to keep the repo's knowledge synced (memory, indexes, references). The checkpoint is a natural point to trigger this sync.
+6. **Do NOT** modify `spec.json:phase` nor advance the phase. Confirm to the user the path of the written checkpoint.
 
-### Modo `restore` — restaurar estado
+### `restore` mode — restore state
 
-Lee el checkpoint y deja al usuario (o al nuevo agente) listo para retomar. Pasos:
+Reads the checkpoint and leaves the user (or the new agent) ready to resume. Steps:
 
-1. **Resolver el change-id** y localizar el checkpoint correspondiente (`docs/spec/changes/{change-id}/checkpoint.md`, o el checkpoint de proyecto si no hay change activo).
-2. **Leer el checkpoint** completo.
-3. **Verificar el estado real de git** contra lo registrado (rama, último commit, working tree) para detectar divergencias entre lo guardado y lo actual.
-4. **Resumir dónde quedó todo**: rama, último commit, trabajo pendiente y decisiones relevantes.
-5. **Proponer el siguiente paso** concreto para retomar, basado en el campo "Siguiente paso" del checkpoint y en el estado real verificado.
-6. **NO** modificar `spec.json:phase` ni avanzar la fase.
+1. **Resolve the change-id** and locate the corresponding checkpoint (`docs/spec/changes/{change-id}/checkpoint.md`, or the project checkpoint if there is no active change).
+2. **Read the checkpoint** in full.
+3. **Verify the real git state** against what was recorded (branch, last commit, working tree) to detect divergences between what was saved and the current state.
+4. **Summarize where everything stands**: branch, last commit, pending work and relevant decisions.
+5. **Propose the next concrete step** to resume, based on the checkpoint's "Next step" field and on the verified real state.
+6. **Do NOT** modify `spec.json:phase` nor advance the phase.
 
-## Resolución del change-id
+## Resolving the change-id
 
-1. Si el usuario pasó un `<change-id>` explícito, usarlo.
-2. Si no, intentar detectar el cambio activo: revisar `docs/spec/changes/` (carpeta más reciente o la indicada por `spec.json`) y, si existe, el `spec.json` del proyecto.
-3. Si no hay cambio activo, operar en modo **proyecto** (checkpoint en `docs/spec/checkpoint.md`).
+1. If the user passed an explicit `<change-id>`, use it.
+2. If not, try to detect the active change: check `docs/spec/changes/` (the most recent folder or the one indicated by `spec.json`) and, if it exists, the project's `spec.json`.
+3. If there is no active change, operate in **project** mode (checkpoint in `docs/spec/checkpoint.md`).
 
-## Formato del checkpoint
+## Checkpoint format
 
 ```markdown
-# Checkpoint — {change-id | proyecto}
+# Checkpoint — {change-id | project}
 
-> Skill transversal karvey-checkpoint. NO es una fase. NO modifica spec.json:phase.
+> Cross-cutting skill karvey-checkpoint. It is NOT a phase. It does NOT modify spec.json:phase.
 
-- **Fecha:** {YYYY-MM-DD HH:MM CLT}
-- **Autor:** {nombre / agente}
-- **Repo:** {ruta del repo}
+- **Date:** {YYYY-MM-DD HH:MM CLT}
+- **Author:** {name / agent}
+- **Repo:** {repo path}
 
-## Estado de git
-- **Rama:** {rama}
-- **Último commit:** {hash corto} {asunto}
+## Git state
+- **Branch:** {branch}
+- **Last commit:** {short hash} {subject}
 - **Working tree:**
   ```
-  {salida de git status --short}
+  {git status --short output}
   ```
 
-## Decisiones tomadas
-- {decisión + por qué}
+## Decisions made
+- {decision + why}
 
-## Trabajo pendiente
-- [ ] {item pendiente}
+## Pending work
+- [ ] {pending item}
 
-## Siguiente paso
-{El paso concreto para retomar limpiamente.}
+## Next step
+{The concrete step to resume cleanly.}
 ```
 
-## Notas
+## Notes
 
-- Esta skill es de apoyo: úsala libremente al cerrar o abrir una sesión, antes de un handoff, o cuando el contexto esté por perderse.
-- No reemplaza las living specs ni `spec.json`; solo guarda/restaura el trabajo-en-progreso.
-- Nunca avanza la fase del cambio.
+- This skill is a support one: use it freely when closing or opening a session, before a handoff, or when the context is about to be lost.
+- It does not replace the living specs nor `spec.json`; it only saves/restores the work-in-progress.
+- It never advances the change's phase.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

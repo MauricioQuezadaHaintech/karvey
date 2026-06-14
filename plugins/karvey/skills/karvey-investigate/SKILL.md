@@ -2,52 +2,52 @@
 name: karvey-investigate
 description: Systematic root-cause debugging for the Karvey method. Iron Law — no fixes without investigation first. Traces data flow, forms and tests hypotheses, stops after repeated failures. Triggers include "karvey investigate", "investigar bug", "root cause", "depurar", "por qué falla", "debugging".
 allowed-tools: Read, Bash, Glob, Grep, Agent
-argument-hint: [descripción del síntoma]
+argument-hint: [symptom description]
 ---
 
 # Karvey Investigate — Root-Cause Analysis
 
-## Propósito
+## Purpose
 
-Skill **transversal** del Método Karvey: una capa de apoyo de depuración y análisis de causa raíz (rol Debugger, inspirado en gstack `/investigate`). **NO es una fase del pipeline lineal**: no modifica `spec.json:phase` ni avanza el flujo de fases. Se invoca en cualquier momento que aparezca un síntoma, bug o comportamiento inesperado, y al terminar el pipeline continúa exactamente donde estaba.
+A **cross-cutting** skill of the Karvey Method: a debugging and root-cause-analysis support layer (the Debugger role, inspired by gstack `/investigate`). **It is NOT a phase of the linear pipeline**: it does not modify `spec.json:phase` nor advance the phase flow. It is invoked any time a symptom, bug or unexpected behavior shows up, and when it finishes the pipeline continues exactly where it was.
 
-**Iron Law:** NUNCA aplicar fixes sin investigar primero la causa raíz. La investigación produce evidencia y una recomendación; el fix lo aplica `karvey-impl`, respetando los gates correspondientes.
+**Iron Law:** NEVER apply fixes without first investigating the root cause. The investigation produces evidence and a recommendation; the fix is applied by `karvey-impl`, respecting the corresponding gates.
 
-Es **agnóstica de stack**: usa el runtime real del target (ver `karvey/rules/targets.md`), sea Python/Azure Functions, Vue, SQL Server, Node-RED, Asterisk, etc.
+It is **stack-agnostic**: it uses the target's real runtime (see `karvey/rules/targets.md`), whether it's Python/Azure Functions, Vue, SQL Server, Node-RED, Asterisk, etc.
 
-## Pasos
+## Steps
 
-1. **Capturar el síntoma exacto y cómo reproducirlo.**
-   - Anotar el comportamiento observado vs. el esperado, mensaje de error literal, stack trace, código de salida, y los pasos mínimos para reproducir.
-   - Si no hay repro confiable, conseguir uno antes de seguir. Sin repro no hay investigación seria.
+1. **Capture the exact symptom and how to reproduce it.**
+   - Write down the observed behavior vs. the expected one, the literal error message, stack trace, exit code, and the minimal steps to reproduce.
+   - If there is no reliable repro, get one before continuing. Without a repro there is no serious investigation.
 
-2. **Trazar el data flow / camino del código relevante.**
-   - Usar Grep/Glob para localizar el punto de entrada y seguir el flujo de datos hasta el síntoma.
-   - Leer (Read) los archivos involucrados de punta a punta del camino: entrada → transformaciones → salida.
-   - Identificar las fronteras (llamadas a SP, webhooks, APIs externas, colas/eventos) donde el dato puede corromperse o perderse.
+2. **Trace the data flow / relevant code path.**
+   - Use Grep/Glob to locate the entry point and follow the data flow down to the symptom.
+   - Read (Read) the files involved end to end along the path: input → transformations → output.
+   - Identify the boundaries (SP calls, webhooks, external APIs, queues/events) where the data can get corrupted or lost.
 
-3. **Formular hipótesis explícitas.**
-   - Escribir cada hipótesis como una afirmación falsable: "X falla porque Y".
-   - Priorizar por probabilidad y por costo de verificación (verificar primero lo barato y lo más probable).
+3. **Formulate explicit hypotheses.**
+   - Write each hypothesis as a falsifiable claim: "X fails because Y".
+   - Prioritize by likelihood and by verification cost (verify the cheapest and most likely first).
 
-4. **Testear cada hipótesis con evidencia.**
-   - Confirmar o descartar con evidencia concreta: logs, prints/trazas temporales, queries de lectura, inspección de estado, y **reproducción en el runtime real del target** (ver `karvey/rules/targets.md`).
-   - Cada hipótesis se cierra con un veredicto: confirmada / descartada, y la evidencia que lo respalda.
-   - No mezclar varios cambios de diagnóstico a la vez: cambiar una variable por vez para no contaminar la señal.
+4. **Test each hypothesis with evidence.**
+   - Confirm or rule out with concrete evidence: logs, temporary prints/traces, read queries, state inspection, and **reproduction in the target's real runtime** (see `karvey/rules/targets.md`).
+   - Each hypothesis is closed with a verdict: confirmed / ruled out, and the evidence that backs it.
+   - Do not mix several diagnostic changes at once: change one variable at a time so the signal is not contaminated.
 
-5. **Detenerse tras ~3 intentos fallidos.**
-   - Si tras ~3 ciclos de hipótesis-test no se llega a la causa raíz, **parar y pedir ayuda** en vez de seguir a ciegas o disparar fixes especulativos.
-   - Reportar lo descartado, lo aún incierto y qué información o acceso falta para avanzar.
+5. **Stop after ~3 failed attempts.**
+   - If after ~3 hypothesis-test cycles the root cause is still not reached, **stop and ask for help** instead of continuing blindly or firing off speculative fixes.
+   - Report what was ruled out, what is still uncertain, and what information or access is missing to move forward.
 
-6. **Reportar causa raíz con evidencia y recomendación de fix.**
-   - Entregar: causa raíz identificada, evidencia que la sustenta, alcance del impacto, y la recomendación de fix.
-   - **No aplicar el fix aquí.** El fix lo ejecuta `karvey-impl`, respetando los gates del método.
+6. **Report the root cause with evidence and a fix recommendation.**
+   - Deliver: identified root cause, the evidence that supports it, the impact scope, and the fix recommendation.
+   - **Do not apply the fix here.** The fix is executed by `karvey-impl`, respecting the method's gates.
 
-## Restricciones
+## Constraints
 
-- No avanza ni cambia la fase del pipeline (`spec.json:phase` queda intacto).
-- No aplica cambios de corrección; solo diagnostica y recomienda.
-- Cambios de diagnóstico temporales (prints, trazas) deben revertirse o quedar señalados para que `karvey-impl` los limpie.
+- It does not advance or change the pipeline phase (`spec.json:phase` stays intact).
+- It does not apply corrective changes; it only diagnoses and recommends.
+- Temporary diagnostic changes (prints, traces) must be reverted or flagged so that `karvey-impl` cleans them up.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

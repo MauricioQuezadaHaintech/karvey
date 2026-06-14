@@ -2,98 +2,98 @@
 name: karvey-health
 description: Code quality dashboard for the Karvey method. Wraps type checker, linter, tests and dead-code detection into a weighted 0-10 score; tracks the trend over time. Triggers include "karvey health", "salud del código", "calidad de código", "quality score", "health dashboard".
 allowed-tools: Read, Bash, Glob, Grep
-argument-hint: [<repo o ruta>]
+argument-hint: [<repo or path>]
 ---
 
-# karvey-health — Dashboard de calidad de código
+# karvey-health — Code quality dashboard
 
-Skill **transversal** del Método Karvey. Es una **capa de apoyo, NO una fase**: se puede invocar en cualquier momento del ciclo y **NO modifica** `spec.json:phase` ni hace avanzar el método. Inspirado en el `/health` de gstack.
+A **cross-cutting** skill of the Karvey Method. It is a **support layer, NOT a phase**: it can be invoked at any point in the cycle and **does NOT modify** `spec.json:phase` nor advance the method. Inspired by gstack's `/health`.
 
-## Propósito
+## Purpose
 
-Entregar una **métrica continua y comparable de salud del código** por repo: un score único 0–10 que resume el estado del type checker, el linter, los tests y la detección de código muerto, junto con su **tendencia en el tiempo** y recomendaciones priorizadas para subir el puntaje.
+Deliver a **continuous and comparable code-health metric** per repo: a single 0–10 score that summarizes the state of the type checker, the linter, the tests and dead-code detection, together with its **trend over time** and prioritized recommendations to raise the score.
 
-El objetivo es que cualquier persona del equipo pueda preguntar "¿cómo está la salud del repo?" y obtener una respuesta objetiva, repetible y comparable entre ejecuciones.
+The goal is that anyone on the team can ask "how is the repo's health?" and get an objective, repeatable answer that is comparable across runs.
 
-## Cuándo se usa
+## When it is used
 
-- A demanda, cuando el usuario pide "karvey health", "salud del código", "calidad de código", "quality score" o "health dashboard".
-- Como chequeo de apoyo antes o después de cualquier fase (requisitos, diseño, implementación, test, deploy), sin alterar el estado de la fase.
-- En cualquier repo, **agnóstico de stack**.
+- On demand, when the user asks for "karvey health", "salud del código", "calidad de código", "quality score" or "health dashboard".
+- As a support check before or after any phase (requirements, design, implementation, test, deploy), without altering the phase state.
+- In any repo, **stack-agnostic**.
 
-## Pasos
+## Steps
 
-### 1. Detectar el stack y las herramientas disponibles
+### 1. Detect the stack and the available tools
 
-Inspeccionar el repo (o la ruta del argumento `[<repo o ruta>]`; si no se pasa, usar el repo actual) para identificar lenguaje, gestor de paquetes y las herramientas de calidad disponibles. **Agnóstico de stack** — detectar por archivos de configuración y manifiestos, no asumir un lenguaje:
+Inspect the repo (or the path from the `[<repo or path>]` argument; if none is passed, use the current repo) to identify language, package manager and the available quality tools. **Stack-agnostic** — detect by configuration files and manifests, do not assume a language:
 
-- **Type checker**: `tsc`/TypeScript (`tsconfig.json`), `mypy`/`pyright` (Python), `go vet`/compilador (Go), `flow`, etc.
+- **Type checker**: `tsc`/TypeScript (`tsconfig.json`), `mypy`/`pyright` (Python), `go vet`/compiler (Go), `flow`, etc.
 - **Linter**: `eslint`, `biome`, `ruff`/`flake8`/`pylint` (Python), `golangci-lint`, `clippy` (Rust), etc.
 - **Test runner**: `vitest`/`jest` (JS/TS), `pytest` (Python), `go test`, `cargo test`, etc.
 - **Dead-code detector**: `knip`/`ts-prune` (JS/TS), `vulture` (Python), `deadcode`/`staticcheck` (Go), `cargo-udeps` (Rust), etc.
 
-Registrar qué herramientas existen realmente. Una herramienta ausente **no penaliza** el score: se excluye y su peso se redistribuye entre las dimensiones disponibles.
+Record which tools actually exist. A missing tool **does not penalize** the score: it is excluded and its weight is redistributed among the available dimensions.
 
-### 2. Ejecutar las herramientas
+### 2. Run the tools
 
-Correr cada herramienta disponible en modo no destructivo (solo lectura/análisis, sin auto-fix), capturando:
+Run each available tool in non-destructive mode (read/analysis only, no auto-fix), capturing:
 
-- **Type checker**: número de errores de tipos.
-- **Linter**: número de errores y warnings.
-- **Tests**: pasados/fallidos y, si está disponible, cobertura.
-- **Dead-code**: cantidad de símbolos/exports/archivos no usados.
+- **Type checker**: number of type errors.
+- **Linter**: number of errors and warnings.
+- **Tests**: passed/failed and, if available, coverage.
+- **Dead-code**: count of unused symbols/exports/files.
 
-Usar timeouts razonables y degradar con gracia: si una herramienta falla por configuración (no por el código), marcarla como "no evaluable" y excluirla del cómputo en vez de asignar 0.
+Use reasonable timeouts and degrade gracefully: if a tool fails due to configuration (not due to the code), mark it as "not assessable" and exclude it from the computation instead of assigning 0.
 
-### 3. Computar un score ponderado 0–10
+### 3. Compute a weighted 0–10 score
 
-Cada dimensión produce un sub-score 0–10. Pesos por defecto (ajustables según las herramientas presentes):
+Each dimension produces a 0–10 sub-score. Default weights (adjustable according to the tools present):
 
-| Dimensión        | Peso | Sub-score 10 cuando… |
+| Dimension        | Weight | Sub-score 10 when… |
 |------------------|------|----------------------|
-| Type checker     | 0.30 | 0 errores de tipos   |
-| Tests            | 0.30 | 100% pasan (bonus por cobertura) |
-| Linter           | 0.25 | 0 errores; warnings descuentan poco |
-| Dead-code        | 0.15 | 0 código muerto      |
+| Type checker     | 0.30 | 0 type errors   |
+| Tests            | 0.30 | 100% pass (bonus for coverage) |
+| Linter           | 0.25 | 0 errors; warnings discount little |
+| Dead-code        | 0.15 | 0 dead code      |
 
-`score_global = Σ (sub_score_i × peso_i) / Σ pesos_disponibles`, redondeado a 1 decimal.
+`score_global = Σ (sub_score_i × weight_i) / Σ available_weights`, rounded to 1 decimal.
 
-Si una dimensión no tiene herramienta, su peso se reparte proporcionalmente entre las demás (renormalizar). Documentar en el reporte qué pesos efectivos se usaron.
+If a dimension has no tool, its weight is distributed proportionally among the others (renormalize). Document in the report which effective weights were used.
 
-Bandas de interpretación: **9–10** excelente · **7–8.9** sano · **5–6.9** atención · **<5** crítico.
+Interpretation bands: **9–10** excellent · **7–8.9** healthy · **5–6.9** attention · **<5** critical.
 
-### 4. Registrar el resultado para seguimiento de tendencia
+### 4. Record the result for trend tracking
 
-Guardar un **historial pequeño** (append-only) del score y su desglose, para poder comparar entre ejecuciones. Ubicación preferida, en orden:
+Save a **small history** (append-only) of the score and its breakdown, to be able to compare across runs. Preferred location, in order:
 
-1. `docs/spec/health-history.json` (o `.jsonl`) dentro del repo, si existe la estructura `docs/spec/` del método.
-2. Si no, un archivo de métricas del repo: `.karvey/health-history.jsonl`.
+1. `docs/spec/health-history.json` (or `.jsonl`) inside the repo, if the method's `docs/spec/` structure exists.
+2. Otherwise, a repo metrics file: `.karvey/health-history.jsonl`.
 
-Cada registro incluye: timestamp (hora Chile), score global, sub-scores por dimensión, conteos crudos (errores de tipos, lint errors/warnings, tests pass/fail, cobertura, dead-code), commit/branch si está disponible, y los pesos efectivos usados. Append, nunca sobrescribir, para preservar la serie histórica.
+Each record includes: timestamp (Chile time), global score, sub-scores per dimension, raw counts (type errors, lint errors/warnings, tests pass/fail, coverage, dead-code), commit/branch if available, and the effective weights used. Append, never overwrite, to preserve the historical series.
 
-### 5. Reportar score + desglose + tendencia + recomendaciones
+### 5. Report score + breakdown + trend + recommendations
 
-Entregar un dashboard claro:
+Deliver a clear dashboard:
 
-- **Score global 0–10** con su banda de interpretación.
-- **Desglose por dimensión**: sub-score, peso efectivo y conteo crudo.
-- **Tendencia**: comparación contra la ejecución anterior (Δ del score) y mini-serie de los últimos N registros (flecha ↑/↓/→).
-- **Recomendaciones priorizadas**: las acciones de mayor impacto primero (p. ej. "resolver 12 errores de tipos sube el score ~1.2 pts"), ordenadas por ganancia esperada vs. esfuerzo.
+- **Global score 0–10** with its interpretation band.
+- **Breakdown per dimension**: sub-score, effective weight and raw count.
+- **Trend**: comparison against the previous run (score Δ) and a mini-series of the last N records (arrow ↑/↓/→).
+- **Prioritized recommendations**: the highest-impact actions first (e.g. "resolving 12 type errors raises the score ~1.2 pts"), ordered by expected gain vs. effort.
 
 ## Multi-repo
 
-Si existe `project.json` con una lista `repos`, correr la evaluación **por cada repo** y entregar:
+If a `project.json` with a `repos` list exists, run the evaluation **for each repo** and deliver:
 
-- Un dashboard por repo (score, desglose, tendencia, recomendaciones).
-- Un **resumen consolidado** del proyecto: promedio (o ponderado) de scores, repos en banda crítica destacados primero, y tendencia agregada.
+- A dashboard per repo (score, breakdown, trend, recommendations).
+- A **consolidated project summary**: average (or weighted) of scores, repos in the critical band highlighted first, and aggregate trend.
 
-Mantener un historial independiente por repo (paso 4) para que las tendencias no se mezclen.
+Keep an independent history per repo (step 4) so the trends do not get mixed.
 
-## Límites
+## Limits
 
-- **NO** avanza ni modifica la fase: no toca `spec.json:phase`.
-- **NO** aplica auto-fix ni modifica código: es solo medición y reporte.
-- No es una fase del método; es una capa de apoyo invocable en cualquier momento.
+- It does **NOT** advance or modify the phase: it does not touch `spec.json:phase`.
+- It does **NOT** apply auto-fix nor modify code: it is only measurement and reporting.
+- It is not a phase of the method; it is a support layer invocable at any time.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

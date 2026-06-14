@@ -2,50 +2,50 @@
 name: karvey-browse
 description: Give the agent eyes in the target's real runtime for the Karvey method. Real browser (web), simulator/device (mobile), terminal (CLI) — click, screenshot, inspect. Imports session cookies for authenticated views. Triggers include "karvey browse", "dar ojos", "navegador real", "screenshot", "inspeccionar UI", "abrir la app".
 allowed-tools: Read, Bash, Glob, Grep
-argument-hint: [url o destino] [--target web|ios|android|cli]
+argument-hint: [url or target] [--target web|ios|android|cli]
 ---
 
-# karvey-browse — Dar ojos al agente
+# karvey-browse — Give the agent eyes
 
-## Propósito
+## Purpose
 
-Skill **transversal** del Método Karvey: una **capa de apoyo, NO una fase**. No avanza el método ni cambia `spec.json:phase`. Se puede invocar desde cualquier fase cuando el agente necesita **ver con sus propios ojos** lo que pasa en el runtime real del target.
+A **cross-cutting** skill of the Karvey Method: a **support layer, NOT a phase**. It does not advance the method nor change `spec.json:phase`. It can be invoked from any phase when the agent needs to **see with its own eyes** what is happening in the target's real runtime.
 
-Su rol es simple: **dar ojos**. El agente deja de razonar a ciegas sobre el código y pasa a observar el comportamiento real — abrir, clickear, capturar pantalla e inspeccionar estado. Inspirado en `gstack /browse` + `/setup-browser-cookies`.
+Its role is simple: **give it eyes**. The agent stops reasoning blindly about the code and starts observing the real behavior — open, click, screenshot and inspect state. Inspired by `gstack /browse` + `/setup-browser-cookies`.
 
-### Agnóstico de stack
+### Stack-agnostic
 
-Opera sobre el runtime real del target declarado en `project.json:targets` (ver `karvey/rules/targets.md`). No asume un stack fijo:
+It operates on the real runtime of the target declared in `project.json:targets` (see `karvey/rules/targets.md`). It does not assume a fixed stack:
 
-| Target | Runtime real | Cómo se observa |
+| Target | Real runtime | How it is observed |
 |--------|--------------|-----------------|
-| `web` | Navegador headless (ej. Playwright) | navegar, clickear, screenshot, leer DOM/consola |
-| `ios` / `android` | Simulador / dispositivo | abrir la app, interactuar, capturar pantalla, leer logs |
-| `cli` | Proceso / terminal | ejecutar, capturar stdout/stderr, inspeccionar estado |
-| `api` | Cliente HTTP | enviar requests, capturar respuestas y headers |
+| `web` | Headless browser (e.g. Playwright) | navigate, click, screenshot, read DOM/console |
+| `ios` / `android` | Simulator / device | open the app, interact, screenshot, read logs |
+| `cli` | Process / terminal | run, capture stdout/stderr, inspect state |
+| `api` | HTTP client | send requests, capture responses and headers |
 
-### Capacidades
+### Capabilities
 
-- **Navegar / abrir** el target en su runtime real.
-- **Clickear / interactuar** (formularios, botones, gestos según target).
-- **Capturar screenshots** como evidencia visual.
-- **Leer estado / consola** (DOM, logs, salida de proceso, respuestas).
+- **Navigate / open** the target in its real runtime.
+- **Click / interact** (forms, buttons, gestures depending on the target).
+- **Capture screenshots** as visual evidence.
+- **Read state / console** (DOM, logs, process output, responses).
 
-### Manejo de sesión (target web)
+### Session handling (web target)
 
-Cuando el target es web, puede **importar cookies/sesión desde un navegador real** para probar vistas autenticadas sin re-login manual. Esto permite inspeccionar pantallas detrás de login usando la sesión ya activa del usuario.
+When the target is web, it can **import cookies/session from a real browser** to test authenticated views without manual re-login. This makes it possible to inspect screens behind login using the user's already-active session.
 
-## Pasos
+## Steps
 
-1. **Determinar el target.** Leer `project.json:targets` (y `karvey/rules/targets.md`). Si el usuario pasó `--target`, usar ese; si no, inferir del destino o del target principal del proyecto.
-2. **Levantar el runtime correspondiente.** Browser headless para web, simulador/dispositivo para mobile, proceso/terminal para CLI, cliente HTTP para API. Si es web autenticado, importar las cookies/sesión del navegador real antes de navegar.
-3. **Ejecutar las acciones pedidas.** Navegar/abrir, clickear/interactuar, capturar y leer estado según lo solicitado.
-4. **Devolver evidencia.** Screenshots, DOM/estado, logs de consola o salida del proceso — todo lo que respalde lo observado.
+1. **Determine the target.** Read `project.json:targets` (and `karvey/rules/targets.md`). If the user passed `--target`, use that; if not, infer it from the destination or from the project's main target.
+2. **Bring up the corresponding runtime.** Headless browser for web, simulator/device for mobile, process/terminal for CLI, HTTP client for API. If it is authenticated web, import the real browser's cookies/session before navigating.
+3. **Execute the requested actions.** Navigate/open, click/interact, capture and read state as requested.
+4. **Return evidence.** Screenshots, DOM/state, console logs or process output — everything that backs up what was observed.
 
-## Recordatorios
+## Reminders
 
-- **Cerrar el runtime/navegador al terminar.** No dejar procesos ni navegadores colgando.
-- **No avanza la fase.** Esta skill es apoyo transversal; nunca modifica `spec.json:phase` ni hace transiciones del método.
+- **Close the runtime/browser when finished.** Do not leave processes or browsers hanging.
+- **It does not advance the phase.** This skill is cross-cutting support; it never modifies `spec.json:phase` nor makes method transitions.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

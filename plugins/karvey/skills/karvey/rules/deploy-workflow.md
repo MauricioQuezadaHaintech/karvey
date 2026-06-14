@@ -1,49 +1,49 @@
-# Regla: Flujo de despliegue (git + pipeline)
+# Rule: Deployment flow (git + pipeline)
 
-Define el flujo ordenado de despliegue que usa el método. Lo aplican `karvey-impl` (durante el desarrollo) y `karvey-deploy` (FASE 11). Alineado con las reglas duras de deploy del equipo.
+Defines the ordered deployment flow the method uses. It is applied by `karvey-impl` (during development) and `karvey-deploy` (PHASE 11). Aligned with the team's hard deploy rules.
 
-## Principios (NUNCA saltarse)
+## Principles (NEVER skip)
 
-1. **Nunca commit directo en `dev` ni `master`.** Siempre feature branch.
-2. **Nunca deploy manual.** El deploy lo gatilla el pipeline: push a `dev` → deploy dev; merge a `master` → deploy prod. Prohibido `func azure functionapp publish` o equivalentes manuales.
-3. **`pull` antes de empezar y `pull` antes de cada merge/PR.** Evitar trabajar sobre base desactualizada.
-4. **Prod requiere OK humano explícito.** El PR a `master` no se mergea sin aprobación.
-5. **Zero downtime**: el despliegue no puede provocar caída del servicio.
+1. **Never commit directly to `dev` or `master`.** Always a feature branch.
+2. **Never deploy manually.** The deploy is triggered by the pipeline: push to `dev` → deploy dev; merge to `master` → deploy prod. Manual `func azure functionapp publish` or equivalents are forbidden.
+3. **`pull` before starting and `pull` before each merge/PR.** Avoid working on a stale base.
+4. **Prod requires explicit human OK.** The PR to `master` is not merged without approval.
+5. **Zero downtime**: the deployment must not cause a service outage.
 
-## Flujo paso a paso
+## Step-by-step flow
 
-Para cada repo afectado (`project.json:repos`):
+For each affected repo (`project.json:repos`):
 
 ```
-0. git pull                              # antes de comenzar
-1. git checkout -b feature/{change-id}   # o el feature_prefix de project.json
-   (desarrollo + commits por task — ver karvey-impl)
-2. git pull origin {integration}         # antes de merge (default: dev)
+0. git pull                              # before starting
+1. git checkout -b feature/{change-id}   # or the feature_prefix from project.json
+   (development + commits per task — see karvey-impl)
+2. git pull origin {integration}         # before merge (default: dev)
 3. merge feature/{change-id} → dev
-4. git push origin dev                   # ⇒ gatilla pipeline de DEV
-5. Verificar deploy DEV (smoke/healthcheck)
-6. git pull origin {production}          # antes del PR (default: master)
+4. git push origin dev                   # ⇒ triggers DEV pipeline
+5. Verify DEV deploy (smoke/healthcheck)
+6. git pull origin {production}          # before the PR (default: master)
 7. PR dev → master
-8. Merge a master SOLO con OK humano      # ⇒ gatilla pipeline de PROD
+8. Merge to master ONLY with human OK     # ⇒ triggers PROD pipeline
 ```
 
-## Checklist de 6 pasos (antes de cualquier deploy)
+## 6-step checklist (before any deploy)
 
-1. ¿Estoy en feature branch? (no dev/master)
-2. ¿Actualicé `CHANGELOG.md`? (ver `changelog-policy.md`)
-3. ¿Commit de todo lo pendiente?
-4. ¿Push del branch?
-5. ¿Merge a `dev`?
-6. ¿Push `dev`?
+1. Am I on a feature branch? (not dev/master)
+2. Did I update `CHANGELOG.md`? (see `changelog-policy.md`)
+3. Did I commit everything pending?
+4. Did I push the branch?
+5. Did I merge to `dev`?
+6. Did I push `dev`?
 
-Solo después de los 6 → el pipeline despliega dev. Para prod, repetir verificación y PR a master con aprobación.
+Only after all 6 → the pipeline deploys dev. For prod, repeat the verification and PR to master with approval.
 
 ## Multi-repo
 
-Si el cambio toca varios repos, aplicar el flujo en **cada uno**, respetando el orden de dependencias declarado en `architecture.md` (ej. BD antes que backend antes que frontend). Registrar el avance por repo en la gestión (ClickUp/`PLAN.md`).
+If the change touches several repos, apply the flow in **each one**, respecting the dependency order declared in `architecture.md` (e.g. DB before backend before frontend). Record the progress per repo in the management tool (ClickUp/`PLAN.md`).
 
-## Gestión
+## Management
 
-`karvey-deploy` registra el despliegue en la gestión del proyecto:
-- ClickUp: task `[Deploy] {change-id}` con el checklist de 6 pasos como subtareas/comentario y cierre al confirmar prod.
-- Markdown: entrada en `PLAN.md` con el estado del deploy por repo y ambiente.
+`karvey-deploy` records the deployment in the project's management tool:
+- ClickUp: task `[Deploy] {change-id}` with the 6-step checklist as subtasks/comment and closure once prod is confirmed.
+- Markdown: entry in `PLAN.md` with the deploy status per repo and environment.

@@ -1,244 +1,244 @@
 ---
 name: karvey-infra
-description: Generate and configure cloud infrastructure (IaC) and CI/CD pipelines from the architecture's cloud spec. Idempotent over existing infra. Includes infra security review. Use after karvey-architecture. Triggers include "karvey infra", "infraestructura", "pipeline CI/CD", "IaC", "terraform", "bicep".
+description: Generate and configure cloud infrastructure (IaC) and CI/CD pipelines from the architecture's cloud spec. Idempotent over existing infra. Includes infra security review. Use after karvey-architecture. Triggers include "karvey infra", "infraestructura", "infrastructure", "pipeline CI/CD", "IaC", "terraform", "bicep".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, WebSearch, AskUserQuestion
 argument-hint: <change-id> [-y]
 ---
 
 # Karvey Infra
 
-## Propósito
+## Purpose
 
-Generar y configurar la **infraestructura cloud (IaC)** y los **pipelines CI/CD** a partir de la sección "Infraestructura Cloud" del `architecture.md` del cambio. Esta es la **FASE 6** del Método Karvey, entre `karvey-architecture` (FASE 5) y `karvey-tasks` (FASE 7).
+Generate and configure the **cloud infrastructure (IaC)** and the **CI/CD pipelines** from the "Cloud Infrastructure" section of the change's `architecture.md`. This is **PHASE 6** of the Karvey Method, between `karvey-architecture` (PHASE 5) and `karvey-tasks` (PHASE 7).
 
-La fase es **idempotente sobre la infra existente**: nunca recrea lo que ya está, solo crea lo que falta o modifica lo necesario. Incluye una **revisión de seguridad de infra** como gate, y respeta el flujo de despliegue del equipo (deploy por pipeline, nunca manual).
+The phase is **idempotent over existing infra**: it never recreates what is already there, it only creates what is missing or modifies what is needed. It includes an **infra security review** as a gate, and respects the team's deployment flow (deploy via pipeline, never manual).
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 1 — Cargar contexto
+### Step 1 — Load context
 
-Leer en paralelo:
-- `docs/spec/changes/{change-id}/spec.json` (en especial `security_tier`, `layers`, `management`)
-- `docs/spec/changes/{change-id}/architecture.md` (en especial la sección **"## Infraestructura Cloud"**: qué servicios de qué nube)
-- `docs/spec/project.json` (campos `git_platform`, `cloud.provider`, `iac_tool`, `repos`, `spec_repo`, `branch_flow`)
-- Reglas compartidas: `rules/project-config.md`, `rules/deploy-workflow.md`, `rules/changelog-policy.md`, `rules/knowledge-sync.md`, `rules/security-tiers.md`
+Read in parallel:
+- `docs/spec/changes/{change-id}/spec.json` (especially `security_tier`, `layers`, `management`)
+- `docs/spec/changes/{change-id}/architecture.md` (especially the **"## Cloud Infrastructure"** section: which services from which cloud)
+- `docs/spec/project.json` (fields `git_platform`, `cloud.provider`, `iac_tool`, `repos`, `spec_repo`, `branch_flow`)
+- Shared rules: `rules/project-config.md`, `rules/deploy-workflow.md`, `rules/changelog-policy.md`, `rules/knowledge-sync.md`, `rules/security-tiers.md`
 
-Verificaciones de entrada:
-- Si **no existe** `docs/spec/project.json` → **detener** e indicar correr `karvey-init` primero (ver `project-config.md`).
-- Verificar `approvals.architecture.approved = true`. Si **no** está aprobada → **detener**: la arquitectura debe estar aprobada antes de generar infra.
+Entry checks:
+- If `docs/spec/project.json` **does not exist** → **stop** and indicate to run `karvey-init` first (see `project-config.md`).
+- Verify `approvals.architecture.approved = true`. If it is **not** approved → **stop**: the architecture must be approved before generating infra.
 
-### Paso 2 — Discovery de infra existente (idempotencia)
+### Step 2 — Discovery of existing infra (idempotency)
 
-El objetivo es **NO recrear lo que ya existe**, solo crear lo que falta o modificar lo necesario.
+The goal is to **NOT recreate what already exists**, only to create what is missing or modify what is needed.
 
-Explorar **cada repo** de `project.json:repos` (despachar subagentes en paralelo si hay varios) buscando:
+Explore **each repo** in `project.json:repos` (dispatch subagents in parallel if there are several) looking for:
 
-**IaC existente:**
-- Carpetas `terraform/`, `bicep/`, `infra/`, `pulumi/`
-- Archivos `*.tf`, `*.tfvars`, `*.bicep`, `Pulumi.yaml`, `Pulumi.*.yaml`
+**Existing IaC:**
+- Folders `terraform/`, `bicep/`, `infra/`, `pulumi/`
+- Files `*.tf`, `*.tfvars`, `*.bicep`, `Pulumi.yaml`, `Pulumi.*.yaml`
 
-**Pipelines CI/CD existentes:**
+**Existing CI/CD pipelines:**
 - `.github/workflows/*.yml` / `*.yaml` (GitHub Actions)
 - `azure-pipelines.yml` / `azure-pipelines-*.yml` (Azure Pipelines)
-- `.gitlab-ci.yml` (referencia, si aplica)
+- `.gitlab-ci.yml` (reference, if applicable)
 
-Reportar lo encontrado en un resumen:
+Report findings in a summary:
 
 ```
-Discovery de infra
+Infra discovery
 ──────────────────
 Repo {repo}:
-  IaC:        {terraform/ encontrado | sin IaC}
-  Pipelines:  {.github/workflows/deploy.yml | sin pipeline}
-  Recursos ya declarados: {lista breve}
+  IaC:        {terraform/ found | no IaC}
+  Pipelines:  {.github/workflows/deploy.yml | no pipeline}
+  Already-declared resources: {brief list}
 ```
 
-A partir del discovery, decidir por cada recurso/pipeline: **crear** (no existe), **modificar** (existe pero le falta algo del cambio) o **dejar como está** (ya cumple).
+Based on the discovery, decide for each resource/pipeline: **create** (does not exist), **modify** (exists but is missing something from the change) or **leave as is** (already compliant).
 
-### Paso 3 — Generar / actualizar IaC
+### Step 3 — Generate / update IaC
 
-Los recursos a crear/modificar salen de la sección **"## Infraestructura Cloud"** de `architecture.md` (qué servicios, de qué nube). Generar según `iac_tool` de `project.json`:
+The resources to create/modify come from the **"## Cloud Infrastructure"** section of `architecture.md` (which services, from which cloud). Generate per `iac_tool` from `project.json`:
 
-| `iac_tool` | Salida | Notas |
+| `iac_tool` | Output | Notes |
 |------------|--------|-------|
-| `terraform` | archivos `.tf` (+ `.tfvars` por ambiente) | módulos por servicio; backend de estado remoto |
-| `bicep` | archivos `.bicep` (+ `.bicepparam` por ambiente) | un módulo por recurso/grupo |
-| `pulumi` | según el lenguaje del proyecto (TS/Python/Go/C#) | stacks por ambiente |
-| `none` | **no genera IaC** | salta a pipelines (Paso 4), deja **nota explícita** de que la infra es manual |
+| `terraform` | `.tf` files (+ `.tfvars` per environment) | modules per service; remote state backend |
+| `bicep` | `.bicep` files (+ `.bicepparam` per environment) | one module per resource/group |
+| `pulumi` | per the project's language (TS/Python/Go/C#) | stacks per environment |
+| `none` | **does not generate IaC** | skip to pipelines (Step 4), leave an **explicit note** that infra is manual |
 
 **Provider (`cloud.provider`):**
-- `azure` → recursos Azure (Resource Group, Function App, SQL, Key Vault, Storage, etc.)
-- `gcp` → recursos GCP (Cloud Run/Functions, Cloud SQL, Secret Manager, GCS, etc.)
-- `aws` → recursos AWS (Lambda, RDS, Secrets Manager, S3, IAM, etc.)
-- `mixed` → generar **por proveedor**, según lo que indique `architecture.md` para cada servicio (ej. cómputo en una nube, datos en otra). Separar por carpeta/módulo por proveedor.
+- `azure` → Azure resources (Resource Group, Function App, SQL, Key Vault, Storage, etc.)
+- `gcp` → GCP resources (Cloud Run/Functions, Cloud SQL, Secret Manager, GCS, etc.)
+- `aws` → AWS resources (Lambda, RDS, Secrets Manager, S3, IAM, etc.)
+- `mixed` → generate **per provider**, per what `architecture.md` indicates for each service (e.g. compute in one cloud, data in another). Separate by folder/module per provider.
 
-Regla de idempotencia: solo escribir/editar lo que el Paso 2 marcó como crear/modificar. No tocar recursos ya conformes. Parametrizar por ambiente (`dev`/`prod`) sin duplicar lógica.
+Idempotency rule: only write/edit what Step 2 marked as create/modify. Do not touch already-compliant resources. Parameterize per environment (`dev`/`prod`) without duplicating logic.
 
-### Paso 4 — Generar / actualizar pipelines CI/CD
+### Step 4 — Generate / update CI/CD pipelines
 
-Generar según `git_platform` de `project.json`:
+Generate per `git_platform` from `project.json`:
 
-| `git_platform` | Salida |
+| `git_platform` | Output |
 |----------------|--------|
 | `github` | `.github/workflows/` (GitHub Actions) |
 | `azure_devops` | `azure-pipelines.yml` (Azure Pipelines) |
 
-**El pipeline DEBE respetar el flujo del equipo** (ver `deploy-workflow.md`), leyendo `branch_flow` de `project.json`:
-- Push a la rama de **integración** (`branch_flow.integration`, default `dev`) → **gatilla deploy a DEV**.
-- Merge a la rama de **producción** (`branch_flow.production`, default `master`) → **gatilla deploy a PROD**.
-- **NUNCA deploy manual.** El pipeline es el único mecanismo de despliegue (nada de `func azure functionapp publish`, `terraform apply` a mano, etc.).
-- Prod requiere **OK humano explícito** (environment protegido / aprobación de PR).
+**The pipeline MUST respect the team's flow** (see `deploy-workflow.md`), reading `branch_flow` from `project.json`:
+- Push to the **integration** branch (`branch_flow.integration`, default `dev`) → **triggers deploy to DEV**.
+- Merge to the **production** branch (`branch_flow.production`, default `master`) → **triggers deploy to PROD**.
+- **NEVER manual deploy.** The pipeline is the only deployment mechanism (no `func azure functionapp publish`, no manual `terraform apply`, etc.).
+- Prod requires an **explicit human OK** (protected environment / PR approval).
 
-El pipeline debe incluir, según corresponda: validación/lint de IaC (`terraform validate`/`fmt`, `bicep build`), plan en PR, apply en push a la rama del ambiente, y el deploy de la aplicación. El `apply` real lo ejecuta el pipeline, **no** se corre a mano (ver Restricciones).
+The pipeline must include, as applicable: IaC validation/lint (`terraform validate`/`fmt`, `bicep build`), plan in PR, apply on push to the environment's branch, and the application deploy. The actual `apply` is run by the pipeline, **not** by hand (see Restrictions).
 
-### Paso 4b — Auto-detección y configuración one-time de la plataforma de deploy
+### Step 4b — Auto-detection and one-time configuration of the deploy platform
 
-**Objetivo:** detectar automáticamente la plataforma de despliegue del proyecto y dejarla configurada/documentada **una sola vez**, para que las fases posteriores (sobre todo `karvey-deploy`, FASE 11) no tengan que re-descubrirla. Inspirado en el flujo `/setup-deploy` de gstack.
+**Goal:** automatically detect the project's deployment platform and leave it configured/documented **one single time**, so that later phases (especially `karvey-deploy`, PHASE 11) do not have to re-discover it. Inspired by gstack's `/setup-deploy` flow.
 
-**Idempotencia (one-time):** si ya existe la configuración de deploy detectada (bloque "Plataforma de deploy" en `infra.md`, o un archivo de config de plataforma ya presente y referenciado), **no re-configurar**: solo verificar que sigue válida y reportar "ya configurada". Solo correr la detección completa cuando falta.
+**Idempotency (one-time):** if the detected deploy configuration already exists ("Deploy platform" block in `infra.md`, or a platform config file already present and referenced), **do not re-configure**: only verify that it is still valid and report "already configured". Only run the full detection when it is missing.
 
-**Detección de plataforma** (explorar repos de `project.json:repos`, despachar subagentes si hay varios). Señales por plataforma:
+**Platform detection** (explore the repos in `project.json:repos`, dispatch subagents if there are several). Signals per platform:
 
-| Plataforma | Señales (archivos / config) |
+| Platform | Signals (files / config) |
 |------------|------------------------------|
 | Fly.io | `fly.toml` |
 | Render | `render.yaml` |
-| Vercel | `vercel.json`, carpeta `.vercel/` |
-| Netlify | `netlify.toml`, carpeta `.netlify/` |
-| Heroku | `Procfile`, `app.json`, remote `heroku` |
-| Azure | Function App / App Service / Static Web Apps en IaC, `azure-pipelines.yml` |
-| AWS | Lambda/ECS/Amplify en IaC, `samconfig.toml`, `serverless.yml` |
-| GCP | Cloud Run / App Engine en IaC, `app.yaml` |
-| GitHub Actions (deploy genérico) | `.github/workflows/*deploy*.yml` |
-| Custom | scripts `deploy.sh`/`Makefile` con target de deploy, u otro mecanismo propio |
+| Vercel | `vercel.json`, `.vercel/` folder |
+| Netlify | `netlify.toml`, `.netlify/` folder |
+| Heroku | `Procfile`, `app.json`, `heroku` remote |
+| Azure | Function App / App Service / Static Web Apps in IaC, `azure-pipelines.yml` |
+| AWS | Lambda/ECS/Amplify in IaC, `samconfig.toml`, `serverless.yml` |
+| GCP | Cloud Run / App Engine in IaC, `app.yaml` |
+| GitHub Actions (generic deploy) | `.github/workflows/*deploy*.yml` |
+| Custom | `deploy.sh`/`Makefile` scripts with a deploy target, or another proprietary mechanism |
 
-Cruzar lo detectado con `cloud.provider` y `git_platform` de `project.json` (deben ser coherentes; si no, reportar la discrepancia).
+Cross-check what is detected against `cloud.provider` and `git_platform` from `project.json` (they must be consistent; if not, report the discrepancy).
 
-**Descubrir y documentar** (lo que se pueda inferir de la config existente; lo que no, dejar marcado como `<pendiente>` sin inventar):
-- **URL de producción** (dominio del proyecto en la plataforma; p. ej. `app` de `fly.toml`, `name` de Vercel, host del App Service).
-- **Health check** (endpoint/comando que confirma que el deploy quedó sano; p. ej. `GET /health`, ruta de readiness).
-- **Comandos de deploy** por ambiente (el que ejecuta el pipeline, p. ej. `flyctl deploy`, `vercel deploy --prod`), recordando que el deploy real lo gatilla el **pipeline**, nunca un run manual (ver `deploy-workflow.md` y Restricciones).
+**Discover and document** (whatever can be inferred from the existing config; whatever cannot, leave marked as `<pending>` without inventing it):
+- **Production URL** (the project's domain on the platform; e.g. `app` from `fly.toml`, Vercel's `name`, the App Service host).
+- **Health check** (the endpoint/command that confirms the deploy is healthy; e.g. `GET /health`, a readiness path).
+- **Deploy commands** per environment (the one the pipeline runs, e.g. `flyctl deploy`, `vercel deploy --prod`), remembering that the actual deploy is triggered by the **pipeline**, never by a manual run (see `deploy-workflow.md` and Restrictions).
 
-**Dejar configurado/documentado:**
-- En `infra.md`, agregar/actualizar el bloque **"## Plataforma de deploy"** con: plataforma detectada, URL de producción, health check, comandos de deploy por ambiente, y mapeo al `branch_flow` (dev/prod).
-- En los **pipelines** (Paso 4): reflejar la plataforma detectada (acción/step de deploy correspondiente, health check post-deploy si aplica) sin duplicar lo ya presente.
+**Leave configured/documented:**
+- In `infra.md`, add/update the **"## Deploy platform"** block with: detected platform, production URL, health check, deploy commands per environment, and the mapping to `branch_flow` (dev/prod).
+- In the **pipelines** (Step 4): reflect the detected platform (the corresponding deploy action/step, post-deploy health check if applicable) without duplicating what is already present.
 
-**Agnosticismo de target (ver `../karvey/rules/targets.md`):** el **canal de release depende del target**, no se asume "web" por defecto. Según `targets` de `project.json`, la plataforma/canal de deploy puede ser: pipeline web, **App Store/TestFlight** (iOS), **Play Store** (Android), **package registry** (`library`/`sdk`), **OTA** (`embedded`), etc. La detección y la configuración deben corresponder al target real; si hay varios targets, documentar el canal de cada uno.
+**Target agnosticism (see `../karvey/rules/targets.md`):** the **release channel depends on the target**, "web" is not assumed by default. Per the `targets` of `project.json`, the deploy platform/channel may be: web pipeline, **App Store/TestFlight** (iOS), **Play Store** (Android), **package registry** (`library`/`sdk`), **OTA** (`embedded`), etc. The detection and configuration must correspond to the real target; if there are several targets, document the channel for each one.
 
-Formato del bloque a escribir en `infra.md`:
+Format of the block to write in `infra.md`:
 
 ```markdown
-## Plataforma de deploy
-- Plataforma:        {fly.io | render | vercel | netlify | heroku | azure | aws | gcp | github-actions | custom}
-- Target / canal:    {web pipeline | App Store/TestFlight | Play Store | package registry | OTA | ...}
-- URL producción:    {url | <pendiente>}
-- Health check:      {endpoint o comando | <pendiente>}
-- Comando deploy:    dev → {comando}  ·  prod → {comando}  (ejecutado por pipeline)
-- Estado:            {recién configurada | ya configurada (verificada)}
+## Deploy platform
+- Platform:          {fly.io | render | vercel | netlify | heroku | azure | aws | gcp | github-actions | custom}
+- Target / channel:  {web pipeline | App Store/TestFlight | Play Store | package registry | OTA | ...}
+- Production URL:    {url | <pending>}
+- Health check:      {endpoint or command | <pending>}
+- Deploy command:    dev → {command}  ·  prod → {command}  (run by the pipeline)
+- Status:            {just configured | already configured (verified)}
 ```
 
-### Paso 5 — Revisión de seguridad de infra (gate)
+### Step 5 — Infra security review (gate)
 
-Generar un **checklist de hallazgos** revisando:
+Generate a **findings checklist** by reviewing:
 
-- **IAM / roles con mínimo privilegio**: cada identidad (service principal, managed identity, service account, IAM role) tiene solo los permisos que necesita; nada de `Owner`/`*:*`/`roles/owner` salvo justificación explícita.
-- **Secretos en gestor de secretos**: Azure Key Vault / GCP Secret Manager / AWS Secrets Manager. **NUNCA hardcodeados** en `.tf`/`.bicep`/YAML ni en variables de pipeline en claro. Referenciar por nombre/ID.
-- **Exposición de red**: **nada público** salvo que `architecture.md` lo justifique. Bases de datos y backends sin IP pública por defecto; reglas de firewall/NSG/Security Group restrictivas.
-- **Cifrado en reposo y en tránsito**: storage/BD con cifrado en reposo; TLS obligatorio en tránsito (HTTPS, conexiones cifradas a BD).
-- **Security Tier**: el `security_tier` de `spec.json` se respeta **a nivel infra** (ver `security-tiers.md`); a mayor tier, controles más estrictos (segmentación de red, secretos rotados, logging/auditoría, etc.).
+- **IAM / least-privilege roles**: each identity (service principal, managed identity, service account, IAM role) has only the permissions it needs; no `Owner`/`*:*`/`roles/owner` except with explicit justification.
+- **Secrets in a secrets manager**: Azure Key Vault / GCP Secret Manager / AWS Secrets Manager. **NEVER hardcoded** in `.tf`/`.bicep`/YAML nor in pipeline variables in cleartext. Reference by name/ID.
+- **Network exposure**: **nothing public** unless `architecture.md` justifies it. Databases and backends with no public IP by default; restrictive firewall/NSG/Security Group rules.
+- **Encryption at rest and in transit**: storage/DB with encryption at rest; TLS mandatory in transit (HTTPS, encrypted connections to the DB).
+- **Security Tier**: the `security_tier` from `spec.json` is respected **at the infra level** (see `security-tiers.md`); the higher the tier, the stricter the controls (network segmentation, rotated secrets, logging/auditing, etc.).
 
-Formato del checklist:
+Checklist format:
 
 ```markdown
-## Revisión de seguridad de infra
-| Control | Estado | Severidad | Hallazgo / acción |
+## Infra security review
+| Control | Status | Severity | Finding / action |
 |---------|--------|-----------|-------------------|
-| IAM mínimo privilegio | OK / Falla | — / Alta | {detalle} |
-| Secretos en gestor | OK / Falla | — / Crítica | {detalle} |
-| Sin exposición pública | OK / Falla | — / Alta | {detalle} |
-| Cifrado reposo/tránsito | OK / Falla | — / Media | {detalle} |
-| Security Tier respetado | OK / Falla | — / Alta | {detalle} |
+| IAM least privilege | OK / Fail | — / High | {detail} |
+| Secrets in manager | OK / Fail | — / Critical | {detail} |
+| No public exposure | OK / Fail | — / High | {detail} |
+| Encryption at rest/transit | OK / Fail | — / Medium | {detail} |
+| Security Tier respected | OK / Fail | — / High | {detail} |
 ```
 
-**Gate:** los hallazgos **críticos y altos deben resolverse** antes de continuar (corregir el IaC/pipeline y re-revisar). Hallazgos medios/bajos se documentan en `infra.md`.
+**Gate:** **critical and high findings must be resolved** before continuing (fix the IaC/pipeline and re-review). Medium/low findings are documented in `infra.md`.
 
-### Paso 6 — Restricciones duras (aplica durante todos los pasos)
+### Step 6 — Hard restrictions (apply during all steps)
 
-- **NUNCA aplicar a PRODUCCIÓN** (`terraform apply` / `az deployment ... create` / `pulumi up` contra prod) sin **OK humano explícito**.
-- Para **DEV**, se puede aplicar **solo si el usuario lo aprueba** en este flujo. Si no aprobó, dejar el IaC listo y que el pipeline lo aplique.
-- El **apply real preferentemente lo hace el pipeline**, no a mano (ver `deploy-workflow.md`).
-- **Zero downtime obligatorio**: ningún cambio de infra puede provocar caída del servicio.
+- **NEVER apply to PRODUCTION** (`terraform apply` / `az deployment ... create` / `pulumi up` against prod) without an **explicit human OK**.
+- For **DEV**, you may apply **only if the user approves** in this flow. If they did not approve, leave the IaC ready and let the pipeline apply it.
+- The **actual apply is preferably done by the pipeline**, not by hand (see `deploy-workflow.md`).
+- **Zero downtime mandatory**: no infra change may cause a service outage.
 
-### Paso 7 — CHANGELOG
+### Step 7 — CHANGELOG
 
-Todo IaC/pipeline generado o modificado **debe registrar entrada** en el `CHANGELOG.md` del repo correspondiente, según `changelog-policy.md`:
-- En la raíz de **cada repo** de `project.json:repos` que recibió cambios de infra/pipeline.
-- Formato *Keep a Changelog* + bloque de trazabilidad con **humano responsable** (de `git config user.*`), **modelo de IA**, el "por qué" (no solo el qué), `change-id` y `Fase Karvey: infra`.
+Any IaC/pipeline generated or modified **must record an entry** in the `CHANGELOG.md` of the corresponding repo, per `changelog-policy.md`:
+- At the root of **each repo** in `project.json:repos` that received infra/pipeline changes.
+- *Keep a Changelog* format + a traceability block with the **responsible human** (from `git config user.*`), the **AI model**, the "why" (not just the what), the `change-id` and `Karvey phase: infra`.
 
-### Paso 8 — Gestión
+### Step 8 — Management
 
-Registrar en la gestión del proyecto, leyendo `management` de `spec.json`:
-- `management = clickup` → crear tasks con prefijo `[Infra]` por recurso/pipeline relevante.
-- `management = markdown` → agregar entradas en `PLAN.md` con el estado de la infra y pipelines por repo/ambiente.
+Record in the project's management, reading `management` from `spec.json`:
+- `management = clickup` → create tasks with the `[Infra]` prefix per relevant resource/pipeline.
+- `management = markdown` → add entries in `PLAN.md` with the status of the infra and pipelines per repo/environment.
 
-### Paso 9 — Escribir salida y actualizar spec.json
+### Step 9 — Write output and update spec.json
 
-Escribir la salida del cambio:
+Write the change's output:
 
 ```
 docs/spec/changes/{change-id}/infra.md
 ```
 
-`infra.md` documenta:
-- **Recursos** creados/modificados/conformes (por proveedor y ambiente).
-- **Pipelines** CI/CD generados y su mapeo al `branch_flow` (dev/prod).
-- **Plataforma de deploy** (el bloque del Paso 4b: plataforma detectada, URL de producción, health check, comandos de deploy y canal de release por target).
-- **Revisión de seguridad** (el checklist del Paso 5 con hallazgos y resoluciones).
-- Notas de idempotencia (qué se reutilizó) y, si `iac_tool = none`, la nota de infra manual.
+`infra.md` documents:
+- **Resources** created/modified/compliant (per provider and environment).
+- **CI/CD pipelines** generated and their mapping to `branch_flow` (dev/prod).
+- **Deploy platform** (the block from Step 4b: detected platform, production URL, health check, deploy commands and release channel per target).
+- **Security review** (the checklist from Step 5 with findings and resolutions).
+- Idempotency notes (what was reused) and, if `iac_tool = none`, the manual-infra note.
 
-Actualizar `spec.json`:
+Update `spec.json`:
 - `phase: "infra-generated"`
 - `approvals.infra.generated: true`
 
-Tras presentación/aprobación (auto-aprobar si flag `-y`; si no, presentar resumen y pedir aprobación):
+After presentation/approval (auto-approve if flag `-y`; if not, present a summary and ask for approval):
 - `approvals.infra.approved: true`
 - `phase: "infra-approved"`
 
-### Paso 10 — Knowledge sync
+### Step 10 — Knowledge sync
 
-Al final, ejecutar el paso de sincronización según `rules/knowledge-sync.md`:
-- Si `knowledge_sync = "obsidian"` → sincronizar `infra.md` al vault vía MCP de Obsidian (con fallback a graphify si falla).
-- Si `knowledge_sync = "graphify"` → `/graphify docs/spec/ --update` (o `/graphify docs/spec/` si `graphify-out/` no existe).
-- Multi-repo con cambios de código de infra → graphify también en los repos afectados.
+At the end, run the sync step per `rules/knowledge-sync.md`:
+- If `knowledge_sync = "obsidian"` → sync `infra.md` to the vault via the Obsidian MCP (with a fallback to graphify if it fails).
+- If `knowledge_sync = "graphify"` → `/graphify docs/spec/ --update` (or `/graphify docs/spec/` if `graphify-out/` does not exist).
+- Multi-repo with infra code changes → graphify also in the affected repos.
 
-### Paso 11 — Output final
+### Step 11 — Final output
 
-Confirmar y mostrar el siguiente paso:
+Confirm and show the next step:
 
 ```
-✅ Infra generada y aprobada
+✅ Infra generated and approved
 
-Siguiente paso:
+Next step:
 /karvey-tasks {change-id}
 ```
 
 ## Safety
 
-Gates duros que **NUNCA** se saltan:
+Hard gates that are **NEVER** skipped:
 
-- **No prod sin OK humano**: jamás aplicar IaC ni deployar a producción sin aprobación humana explícita. El deploy real lo gatilla el pipeline (push a `dev`, merge a `master`), nunca un apply manual (ver `deploy-workflow.md`).
-- **No secretos hardcodeados**: ningún secreto en `.tf`/`.bicep`/Pulumi/YAML ni en variables de pipeline en claro. Todo via Key Vault / Secret Manager / Secrets Manager.
-- **Idempotencia**: nunca recrear infra existente; solo crear lo que falta o modificar lo necesario. Respetar el discovery del Paso 2.
-- **Zero downtime**: ningún cambio de infra puede provocar caída del servicio.
-- **Gate de seguridad**: hallazgos críticos/altos del Paso 5 bloquean el avance hasta resolverse.
+- **No prod without a human OK**: never apply IaC nor deploy to production without explicit human approval. The actual deploy is triggered by the pipeline (push to `dev`, merge to `master`), never a manual apply (see `deploy-workflow.md`).
+- **No hardcoded secrets**: no secret in `.tf`/`.bicep`/Pulumi/YAML nor in pipeline variables in cleartext. Everything via Key Vault / Secret Manager / Secrets Manager.
+- **Idempotency**: never recreate existing infra; only create what is missing or modify what is needed. Respect the discovery from Step 2.
+- **Zero downtime**: no infra change may cause a service outage.
+- **Security gate**: critical/high findings from Step 5 block progress until resolved.
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase Tasks ahora?»
-- Si confirma → ejecutá `/karvey-tasks {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Tasks phase now?"
+- If they confirm → run `/karvey-tasks {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
+- If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

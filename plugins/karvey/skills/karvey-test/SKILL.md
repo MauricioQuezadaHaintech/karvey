@@ -1,232 +1,232 @@
 ---
 name: karvey-test
-description: Execute unit tests and E2E tests after implementation. Generates test_plan.md and test_evidence.md with request/response/PASS/FAIL evidence. Triggers include "karvey test", "ejecutar tests", "pruebas", "testing", "evidencias".
+description: Execute unit tests and E2E tests after implementation. Generates test_plan.md and test_evidence.md with request/response/PASS/FAIL evidence. Triggers include "karvey test", "ejecutar tests", "run tests", "pruebas", "tests", "testing", "evidencias", "evidence".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 argument-hint: <change-id> [--e2e-only] [--unit-only]
 ---
 
 # Karvey Test
 
-## Propósito
+## Purpose
 
-Ejecutar el plan de pruebas completo post-implementación: tests unitarios por capa y pruebas E2E del flujo completo. Documentar evidencias en `docs/test_evidence.md`.
+Run the full post-implementation test plan: unit tests per layer and E2E tests of the complete flow. Document evidence in `docs/test_evidence.md`.
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 1 — Cargar contexto
+### Step 1 — Load context
 
-Leer:
+Read:
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/architecture.md`
-- `docs/spec/changes/{change-id}/mockup.html` (para mapear flujos E2E)
+- `docs/spec/changes/{change-id}/mockup.html` (to map E2E flows)
 - `docs/spec/changes/{change-id}/tasks.md`
 
-Leer también `docs/spec/project.json` y obtener el campo `targets` (ver `karvey/rules/targets.md`). El runtime real en que se ejecutan los tests E2E depende del target declarado: browser (web), simulador/dispositivo (iOS/Android), terminal (CLI), cliente HTTP (API), hardware/emulador (embedded). **No asumir "web" por defecto** — un proyecto puede tener varios targets.
+Also read `docs/spec/project.json` and obtain the `targets` field (see `karvey/rules/targets.md`). The actual runtime in which the E2E tests run depends on the declared target: browser (web), simulator/device (iOS/Android), terminal (CLI), HTTP client (API), hardware/emulator (embedded). **Do not assume "web" by default** — a project may have multiple targets.
 
-Detectar stack: `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `Gemfile`, `Cargo.toml` u otros archivos de configuración del proyecto. Identificar:
-- Lenguaje y framework del backend
-- Tipo de base de datos y patrón de acceso (ORM, SPs, queries directas)
-- Framework de test unitario disponible
-- Framework E2E disponible
-- Protocolo de API (REST, GraphQL, gRPC, etc.)
-- Targets declarados y su runtime real correspondiente
+Detect stack: `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `Gemfile`, `Cargo.toml`, or other project configuration files. Identify:
+- Backend language and framework
+- Database type and access pattern (ORM, SPs, direct queries)
+- Available unit test framework
+- Available E2E framework
+- API protocol (REST, GraphQL, gRPC, etc.)
+- Declared targets and their corresponding actual runtime
 
-### Paso 2 — Generar o actualizar test_plan.md
+### Step 2 — Generate or update test_plan.md
 
-Si `docs/test_plan.md` no existe, crearlo. Si existe, agregar sección para este change-id.
+If `docs/test_plan.md` does not exist, create it. If it exists, add a section for this change-id.
 
-**Estructura del test plan:**
+**Test plan structure:**
 
 ```markdown
 # Test Plan: {change-id}
 
 ## Scope
-Requirements cubiertos: {lista}
-Capas: {BD / Backend / Frontend}
+Requirements covered: {list}
+Layers: {DB / Backend / Frontend}
 
-## Tests Unitarios
+## Unit Tests
 
-### BD
-| ID | SP / Función | Caso | Input | Expected |
+### DB
+| ID | SP / Function | Case | Input | Expected |
 |----|-------------|------|-------|----------|
-| UT-BD-01 | `{schema}.{sp_nombre}` | Happy path | `@{contextKey}={valor}, @param=X` | Retorna {Y} |
-| UT-BD-02 | `{schema}.{sp_nombre}` | Contexto inválido | `@{contextKey}={valor_inválido}` | Error controlado |
-| UT-BD-03 | `{schema}.{sp_nombre}` | Input vacío | `@param=NULL` | Error controlado |
+| UT-BD-01 | `{schema}.{sp_name}` | Happy path | `@{contextKey}={value}, @param=X` | Returns {Y} |
+| UT-BD-02 | `{schema}.{sp_name}` | Invalid context | `@{contextKey}={invalid_value}` | Controlled error |
+| UT-BD-03 | `{schema}.{sp_name}` | Empty input | `@param=NULL` | Controlled error |
 
 ### Backend
-| ID | Endpoint / Operación | Caso | Input | Expected |
+| ID | Endpoint / Operation | Case | Input | Expected |
 |----|---------|------|---------|----------|
-| UT-BE-01 | {operación} | Happy path | `{input válido}` | {respuesta esperada} |
-| UT-BE-02 | {operación} | Sin auth | Sin credencial | Error de autenticación |
-| UT-BE-03 | {operación} | Contexto incorrecto | `{input de otro usuario}` | Error de autorización |
-| UT-BE-04 | {operación} | Input inválido | `{input incompleto}` | Error de validación |
+| UT-BE-01 | {operation} | Happy path | `{valid input}` | {expected response} |
+| UT-BE-02 | {operation} | No auth | No credential | Authentication error |
+| UT-BE-03 | {operation} | Wrong context | `{another user's input}` | Authorization error |
+| UT-BE-04 | {operation} | Invalid input | `{incomplete input}` | Validation error |
 
 ### Frontend
-| ID | Componente | Caso | Acción | Expected |
+| ID | Component | Case | Action | Expected |
 |----|-----------|------|--------|----------|
-| UT-FE-01 | {Componente} | Render inicial | Montar | Muestra skeleton |
-| UT-FE-02 | {Componente} | Datos cargados | API retorna datos | Muestra {N} items |
-| UT-FE-03 | {Componente} | Error API | API retorna 500 | Muestra mensaje de error |
-| UT-FE-04 | {Componente} | Sin datos | API retorna [] | Muestra estado vacío |
+| UT-FE-01 | {Component} | Initial render | Mount | Shows skeleton |
+| UT-FE-02 | {Component} | Data loaded | API returns data | Shows {N} items |
+| UT-FE-03 | {Component} | API error | API returns 500 | Shows error message |
+| UT-FE-04 | {Component} | No data | API returns [] | Shows empty state |
 
-## Tests E2E
+## E2E Tests
 
-Flujos derivados de los 3 niveles del mockup:
+Flows derived from the 3 levels of the mockup:
 
-### Flujo 1: {Nombre del flujo principal — Nivel 1→2→3}
-| Paso | Acción | Expected |
+### Flow 1: {Main flow name — Level 1→2→3}
+| Step | Action | Expected |
 |------|--------|----------|
-| 1 | Navegar a {sección} | Vista de {Nivel 2} se carga |
-| 2 | Hacer click en {elemento} | {Modal/Panel Nivel 3} se abre |
-| 3 | Completar formulario con {datos válidos} | {resultado esperado} |
-| 4 | Confirmar acción | {estado final} |
+| 1 | Navigate to {section} | {Level 2} view loads |
+| 2 | Click on {element} | {Level 3 Modal/Panel} opens |
+| 3 | Fill in form with {valid data} | {expected result} |
+| 4 | Confirm action | {final state} |
 
-### Flujo 2: {Nombre del flujo de error}
+### Flow 2: {Error flow name}
 ...
 
-### Flujo 3: {Flujo de permisos / seguridad}
+### Flow 3: {Permissions / security flow}
 ...
 ```
 
-### Paso 3 — Ejecutar tests unitarios
+### Step 3 — Run unit tests
 
-#### BD
-Para cada SP / función, ejecutar directamente en la BD de dev usando la sintaxis del stack:
+#### DB
+For each SP / function, run it directly in the dev DB using the stack's syntax:
 ```sql
--- UT-BD-01: Happy path (adaptar sintaxis según BD: EXEC, CALL, SELECT, etc.)
-{DB_CALL} {schema}.{sp_nombre} @{contextKey}={valor}, @param='valor_prueba'
--- Verificar resultado esperado
+-- UT-BD-01: Happy path (adapt syntax to the DB: EXEC, CALL, SELECT, etc.)
+{DB_CALL} {schema}.{sp_name} @{contextKey}={value}, @param='test_value'
+-- Verify expected result
 ```
 
-Registrar resultado en `docs/test_evidence.md`.
+Record the result in `docs/test_evidence.md`.
 
 #### Backend
-Usar `curl`, el test runner del proyecto, o el cliente apropiado según el protocolo:
+Use `curl`, the project's test runner, or the appropriate client per protocol:
 ```bash
-# REST (adaptar método, URL y puerto según el stack)
-curl -s -X POST "http://localhost:{puerto}/{endpoint}" \
-  -H "Authorization: {mecanismo_auth}" \
+# REST (adapt method, URL and port to the stack)
+curl -s -X POST "http://localhost:{port}/{endpoint}" \
+  -H "Authorization: {auth_mechanism}" \
   -H "Content-Type: application/json" \
-  -d '{input_de_prueba}'
+  -d '{test_input}'
 
 # GraphQL
-curl -s -X POST "http://localhost:{puerto}/graphql" \
+curl -s -X POST "http://localhost:{port}/graphql" \
   -H "Content-Type: application/json" \
-  -d '{"query": "{operacion(args) { campos }}"}'
+  -d '{"query": "{operation(args) { fields }}"}'
 
-# gRPC / otros: usar el cliente nativo del proyecto
+# gRPC / others: use the project's native client
 ```
 
-Ejecutar con el test runner detectado:
+Run with the detected test runner:
 - Python: `pytest`, `unittest`
 - Node/JS: `jest`, `vitest`, `mocha`, `npm run test`
 - Go: `go test ./...`
 - Java: `mvn test`, `gradle test`
 - Ruby: `rspec`, `rails test`
 - Rust: `cargo test`
-- Otro: usar el comando de test que exista en el proyecto (`Makefile`, `package.json scripts`, etc.)
+- Other: use whatever test command exists in the project (`Makefile`, `package.json scripts`, etc.)
 
-Si no hay test runner configurado: verificación manual documentada como evidencia.
+If there is no configured test runner: manual verification documented as evidence.
 
 #### Frontend
-Ejecutar con el test runner detectado del frontend:
+Run with the detected frontend test runner:
 - `npm run test`, `npx vitest run`, `jest`, `ng test`, etc.
-Si no existe test runner frontend: verificación manual documentada como evidencia.
+If there is no frontend test runner: manual verification documented as evidence.
 
-### Paso 4 — Ejecutar tests E2E en el runtime real del target
+### Step 4 — Run E2E tests in the target's actual runtime
 
-Los tests E2E se ejecutan **en el runtime real del target** declarado en `docs/spec/project.json:targets` (ver `karvey/rules/targets.md`), nunca contra un stub o asumiendo "web":
-- **web** → browser (headless o real). Framework: Playwright (`npx playwright test`), Cypress (`npx cypress run`), Selenium.
-- **iOS / Android** → simulador o dispositivo físico (vía túnel). Framework nativo o E2E mobile (XCUITest, Espresso, Detox, Maestro).
-- **CLI** → terminal: ejecutar el binario/comando real y verificar transcript de stdout/stderr y exit code.
-- **API / backend** → cliente HTTP real (`curl`, cliente del protocolo) contra el endpoint desplegado en dev.
-- **embedded** → hardware o emulador del proyecto.
+E2E tests run **in the target's actual runtime** declared in `docs/spec/project.json:targets` (see `karvey/rules/targets.md`), never against a stub or assuming "web":
+- **web** → browser (headless or real). Framework: Playwright (`npx playwright test`), Cypress (`npx cypress run`), Selenium.
+- **iOS / Android** → simulator or physical device (via tunnel). Native framework or mobile E2E (XCUITest, Espresso, Detox, Maestro).
+- **CLI** → terminal: run the actual binary/command and verify the stdout/stderr transcript and exit code.
+- **API / backend** → actual HTTP client (`curl`, protocol client) against the endpoint deployed in dev.
+- **embedded** → the project's hardware or emulator.
 
-Para "dar ojos" sobre el runtime real (capturar pantalla, navegar, interactuar), apoyarse en la skill transversal **`karvey-browse`**, que opera sobre el runtime del target (browser web, simulador/dispositivo mobile vía túnel, proceso/terminal CLI). No asume navegador.
+To "get eyes" on the actual runtime (capture screen, navigate, interact), rely on the cross-cutting skill **`karvey-browse`**, which operates on the target's runtime (web browser, mobile simulator/device via tunnel, CLI process/terminal). It does not assume a browser.
 
-Detectar el framework E2E disponible en el proyecto según el target:
+Detect the E2E framework available in the project per target:
 - **Playwright**: `npx playwright test`
 - **Cypress**: `npx cypress run`
-- **Selenium**: ejecutar suite configurada
-- **framework nativo / mobile** (Go, Java, XCUITest, Espresso, Detox, Maestro, etc.): usar el comando de integración del proyecto
-- **Sin framework E2E**: ejecutar manualmente cada flujo en el runtime real del target en dev
+- **Selenium**: run the configured suite
+- **native / mobile framework** (Go, Java, XCUITest, Espresso, Detox, Maestro, etc.): use the project's integration command
+- **No E2E framework**: manually run each flow in the target's actual runtime in dev
 
-Para cada paso del flujo E2E, independientemente del método, documentar:
-- URL o pantalla visitada
-- Acción realizada
-- Response/comportamiento observado
+For each E2E flow step, regardless of method, document:
+- URL or screen visited
+- Action performed
+- Observed response/behavior
 - PASS / FAIL
 
-Para cada paso del flujo E2E documentar:
-- URL visitada
-- Acción realizada
-- Response/comportamiento observado
+For each E2E flow step document:
+- URL visited
+- Action performed
+- Observed response/behavior
 - PASS / FAIL
 
-### Paso 4B — Benchmark de performance (baseline)
+### Step 4B — Performance benchmark (baseline)
 
-Medir métricas de performance **en el runtime real del target**, para tener un baseline comparable entre corridas (detectar regresiones de rendimiento, no solo de funcionalidad). Las métricas dependen del target:
-- **web** → Core Web Vitals (LCP, CLS, INP/FID), TTFB, tiempo de carga.
-- **iOS / Android** → tiempo de arranque (cold/warm start), tiempo de respuesta de interacciones, uso de memoria.
-- **CLI** → tiempo de ejecución del comando, tiempo de arranque del proceso.
-- **API / backend** → latencia de respuesta (p50/p95/p99), throughput.
+Measure performance metrics **in the target's actual runtime**, to have a comparable baseline across runs (detect performance regressions, not just functional ones). The metrics depend on the target:
+- **web** → Core Web Vitals (LCP, CLS, INP/FID), TTFB, load time.
+- **iOS / Android** → startup time (cold/warm start), interaction response time, memory usage.
+- **CLI** → command execution time, process startup time.
+- **API / backend** → response latency (p50/p95/p99), throughput.
 
-Esta medición puede delegarse o relacionarse con la skill **`karvey-health`** (chequeo de salud/performance del runtime). Registrar los valores medidos en `docs/test_evidence.md` (sección Benchmark) para comparar contra corridas previas: si una métrica clave se degrada respecto al baseline anterior, marcarlo como hallazgo.
+This measurement can be delegated to or related with the **`karvey-health`** skill (runtime health/performance check). Record the measured values in `docs/test_evidence.md` (Benchmark section) to compare against previous runs: if a key metric degrades relative to the previous baseline, flag it as a finding.
 
-### Paso 4C — Tests de regresión automáticos
+### Step 4C — Automatic regression tests
 
-**Cada vez que un test detecta un bug y este se corrige**, generar un test de regresión automático que cubra exactamente ese caso, de modo que vuelva a fallar si el bug reaparece. Es decir: por cada FAIL que se arregla, debe quedar un test nuevo en la suite.
+**Every time a test detects a bug and it is fixed**, generate an automatic regression test that covers exactly that case, so it fails again if the bug reappears. That is: for every fixed FAIL, a new test must remain in the suite.
 
-- Escribir el test en el framework de la capa donde estaba el bug (unitario o E2E) usando el runner detectado en el Paso 1.
-- Nombrarlo de forma trazable al bug (ej. `regression_{change-id}_{descripción-corta}`).
-- El test debe reproducir el input/escenario que producía el fallo y aseverar el comportamiento correcto.
-- Verificar que el test pasa contra el código corregido (y, idealmente, que falla contra el código previo).
-- Registrar el test de regresión generado en `docs/test_evidence.md` (sección Regresión), referenciando el ID del test fallido original.
+- Write the test in the framework of the layer where the bug was (unit or E2E) using the runner detected in Step 1.
+- Name it traceably to the bug (e.g., `regression_{change-id}_{short-description}`).
+- The test must reproduce the input/scenario that caused the failure and assert the correct behavior.
+- Verify that the test passes against the fixed code (and, ideally, that it fails against the previous code).
+- Record the generated regression test in `docs/test_evidence.md` (Regression section), referencing the ID of the original failed test.
 
-### Paso 5 — Documentar evidencias
+### Step 5 — Document evidence
 
-Escribir o actualizar `docs/test_evidence.md`:
+Write or update `docs/test_evidence.md`:
 
 ```markdown
 # Test Evidence: {change-id}
 
-**Fecha:** {YYYY-MM-DD HH:MM}
-**Ambiente:** dev / local
-**Stack:** {stack detectado}
-**Targets:** {targets de project.json}
-**Runtime E2E:** {runtime real usado por target — browser / simulador / terminal / cliente HTTP / ...}
+**Date:** {YYYY-MM-DD HH:MM}
+**Environment:** dev / local
+**Stack:** {detected stack}
+**Targets:** {targets from project.json}
+**E2E Runtime:** {actual runtime used per target — browser / simulator / terminal / HTTP client / ...}
 
-## Tests Unitarios — BD
+## Unit Tests — DB
 
-### UT-BD-01: {nombre SP} — Happy path
-**Resultado: ✅ PASS**
+### UT-BD-01: {SP name} — Happy path
+**Result: ✅ PASS**
 
 Request:
 ```sql
-{DB_CALL} {schema}.{sp_nombre} @{contextKey}={valor}, @param='valor'
+{DB_CALL} {schema}.{sp_name} @{contextKey}={value}, @param='value'
 ```
 
 Response:
 ```
-{resultado real — formato según el protocolo del proyecto (JSON, XML, binario, etc.)}
+{actual result — format per the project's protocol (JSON, XML, binary, etc.)}
 ```
 
-Observaciones: {si aplica}
+Notes: {if applicable}
 
 ---
 
-### UT-BD-02: Contexto inválido
-**Resultado: ✅ PASS**
+### UT-BD-02: Invalid context
+**Result: ✅ PASS**
 ...
 
-## Tests Unitarios — Backend
+## Unit Tests — Backend
 
 ### UT-BE-01: POST /endpoint — Happy path
-**Resultado: ✅ PASS**
+**Result: ✅ PASS**
 
 Request:
 ```
-POST http://localhost:{puerto}/api/{endpoint}
+POST http://localhost:{port}/api/{endpoint}
 Authorization: Bearer ***
 Content-Type: application/json
 
@@ -237,101 +237,101 @@ Response:
 ```
 HTTP/1.1 200 OK
 
-{body de respuesta}
+{response body}
 ```
 
 ---
 
-## Tests E2E
+## E2E Tests
 
-### Flujo 1: {Nombre}
-**Resultado: ✅ PASS**
+### Flow 1: {Name}
+**Result: ✅ PASS**
 
-| Paso | Acción | Resultado | Estado |
+| Step | Action | Result | Status |
 |------|--------|-----------|--------|
-| 1 | {acción} | {resultado} | ✅ |
-| 2 | {acción} | {resultado} | ✅ |
+| 1 | {action} | {result} | ✅ |
+| 2 | {action} | {result} | ✅ |
 
-Runtime real usado: {browser / simulador / terminal / cliente HTTP / ...}
+Actual runtime used: {browser / simulator / terminal / HTTP client / ...}
 
 ---
 
-## Benchmark de performance (baseline)
+## Performance benchmark (baseline)
 
-**Runtime medido:** {target / runtime real}
+**Measured runtime:** {target / actual runtime}
 
-| Métrica | Corrida actual | Baseline previo | Delta | Estado |
+| Metric | Current run | Previous baseline | Delta | Status |
 |---------|----------------|-----------------|-------|--------|
-| {LCP / cold start / latencia p95 / tiempo CLI} | {valor} | {valor o —} | {±} | ✅ / ⚠️ regresión |
+| {LCP / cold start / p95 latency / CLI time} | {value} | {value or —} | {±} | ✅ / ⚠️ regression |
 
-Observaciones: {degradaciones detectadas respecto al baseline, si aplica}
+Notes: {detected degradations relative to the baseline, if applicable}
 
 ---
 
-## Tests de regresión generados
+## Generated regression tests
 
-| ID test regresión | Cubre bug (ID test original) | Capa | Archivo | Estado |
+| Regression test ID | Covers bug (original test ID) | Layer | File | Status |
 |-------------------|------------------------------|------|---------|--------|
-| `regression_{change-id}_{desc}` | {UT-XX-NN / E2E Flujo N} | {BD/Backend/Frontend/E2E} | {ruta} | ✅ PASS |
+| `regression_{change-id}_{desc}` | {UT-XX-NN / E2E Flow N} | {DB/Backend/Frontend/E2E} | {path} | ✅ PASS |
 
 ---
 
-## Resumen
+## Summary
 
-| Categoría | Total | PASS | FAIL |
+| Category | Total | PASS | FAIL |
 |-----------|-------|------|------|
-| BD | {N} | {N} | {N} |
+| DB | {N} | {N} | {N} |
 | Backend | {N} | {N} | {N} |
 | Frontend | {N} | {N} | {N} |
 | E2E | {N} | {N} | {N} |
-| Regresión | {N} | {N} | {N} |
+| Regression | {N} | {N} | {N} |
 | **Total** | **{N}** | **{N}** | **{N}** |
 ```
 
-### Paso 5B — Actualizar grafo de conocimiento
+### Step 5B — Update knowledge graph
 
-Sincronizar el conocimiento según `karvey/rules/knowledge-sync.md` (Obsidian si está disponible; mínimo `/graphify docs/spec/ --update`) para reflejar `test_plan.md` y `test_evidence.md`.
-Si `docs/spec/graphify-out/` no existe, invocar `/graphify docs/spec/` sin `--update`.
+Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect `test_plan.md` and `test_evidence.md`.
+If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
 
-### Paso 6 — Reportar al usuario
+### Step 6 — Report to the user
 
-Si todos los tests PASS:
+If all tests PASS:
 ```
-✅ Testing completo
+✅ Testing complete
 
-Resultados:
-  BD: {N}/{N} PASS
+Results:
+  DB: {N}/{N} PASS
   Backend: {N}/{N} PASS
   Frontend: {N}/{N} PASS
   E2E: {N}/{N} PASS
 
-Evidencias: docs/test_evidence.md
+Evidence: docs/test_evidence.md
 
-Siguiente paso:
+Next step:
 /karvey-qa {change-id}
 ```
 
-Si hay FAILs:
+If there are FAILs:
 ```
-⚠️ {N} tests fallaron
+⚠️ {N} tests failed
 
 FAILs:
-  - {ID}: {descripción del fallo}
-  - {ID}: {descripción del fallo}
+  - {ID}: {failure description}
+  - {ID}: {failure description}
 
-Por cada FAIL que se corrija, generar su test de regresión (Paso 4C) y dejarlo en la suite.
+For every fixed FAIL, generate its regression test (Step 4C) and leave it in the suite.
 
-Corregir y re-ejecutar: /karvey-test {change-id}
-O avanzar con los fallos documentados (no recomendado): /karvey-qa {change-id}
+Fix and re-run: /karvey-test {change-id}
+Or proceed with documented failures (not recommended): /karvey-qa {change-id}
 ```
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase QA ahora?»
-- Si confirma → ejecutá `/karvey-qa {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When finishing this phase and having the corresponding approval, **actively ask the user**: "Shall we advance to the QA phase now?"
+- If they confirm → run `/karvey-qa {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
+- If you resume in another session, `/karvey {change-id}` indicates which phase you are in and which one follows.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

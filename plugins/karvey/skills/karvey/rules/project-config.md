@@ -1,20 +1,20 @@
-# Regla: Configuración del proyecto (`project.json`)
+# Rule: Project configuration (`project.json`)
 
-El Método Karvey opera a dos niveles: **proyecto** (config estable, compartida por todos los cambios) y **cambio** (`spec.json` por change-id). Esta regla define la config a nivel proyecto.
+The Karvey Method operates at two levels: **project** (stable config, shared by all changes) and **change** (`spec.json` per change-id). This rule defines the project-level config.
 
-## Ubicación
+## Location
 
 ```
 docs/spec/project.json
 ```
 
-`docs/spec/` vive en el **repo principal** del proyecto (`spec_repo`). Un proyecto tiene **1 o más repos, nunca cero**. Si hay un solo repo, ese es el `spec_repo`. Si hay varios, se designa el principal/orquestador.
+`docs/spec/` lives in the project's **main repo** (`spec_repo`). A project has **1 or more repos, never zero**. If there is a single repo, that one is the `spec_repo`. If there are several, the main/orchestrator repo is designated.
 
-## Esquema
+## Schema
 
 ```json
 {
-  "project": "{nombre del proyecto}",
+  "project": "{project name}",
   "git_platform": "github | azure_devops",
   "cloud": {
     "provider": "azure | gcp | aws | mixed | none"
@@ -22,8 +22,8 @@ docs/spec/project.json
   "iac_tool": "terraform | bicep | pulumi | none",
   "knowledge_sync": "obsidian | graphify",
   "targets": ["web", "ios", "android", "desktop", "cli", "api", "embedded"],
-  "repos": ["ruta/o/nombre/repo1", "ruta/o/nombre/repo2"],
-  "spec_repo": "repo-principal-donde-vive-docs-spec",
+  "repos": ["path/or/name/repo1", "path/or/name/repo2"],
+  "spec_repo": "main-repo-where-docs-spec-lives",
   "branch_flow": {
     "feature_prefix": "feature/",
     "integration": "dev",
@@ -36,23 +36,23 @@ docs/spec/project.json
 }
 ```
 
-## Reglas de manejo
+## Handling rules
 
-- **`repos`**: arreglo obligatorio con **mínimo 1** entrada. Validar al crear/leer; si viene vacío, detener y pedir al menos un repo.
-- **`spec_repo`**: si `repos` tiene 1 elemento, `spec_repo` = ese repo. Si tiene varios, preguntar cuál es el principal.
-- **`git_platform`**: determina qué pipelines genera `karvey-infra` (GitHub Actions vs Azure Pipelines).
-- **`cloud.provider`**: `mixed` significa que se usan servicios de más de una nube; el detalle de qué servicio de qué nube se especifica en la sección "Infraestructura Cloud" de `architecture.md` por cada cambio.
-- **`iac_tool`**: `none` significa que la infra se gestiona manualmente; `karvey-infra` igual genera/valida los pipelines CI/CD.
-- **`knowledge_sync`**: ver `knowledge-sync.md`.
-- **`targets`**: plataformas del proyecto (mínimo 1). Define cómo cada fase verifica/diseña. Ver `targets.md`. Agnóstico de stack: nunca asumir `web` por defecto.
-- **`branch_flow`**: convención de ramas; respetada por `karvey-impl`, `karvey-qa` y `karvey-deploy`. Default: `feature/*` → `dev` → `master`.
-- **`enforcement`**: activación (opt-in) de los hooks de `enforcement.md`. `karvey-init` pregunta y `karvey-guard` los gestiona. Default ambos `false`.
+- **`repos`**: mandatory array with **at least 1** entry. Validate on create/read; if it comes in empty, stop and ask for at least one repo.
+- **`spec_repo`**: if `repos` has 1 element, `spec_repo` = that repo. If it has several, ask which one is the main one.
+- **`git_platform`**: determines which pipelines `karvey-infra` generates (GitHub Actions vs Azure Pipelines).
+- **`cloud.provider`**: `mixed` means services from more than one cloud are used; the detail of which service from which cloud is specified in the "Cloud Infrastructure" section of `architecture.md` for each change.
+- **`iac_tool`**: `none` means infra is managed manually; `karvey-infra` still generates/validates the CI/CD pipelines.
+- **`knowledge_sync`**: see `knowledge-sync.md`.
+- **`targets`**: the project's platforms (at least 1). Defines how each phase verifies/designs. See `targets.md`. Stack-agnostic: never assume `web` by default.
+- **`branch_flow`**: branch convention; respected by `karvey-impl`, `karvey-qa` and `karvey-deploy`. Default: `feature/*` → `dev` → `master`.
+- **`enforcement`**: opt-in activation of the hooks in `enforcement.md`. `karvey-init` asks and `karvey-guard` manages them. Default both `false`.
 
-> **Nota — `goal`**: el objetivo del cambio NO vive en `project.json` sino por cambio, en `prd.md` y en `spec.json` (`"goal"`). Da el norte para perseguir el resultado sin detenerse, respetando los gates de plan y seguridad.
+> **Note — `goal`**: the change's goal does NOT live in `project.json` but per change, in `prd.md` and in `spec.json` (`"goal"`). It sets the direction to pursue the outcome without stopping, while respecting the plan and security gates.
 
-## Quién la crea / lee
+## Who creates / reads it
 
-- **Crea**: `karvey-init` (primera vez en el proyecto). Pre-poblada desde la síntesis de `karvey-grill` si existe.
-- **Lee**: todas las fases. En particular `karvey-architecture` (cloud), `karvey-infra` (git_platform, cloud, iac_tool, repos), `karvey-deploy` (branch_flow, repos), y cualquier fase que sincronice conocimiento (`knowledge_sync`).
+- **Creates**: `karvey-init` (first time in the project). Pre-populated from the `karvey-grill` synthesis if it exists.
+- **Reads**: all phases. In particular `karvey-architecture` (cloud), `karvey-infra` (git_platform, cloud, iac_tool, repos), `karvey-deploy` (branch_flow, repos), and any phase that syncs knowledge (`knowledge_sync`).
 
-Si una fase necesita `project.json` y no existe, detener e indicar correr `karvey-init` primero.
+If a phase needs `project.json` and it does not exist, stop and indicate to run `karvey-init` first.

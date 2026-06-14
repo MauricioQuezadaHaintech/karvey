@@ -2,54 +2,54 @@
 name: karvey-diagram
 description: Diagram maker for the Karvey method. Natural language in, diagram out — mermaid source + editable .excalidraw + rendered SVG/PNG. Offline-friendly. Triggers include "karvey diagram", "diagrama", "mermaid", "excalidraw", "diagrama de flujo", "diagrama de arquitectura".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [descripción del diagrama] [--type flow|sequence|architecture|er]
+argument-hint: [diagram description] [--type flow|sequence|architecture|er]
 ---
 
 # karvey-diagram
 
-## Propósito
+## Purpose
 
-Skill **transversal** del Método Karvey — es una **capa de apoyo**, NO una fase. **No cambia `spec.json:phase`** ni hace avanzar el flujo del método. Su único trabajo es convertir una descripción en lenguaje natural en un diagrama **editable y renderizado**.
+A **cross-cutting** skill of the Karvey Method — it is a **support layer**, NOT a phase. **It does not change `spec.json:phase`** nor advance the method's flow. Its only job is to turn a natural-language description into an **editable and rendered** diagram.
 
-Inspirada en el `/diagram` de gstack: lenguaje natural entra, diagrama sale (fuente mermaid + `.excalidraw` editable + SVG/PNG renderizado). Pensada para funcionar **offline-friendly**: si no hay herramienta de render disponible, degrada limpiamente a solo-fuente.
+Inspired by gstack's `/diagram`: natural language in, diagram out (mermaid source + editable `.excalidraw` + rendered SVG/PNG). Designed to work **offline-friendly**: if no render tool is available, it degrades cleanly to source-only.
 
-Es especialmente útil como apoyo de:
-- **karvey-architecture** — diagramas de arquitectura y de flujo de datos (data flow).
-- **docs** en general — cualquier documento del change que necesite un diagrama.
+It is especially useful as support for:
+- **karvey-architecture** — architecture and data-flow diagrams.
+- **docs** in general — any document of the change that needs a diagram.
 
-## Cuándo usarla
+## When to use it
 
-Cuando el usuario pide un diagrama: "diagrama de flujo", "diagrama de arquitectura", "hazme un mermaid", "exporta esto a excalidraw", etc. Puede invocarse en cualquier momento del ciclo Karvey sin alterar el estado de la fase.
+When the user asks for a diagram: "flow diagram", "architecture diagram", "make me a mermaid", "export this to excalidraw", etc. It can be invoked at any point of the Karvey cycle without altering the phase state.
 
-## Pasos
+## Steps
 
-1. **Entender qué se quiere diagramar.**
-   - Leer la descripción en lenguaje natural del usuario (y el `--type` si lo pasó).
-   - Si el contexto vive en el repo (spec, docs de arquitectura, código), usar Read/Glob/Grep para entender entidades, componentes, flujos y relaciones antes de dibujar.
-   - Inferir el tipo de diagrama si no se especificó: `flow` (flujo/proceso), `sequence` (secuencia/interacción), `architecture` (componentes/data flow), `er` (entidad-relación / modelo de datos).
+1. **Understand what is to be diagrammed.**
+   - Read the user's natural-language description (and the `--type` if passed).
+   - If the context lives in the repo (spec, architecture docs, code), use Read/Glob/Grep to understand entities, components, flows and relationships before drawing.
+   - Infer the diagram type if not specified: `flow` (flow/process), `sequence` (sequence/interaction), `architecture` (components/data flow), `er` (entity-relationship / data model).
 
-2. **Generar la fuente mermaid.**
-   - Producir el bloque mermaid correcto para el tipo elegido (`flowchart`, `sequenceDiagram`, `erDiagram`, etc.).
-   - Mantener nombres claros y consistentes con la spec/arquitectura del change.
-   - Esta es la salida mínima garantizada — siempre se entrega, aunque no haya render.
+2. **Generate the mermaid source.**
+   - Produce the correct mermaid block for the chosen type (`flowchart`, `sequenceDiagram`, `erDiagram`, etc.).
+   - Keep names clear and consistent with the change's spec/architecture.
+   - This is the minimum guaranteed output — it is always delivered, even if there is no render.
 
-3. **(Opcional) Versión `.excalidraw` editable.**
-   - Si el usuario quiere editar a mano o presentar, generar también un archivo `.excalidraw` (JSON Excalidraw) equivalente al diagrama.
-   - Si existe una herramienta de conversión mermaid→excalidraw disponible, usarla; si no, construir un `.excalidraw` simple con los nodos y aristas principales.
+3. **(Optional) Editable `.excalidraw` version.**
+   - If the user wants to edit it by hand or present it, also generate an `.excalidraw` file (Excalidraw JSON) equivalent to the diagram.
+   - If a mermaid→excalidraw conversion tool is available, use it; if not, build a simple `.excalidraw` with the main nodes and edges.
 
-4. **Renderizar a SVG/PNG si hay herramienta disponible (detectar; degradar si no).**
-   - Detectar herramientas de render, en orden de preferencia: `mmdc` (mermaid-cli) → `npx @mermaid-js/mermaid-cli` → contenedor/local equivalente.
-   - Comprobar disponibilidad antes de invocar (p. ej. `command -v mmdc`). Si hay red/herramienta, renderizar `SVG` (preferido por ser vectorial) y/o `PNG`.
-   - **Degradación offline-friendly:** si no hay ninguna herramienta de render, NO fallar — entregar la fuente mermaid (y el `.excalidraw` si se pidió) e indicar explícitamente que el render quedó pendiente y cómo generarlo localmente.
+4. **Render to SVG/PNG if a tool is available (detect; degrade if not).**
+   - Detect render tools, in order of preference: `mmdc` (mermaid-cli) → `npx @mermaid-js/mermaid-cli` → equivalent container/local.
+   - Check availability before invoking (e.g. `command -v mmdc`). If there is network/tool, render `SVG` (preferred for being vectorial) and/or `PNG`.
+   - **Offline-friendly degradation:** if there is no render tool at all, do NOT fail — deliver the mermaid source (and the `.excalidraw` if requested) and explicitly indicate that the render is pending and how to generate it locally.
 
-5. **Guardar en la ubicación correcta.**
-   - Si el change está activo, guardar en `docs/spec/changes/{change-id}/` (junto a la spec/docs del change).
-   - Si no aplica un change-id, guardar donde corresponda al contexto (carpeta de docs/arquitectura relevante).
-   - Nombrar de forma descriptiva: `<nombre>.mmd`, `<nombre>.excalidraw`, `<nombre>.svg` / `<nombre>.png`.
+5. **Save in the correct location.**
+   - If the change is active, save in `docs/spec/changes/{change-id}/` (next to the change's spec/docs).
+   - If a change-id does not apply, save where the context corresponds (relevant docs/architecture folder).
+   - Name descriptively: `<name>.mmd`, `<name>.excalidraw`, `<name>.svg` / `<name>.png`.
 
-## Importante
+## Important
 
-- **No avanza la fase.** Esta skill nunca escribe ni modifica `spec.json:phase` ni el estado del Método Karvey. Es puro apoyo de visualización.
+- **It does not advance the phase.** This skill never writes nor modifies `spec.json:phase` nor the state of the Karvey Method. It is pure visualization support.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

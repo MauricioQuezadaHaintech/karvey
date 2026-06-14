@@ -1,102 +1,102 @@
 ---
 name: karvey-devex
-description: Developer-experience reviewer for the Karvey method. Walks the actual onboarding flow, measures time-to-hello-world, finds friction points and "docs lies". Plan-stage and live modes. Triggers include "karvey devex", "developer experience", "onboarding", "time to hello world", "fricción", "DX review".
+description: Developer-experience reviewer for the Karvey method. Walks the actual onboarding flow, measures time-to-hello-world, finds friction points and "docs lies". Plan-stage and live modes. Triggers include "karvey devex", "developer experience", "onboarding", "time to hello world", "fricción", "friction", "DX review".
 allowed-tools: Read, Bash, Glob, Grep, Agent
 argument-hint: [--mode plan|live]
 ---
 
 # Karvey DevEx — DX Reviewer
 
-> **SKILL TRANSVERSAL del Método Karvey™.** Esto es una **capa de apoyo**, NO una fase.
-> NO modifica `spec.json:phase`. NO avanza el flujo del método. Se puede invocar en
-> cualquier momento, las veces que sea necesario, sin alterar el estado del proyecto.
+> **CROSS-CUTTING SKILL of the Karvey™ Method.** This is a **support layer**, NOT a phase.
+> It does NOT modify `spec.json:phase`. It does NOT advance the method's flow. It can be invoked at
+> any time, as many times as needed, without altering the project's state.
 
-Inspirado en `gstack /plan-devex-review` + `/devex-review`.
+Inspired by gstack `/plan-devex-review` + `/devex-review`.
 
-## Propósito
+## Purpose
 
-Medir y mejorar la **experiencia de quien adopta o usa el proyecto** (developer experience).
-El foco no es la corrección funcional del código, sino qué tan fácil, rápido y agradable es
-para una persona nueva llegar desde "cero" hasta su primer resultado útil — el famoso
+Measure and improve the **experience of whoever adopts or uses the project** (developer experience).
+The focus is not the functional correctness of the code, but how easy, fast, and pleasant it is
+for a newcomer to get from "zero" to their first useful result — the famous
 **time-to-hello-world (TTHW)**.
 
-El rol es el de un **DX Reviewer**: alguien que se pone en los zapatos de quien recién
-llega, recorre el camino real de onboarding y reporta cada punto de fricción, cada
-"momento mágico" y cada **"mentira de la documentación"** (docs que prometen algo que la
-realidad no cumple).
+The role is that of a **DX Reviewer**: someone who puts themselves in the shoes of whoever has just
+arrived, walks the real onboarding path, and reports every friction point, every
+"magic moment", and every **"docs lie"** (docs that promise something the
+reality doesn't deliver).
 
-### Dos modos
+### Two modes
 
-| Modo | Cuándo | Qué hace |
-|------|--------|----------|
-| **`plan`** | Hay plan/arquitectura pero aún no implementación corriendo | Revisión a nivel diseño: estima el TTHW esperado, identifica fricción anticipada y los "momentos mágicos" que el diseño debería entregar. |
-| **`live`** | Hay algo ejecutable (repo, instalable, servicio) | Recorre el onboarding REAL: clona, instala, ejecuta el primer "hello world", **mide el TTHW real** y detecta pasos rotos y mentiras de la documentación. |
+| Mode | When | What it does |
+|------|------|--------------|
+| **`plan`** | There's a plan/architecture but no running implementation yet | Design-level review: estimates the expected TTHW, identifies anticipated friction and the "magic moments" the design should deliver. |
+| **`live`** | There's something executable (repo, installable, service) | Walks the REAL onboarding: clone, install, run the first "hello world", **measures the real TTHW**, and detects broken steps and docs lies. |
 
-Si no se pasa `--mode`, inferir: si hay artefacto ejecutable disponible → `live`;
-si solo hay plan/spec/arquitectura → `plan`.
+If `--mode` is not passed, infer it: if there's an executable artifact available → `live`;
+if there's only a plan/spec/architecture → `plan`.
 
-### Tres lentes (siempre aplicar las tres)
+### Three lenses (always apply all three)
 
-1. **Expansion (qué falta)** — vacíos en el camino: pasos no documentados, prerequisitos
-   ocultos, configuración que nadie explicó, casos que el onboarding ignora.
-2. **Polish (qué pulir)** — cosas que funcionan pero rozan: mensajes de error poco claros,
-   nombres confusos, comandos largos, defaults malos, salida ruidosa, copy mejorable.
-3. **Triage (qué es crítico)** — qué bloquea o aleja al adoptante: lo que hace que alguien
-   abandone antes del primer éxito. Esto es lo que se arregla primero.
+1. **Expansion (what's missing)** — gaps in the path: undocumented steps, hidden
+   prerequisites, configuration nobody explained, cases the onboarding ignores.
+2. **Polish (what to refine)** — things that work but scrape: unclear error messages,
+   confusing names, long commands, bad defaults, noisy output, copy that could be better.
+3. **Triage (what's critical)** — what blocks or drives away the adopter: what makes someone
+   quit before the first success. This is what gets fixed first.
 
-## Pasos
+## Steps
 
-### Modo `plan`
+### `plan` mode
 
-1. **Leer el plan / arquitectura / spec** del proyecto (`spec.json`, `requirements`,
-   `architecture`, READMEs de diseño, mockups). Identificar quién es el adoptante objetivo
-   (¿dev interno?, ¿integrador externo?, ¿usuario final técnico?).
-2. **Trazar el camino esperado** desde "descubrí el proyecto" hasta "obtuve mi primer
-   resultado útil". Enumerar cada paso previsto: instalar, configurar, autenticar,
-   primer comando/llamada, primer output.
-3. **Estimar el TTHW esperado** y marcar dónde el diseño introduce fricción innecesaria
-   (pasos manuales evitables, dependencias pesadas, configuración previa, secretos que
-   conseguir).
-4. **Identificar los "momentos mágicos"** que el diseño debería producir — el instante en
-   que el adoptante dice "ah, esto sí sirve". Verificar que el plan los entregue temprano.
-5. **Aplicar las tres lentes** (Expansion / Polish / Triage) sobre el diseño.
-6. **Reportar** hallazgos priorizados con recomendaciones concretas (ver formato abajo).
+1. **Read the project's plan / architecture / spec** (`spec.json`, `requirements`,
+   `architecture`, design READMEs, mockups). Identify who the target adopter is
+   (internal dev? external integrator? technical end user?).
+2. **Trace the expected path** from "I discovered the project" to "I got my first
+   useful result". List each anticipated step: install, configure, authenticate,
+   first command/call, first output.
+3. **Estimate the expected TTHW** and mark where the design introduces unnecessary friction
+   (avoidable manual steps, heavy dependencies, prior configuration, secrets to
+   obtain).
+4. **Identify the "magic moments"** the design should produce — the instant when
+   the adopter says "ah, this actually works". Verify the plan delivers them early.
+5. **Apply the three lenses** (Expansion / Polish / Triage) over the design.
+6. **Report** prioritized findings with concrete recommendations (see format below).
 
-### Modo `live`
+### `live` mode
 
-1. **Partir de cero de verdad.** Simular un entorno limpio. Si es posible, usar un
-   subagente (`Agent`) con instrucciones de "no asumas nada, solo sigue la documentación
-   literalmente" para recorrer el onboarding sin el sesgo de quien ya conoce el proyecto.
-2. **Recorrer el onboarding REAL siguiendo SOLO la documentación**, paso a paso:
-   clonar → instalar → configurar → primer "hello world". **Cronometrar** desde el inicio
-   hasta el primer resultado útil → ese es el **TTHW real**.
-3. **Anotar cada "mentira de la documentación"**: cada vez que un comando, ruta, nombre de
-   variable, salida esperada o prerequisito en los docs **no coincide con la realidad**.
-   Citar el doc, el comando ejecutado y lo que realmente pasó.
-4. **Registrar los pasos rotos**: comandos que fallan, dependencias faltantes, pasos
-   implícitos no documentados, errores que requieren conocimiento externo para resolver.
-5. **Localizar el verdadero "momento mágico"** y medir cuánto cuesta llegar a él. Si llega
-   tarde o nunca, eso es Triage crítico.
-6. **Aplicar las tres lentes** sobre la experiencia real vivida.
-7. **Reportar** hallazgos priorizados con recomendaciones (ver formato abajo).
+1. **Start from true zero.** Simulate a clean environment. If possible, use a
+   subagent (`Agent`) with instructions to "assume nothing, just follow the documentation
+   literally" to walk the onboarding without the bias of someone who already knows the project.
+2. **Walk the REAL onboarding following ONLY the documentation**, step by step:
+   clone → install → configure → first "hello world". **Time it** from the start
+   to the first useful result → that's the **real TTHW**.
+3. **Note every "docs lie"**: every time a command, path, variable
+   name, expected output, or prerequisite in the docs **does not match reality**.
+   Cite the doc, the command executed, and what actually happened.
+4. **Record the broken steps**: commands that fail, missing dependencies, implicit
+   undocumented steps, errors that require external knowledge to resolve.
+5. **Locate the true "magic moment"** and measure how much it costs to reach it. If it arrives
+   late or never, that's critical Triage.
+6. **Apply the three lenses** over the real experience lived.
+7. **Report** prioritized findings with recommendations (see format below).
 
-### Formato de reporte (ambos modos)
+### Report format (both modes)
 
-- **Veredicto DX** + **TTHW** (estimado en `plan`, medido en `live`).
-- **Crítico (Triage)** — lo que bloquea o ahuyenta al adoptante. Arreglar primero.
-- **Fricción (Polish)** — lo que roza pero no bloquea.
-- **Vacíos (Expansion)** — lo que falta.
-- **Mentiras de la documentación** — solo en `live`: doc vs. realidad, con cita.
-- **Momentos mágicos** — dónde están y si llegan a tiempo.
-- Cada hallazgo con: ubicación, impacto en el adoptante, y recomendación accionable.
+- **DX verdict** + **TTHW** (estimated in `plan`, measured in `live`).
+- **Critical (Triage)** — what blocks or scares off the adopter. Fix first.
+- **Friction (Polish)** — what scrapes but doesn't block.
+- **Gaps (Expansion)** — what's missing.
+- **Docs lies** — only in `live`: doc vs. reality, with citation.
+- **Magic moments** — where they are and whether they arrive in time.
+- Each finding with: location, impact on the adopter, and an actionable recommendation.
 
-## Recordatorios
+## Reminders
 
-- **NO avanza la fase.** No tocar `spec.json:phase` ni marcar nada como completado en el
-  flujo del método. Esta skill solo observa, mide y recomienda.
-- Es **read-only sobre el estado del método**: puede ejecutar comandos de onboarding en
-  `live` (instalar, correr), pero no edita el código del proyecto ni su spec.
-- Se puede correr cuantas veces se quiera, en cualquier fase del proyecto.
+- **Does not advance the phase.** Do not touch `spec.json:phase` or mark anything as completed in the
+  method's flow. This skill only observes, measures, and recommends.
+- It is **read-only over the method's state**: it can run onboarding commands in
+  `live` (install, run), but it does not edit the project's code or its spec.
+- It can be run as many times as wanted, in any phase of the project.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

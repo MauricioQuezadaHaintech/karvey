@@ -1,15 +1,15 @@
-# ClickUp Protocol — Método Karvey
+# ClickUp Protocol — Karvey Method
 
-## Credenciales — `.connections.json`
+## Credentials — `.connections.json`
 
-Las credenciales se guardan en `.connections.json` en la raíz del proyecto. **Este archivo NUNCA se sube al repositorio.**
+Credentials are stored in `.connections.json` at the project root. **This file is NEVER committed to the repository.**
 
-### Setup inicial (si no existe)
+### Initial setup (if it does not exist)
 
-Si `.connections.json` no existe en el proyecto, crearlo con esta estructura y agregar al `.gitignore`:
+If `.connections.json` does not exist in the project, create it with this structure and add it to `.gitignore`:
 
 ```bash
-# Agregar a .gitignore
+# Add to .gitignore
 echo ".connections.json" >> .gitignore
 ```
 
@@ -23,9 +23,9 @@ echo ".connections.json" >> .gitignore
 }
 ```
 
-> Indicar al usuario que complete los valores reales en `.connections.json` localmente antes de continuar.
+> Tell the user to fill in the real values in `.connections.json` locally before continuing.
 
-### Leer credenciales en bash
+### Read credentials in bash
 
 ```bash
 API_KEY=$(python3 -c "import json; print(json.load(open('.connections.json'))['clickup']['api_key'])")
@@ -33,64 +33,64 @@ USER_ID=$(python3 -c "import json; print(json.load(open('.connections.json'))['c
 WORKSPACE_ID=$(python3 -c "import json; print(json.load(open('.connections.json'))['clickup']['workspace_id'])")
 ```
 
-## Estructura WBS: Epic > Feature > Task
+## WBS structure: Epic > Feature > Task
 
 ```
-E{n} Nombre del Epic
-├── E{n}.F{n} Nombre del Feature
-│   ├── E{n}.F{n}.T{n} [BD] Descripción
-│   ├── E{n}.F{n}.T{n} [Backend] Descripción
-│   └── E{n}.F{n}.T{n} [Frontend] Descripción
+E{n} Epic name
+├── E{n}.F{n} Feature name
+│   ├── E{n}.F{n}.T{n} [BD] Description
+│   ├── E{n}.F{n}.T{n} [Backend] Description
+│   └── E{n}.F{n}.T{n} [Frontend] Description
 ```
 
-### Capas válidas
-| Etiqueta | Agente |
+### Valid layers
+| Tag | Agent |
 |---|---|
-| `[BD]` | Base de datos (SPs, migraciones, queries) |
-| `[Backend]` | Lógica de servidor (API, servicios, funciones) |
+| `[BD]` | Database (SPs, migrations, queries) |
+| `[Backend]` | Server logic (API, services, functions) |
 | `[Frontend]` | Vue/React/UI |
 | `[Infra]` | Docker, pipelines, infra |
-| `[Test]` | Testing y QA |
+| `[Test]` | Testing and QA |
 
-## Operaciones MCP
+## MCP operations
 
-### Crear Epic
+### Create Epic
 ```
 clickup_create_task
-  name: "E{n} {Nombre del Epic}"
+  name: "E{n} {Epic name}"
   list_id: "{BACKLOG_LIST_ID}"
   task_type: "Epic"
-  description: (ver template epic)
-  tags: ["{cliente}"]
+  description: (see epic template)
+  tags: ["{client}"]
   priority: "normal"
 ```
 
-### Crear Feature
+### Create Feature
 ```
 clickup_create_task
-  name: "E{n}.F{n} {Nombre del Feature}"
+  name: "E{n}.F{n} {Feature name}"
   list_id: "{BACKLOG_LIST_ID}"
   task_type: "Feature"
-  description: (ver template feature)
-  tags: ["{cliente}"]
+  description: (see feature template)
+  tags: ["{client}"]
 ```
 
-### Crear Task
+### Create Task
 ```
 clickup_create_task
-  name: "E{n}.F{n}.T{n} [Capa] {Descripción}"
+  name: "E{n}.F{n}.T{n} [Layer] {Description}"
   list_id: "{BACKLOG_LIST_ID}"
-  description: (ver template task)
-  tags: ["{cliente}"]
+  description: (see task template)
+  tags: ["{client}"]
   priority: "normal"
   start_date: "YYYY-MM-DD"
   due_date: "YYYY-MM-DD"
 ```
-> NOTA: `time_estimate` NO funciona en MCP. Siempre actualizar via REST API después de crear.
+> NOTE: `time_estimate` does NOT work via MCP. Always update it via REST API after creating.
 
-## Operaciones REST API
+## REST API operations
 
-### Crear dependencia (task A espera a task B)
+### Create dependency (task A waits for task B)
 ```bash
 curl -s -X POST "https://api.clickup.com/api/v2/task/{A}/dependency" \
   -H "Authorization: $API_KEY" \
@@ -98,14 +98,14 @@ curl -s -X POST "https://api.clickup.com/api/v2/task/{A}/dependency" \
   -d '{"depends_on":"{B}"}'
 ```
 
-### Agregar task al Sprint activo
+### Add task to the active Sprint
 ```bash
 curl -s -X POST "https://api.clickup.com/api/v2/list/{SPRINT_LIST_ID}/task/{TASK_ID}" \
   -H "Authorization: $API_KEY" \
   -H "Content-Type: application/json"
 ```
 
-### Actualizar time_estimate (OBLIGATORIO, MCP no lo guarda)
+### Update time_estimate (MANDATORY, MCP does not save it)
 ```bash
 curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
   -H "Authorization: $API_KEY" \
@@ -113,8 +113,8 @@ curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
   -d '{"time_estimate": {MS}}'
 ```
 
-### Conversión horas → ms
-| Tiempo | Ms |
+### Hours → ms conversion
+| Time | Ms |
 |---|---|
 | 10min | 600,000 |
 | 15min | 900,000 |
@@ -123,48 +123,48 @@ curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
 | 1h | 3,600,000 |
 | 2h | 7,200,000 |
 
-## Flujo de estados
+## Status flow
 ```
 to do → in progress → listo! para pap → complete
 ```
 
-### Al iniciar task
+### When starting a task
 ```
 clickup_update_task(task_id, status="in progress")
 clickup_start_time_tracking(task_id)
 ```
 
-### Al completar task
+### When completing a task
 ```
 clickup_stop_time_tracking()
-clickup_create_task_comment(task_id, "RESUMEN:\n- qué se hizo\n- archivos modificados\n- resultado: OK")
+clickup_create_task_comment(task_id, "SUMMARY:\n- what was done\n- files modified\n- result: OK")
 clickup_update_task(task_id, status="listo! para pap")
 ```
 
-### Cascada de estados
-- Cuando TODAS las tasks de un Feature → Feature a "listo! para pap"
-- Cuando TODOS los Features de un Epic → Epic a "listo! para pap"
-- Un Feature solo cambia cuando TODAS las capas (BD+Backend+Frontend) están listas
+### Status cascade
+- When ALL tasks of a Feature → Feature to "listo! para pap"
+- When ALL Features of an Epic → Epic to "listo! para pap"
+- A Feature only changes when ALL layers (BD+Backend+Frontend) are done
 
-## Backlogs por proyecto
+## Backlogs per project
 
-Los List IDs son específicos de cada workspace. Obtenerlos con:
+List IDs are specific to each workspace. Get them with:
 ```
 clickup_get_workspace_hierarchy
   max_depth: 3
 ```
-Buscar el folder del proyecto y copiar el `list_id` del backlog correspondiente.
+Find the project's folder and copy the `list_id` of the corresponding backlog.
 
-| Proyecto | List ID |
+| Project | List ID |
 |---|---|
-| {Proyecto 1} | `YOUR_BACKLOG_LIST_ID` |
-| {Proyecto 2} | `YOUR_BACKLOG_LIST_ID` |
+| {Project 1} | `YOUR_BACKLOG_LIST_ID` |
+| {Project 2} | `YOUR_BACKLOG_LIST_ID` |
 
-## Sprint activo
+## Active sprint
 
-Verificar antes de cada registro:
+Verify before each record:
 ```
 clickup_get_list
   list_name: "Sprint XX"
 ```
-Buscar en el folder de sprints del workspace (ej. "Dev Sprints").
+Find it in the workspace's sprints folder (e.g. "Dev Sprints").

@@ -1,7 +1,7 @@
 {
   "name": "karvey",
   "displayName": "Karvey — Método SDD",
-  "description": "Método Karvey (Afán, selknam): pipeline spec-driven development de 12 fases + capa transversal de 12 skills de apoyo. Agnóstico de stack (web, mobile, desktop, CLI, API, embedded). PRD, EARS, mockup, diseño, arquitectura, IaC+CI/CD, QA con gate de seguridad, despliegue ordenado con canary, versionado semver. Síntesis de experiencia propia + Kiro + gstack.",
+  "description": "Karvey Method (Afán, Selknam): spec-driven development pipeline of 12 phases + a cross-cutting layer of 12 support skills. Stack-agnostic (web, mobile, desktop, CLI, API, embedded). PRD, EARS, mockup, design, architecture, IaC+CI/CD, QA with a security gate, ordered deployment with canary, semver versioning. A synthesis of first-hand experience + Kiro + gstack.",
   "version": "3.0.0",
   "author": {
     "name": "Mauricio Quezada Ibáñez",

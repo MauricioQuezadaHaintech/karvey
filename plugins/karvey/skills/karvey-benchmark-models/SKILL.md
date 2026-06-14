@@ -1,51 +1,51 @@
 ---
 name: karvey-benchmark-models
-description: Cross-model benchmark for the Karvey method. Side-by-side comparison of models (e.g. Claude vs GPT vs Gemini) on a skill or task — latency, tokens, cost, and optional LLM-judged quality. Triggers include "karvey benchmark models", "comparar modelos", "benchmark de modelos", "qué modelo conviene", "latencia tokens costo".
+description: Cross-model benchmark for the Karvey method. Side-by-side comparison of models (e.g. Claude vs GPT vs Gemini) on a skill or task — latency, tokens, cost, and optional LLM-judged quality. Triggers include "karvey benchmark models", "comparar modelos", "compare models", "benchmark de modelos", "model benchmark", "qué modelo conviene", "which model to use", "latencia tokens costo", "latency tokens cost".
 allowed-tools: Read, Bash, Glob, Grep, Agent
-argument-hint: [tarea o skill] [--models <lista>]
+argument-hint: [task or skill] [--models <list>]
 ---
 
-# Karvey — Benchmark de Modelos (cross-model)
+# Karvey — Model Benchmark (cross-model)
 
-**Skill transversal del Método Karvey.** Es una **capa de apoyo, NO una fase.** No avanza ni modifica el ciclo del método: **nunca toca `spec.json:phase`**. Se puede invocar en cualquier momento sin alterar el estado del proyecto.
+**CROSS-CUTTING SKILL of the Karvey Method.** It is a **support layer, NOT a phase.** It does not advance or modify the method's cycle: **it never touches `spec.json:phase`**. It can be invoked at any time without altering the project's state.
 
-Inspirado en `gstack /benchmark-models`: comparación lado a lado de modelos (por ejemplo Claude vs GPT vs Gemini) sobre una misma skill o tarea, midiendo latencia, tokens, costo y, opcionalmente, calidad juzgada por un LLM.
+Inspired by gstack `/benchmark-models`: a side-by-side comparison of models (for example Claude vs GPT vs Gemini) over the same skill or task, measuring latency, tokens, cost, and, optionally, quality judged by an LLM.
 
-## Propósito
+## Purpose
 
-Decidir **con datos** qué modelo conviene para una tarea o skill determinada del proyecto. En vez de elegir un modelo por intuición o costumbre, esta skill corre la misma tarea en varios modelos y entrega una tabla comparativa objetiva más una recomendación fundamentada.
+Decide **with data** which model is best for a given task or skill in the project. Instead of choosing a model by intuition or habit, this skill runs the same task across several models and delivers an objective comparison table plus a well-founded recommendation.
 
-Es una skill **meta / diagnóstica**: observa y mide, pero **no modifica el código del proyecto** ni produce artefactos de las fases del método. No genera commits, no cambia archivos de la solución, no avanza la fase.
+It is a **meta / diagnostic** skill: it observes and measures, but **it does not modify the project's code** or produce artifacts from the method's phases. It generates no commits, does not change the solution's files, does not advance the phase.
 
-## Pasos
+## Steps
 
-1. **Definir la tarea y los modelos a comparar.**
-   - Identificar la tarea o skill objetivo (desde el argumento o preguntando al usuario).
-   - Detectar las CLIs de modelos disponibles en el entorno: `claude`, `codex`/`gpt`, `gemini`, etc.
-   - Degradar con gracia: si una CLI no está accesible, excluirla del benchmark y avisar. Comparar solo los modelos realmente disponibles.
+1. **Define the task and the models to compare.**
+   - Identify the target task or skill (from the argument or by asking the user).
+   - Detect the model CLIs available in the environment: `claude`, `codex`/`gpt`, `gemini`, etc.
+   - Degrade gracefully: if a CLI is not accessible, exclude it from the benchmark and warn. Compare only the models actually available.
 
-2. **Correr la misma tarea en cada modelo.**
-   - Usar exactamente el mismo prompt/entrada para todos, para que la comparación sea justa.
-   - Ejecutar de forma aislada por modelo y capturar la salida completa de cada uno.
+2. **Run the same task on each model.**
+   - Use exactly the same prompt/input for all, so the comparison is fair.
+   - Run in isolation per model and capture the full output of each one.
 
-3. **Medir latencia, tokens y costo.**
-   - Latencia: tiempo de pared (wall-clock) de cada corrida.
-   - Tokens: entrada + salida reportados por cada CLI.
-   - Costo: estimar a partir de tokens y el precio vigente de cada modelo.
+3. **Measure latency, tokens, and cost.**
+   - Latency: wall-clock time of each run.
+   - Tokens: input + output reported by each CLI.
+   - Cost: estimate from tokens and each model's current price.
 
-4. **(Opcional) Calidad juzgada por un LLM-judge.**
-   - Si se requiere evaluar calidad, usar un modelo como juez para puntuar las salidas según una rúbrica acordada (precisión, completitud, formato, etc.).
-   - Mantener el juez fijo y la rúbrica explícita para que las notas sean comparables.
+4. **(Optional) Quality judged by an LLM-judge.**
+   - If quality needs to be evaluated, use a model as judge to score the outputs against an agreed rubric (accuracy, completeness, format, etc.).
+   - Keep the judge fixed and the rubric explicit so the scores are comparable.
 
-5. **Tabla comparativa + recomendación.**
-   - Presentar una tabla lado a lado: modelo, latencia, tokens, costo y (si aplica) calidad.
-   - Cerrar con una recomendación clara de qué modelo conviene para esa tarea y por qué (balance costo/calidad/latencia según el objetivo).
+5. **Comparison table + recommendation.**
+   - Present a side-by-side table: model, latency, tokens, cost, and (if applicable) quality.
+   - Close with a clear recommendation of which model is best for that task and why (cost/quality/latency balance per the objective).
 
-## Recordatorios
+## Reminders
 
-- **No avanza la fase.** Esta skill jamás escribe `spec.json:phase` ni dispara transiciones del método.
-- **No toca el código del proyecto.** Solo lee, ejecuta corridas de prueba y reporta.
-- Es invocable en cualquier punto del ciclo Karvey como apoyo a la toma de decisiones.
+- **Does not advance the phase.** This skill never writes `spec.json:phase` or triggers method transitions.
+- **Does not touch the project's code.** It only reads, runs test runs, and reports.
+- It is invocable at any point in the Karvey cycle as support for decision-making.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

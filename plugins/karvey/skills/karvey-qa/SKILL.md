@@ -7,192 +7,192 @@ argument-hint: <change-id> [--source <branch>] [--target <branch>]
 
 # Karvey QA
 
-## Propósito
+## Purpose
 
-Revisión de código en 8 dimensiones post-implementación. Genera documento de revisión, crea subtareas en ClickUp o PLAN.md, y notifica al grupo de Google Chat del proyecto.
+Code review across 8 dimensions, post-implementation. Generates a review document, creates subtasks in ClickUp or PLAN.md, and notifies the project's Google Chat group.
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 0 — Identificar ramas y stack
+### Step 0 — Identify branches and stack
 
-Leer `docs/spec/changes/{change-id}/spec.json`.
+Read `docs/spec/changes/{change-id}/spec.json`.
 
-Si el usuario no especificó ramas, preguntar: "¿Cuáles son las ramas a comparar? (source → target)"
-Convención por defecto: `feature/{change-id}` → `dev`
+If the user did not specify branches, ask: "Which branches should be compared? (source → target)"
+Default convention: `feature/{change-id}` → `dev`
 
-Detectar stack del repo (ver `package.json`, `requirements.txt`, `pyproject.toml`).
+Detect the repo stack (see `package.json`, `requirements.txt`, `pyproject.toml`).
 
-Obtener diff:
+Get the diff:
 ```bash
 git diff {target}...{source} --stat
 git diff {target}...{source}
 git log {target}...{source} --oneline
 ```
 
-### Paso 1 — Análisis en 8 dimensiones
+### Step 1 — Analysis across 8 dimensions
 
-Despachar subagentes paralelos para las dimensiones 1–4, ejecutar 5–6 en contexto principal. Las dimensiones 7 (second opinion cross-model) y 8 (auditoría visual) se ejecutan al final, una vez consolidados los hallazgos preliminares:
+Dispatch parallel subagents for dimensions 1–4, run 5–6 in the main context. Dimensions 7 (second opinion cross-model) and 8 (visual audit) run at the end, once the preliminary findings are consolidated:
 
-**Dimensión 1: Seguridad**
-- Credenciales hardcodeadas (tokens, API keys, passwords)
-- XSS: `v-html` sin sanitizar, `dangerouslySetInnerHTML`
-- Auth solo en frontend sin enforcement en backend
-- Datos personales reales en código (RUTs, emails, teléfonos)
-- Validaciones de contexto de usuario ausentes en operaciones de datos o endpoints
-- SQL dinámico sin sanitizar
-- Stack traces expuestos al cliente
+**Dimension 1: Security**
+- Hardcoded credentials (tokens, API keys, passwords)
+- XSS: unsanitized `v-html`, `dangerouslySetInnerHTML`
+- Auth only in the frontend with no backend enforcement
+- Real personal data in code (RUTs, emails, phone numbers)
+- Missing user-context validations in data operations or endpoints
+- Unsanitized dynamic SQL
+- Stack traces exposed to the client
 
-**Cobertura OWASP Top 10 (revisar explícitamente cada categoría):**
-- A01 Broken Access Control — IDOR, escalamiento de privilegios, validación de contexto de tenant/usuario ausente
-- A02 Cryptographic Failures — datos sensibles en claro, algoritmos débiles, TLS no forzado
-- A03 Injection — SQL/NoSQL/OS/LDAP injection, queries dinámicas sin parametrizar
-- A04 Insecure Design — falta de límites de tasa, flujos sin controles de negocio
-- A05 Security Misconfiguration — defaults inseguros, CORS abierto, headers de seguridad faltantes, debug activo
-- A06 Vulnerable & Outdated Components — dependencias con CVE conocidos
-- A07 Identification & Authentication Failures — sesiones débiles, credenciales por defecto, MFA ausente donde corresponda
-- A08 Software & Data Integrity Failures — deserialización insegura, pipelines/artefactos sin verificar
-- A09 Security Logging & Monitoring Failures — eventos de seguridad sin registrar, logs con datos sensibles
-- A10 Server-Side Request Forgery (SSRF) — fetch/requests con URL controlada por el usuario sin validar
+**OWASP Top 10 coverage (explicitly review each category):**
+- A01 Broken Access Control — IDOR, privilege escalation, missing tenant/user context validation
+- A02 Cryptographic Failures — sensitive data in cleartext, weak algorithms, TLS not enforced
+- A03 Injection — SQL/NoSQL/OS/LDAP injection, unparameterized dynamic queries
+- A04 Insecure Design — missing rate limits, flows without business controls
+- A05 Security Misconfiguration — insecure defaults, open CORS, missing security headers, debug enabled
+- A06 Vulnerable & Outdated Components — dependencies with known CVEs
+- A07 Identification & Authentication Failures — weak sessions, default credentials, MFA absent where it should be
+- A08 Software & Data Integrity Failures — insecure deserialization, unverified pipelines/artifacts
+- A09 Security Logging & Monitoring Failures — security events not logged, logs with sensitive data
+- A10 Server-Side Request Forgery (SSRF) — fetch/requests with a user-controlled URL without validation
 
-**Modelado de amenazas STRIDE (clasificar cada hallazgo y buscar amenazas por categoría):**
-- **S**poofing — suplantación de identidad/origen
-- **T**ampering — alteración de datos en tránsito o reposo
-- **R**epudiation — acciones sin trazabilidad/auditoría
-- **I**nformation Disclosure — fuga de datos sensibles
-- **D**enial of Service — agotamiento de recursos, falta de límites
-- **E**levation of Privilege — escalamiento de permisos
+**STRIDE threat modeling (classify each finding and look for threats per category):**
+- **S**poofing — impersonation of identity/origin
+- **T**ampering — alteration of data in transit or at rest
+- **R**epudiation — actions without traceability/audit
+- **I**nformation Disclosure — leakage of sensitive data
+- **D**enial of Service — resource exhaustion, lack of limits
+- **E**levation of Privilege — privilege escalation
 
-> **🚧 GATE DE SEGURIDAD (bloqueante):** Si existe cualquier hallazgo de seguridad de severidad Crítica o Alta sin resolver, NO se habilita el despliegue. El gate cubre explícitamente las categorías **OWASP Top 10** y el modelado **STRIDE** descritos arriba: un hallazgo crítico/alto en cualquiera de ellas bloquea el avance. El cambio no puede avanzar a `/karvey-deploy` hasta resolver y re-ejecutar QA.
+> **🚧 SECURITY GATE (blocking):** If any unresolved security finding of Critical or High severity exists, deployment is NOT enabled. The gate explicitly covers the **OWASP Top 10** categories and the **STRIDE** modeling described above: a critical/high finding in any of them blocks advancement. The change cannot advance to `/karvey-deploy` until it is resolved and QA is re-run.
 
-**Dimensión 2: Errores de código**
-- Acceso a null/undefined sin guarda
-- Memory leaks (listeners, intervals, subscriptions sin cleanup)
-- Promesas no manejadas
-- Firmas de funciones cambiadas sin actualizar callers
-- Race conditions en async
+**Dimension 2: Code errors**
+- Null/undefined access without a guard
+- Memory leaks (listeners, intervals, subscriptions without cleanup)
+- Unhandled promises
+- Function signatures changed without updating callers
+- Race conditions in async
 
-**Dimensión 3: Consistencia**
-- Typos en naming
-- Mezcla de patrones en mismo módulo
-- Código duplicado (3+ repeticiones que deberían ser helper)
-- Axios directo saltando interceptores del apiService
+**Dimension 3: Consistency**
+- Typos in naming
+- Mixing of patterns within the same module
+- Duplicated code (3+ repetitions that should be a helper)
+- Direct Axios bypassing the apiService interceptors
 - Tabs vs spaces
 
-**Dimensión 4: Impacto en módulos existentes**
-- Cambios en archivos compartidos (router, store raíz, apiService, componentes globales)
-- Interfaces públicas modificadas sin actualizar consumidores
-- Cambios de comportamiento implícitos (timeouts, guards, interceptores)
+**Dimension 4: Impact on existing modules**
+- Changes in shared files (router, root store, apiService, global components)
+- Public interfaces modified without updating consumers
+- Implicit behavior changes (timeouts, guards, interceptors)
 
-**Dimensión 5: Variables de entorno**
-- Variables usadas en código pero no declaradas en Dockerfile/pipeline
-- Variables sin fallback en algún ambiente
-- Variables en `.env.example` pero no usadas
+**Dimension 5: Environment variables**
+- Variables used in code but not declared in Dockerfile/pipeline
+- Variables with no fallback in some environment
+- Variables in `.env.example` but not used
 
-**Dimensión 6: Versionamiento**
-- Archivo de versión del proyecto actualizado (`package.json`, `pyproject.toml`, `VERSION`, etc.)
-- `CHANGELOG.md` con entrada para la versión actual
-- Consistencia entre version file y CHANGELOG
+**Dimension 6: Versioning**
+- Project version file updated (`package.json`, `pyproject.toml`, `VERSION`, etc.)
+- `CHANGELOG.md` with an entry for the current version
+- Consistency between the version file and the CHANGELOG
 
-Verificar el CHANGELOG según la regla `karvey/rules/changelog-policy.md`, para cada repo con cambios:
-- `CHANGELOG.md` tiene entrada para la versión actual
-- La entrada incluye **humano responsable** (nombre + contacto)
-- La entrada indica el **modelo de IA** usado
-- La entrada explica el **por qué** del cambio (no solo el qué)
+Verify the CHANGELOG per the `karvey/rules/changelog-policy.md` rule, for each repo with changes:
+- `CHANGELOG.md` has an entry for the current version
+- The entry includes the **responsible human** (name + contact)
+- The entry indicates the **AI model** used
+- The entry explains the **why** of the change (not just the what)
 
-Si falta cualquiera de estos campos, es hallazgo de versionamiento y bloquea el avance a deploy.
+If any of these fields is missing, it is a versioning finding and blocks advancement to deploy.
 
-**Dimensión 7: Second opinion cross-model (revisión adversarial)**
+**Dimension 7: Second opinion cross-model (adversarial review)**
 
-Antes de liberar, obtener una revisión adversarial con OTRO modelo, invocando la skill transversal `karvey-second-opinion` sobre el mismo diff (`{target}...{source}`).
+Before releasing, obtain an adversarial review with ANOTHER model, by invoking the cross-cutting skill `karvey-second-opinion` on the same diff (`{target}...{source}`).
 
-- Es **complementaria**, no reemplaza el juicio de QA: sirve para descubrir puntos ciegos del modelo principal (sesgos, suposiciones, casos borde no considerados).
-- Pasar como contexto: el diff, el `spec.json` del change-id y los hallazgos preliminares de las dimensiones 1–6.
-- Integrar los hallazgos nuevos del segundo modelo al documento de revisión, marcándolos con su origen (modelo + skill).
-- Reglas de severidad: si el segundo modelo levanta un hallazgo crítico/alto que QA considera válido, aplica el mismo gate bloqueante. Las discrepancias entre modelos se documentan; la decisión final es del QA humano/principal.
+- It is **complementary**, it does not replace QA's judgment: it serves to discover the main model's blind spots (biases, assumptions, edge cases not considered).
+- Pass as context: the diff, the change-id's `spec.json`, and the preliminary findings of dimensions 1–6.
+- Integrate the second model's new findings into the review document, marking them with their origin (model + skill).
+- Severity rules: if the second model raises a critical/high finding that QA considers valid, the same blocking gate applies. Discrepancies between models are documented; the final decision is the human/main QA's.
 
-**Dimensión 8: Auditoría visual del producto IMPLEMENTADO vs design-spec**
+**Dimension 8: Visual audit of the IMPLEMENTED product vs design-spec**
 
-Auditar la UI **ya construida** en el runtime real del target (no el mockup, no el código aislado), apoyándose en `karvey-browse` para abrir el target y capturar el estado real. Es **agnóstico de target** (web, mobile, escritorio u otro): lo que importa es comparar lo que el usuario realmente ve contra lo especificado.
+Audit the **already-built** UI in the target's actual runtime (not the mockup, not the isolated code), relying on `karvey-browse` to open the target and capture the actual state. It is **target-agnostic** (web, mobile, desktop, or other): what matters is comparing what the user actually sees against what was specified.
 
-- Cargar el diseño esperado desde `docs/spec/changes/{change-id}/design-spec.md` (o el `design-spec.md` del scope correspondiente).
-- Con `karvey-browse`, navegar el flujo implementado en el runtime real del target y capturar evidencia (screenshots/estado) de cada pantalla/estado relevante.
-- Comparar implementado vs design-spec: layout, espaciados, tipografía, colores/tokens, estados (vacío, carga, error, hover/focus), responsividad, copy y jerarquía visual.
-- Registrar cada desviación como hallazgo visual con severidad y evidencia.
-- Para los fixes visuales: aplicar **commits atómicos** (un fix por commit) documentando **before/after** (captura antes y después). Las desviaciones que rompan accesibilidad o seguridad heredan el gate bloqueante de su dimensión correspondiente.
+- Load the expected design from `docs/spec/changes/{change-id}/design-spec.md` (or the corresponding scope's `design-spec.md`).
+- With `karvey-browse`, navigate the implemented flow in the target's actual runtime and capture evidence (screenshots/state) of each relevant screen/state.
+- Compare implemented vs design-spec: layout, spacing, typography, colors/tokens, states (empty, loading, error, hover/focus), responsiveness, copy, and visual hierarchy.
+- Record each deviation as a visual finding with severity and evidence.
+- For visual fixes: apply **atomic commits** (one fix per commit) documenting **before/after** (capture before and after). Deviations that break accessibility or security inherit the blocking gate of their corresponding dimension.
 
-### Paso 2 — Generar documento de revisión
+### Step 2 — Generate review document
 
-Nombre del archivo: `REVISION_PR_{numero}_{YYYYMMDD}.md` en la raíz del repo.
+File name: `REVISION_PR_{number}_{YYYYMMDD}.md` at the repo root.
 
-Estructura:
+Structure:
 ```markdown
-# Revisión de Código — {change-id}: {source} → {target}
+# Code Review — {change-id}: {source} → {target}
 
-## Información General
-- Repositorio: {nombre}
+## General Information
+- Repository: {name}
 - Stack: {stack}
-- Rama source: {source}
-- Rama target: {target}
-- Fecha: {YYYY-MM-DD}
-- Commits incluidos: {N}
-- Archivos modificados: {N}
+- Source branch: {source}
+- Target branch: {target}
+- Date: {YYYY-MM-DD}
+- Commits included: {N}
+- Files modified: {N}
 
-## Resumen Ejecutivo
-{párrafo con hallazgos más importantes}
+## Executive Summary
+{paragraph with the most important findings}
 
-## Hallazgos por Dimensión
+## Findings by Dimension
 
-### 1. Seguridad
-{hallazgos con: #N, archivo, línea ~NNN, severidad, descripción, código problemático, recomendación, instrucciones para IA}
+### 1. Security
+{findings with: #N, file, line ~NNN, severity, description, problematic code, recommendation, instructions for the AI}
 
-### 2. Errores de código
+### 2. Code errors
 ...
 
-### 3. Consistencia
+### 3. Consistency
 ...
 
-### 4. Impacto en módulos existentes
+### 4. Impact on existing modules
 ...
 
-### 5. Variables de entorno
-{tabla de cruce + discrepancias}
+### 5. Environment variables
+{cross-reference table + discrepancies}
 
-### 6. Versionamiento
-{verificación del archivo de versión del proyecto y CHANGELOG o equivalente}
+### 6. Versioning
+{verification of the project version file and CHANGELOG or equivalent}
 
 ### 7. Second opinion cross-model
-{modelo/skill usado, hallazgos nuevos del segundo modelo marcados con su origen, discrepancias documentadas}
+{model/skill used, second model's new findings marked with their origin, documented discrepancies}
 
-### 8. Auditoría visual (implementado vs design-spec)
-{desviaciones con severidad, evidencia before/after, referencia a design-spec.md}
+### 8. Visual audit (implemented vs design-spec)
+{deviations with severity, before/after evidence, reference to design-spec.md}
 
-## Tabla Resumen por Severidad
-| Severidad | Cantidad |
+## Summary Table by Severity
+| Severity | Count |
 |-----------|---------|
-| Crítico | N |
-| Alto | N |
-| Medio | N |
-| Bajo | N |
+| Critical | N |
+| High | N |
+| Medium | N |
+| Low | N |
 
-## Checklist antes del merge
-- [ ] Todos los hallazgos críticos resueltos
-- [ ] Todos los hallazgos altos resueltos
-- [ ] Gate de seguridad superado (OWASP Top 10 + STRIDE sin críticos/altos)
-- [ ] Second opinion cross-model ejecutada e integrada
-- [ ] Auditoría visual vs design-spec sin desviaciones bloqueantes
-- [ ] Variables de entorno verificadas
-- [ ] Tests pasan
-- [ ] Build de producción exitoso
+## Pre-merge checklist
+- [ ] All critical findings resolved
+- [ ] All high findings resolved
+- [ ] Security gate passed (OWASP Top 10 + STRIDE with no criticals/highs)
+- [ ] Second opinion cross-model executed and integrated
+- [ ] Visual audit vs design-spec with no blocking deviations
+- [ ] Environment variables verified
+- [ ] Tests pass
+- [ ] Production build successful
 
-## Áreas que requieren testing manual
-- {área}: {razón}
+## Areas requiring manual testing
+- {area}: {reason}
 ```
 
-### Paso 3A — Crear tareas en ClickUp (si management=clickup)
+### Step 3A — Create tasks in ClickUp (if management=clickup)
 
-Obtener sprint activo: `clickup_get_list` con nombre "Sprint XX".
+Get the active sprint: `clickup_get_list` with name "Sprint XX".
 
-Crear tarea padre:
+Create parent task:
 ```
 clickup_create_task
   name: "QA Review {change-id} ({source} → {target})"
@@ -201,88 +201,88 @@ clickup_create_task
   tags: ["{client_tag}"]
 ```
 
-Por cada hallazgo crítico y alto, crear subtarea:
+For each critical and high finding, create a subtask:
 ```
 clickup_create_task
-  name: "#{N} [{SEVERIDAD}] {archivo}: {descripción corta}"
-  parent: {tarea_padre_id}
+  name: "#{N} [{SEVERITY}] {file}: {short description}"
+  parent: {parent_task_id}
   priority: {urgent|high|normal|low}
-  assignees: [{autor según git log del archivo}]
-  time_estimate: {5-60 min en ms}
-  markdown_description: (ver formato en QA_CODE_REVIEW_STANDARD)
+  assignees: [{author per the file's git log}]
+  time_estimate: {5-60 min in ms}
+  markdown_description: (see format in QA_CODE_REVIEW_STANDARD)
 ```
 
-Estimación de fixes:
-- Fix simple (null check, typo): 5-10min
-- Fix medio (agregar validación, cleanup): 15-20min
-- Fix complejo (extraer helper, mover a env var): 30min
-- Migración masiva: 45-60min
+Fix estimation:
+- Simple fix (null check, typo): 5-10min
+- Medium fix (add validation, cleanup): 15-20min
+- Complex fix (extract helper, move to env var): 30min
+- Mass migration: 45-60min
 
-### Paso 3B — Actualizar PLAN.md (si management=markdown)
+### Step 3B — Update PLAN.md (if management=markdown)
 
-Agregar sección "QA Review" al final del PLAN.md con la lista de hallazgos y acciones pendientes.
+Add a "QA Review" section at the end of PLAN.md with the list of findings and pending actions.
 
-### Paso 3C — Actualizar grafo de conocimiento
+### Step 3C — Update knowledge graph
 
-Sincronizar el conocimiento según `karvey/rules/knowledge-sync.md` (Obsidian si está disponible; mínimo `/graphify docs/spec/ --update`) para reflejar el `REVISION_PR_{n}_{fecha}.md` generado.
-Si `docs/spec/graphify-out/` no existe, invocar `/graphify docs/spec/` sin `--update`.
+Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the generated `REVISION_PR_{n}_{date}.md`.
+If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
 
-### Paso 3D — Actualizar estado en spec.json
+### Step 3D — Update status in spec.json
 
-Actualizar `docs/spec/changes/{change-id}/spec.json` según el resultado del QA:
+Update `docs/spec/changes/{change-id}/spec.json` per the QA result:
 
-- Si NO hay hallazgos críticos ni altos (incluido el GATE DE SEGURIDAD de la Dimensión 1 con OWASP Top 10 + STRIDE, los hallazgos válidos del second opinion cross-model y las desviaciones visuales bloqueantes) → marcar `approvals.qa.approved: true` y `phase: "qa"`.
-- Si hay hallazgos bloqueantes (críticos/altos, gate de seguridad sin resolver, hallazgo crítico/alto válido del segundo modelo, o desviación visual que rompe accesibilidad/seguridad) → marcar `approvals.qa.approved: false`.
+- If there are NO critical or high findings (including the SECURITY GATE of Dimension 1 with OWASP Top 10 + STRIDE, the valid findings of the second opinion cross-model, and the blocking visual deviations) → set `approvals.qa.approved: true` and `phase: "qa"`.
+- If there are blocking findings (critical/high, unresolved security gate, valid critical/high finding from the second model, or a visual deviation that breaks accessibility/security) → set `approvals.qa.approved: false`.
 
-### Paso 4 — Notificar por Google Chat
+### Step 4 — Notify via Google Chat
 
-Identificar el space del proyecto en la tabla de espacios conocidos.
-Enviar resumen al grupo usando el protocolo de Google Chat del CLAUDE.md.
+Identify the project's space in the known-spaces table.
+Send a summary to the group using the Google Chat protocol from CLAUDE.md.
 
-Formato del mensaje (Google Chat):
+Message format (Google Chat):
 ```
 *QA Review — {change-id}*
 
 *{source}* → *{target}*
 
-*Hallazgos:*
-- 🔴 Críticos: {N}
-- 🟠 Altos: {N}
-- 🟡 Medios: {N}
-- ⚪ Bajos: {N}
+*Findings:*
+- 🔴 Critical: {N}
+- 🟠 High: {N}
+- 🟡 Medium: {N}
+- ⚪ Low: {N}
 
-*Áreas de testing manual:*
-- {área 1}
-- {área 2}
+*Manual testing areas:*
+- {area 1}
+- {area 2}
 
-Documento completo: `REVISION_PR_{n}_{fecha}.md`
+Full document: `REVISION_PR_{n}_{date}.md`
 ```
 
-### Paso 5 — Output final
+### Step 5 — Final output
 
 ```
-✅ QA Review completo
+✅ QA Review complete
 
-Hallazgos: {N} total ({críticos}, {altos}, {medios}, {bajos})
-Documento: REVISION_PR_{n}_{fecha}.md
+Findings: {N} total ({critical}, {high}, {medium}, {low})
+Document: REVISION_PR_{n}_{date}.md
 
-Gestión: {N subtareas creadas en ClickUp | PLAN.md actualizado}
-Google Chat: notificación enviada a {grupo}
+Management: {N subtasks created in ClickUp | PLAN.md updated}
+Google Chat: notification sent to {group}
 
-Siguiente paso (si hay hallazgos críticos/altos):
-  Corregir → re-ejecutar /karvey-impl {change-id} → /karvey-test {change-id} → /karvey-qa {change-id}
+Next step (if there are critical/high findings):
+  Fix → re-run /karvey-impl {change-id} → /karvey-test {change-id} → /karvey-qa {change-id}
 
-Siguiente paso (si sin hallazgos bloqueantes):
+Next step (if no blocking findings):
   /karvey-deploy {change-id}
 ```
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase Despliegue ahora?»
-- Si confirma → ejecutá `/karvey-deploy {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When finishing this phase and having the corresponding approval, **actively ask the user**: "Shall we advance to the Deploy phase now?"
+- If they confirm → run `/karvey-deploy {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
+- If you resume in another session, `/karvey {change-id}` indicates which phase you are in and which one follows.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

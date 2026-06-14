@@ -1,300 +1,300 @@
 ---
 name: karvey-architecture
-description: Generate enterprise architecture design with explicit security controls, component boundaries, and integration patterns. Use after karvey-design-graphic. Triggers include "karvey architecture", "diseño técnico", "arquitectura", "diseño de sistema".
+description: Generate enterprise architecture design with explicit security controls, component boundaries, and integration patterns. Use after karvey-design-graphic. Triggers include "karvey architecture", "diseño técnico", "technical design", "arquitectura", "architecture", "diseño de sistema", "system design".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, WebSearch, AskUserQuestion
 argument-hint: <change-id> [-y]
 ---
 
 # Karvey Architecture
 
-## Propósito
+## Purpose
 
-Generar el diseño técnico de arquitectura empresarial: componentes, boundaries, integraciones, controles de seguridad por tier, observabilidad, y estructura de archivos concreta por capa.
+Generate the enterprise architecture technical design: components, boundaries, integrations, security controls per tier, observability, and a concrete file structure per layer.
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 1 — Cargar contexto
+### Step 1 — Load context
 
-Leer en paralelo:
+Read in parallel:
 - `docs/spec/changes/{change-id}/spec.json` (security_tier, layers, capability)
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/design-spec.md`
 - `docs/spec/project.json` (cloud.provider, iac_tool, git_platform)
 - `rules/security-tiers.md`
-- Steering del proyecto: `product.md`, `tech.md` o equivalentes si existen
+- Project steering: `product.md`, `tech.md` or equivalents if they exist
 
-Verificar `approvals.design_graphic.approved = true`. Si no, detener.
+Verify `approvals.design_graphic.approved = true`. If not, stop.
 
-### Paso 2 — Discovery de arquitectura
+### Step 2 — Architecture discovery
 
-**Para features que extienden el sistema existente (brownfield):**
+**For features that extend the existing system (brownfield):**
 
-Despachar subagentes para explorar en paralelo:
-- Subagente A: `grep -r` de patrones existentes relacionados con el capability
-- Subagente B: leer endpoints/SPs existentes del área afectada
+Dispatch subagents to explore in parallel:
+- Subagent A: `grep -r` of existing patterns related to the capability
+- Subagent B: read existing endpoints/SPs of the affected area
 
-Identificar:
-- Patrones de código existentes a seguir (naming, estructura de funciones, manejo de errores)
-- Acceso a datos existente y sus firmas (SPs, queries, ORM models, repositorios, etc.)
-- Endpoints / operaciones de API existentes y sus contratos
-- Integraciones externas que ya existen
+Identify:
+- Existing code patterns to follow (naming, function structure, error handling)
+- Existing data access and its signatures (SPs, queries, ORM models, repositories, etc.)
+- Existing API endpoints / operations and their contracts
+- External integrations that already exist
 
-**Para features completamente nuevos (greenfield):**
-- Definir los patrones nuevos coherentes con el stack existente
+**For completely new features (greenfield):**
+- Define new patterns coherent with the existing stack
 
-### Paso 3 — Clasificar complejidad arquitectónica
+### Step 3 — Classify architectural complexity
 
-| Tipo | Criterio | Discovery |
+| Type | Criterion | Discovery |
 |------|----------|-----------|
-| Simple addition | Solo agrega CRUD o UI sin lógica nueva | Mínimo |
-| Extension | Extiende sistema existente con lógica nueva | Medio |
-| New capability | Capability nuevo, sin base existente | Completo |
-| Complex integration | Integración con sistema externo o multi-capa | Exhaustivo |
+| Simple addition | Only adds CRUD or UI with no new logic | Minimal |
+| Extension | Extends the existing system with new logic | Medium |
+| New capability | New capability, no existing base | Complete |
+| Complex integration | Integration with an external or multi-layer system | Exhaustive |
 
-### Paso 4 — Generar borrador de architecture.md
+### Step 4 — Generate architecture.md draft
 
-Estructura obligatoria:
+Required structure:
 
 ```markdown
 # Architecture: {change-id}
 
-## Resumen
-{1 párrafo: qué resuelve y cómo a alto nivel}
+## Summary
+{1 paragraph: what it solves and how, at a high level}
 
-## Diagramas (OBLIGATORIO — al menos uno)
+## Diagrams (MANDATORY — at least one)
 
-Esta arquitectura DEBE incluir al menos un diagrama en mermaid: de **flujo de datos** (data flow) y/o de **componentes**. Recomendado generarlo con la skill transversal `karvey-diagram`, que produce mermaid coherente con el resto de la spec.
+This architecture MUST include at least one mermaid diagram: **data flow** and/or **components**. Recommended to generate it with the cross-cutting `karvey-diagram` skill, which produces mermaid coherent with the rest of the spec.
 
 ```mermaid
-{diagrama de componentes o data flow — generado idealmente con /karvey-diagram}
+{component or data flow diagram — ideally generated with /karvey-diagram}
 ```
 
-> Mínimo exigible: 1 diagrama. Para features de tipo "Complex integration" o "New capability", incluir ambos (componentes + data flow).
+> Minimum required: 1 diagram. For "Complex integration" or "New capability" features, include both (components + data flow).
 
-## Boundary del sistema
-**Esta spec es dueña de:**
-- {componente/endpoint/SP 1}
-- {componente/endpoint/SP 2}
+## System boundary
+**This spec owns:**
+- {component/endpoint/SP 1}
+- {component/endpoint/SP 2}
 
-**Esta spec NO toca:**
-- {componente existente que se mantiene}
-- {funcionalidad adyacente fuera de scope}
+**This spec does NOT touch:**
+- {existing component that is kept}
+- {adjacent functionality out of scope}
 
-**Cambios que requieren revalidación de este diseño:**
-- {condición 1 que haría obsoleto este diseño}
+**Changes that require revalidating this design:**
+- {condition 1 that would make this design obsolete}
 
-## Componentes y responsabilidades
+## Components and responsibilities
 
-### Capa BD
-| Componente | Tipo | Responsabilidad | Security Tier |
+### DB layer
+| Component | Type | Responsibility | Security Tier |
 |------------|------|----------------|---------------|
-| `{schema}.{sp_nombre}` | SP / función nueva | {qué hace} | Tier {N} |
-| `{tabla}` | Tabla modificada | {qué columna/índice} | Tier {N} |
+| `{schema}.{sp_name}` | New SP / function | {what it does} | Tier {N} |
+| `{table}` | Modified table | {which column/index} | Tier {N} |
 
-**Controles de seguridad BD:**
-- Validación de contexto de usuario en cada query/SP: SÍ/NO
-- Parámetros tipados (no SQL/query dinámico): SÍ/NO
-- Logging de operaciones críticas: SÍ/NO
+**DB security controls:**
+- User context validation in every query/SP: YES/NO
+- Typed parameters (no dynamic SQL/query): YES/NO
+- Logging of critical operations: YES/NO
 
-### Capa Backend
-| Componente | Tipo | Responsabilidad | Security Tier |
+### Backend layer
+| Component | Type | Responsibility | Security Tier |
 |------------|------|----------------|---------------|
-| `{backend_path}/{nombre}` | Endpoint / función nueva | {qué hace} | Tier {N} |
-| `{módulo}` | Módulo modificado | {qué cambia} | Tier {N} |
+| `{backend_path}/{name}` | New endpoint / function | {what it does} | Tier {N} |
+| `{module}` | Modified module | {what changes} | Tier {N} |
 
-**Controles de seguridad Backend:**
-- Autenticación requerida: Tier {N} → {mecanismo: JWT, session, API key, etc.}
-- Validación de contexto de usuario por request: SÍ/NO
-- Sanitización de inputs en boundaries: SÍ/NO
-- Manejo de errores sin exponer stack traces: SÍ/NO
-- Variables sensibles via secrets manager: SÍ/NO
+**Backend security controls:**
+- Authentication required: Tier {N} → {mechanism: JWT, session, API key, etc.}
+- Per-request user context validation: YES/NO
+- Input sanitization at boundaries: YES/NO
+- Error handling without exposing stack traces: YES/NO
+- Sensitive variables via secrets manager: YES/NO
 
-### Capa Frontend
-| Componente | Tipo | Responsabilidad |
+### Frontend layer
+| Component | Type | Responsibility |
 |------------|------|----------------|
-| `{componente}` | Componente nuevo | {qué renderiza} |
-| `{state_path}/{store}` | Store nuevo/modificado | {qué estado maneja} |
-| `{api_layer}/{servicio}` | Servicio API | {qué endpoints consume} |
+| `{component}` | New component | {what it renders} |
+| `{state_path}/{store}` | New/modified store | {what state it manages} |
+| `{api_layer}/{service}` | API service | {which endpoints it consumes} |
 
-**Controles de seguridad Frontend:**
-- Auth checks en rutas: Solo frontend como UX, enforcement en backend
-- No exponer datos de otros tenants en store
-- Sanitización de outputs dinámicos (no v-html sin sanitizar)
+**Frontend security controls:**
+- Auth checks on routes: Frontend only as UX, enforcement in the backend
+- Do not expose other tenants' data in the store
+- Sanitization of dynamic outputs (no unsanitized v-html)
 
-### Integraciones externas
-| Sistema | Dirección | Protocolo | Auth | Timeout |
+### External integrations
+| System | Direction | Protocol | Auth | Timeout |
 |---------|-----------|-----------|------|---------|
-| {sistema} | inbound/outbound | REST/WebSocket | {mecanismo} | {ms} |
+| {system} | inbound/outbound | REST/WebSocket | {mechanism} | {ms} |
 
-## Infraestructura Cloud
+## Cloud infrastructure
 
-**Proveedor(es) de nube:** {de `project.json` `cloud.provider`. Si es `mixed`, especificar explícitamente qué parte del sistema corre en qué nube — ej: "backend y BD en Azure; almacenamiento de archivos en GCP Cloud Storage"}
+**Cloud provider(s):** {from `project.json` `cloud.provider`. If `mixed`, explicitly specify which part of the system runs in which cloud — e.g.: "backend and DB on Azure; file storage on GCP Cloud Storage"}
 
-| Servicio cloud | Nube | Propósito | Capa | Security Tier |
+| Cloud service | Cloud | Purpose | Layer | Security Tier |
 |----------------|------|-----------|------|---------------|
-| {ej. Azure Functions} | Azure | {qué hace} | Backend | Tier {N} |
-| {ej. Azure SQL} | Azure | {qué hace} | BD | Tier {N} |
-| {ej. GCP Cloud Storage} | GCP | {qué hace} | {capa} | Tier {N} |
+| {e.g. Azure Functions} | Azure | {what it does} | Backend | Tier {N} |
+| {e.g. Azure SQL} | Azure | {what it does} | DB | Tier {N} |
+| {e.g. GCP Cloud Storage} | GCP | {what it does} | {layer} | Tier {N} |
 
-**Región(es) / zona:** {ej. East US 2 / southamerica-west1}
+**Region(s) / zone:** {e.g. East US 2 / southamerica-west1}
 
-**Herramienta IaC:** {de `project.json` `iac_tool`}. El código IaC vivirá en {dónde — ej. `infra/` del repo correspondiente, o repo de infra dedicado}.
+**IaC tool:** {from `project.json` `iac_tool`}. The IaC code will live in {where — e.g. `infra/` of the corresponding repo, or a dedicated infra repo}.
 
-**Trigger de despliegue:** push a `dev` → deploy DEV; merge a `master` → deploy PROD. Siempre gatillado por pipeline, NUNCA manual.
+**Deployment trigger:** push to `dev` → deploy DEV; merge to `master` → deploy PROD. Always triggered by the pipeline, NEVER manual.
 
-> El detalle de IaC (módulos, recursos concretos) y pipelines lo genera la FASE 6 (`/karvey-infra`). Esta sección solo declara qué servicios de qué nube se usan a nivel de diseño.
+> The IaC detail (modules, concrete resources) and pipelines are generated by PHASE 6 (`/karvey-infra`). This section only declares which services from which cloud are used at the design level.
 
-## Flujo de datos principal
+## Main data flow
 
 ```
-{Actor} → {Frontend} → {API Gateway / BFF} → {Backend} → {BD / Servicio}
+{Actor} → {Frontend} → {API Gateway / BFF} → {Backend} → {DB / Service}
                                                     ↓
-                                         {Sistema externo}
+                                         {External system}
 ```
 
-Describir el flujo paso a paso para el caso de uso principal:
-1. {paso 1: qué hace el actor}
-2. {paso 2: cómo responde el frontend}
-3. {paso N: qué persiste en BD}
+Describe the flow step by step for the main use case:
+1. {step 1: what the actor does}
+2. {step 2: how the frontend responds}
+3. {step N: what is persisted in the DB}
 
-## Trust boundaries (límites de confianza)
+## Trust boundaries
 
-Marcar explícitamente DÓNDE entra input no confiable y DÓNDE se valida. Todo dato que cruza un límite hacia adentro debe validarse/sanitizarse en ese cruce.
+Explicitly mark WHERE untrusted input enters and WHERE it is validated. Any data crossing a boundary inward must be validated/sanitized at that crossing.
 
-| Límite de confianza | Qué cruza | Lado no confiable | Dónde se valida/sanitiza | Control |
+| Trust boundary | What crosses | Untrusted side | Where it is validated/sanitized | Control |
 |---------------------|-----------|-------------------|--------------------------|---------|
-| Cliente → Backend | {payload del request} | Frontend / red pública | {endpoint / capa de entrada} | {validación de schema, auth, sanitización} |
-| Backend → BD | {parámetros del query/SP} | {capa backend} | {SP / capa de acceso a datos} | {parámetros tipados, contexto de usuario} |
-| Sistema externo → Backend | {webhook / respuesta de API} | {sistema externo} | {handler de inbound} | {verificación de firma, validación de payload} |
+| Client → Backend | {request payload} | Frontend / public network | {endpoint / entry layer} | {schema validation, auth, sanitization} |
+| Backend → DB | {query/SP parameters} | {backend layer} | {SP / data access layer} | {typed parameters, user context} |
+| External system → Backend | {webhook / API response} | {external system} | {inbound handler} | {signature verification, payload validation} |
 
-> Regla: ningún dato proveniente del lado no confiable se usa sin validar. Marcar en el diagrama de data flow el cruce de cada trust boundary (ej. línea punteada `-. untrusted .->`).
+> Rule: no data from the untrusted side is used without validation. Mark each trust boundary crossing in the data flow diagram (e.g. dotted line `-. untrusted .->`).
 
-## Puntos de control de seguridad
+## Security control points
 
-| Punto | Tier | Control |
+| Point | Tier | Control |
 |-------|------|---------|
-| Entrada al endpoint | {N} | Validar auth token, extraer identidad del usuario |
-| Llamada a BD / servicio | {N} | Pasar contexto de usuario, no trustar input |
-| Respuesta al cliente | {N} | No filtrar datos de otros usuarios/tenants |
-| Logging | {N} | No loggear PII ni tokens |
+| Endpoint entry | {N} | Validate auth token, extract user identity |
+| DB / service call | {N} | Pass user context, do not trust input |
+| Response to client | {N} | Do not leak other users'/tenants' data |
+| Logging | {N} | Do not log PII or tokens |
 
-## Plan de archivos (concreto)
+## File plan (concrete)
 
-### Archivos a CREAR
-| Archivo | Capa | Responsabilidad |
+### Files to CREATE
+| File | Layer | Responsibility |
 |---------|------|----------------|
-| `{backend_path}/{nombre}` | Backend | {descripción} |
-| `{frontend_path}/{nombre}` | Frontend | {descripción} |
+| `{backend_path}/{name}` | Backend | {description} |
+| `{frontend_path}/{name}` | Frontend | {description} |
 
-### Archivos a MODIFICAR
-| Archivo | Capa | Cambio |
+### Files to MODIFY
+| File | Layer | Change |
 |---------|------|--------|
-| `{backend_path}/{existente}` | Backend | Agregar {qué} |
+| `{backend_path}/{existing}` | Backend | Add {what} |
 
-### Archivos de BD
-| Archivo | Tipo | Cambio |
+### DB files
+| File | Type | Change |
 |---------|------|--------|
-| `{db_path}/{sp_nombre}.sql` | SP / migración nueva | {descripción} |
+| `{db_path}/{sp_name}.sql` | New SP / migration | {description} |
 
-## Estrategia de observabilidad
+## Observability strategy
 
-- Logging estructurado en: {puntos de log}
-- Métricas a trackear: {lista}
-- Alertas recomendadas: {lista}
-- Trazabilidad de request: {correlationId, userId/contextKey en cada log}
+- Structured logging at: {log points}
+- Metrics to track: {list}
+- Recommended alerts: {list}
+- Request traceability: {correlationId, userId/contextKey in every log}
 
-## Decisiones arquitectónicas
+## Architectural decisions
 
-| Decisión | Alternativa considerada | Por qué se eligió esta |
+| Decision | Alternative considered | Why this one was chosen |
 |----------|------------------------|------------------------|
-| {decisión 1} | {alternativa} | {razón} |
+| {decision 1} | {alternative} | {reason} |
 
-## Riesgos y mitigaciones
+## Risks and mitigations
 
-| Riesgo | Probabilidad | Impacto | Mitigación |
+| Risk | Likelihood | Impact | Mitigation |
 |--------|-------------|---------|-----------|
-| {riesgo} | Alta/Media/Baja | Alto/Medio/Bajo | {cómo se mitiga} |
+| {risk} | High/Medium/Low | High/Medium/Low | {how it is mitigated} |
 
-## Edge cases / casos extremos (OBLIGATORIO)
+## Edge cases (MANDATORY)
 
-Listar los casos límite identificados y cómo los maneja el diseño. Cubrir al menos: inputs vacíos/nulos, valores fuera de rango, concurrencia/duplicados, fallas de dependencias externas (timeout, error, indisponibilidad), datos inconsistentes y límites de tamaño/cantidad.
+List the identified edge cases and how the design handles them. Cover at least: empty/null inputs, out-of-range values, concurrency/duplicates, external dependency failures (timeout, error, unavailability), inconsistent data, and size/quantity limits.
 
-| Caso extremo | Cómo se maneja | Componente responsable |
+| Edge case | How it is handled | Responsible component |
 |--------------|----------------|------------------------|
-| {input vacío / nulo} | {comportamiento esperado} | {componente} |
-| {valor fuera de rango / inválido} | {validación + respuesta} | {componente} |
-| {request duplicado / concurrencia} | {idempotencia / lock / dedup} | {componente} |
-| {timeout o error de sistema externo} | {retry / fallback / degradación} | {componente} |
-| {dato inconsistente o estado inesperado} | {detección + manejo} | {componente} |
+| {empty / null input} | {expected behavior} | {component} |
+| {out-of-range / invalid value} | {validation + response} | {component} |
+| {duplicate request / concurrency} | {idempotency / lock / dedup} | {component} |
+| {external system timeout or error} | {retry / fallback / degradation} | {component} |
+| {inconsistent data or unexpected state} | {detection + handling} | {component} |
 
-## Plan de cobertura de tests (alimenta /karvey-test)
+## Test coverage plan (feeds /karvey-test)
 
-Declarar qué se testea y a qué nivel. Cada requirement y cada edge case crítico debe tener al menos un test asociado en algún nivel.
+Declare what is tested and at which level. Every requirement and every critical edge case must have at least one associated test at some level.
 
-| Qué se testea | Nivel (unit / integración / E2E) | Componente / capa | Caso(s) que cubre |
+| What is tested | Level (unit / integration / E2E) | Component / layer | Case(s) covered |
 |---------------|----------------------------------|-------------------|-------------------|
-| {lógica de validación} | unit | Backend | {requirement / edge case} |
-| {flujo endpoint → BD} | integración | Backend + BD | {requirement} |
-| {flujo de usuario completo} | E2E | Frontend + Backend | {caso de uso principal} |
-| {manejo de edge case} | unit / integración | {capa} | {edge case del listado anterior} |
+| {validation logic} | unit | Backend | {requirement / edge case} |
+| {endpoint → DB flow} | integration | Backend + DB | {requirement} |
+| {full user flow} | E2E | Frontend + Backend | {main use case} |
+| {edge case handling} | unit / integration | {layer} | {edge case from the list above} |
 
-> Esta tabla es el contrato de testing que consume `/karvey-test` en la FASE de testing.
+> This table is the testing contract that `/karvey-test` consumes in the testing PHASE.
 ```
 
-### Paso 5 — Review gate
+### Step 5 — Review gate
 
-Verificar antes de escribir:
-- [ ] Todos los requirements tienen al menos un componente que los implementa
-- [ ] El boundary está explícitamente definido
-- [ ] Cada componente tiene su Security Tier declarado
-- [ ] No hay componentes con responsabilidad vaga ("helper", "utils" sin descripción)
-- [ ] El plan de archivos es concreto (paths reales, no "crear archivo para X")
-- [ ] Los controles de seguridad cubren el Tier declarado en spec.json
-- [ ] La sección Infraestructura Cloud especifica qué servicios de qué nube se usan (y qué parte de qué nube si es mixto)
-- [ ] Hay estrategia de observabilidad
-- [ ] Hay al menos un diagrama en mermaid (data flow y/o componentes); para "Complex integration" / "New capability" están ambos. Recomendado generarlo con `/karvey-diagram`
-- [ ] Hay sección de Edge cases que cubre al menos: inputs vacíos/nulos, fuera de rango, concurrencia/duplicados, fallas de sistemas externos y datos inconsistentes
-- [ ] Los Trust boundaries están marcados explícitamente: dónde entra input no confiable y dónde se valida cada cruce
-- [ ] Hay Plan de cobertura de tests con nivel (unit/integración/E2E) por ítem; cada requirement y cada edge case crítico tiene al menos un test asociado
+Verify before writing:
+- [ ] Every requirement has at least one component that implements it
+- [ ] The boundary is explicitly defined
+- [ ] Each component has its Security Tier declared
+- [ ] No components with vague responsibility ("helper", "utils" without a description)
+- [ ] The file plan is concrete (real paths, not "create a file for X")
+- [ ] The security controls cover the Tier declared in spec.json
+- [ ] The Cloud Infrastructure section specifies which services from which cloud are used (and which part in which cloud if mixed)
+- [ ] There is an observability strategy
+- [ ] There is at least one mermaid diagram (data flow and/or components); for "Complex integration" / "New capability" both are present. Recommended to generate it with `/karvey-diagram`
+- [ ] There is an Edge cases section covering at least: empty/null inputs, out of range, concurrency/duplicates, external system failures, and inconsistent data
+- [ ] Trust boundaries are explicitly marked: where untrusted input enters and where each crossing is validated
+- [ ] There is a Test coverage plan with a level (unit/integration/E2E) per item; every requirement and every critical edge case has at least one associated test
 
-Si hay issues: corregir y re-verificar. Máximo 2 iteraciones.
+If there are issues: fix and re-verify. Maximum 2 iterations.
 
-### Paso 6 — Escribir architecture.md
+### Step 6 — Write architecture.md
 
 ```
 docs/spec/changes/{change-id}/architecture.md
 ```
 
-Actualizar `spec.json`:
+Update `spec.json`:
 - `phase: "architecture-generated"`
 - `approvals.architecture.generated: true`
 
-### Paso 6B — Actualizar grafo de conocimiento
+### Step 6B — Update knowledge graph
 
-Sincronizar el conocimiento según `karvey/rules/knowledge-sync.md` (Obsidian si está disponible; mínimo `/graphify docs/spec/ --update`) para reflejar el `architecture.md` creado.
-Si `docs/spec/graphify-out/` no existe, invocar `/graphify docs/spec/` sin `--update`.
+Sync the knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the created `architecture.md`.
+If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
 
-### Paso 7 — Presentar para aprobación
+### Step 7 — Present for approval
 
-Si flag `-y`: auto-aprobar.
-Si no: presentar resumen y pedir aprobación.
+If flag `-y`: auto-approve.
+If not: present a summary and ask for approval.
 
-Al aprobar: `approvals.architecture.approved: true`, `phase: "architecture-approved"`.
+On approval: `approvals.architecture.approved: true`, `phase: "architecture-approved"`.
 
 ```
-✅ Architecture aprobada
+✅ Architecture approved
 
-Siguiente paso:
+Next step:
 /karvey-infra {change-id}
 ```
 
 
-## Avanzar a la siguiente fase
+## Advance to the next phase
 
-Al terminar esta fase y contar con la aprobación correspondiente, **preguntá activamente al usuario**: «¿Avanzamos a la fase Infraestructura ahora?»
-- Si confirma → ejecutá `/karvey-infra {change-id}`.
-- Si prefiere revisar o ajustar antes → esperá. El avance siempre es con el OK del usuario (gate del método).
-- Si retomás en otra sesión, `/karvey {change-id}` indica en qué fase vas y cuál sigue.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Infrastructure phase now?"
+- If they confirm → run `/karvey-infra {change-id}`.
+- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
+- If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

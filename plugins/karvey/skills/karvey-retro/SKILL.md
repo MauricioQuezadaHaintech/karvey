@@ -1,69 +1,69 @@
 ---
 name: karvey-retro
-description: Team-aware retrospective for the Karvey method. Per-person breakdowns, shipping streaks, test-health trends, and growth opportunities from commit history and work patterns. Triggers include "karvey retro", "retrospectiva", "retro semanal", "velocity", "qué mejorar", "review de equipo".
+description: Team-aware retrospective for the Karvey method. Per-person breakdowns, shipping streaks, test-health trends, and growth opportunities from commit history and work patterns. Triggers include "karvey retro", "retrospectiva", "retrospective", "retro semanal", "weekly retro", "velocity", "qué mejorar", "what to improve", "review de equipo", "team review".
 allowed-tools: Read, Bash, Glob, Grep, Agent
-argument-hint: [--since <fecha/rango>] [<repo>]
+argument-hint: [--since <date/range>] [<repo>]
 ---
 
-# Karvey Retro — Retrospectiva de equipo
+# Karvey Retro — Team retrospective
 
-## Propósito
+## Purpose
 
-**Skill TRANSVERSAL del Método Karvey.** Es una capa de apoyo, **NO una fase**: no cambia `spec.json:phase` ni hace avanzar el ciclo. Se puede invocar en cualquier momento sin alterar el estado del proyecto.
+**CROSS-CUTTING SKILL of the Karvey Method.** It is a support layer, **NOT a phase**: it does not change `spec.json:phase` or advance the cycle. It can be invoked at any time without altering the project's state.
 
-Inspirada en `gstack /retro`, su objetivo es **aprender del ciclo a nivel equipo y persona, para mejorar**. Mira el historial de trabajo (commits, autores, frecuencia, salud de tests) y produce una retrospectiva con desglose por persona, rachas de entregas, tendencias y oportunidades concretas de crecimiento.
+Inspired by gstack `/retro`, its goal is to **learn from the cycle at the team and person level, in order to improve**. It looks at the work history (commits, authors, frequency, test health) and produces a retrospective with a per-person breakdown, shipping streaks, trends, and concrete growth opportunities.
 
-El foco es **constructivo, orientado a la mejora — nunca a la culpa**. Respeta la privacidad de las personas: el tono es de aprendizaje, no de evaluación punitiva.
+The focus is **constructive, improvement-oriented — never blame**. It respects people's privacy: the tone is one of learning, not punitive evaluation.
 
-## Pasos
+## Steps
 
-### 1. Analizar el historial git
+### 1. Analyze the git history
 
-Recorrer los repos declarados en `project.json:repos` y extraer la actividad del rango pedido (por defecto el último ciclo / la última semana; respetar `--since` si se entrega).
+Walk the repos declared in `project.json:repos` and extract the activity for the requested range (default: the last cycle / last week; honor `--since` if provided).
 
-- Commits por autor, frecuencia y distribución temporal.
-- Archivos/áreas tocadas por cada persona.
-- Tamaño de los cambios (líneas agregadas/eliminadas) como señal de magnitud, no como métrica de productividad.
+- Commits per author, frequency, and temporal distribution.
+- Files/areas touched by each person.
+- Size of the changes (lines added/removed) as a signal of magnitude, not as a productivity metric.
 
 ```bash
-# Por cada repo en project.json:repos
-git -C <repo> log --since="<rango>" --pretty='%an|%ad|%s' --date=short --no-merges
-git -C <repo> shortlog -sne --since="<rango>" --no-merges
+# For each repo in project.json:repos
+git -C <repo> log --since="<range>" --pretty='%an|%ad|%s' --date=short --no-merges
+git -C <repo> shortlog -sne --since="<range>" --no-merges
 ```
 
-### 2. Cruzar con salud de tests y avance de spec/docs
+### 2. Cross-reference with test health and spec/docs progress
 
-- Apoyarse en **karvey-health** (si está disponible) para la tendencia de salud de tests del ciclo.
-- Cruzar la actividad con el avance reflejado en `docs/` y en la spec (qué requisitos/tareas se cerraron, qué quedó pendiente).
-- Buscar señales: tests que se rompieron y se arreglaron, áreas frágiles, deuda que reaparece ciclo a ciclo.
+- Lean on **karvey-health** (if available) for the cycle's test-health trend.
+- Cross-reference the activity with the progress reflected in `docs/` and the spec (which requirements/tasks were closed, what's still pending).
+- Look for signals: tests that broke and got fixed, fragile areas, debt that reappears cycle after cycle.
 
-### 3. Generar el desglose
+### 3. Generate the breakdown
 
-Producir, a partir de los datos anteriores:
+Produce, from the data above:
 
-- **Por persona:** en qué trabajó, su racha de entregas (shipping streak), su tendencia respecto a ciclos previos.
-- **Rachas de entregas:** continuidad y consistencia del envío de trabajo del equipo.
-- **Tendencias:** salud de tests subiendo/bajando, velocidad, foco vs. dispersión.
-- **Oportunidades de crecimiento:** áreas donde cada persona/equipo puede mejorar, en lenguaje de apoyo.
+- **Per person:** what they worked on, their shipping streak, their trend relative to previous cycles.
+- **Shipping streaks:** continuity and consistency of the team's work delivery.
+- **Trends:** test health going up/down, velocity, focus vs. spread.
+- **Growth opportunities:** areas where each person/team can improve, in supportive language.
 
-### 4. Presentar el retro con acciones concretas
+### 4. Present the retro with concrete actions
 
-Entregar la retrospectiva con:
+Deliver the retrospective with:
 
-- Resumen del ciclo (qué salió bien, qué costó).
-- Desglose por persona y por equipo.
-- **Acciones concretas** y accionables para el próximo ciclo (no generalidades).
-- Tono constructivo en todo momento.
+- Cycle summary (what went well, what was hard).
+- Breakdown per person and per team.
+- **Concrete, actionable items** for the next cycle (no generalities).
+- A constructive tone throughout.
 
-## Enganche con el ciclo
+## Hook into the cycle
 
-Esta skill **se puede enganchar al cierre de ciclo en karvey-archive (FASE 12)** como paso de aprendizaje del ciclo. Aun así, **no avanza la fase**: `spec.json:phase` permanece intacto antes y después de ejecutar la retro.
+This skill **can be hooked into the cycle closeout in karvey-archive (PHASE 12)** as the cycle's learning step. Even so, **it does not advance the phase**: `spec.json:phase` stays intact before and after running the retro.
 
-## Privacidad y tono
+## Privacy and tone
 
-- Foco en **mejora, no en culpa**.
-- Lenguaje constructivo; las métricas son señales para conversar, no para rankear personas.
-- No exponer datos sensibles más allá de lo necesario para la retrospectiva del equipo.
+- Focus on **improvement, not blame**.
+- Constructive language; the metrics are signals for conversation, not for ranking people.
+- Do not expose sensitive data beyond what's necessary for the team retrospective.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

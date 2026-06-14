@@ -1,10 +1,10 @@
 # Karvey
 
-> **Karvey** es una palabra **ona/selknam** que significa ***Afán***.
+> **Karvey** is an Ona/Selknam word meaning ***Afán*** (zeal / drive).
 
-Método de **spec-driven development (SDD)** para Claude Code, **agnóstico de stack** (web, iOS/Android, desktop, CLI, API, embedded). Lleva un cambio desde la idea hasta producción con un pipeline de 12 fases con gates de aprobación, más una capa transversal de skills de apoyo.
+A **spec-driven development (SDD)** method for Claude Code, **stack-agnostic** (web, iOS/Android, desktop, CLI, API, embedded). It takes a change from idea to production through a 12-phase pipeline with approval gates, plus a cross-cutting layer of support skills.
 
-Creado por **Mauricio Quezada Ibáñez** · **HainTech**. Síntesis de experiencia propia con ideas conceptuales de **Kiro** (cc-sdd) y **gstack** (Garry Tan) — inspiración conceptual, sin su código.
+Created by **Mauricio Quezada Ibáñez** · **HainTech**. A synthesis of first-hand experience with conceptual ideas from **Kiro** (cc-sdd) and **gstack** (Garry Tan) — conceptual inspiration, none of their code.
 
 ## Pipeline (0–12)
 
@@ -13,39 +13,41 @@ Creado por **Mauricio Quezada Ibáñez** · **HainTech**. Síntesis de experienc
 → 6 infra → 7 tasks → 8 impl → 9 test → 10 qa → 11 deploy → 12 archive
 ```
 
-Cada fase produce un documento en `docs/spec/` y pide tu OK antes de avanzar. El orquestador `/karvey:karvey <change-id>` te dice siempre en qué fase vas y cuál sigue.
+Each phase produces a document under `docs/spec/` and asks for your OK before advancing. The orchestrator `/karvey:karvey <change-id>` always tells you which phase you're in and which comes next.
 
-## Capa transversal (skills de apoyo, invocables en cualquier momento)
+## Cross-cutting layer (support skills, invokable any time)
 
 `investigate` · `second-opinion` · `health` · `browse` · `checkpoint` · `diagram` · `docs` · `guard` · `devex` · `retro` · `scrape` · `benchmark-models`
 
-## Características
+## Features
 
-- **PRD como base** + requirements EARS trazables.
-- **Mockup navegable** (con modo shotgun de variantes) y **diseño** con scoring 0-10 por plataforma (WCAG/HIG/Material).
-- **Arquitectura** con diagramas, edge cases, trust boundaries e **Infraestructura Cloud**.
-- **IaC + pipelines CI/CD** (Terraform/Bicep/Pulumi · GitHub Actions/Azure Pipelines) con revisión de seguridad.
-- **QA en 8 dimensiones** con **gate de seguridad bloqueante** (OWASP + STRIDE) y second opinion cross-model.
-- **Despliegue ordenado** `feature → dev → PR master`, gatillado por pipeline, con **canary** post-deploy.
-- **Versionado semver + CHANGELOG** por componente/repo, con trazabilidad humano + modelo de IA.
-- **Enforcement opcional por hooks** (git-flow + plan-gate) — opt-in por proyecto.
+- **PRD as the base** + traceable EARS requirements.
+- **Navigable mockup** (with shotgun variant mode) and **design** with 0-10 scoring per platform (WCAG/HIG/Material).
+- **Architecture** with diagrams, edge cases, trust boundaries and a **Cloud Infrastructure** section.
+- **IaC + CI/CD pipelines** (Terraform/Bicep/Pulumi · GitHub Actions/Azure Pipelines) with security review.
+- **8-dimension QA** with a **blocking security gate** (OWASP + STRIDE) and cross-model second opinion.
+- **Ordered deployment** `feature → dev → PR master`, pipeline-triggered, with **canary** post-deploy.
+- **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability.
+- **Optional hook-based enforcement** (git-flow + plan-gate) — opt-in per project.
 
-## Instalación (como plugin de Claude Code)
+## Install (as a Claude Code plugin)
 
 ```
 /plugin marketplace add MauricioQuezadaHaintech/karvey
 /plugin install karvey@karvey-methods
 ```
 
-Luego invocá las skills namespaceadas, por ejemplo:
+Then invoke the namespaced skills, for example:
 
 ```
-/karvey:grill            # iniciar pre-spec
-/karvey:karvey <id>      # ver estado y siguiente paso
+/karvey:grill            # start pre-spec
+/karvey:karvey <id>      # see status and next step
 ```
 
-## Licencia y marca
+The skills' bodies are in English (what Claude reads), but **artifacts are generated in the project's language** (`spec.json` `language` field) and Claude replies in your language. Triggers are bilingual (English + Spanish).
 
-Código bajo **Apache License 2.0** (ver [`LICENSE`](LICENSE) y [`NOTICE`](NOTICE)). Podés usar, modificar y adaptar `karvey-*` con atribución.
+## License and trademark
 
-El nombre **"Karvey"** y la convención `karvey-*` son marca de **HainTech** — ver [`TRADEMARK.md`](TRADEMARK.md). Las adaptaciones deben conservar la atribución a Mauricio Quezada Ibáñez / HainTech y no implicar endoso oficial sin permiso.
+Code under the **Apache License 2.0** (see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE)). You may use, modify and adapt `karvey-*` with attribution.
+
+The **"Karvey"** name and the `karvey-*` convention are trademarks of **HainTech** — see [`TRADEMARK.md`](TRADEMARK.md). Adaptations must keep attribution to Mauricio Quezada Ibáñez / HainTech and must not imply official endorsement without permission.

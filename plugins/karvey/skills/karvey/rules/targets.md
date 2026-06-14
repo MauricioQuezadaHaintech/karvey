@@ -1,31 +1,31 @@
-# Regla: Agnosticismo de stack (targets / plataformas)
+# Rule: Stack agnosticism (targets / platforms)
 
-Karvey es **agnóstico de stack**: sirve para cualquier plataforma. El proyecto declara sus **targets** en `docs/spec/project.json` y cada fase se adapta a ellos. Esto generaliza capacidades que en otros métodos están atadas a un stack (p. ej. la suite iOS de gstack), llevándolas a "el runtime real del target".
+Karvey is **stack-agnostic**: it works for any platform. The project declares its **targets** in `docs/spec/project.json` and each phase adapts to them. This generalizes capabilities that in other methods are tied to a stack (e.g. gstack's iOS suite), bringing them to "the target's real runtime".
 
-## Campo `targets` en project.json
+## `targets` field in project.json
 
 ```json
 "targets": ["web", "ios", "android", "desktop", "cli", "api", "embedded"]
 ```
 
-Valores típicos (no exhaustivo): `web`, `ios`, `android`, `desktop`, `cli`, `api`/`backend`, `embedded`, `library`/`sdk`, `game`, `data`/`ml`. Un proyecto puede tener varios.
+Typical values (not exhaustive): `web`, `ios`, `android`, `desktop`, `cli`, `api`/`backend`, `embedded`, `library`/`sdk`, `game`, `data`/`ml`. A project can have several.
 
-## Cómo se adapta cada fase al target
+## How each phase adapts to the target
 
-| Fase | Adaptación según target |
+| Phase | Adaptation by target |
 |------|--------------------------|
-| `mockup` (3) | Web → HTML navegable; mobile → flujo de pantallas; CLI → transcript de comandos; API → ejemplos request/response. |
-| `design-graphic` (4) | Guía de diseño por plataforma: **WCAG** (web), **Apple HIG** (iOS), **Material** (Android), convenciones de escritorio/terminal. |
-| `architecture` (5) | Infra y boundaries propios del target (app stores, dispositivos, edge, runtime embebido, etc.). |
-| `test` (9) | **Runtime real del target**: browser (web), simulador/dispositivo (iOS/Android), terminal (CLI), cliente HTTP (API), hardware/emulador (embedded). |
-| `qa` (10) | Auditoría visual y de UX en el runtime real; checklist de la plataforma (HIG/Material/WCAG). |
-| `deploy` (11) | Canal de release del target: pipeline web, App Store/TestFlight, Play Store, package registry, OTA, etc. |
+| `mockup` (3) | Web → navigable HTML; mobile → screen flow; CLI → command transcript; API → request/response examples. |
+| `design-graphic` (4) | Per-platform design guide: **WCAG** (web), **Apple HIG** (iOS), **Material** (Android), desktop/terminal conventions. |
+| `architecture` (5) | Infra and boundaries specific to the target (app stores, devices, edge, embedded runtime, etc.). |
+| `test` (9) | **Target's real runtime**: browser (web), simulator/device (iOS/Android), terminal (CLI), HTTP client (API), hardware/emulator (embedded). |
+| `qa` (10) | Visual and UX audit in the real runtime; platform checklist (HIG/Material/WCAG). |
+| `deploy` (11) | The target's release channel: web pipeline, App Store/TestFlight, Play Store, package registry, OTA, etc. |
 
-## Skills de apoyo y targets
+## Support skills and targets
 
-- **`karvey-browse`** ("dar ojos") opera sobre el runtime real del target: browser headless (web), simulador/dispositivo vía túnel (mobile), proceso/terminal (CLI). No asume navegador.
-- **`karvey-devex`** mide onboarding/time-to-hello-world del target correspondiente.
+- **`karvey-browse`** ("give eyes") operates on the target's real runtime: headless browser (web), simulator/device via tunnel (mobile), process/terminal (CLI). It does not assume a browser.
+- **`karvey-devex`** measures onboarding/time-to-hello-world of the corresponding target.
 
-## Principio
+## Principle
 
-Ninguna fase asume "web" por defecto. Si una capacidad existe para un target (ej. auditoría HIG en iPhone real), debe existir el equivalente para los demás targets declarados. El método describe el **qué** (verificar en el runtime real, auditar contra la guía de la plataforma); el **cómo** lo resuelve la skill según el target.
+No phase assumes "web" by default. If a capability exists for one target (e.g. HIG audit on a real iPhone), the equivalent must exist for the other declared targets. The method describes the **what** (verify in the real runtime, audit against the platform guide); the **how** is solved by the skill according to the target.

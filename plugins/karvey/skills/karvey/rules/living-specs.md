@@ -1,35 +1,35 @@
-# Living Specs — Estructura y Protocolo
+# Living Specs — Structure and Protocol
 
-## Estructura de directorios
+## Directory structure
 
 ```
 docs/spec/
-├── specs/                          # Living specs (fuente de verdad acumulativa)
+├── specs/                          # Living specs (cumulative source of truth)
 │   └── {capability}/
-│       └── spec.md                 # Spec maestra del capability (crece con el tiempo)
-└── changes/                        # Cambios en curso
+│       └── spec.md                 # Master spec of the capability (grows over time)
+└── changes/                        # Changes in progress
     ├── {change-id}/
-    │   ├── spec.json               # Metadata del cambio
-    │   ├── proposal.md             # Por qué, qué y el impacto
-    │   ├── requirements.md         # EARS requirements del cambio
-    │   ├── spec-delta.md           # ADDED/MODIFIED/REMOVED sobre las living specs
-    │   ├── design-spec.md          # Especificación de diseño gráfico
-    │   ├── architecture.md         # Diseño técnico y arquitectura
-    │   ├── tasks.md                # Plan de tareas de implementación
-    │   ├── PLAN.md                 # (solo si management=markdown) Plan y checklist
-    │   ├── mockup.html             # Mockup navegable HTML
-    │   └── IMPLEMENTED             # Archivo vacío que marca: desplegado a producción
-    └── archive/                    # Cambios completados y archivados
+    │   ├── spec.json               # Change metadata
+    │   ├── proposal.md             # Why, what and the impact
+    │   ├── requirements.md         # EARS requirements of the change
+    │   ├── spec-delta.md           # ADDED/MODIFIED/REMOVED over the living specs
+    │   ├── design-spec.md          # Graphic design specification
+    │   ├── architecture.md         # Technical design and architecture
+    │   ├── tasks.md                # Implementation task plan
+    │   ├── PLAN.md                 # (only if management=markdown) Plan and checklist
+    │   ├── mockup.html             # Navigable HTML mockup
+    │   └── IMPLEMENTED             # Empty file that marks: deployed to production
+    └── archive/                    # Completed and archived changes
         └── {YYYY-MM-DD}-{change-id}/
-            └── (mismos archivos del change)
+            └── (same files as the change)
 ```
 
-## spec.json — estructura
+## spec.json — structure
 
 ```json
 {
   "change_id": "add-feature-name",
-  "capability": "nombre-del-capability",
+  "capability": "capability-name",
   "created_at": "2026-05-31T00:00:00Z",
   "updated_at": "2026-05-31T00:00:00Z",
   "language": "es",
@@ -52,50 +52,50 @@ docs/spec/
 }
 ```
 
-## spec-delta.md — formato
+## spec-delta.md — format
 
 ```markdown
 # Spec Delta: {change-id}
 
 ## ADDED Requirements
 
-### Requirement: {Nombre}
-WHEN {evento},
-the system SHALL {comportamiento}.
+### Requirement: {Name}
+WHEN {event},
+the system SHALL {behavior}.
 
-#### Scenario: {caso}
+#### Scenario: {case}
 GIVEN ...
 WHEN ...
 THEN ...
 
 ## MODIFIED Requirements
 
-### Requirement: {Nombre existente}
-<!-- Reemplaza COMPLETAMENTE el requirement en docs/spec/specs/{capability}/spec.md -->
-WHEN {nuevo comportamiento},
-the system SHALL {nuevo resultado}.
+### Requirement: {Existing name}
+<!-- COMPLETELY replaces the requirement in docs/spec/specs/{capability}/spec.md -->
+WHEN {new behavior},
+the system SHALL {new result}.
 
 ## REMOVED Requirements
 
-### Requirement: {Nombre a eliminar}
-<!-- Razón: {por qué se elimina} -->
+### Requirement: {Name to remove}
+<!-- Reason: {why it is removed} -->
 ```
 
-## Protocolo de archiving
+## Archiving protocol
 
-Al completar e implementar un cambio:
+When completing and implementing a change:
 
-1. Verificar que `IMPLEMENTED` existe en el directorio del change
-2. Por cada operación en spec-delta.md:
-   - **ADDED**: append al final de `docs/spec/specs/{capability}/spec.md`
-   - **MODIFIED**: reemplazar el bloque completo del requirement por nombre
-   - **REMOVED**: eliminar el bloque + agregar comentario de deprecación
+1. Verify that `IMPLEMENTED` exists in the change's directory
+2. For each operation in spec-delta.md:
+   - **ADDED**: append to the end of `docs/spec/specs/{capability}/spec.md`
+   - **MODIFIED**: replace the full block of the requirement by name
+   - **REMOVED**: remove the block + add a deprecation comment
 3. Git commit: "Merge spec deltas from {change-id}"
-4. Mover carpeta: `mv docs/spec/changes/{change-id} docs/spec/changes/archive/{fecha}-{change-id}`
+4. Move folder: `mv docs/spec/changes/{change-id} docs/spec/changes/archive/{date}-{change-id}`
 5. Git commit: "Archive {change-id}"
 
-## Convención de capabilities
+## Capabilities convention
 
-Los capabilities representan dominios funcionales del producto, no features individuales.
-Ejemplos válidos: `authentication`, `call-management`, `contact-search`, `notifications`, `tenant-config`
-Evitar: `fix-bug-123`, `add-button`, `update-sp` (demasiado granulares)
+Capabilities represent functional domains of the product, not individual features.
+Valid examples: `authentication`, `call-management`, `contact-search`, `notifications`, `tenant-config`
+Avoid: `fix-bug-123`, `add-button`, `update-sp` (too granular)

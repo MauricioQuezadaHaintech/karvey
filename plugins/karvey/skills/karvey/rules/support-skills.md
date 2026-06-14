@@ -1,31 +1,31 @@
-# Regla: Skills de apoyo (capa transversal)
+# Rule: Support skills (cross-cutting layer)
 
-Además de las 12 fases del pipeline (lineal, con gates), Karvey tiene una **capa transversal** de skills de apoyo que se invocan **en cualquier momento**, sin alterar la fase actual. Inspiradas en la filosofía de "equipo virtual" de gstack, pero integradas al método.
+In addition to the 12 pipeline phases (linear, with gates), Karvey has a **cross-cutting layer** of support skills that are invoked **at any time**, without altering the current phase. Inspired by gstack's "virtual team" philosophy, but integrated into the method.
 
-## Catálogo
+## Catalog
 
-| Skill | Rol | Cuándo usarla | Origen (gstack) |
+| Skill | Role | When to use it | Origin (gstack) |
 |-------|-----|---------------|-----------------|
-| `karvey-investigate` | Debugger | Algo falla y no se entiende por qué. **Iron Law: no fix sin investigar primero.** | investigate |
-| `karvey-second-opinion` | Revisor cross-model | Antes de liberar algo sensible: review adversarial con OTRO modelo (Claude vs GPT/otro). | codex |
-| `karvey-health` | Calidad de código | Chequeo periódico: score 0–10 (type-check + lint + tests + dead code) con tendencia. | health |
-| `karvey-browse` | Ojos en el runtime | Inspeccionar/clickear/screenshot en el runtime real del target (browser/simulador/CLI). | browse, setup-browser-cookies |
-| `karvey-checkpoint` | Estado de trabajo | Guardar/restaurar contexto de trabajo (git state, decisiones, WIP) entre sesiones/handoffs. | context-save/restore |
-| `karvey-diagram` | Diagramador | Generar diagramas: texto → mermaid + excalidraw + SVG/PNG. | diagram |
-| `karvey-docs` | Doc Engineer | Generar docs Diataxis (tutorial/how-to/reference/explanation), actualizar docs stale, export PDF. | document-generate/release, make-pdf |
-| `karvey-guard` | Guardrails | Activar/quitar hooks de enforcement; edit-lock a un directorio para trabajo sensible. | careful, freeze, guard |
-| `karvey-devex` | DX Reviewer | Auditar experiencia de desarrollador/onboarding: time-to-hello-world, fricción, "docs lies". | plan-devex-review, devex-review |
-| `karvey-retro` | Retrospectiva | Cierre de ciclo: velocity, test health, por persona, oportunidades de mejora. | retro |
-| `karvey-scrape` | Extractor web | Extraer datos de una web y codificar el scrape como skill reutilizable. | scrape, skillify |
-| `karvey-benchmark-models` | Benchmark de modelos | Comparar modelos (latencia/tokens/costo/calidad) para una skill o tarea. | benchmark-models |
+| `karvey-investigate` | Debugger | Something fails and it's not understood why. **Iron Law: no fix without investigating first.** | investigate |
+| `karvey-second-opinion` | Cross-model reviewer | Before releasing something sensitive: adversarial review with ANOTHER model (Claude vs GPT/other). | codex |
+| `karvey-health` | Code quality | Periodic check: score 0–10 (type-check + lint + tests + dead code) with trend. | health |
+| `karvey-browse` | Eyes on the runtime | Inspect/click/screenshot in the target's real runtime (browser/simulator/CLI). | browse, setup-browser-cookies |
+| `karvey-checkpoint` | Work state | Save/restore working context (git state, decisions, WIP) across sessions/handoffs. | context-save/restore |
+| `karvey-diagram` | Diagrammer | Generate diagrams: text → mermaid + excalidraw + SVG/PNG. | diagram |
+| `karvey-docs` | Doc Engineer | Generate Diataxis docs (tutorial/how-to/reference/explanation), update stale docs, export PDF. | document-generate/release, make-pdf |
+| `karvey-guard` | Guardrails | Activate/remove enforcement hooks; edit-lock on a directory for sensitive work. | careful, freeze, guard |
+| `karvey-devex` | DX Reviewer | Audit developer/onboarding experience: time-to-hello-world, friction, "docs lies". | plan-devex-review, devex-review |
+| `karvey-retro` | Retrospective | Cycle closure: velocity, test health, per person, improvement opportunities. | retro |
+| `karvey-scrape` | Web extractor | Extract data from a website and encode the scrape as a reusable skill. | scrape, skillify |
+| `karvey-benchmark-models` | Model benchmark | Compare models (latency/tokens/cost/quality) for a skill or task. | benchmark-models |
 
-## Reglas de invocación
+## Invocation rules
 
-- Las skills de apoyo **no avanzan la fase** del cambio (`spec.json:phase` no cambia salvo que la skill de fase lo haga).
-- Pueden invocarse antes, durante o después de cualquier fase.
-- Respetan los mismos gates: `karvey-guard`/hooks siguen aplicando; `karvey-second-opinion` no aprueba por sí solo el gate de seguridad de `karvey-qa`, lo complementa.
-- Al producir artefactos en `docs/spec/`, sincronizan conocimiento según `knowledge-sync.md`.
+- Support skills **do not advance the change's phase** (`spec.json:phase` does not change unless a phase skill does it).
+- They can be invoked before, during or after any phase.
+- They respect the same gates: `karvey-guard`/hooks still apply; `karvey-second-opinion` does not by itself approve the `karvey-qa` security gate, it complements it.
+- When producing artifacts in `docs/spec/`, they sync knowledge according to `knowledge-sync.md`.
 
-## Equivalencias rápidas (si vienes de gstack)
+## Quick equivalences (if you come from gstack)
 
-Lo que en gstack son comandos sueltos, en Karvey está **absorbido en fase** o en esta **capa de apoyo**. Ver la tabla de cobertura en `karvey/SKILL.md`.
+What in gstack are standalone commands, in Karvey is **absorbed into a phase** or into this **support layer**. See the coverage table in `karvey/SKILL.md`.

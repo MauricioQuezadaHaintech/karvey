@@ -1,66 +1,66 @@
 ---
 name: karvey-archive
-description: Archive a completed change: merge spec-deltas into living specs, move to archive, close Epic in ClickUp. Triggers include "karvey archive", "archivar", "cerrar epic", "merge specs".
+description: Archive a completed change: merge spec-deltas into living specs, move to archive, close Epic in ClickUp. Triggers include "karvey archive", "archivar", "archive", "cerrar epic", "close epic", "merge specs".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <change-id>
 ---
 
 # Karvey Archive
 
-## Propósito
+## Purpose
 
-Completar el ciclo de vida del cambio: fusionar spec-deltas en las living specs, archivar el directorio del cambio, y cerrar el Epic en ClickUp o marcar completo en PLAN.md.
+Complete the change's lifecycle: merge spec-deltas into the living specs, archive the change directory, and close the Epic in ClickUp or mark it complete in PLAN.md.
 
-## Pasos de ejecución
+## Execution steps
 
-### Paso 1 — Verificar completitud
+### Step 1 — Verify completeness
 
-**Cuándo:** el cambio ya fue desplegado con `/karvey-deploy` (phase: deployed). Archive es la FASE 12 (última) del Método Karvey y se ejecuta DESPUÉS del despliegue.
+**When:** the change has already been deployed with `/karvey-deploy` (phase: deployed). Archive is PHASE 12 (the last) of the Karvey Method and runs AFTER the deployment.
 
-Leer `docs/spec/changes/{change-id}/spec.json`.
+Read `docs/spec/changes/{change-id}/spec.json`.
 
-Verificar:
-- [ ] `phase = "deployed"` o `approvals.deploy.approved = true` — si no se cumple, advertir que falta desplegar el cambio con `/karvey-deploy` y detener.
+Verify:
+- [ ] `phase = "deployed"` or `approvals.deploy.approved = true` — if not met, warn that the change still needs to be deployed with `/karvey-deploy` and stop.
 - [ ] `approvals.tasks.approved = true`
-- [ ] Tests ejecutados (existe `docs/test_evidence.md` con entradas del change-id)
-- [ ] QA review completado (existe `REVISION_PR_*_{fecha}.md`)
-- [ ] No hay hallazgos críticos o altos pendientes
+- [ ] Tests executed (`docs/test_evidence.md` exists with entries for the change-id)
+- [ ] QA review completed (`REVISION_PR_*_{date}.md` exists)
+- [ ] No pending critical or high findings
 
-Si hay bloqueantes: reportar y detener.
+If there are blockers: report and stop.
 
-Como el despliegue ya ocurrió (`/karvey-deploy`), crear el marcador de producción `docs/spec/changes/{change-id}/IMPLEMENTED` si aún no existe. Si por alguna razón el deploy no se completó, advertir que se archivará sin el marcador de producción.
+Since the deployment already happened (`/karvey-deploy`), create the production marker `docs/spec/changes/{change-id}/IMPLEMENTED` if it does not already exist. If for some reason the deploy did not complete, warn that it will be archived without the production marker.
 
-### Paso 2 — Leer spec-deltas
+### Step 2 — Read spec-deltas
 
-Leer todos los archivos `docs/spec/changes/{change-id}/specs/**/*.md`.
+Read all files `docs/spec/changes/{change-id}/specs/**/*.md`.
 
-Para cada spec-delta, identificar las operaciones:
-- `## ADDED Requirements` → append en living spec
-- `## MODIFIED Requirements` → reemplazar bloque en living spec
-- `## REMOVED Requirements` → eliminar bloque + dejar comentario deprecación
+For each spec-delta, identify the operations:
+- `## ADDED Requirements` → append to the living spec
+- `## MODIFIED Requirements` → replace the block in the living spec
+- `## REMOVED Requirements` → remove the block + leave a deprecation comment
 
-### Paso 3 — Mergear deltas en living specs
+### Step 3 — Merge deltas into living specs
 
-Para cada capability afectado, editar `docs/spec/specs/{capability}/spec.md`:
+For each affected capability, edit `docs/spec/specs/{capability}/spec.md`:
 
-**ADDED:** Agregar al final del archivo:
+**ADDED:** Add to the end of the file:
 ```bash
 cat >> docs/spec/specs/{capability}/spec.md << 'EOF'
 
-{bloque del nuevo requirement completo}
+{full block of the new requirement}
 EOF
 ```
 
-**MODIFIED:** Localizar el requirement por nombre y reemplazar el bloque completo.
-Búsqueda: `grep -n "### Requirement: {nombre}" docs/spec/specs/{capability}/spec.md`
-Reemplazar desde esa línea hasta el próximo `### Requirement:` o fin de archivo.
+**MODIFIED:** Locate the requirement by name and replace the full block.
+Search: `grep -n "### Requirement: {name}" docs/spec/specs/{capability}/spec.md`
+Replace from that line to the next `### Requirement:` or end of file.
 
-**REMOVED:** Localizar el bloque y eliminarlo, dejando comentario:
+**REMOVED:** Locate the block and delete it, leaving a comment:
 ```markdown
-<!-- Eliminado {fecha}: {razón del spec-delta} -->
+<!-- Removed {date}: {reason from the spec-delta} -->
 ```
 
-### Paso 4 — Commit del merge de specs
+### Step 4 — Commit the spec merge
 
 ```bash
 git add docs/spec/specs/
@@ -69,7 +69,7 @@ git commit -m "spec: merge deltas from {change-id}
 - {capability}: ADDED {N} requirements, MODIFIED {N}, REMOVED {N}"
 ```
 
-### Paso 5 — Archivar el directorio del cambio
+### Step 5 — Archive the change directory
 
 ```bash
 TIMESTAMP=$(date +%Y-%m-%d)
@@ -77,10 +77,10 @@ mkdir -p docs/spec/changes/archive
 mv docs/spec/changes/{change-id} docs/spec/changes/archive/${TIMESTAMP}-{change-id}
 ```
 
-Verificar:
+Verify:
 ```bash
 ls -la docs/spec/changes/archive/${TIMESTAMP}-{change-id}
-# change-id ya no debe existir en docs/spec/changes/
+# change-id must no longer exist in docs/spec/changes/
 ```
 
 ```bash
@@ -90,104 +90,104 @@ git commit -m "chore: archive {change-id}
 Spec deltas merged into living specs. Change archived."
 ```
 
-### Paso 6A — Cerrar Epic en ClickUp (si management=clickup)
+### Step 6A — Close Epic in ClickUp (if management=clickup)
 
 ```
 clickup_create_task_comment(epic_id,
-  "✅ Epic completado y archivado.\n\nSpec deltas mergeados en: docs/spec/specs/{capability}/spec.md\nArchivado en: docs/spec/changes/archive/{fecha}-{change-id}\n\nRealizado con Método Karvey")
+  "✅ Epic completed and archived.\n\nSpec deltas merged into: docs/spec/specs/{capability}/spec.md\nArchived in: docs/spec/changes/archive/{date}-{change-id}\n\nDone with the Karvey Method")
 clickup_update_task(epic_id, status="complete")
 ```
 
-### Paso 6B — Cerrar PLAN.md (si management=markdown)
+### Step 6B — Close PLAN.md (if management=markdown)
 
-Actualizar `docs/spec/changes/archive/{fecha}-{change-id}/PLAN.md`:
-- Estado general: `✅ Completado y archivado`
-- Agregar entrada en historial: `| {fecha} | archive | Spec mergeada y archivada |`
+Update `docs/spec/changes/archive/{date}-{change-id}/PLAN.md`:
+- General status: `✅ Completed and archived`
+- Add a history entry: `| {date} | archive | Spec merged and archived |`
 
-### Paso 6C — Actualizar spec.json
+### Step 6C — Update spec.json
 
-Actualizar `docs/spec/changes/archive/{fecha}-{change-id}/spec.json`:
-- Dejar `phase: "archived"` (transición desde `deployed`).
+Update `docs/spec/changes/archive/{date}-{change-id}/spec.json`:
+- Set `phase: "archived"` (transition from `deployed`).
 
-### Paso 7 — Validar living specs
+### Step 7 — Validate living specs
 
 ```bash
 grep -n "### Requirement:" docs/spec/specs/{capability}/spec.md
-# Verificar que los requirements ADDED aparecen
-# Verificar que los REMOVED ya no están
+# Verify that the ADDED requirements appear
+# Verify that the REMOVED ones are no longer there
 ```
 
-### Paso 7B — Actualizar grafo de conocimiento
+### Step 7B — Update knowledge graph
 
-Sincronizar el conocimiento según `karvey/rules/knowledge-sync.md` (Obsidian si está disponible; mínimo `/graphify docs/spec/ --update`) para reflejar el merge de spec-deltas y el archivado.
-El `--update` también elimina del grafo los nodos de documentos que fueron borrados (REMOVED requirements).
+Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the spec-delta merge and the archiving.
+The `--update` also removes from the graph the nodes of documents that were deleted (REMOVED requirements).
 
-### Paso 7C — Retrospectiva del ciclo (opcional, recomendado)
+### Step 7C — Cycle retrospective (optional, recommended)
 
-Una vez mergeadas las specs y archivado el cambio, ofrecer cerrar el ciclo con una retrospectiva. Es **opcional pero recomendado**, sobre todo en Epics grandes o ciclos que tomaron varios días.
+Once the specs are merged and the change archived, offer to close the cycle with a retrospective. It is **optional but recommended**, especially on large Epics or cycles that took several days.
 
-Recomendar correr la skill transversal `karvey-retro` para extraer aprendizajes del ciclo:
-- **Velocity:** cuánto tomó cada fase vs. lo estimado, dónde se fue el tiempo.
-- **Test health:** cobertura, tests flaky, hallazgos de QA recurrentes.
-- **Oportunidades:** deuda técnica detectada, mejoras de proceso, riesgos para el próximo ciclo.
-
-```
-¿Querís correr la retrospectiva del ciclo con /karvey-retro {change-id}?
-(opcional — recomendado para capturar aprendizajes de velocity, test health y oportunidades)
-```
-
-No es bloqueante: si el usuario la omite, continuar igual con el output final.
-
-### Paso 7D — Documentación post-release (opcional, recomendado)
-
-Las living specs internas (`docs/spec/specs/`) ya quedaron mergeadas en el Paso 3 — eso **no** se toca acá. Este paso es para la documentación **de usuario / de proyecto** (READMEs, guías, docs Diataxis), que es distinta de las specs internas.
-
-Recomendar correr la skill transversal `karvey-docs` para, después del release:
-- **Actualizar docs stale:** detectar y refrescar documentación de proyecto/usuario que quedó desactualizada por lo que se shipeó en este cambio.
-- **Generar docs Diataxis:** crear documentación nueva (tutorial / how-to / referencia / explicación) de las funcionalidades entregadas, cuando aplique.
+Recommend running the cross-cutting skill `karvey-retro` to extract learnings from the cycle:
+- **Velocity:** how long each phase took vs. the estimate, where the time went.
+- **Test health:** coverage, flaky tests, recurring QA findings.
+- **Opportunities:** detected technical debt, process improvements, risks for the next cycle.
 
 ```
-¿Querís actualizar/generar la documentación de usuario con /karvey-docs {change-id}?
-(opcional — recomendado; distingue docs de usuario/proyecto de las living specs internas que archive ya mergeó)
+Do you want to run the cycle retrospective with /karvey-retro {change-id}?
+(optional — recommended to capture learnings on velocity, test health, and opportunities)
 ```
 
-No es bloqueante: si el usuario la omite, continuar igual con el output final.
+It is not blocking: if the user skips it, continue anyway with the final output.
 
-### Paso 8 — Output final
+### Step 7D — Post-release documentation (optional, recommended)
+
+The internal living specs (`docs/spec/specs/`) were already merged in Step 3 — that is **not** touched here. This step is for the **user / project** documentation (READMEs, guides, Diataxis docs), which is distinct from the internal specs.
+
+Recommend running the cross-cutting skill `karvey-docs` to, after the release:
+- **Update stale docs:** detect and refresh project/user documentation that became outdated by what was shipped in this change.
+- **Generate Diataxis docs:** create new documentation (tutorial / how-to / reference / explanation) for the delivered features, when applicable.
 
 ```
-✅ Cambio archivado: {change-id}
+Do you want to update/generate the user documentation with /karvey-docs {change-id}?
+(optional — recommended; it distinguishes user/project docs from the internal living specs that archive already merged)
+```
 
-Spec deltas mergeados:
+It is not blocking: if the user skips it, continue anyway with the final output.
+
+### Step 8 — Final output
+
+```
+✅ Change archived: {change-id}
+
+Spec deltas merged:
   - docs/spec/specs/{capability}/spec.md
     - ADDED: {N} requirements
     - MODIFIED: {N} requirements
     - REMOVED: {N} requirements
 
-Archivado en: docs/spec/changes/archive/{fecha}-{change-id}
-IMPLEMENTED: {sí / no — sin marcar}
+Archived in: docs/spec/changes/archive/{date}-{change-id}
+IMPLEMENTED: {yes / no — not marked}
 
-Gestión: {Epic E{n} cerrado en ClickUp | PLAN.md marcado completo}
+Management: {Epic E{n} closed in ClickUp | PLAN.md marked complete}
 
 Commits:
   - "spec: merge deltas from {change-id}"
   - "chore: archive {change-id}"
 
-Pasos finales opcionales (recomendados):
-  - 🔁 Retrospectiva del ciclo:        /karvey-retro {change-id}
-  - 📚 Documentación post-release:     /karvey-docs {change-id}
+Optional final steps (recommended):
+  - 🔁 Cycle retrospective:           /karvey-retro {change-id}
+  - 📚 Post-release documentation:    /karvey-docs {change-id}
 
-🏁 Ciclo completo del Método Karvey finalizado para {change-id}
+🏁 Full Karvey Method cycle finished for {change-id}
 ```
 
 
-## Cierre del ciclo
+## Cycle closure
 
-Tras archivar, **preguntá al usuario** si quiere correr los pasos finales opcionales recomendados:
-- `/karvey-retro {change-id}` — retrospectiva del ciclo.
-- `/karvey-docs {change-id}` — documentación post-release (Diataxis / actualizar docs).
+After archiving, **ask the user** whether they want to run the recommended optional final steps:
+- `/karvey-retro {change-id}` — cycle retrospective.
+- `/karvey-docs {change-id}` — post-release documentation (Diataxis / update docs).
 
-Con esto el ciclo del cambio queda cerrado. Para un nuevo cambio: `/karvey-grill` o `/karvey-init`.
+With this, the change's cycle is closed. For a new change: `/karvey-grill` or `/karvey-init`.
 
 ---
-*Parte del Método Karvey™ — © HainTech, por Mauricio Quezada Ibáñez · Apache 2.0 · ver `karvey/LICENSE` y `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
