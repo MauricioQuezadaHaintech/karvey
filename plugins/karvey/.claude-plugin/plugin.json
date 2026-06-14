@@ -1,0 +1,14 @@
+{
+  "name": "karvey",
+  "displayName": "Karvey — Método SDD",
+  "description": "Método Karvey (Afán, selknam): pipeline spec-driven development de 12 fases + capa transversal de 12 skills de apoyo. Agnóstico de stack (web, mobile, desktop, CLI, API, embedded). PRD, EARS, mockup, diseño, arquitectura, IaC+CI/CD, QA con gate de seguridad, despliegue ordenado con canary, versionado semver. Síntesis de experiencia propia + Kiro + gstack.",
+  "version": "3.0.0",
+  "author": {
+    "name": "Mauricio Quezada Ibáñez",
+    "url": "https://github.com/MauricioQuezadaHaintech"
+  },
+  "homepage": "https://github.com/MauricioQuezadaHaintech/karvey",
+  "repository": "https://github.com/MauricioQuezadaHaintech/karvey",
+  "license": "Apache-2.0",
+  "keywords": ["karvey", "spec-driven", "sdd", "specification-driven", "kiro", "cc-sdd", "gstack", "Garry Tan", "PRD", "requirements", "EARS", "afán", "haintech", "pipeline", "ci-cd", "devops"]
+}

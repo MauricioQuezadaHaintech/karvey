@@ -1,0 +1,24 @@
+{
+  "name": "karvey-methods",
+  "owner": {
+    "name": "Mauricio Quezada Ibáñez — HainTech",
+    "url": "https://github.com/MauricioQuezadaHaintech"
+  },
+  "description": "Karvey — método de spec-driven development agnóstico de stack. Propiedad de HainTech.",
+  "plugins": [
+    {
+      "name": "karvey",
+      "source": "./plugins/karvey",
+      "description": "Método Karvey (Afán, selknam): pipeline SDD de 12 fases + 12 skills de apoyo, agnóstico de stack. Síntesis de experiencia propia + Kiro + gstack.",
+      "version": "3.0.0",
+      "author": {
+        "name": "Mauricio Quezada Ibáñez",
+        "url": "https://github.com/MauricioQuezadaHaintech"
+      },
+      "homepage": "https://github.com/MauricioQuezadaHaintech/karvey",
+      "repository": "https://github.com/MauricioQuezadaHaintech/karvey",
+      "license": "Apache-2.0",
+      "keywords": ["karvey", "spec-driven", "sdd", "kiro", "gstack", "afán", "haintech", "pipeline", "devops"]
+    }
+  ]
+}

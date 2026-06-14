@@ -1,0 +1,26 @@
+Karvey — Método de desarrollo de negocio spec-driven
+Copyright (c) HainTech. Todos los derechos reservados sobre la marca "Karvey".
+
+Creado por Mauricio Quezada Ibáñez (HainTech). Propiedad de HainTech.
+
+Licenciado bajo la Apache License, Version 2.0 (la "Licencia").
+No puedes usar este trabajo salvo en cumplimiento de la Licencia.
+Puedes obtener una copia de la Licencia en:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Salvo que lo requiera la ley aplicable o se acuerde por escrito, el software
+distribuido bajo la Licencia se distribuye "TAL CUAL", SIN GARANTÍAS NI
+CONDICIONES DE NINGÚN TIPO, expresas o implícitas.
+
+---
+
+"Karvey" es una palabra ona/selknam que significa *Afán*.
+
+Karvey sintetiza la experiencia propia de Mauricio Quezada Ibáñez (HainTech)
+con ideas conceptuales de los métodos Kiro (spec-driven development / cc-sdd)
+y gstack (Garry Tan). Es una síntesis e inspiración conceptual; NO incorpora
+código de esos proyectos.
+
+El nombre "Karvey" y la convención de nombres "karvey-*" son marca de HainTech.
+Ver TRADEMARK.md para la política de uso de la marca.
