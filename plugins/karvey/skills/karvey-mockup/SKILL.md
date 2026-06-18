@@ -1,6 +1,6 @@
 ---
 name: karvey-mockup
-description: Generate a navigable HTML mockup with 3 levels of depth from approved requirements. Iterate with user until approved, then advance to graphic design. Triggers include "karvey mockup", "generar mockup", "generate mockup", "crear prototipo", "create prototype", "wireframe".
+description: Generate a navigable HTML mockup with 3–4 levels of depth from approved requirements, then validate it against the requirements to catch spec-gaps early. Iterate with the user until approved, then advance to graphic design. Triggers include "karvey mockup", "generar mockup", "generate mockup", "crear prototipo", "create prototype", "wireframe".
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 argument-hint: <change-id> [--iteration N] [--shotgun | --variants N]
 ---
@@ -9,7 +9,9 @@ argument-hint: <change-id> [--iteration N] [--shotgun | --variants N]
 
 ## Purpose
 
-Generate a navigable HTML file with 3 levels of depth before defining the graphic design. The engineer navigates the mockup in the browser, gives feedback, and it's iterated until approval. Only afterward does it advance to graphic design and architecture.
+Generate a navigable HTML file with **3–4 levels of depth** before defining the graphic design. The engineer navigates the mockup in the browser, gives feedback, and it's iterated until approval. Crucially, the mockup is then **validated against the requirements** (Step 5B) to surface spec-gaps while they are still cheap to fix — before design, architecture and impl. Only afterward does it advance to graphic design and architecture.
+
+> **Why deeper (3–4 levels):** the goal of the mockup is to make the product *real enough* that spec mistakes become visible now, not during testing. A shallow mockup (just shells and lists) hides the decisions that actually break specs — wizards, confirmations, error/empty states, edge flows. Go to a 4th level whenever a flow has a multi-step action, a destructive confirmation, or a non-trivial state machine.
 
 ## Target agnosticism
 
@@ -34,6 +36,7 @@ If the user doesn't pass a flag, always use normal mode.
 - **Level 1 — App Shell**: Main navigation (sidebar/topbar with the product's sections)
 - **Level 2 — Section**: Views of each section (lists, forms, dashboards)
 - **Level 3 — Detail**: Detail views (modals, side panels, sub-views, wizards)
+- **Level 4 — Sub-flow / state (when warranted)**: the steps and states *inside* a Level 3 action — wizard step 2/3, destructive confirmation, error/empty/loading states of that flow, success state. Add it whenever a flow has a multi-step action, a confirmation, or a non-trivial state machine. This is where spec-gaps usually hide, so don't skip it for those flows.
 
 ## Execution steps
 
@@ -155,6 +158,21 @@ Update `spec.json`:
 
 Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the `mockup.html` created or modified.
 If `docs/spec/graphify-out/` doesn't exist, invoke `/graphify docs/spec/` without `--update`.
+
+### Step 4C — Spec↔mockup validation (catch spec-gaps early)
+
+Before presenting, **walk the mockup against `requirements.md`** — one pass to confirm the mockup actually realizes every requirement, and to find what the requirements forgot. This is the cheapest place in the whole pipeline to fix a spec.
+
+For each requirement, check:
+- Is there a screen/state in the mockup that satisfies it? (requirement → no screen = a gap in the mockup, or a requirement that's vaguer than it looked)
+- Does the mockup imply a behavior/state/field that **no requirement covers**? (screen → no requirement = a likely **spec-gap**: the requirement is incomplete)
+- Are the Level-4 states (errors, confirmations, empty, multi-step) actually specified, or did the mockup just invent them?
+
+Record each mismatch. Then route per `karvey/rules/iteration-loop.md`:
+- If `requirements` is **still in this change's scope and not yet locked downstream**, the cheapest path is to fix the requirement now: note it and update `requirements.md` + `spec-delta.md` directly (you're still pre-design), keeping PRD traceability.
+- If the gap is bigger or contested, append it to `docs/spec/changes/{change-id}/findings.md` as a `spec-gap` and run `/karvey-iterate {change-id}` to route it formally.
+
+Document the validation outcome briefly in the presentation (Step 5): "Spec↔mockup: N requirements covered, M gaps found and fixed/routed."
 
 ### Step 5 — Present to the user
 
