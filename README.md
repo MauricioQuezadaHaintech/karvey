@@ -15,9 +15,22 @@ Created by **Mauricio Quezada Ibáñez** · **HainTech**. A synthesis of first-h
 
 Each phase produces a document under `docs/spec/` and asks for your OK before advancing. The orchestrator `/karvey:karvey <change-id>` always tells you which phase you're in and which comes next.
 
+### A spiral, not a line — the iteration loop
+
+The pipeline is the happy path; real work iterates. Findings from `test`/`qa`/`browse` land in `findings.md` and the **iteration engine** `/karvey:karvey-iterate` routes each one:
+
+```
+test · qa · browse → findings.md → karvey-iterate
+                                      ├─ bug      → BUG-NN incident tracker → impl→test→qa micro-loop
+                                      ├─ spec-gap → re-open requirements (ripple only affected phases)
+                                      └─ emergent → discovery backlog → future change-id (swept at archive)
+```
+
+A change is *done* only when no open `bug`/`spec-gap` remains and every `emergent` idea is captured — so nothing gets dropped and nothing stays "in the air".
+
 ## Cross-cutting layer (support skills, invokable any time)
 
-`investigate` · `second-opinion` · `health` · `browse` · `checkpoint` · `diagram` · `docs` · `guard` · `devex` · `retro` · `scrape` · `benchmark-models`
+`iterate` · `investigate` · `second-opinion` · `health` · `browse` · `checkpoint` · `diagram` · `docs` · `guard` · `devex` · `retro` · `scrape` · `benchmark-models`
 
 ## Features
 
@@ -26,6 +39,10 @@ Each phase produces a document under `docs/spec/` and asks for your OK before ad
 - **Architecture** with diagrams, edge cases, trust boundaries and a **Cloud Infrastructure** section.
 - **IaC + CI/CD pipelines** (Terraform/Bicep/Pulumi · GitHub Actions/Azure Pipelines) with security review.
 - **8-dimension QA** with a **blocking security gate** (OWASP + STRIDE) and cross-model second opinion.
+- **Iteration loop** that routes findings back to their edge (`bug` / `spec-gap` / `emergent`) so the method guides you through iteration, not just the happy path.
+- **Incident tracker** (`BUG-NN` with state history) per repo + a global index — complementary to ClickUp.
+- **Discovery backlog** (Markdown + ClickUp) so emergent ideas become future change-ids, swept at archive.
+- **Mandatory phase-close** ritual: every phase/task updates management (ClickUp comment + status + cascade) so nothing goes stale.
 - **Ordered deployment** `feature → dev → PR master`, pipeline-triggered, with **canary** post-deploy.
 - **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability.
 - **Optional hook-based enforcement** (git-flow + plan-gate) — opt-in per project.

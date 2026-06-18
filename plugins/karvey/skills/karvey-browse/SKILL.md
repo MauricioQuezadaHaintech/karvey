@@ -31,6 +31,10 @@ It operates on the real runtime of the target declared in `project.json:targets`
 - **Capture screenshots** as visual evidence.
 - **Read state / console** (DOM, logs, process output, responses).
 
+### Findings (feed the iteration loop)
+
+When browsing surfaces a defect or a gap (something looks wrong, behaves wrong, or contradicts/exceeds the spec), and a `change-id` is in context, **append it to `docs/spec/changes/{change-id}/findings.md`** classified as `bug` / `spec-gap` / `emergent` (see `karvey/rules/iteration-loop.md`). Browse only **observes and classifies** — routing is `karvey-iterate`'s job. This is how "I saw it break with my own eyes" becomes tracked work instead of a passing comment.
+
 ### Session handling (web target)
 
 When the target is web, it can **import cookies/session from a real browser** to test authenticated views without manual re-login. This makes it possible to inspect screens behind login using the user's already-active session.

@@ -173,9 +173,11 @@ Measure performance metrics **in the target's actual runtime**, to have a compar
 
 This measurement can be delegated to or related with the **`karvey-health`** skill (runtime health/performance check). Record the measured values in `docs/test_evidence.md` (Benchmark section) to compare against previous runs: if a key metric degrades relative to the previous baseline, flag it as a finding.
 
-### Step 4C — Automatic regression tests
+### Step 4C — Automatic regression tests + incident logging
 
-**Every time a test detects a bug and it is fixed**, generate an automatic regression test that covers exactly that case, so it fails again if the bug reappears. That is: for every fixed FAIL, a new test must remain in the suite.
+**Every time a test detects a bug**, log it in the incident tracker `docs/bugs_dev_testing.md` as a `BUG-NN` (continue the incremental counter — read the file first), opening its **State history** at `DETECTADO` (see `karvey/rules/incident-tracking.md`), and mirror it to `docs/spec/incidents-index.md`. The same bug is also recorded as a `bug`-type finding in `findings.md` (Step 5C).
+
+**When it is fixed**, generate an automatic regression test that covers exactly that case, so it fails again if the bug reappears, and move the incident to `RESUELTO` (a regression test is required to reach `RESUELTO`). That is: for every fixed FAIL, a new test must remain in the suite.
 
 - Write the test in the framework of the layer where the bug was (unit or E2E) using the runner detected in Step 1.
 - Name it traceably to the bug (e.g., `regression_{change-id}_{short-description}`).
@@ -288,10 +290,23 @@ Notes: {detected degradations relative to the baseline, if applicable}
 | **Total** | **{N}** | **{N}** | **{N}** |
 ```
 
-### Step 5B — Update knowledge graph
+### Step 5B — Classify findings (feed the iteration loop)
 
-Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect `test_plan.md` and `test_evidence.md`.
+Append every observation from this run to `docs/spec/changes/{change-id}/findings.md`, classified by type (see `karvey/rules/iteration-loop.md`):
+- `bug` — a FAIL where the code doesn't do what the (correct) spec says → already logged as `BUG-NN` in Step 4C.
+- `spec-gap` — while testing you realized the **spec itself** is wrong/incomplete (e.g. the requirement never defined this case). Don't silently "fix" it in code — record it so it can re-open requirements.
+- `emergent` — a valid new idea/scope that surfaced but is **out of this change's scope**.
+
+You only **classify and append** here; routing is `karvey-iterate`'s job. If `findings.md` ends with any open `bug`/`spec-gap`, the next step is `/karvey-iterate {change-id}`, not `/karvey-qa`.
+
+### Step 5C — Update knowledge graph
+
+Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect `test_plan.md`, `test_evidence.md` and `findings.md`.
 If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
+
+### Step 5D — Phase-close
+
+Run the phase-close ritual (`karvey/rules/phase-close.md`): comment + status on management (ClickUp/PLAN.md), ensure findings/incidents are recorded, update `spec.json` (`phase: "test"`, `updated_at`).
 
 ### Step 6 — Report to the user
 
@@ -319,16 +334,22 @@ FAILs:
   - {ID}: {failure description}
   - {ID}: {failure description}
 
+Logged as incidents: BUG-{list} (docs/bugs_dev_testing.md)
+Findings recorded: {N bug · N spec-gap · N emergent} → findings.md
+
 For every fixed FAIL, generate its regression test (Step 4C) and leave it in the suite.
 
-Fix and re-run: /karvey-test {change-id}
-Or proceed with documented failures (not recommended): /karvey-qa {change-id}
+Next step:
+  - Route the findings (recommended): /karvey-iterate {change-id}
+  - Or fix bugs and re-run directly: /karvey-test {change-id}
 ```
+
+> If any finding is a `spec-gap` (the spec, not the code, was wrong), do **not** just patch code — `/karvey-iterate` will re-open requirements so the spec is corrected and the fix is traceable.
 
 
 ## Advance to the next phase
 
-When finishing this phase and having the corresponding approval, **actively ask the user**: "Shall we advance to the QA phase now?"
+When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items, the next step is `/karvey-iterate {change-id}` (route them), not QA. Once routed/clear, **actively ask the user**: "Shall we advance to the QA phase now?"
 - If they confirm → run `/karvey-qa {change-id}`.
 - If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
 - If you resume in another session, `/karvey {change-id}` indicates which phase you are in and which one follows.

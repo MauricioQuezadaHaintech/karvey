@@ -128,6 +128,8 @@ curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
 to do → in progress → listo! para pap → complete
 ```
 
+> **Mandatory, not optional.** Updating ClickUp at the close of every task **and every phase** is the `phase-close.md` ritual — a numbered step, not a "should". Tasks left stale (work done but ClickUp not moved) are a process defect. See `phase-close.md`.
+
 ### When starting a task
 ```
 clickup_update_task(task_id, status="in progress")
@@ -144,7 +146,15 @@ clickup_update_task(task_id, status="listo! para pap")
 ### Status cascade
 - When ALL tasks of a Feature → Feature to "listo! para pap"
 - When ALL Features of an Epic → Epic to "listo! para pap"
-- A Feature only changes when ALL layers (BD+Backend+Frontend) are done
+- A Feature only changes when ALL layers (BD+Backend+Frontend+Infra) are done
+
+### Phase-level status (not just leaf tasks)
+
+Each **pipeline phase** maps to a Feature (or a checklist item in the Epic). Closing a phase advances that item, so the ClickUp board reflects pipeline progress (`requirements → … → deploy`), not only leaf impl tasks. Run this at every phase close, per `phase-close.md`.
+
+### Incident & backlog mirroring
+- A `BUG-NN` (see `incident-tracking.md`) created during test/qa is mirrored to a ClickUp task; the `BUG-NN` records the task id and vice-versa.
+- An `emergent` finding goes to the ClickUp backlog list (`backlog_list_id`) and to `docs/spec/backlog.md` (see `backlog.md`). Status is kept in sync at phase close.
 
 ## Backlogs per project
 

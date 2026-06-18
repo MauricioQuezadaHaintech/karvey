@@ -153,6 +153,17 @@ Do you want to update/generate the user documentation with /karvey-docs {change-
 
 It is not blocking: if the user skips it, continue anyway with the final output.
 
+### Step 7E — Discovery backlog sweep (so nothing stays "in the air")
+
+A closing cycle almost always surfaced ideas and out-of-scope work. Before finishing, sweep the discovery backlog (`karvey/rules/backlog.md`) so those become real future work instead of evaporating.
+
+1. Read `docs/spec/backlog.md`. List the `open` items whose origin is this change (and any other `open` items, for visibility).
+2. For each, decide with the user: **promote** (create a future `change-id` now via `/karvey-grill` or `/karvey-init`, carrying the backlog context as PRD seed and recording `seed_backlog_id`), **keep** (leave `open` for later), or **discard** (with a reason).
+3. Update each item's `status` (`promoted` + `Promoted to change-id`, or `discarded` + reason). If `management=clickup`, mirror the status to the backlog list.
+4. **Report the counts explicitly** — promoted / kept / discarded. Never sweep silently: a silent sweep reads as "all captured" when it isn't.
+
+This is the step that guarantees post-cycle discoveries don't get lost.
+
 ### Step 8 — Final output
 
 ```
@@ -172,6 +183,11 @@ Management: {Epic E{n} closed in ClickUp | PLAN.md marked complete}
 Commits:
   - "spec: merge deltas from {change-id}"
   - "chore: archive {change-id}"
+
+Discovery backlog swept:
+  - Promoted to new change-ids: {N} ({list})
+  - Kept open: {N}
+  - Discarded: {N}
 
 Optional final steps (recommended):
   - 🔁 Cycle retrospective:           /karvey-retro {change-id}

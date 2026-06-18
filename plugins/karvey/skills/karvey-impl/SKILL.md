@@ -96,6 +96,8 @@ If the test fails: fix it within the same task before advancing.
 
 ### Step 6 — Complete the task in management
 
+This is the **per-task phase-close ritual** (`karvey/rules/phase-close.md`): comment + status + cascade, applied to every task. It is mandatory, not a "should" — a task is not done until its management record is updated.
+
 **If ClickUp:**
 ```
 clickup_stop_time_tracking()

@@ -1,8 +1,8 @@
 {
   "name": "karvey",
   "displayName": "Karvey — Método SDD",
-  "description": "Karvey Method (Afán, Selknam): spec-driven development pipeline of 12 phases + a cross-cutting layer of 12 support skills. Stack-agnostic (web, mobile, desktop, CLI, API, embedded). PRD, EARS, mockup, design, architecture, IaC+CI/CD, QA with a security gate, ordered deployment with canary, semver versioning. A synthesis of first-hand experience + Kiro + gstack.",
-  "version": "3.1.0",
+  "description": "Karvey Method (Afán, Selknam): spec-driven development as a spiral — 13-phase pipeline (0–12) + a cross-cutting layer of 14 support skills, with an iteration loop that routes findings (bug/spec-gap/emergent), a BUG-NN incident tracker with state history, a discovery backlog (Markdown + ClickUp) and a mandatory phase-close ritual. Stack-agnostic (web, mobile, desktop, CLI, API, embedded). PRD, EARS, mockup (3–4 levels + spec validation), design, architecture, IaC+CI/CD, QA with a security gate, ordered deployment with canary, semver versioning. A synthesis of first-hand experience + Kiro + gstack.",
+  "version": "3.2.0",
   "author": {
     "name": "Mauricio Quezada Ibáñez",
     "url": "https://github.com/MauricioQuezadaHaintech"
@@ -10,5 +10,5 @@
   "homepage": "https://github.com/MauricioQuezadaHaintech/karvey",
   "repository": "https://github.com/MauricioQuezadaHaintech/karvey",
   "license": "Apache-2.0",
-  "keywords": ["karvey", "spec-driven", "sdd", "specification-driven", "kiro", "cc-sdd", "gstack", "Garry Tan", "PRD", "requirements", "EARS", "afán", "haintech", "pipeline", "ci-cd", "devops"]
+  "keywords": ["karvey", "spec-driven", "sdd", "specification-driven", "kiro", "cc-sdd", "gstack", "Garry Tan", "PRD", "requirements", "EARS", "iteration", "feedback-loop", "incident-tracker", "backlog", "afán", "haintech", "pipeline", "ci-cd", "devops"]
 }

@@ -9,8 +9,8 @@
     {
       "name": "karvey",
       "source": "./plugins/karvey",
-      "description": "Karvey Method (Afán, Selknam): stack-agnostic SDD pipeline of 12 phases + 12 support skills. A synthesis of first-hand experience + Kiro + gstack.",
-      "version": "3.1.0",
+      "description": "Karvey Method (Afán, Selknam): stack-agnostic SDD spiral of 13 phases (0–12) + 14 support skills with an iteration loop (findings → bug/spec-gap/emergent), incident tracker and discovery backlog. A synthesis of first-hand experience + Kiro + gstack.",
+      "version": "3.2.0",
       "author": {
         "name": "Mauricio Quezada Ibáñez",
         "url": "https://github.com/MauricioQuezadaHaintech"

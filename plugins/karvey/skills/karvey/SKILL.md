@@ -30,6 +30,9 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **Orderly deployment**: feature branch → dev → PR to master, triggered by the pipeline, with post-deploy canary
 - **Semver versioning + CHANGELOG** per component/repo, with human + AI model traceability
 - **Persistent goal**: a north star that every phase re-reads so it never stops until the result is achieved, while respecting the gates
+- **Spiral, not a line — iteration loop**: testing/QA/real-runtime surface defects and new ideas; the **iteration engine** (`karvey-iterate`) routes each finding back to its edge (`bug` → incident tracker + QA micro-loop · `spec-gap` → re-open requirements · `emergent` → discovery backlog) so **nothing is dropped**. See `rules/iteration-loop.md`.
+- **Incident tracker** (`BUG-NN` with state history) + **discovery backlog** (Markdown + ClickUp) so bugs and post-cycle ideas stay traceable (`rules/incident-tracking.md`, `rules/backlog.md`)
+- **Phase-close ritual**: every phase/task closes with a mandatory management update (ClickUp comment + status + cascade) so tasks never go stale — see `rules/phase-close.md`
 - **Cross-cutting layer of support skills** (investigate, second-opinion, health, browse, etc.) callable at any time
 - **Optional enforcement via hooks** (git-flow + plan-gate) and **archive** with spec merge
 
@@ -39,7 +42,7 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 PHASE 0 ─── /karvey-grill          → Pre-spec + 10-star reframe (+ platform/cloud)
 PHASE 1 ─── /karvey-init           → change-id, project.json, prd.md, spec.json, ClickUp Epic
 PHASE 2 ─── /karvey-requirements   → EARS requirements (trace to the PRD), spec-delta, approval
-PHASE 3 ─── /karvey-mockup         → Navigable 3 levels (+ shotgun variants mode)
+PHASE 3 ─── /karvey-mockup         → Navigable 3–4 levels + spec↔mockup validation (+ shotgun mode)
 PHASE 4 ─── /karvey-design-graphic → OKLCH visual system + 0-10 scoring per dimension
 PHASE 5 ─── /karvey-architecture   → Architecture, Tiers, diagrams, edge cases, Cloud Infra
 PHASE 6 ─── /karvey-infra          → IaC + CI/CD pipelines + infra security review
@@ -48,14 +51,28 @@ PHASE 8 ─── /karvey-impl           → Implementation DB→Backend→Front
 PHASE 9 ─── /karvey-test           → Unit + E2E in the target's real runtime, benchmark, regression
 PHASE 10 ── /karvey-qa             → QA 8D + blocking security gate, REVISION_PR
 PHASE 11 ── /karvey-deploy         → Orderly deployment feature→dev→PR master + canary
-PHASE 12 ── /karvey-archive        → Merge spec-deltas, retro, docs, close Epic
+PHASE 12 ── /karvey-archive        → Merge spec-deltas, retro, docs, close Epic + backlog sweep
 ```
+
+### Feedback edges — the spiral (not part of the linear count)
+
+Findings from `test`/`qa`/`browse` land in `findings.md` and are routed by `/karvey-iterate`:
+
+```
+   test · qa · browse ──→ findings.md ──→ /karvey-iterate (the engine)
+                                              ├─ bug      → BUG-NN tracker → impl→test→qa micro-loop
+                                              ├─ spec-gap → re-open PHASE 2 requirements (ripple only affected phases)
+                                              └─ emergent → discovery backlog → future change-id (swept at archive)
+```
+
+A change is **done** only when `findings.md` has no open `bug`/`spec-gap` and all `emergent` are captured (convergence rule, `rules/iteration-loop.md`).
 
 ## Cross-cutting layer — support skills (callable at any time)
 
-These are not phases; they do not advance `spec.json:phase`. See `rules/support-skills.md`.
+These are not phases; they do not advance `spec.json:phase` forward. See `rules/support-skills.md`.
 
 ```
+/karvey-iterate            → Iteration engine: route findings (bug/spec-gap/emergent) to their edge
 /karvey-investigate        → Root-cause debugging (Iron Law: no fix without investigating)
 /karvey-second-opinion     → Adversarial cross-model review (Claude vs another model)
 /karvey-health             → 0-10 dashboard (type/lint/tests/dead-code) + trend
@@ -103,12 +120,17 @@ Read `spec.json` and determine the current phase based on `phase` and `approvals
 | `tasks` | tasks.approved=false | Review tasks with the user |
 | `tasks` | tasks.approved=true | `/karvey-impl {change-id}` |
 | `impl` | — | `/karvey-test {change-id}` |
-| `test` | — | `/karvey-qa {change-id}` |
-| `qa` | qa.approved=false (open criticals/highs) | Fix → re-impl → re-test → re-qa |
-| `qa` | qa.approved=true | `/karvey-deploy {change-id}` |
-| `deployed` | — | `/karvey-archive {change-id}` |
+| `test` | findings.md has open items | `/karvey-iterate {change-id}` (route them first) |
+| `test` | no open findings | `/karvey-qa {change-id}` |
+| `qa` | findings.md has open `bug`/`spec-gap` | `/karvey-iterate {change-id}` (route them) |
+| `qa` | open `spec-gap` routed → requirements re-opened | `/karvey-requirements {change-id}` (revision mode, ripple affected phases) |
+| `qa` | qa.approved=false (open criticals/highs, bug edge) | Fix → re-impl → re-test → re-qa |
+| `qa` | qa.approved=true + converged (no open bug/spec-gap, emergent captured) | `/karvey-deploy {change-id}` |
+| `deployed` | — | `/karvey-archive {change-id}` (+ sweep backlog into new change-ids) |
 
-Show the user the status (capability, phase, Tier, management, **goal**, approvals including `infra`, `qa`, `deploy`) and the next step.
+**Convergence gate:** before advancing from `test`/`qa` to deploy, `findings.md` must have no open `bug`/`spec-gap` and all `emergent` must be captured in the backlog (`rules/iteration-loop.md`). If not, the next step is `/karvey-iterate`, not forward.
+
+Show the user the status (capability, phase, Tier, management, **goal**, approvals including `infra`, `qa`, `deploy`, plus `iteration_count` and open findings/backlog counts) and the next step.
 
 ### With `--phase <fase>` — Detailed description of a phase
 
@@ -134,7 +156,7 @@ EARS requirements, each one **traced to a section of the PRD**. `requirements.md
 **Rules:** `ears-format.md`, `living-specs.md`, `security-tiers.md`
 
 ### PHASE 3: /karvey-mockup
-Navigable 3 levels, adapted to the target. Shotgun mode (N variants + board). `mockup.html` (or the target's equivalent).
+Navigable **3–4 levels** (deeper when the flow warrants it), adapted to the target. Shotgun mode (N variants + board). Includes a **spec↔mockup validation** pass: walk the mockup against `requirements.md` to catch spec-gaps *before* design/architecture/impl (cheap correction). `mockup.html` (or the target's equivalent).
 
 ### PHASE 4: /karvey-design-graphic
 OKLCH system + 0-10 scoring per dimension (what a 10 would be). Per-platform guidance (WCAG/HIG/Material). `design-spec.md`.
@@ -156,19 +178,20 @@ Executes tasks on `feature/{change-id}` (never dev/master). Version bump + CHANG
 **Rules:** `deploy-workflow.md`, `changelog-policy.md`, `versioning.md`
 
 ### PHASE 9: /karvey-test
-Unit + E2E in the target's **real runtime**, performance benchmark, regression tests. `test_evidence.md`.
-**Rules:** `targets.md`
+Unit + E2E in the target's **real runtime**, performance benchmark, regression tests. Writes observations to `findings.md` (classified bug/spec-gap/emergent) and promotes confirmed bugs to the `BUG-NN` incident tracker. `test_evidence.md`.
+**Rules:** `targets.md`, `iteration-loop.md`, `incident-tracking.md`, `phase-close.md`
 
 ### PHASE 10: /karvey-qa
-8-dimension QA: Security (blocking gate, OWASP+STRIDE), Errors, Consistency, Impact, Env vars, Versioning (CHANGELOG), cross-model Second-opinion, Visual audit. `REVISION_PR_{n}_{date}.md`.
-**Rules:** `changelog-policy.md`, `versioning.md`
+8-dimension QA: Security (blocking gate, OWASP+STRIDE), Errors, Consistency, Impact, Env vars, Versioning (CHANGELOG), cross-model Second-opinion, Visual audit. Appends findings to `findings.md`; on open `bug`/`spec-gap` it routes via `/karvey-iterate` instead of advancing. `REVISION_PR_{n}_{date}.md`.
+**Rules:** `changelog-policy.md`, `versioning.md`, `iteration-loop.md`, `phase-close.md`
 
 ### PHASE 11: /karvey-deploy
 Orderly per-repo flow: pull → feature → pull → merge dev (DEV pipeline) → canary → pull → PR dev→master (PROD with human OK) → canary. Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended). Never deploy manually.
 **Rules:** `deploy-workflow.md`, `versioning.md`, `changelog-policy.md`, `project-config.md`
 
 ### PHASE 12: /karvey-archive
-Merge spec-deltas into living specs, archive, close the Epic. Recommended optional: `/karvey-retro` + `/karvey-docs`.
+Merge spec-deltas into living specs, archive, close the Epic. **Backlog sweep:** review open `emergent` items from this change and offer to promote them into new `change-id`s (so post-cycle discoveries don't evaporate). Recommended optional: `/karvey-retro` + `/karvey-docs`.
+**Rules:** `living-specs.md`, `backlog.md`, `phase-close.md`
 
 ---
 
@@ -179,19 +202,22 @@ Merge spec-deltas into living specs, archive, close the Epic. Recommended option
 ```
 docs/spec/
 ├── project.json                       ← Config (git, cloud, IaC, targets, knowledge_sync, repos, enforcement)
+├── backlog.md                         ← Discovery backlog (emergent items → future change-ids)
+├── incidents-index.md                 ← Global index of all BUG-NN across repos + current state
 ├── specs/{capability}/spec.md         ← Living specs (cumulative per capability)
 └── changes/{change-id}/
-    ├── spec.json                      ← Metadata, phase, approvals, goal
+    ├── spec.json                      ← Metadata, phase, approvals, goal, iteration_count, revision_history
     ├── prd.md                         ← Product Requirements Document
     ├── requirements.md                ← EARS (trace to the PRD)
     ├── spec-delta.md  · mockup.* · design-spec.md
     ├── architecture.md                ← + Cloud Infrastructure
     ├── infra.md  · tasks.md  · checkpoint.md
+    ├── findings.md                    ← Triage inbox (bug/spec-gap/emergent) routed by karvey-iterate
     ├── PLAN.md (if markdown)  · IMPLEMENTED
     └── archive/{YYYY-MM-DD}-{change-id}/
 ```
 
-The code (incl. IaC and pipelines), the per-component/repo `CHANGELOG.md`, and the `settings.json` hooks live in each repo of `project.json:repos`.
+The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incident tracker, the per-component/repo `CHANGELOG.md`, and the `settings.json` hooks live in each repo of `project.json:repos`.
 
 ## Shared rules
 
@@ -209,6 +235,10 @@ The code (incl. IaC and pipelines), the per-component/repo `CHANGELOG.md`, and t
 | `rules/versioning.md` | impl, deploy, qa |
 | `rules/enforcement.md` | init, guard |
 | `rules/support-skills.md` | cross-cutting layer |
+| `rules/iteration-loop.md` | test, qa, browse, iterate |
+| `rules/incident-tracking.md` | test, qa, iterate, investigate |
+| `rules/backlog.md` | iterate, archive, context |
+| `rules/phase-close.md` | all phases (at close), impl, iterate |
 
 ## If you come from Kiro or gstack — equivalences
 
@@ -225,6 +255,7 @@ Karvey absorbs the value of both. What in gstack are standalone commands lives h
 | qa, browse, benchmark | `karvey-test` + `karvey-browse` + `karvey-health` |
 | ship, land-and-deploy, canary | `karvey-deploy` |
 | investigate | `karvey-investigate` |
+| (no direct equivalent — feedback loop) | `karvey-iterate` (route findings: bug/spec-gap/emergent) |
 | health | `karvey-health` |
 | context-save/restore | `karvey-checkpoint` |
 | document-generate/release, make-pdf | `karvey-docs` |
@@ -246,7 +277,7 @@ N/A (gstack-proprietary, with a generic equivalent): `open-gstack-browser` → `
 /karvey-context                                     → Dashboard + deployment queue
 Phases: grill init requirements mockup design-graphic architecture infra
         tasks impl test qa deploy archive
-Support: investigate second-opinion health browse checkpoint diagram
+Support: iterate investigate second-opinion health browse checkpoint diagram
         docs guard devex retro scrape benchmark-models import
 ```
 

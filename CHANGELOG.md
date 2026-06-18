@@ -2,6 +2,33 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.2.0] - 2026-06-17
+
+### Added — Iteration loop (Karvey becomes a spiral, not a line)
+- **`karvey-iterate`** support skill: the iteration engine. Reads the change's `findings.md` inbox and routes each finding to its feedback edge — `bug` → incident tracker + QA micro-loop · `spec-gap` → re-open `requirements` (rippling only the affected phases) · `emergent` → discovery backlog. The single place loop logic lives; phase skills only observe/classify.
+- **`rules/iteration-loop.md`**: the three feedback edges, the `findings.md` triage artifact, the spec-revision sub-cycle, and the convergence gate (a change is done only when no open `bug`/`spec-gap` remains and all `emergent` are captured).
+- **`rules/incident-tracking.md`**: a dedicated `BUG-NN` incident tracker (`docs/bugs_dev_testing.md` per repo + global `incidents-index.md`) with a **state-history** machine (DETECTADO → DIAGNOSTICADO → EN FIX → RESUELTO → REABIERTO). Complementary to ClickUp; integrates with `karvey-investigate` and regression tests.
+- **`rules/backlog.md`**: a **dual** discovery backlog — `docs/spec/backlog.md` (source of truth) mirrored into the ClickUp `backlog_list_id`. Swept at archive to promote emergent items into new change-ids (`seed_backlog_id`).
+- **`rules/phase-close.md`**: a **mandatory** phase-close ritual (comment + status + cascade on ClickUp/PLAN.md, findings/backlog sweep, spec.json + knowledge update) at the end of every phase and every task — fixes stale ClickUp tasks by making the update a numbered step, not a "should".
+
+### Changed
+- **`karvey-mockup`**: navigable depth 3 → **3–4 levels** (sub-flows/states where spec-gaps hide) + a **spec↔mockup validation** pass (Step 4C) to catch spec defects before design/architecture/impl.
+- **`karvey-test`**: writes classified findings to `findings.md`, logs bugs to the `BUG-NN` tracker, and routes via `karvey-iterate` (Step 5B/5C/5D).
+- **`karvey-qa`**: classifies findings (bug/spec-gap/emergent), routes via `karvey-iterate`, convergence gate before deploy (Step 3E/3F).
+- **`karvey-impl`**: per-task completion is now the explicit per-task phase-close ritual.
+- **`karvey-archive`**: discovery-backlog sweep (Step 7E) that promotes emergent work into future change-ids.
+- **`karvey-browse`**: surfaced defects/gaps are recorded as classified findings.
+- **Orchestrator + `living-specs.md`**: state machine gains the feedback edges and convergence gate; `spec.json` gains `iteration_count`, `revision_history`, `seed_backlog_id` and explicit `infra`/`qa`/`deploy` approvals; directory structure adds `findings.md`, `backlog.md`, `incidents-index.md`.
+- **`clickup-protocol.md`**: ClickUp updates declared mandatory (phase-close), phase-level status mapping, incident/backlog mirroring.
+- Support layer now **14** skills (adds `karvey-iterate`).
+
+### Why
+Karvey was a waterfall with a single QA micro-loop: findings that were really spec defects had no edge back to `requirements`, and post-cycle discoveries stayed "in the air". ClickUp updates were documented as a "should" and got skipped, leaving tasks stale, and bugs had no dedicated incremental tracker with history. This release makes the method guide **iteration** itself — close the feedback loops, track incidents with state history, capture emergent work, and enforce the close ritual — so nothing gets dropped.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 4.8 (1M context)
+> 🔗 Karvey phase: method evolution (iteration loop + incident tracking + backlog + phase-close) · Apache 2.0
+
 ## [3.1.0] - 2026-06-14
 
 ### Added

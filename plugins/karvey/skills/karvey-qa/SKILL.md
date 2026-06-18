@@ -234,6 +234,21 @@ Update `docs/spec/changes/{change-id}/spec.json` per the QA result:
 - If there are NO critical or high findings (including the SECURITY GATE of Dimension 1 with OWASP Top 10 + STRIDE, the valid findings of the second opinion cross-model, and the blocking visual deviations) → set `approvals.qa.approved: true` and `phase: "qa"`.
 - If there are blocking findings (critical/high, unresolved security gate, valid critical/high finding from the second model, or a visual deviation that breaks accessibility/security) → set `approvals.qa.approved: false`.
 
+### Step 3E — Classify findings & route the iteration loop
+
+QA findings are not all the same kind. Append each to `docs/spec/changes/{change-id}/findings.md` classified by type (see `karvey/rules/iteration-loop.md`), because each goes to a different edge:
+- `bug` — code defect against a correct spec (most security/error/consistency findings). → incident tracker `BUG-NN` (`incident-tracking.md`) + the QA micro-loop `impl→test→qa`.
+- `spec-gap` — QA revealed the **spec was wrong/incomplete** (e.g. an impact finding that shows a requirement contradicts existing behavior, or a visual deviation because `design-spec` never specified that state). → re-open `requirements`.
+- `emergent` — a valid improvement that is **out of this change's scope**. → discovery backlog.
+
+Then **route them** with `/karvey-iterate {change-id}` (the engine confirms types and dispatches). Do not hand-route here — QA only observes and classifies; `karvey-iterate` is the single router.
+
+**Convergence:** the change may advance to deploy only when there are no open `bug`/`spec-gap` findings (and the security gate passes) and all `emergent` are captured. Otherwise the next step is `/karvey-iterate`, not `/karvey-deploy`.
+
+### Step 3F — Phase-close
+
+Run the phase-close ritual (`karvey/rules/phase-close.md`): comment + status on management, ensure findings/incidents/backlog are synced, update `spec.json` (`updated_at`).
+
 ### Step 4 — Notify via Google Chat
 
 Identify the project's space in the known-spaces table.
@@ -269,17 +284,22 @@ Document: REVISION_PR_{n}_{date}.md
 Management: {N subtasks created in ClickUp | PLAN.md updated}
 Google Chat: notification sent to {group}
 
-Next step (if there are critical/high findings):
-  Fix → re-run /karvey-impl {change-id} → /karvey-test {change-id} → /karvey-qa {change-id}
+Findings recorded: {N bug · N spec-gap · N emergent} → findings.md
 
-Next step (if no blocking findings):
+Next step (if there are open findings):
+  Route them: /karvey-iterate {change-id}
+    → bug:      fix via /karvey-impl → /karvey-test → /karvey-qa
+    → spec-gap: re-opens requirements (ripple only affected phases)
+    → emergent: captured in the backlog
+
+Next step (if converged — no open bug/spec-gap, security gate passed):
   /karvey-deploy {change-id}
 ```
 
 
 ## Advance to the next phase
 
-When finishing this phase and having the corresponding approval, **actively ask the user**: "Shall we advance to the Deploy phase now?"
+When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items (or the security gate is unresolved), the next step is `/karvey-iterate {change-id}`, not Deploy. Once converged and with the corresponding approval, **actively ask the user**: "Shall we advance to the Deploy phase now?"
 - If they confirm → run `/karvey-deploy {change-id}`.
 - If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
 - If you resume in another session, `/karvey {change-id}` indicates which phase you are in and which one follows.
