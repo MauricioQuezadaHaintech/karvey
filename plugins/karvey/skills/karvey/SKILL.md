@@ -86,6 +86,7 @@ These are not phases; they do not advance `spec.json:phase` forward. See `rules/
 /karvey-scrape             → Extract web data + encode it as a skill
 /karvey-benchmark-models   → Compare models (latency/tokens/cost/quality)
 /karvey-import             → Convert Kiro/gstack specs into Karvey (docs/spec/)
+/karvey-standards          → Uplift engineering standards (golden paths) from the real system → standards repo
 ```
 
 Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue.
@@ -282,7 +283,7 @@ N/A (gstack-proprietary, with a generic equivalent): `open-gstack-browser` → `
 Phases: grill init requirements mockup design-graphic architecture infra
         tasks impl test qa deploy archive
 Support: iterate investigate second-opinion health browse checkpoint diagram
-        docs guard devex retro scrape benchmark-models import
+        docs guard devex retro scrape benchmark-models import standards
 ```
 
 ---

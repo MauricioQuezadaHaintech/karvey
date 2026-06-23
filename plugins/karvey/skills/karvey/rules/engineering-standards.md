@@ -12,20 +12,40 @@ Standards are the **golden paths** (the canonical, approved way to build in each
 distinct from living specs: a spec says *"the system sends a claim notification"*; a standard says
 *"every DB write goes through a stored procedure in the `sip` schema; direct SQL from the backend is forbidden"*.
 
+## Two planes — method vs standards (do not mix)
+
+Karvey separates **the method** from **the standards**:
+
+| | **The method** (this plugin) | **The standards** (the team's data) |
+|---|---|---|
+| What | Generic SDD pipeline + this rule + the `karvey-standards` uplift skill | The concrete golden paths (how *this* team builds a SP / service / component) |
+| Defines | *where* standards live, the *format*, the *gate* | the *content* |
+| Lives in | the **public** plugin repo | the **team's own** standards repo (e.g. a private Azure DevOps repo) |
+| Team data | **never** | yes |
+
+> The public plugin MUST NOT contain any team's concrete standards. They are resolved at runtime from
+> `project.json:standards` and produced by `karvey-standards` into the team's repo. A team may keep an
+> internal fork, but the clean default is a **separate standards repo** so the method updates independently.
+
 ## Location
 
+The standards files follow this shape, wherever they are hosted:
+
 ```
-docs/spec/
-├── standards/
-│   ├── _index.md          ← which standard applies to which target/repo + maturity
-│   ├── db.md              ← schemas, naming, "all writes via SP", canonical SP example, forbidden
-│   ├── backend.md         ← service/function structure, layering, event-driven pattern (the chosen one)
-│   ├── frontend.md        ← component/store/API patterns + migration state (current vs target)
-│   └── {layer-or-target}.md
+standards/
+├── _index.md          ← which standard applies to which target/repo + maturity
+├── db.md              ← schemas, naming, "all writes via SP", canonical SP example, forbidden
+├── backend.md         ← service/function structure, layering, event-driven pattern (the chosen one)
+├── frontend.md        ← component/store/API patterns + migration state (current vs target)
+└── {layer-or-target}.md
 ```
 
-`docs/spec/standards/` lives in the **`spec_repo`** (same as the rest of `docs/spec/`). Standards are
-**cumulative and versioned with the repo** — they evolve, they are not rewritten per change.
+They are resolved from `project.json:standards` (see `project-config.md`):
+- `source: "local"` → `docs/spec/standards/` inside the `spec_repo` (simplest, single-repo case).
+- `source: "git"` → a **separate team-owned repo** (`repo` + `ref` + `path`), e.g. a private Azure DevOps
+  repo the whole team installs; phases read a cached shallow checkout (`.karvey/standards/`).
+
+Standards are **cumulative and versioned with their repo** — they evolve, they are not rewritten per change.
 
 ## Standard file structure (fixed — meant to be consumed as constraints, not prose)
 
@@ -124,19 +144,22 @@ changes), review `deviations.md`:
 This mirrors the iteration loop (`iteration-loop.md`): a `spec-gap` re-opens requirements; a recurring
 deviation re-opens the **standard**. Standards are living, like specs.
 
-## Bootstrapping standards (how to populate them without inventing)
+## Bootstrapping & refreshing standards — `karvey-standards`
 
-Standards are **distilled from what already exists**, never idealized from scratch:
-- Read each repo's `CLAUDE.md` / `CONTRIBUTING.md` / `README.md` and steering docs (`tech.md`, `product.md`).
-- Read **canonical real code** (a well-made SP, a reference service, a reference component) and cite it as
-  `Source of truth`.
-- Fold in tribal rules that currently live only in chat/memory.
-- Anything genuinely undefined becomes a `> TODO` placeholder + a gray zone (so it surfaces as a design-mode
-  question the first time it is hit, instead of being guessed).
+Standards are **distilled from the team's real system**, never idealized from scratch. The dedicated uplift
+skill **`karvey-standards`** does this (see its SKILL):
+- Reads each repo's `CLAUDE.md` / `CONTRIBUTING.md` / `README.md` + steering docs, and **canonical real code**
+  (a well-made SP, a reference service, a reference component), citing it as `Source of truth`.
+- Dispatches discovery subagents per layer, picks a golden path where repos diverge, and drafts each
+  `standards/{layer}.md` in the fixed format above.
+- Folds in tribal rules; anything undefined becomes a `> TODO` + a gray zone.
+- **Writes to the team's standards repo** (`project.json:standards`), never the public plugin. Human-approved.
+- `--refresh` re-runs it and promotes recurring `deviations.md` entries into the standard (feedback loop).
 
-`karvey-init` offers to bootstrap `standards/` for the declared `targets`; they can also be authored manually.
-If `standards/` is absent, `architecture`/`impl` still run but **must announce** that no standard was found for
-the layer and treat every non-trivial pattern choice as a gray zone (ask), rather than silently picking one.
+`karvey-init` may invoke `karvey-standards` on first setup to bootstrap standards for the declared `targets`;
+they can also be authored manually. If no standard exists for a layer, `architecture`/`impl` still run but
+**must announce** it and treat every non-trivial pattern choice as a gray zone (ask), rather than silently
+picking one.
 
 ## Optional enforcement
 
@@ -151,18 +174,22 @@ The applicable standards are declared at project level so phases know what to lo
 
 ```json
 "standards": {
-  "dir": "docs/spec/standards",
+  "source": "git",
+  "repo": "https://dev.azure.com/{org}/{project}/_git/{standards-repo}",
+  "ref": "main",
+  "path": "standards",
   "by_layer": { "db": "db.md", "backend": "backend.md", "frontend": "frontend.md" }
 }
 ```
 
-See `project-config.md`. If `standards` is absent, phases fall back to `docs/spec/standards/_index.md`,
+(Use `"source": "local"` + `"dir": "docs/spec/standards"` for the single-repo case.)
+See `project-config.md`. If `standards` is absent, phases fall back to `standards/_index.md`,
 and if that is missing too, to the "no standard found → ask" behavior above.
 
 ## Who writes / who reads
 
-- **Writes / updates:** `karvey-init` (bootstrap), maintainers (manually), `karvey-archive` (folds recurring
-  deviations back into the standard).
+- **Writes / updates:** `karvey-standards` (uplift/refresh — the main author), `karvey-init` (may trigger the
+  bootstrap), maintainers (manually), `karvey-archive` (folds recurring deviations back into the standard).
 - **Reads (as a hard constraint):** `karvey-architecture`, `karvey-impl`, and `karvey-qa` (the Consistency
   dimension checks conformance + that every deviation has an approved entry).
 

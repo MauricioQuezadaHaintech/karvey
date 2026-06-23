@@ -30,7 +30,11 @@ docs/spec/project.json
     "production": "master"
   },
   "standards": {
+    "source": "git",
     "dir": "docs/spec/standards",
+    "repo": "https://dev.azure.com/{org}/{project}/_git/{standards-repo}",
+    "ref": "main",
+    "path": "standards",
     "by_layer": { "db": "db.md", "backend": "backend.md", "frontend": "frontend.md" }
   },
   "enforcement": {
@@ -50,7 +54,10 @@ docs/spec/project.json
 - **`knowledge_sync`**: see `knowledge-sync.md`.
 - **`targets`**: the project's platforms (at least 1). Defines how each phase verifies/designs. See `targets.md`. Stack-agnostic: never assume `web` by default.
 - **`branch_flow`**: branch convention; respected by `karvey-impl`, `karvey-qa` and `karvey-deploy`. Default: `feature/*` → `dev` → `master`.
-- **`standards`**: engineering golden paths per layer (see `engineering-standards.md`). `dir` points to the standards folder in the `spec_repo`; `by_layer` maps a layer to its standard file. Loaded as a **hard constraint** by `karvey-architecture` and `karvey-impl`. Optional but recommended; if absent, those phases fall back to `standards/_index.md` and, failing that, treat non-trivial pattern choices as gray zones to ask (never silently picked).
+- **`standards`**: engineering golden paths per layer (see `engineering-standards.md`). Two source modes:
+  - `source: "local"` → standards live in `dir` inside the `spec_repo` (single-repo / simplest case).
+  - `source: "git"` → standards live in a **separate, team-owned repo** (e.g. a private Azure DevOps repo) given by `repo` + `ref` + `path`. Phases resolve it by cloning/pulling a shallow working copy into a cache (`.karvey/standards/`) and reading from there. This keeps the **method** (public plugin) and the **standards** (org's private data) decoupled and independently installable/versioned.
+  - `by_layer` maps a layer to its standard file. Loaded as a **hard constraint** by `karvey-architecture` and `karvey-impl`; populated/refreshed by `karvey-standards`. The standards repo is **never** the public plugin repo. Optional but recommended; if absent, those phases fall back to `standards/_index.md` and, failing that, treat non-trivial pattern choices as gray zones to ask (never silently picked).
 - **`enforcement`**: opt-in activation of the hooks in `enforcement.md`. `karvey-init` asks and `karvey-guard` manages them. Default both `false`.
 
 > **Note — `goal`**: the change's goal does NOT live in `project.json` but per change, in `prd.md` and in `spec.json` (`"goal"`). It sets the direction to pursue the outcome without stopping, while respecting the plan and security gates.

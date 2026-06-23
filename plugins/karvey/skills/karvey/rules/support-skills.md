@@ -20,6 +20,7 @@ In addition to the 12 pipeline phases (linear, with gates), Karvey has a **cross
 | `karvey-scrape` | Web extractor | Extract data from a website and encode the scrape as a reusable skill. | scrape, skillify |
 | `karvey-benchmark-models` | Model benchmark | Compare models (latency/tokens/cost/quality) for a skill or task. | benchmark-models |
 | `karvey-import` | Migration | Convert existing Kiro (`.kiro/specs/*`) or gstack specs into Karvey's `docs/spec/` structure. Non-destructive on the source. | — |
+| `karvey-standards` | Standards uplift | Distill the team's engineering golden paths (db/backend/frontend…) from the **real system** into the team's standards repo (`project.json:standards`), in the `engineering-standards.md` format. Re-runnable to refresh. Never writes into the public plugin. | — (Karvey) |
 
 ## Invocation rules
 
