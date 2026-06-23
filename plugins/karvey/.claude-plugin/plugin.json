@@ -2,7 +2,7 @@
   "name": "karvey",
   "displayName": "Karvey — Método SDD",
   "description": "Karvey Method (Afán, Selknam): spec-driven development as a spiral — 13-phase pipeline (0–12) + a cross-cutting layer of 14 support skills, with an iteration loop that routes findings (bug/spec-gap/emergent), a BUG-NN incident tracker with state history, a discovery backlog (Markdown + ClickUp), engineering standards (golden paths per layer + a design-mode conformance gate) and a mandatory phase-close ritual. Stack-agnostic (web, mobile, desktop, CLI, API, embedded). PRD, EARS, mockup (3–4 levels + spec validation), design, architecture, IaC+CI/CD, QA with a security gate, ordered deployment with canary, semver versioning. A synthesis of first-hand experience + Kiro + gstack.",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "author": {
     "name": "Mauricio Quezada Ibáñez",
     "url": "https://github.com/MauricioQuezadaHaintech"

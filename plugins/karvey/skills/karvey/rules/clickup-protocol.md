@@ -113,15 +113,41 @@ curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
   -d '{"time_estimate": {MS}}'
 ```
 
-### Hours → ms conversion
+### Time → ms conversion
 | Time | Ms |
 |---|---|
 | 10min | 600,000 |
 | 15min | 900,000 |
 | 20min | 1,200,000 |
 | 30min | 1,800,000 |
-| 1h | 3,600,000 |
-| 2h | 7,200,000 |
+| 60min | 3,600,000 |
+
+## Estimation — AI times, in minutes (not hours)
+
+> **Estimates reflect AI execution time + human review, expressed in MINUTES — not human coding hours.**
+> An AI develops a whole 30-SP API in ~15 min; a single endpoint in ~30 s. The real bottleneck is human
+> review and the cross-layer dependencies (BD → Backend → Frontend), not the AI.
+
+- **A task is estimated in minutes. Typical task: 10–30 min. Cap: ~60 min → if it exceeds, split it.**
+- The legacy "6-hour rule" assumed *human* coding time; under AI-driven development the effective cap is **~60 min**.
+- Splitting keeps progress traceable, commits atomic/reviewable, and surfaces blockers early.
+
+| Work type | AI dev | + Human review | **Estimate** |
+|---|---|---|---|
+| SP simple (basic CRUD) | ~1min | 5min | **10min** |
+| SP with business logic | 2–3min | 5–10min | **15min** |
+| SP complex + new table | 3–5min | 10min | **20min** |
+| Endpoint simple (calls SP, returns) | ~30s | 5min | **10min** |
+| Endpoint with logic (validation, integration) | 1–2min | 5–10min | **15min** |
+| Complex service (queue, external integration) | 5–10min | 10–15min | **25–30min** |
+| UI simple form/component | 2–3min | 10min | **20min** |
+| UI complex (state, preview, drag&drop) | 5–10min | 10–15min | **25–30min** |
+| Parser / data processing | 5–10min | 10min | **25min** |
+| Test plan + run with evidence | 5–10min | 5min | **15min** |
+
+**Aggregation:** Feature = sum of its tasks (typ. 1–3 h) · Epic = sum of its features (typ. 3–8 h). A whole API
+can be one Epic (~15 min–2 h of pure AI, ~1 day with review). Testing is included in "AI dev" (the AI writes
+and runs tests as part of development).
 
 ## Status flow
 ```

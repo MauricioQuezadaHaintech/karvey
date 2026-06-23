@@ -2,6 +2,18 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.4.0] - 2026-06-23
+
+### Added
+- **AI-time estimation in `clickup-protocol.md`**: estimates are expressed in **minutes** (AI execution + human review), not human coding hours. Typical task 10–30 min, **cap ~60 min → split if it exceeds**. Added a per-work-type reference table (SP/endpoint/service/UI/parser/test) and Feature/Epic aggregation. The legacy "6-hour rule" is reframed: it assumed human time; under AI-driven dev the effective cap is ~60 min.
+
+### Why
+Reconciliation of the team's `GESTION_PROYECTOS_IA` governance doc into Karvey: that doc was the Paáutin-specific, prior form of the same method (its ClickUp folder is literally "Dev Sprints Metodo Karvey"). The clickup-protocol already covered WBS/naming/dependencies/status; the missing piece was the AI-time estimation model. Project-specific bits (2026 sprint calendar, workspace IDs, client tags) go to the team's `paautin-standards`, not here.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 4.8
+> 🔗 Karvey phase: rule refinement (clickup-protocol estimation) · Apache 2.0
+
 ## [3.3.0] - 2026-06-23
 
 ### Added
