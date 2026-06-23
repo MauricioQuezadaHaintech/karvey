@@ -29,6 +29,10 @@ docs/spec/project.json
     "integration": "dev",
     "production": "master"
   },
+  "standards": {
+    "dir": "docs/spec/standards",
+    "by_layer": { "db": "db.md", "backend": "backend.md", "frontend": "frontend.md" }
+  },
   "enforcement": {
     "git_flow_hook": false,
     "plan_gate_hook": false
@@ -46,6 +50,7 @@ docs/spec/project.json
 - **`knowledge_sync`**: see `knowledge-sync.md`.
 - **`targets`**: the project's platforms (at least 1). Defines how each phase verifies/designs. See `targets.md`. Stack-agnostic: never assume `web` by default.
 - **`branch_flow`**: branch convention; respected by `karvey-impl`, `karvey-qa` and `karvey-deploy`. Default: `feature/*` → `dev` → `master`.
+- **`standards`**: engineering golden paths per layer (see `engineering-standards.md`). `dir` points to the standards folder in the `spec_repo`; `by_layer` maps a layer to its standard file. Loaded as a **hard constraint** by `karvey-architecture` and `karvey-impl`. Optional but recommended; if absent, those phases fall back to `standards/_index.md` and, failing that, treat non-trivial pattern choices as gray zones to ask (never silently picked).
 - **`enforcement`**: opt-in activation of the hooks in `enforcement.md`. `karvey-init` asks and `karvey-guard` manages them. Default both `false`.
 
 > **Note — `goal`**: the change's goal does NOT live in `project.json` but per change, in `prd.md` and in `spec.json` (`"goal"`). It sets the direction to pursue the outcome without stopping, while respecting the plan and security gates.
@@ -53,6 +58,6 @@ docs/spec/project.json
 ## Who creates / reads it
 
 - **Creates**: `karvey-init` (first time in the project). Pre-populated from the `karvey-grill` synthesis if it exists.
-- **Reads**: all phases. In particular `karvey-architecture` (cloud), `karvey-infra` (git_platform, cloud, iac_tool, repos), `karvey-deploy` (branch_flow, repos), and any phase that syncs knowledge (`knowledge_sync`).
+- **Reads**: all phases. In particular `karvey-architecture` (cloud, **standards**), `karvey-impl` (**standards**, branch_flow), `karvey-infra` (git_platform, cloud, iac_tool, repos), `karvey-deploy` (branch_flow, repos), and any phase that syncs knowledge (`knowledge_sync`).
 
 If a phase needs `project.json` and it does not exist, stop and indicate to run `karvey-init` first.

@@ -19,8 +19,10 @@ Read in parallel:
 - `docs/spec/changes/{change-id}/spec.json` (security_tier, layers, capability)
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/design-spec.md`
-- `docs/spec/project.json` (cloud.provider, iac_tool, git_platform)
+- `docs/spec/project.json` (cloud.provider, iac_tool, git_platform, **standards**)
 - `rules/security-tiers.md`
+- `rules/engineering-standards.md`
+- **Engineering standards for the change's layers/targets**: resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and read the relevant `standards/{layer}.md`. These are a **hard constraint** on this design, not a suggestion. If no standard exists for a layer, announce it and treat every non-trivial pattern choice for that layer as a gray zone to ask (never silently pick one).
 - Project steering: `product.md`, `tech.md` or equivalents if they exist
 
 Verify `approvals.design_graphic.approved = true`. If not, stop.
@@ -241,6 +243,20 @@ Declare what is tested and at which level. Every requirement and every critical 
 > This table is the testing contract that `/karvey-test` consumes in the testing PHASE.
 ```
 
+### Step 4B — Conformance gate against engineering standards
+
+Before the review gate, classify the drafted design against the engineering standards loaded in Step 1 (`engineering-standards.md`). For each layer touched (DB / Backend / Frontend / Infra):
+
+| Outcome | Action |
+|---------|--------|
+| ✅ **Conforms** to the golden path | Proceed. Cite the standard followed in "Architectural decisions". |
+| ⚠️ **Gray zone, or must go outside the standard** | Do **NOT** decide alone. Emit a **Deviation Request** and ask the user **in design mode** (use `AskUserQuestion`). |
+| ❌ **Violates a MUST / MUST NOT** with no justification | Block. Rework to conform, or escalate explicitly as a deviation. |
+
+A **Deviation Request** presents: what the standard says · what this change needs instead · why (the driver) · options (recommended first, with the reason) · blast radius. On the user's approval, append the decision to `docs/spec/changes/{change-id}/deviations.md` (format in `engineering-standards.md`) and reference it in "Architectural decisions". Never resolve a deviation silently.
+
+> Migration case (`Status: migrating`, e.g. frontend v2→v3): new work MUST use the `target` pattern. Designing against the `current`/`deprecated` pattern is a deviation — ask.
+
 ### Step 5 — Review gate
 
 Verify before writing:
@@ -256,6 +272,7 @@ Verify before writing:
 - [ ] There is an Edge cases section covering at least: empty/null inputs, out of range, concurrency/duplicates, external system failures, and inconsistent data
 - [ ] Trust boundaries are explicitly marked: where untrusted input enters and where each crossing is validated
 - [ ] There is a Test coverage plan with a level (unit/integration/E2E) per item; every requirement and every critical edge case has at least one associated test
+- [ ] The design conforms to the engineering standards of every layer touched, OR every departure has an approved entry in `deviations.md` (Step 4B); no MUST/MUST NOT is silently violated
 
 If there are issues: fix and re-verify. Maximum 2 iterations.
 

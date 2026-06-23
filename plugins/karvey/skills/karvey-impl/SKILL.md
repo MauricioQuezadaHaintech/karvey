@@ -20,6 +20,8 @@ Read:
 - `docs/spec/changes/{change-id}/tasks.md`
 - `docs/spec/changes/{change-id}/architecture.md`
 - `docs/spec/changes/{change-id}/requirements.md`
+- `docs/spec/changes/{change-id}/deviations.md` (if it exists — deviations already approved at design time)
+- **Engineering standards** for the layers being implemented: resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and read the relevant `standards/{layer}.md` (see `karvey/rules/engineering-standards.md`). These are a **hard constraint** on the code you write.
 
 Verify `approvals.tasks.approved = true`. If not, stop.
 
@@ -52,7 +54,8 @@ Do the technical work: create/modify files per the File Structure Plan.
 
 **Execution rules:**
 - Respect the task's boundary — do not touch code outside its scope
-- Follow the existing stack's patterns (read similar files from the codebase before writing)
+- **Conform to the engineering standard** of the layer (golden path, MUST/MUST NOT) loaded in Step 1. Follow the existing stack's patterns (read the standard's `Source of truth` files before writing).
+- **Do not step outside the standard silently.** If a task needs a `deprecated` pattern (e.g. frontend `current`/v2 instead of `target`/v3), a new schema, an unapproved library, or anything a standard lists as a gray zone or MUST NOT — and it is not already covered by an approved entry in `deviations.md` — **stop and raise a Deviation Request to the user before writing the code** (what the standard says · what's needed · why · options recommended-first · blast radius). On approval, append it to `deviations.md` (format in `engineering-standards.md`), then implement. Never invent a deviation mid-code.
 - Do not hardcode secrets or credentials
 - Validate the user context/authentication on every endpoint and data access, per the project's pattern
 

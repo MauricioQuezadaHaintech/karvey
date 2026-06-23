@@ -204,6 +204,8 @@ docs/spec/
 ├── project.json                       ← Config (git, cloud, IaC, targets, knowledge_sync, repos, enforcement)
 ├── backlog.md                         ← Discovery backlog (emergent items → future change-ids)
 ├── incidents-index.md                 ← Global index of all BUG-NN across repos + current state
+├── standards/                         ← Engineering golden paths ("how we build here", per layer)
+│   ├── _index.md  · db.md · backend.md · frontend.md   ← loaded as a hard constraint by architecture/impl
 ├── specs/{capability}/spec.md         ← Living specs (cumulative per capability)
 └── changes/{change-id}/
     ├── spec.json                      ← Metadata, phase, approvals, goal, iteration_count, revision_history
@@ -213,6 +215,7 @@ docs/spec/
     ├── architecture.md                ← + Cloud Infrastructure
     ├── infra.md  · tasks.md  · checkpoint.md
     ├── findings.md                    ← Triage inbox (bug/spec-gap/emergent) routed by karvey-iterate
+    ├── deviations.md                  ← Approved departures from engineering standards (design mode)
     ├── PLAN.md (if markdown)  · IMPLEMENTED
     └── archive/{YYYY-MM-DD}-{change-id}/
 ```
@@ -224,6 +227,7 @@ The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incid
 | File | Applies in |
 |---------|-----------|
 | `rules/project-config.md` | init, architecture, infra, deploy, context |
+| `rules/engineering-standards.md` | init, architecture, impl, qa, archive, guard |
 | `rules/clickup-protocol.md` | init, tasks, impl, qa, deploy, archive |
 | `rules/ears-format.md` | requirements |
 | `rules/security-tiers.md` | requirements, architecture, infra, qa |
