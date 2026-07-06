@@ -265,9 +265,87 @@ Edit `mockup.html` to:
 4. Apply the motion system to existing transitions
 5. Update the banner: `🎨 MOCKUP WITH GRAPHIC DESIGN — {change-id} — {date}`
 
-### Step 9B — Update knowledge graph
+### Step 9B — Generate the visual components catalog
 
-Sync the knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect `design-spec.md` and the updated `mockup.html`.
+The `design-spec.md` defines the system at the **token** level (palette, type, spacing, key components with their treatment + scoring). It does **not** enumerate, screen by screen and component by component, the concrete visual assets an illustrator or an AI art agent must produce. That is what `design-components.md` is for: an **art brief per component**.
+
+**Derive it — do not invent it.** The catalog is derived from three sources and must cover them **exhaustively** — nothing invented, nothing omitted:
+- **`mockup.html`** (approved) — every screen, modal/bottom sheet, and state that actually appears.
+- **`design-spec.md`** — palette (hex + OKLCH, light AND dark), typography, tokens, illustration register.
+- **`proposal.md` / requirements** — the character/brand, the domain, and what each surface is for.
+
+**Target agnosticism (do NOT assume web).** Adapt the components to the project's target(s) declared in `docs/spec/project.json` (see `karvey/rules/targets.md`). The component inventory changes with the target: mobile → screens, bottom sheets, bottom-nav, push notifications; web → pages, side-nav, toasts, tables; CLI → screens/prompts, states, ANSI treatment; etc. If the project has multiple targets, add a section per target (e.g. "App" + "WebApp"). No component is assumed just because the web default has it.
+
+Write to `docs/spec/changes/{change-id}/design-components.md` using this template:
+
+```markdown
+# Visual components catalog — {product / change-id}
+
+**Purpose:** brief for a designer or AI agent that produces **illustrations/backgrounds per component**. Each item carries: what it is, content, states, and **required background art** (motif + style + palette). Navigable reference: `mockup.html`. Visual system: `design-spec.md`.
+
+## Cross-cutting base (applies to all art)
+- **Style:** {illustration style — trace, shapes, energy reference without copying any artist/brand}.
+- **Palette (OKLCH → hex):** {light: hex list} · **Dark:** {dark: hex list}.
+- **Character / brand:** {the hero of the art — how it can be illustrated across variants}.
+- **Asset format:** vector/SVG preferred; PNG @1x/@2x/@3x for bitmap; backgrounds that **work in light and dark**; **safe zone** for text on top (do not saturate the center).
+
+---
+
+## A. Screens — {target / surface}
+
+| # | Screen | Purpose | Required background/art |
+|---|--------|---------|-------------------------|
+| A1 | **{screen}** | {purpose} | {scene / motif / where the safe zone is} |
+| … | | | |
+
+## B. Modals / bottom sheets
+
+| # | Modal | Content | Header illustration |
+|---|-------|---------|---------------------|
+| B1 | **{modal}** | {content} | {small header illustration} |
+| … | | | |
+
+## C. UI components
+
+Per component: description, states, and **required background/fill art**. Cover at least: primary button, secondary button, input/textbox (+ variants: text, number, masked RUT/phone, select, date picker, textarea, search), chip, card, tile, avatar, badge, progress bar, tabs, bottom-nav (or the target's navigation), global states (loading/empty/error/success), and any **target-specific** component that appears in the mockup.
+
+### C1. {component}
+- **What it is:** {description}.
+- **States:** {enumerate real states — normal, hover/pressed, disabled, loading, error, …}.
+- **Art:** {required background/fill art, or "no illustration — define shine/shadow only"}.
+
+### C2. {component}
+- …
+
+## D. Push notifications
+
+| Type | Example copy | Illustration |
+|------|--------------|--------------|
+| **{type}** | "{copy in the product's voice}" | {icon/illustration} |
+| … | | |
+
+## E. {other surface — e.g. WebApp} (only if the change has it)
+
+| Component | Description | Art |
+|-----------|-------------|-----|
+| **{component}** | {description} | {art} |
+
+---
+
+## F. Deliverable for the illustrator / AI agent
+For each component in sections C, D and E, **1 base illustration** is expected (+ state variants where indicated), in the palette and style of "Cross-cutting base", with a **light and dark** version and a **safe zone for text**. Priority order:
+1. {highest-visibility assets — e.g. hero scene + hero portrait}.
+2. {navigation + tile/chip icon sets}.
+3. {push notification icons}.
+4. {badges / progress / accents}.
+5. {modals and global states}.
+```
+
+Only include sections that the change actually has (drop E if there is no second surface; rename A's heading to the real target). Every screen/modal/state present in `mockup.html` must appear here.
+
+### Step 9C — Update knowledge graph
+
+Sync the knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect `design-spec.md`, `design-components.md`, and the updated `mockup.html`.
 If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
 
 ### Step 10 — Output
@@ -277,6 +355,7 @@ If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` witho
 
 Files created/updated:
   - docs/spec/changes/{change-id}/design-spec.md
+  - docs/spec/changes/{change-id}/design-components.md
   - docs/spec/changes/{change-id}/mockup.html (updated with visual system)
 
 Design system:
@@ -285,6 +364,7 @@ Design system:
   - Typography: {font(s)}
   - Anti-patterns checked: ✅
   - Design scoring: {N}/10 average (threshold ≥8, none <7) — {met | not met}
+  - Components catalog: {N} components briefed (light+dark, safe zones)
 
 Update spec.json: approvals.design_graphic = true
 

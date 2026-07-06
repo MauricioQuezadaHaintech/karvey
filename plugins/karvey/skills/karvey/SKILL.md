@@ -43,7 +43,7 @@ PHASE 0 ─── /karvey-grill          → Pre-spec + 10-star reframe (+ platf
 PHASE 1 ─── /karvey-init           → change-id, project.json, prd.md, spec.json, ClickUp Epic
 PHASE 2 ─── /karvey-requirements   → EARS requirements (trace to the PRD), spec-delta, approval
 PHASE 3 ─── /karvey-mockup         → Navigable 3–4 levels + spec↔mockup validation (+ shotgun mode)
-PHASE 4 ─── /karvey-design-graphic → OKLCH visual system + 0-10 scoring per dimension
+PHASE 4 ─── /karvey-design-graphic → OKLCH visual system + 0-10 scoring + visual components catalog
 PHASE 5 ─── /karvey-architecture   → Architecture, Tiers, diagrams, edge cases, Cloud Infra
 PHASE 6 ─── /karvey-infra          → IaC + CI/CD pipelines + infra security review
 PHASE 7 ─── /karvey-tasks          → 10–30 min tasks, E{n}.F{n}.T{n}, ClickUp sprint
@@ -160,7 +160,7 @@ EARS requirements, each one **traced to a section of the PRD**. `requirements.md
 Navigable **3–4 levels** (deeper when the flow warrants it), adapted to the target. Shotgun mode (N variants + board). Includes a **spec↔mockup validation** pass: walk the mockup against `requirements.md` to catch spec-gaps *before* design/architecture/impl (cheap correction). `mockup.html` (or the target's equivalent).
 
 ### PHASE 4: /karvey-design-graphic
-OKLCH system + 0-10 scoring per dimension (what a 10 would be). Per-platform guidance (WCAG/HIG/Material). `design-spec.md`.
+OKLCH system + 0-10 scoring per dimension (what a 10 would be). Per-platform guidance (WCAG/HIG/Material). Derives a **visual components catalog** (art brief per screen/modal/component: states + background art, light+dark, safe zones) exhaustively from the mockup. `design-spec.md`, `design-components.md`.
 
 ### PHASE 5: /karvey-architecture
 Boundaries, security per Tier, diagrams (mermaid), edge cases, trust boundaries, test coverage plan, **Cloud Infrastructure** section. `architecture.md`.

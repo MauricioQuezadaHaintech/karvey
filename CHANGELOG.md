@@ -2,6 +2,18 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.5.0] - 2026-07-05
+
+### Added
+- **Visual components catalog** in `karvey-design-graphic` (new Step 9B → `design-components.md`): the design-graphic phase now produces, besides the token-level `design-spec.md`, an **art brief per component** for illustrators / AI art agents. It is **derived exhaustively** from the approved `mockup.html` + `design-spec.md` + requirements (nothing invented, nothing omitted), with a mandatory template: cross-cutting base (style, palette hex light+dark, character/brand, asset format @1x/2x/3x + safe zone), Screens table, Modals/bottom-sheets table, UI components (per component: description · states · required background/fill art), Push notifications table, an optional section per additional surface, and a prioritized deliverable list (1 base illustration + state variants, light+dark, safe zone). **Target-agnostic** per `rules/targets.md` — the component inventory adapts to the declared target(s) (mobile/web/CLI/…), it does not assume web. The knowledge-sync step (renamed 9C) and the phase Output now include `design-components.md`; the orchestrator's PHASE 4 description was updated accordingly.
+
+### Why
+Working with designers or illustration agents needs a document that lists **all** visual components (screens, modals, notifications, buttons, inputs, chips, cards, tiles, avatars, bars, badges, bottom-nav, maps, states) with description, states, and a per-component art/background brief in light and dark with a safe zone for text. `design-spec.md` stops at token level and did not fill that gap. Calibrated against a real hand-made catalog (Paáutin wisn mascotas).
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 4.8
+> 🔗 Karvey phase: skill refinement (design-graphic → design-components deliverable) · Apache 2.0
+
 ## [3.4.0] - 2026-06-23
 
 ### Added
