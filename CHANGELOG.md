@@ -2,6 +2,20 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.6.0] - 2026-09-07
+
+### Added
+- **Dimension 9 — Standards conformance (golden path)** in `karvey-qa`. QA now verifies the diff against the engineering standards of the layers it touches (`standards/{layer}.md`), citing the concrete rule breached, and checks that **every departure has an approved entry in `deviations.md`**. A departure with no entry is a **High**, blocking finding; a gray zone the standard does not cover is Medium tagged `gray-zone` and escalates to design mode, never Critical by the reviewer's own reading. A standard in `draft` does not by itself produce Critical/High findings, and with no standards for the project the dimension is recorded as **not evaluated** — which is not the same as conformant. Wired into the review document, the pre-merge checklist and the `approvals.qa` gate.
+
+### Fixed
+- `rules/engineering-standards.md` claimed that "`karvey-qa` (the **Consistency** dimension) checks conformance". It did not: Consistency measures coherence *internal* to the module (patterns, naming, duplication), not agreement with the documented standard. The rule now points at Dimension 9 and says so explicitly, and the conformance gate is described as **three** phases — design decides (`karvey-architecture`), implementation obeys (`karvey-impl`), **QA verifies** (`karvey-qa`) — with its own outcome table.
+
+### Why
+`karvey-impl` already loaded the standards as a hard constraint and required a Deviation Request before departing from them, but **nothing ever verified that it happened**. The method only trusted: an implementation that skipped the golden path without raising the request reached production with no phase having checked. A gate that is never verified is not a gate. Surfaced while adding the same missing dimension to a team's own QA standard, where the identical hole existed.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5 (1M context)
+
 ## [3.5.0] - 2026-07-05
 
 ### Added

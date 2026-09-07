@@ -1,6 +1,6 @@
 ---
 name: karvey-qa
-description: QA code review in 8 dimensions (Security with OWASP Top 10 + STRIDE, Errors, Consistency, Impact, Env vars, Versioning, Second opinion cross-model, Visual audit vs design-spec). Creates REVISION_PR document, ClickUp tasks or PLAN.md entries. Notifies Google Chat. Triggers include "karvey qa", "code review", "revisión de código", "QA".
+description: QA code review in 9 dimensions (Security with OWASP Top 10 + STRIDE, Errors, Consistency, Impact, Env vars, Versioning, Second opinion cross-model, Visual audit vs design-spec, Standards conformance). Creates REVISION_PR document, ClickUp tasks or PLAN.md entries. Notifies Google Chat. Triggers include "karvey qa", "code review", "revisión de código", "QA".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 argument-hint: <change-id> [--source <branch>] [--target <branch>]
 ---
@@ -9,7 +9,7 @@ argument-hint: <change-id> [--source <branch>] [--target <branch>]
 
 ## Purpose
 
-Code review across 8 dimensions, post-implementation. Generates a review document, creates subtasks in ClickUp or PLAN.md, and notifies the project's Google Chat group.
+Code review across 9 dimensions, post-implementation. Generates a review document, creates subtasks in ClickUp or PLAN.md, and notifies the project's Google Chat group.
 
 ## Execution steps
 
@@ -29,9 +29,9 @@ git diff {target}...{source}
 git log {target}...{source} --oneline
 ```
 
-### Step 1 — Analysis across 8 dimensions
+### Step 1 — Analysis across 9 dimensions
 
-Dispatch parallel subagents for dimensions 1–4, run 5–6 in the main context. Dimensions 7 (second opinion cross-model) and 8 (visual audit) run at the end, once the preliminary findings are consolidated:
+Dispatch parallel subagents for dimensions 1–4, run 5–6 and 9 in the main context. Dimensions 7 (second opinion cross-model) and 8 (visual audit) run at the end, once the preliminary findings are consolidated:
 
 **Dimension 1: Security**
 - Hardcoded credentials (tokens, API keys, passwords)
@@ -106,7 +106,7 @@ If any of these fields is missing, it is a versioning finding and blocks advance
 Before releasing, obtain an adversarial review with ANOTHER model, by invoking the cross-cutting skill `karvey-second-opinion` on the same diff (`{target}...{source}`).
 
 - It is **complementary**, it does not replace QA's judgment: it serves to discover the main model's blind spots (biases, assumptions, edge cases not considered).
-- Pass as context: the diff, the change-id's `spec.json`, and the preliminary findings of dimensions 1–6.
+- Pass as context: the diff, the change-id's `spec.json`, and the preliminary findings of dimensions 1–6 and 9.
 - Integrate the second model's new findings into the review document, marking them with their origin (model + skill).
 - Severity rules: if the second model raises a critical/high finding that QA considers valid, the same blocking gate applies. Discrepancies between models are documented; the final decision is the human/main QA's.
 
@@ -119,6 +119,20 @@ Audit the **already-built** UI in the target's actual runtime (not the mockup, n
 - Compare implemented vs design-spec: layout, spacing, typography, colors/tokens, states (empty, loading, error, hover/focus), responsiveness, copy, and visual hierarchy.
 - Record each deviation as a visual finding with severity and evidence.
 - For visual fixes: apply **atomic commits** (one fix per commit) documenting **before/after** (capture before and after). Deviations that break accessibility or security inherit the blocking gate of their corresponding dimension.
+
+**Dimension 9: Standards conformance (golden path)**
+
+`karvey-impl` loads the engineering standards as a hard constraint and requires a Deviation Request before departing from them (`karvey/rules/engineering-standards.md`). This dimension **verifies that it actually happened**. Without it the method only trusts: an implementation that skipped the golden path without raising the Deviation Request reaches production with nothing having checked.
+
+Do not confuse it with Dimension 3: **Consistency** measures coherence *internal* to the module (patterns, naming, duplication); **conformance** measures agreement with the *documented standard*. A module can be impeccably consistent with itself and be entirely outside the golden path.
+
+- Resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and load the `standards/{layer}.md` **only for the layers the diff touches**.
+- Compare the diff against each standard's `MUST` / `MUST NOT`, citing the standard and the concrete rule breached (e.g. `db.md § SP contract`). A finding with no citation is not a conformance finding.
+- **Approved deviation is not a finding:** if `docs/spec/changes/{change-id}/deviations.md` holds an approved entry covering the case, it conforms. Say so in the review — it is evidence the gate worked.
+- **Unregistered deviation → High.** It is the failure this dimension exists to catch: the code departed from the standard and nobody decided it.
+- **Gray zone → Medium, tagged `gray-zone`,** and escalate to design mode. Never Critical by the reviewer's own reading of a standard that does not cover the case.
+- **A standard in `draft` does not by itself produce Critical/High findings** — only an explicit `MUST` violation does. Blocking on a rule still being drafted burns the team's trust in the gate.
+- If there are no standards for the project, record the dimension as **not evaluated**. Not evaluated is not the same as conformant.
 
 ### Step 2 — Generate review document
 
@@ -166,6 +180,9 @@ Structure:
 ### 8. Visual audit (implemented vs design-spec)
 {deviations with severity, before/after evidence, reference to design-spec.md}
 
+### 9. Standards conformance (golden path)
+{per layer touched: standard + rule breached, or "conforms"; approved deviations cited from deviations.md; gray zones escalated. If there are no standards: "not evaluated"}
+
 ## Summary Table by Severity
 | Severity | Count |
 |-----------|---------|
@@ -180,6 +197,7 @@ Structure:
 - [ ] Security gate passed (OWASP Top 10 + STRIDE with no criticals/highs)
 - [ ] Second opinion cross-model executed and integrated
 - [ ] Visual audit vs design-spec with no blocking deviations
+- [ ] Standards conformance verified for every layer the diff touches (or recorded as not evaluated)
 - [ ] Environment variables verified
 - [ ] Tests pass
 - [ ] Production build successful
@@ -231,8 +249,8 @@ If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` witho
 
 Update `docs/spec/changes/{change-id}/spec.json` per the QA result:
 
-- If there are NO critical or high findings (including the SECURITY GATE of Dimension 1 with OWASP Top 10 + STRIDE, the valid findings of the second opinion cross-model, and the blocking visual deviations) → set `approvals.qa.approved: true` and `phase: "qa"`.
-- If there are blocking findings (critical/high, unresolved security gate, valid critical/high finding from the second model, or a visual deviation that breaks accessibility/security) → set `approvals.qa.approved: false`.
+- If there are NO critical or high findings (including the SECURITY GATE of Dimension 1 with OWASP Top 10 + STRIDE, the valid findings of the second opinion cross-model, the blocking visual deviations, and any unregistered departure from the golden path in Dimension 9) → set `approvals.qa.approved: true` and `phase: "qa"`.
+- If there are blocking findings (critical/high, unresolved security gate, valid critical/high finding from the second model, a visual deviation that breaks accessibility/security, or a standards departure with no approved entry in `deviations.md`) → set `approvals.qa.approved: false`.
 
 ### Step 3E — Classify findings & route the iteration loop
 
