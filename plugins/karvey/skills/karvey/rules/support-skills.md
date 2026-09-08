@@ -7,7 +7,7 @@ In addition to the 12 pipeline phases (linear, with gates), Karvey has a **cross
 | Skill | Role | When to use it | Origin (gstack) |
 |-------|-----|---------------|-----------------|
 | `karvey-iterate` | Iteration engine | Findings appeared (test/qa/browse) or the spec turned out wrong/incomplete. Routes each finding: `bug` → incident tracker + QA micro-loop · `spec-gap` → re-open requirements · `emergent` → discovery backlog. The one place loop logic lives. | — (Karvey feedback loop) |
-| `karvey-investigate` | Debugger | Something fails and it's not understood why. **Iron Law: no fix without investigating first.** | investigate |
+| `karvey-investigate` | Debugger | Something fails and it's not understood why. **Iron Law: no fix without investigating first.** Date the symptom, ask what changed, and never report a pre-existing weakness as the cause of a new failure. | investigate |
 | `karvey-second-opinion` | Cross-model reviewer | Before releasing something sensitive: adversarial review with ANOTHER model (Claude vs GPT/other). | codex |
 | `karvey-health` | Code quality | Periodic check: score 0–10 (type-check + lint + tests + dead code) with trend. | health |
 | `karvey-browse` | Eyes on the runtime | Inspect/click/screenshot in the target's real runtime (browser/simulator/CLI). | browse, setup-browser-cookies |
