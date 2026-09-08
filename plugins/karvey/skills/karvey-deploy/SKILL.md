@@ -1,6 +1,6 @@
 ---
 name: karvey-deploy
-description: Execute the ordered deployment flow (feature branch → dev → PR master) honoring the team's hard rules. Pull before start and before merge. Pipeline-triggered, never manual. Prod requires explicit human OK. Bumps semver + changelog before push, auto-detects the deploy platform, and runs a post-deploy canary loop (dev and prod) to guard zero-downtime. Use after karvey-qa passes. Triggers include "karvey deploy", "desplegar", "deploy", "liberar", "release", "subir a dev", "push to dev", "pasar a prod", "promote to prod".
+description: Execute the ordered deployment flow (feature branch → dev → PR master) honoring the team's hard rules. Pull before start and before merge. Pipeline-triggered, never manual. Verifies the PR's own gates (CI + branch policies) before requesting the prod OK, and detects the git host (GitHub / Azure Repos / GitLab) for the PR CLI. Prod requires explicit human OK. Bumps semver + changelog before push, auto-detects the deploy platform, and runs a post-deploy canary loop (dev and prod) to guard zero-downtime. Use after karvey-qa passes. Triggers include "karvey deploy", "desplegar", "deploy", "liberar", "release", "subir a dev", "push to dev", "pasar a prod", "promote to prod".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 argument-hint: <change-id>
 ---
@@ -76,6 +76,29 @@ If the prod URL/health cannot be discovered, **do not invent it**: record it as 
 
 Record what was detected in `project.json:deploy` (`platform`, `prod_url`, `dev_url`, `health_check`) per repo.
 
+### Step 1.5-bis — Git host (which CLI opens and merges the PR)
+
+The deploy platform and the **git host** are different things: a repo can deploy to Azure and live on GitHub,
+or the reverse. **The PR CLI is not interchangeable** — assuming `gh` against Azure Repos fails at the worst
+moment, with the branch already merged into `dev`.
+
+Read **`project.json:git_platform`** (see `karvey/rules/project-config.md`). If it is not declared, detect it
+from the remote and record it there:
+
+```bash
+git remote get-url origin
+```
+
+| Remote | `git_platform` | PR CLI |
+|---|---|---|
+| `github.com/…` | `github` | `gh pr …` |
+| `dev.azure.com/…` or `…visualstudio.com/…` | `azure_devops` | `az repos pr …` |
+| `gitlab.com/…` | `gitlab` | `glab mr …` |
+| other | ask the user | — |
+
+If a repo's remote contradicts the declared `git_platform`, **the remote wins** and it is reported: the
+config is stale. Used in 2.9, 2.9-bis and 2.10.
+
 ### Step 2 — Ordered deployment flow (FOR EACH repo)
 
 Apply following `karvey/rules/deploy-workflow.md` EXACTLY, in the dependency order from Step 1.
@@ -126,17 +149,51 @@ git push origin {integration}     # dev → triggers DEV pipeline
 git pull origin {production}      # default: master
 ```
 
-**2.9 — Create PR `dev` → `master`:**
+**2.9 — Create PR `dev` → `master`.** Use the host detected in Step 1.5-bis:
+
 ```bash
+# GitHub
 gh pr create --base {production} --head {integration} \
   --title "[Deploy] {change-id}" \
   --body "Deploy of {change-id}. QA OK, tests PASS, CHANGELOG updated. Requires human OK to merge to prod."
+
+# Azure Repos
+az repos pr create --source-branch {integration} --target-branch {production} \
+  --title "[Deploy] {change-id}" \
+  --description "Deploy of {change-id}. QA OK, tests PASS, CHANGELOG updated. Requires human OK to merge to prod."
 ```
+
+**2.9-bis — Verify the PR's own gates. Do NOT skip to 2.10.**
+
+The PR carries checks the repo enforces — CI, required reviewers, and whatever policies the team applied
+(build validation, status checks). They are **not** the same as the release gate of Step 0: that one
+validated the local state before starting; these validate this PR, on the merge commit, and can fail for
+reasons Step 0 could not see (a conflict with what advanced on production, a policy someone added since).
+
+Retrieve them and **wait for them to settle** — right after creating the PR they are queued, not passed:
+
+```bash
+gh pr checks {pr}                              # GitHub
+az repos pr policy list --id {pr} -o table     # Azure Repos
+```
+
+| Gate state | Action |
+|---|---|
+| ✅ All required ones passed | Continue to 2.10 (request the human OK). |
+| ⏳ Still running/queued | Wait and re-check. Do not request approval on an unresolved gate. |
+| ❌ A required one failed | **STOP.** Report which one and why. It goes back to `karvey-iterate`, not to the merge. |
+| ⚪ Not configured (no policies) | Report it: this repo has **no gate on production**. Continue if the user accepts, and note it as a finding — a `master` with no build validation merges untested code. |
+
+**Never request the prod OK while a required gate is red or unresolved.** Asking a human to approve over a
+red gate turns the approval into a rubber stamp, which is exactly what the gate exists to prevent. Bypassing
+a policy is the human's call and their explicit responsibility — never the agent's initiative, never to
+unblock itself.
 
 **2.10 — Merge to `master` ONLY with explicit human OK ⇒ triggers PROD pipeline.**
 Use `AskUserQuestion` to request explicit prod approval. Without human OK, **do not merge**. With OK:
 ```bash
-gh pr merge --merge          # ⇒ triggers PROD pipeline
+gh pr merge --merge                            # GitHub    ⇒ triggers PROD pipeline
+az repos pr update --id {pr} --status completed # Azure Repos ⇒ triggers PROD pipeline
 ```
 
 **2.11 — Post-deploy canary in PROD (see Step 2-bis):** after the merge to `master`, wait for the PROD pipeline and run the **canary loop** over the actual production runtime (`prod_url` / health from Step 1.5). It is the direct reinforcement of zero-downtime: if the canary detects a regression, **alert and recommend an immediate rollback**.
@@ -177,6 +234,11 @@ Only after the 6 → the pipeline deploys dev. For prod, repeat the verification
 - **NEVER deploy manually.** The deploy is triggered by the pipeline (push to `dev`, merge to `master`). `func azure functionapp publish` or manual equivalents are FORBIDDEN.
 - **`pull` before starting and before each merge/PR.**
 - **Prod NEVER without explicit human OK.** The PR to `master` is not merged without approval.
+- **NEVER request the prod OK with the PR's gates red or unresolved** (2.9-bis). Approving over a red gate
+  turns the human into a rubber stamp. Bypassing a policy is the human's decision and their explicit
+  responsibility — never the agent's initiative to unblock itself.
+- **NEVER assume the git host.** `gh` against Azure Repos (or the reverse) fails with the branch already in
+  `dev`. Detect it from the remote (1.5-bis).
 - **NEVER deploy without bumping the version** (semver + CHANGELOG per component and repo).
 - **Zero downtime**: the deployment cannot cause a service outage; the post-deploy canary reinforces this and, on a prod regression, recommends a rollback (via pipeline, never manual).
 

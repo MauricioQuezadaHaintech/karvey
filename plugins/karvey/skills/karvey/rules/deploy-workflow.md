@@ -8,7 +8,12 @@ Defines the ordered deployment flow the method uses. It is applied by `karvey-im
 2. **Never deploy manually.** The deploy is triggered by the pipeline: push to `dev` → deploy dev; merge to `master` → deploy prod. Manual `func azure functionapp publish` or equivalents are forbidden.
 3. **`pull` before starting and `pull` before each merge/PR.** Avoid working on a stale base.
 4. **Prod requires explicit human OK.** The PR to `master` is not merged without approval.
-5. **Zero downtime**: the deployment must not cause a service outage.
+5. **The PR's gates are verified before requesting that OK.** CI and branch policies (build validation,
+   required reviewers, status checks) are not the same as the release gate: they run on this PR, over the
+   merge commit, and catch what the local pre-check could not see. Never ask a human to approve over a red
+   or unresolved gate — that turns the approval into a rubber stamp. Bypassing a policy is the human's
+   decision and their explicit responsibility, never the agent's initiative to unblock itself.
+6. **Zero downtime**: the deployment must not cause a service outage.
 
 ## Step-by-step flow
 
@@ -23,8 +28,9 @@ For each affected repo (`project.json:repos`):
 4. git push origin dev                   # ⇒ triggers DEV pipeline
 5. Verify DEV deploy (smoke/healthcheck)
 6. git pull origin {production}          # before the PR (default: master)
-7. PR dev → master
-8. Merge to master ONLY with human OK     # ⇒ triggers PROD pipeline
+7. PR dev → master                       # gh pr / az repos pr / glab mr, per git_platform
+8. Verify the PR's gates (CI + branch policies) and wait for them to settle
+9. Merge to master ONLY with human OK     # ⇒ triggers PROD pipeline
 ```
 
 ## 6-step checklist (before any deploy)

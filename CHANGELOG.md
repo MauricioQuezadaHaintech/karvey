@@ -2,6 +2,17 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.7.0] - 2026-09-08
+
+### Added
+- **`karvey-deploy` verifies the PR's own gates before requesting the prod OK** (new step 2.9-bis). After opening the PR to `master` the skill retrieved nothing: it went straight to asking for approval. But the PR carries checks the repo enforces — CI and branch policies (build validation, required reviewers, status checks) — that are **not** the release gate of Step 0: they run on *this* PR over the *merge commit*, and fail for reasons the local pre-check cannot see (a conflict with what advanced on production, a policy added since). Now it retrieves them (`gh pr checks` / `az repos pr policy list`), **waits for them to settle** instead of reading the queued state as passed, and routes the outcome: green → continue; running → wait; red → **stop**, back to `karvey-iterate`; none configured → report that production has no gate. New hard rule: **never request the prod OK over a red or unresolved gate** — that turns the human into a rubber stamp, which is what the gate exists to prevent. Bypassing a policy stays the human's explicit decision, never the agent's initiative to unblock itself.
+- **Git host detection** (new step 1.5-bis). The deploy platform and the git host are different things — a repo can deploy to Azure and live on GitHub. The skill hardcoded `gh pr create` / `gh pr merge`, so on Azure Repos or GitLab it failed at the worst moment: with the branch already merged into `dev`. It now resolves `project.json:git_platform` (falling back to detection from the remote, and the remote wins if the config is stale) and issues the right CLI: `gh pr` · `az repos pr` · `glab mr`.
+
+### Changed
+- `rules/deploy-workflow.md`: gate verification added as principle 5 and as step 8 of the flow. `rules/project-config.md`: `git_platform` now also documents that it picks `karvey-deploy`'s PR CLI, not only the pipelines `karvey-infra` generates.
+
+### Why
+The method took you to the door of production and never checked whether it opened. Everything a team places on the PR to protect `master` — tests, policies, reviewers — was invisible to the phase whose whole job is crossing that door.
 ## [3.6.0] - 2026-09-07
 
 ### Added
