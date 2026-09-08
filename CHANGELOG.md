@@ -2,6 +2,26 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.6.0] - 2026-09-08
+
+### Added
+- **Causal discipline in `karvey-investigate`** — the skill went from 6 steps to 9, with three new ones placed *before* reading any code:
+  - **Step 1 now dates the symptom.** The report timestamp and, where possible, the first occurrence, define the **incident window**. Without it the following steps are inert.
+  - **New Step 2 — check what is already known:** incident tracker (`docs/bugs_dev_testing.md` / `incidents-index.md`), engineering standards for the layer, and the `CHANGELOG.md` of the window. The team's accumulated knowledge is evidence, not background reading.
+  - **New Step 3 — "what CHANGED?" before "what is WRONG?":** for a new symptom the causal question is historical. Inspect the window with `CHANGELOG`, `git log` / `git log -S`, merges to deploy branches, **and non-code changes** — configuration, CSP/security headers, secrets and rotations, infra, flags, provider or quota changes.
+  - **New Step 7 — causal-coherence gate:** a cause that predates the incident window cannot explain a symptom that started inside it. A pre-existing finding is **latent fragility, not the cause**; the investigation continues until the trigger appears. The report must label each finding as *cause* or *contributing fragility*.
+- **Trace across repo boundaries** (Step 4): follow the path into the component that holds the next hop. If a repo is out of reach, say so and name what you would inspect — never silently downgrade the conclusion to what happened to be reachable.
+- **"Never state what a symbol does without opening it"** (Step 6): project-local helpers, wrappers and loggers behave by project decision, not language default. Claims that depend on them are cited by file and line or they are not evidence.
+- **Reuse before invention** (Step 9): before recommending retry/backoff, reconnection or degraded-state indicators, check whether a sibling module already implements it, and cite that as the pattern.
+- Three new hard **Constraints**: no undated investigation, no pre-existing finding reported as the cause of a new symptom, no claim about a symbol without having read its definition.
+
+### Why
+Post-mortem of a real investigation: an engineer correctly found a fragile reconnection path in a frontend and reported it as the root cause of an incident reported that week. Their own evidence said the code had been unchanged since the first commit — which refuted the causal claim, and went unnoticed. The actual cause was a security header (CSP) put in enforce six days earlier, visible in the `CHANGELOG` and in `git log`, and the decisive corroborating detail lived in a **different repo** (a token TTL). Three of the four gaps were method, not skill: nobody dated the incident, nobody asked what changed, and a pre-existing finding was allowed to stand as a cause. The fourth — asserting a project-local `logger.error` was a no-op without opening it — is now a constraint.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5
+> 🔗 Karvey phase: skill refinement (investigate → causal discipline) · Apache 2.0
+
 ## [3.5.0] - 2026-07-05
 
 ### Added
