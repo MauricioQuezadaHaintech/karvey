@@ -51,7 +51,7 @@ docs/spec/project.json
 
 - **`repos`**: mandatory array with **at least 1** entry. Validate on create/read; if it comes in empty, stop and ask for at least one repo.
 - **`spec_repo`**: if `repos` has 1 element, `spec_repo` = that repo. If it has several, ask which one is the main one.
-- **`git_platform`**: determines which pipelines `karvey-infra` generates (GitHub Actions vs Azure Pipelines).
+- **`git_platform`**: determines which pipelines `karvey-infra` generates (GitHub Actions vs Azure Pipelines) **and which CLI `karvey-deploy` uses to open, verify and merge the PR** (`gh pr` vs `az repos pr` vs `glab mr`) — they are not interchangeable. If a repo's remote contradicts it, the remote wins and the config is stale.
 - **`cloud.provider`**: `mixed` means services from more than one cloud are used; the detail of which service from which cloud is specified in the "Cloud Infrastructure" section of `architecture.md` for each change.
 - **`iac_tool`**: `none` means infra is managed manually; `karvey-infra` still generates/validates the CI/CD pipelines.
 - **`knowledge_sync`**: see `knowledge-sync.md`.
@@ -71,6 +71,6 @@ docs/spec/project.json
 ## Who creates / reads it
 
 - **Creates**: `karvey-init` (first time in the project). Pre-populated from the `karvey-grill` synthesis if it exists.
-- **Reads**: all phases. In particular `karvey-architecture` (cloud, **standards**), `karvey-impl` (**standards**, branch_flow), `karvey-infra` (git_platform, cloud, iac_tool, repos), `karvey-deploy` (branch_flow, repos), and any phase that syncs knowledge (`knowledge_sync`).
+- **Reads**: all phases. In particular `karvey-architecture` (cloud, **standards**), `karvey-impl` (**standards**, branch_flow), `karvey-infra` (git_platform, cloud, iac_tool, repos), `karvey-deploy` (branch_flow, repos, git_platform), and any phase that syncs knowledge (`knowledge_sync`).
 
 If a phase needs `project.json` and it does not exist, stop and indicate to run `karvey-init` first.
