@@ -54,6 +54,16 @@ A change is *done* only when no open `bug`/`spec-gap` remains and every `emergen
 /plugin install karvey@karvey-methods
 ```
 
+## Update to the latest version
+
+```
+claude plugin marketplace update karvey-methods
+claude plugin update karvey@karvey-methods
+```
+
+Then **restart the session** for the new version to load. Verify with `claude plugin list`
+(or `/plugin` inside Claude Code, which does the same from a menu).
+
 Then invoke the namespaced skills, for example:
 
 ```
