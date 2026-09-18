@@ -33,6 +33,7 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **Spiral, not a line — iteration loop**: testing/QA/real-runtime surface defects and new ideas; the **iteration engine** (`karvey-iterate`) routes each finding back to its edge (`bug` → incident tracker + QA micro-loop · `spec-gap` → re-open requirements · `emergent` → discovery backlog) so **nothing is dropped**. See `rules/iteration-loop.md`.
 - **Incident tracker** (`BUG-NN` with state history) + **discovery backlog** (Markdown + ClickUp) so bugs and post-cycle ideas stay traceable (`rules/incident-tracking.md`, `rules/backlog.md`)
 - **Phase-close ritual**: every phase/task closes with a mandatory management update (ClickUp comment + status + cascade) so tasks never go stale — see `rules/phase-close.md`
+- **Multi-agent and multi-repo work**: parent/child changes across repos, business decisions (`D-NN`) and pinned inputs from design/copy/legal agents (`repo path @commit`) in `spec.json`, approvals that cite who approved and where, `[human]` tasks for steps only a person may run, `ops` and `hotfix` change types, light CI for docs-only PRs — see `rules/multi-agent.md`
 - **Cross-cutting layer of support skills** (investigate, second-opinion, health, browse, etc.) callable at any time
 - **Optional enforcement via hooks** (git-flow + plan-gate) and **archive** with spec merge
 
@@ -129,9 +130,15 @@ Read `spec.json` and determine the current phase based on `phase` and `approvals
 | `qa` | qa.approved=true + converged (no open bug/spec-gap, emergent captured) | `/karvey-deploy {change-id}` |
 | `deployed` | — | `/karvey-archive {change-id}` (+ sweep backlog into new change-ids) |
 
+**Change type (`spec.json:type`, see `rules/multi-agent.md`):**
+- `ops` → short pipeline: `init → requirements (lite) → infra (command plan) → tasks ([human]/[Infra]) → execution + verification → archive`. Rows for mockup, design-graphic and architecture are skipped (architecture only if trust boundaries change).
+- `hotfix` → `iterate` (BUG-NN) → `impl` → `test` (regression) → `deploy`, with fix + BUG-NN + regression test in the **same PR**. Requirements re-open only if the defect is a `spec-gap`.
+- A **parent** change (`links.children` not empty) has no code of its own: show each child's phase (`{change-id}@{repo}`) and advance the parent to `deployed` only when every child is deployed or descoped by a decision.
+- Any task in `awaiting-human` blocks only its dependents: show it first, with its executor and verification command.
+
 **Convergence gate:** before advancing from `test`/`qa` to deploy, `findings.md` must have no open `bug`/`spec-gap` and all `emergent` must be captured in the backlog (`rules/iteration-loop.md`). If not, the next step is `/karvey-iterate`, not forward.
 
-Show the user the status (capability, phase, Tier, management, **goal**, approvals including `infra`, `qa`, `deploy`, plus `iteration_count` and open findings/backlog counts) and the next step.
+Show the user the status (capability, **type**, phase, Tier, management, **goal**, approvals including `infra`, `qa`, `deploy`, `prod` — each with `por`/`ref` when present —, `links` parent/children, `decisions`, pinned `inputs`, tasks `awaiting-human`, plus `iteration_count` and open findings/backlog counts) and the next step.
 
 ### With `--phase <fase>` — Detailed description of a phase
 
@@ -200,6 +207,8 @@ Merge spec-deltas into living specs, archive, close the Epic. **Backlog sweep:**
 
 `docs/spec/` lives in the project's **main repo** (`spec_repo`). A project has 1 or more repos, never zero.
 
+In multi-repo work each repo with its own code keeps its own `docs/spec/` with **child** changes; the **parent** change and the business decision log (`D-NN`) live in the operations repo. Cross-repo references are always `{change-id}@{repo}`, `D-NN@{repo}` or `{repo} {path} @{commit}` (see `rules/multi-agent.md`).
+
 ```
 docs/spec/
 ├── project.json                       ← Config (git, cloud, IaC, targets, knowledge_sync, repos, enforcement)
@@ -209,7 +218,7 @@ docs/spec/
 │   ├── _index.md  · db.md · backend.md · frontend.md   ← loaded as a hard constraint by architecture/impl
 ├── specs/{capability}/spec.md         ← Living specs (cumulative per capability)
 └── changes/{change-id}/
-    ├── spec.json                      ← Metadata, phase, approvals, goal, iteration_count, revision_history
+    ├── spec.json                      ← Metadata, type, phase, approvals (+ por/ref, prod), goal, links, decisions, inputs, iteration_count, revision_history
     ├── prd.md                         ← Product Requirements Document
     ├── requirements.md                ← EARS (trace to the PRD)
     ├── spec-delta.md  · mockup.* · design-spec.md
@@ -244,6 +253,7 @@ The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incid
 | `rules/incident-tracking.md` | test, qa, iterate, investigate |
 | `rules/backlog.md` | iterate, archive, context |
 | `rules/phase-close.md` | all phases (at close), impl, iterate |
+| `rules/multi-agent.md` | init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health — and every approval gate |
 
 ## If you come from Kiro or gstack — equivalences
 

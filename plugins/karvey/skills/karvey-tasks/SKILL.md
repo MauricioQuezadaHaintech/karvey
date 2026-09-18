@@ -43,7 +43,18 @@ For each Feature identified in architecture.md, generate tasks per layer followi
 ```
 Tasks of the same layer within a Feature can be marked `(P)` if they are independent.
 
-**Valid layer labels:** `[DB/Backend/Frontend/Infra]`. `Infra`-type tasks are allowed for IaC/pipeline adjustments that come up during implementation (the base infra is already defined in `infra.md`).
+**Valid layer labels:** `[DB/Backend/Frontend/Infra/human]`. `Infra`-type tasks are allowed for IaC/pipeline adjustments that come up during implementation (the base infra is already defined in `infra.md`).
+
+**`[human]` tasks** (see `karvey/rules/multi-agent.md` §5): any step the agent must not or cannot execute — IAM grants, destructive deletions, console-only settings, registrar DNS without API, payments. The agent writes it so a person can run it without interpretation:
+```markdown
+### F2.T3 [human] {Description} — _Depends: F2.T2_
+**Executor:** {name / role}
+**Command:** `{exact command or console path; prefer a versioned script in the repo}`
+**Verification:** `{read-only command}` → expected: {observable result}
+**Rollback:** `{exact command to undo}`
+**Executed:** (filled when done: name · YYYY-MM-DD HH:MM · evidence)
+```
+A `[human]` task has no AI time estimate; it declares the executor instead. Tasks that depend on it wait in `awaiting-human`; independent tasks do not.
 
 **Structure of tasks.md:**
 ```markdown
@@ -92,6 +103,7 @@ Verify before writing:
 - [ ] No task exceeds a 1h estimate
 - [ ] [DB] tasks do not modify application code and vice versa
 - [ ] Testing tasks are included (at least one per Feature)
+- [ ] Every step the agent must not execute is a `[human]` task with executor, command, verification and rollback — none is hidden inside an agent task
 
 If there are gaps: fix and re-verify. Maximum 2 iterations.
 

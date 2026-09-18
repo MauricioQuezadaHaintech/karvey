@@ -45,6 +45,7 @@ A change is *done* only when no open `bug`/`spec-gap` remains and every `emergen
 - **Mandatory phase-close** ritual: every phase/task updates management (ClickUp comment + status + cascade) so nothing goes stale.
 - **Ordered deployment** `feature → dev → PR master`, pipeline-triggered, with **canary** post-deploy.
 - **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability.
+- **Multi-agent & multi-repo work**: parent/child changes across repos, `D-NN` decisions and pinned inputs (`repo path @commit`) from design/copy/legal agents, approvals that record who and where, `[human]` tasks with verification and rollback, `ops` and `hotfix` change types, light CI for docs-only PRs.
 - **Optional hook-based enforcement** (git-flow + plan-gate) — opt-in per project.
 
 ## Install (as a Claude Code plugin)

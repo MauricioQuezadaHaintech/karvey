@@ -39,7 +39,18 @@ Verify the release gate. If **anything fails, STOP and report what is missing. D
    - [ ] The **why**, not just the what.
    - [ ] CHANGELOG version matches the project's version file.
 
+4. **Hotfix lane** (`spec.json:type = "hotfix"`, see `karvey/rules/multi-agent.md` §7): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three. The regression test is green in CI. The version is its own rev bump, and `revision_history` has the entry with `bug` + `release`. Missing any → stop.
+
+5. **Parent/child** (`links`): if this change is a **child**, deploy only this repo and report the result to the parent change. If it is a **parent**, it has no deploy of its own — verify every child is deployed and then mark the parent `deployed`.
+
 If any of these fail, report exactly what is missing and stop. **Do not deploy.**
+
+### Step 0-bis — Documentation-only PRs
+
+If the diff of the PR touches only docs/specs (`docs/**`, `*.md`, `spec.json`) — check with `git diff --name-only {base}...HEAD` — it follows the **docs-only lane** (`karvey/rules/multi-agent.md` §8):
+- It runs the **light CI** (spec lint: valid JSON in every `spec.json`, required fields, well-formed `links`/`decisions`/`inputs`, no broken markdown links). If the repo has no such job yet, propose adding one with a path filter so build/test/deploy jobs are skipped for docs-only paths.
+- It is merged by whoever `project.json:docs_pr.merged_by` declares (if not declared, ask once and record it). No version bump is needed unless the repo versions its docs.
+- It never triggers a deploy, never carries code, and does not need `approvals.prod`. If code sneaks in, it is not docs-only: go back to the normal flow.
 
 ### Step 1 — Determine repos and order
 
@@ -134,7 +145,9 @@ gh pr create --base {production} --head {integration} \
 ```
 
 **2.10 — Merge to `master` ONLY with explicit human OK ⇒ triggers PROD pipeline.**
-Use `AskUserQuestion` to request explicit prod approval. Without human OK, **do not merge**. With OK:
+Use `AskUserQuestion` to request explicit prod approval. Without human OK, **do not merge**.
+
+**`approvals.prod` is mandatory before the merge** (`karvey/rules/multi-agent.md` §4): record in `spec.json` `approvals.prod = { "por": "{human name}", "fecha": "YYYY-MM-DD", "ref": "D-NN" }`, where `D-NN` is the entry in the decision log that holds the OK, and commit it on the branch that goes to `master`. This keeps the prod approval **in the repo history** even when the git platform cannot enforce required reviewers (e.g. no GitHub Enterprise / branch protection). The prod gate is never delegated to an agent (`rol` is always `human`). Without a filled `approvals.prod`, **do not merge**. With OK and the record committed:
 ```bash
 gh pr merge --merge          # ⇒ triggers PROD pipeline
 ```
@@ -176,7 +189,9 @@ Only after the 6 → the pipeline deploys dev. For prod, repeat the verification
 - **NEVER commit directly to `dev` or `master`.** Always a feature branch.
 - **NEVER deploy manually.** The deploy is triggered by the pipeline (push to `dev`, merge to `master`). `func azure functionapp publish` or manual equivalents are FORBIDDEN.
 - **`pull` before starting and before each merge/PR.**
-- **Prod NEVER without explicit human OK.** The PR to `master` is not merged without approval.
+- **Prod NEVER without explicit human OK.** The PR to `master` is not merged without approval, and without `approvals.prod` (`por` + `fecha` + `ref: D-NN`) recorded in the repo.
+- **Hotfix = fix + BUG-NN + regression test in the same PR.** Never a bare fix.
+- **Docs-only PRs** run the light CI and never trigger a deploy.
 - **NEVER deploy without bumping the version** (semver + CHANGELOG per component and repo).
 - **Zero downtime**: the deployment cannot cause a service outage; the post-deploy canary reinforces this and, on a prod regression, recommends a rollback (via pipeline, never manual).
 
@@ -209,6 +224,7 @@ spec.json:
   phase: "deployed"
   approvals.deploy.generated: {YYYY-MM-DD}
   approvals.deploy.approved: {YYYY-MM-DD if there was prod human OK, otherwise null}
+  approvals.prod: { por, fecha, ref: D-NN }   # already committed before the merge (2.10)
 ```
 
 ### Step 7 — Knowledge sync
@@ -229,6 +245,7 @@ Repos deployed (in dependency order):
 
 6-step checklist: verified
 QA gate: OK (0 critical, 0 high) · Tests: PASS · Version bumped + CHANGELOG: OK
+Prod approval: {por} · {fecha} · {D-NN}   Type: {feature | ops | hotfix (BUG-NN, release x.y.z)}
 Deploy platform: {Fly | Render | Vercel | Netlify | Azure | GitHub Actions | ...} · Prod URL: {prod_url}
 Post-deploy canary: DEV {OK / REGRESSION} · PROD {OK / REGRESSION → rollback recommended / N/A}
 {If there is a frontend} Version visible in UI: {yes / recommended to the user}

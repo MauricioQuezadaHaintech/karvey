@@ -163,6 +163,14 @@ For each E2E flow step document:
 - Observed response/behavior
 - PASS / FAIL
 
+### Step 4-bis — Infrastructure tests (IAM bindings and ops steps)
+
+If the change has `[human]` or `[Infra]` tasks that grant permissions, or is an `ops` change (`karvey/rules/multi-agent.md` §5–6), run the **read-only verification scripts** that `karvey-infra` produced (e.g. `infra/iam/{change-id}.verify.sh`) as infrastructure tests:
+- Assert the **binding itself** (member · role · resource), not only its effect — an end-to-end success can hide an over-granted role.
+- Also assert that no broader role was granted to the same member than the one declared (least privilege).
+- Record each check in `docs/test_evidence.md` (Infrastructure section) with the command, output and PASS/FAIL. A FAIL is a `bug` finding; if the human step was not executed yet, the task stays `awaiting-human` and the test is reported as **pending**, not FAIL.
+- Where the CI has read-only credentials, add the verification to CI so drift (someone removing or widening the binding) is detected later.
+
 ### Step 4B — Performance benchmark (baseline)
 
 Measure performance metrics **in the target's actual runtime**, to have a comparable baseline across runs (detect performance regressions, not just functional ones). The metrics depend on the target:

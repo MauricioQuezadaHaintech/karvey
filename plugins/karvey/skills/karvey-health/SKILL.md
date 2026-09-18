@@ -1,6 +1,6 @@
 ---
 name: karvey-health
-description: Code quality dashboard for the Karvey method. Wraps type checker, linter, tests and dead-code detection into a weighted 0-10 score; tracks the trend over time. Triggers include "karvey health", "salud del código", "calidad de código", "quality score", "health dashboard".
+description: Code quality dashboard for the Karvey method. Wraps type checker, linter, tests and dead-code detection into a weighted 0-10 score; tracks the trend over time. Also checks method readiness in multi-agent/multi-repo work — Karvey skills installed in the agent's environment and pinned cross-repo inputs (repo path @commit) still existing and up to date. Triggers include "karvey health", "salud del código", "calidad de código", "quality score", "health dashboard", "skills instalados", "skills installed", "inputs desactualizados", "input drift".
 allowed-tools: Read, Bash, Glob, Grep
 argument-hint: [<repo or path>]
 ---
@@ -80,6 +80,23 @@ Deliver a clear dashboard:
 - **Trend**: comparison against the previous run (score Δ) and a mini-series of the last N records (arrow ↑/↓/→).
 - **Prioritized recommendations**: the highest-impact actions first (e.g. "resolving 12 type errors raises the score ~1.2 pts"), ordered by expected gain vs. effort.
 
+### 6. Method readiness checks (multi-agent / multi-repo)
+
+Reported in a separate **Method readiness** block; they do **not** change the 0–10 code score. See `karvey/rules/multi-agent.md` §3 and §9.
+
+**6a. Karvey skills installed in this agent's environment.** Each agent (lab server, laptop, CI runner, remote sandbox) must be able to load the method:
+- Look for the skills where the harness loads them — the plugin install (e.g. `~/.claude/plugins/marketplaces/*/plugins/karvey/`) or user/project skill folders (`~/.claude/skills/karvey*`, `.claude/skills/karvey*`) — and read the installed version from its `plugin.json`.
+- Compare with the version the project expects (`project.json:karvey_version`, if declared) and verify the skills the project's changes will need are present (at least `karvey`, the phase skills in use, and `karvey-iterate`).
+- Missing or outdated → **FAIL** with the install/update instructions **for this environment** (plugin marketplace install/update for Claude Code; copying the `skills/` folder for harnesses without plugins; re-starting the agent session so the skills load). Never report a phase as runnable in an environment where its skill is not installed.
+
+**6b. Pinned inputs still exist and are current.** For every active change (`docs/spec/changes/*/spec.json`) and every `inputs.*` entry (`"{repo} {path} @{commit}"`), plus `links.parent`/`links.children` and `decisions`:
+- The repo is reachable, the commit exists (`git -C {repo} cat-file -e {commit}`) and the path exists at that commit (`git -C {repo} cat-file -e {commit}:{path}`). Missing → **FAIL** (the pin is broken; the change is reading something that cannot be reproduced).
+- The source advanced: `git -C {repo} log --oneline {commit}..origin/{default-branch} -- {path}` not empty → **WARN · input drift**, listing the new commits. Recommend `/karvey-iterate {change-id}` (input-drift routing).
+- Linked parent/children changes and `D-NN` decisions exist in their repos → otherwise **WARN**.
+- If a repo is out of reach, say so and name it — never report the check as passed.
+
+This check can also run in CI (read-only) so drift is flagged on every PR.
+
 ## Multi-repo
 
 If a `project.json` with a `repos` list exists, run the evaluation **for each repo** and deliver:
@@ -92,7 +109,7 @@ Keep an independent history per repo (step 4) so the trends do not get mixed.
 ## Limits
 
 - It does **NOT** advance or modify the phase: it does not touch `spec.json:phase`.
-- It does **NOT** apply auto-fix nor modify code: it is only measurement and reporting.
+- It does **NOT** apply auto-fix nor modify code: it is only measurement and reporting. It does not re-pin inputs or install skills — it reports and gives the instructions.
 - It is not a phase of the method; it is a support layer invocable at any time.
 
 ---
