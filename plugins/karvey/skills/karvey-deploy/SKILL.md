@@ -147,7 +147,7 @@ gh pr create --base {production} --head {integration} \
 **2.10 — Merge to `master` ONLY with explicit human OK ⇒ triggers PROD pipeline.**
 Use `AskUserQuestion` to request explicit prod approval. Without human OK, **do not merge**.
 
-**`approvals.prod` is mandatory before the merge** (`karvey/rules/multi-agent.md` §4): record in `spec.json` `approvals.prod = { "por": "{human name}", "fecha": "YYYY-MM-DD", "ref": "D-NN" }`, where `D-NN` is the entry in the decision log that holds the OK, and commit it on the branch that goes to `master`. This keeps the prod approval **in the repo history** even when the git platform cannot enforce required reviewers (e.g. no GitHub Enterprise / branch protection). The prod gate is never delegated to an agent (`rol` is always `human`). Without a filled `approvals.prod`, **do not merge**. With OK and the record committed:
+**`approvals.prod` is mandatory before the merge** (`karvey/rules/multi-agent.md` §4): record in `spec.json` `approvals.prod = { "by": "{human name}", "date": "YYYY-MM-DD", "ref": "D-NN" }`, where `D-NN` is the entry in the decision log that holds the OK, and commit it on the branch that goes to `master`. This keeps the prod approval **in the repo history** even when the git platform cannot enforce required reviewers (e.g. no GitHub Enterprise / branch protection). The prod gate is never delegated to an agent (`role` is always `human`). Without a filled `approvals.prod`, **do not merge**. With OK and the record committed:
 ```bash
 gh pr merge --merge          # ⇒ triggers PROD pipeline
 ```
@@ -189,7 +189,7 @@ Only after the 6 → the pipeline deploys dev. For prod, repeat the verification
 - **NEVER commit directly to `dev` or `master`.** Always a feature branch.
 - **NEVER deploy manually.** The deploy is triggered by the pipeline (push to `dev`, merge to `master`). `func azure functionapp publish` or manual equivalents are FORBIDDEN.
 - **`pull` before starting and before each merge/PR.**
-- **Prod NEVER without explicit human OK.** The PR to `master` is not merged without approval, and without `approvals.prod` (`por` + `fecha` + `ref: D-NN`) recorded in the repo.
+- **Prod NEVER without explicit human OK.** The PR to `master` is not merged without approval, and without `approvals.prod` (`by` + `date` + `ref: D-NN`) recorded in the repo.
 - **Hotfix = fix + BUG-NN + regression test in the same PR.** Never a bare fix.
 - **Docs-only PRs** run the light CI and never trigger a deploy.
 - **NEVER deploy without bumping the version** (semver + CHANGELOG per component and repo).
@@ -224,7 +224,7 @@ spec.json:
   phase: "deployed"
   approvals.deploy.generated: {YYYY-MM-DD}
   approvals.deploy.approved: {YYYY-MM-DD if there was prod human OK, otherwise null}
-  approvals.prod: { por, fecha, ref: D-NN }   # already committed before the merge (2.10)
+  approvals.prod: { by, date, ref: D-NN }   # already committed before the merge (2.10)
 ```
 
 ### Step 7 — Knowledge sync
@@ -245,7 +245,7 @@ Repos deployed (in dependency order):
 
 6-step checklist: verified
 QA gate: OK (0 critical, 0 high) · Tests: PASS · Version bumped + CHANGELOG: OK
-Prod approval: {por} · {fecha} · {D-NN}   Type: {feature | ops | hotfix (BUG-NN, release x.y.z)}
+Prod approval: {by} · {date} · {D-NN}   Type: {feature | ops | hotfix (BUG-NN, release x.y.z)}
 Deploy platform: {Fly | Render | Vercel | Netlify | Azure | GitHub Actions | ...} · Prod URL: {prod_url}
 Post-deploy canary: DEV {OK / REGRESSION} · PROD {OK / REGRESSION → rollback recommended / N/A}
 {If there is a frontend} Version visible in UI: {yes / recommended to the user}

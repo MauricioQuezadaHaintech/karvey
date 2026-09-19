@@ -63,7 +63,7 @@ docs/spec/
     "tasks": { "generated": false, "approved": false },
     "qa": { "approved": false },
     "deploy": { "approved": false },
-    "prod": { "por": "", "fecha": "", "ref": "" }
+    "prod": { "by": "", "date": "", "ref": "" }
   }
 }
 ```
@@ -74,8 +74,8 @@ docs/spec/
 - `links.parent` / `links.children` — `"{change-id}@{repo}"` references between a parent change (operations repo) and its per-repo children.
 - `decisions` — business decisions this change depends on, `"D-NN@{repo}"`. Requirements cite them.
 - `inputs` — pinned work from other agents: `design`, `design_system`, `copy`, `legal`, each `"{repo} {path} @{commit}"`. Only the applicable keys are present.
-- `approvals.<phase>` — besides `generated`/`approved`, records `por` (who), `rol` (`human` | `ceo-delegate`), `fecha` and `ref` (the `D-NN` where the approval is written down).
-- `approvals.prod` — `{ por, fecha, ref }`; mandatory before the merge to the production branch; never delegated to an agent.
+- `approvals.<phase>` — besides `generated`/`approved`, records `by` (who), `role` (`human` | `ceo-delegate`), `date` and `ref` (the `D-NN` where the approval is written down).
+- `approvals.prod` — `{ by, date, ref }`; mandatory before the merge to the production branch; never delegated to an agent.
 
 ### Iteration fields
 

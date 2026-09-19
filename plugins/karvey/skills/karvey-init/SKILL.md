@@ -160,12 +160,12 @@ Write `docs/spec/changes/{change-id}/spec.json` with:
     "infra": { "generated": false, "approved": false },
     "qa": { "generated": false, "approved": false },
     "deploy": { "generated": false, "approved": false },
-    "prod": { "por": "", "fecha": "", "ref": "" }
+    "prod": { "by": "", "date": "", "ref": "" }
   }
 }
 ```
 
-Each approval, when granted, also records `por`, `rol` (`human` | `ceo-delegate`), `fecha` and `ref` (`D-NN`) — see `karvey/rules/multi-agent.md` §4. Omit `links`/`decisions`/`inputs` values that don't apply (keep the keys empty), and the full schema is in `karvey/rules/living-specs.md`.
+Each approval, when granted, also records `by`, `role` (`human` | `ceo-delegate`), `date` and `ref` (`D-NN`) — see `karvey/rules/multi-agent.md` §4. Omit `links`/`decisions`/`inputs` values that don't apply (keep the keys empty), and the full schema is in `karvey/rules/living-specs.md`.
 
 ### Step 8 — Create prd.md
 

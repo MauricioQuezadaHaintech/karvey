@@ -145,7 +145,7 @@ Do you approve the requirements to continue?
 
 If the `-y` flag is present: auto-approve.
 
-If the user approves: update `spec.json` with `approvals.requirements.approved: true` plus `por`, `rol` (`human` | `ceo-delegate`), `fecha` and `ref` (the `D-NN` where the approval is recorded) — see `karvey/rules/multi-agent.md` §4.
+If the user approves: update `spec.json` with `approvals.requirements.approved: true` plus `by`, `role` (`human` | `ceo-delegate`), `date` and `ref` (the `D-NN` where the approval is recorded) — see `karvey/rules/multi-agent.md` §4.
 
 **`ops` changes** (`spec.json:type = "ops"`): requirements are **lite** — the verifiable goal, one EARS requirement per observable end state (e.g. "the deploy service account SHALL hold role X on project Y") and the rollback expectation. No mockup/design phases follow; the next step is `/karvey-infra`.
 

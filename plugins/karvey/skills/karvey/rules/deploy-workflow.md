@@ -7,7 +7,7 @@ Defines the ordered deployment flow the method uses. It is applied by `karvey-im
 1. **Never commit directly to `dev` or `master`.** Always a feature branch.
 2. **Never deploy manually.** The deploy is triggered by the pipeline: push to `dev` → deploy dev; merge to `master` → deploy prod. Manual `func azure functionapp publish` or equivalents are forbidden.
 3. **`pull` before starting and `pull` before each merge/PR.** Avoid working on a stale base.
-4. **Prod requires explicit human OK.** The PR to `master` is not merged without approval, recorded in the repo as `spec.json:approvals.prod = { por, fecha, ref: D-NN }` (see `multi-agent.md` §4).
+4. **Prod requires explicit human OK.** The PR to `master` is not merged without approval, recorded in the repo as `spec.json:approvals.prod = { by, date, ref: D-NN }` (see `multi-agent.md` §4).
 5. **Zero downtime**: the deployment must not cause a service outage.
 
 ## Step-by-step flow

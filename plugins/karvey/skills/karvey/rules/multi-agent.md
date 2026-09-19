@@ -54,13 +54,13 @@ Every approval gate records **who** approved and **where** that approval is writ
 ```json
 "approvals": {
   "requirements": { "generated": true, "approved": true,
-                    "por": "{name}", "rol": "human | ceo-delegate", "fecha": "YYYY-MM-DD", "ref": "D-NN" },
+                    "by": "{name}", "role": "human | ceo-delegate", "date": "YYYY-MM-DD", "ref": "D-NN" },
   "...": {},
-  "prod": { "por": "{name}", "fecha": "YYYY-MM-DD", "ref": "D-NN" }
+  "prod": { "by": "{name}", "date": "YYYY-MM-DD", "ref": "D-NN" }
 }
 ```
 
-- `rol: "ceo-delegate"` is valid only when a decision (`ref`) records that the human owner delegated that gate to a coordinating agent. The `prod` gate is **never** delegated to an agent.
+- `role: "ceo-delegate"` is valid only when a decision (`ref`) records that the human owner delegated that gate to a coordinating agent. The `prod` gate is **never** delegated to an agent.
 - `approvals.prod` is mandatory before merging to the production branch (see `karvey-deploy`). It makes the human approval part of the repo history even where the git platform cannot enforce required reviewers (e.g. no GitHub Enterprise / branch protection).
 
 ## 5. Human-executed tasks (`[human]`)
@@ -116,4 +116,4 @@ Each agent environment (a lab server, a laptop, a CI runner, a remote sandbox) m
 
 ## Outside the method — user hooks
 
-Approval markers with an expiry (e.g. a plan-gate marker valid for 2 h that agents cannot renew) belong to the **user's own hooks**, not to Karvey. How a human delegates approvals to a coordinating agent, or extends a marker's validity, is defined in the user's environment. Karvey only records the resulting approval (`approvals.<phase>.rol` + `ref: D-NN`). See the note in `enforcement.md`.
+Approval markers with an expiry (e.g. a plan-gate marker valid for 2 h that agents cannot renew) belong to the **user's own hooks**, not to Karvey. How a human delegates approvals to a coordinating agent, or extends a marker's validity, is defined in the user's environment. Karvey only records the resulting approval (`approvals.<phase>.role` + `ref: D-NN`). See the note in `enforcement.md`.

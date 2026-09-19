@@ -138,7 +138,7 @@ Read `spec.json` and determine the current phase based on `phase` and `approvals
 
 **Convergence gate:** before advancing from `test`/`qa` to deploy, `findings.md` must have no open `bug`/`spec-gap` and all `emergent` must be captured in the backlog (`rules/iteration-loop.md`). If not, the next step is `/karvey-iterate`, not forward.
 
-Show the user the status (capability, **type**, phase, Tier, management, **goal**, approvals including `infra`, `qa`, `deploy`, `prod` — each with `por`/`ref` when present —, `links` parent/children, `decisions`, pinned `inputs`, tasks `awaiting-human`, plus `iteration_count` and open findings/backlog counts) and the next step.
+Show the user the status (capability, **type**, phase, Tier, management, **goal**, approvals including `infra`, `qa`, `deploy`, `prod` — each with `by`/`ref` when present —, `links` parent/children, `decisions`, pinned `inputs`, tasks `awaiting-human`, plus `iteration_count` and open findings/backlog counts) and the next step.
 
 ### With `--phase <fase>` — Detailed description of a phase
 
@@ -218,7 +218,7 @@ docs/spec/
 │   ├── _index.md  · db.md · backend.md · frontend.md   ← loaded as a hard constraint by architecture/impl
 ├── specs/{capability}/spec.md         ← Living specs (cumulative per capability)
 └── changes/{change-id}/
-    ├── spec.json                      ← Metadata, type, phase, approvals (+ por/ref, prod), goal, links, decisions, inputs, iteration_count, revision_history
+    ├── spec.json                      ← Metadata, type, phase, approvals (+ by/ref, prod), goal, links, decisions, inputs, iteration_count, revision_history
     ├── prd.md                         ← Product Requirements Document
     ├── requirements.md                ← EARS (trace to the PRD)
     ├── spec-delta.md  · mockup.* · design-spec.md
