@@ -2,6 +2,27 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.9.1] - 2026-09-22
+
+### Fixed — documentation drift
+- **Counts were wrong across the docs.** README said "12-phase pipeline" (it is **13 phases, 0–12**); `plugin.json` / `marketplace.json` said "16 support skills" (it is **18**); `plugins/karvey/README.md` said "12 phases + 12 support"; `rules/support-skills.md` said "12 pipeline phases". All corrected against the 32 skills actually shipped (1 orchestrator + 13 phases + 18 support).
+- **`plugins/karvey/README.md` claimed no hook activates on install.** False since 3.8.0: the plugin registers a `SessionStart` hook. The README now separates the hooks **active on install** (session context, inert without a handoff; statusline installed by hand) from the **opt-in** enforcement hooks (`git-flow-guard`, `plan-gate`, via `karvey-guard`).
+- **Orchestrator (`skills/karvey/SKILL.md`)** still described an 8-dimension QA and a deploy without PR gates or branch hygiene; now 9 dimensions (standards conformance), deploy phase with PR-gate verification, git-host detection and branch hygiene, and the features list includes branch hygiene. `deploy-workflow.md` is listed as applying to archive and context too.
+- **`karvey-context` was missing from the support-skills catalog** (`rules/support-skills.md`) and from the README's support list.
+- **Stale local copies of shared rules.** `karvey-init` and `karvey-tasks` carried an old `clickup-protocol.md` that still estimated in **hours** (the 3.4.0 minutes-based AI estimation never reached them), and `karvey-init` / `karvey-requirements` carried an old `living-specs.md` without `findings.md`, `backlog.md`, `incidents-index.md` or the 3.7 `spec.json` fields. Re-synced from `skills/karvey/rules/`; every local copy is now byte-identical to its canonical rule.
+- `deploy-workflow.md` referenced `project.json:protected_branches`; the field lives in `branch_flow.protected_branches`.
+
+### Added
+- **Skills catalog** in the README: the 32 skills in tables — orchestrator, the 13 phases (what each produces + key rules) and the 18 support skills (role).
+- **`docs/spec/backlog.md`** for the method's own repo, with **BL-01**: run graphify (`project.json:knowledge_sync`) over the repo once the pending changes land.
+
+### Why
+The owner asked whether the whole plugin documentation reflected what shipped. It did not: counts had drifted over several releases, one README described the hooks incorrectly, and three phase skills were reading outdated copies of shared rules — a silent behavior bug, not just a docs one.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5 (1M context)
+> 🔗 Karvey phase: docs sync (karvey-docs scope) + rule-copy re-sync · Apache 2.0
+
 ## [3.9.0] - 2026-09-22
 
 ### Added — Branch hygiene (nothing left in branches)

@@ -4,18 +4,21 @@
 
 ```
 docs/spec/
+├── backlog.md                      # Discovery backlog (emergent → future change-ids) — see backlog.md
+├── incidents-index.md              # Global index of all BUG-NN across repos + state — see incident-tracking.md
 ├── specs/                          # Living specs (cumulative source of truth)
 │   └── {capability}/
 │       └── spec.md                 # Master spec of the capability (grows over time)
 └── changes/                        # Changes in progress
     ├── {change-id}/
-    │   ├── spec.json               # Change metadata
+    │   ├── spec.json               # Change metadata (incl. iteration_count, revision_history)
     │   ├── proposal.md             # Why, what and the impact
     │   ├── requirements.md         # EARS requirements of the change
     │   ├── spec-delta.md           # ADDED/MODIFIED/REMOVED over the living specs
     │   ├── design-spec.md          # Graphic design specification
     │   ├── architecture.md         # Technical design and architecture
     │   ├── tasks.md                # Implementation task plan
+    │   ├── findings.md             # Triage inbox (bug/spec-gap/emergent) — see iteration-loop.md
     │   ├── PLAN.md                 # (only if management=markdown) Plan and checklist
     │   ├── mockup.html             # Navigable HTML mockup
     │   └── IMPLEMENTED             # Empty file that marks: deployed to production
@@ -23,6 +26,8 @@ docs/spec/
         └── {YYYY-MM-DD}-{change-id}/
             └── (same files as the change)
 ```
+
+> The per-repo incident tracker `docs/bugs_dev_testing.md` lives in **each repo** (not under `docs/spec/`); `incidents-index.md` aggregates them. See `incident-tracking.md`.
 
 ## spec.json — structure
 
@@ -36,6 +41,13 @@ docs/spec/
   "management": "clickup",
   "security_tier": 2,
   "phase": "requirements",
+  "type": "feature",
+  "links": { "parent": "", "children": [] },
+  "decisions": [],
+  "inputs": {},
+  "iteration_count": 0,
+  "revision_history": [],
+  "seed_backlog_id": "",
   "clickup": {
     "epic_id": "",
     "feature_ids": [],
@@ -47,10 +59,31 @@ docs/spec/
     "mockup": { "generated": false, "approved": false },
     "design_graphic": { "generated": false, "approved": false },
     "architecture": { "generated": false, "approved": false },
-    "tasks": { "generated": false, "approved": false }
+    "infra": { "generated": false, "approved": false },
+    "tasks": { "generated": false, "approved": false },
+    "qa": { "approved": false },
+    "deploy": { "approved": false },
+    "prod": { "by": "", "date": "", "ref": "" }
   }
 }
 ```
+
+### Multi-agent / multi-repo fields (see `multi-agent.md`)
+
+- `type` — `feature` (default) · `ops` (no application code: IAM, DNS, secrets, console config — short pipeline) · `hotfix` (fast lane: fix + `BUG-NN` + regression test in the same PR).
+- `links.parent` / `links.children` — `"{change-id}@{repo}"` references between a parent change (operations repo) and its per-repo children.
+- `decisions` — business decisions this change depends on, `"D-NN@{repo}"`. Requirements cite them.
+- `inputs` — pinned work from other agents: `design`, `design_system`, `copy`, `legal`, each `"{repo} {path} @{commit}"`. Only the applicable keys are present.
+- `approvals.<phase>` — besides `generated`/`approved`, records `by` (who), `role` (`human` | `ceo-delegate`), `date` and `ref` (the `D-NN` where the approval is written down).
+- `approvals.prod` — `{ by, date, ref }`; mandatory before the merge to the production branch; never delegated to an agent.
+
+### Iteration fields
+
+- `iteration_count` — how many times this change went through a feedback loop (incremented by `karvey-iterate` on a `spec-gap` re-open). A high count is a signal the spec was weak — useful for the retro.
+- `revision_history` — append-only log of spec-revision sub-cycles: `[{ "date", "finding": "F-NN", "reason", "ripple": ["mockup","tasks"] }]`. Records *why* requirements were re-opened and which downstream phases were rippled. Hotfix entries also carry `"bug": "BUG-NN"` and `"release": "x.y.z"`; an input re-pin carries `"input": "design"` and the old/new commit.
+- `seed_backlog_id` — if this change was promoted from a discovery backlog item (`BL-NN`), its id, for traceability (see `backlog.md`).
+
+> The `qa` and `deploy` approvals were already used by the qa/deploy skills; they are made explicit in the schema here. `infra` likewise. The `approvals.*.approved` flags are what `karvey-iterate` resets (only for the affected phases) during a spec-revision ripple.
 
 ## spec-delta.md — format
 
