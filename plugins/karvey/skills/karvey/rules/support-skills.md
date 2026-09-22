@@ -1,6 +1,6 @@
 # Rule: Support skills (cross-cutting layer)
 
-In addition to the 12 pipeline phases (linear, with gates), Karvey has a **cross-cutting layer** of support skills that are invoked **at any time**, without altering the current phase. Inspired by gstack's "virtual team" philosophy, but integrated into the method.
+In addition to the 13 pipeline phases (0–12) (linear, with gates), Karvey has a **cross-cutting layer** of support skills that are invoked **at any time**, without altering the current phase. Inspired by gstack's "virtual team" philosophy, but integrated into the method.
 
 ## Catalog
 
@@ -22,6 +22,7 @@ In addition to the 12 pipeline phases (linear, with gates), Karvey has a **cross
 | `karvey-import` | Migration | Convert existing Kiro (`.kiro/specs/*`) or gstack specs into Karvey's `docs/spec/` structure. Non-destructive on the source. | — |
 | `karvey-team` | Team layer (**optional**) | Set up and run a team of agents (roles, manifests, boards, census, relay) and **measure what it costs**. Opt-in: Karvey is complete with one agent, and a team is expensive — read `rules/team.md` first. | — (Karvey) |
 | `karvey-decisions` | Decision log | Single numbered registry (`D-NN` business, `C-NN` direction) that changes cite; **`cross` checks a question against the log before anything is declared blocked**. | — (Karvey) |
+| `karvey-context` | Dashboard (read-only) | Any time: project config, capabilities, active/archived changes, deploy queue / landing report, open backlog count and **live branches** (absorbed vs carrying unreleased work). Never writes. | — (Karvey) |
 | `karvey-standards` | Standards uplift | Distill the team's engineering golden paths (db/backend/frontend…) from the **real system** into the team's standards repo (`project.json:standards`), in the `engineering-standards.md` format. Re-runnable to refresh. Never writes into the public plugin. | — (Karvey) |
 
 ## Invocation rules

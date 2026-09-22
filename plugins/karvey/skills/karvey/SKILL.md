@@ -26,8 +26,9 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **Infrastructure as code + CI/CD**: IaC and pipelines per cloud and git platform, with a security review
 - **10–30 min AI tasks** + ClickUp or Markdown management
 - **DB/Backend/Frontend + E2E testing** in the target's real runtime, with benchmark and regression
-- **8-dimension QA**: includes a blocking security gate (OWASP+STRIDE), cross-model second opinion, and visual audit
-- **Orderly deployment**: feature branch → dev → PR to master, triggered by the pipeline, with post-deploy canary
+- **9-dimension QA**: includes a blocking security gate (OWASP+STRIDE), cross-model second opinion, visual audit, and standards conformance (golden path + approved deviations)
+- **Orderly deployment**: feature branch → dev → PR to master, triggered by the pipeline, verifying the PR's gates (CI + branch policies) before the prod OK, with post-deploy canary
+- **Branch hygiene — nothing left in branches**: once a branch is absorbed into production it is deleted (remote + local); a branch still carrying unreleased work is never deleted, it is reported — see `rules/deploy-workflow.md` → *Branch hygiene*
 - **Semver versioning + CHANGELOG** per component/repo, with human + AI model traceability
 - **Persistent goal**: a north star that every phase re-reads so it never stops until the result is achieved, while respecting the gates
 - **Spiral, not a line — iteration loop**: testing/QA/real-runtime surface defects and new ideas; the **iteration engine** (`karvey-iterate`) routes each finding back to its edge (`bug` → incident tracker + QA micro-loop · `spec-gap` → re-open requirements · `emergent` → discovery backlog) so **nothing is dropped**. See `rules/iteration-loop.md`.
@@ -95,7 +96,7 @@ These are not phases; they do not advance `spec.json:phase` forward. See `rules/
 /karvey-decisions          → Decision log (D-NN / C-NN) + cross-check before declaring a block
 ```
 
-Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue.
+Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue + live branches (read-only; one of the 18 support skills).
 
 ## Execution by argument
 
@@ -195,11 +196,11 @@ Unit + E2E in the target's **real runtime**, performance benchmark, regression t
 **Rules:** `targets.md`, `iteration-loop.md`, `incident-tracking.md`, `phase-close.md`
 
 ### PHASE 10: /karvey-qa
-8-dimension QA: Security (blocking gate, OWASP+STRIDE), Errors, Consistency, Impact, Env vars, Versioning (CHANGELOG), cross-model Second-opinion, Visual audit. Appends findings to `findings.md`; on open `bug`/`spec-gap` it routes via `/karvey-iterate` instead of advancing. `REVISION_PR_{n}_{date}.md`.
+9-dimension QA: Security (blocking gate, OWASP+STRIDE), Errors, Consistency, Impact, Env vars, Versioning (CHANGELOG), cross-model Second-opinion, Visual audit, Standards conformance (golden path + `deviations.md`). Appends findings to `findings.md`; on open `bug`/`spec-gap` it routes via `/karvey-iterate` instead of advancing. `REVISION_PR_{n}_{date}.md`.
 **Rules:** `changelog-policy.md`, `versioning.md`, `iteration-loop.md`, `phase-close.md`
 
 ### PHASE 11: /karvey-deploy
-Orderly per-repo flow: pull → feature → pull → merge dev (DEV pipeline) → canary → pull → PR dev→master (PROD with human OK) → canary. Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended). Never deploy manually.
+Orderly per-repo flow: pull → feature → pull → merge dev (DEV pipeline) → canary → pull → PR dev→master → verify the PR's gates (CI + branch policies) → PROD with human OK → canary → **branch hygiene** (delete absorbed branches, report the rest). Detects the git host (`gh` / `az repos` / `glab`). Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended). Never deploy manually.
 **Rules:** `deploy-workflow.md`, `versioning.md`, `changelog-policy.md`, `project-config.md`
 
 ### PHASE 12: /karvey-archive
@@ -249,7 +250,7 @@ The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incid
 | `rules/living-specs.md` | init, requirements, archive |
 | `rules/knowledge-sync.md` | all phases (at close) |
 | `rules/targets.md` | mockup, design-graphic, architecture, test, qa, deploy |
-| `rules/deploy-workflow.md` | infra, impl, deploy |
+| `rules/deploy-workflow.md` | infra, impl, deploy, archive (branch sweep), context (live branches) |
 | `rules/changelog-policy.md` | impl, infra, deploy, qa |
 | `rules/versioning.md` | impl, deploy, qa |
 | `rules/enforcement.md` | init, guard |

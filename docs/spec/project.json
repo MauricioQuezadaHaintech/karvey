@@ -13,5 +13,5 @@
     "production": "main"
   },
   "enforcement": { "git_flow_hook": false, "plan_gate_hook": false },
-  "karvey_version": "3.9.0"
+  "karvey_version": "3.9.1"
 }

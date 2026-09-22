@@ -53,7 +53,7 @@ reads it as pending work. The method closes that loop explicitly instead of leav
 
 **When:** right after the merge to `{production}` and its canary (`karvey-deploy` 2.12), and again as a
 sweep at `karvey-archive` (Step 7F). Long-lived branches (`{integration}`, `{production}`, and any listed
-in `project.json:protected_branches`) are never candidates.
+in `project.json:branch_flow.protected_branches`) are never candidates.
 
 **Absorbed = its content is already in `{production}`.** Check it, never assume it:
 

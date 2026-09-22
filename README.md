@@ -2,7 +2,7 @@
 
 > **Karvey** is an Ona/Selknam word meaning ***Afán*** (zeal / drive).
 
-A **spec-driven development (SDD)** method for Claude Code, **stack-agnostic** (web, iOS/Android, desktop, CLI, API, embedded). It takes a change from idea to production through a 12-phase pipeline with approval gates, plus a cross-cutting layer of support skills.
+A **spec-driven development (SDD)** method for Claude Code, **stack-agnostic** (web, iOS/Android, desktop, CLI, API, embedded). It takes a change from idea to production through a 13-phase pipeline (0–12) with approval gates, plus a cross-cutting layer of support skills.
 
 Created by **Mauricio Quezada Ibáñez** · **HainTech**. A synthesis of first-hand experience with conceptual ideas from **Kiro** (cc-sdd) and **gstack** (Garry Tan) — conceptual inspiration, none of their code.
 
@@ -30,9 +30,65 @@ A change is *done* only when no open `bug`/`spec-gap` remains and every `emergen
 
 ## Cross-cutting layer (support skills, invokable any time)
 
-`iterate` · `investigate` · `second-opinion` · `health` · `browse` · `checkpoint` · `diagram` · `docs` · `guard` · `devex` · `retro` · `scrape` · `benchmark-models` · `import` · `standards`
+`context` · `iterate` · `investigate` · `second-opinion` · `health` · `browse` · `checkpoint` · `diagram` · `docs` · `guard` · `devex` · `retro` · `scrape` · `benchmark-models` · `import` · `standards`
 
 Optional team layer (opt-in, **not** the default — Karvey is complete with one agent): `team` · `decisions`.
+
+## Skills catalog (32)
+
+Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 18 support skills.** Each skill's full contract lives in `plugins/karvey/skills/<skill>/SKILL.md`; the shared rules in `plugins/karvey/skills/karvey/rules/`.
+
+### Orchestrator
+
+| Skill | What it does |
+|---|---|
+| `karvey` | Entry point. Shows the change's phase and approvals, tells you the next skill, `--autoplan` chains the planning phases. |
+
+### Pipeline phases (0–12)
+
+| # | Skill | Produces | Key rules |
+|---|---|---|---|
+| 0 | `karvey-grill` | Pre-spec interview + "10-star" reframe → synthesis that seeds the PRD | — |
+| 1 | `karvey-init` | `project.json`, `change-id`, `prd.md`, `spec.json`, Epic (ClickUp) or `PLAN.md` | project-config, clickup-protocol, living-specs, enforcement |
+| 2 | `karvey-requirements` | EARS `requirements.md` traced to the PRD + `spec-delta.md` | ears-format, living-specs, security-tiers |
+| 3 | `karvey-mockup` | Navigable mockup, 3–4 levels + spec↔mockup validation | targets |
+| 4 | `karvey-design-graphic` | `design-spec.md` (OKLCH, type, 0-10 scoring) + `design-components.md` | targets |
+| 5 | `karvey-architecture` | `architecture.md`: boundaries, security tier, diagrams, cloud; standards conformance gate | security-tiers, engineering-standards |
+| 6 | `karvey-infra` | IaC + CI/CD pipelines with infra security review → `infra.md` | project-config, deploy-workflow |
+| 7 | `karvey-tasks` | `tasks.md`: 10–30 min AI tasks `E{n}.F{n}.T{n}` with dependencies | clickup-protocol |
+| 8 | `karvey-impl` | Code on `feature/{change-id}`, per-task commit + version + CHANGELOG | deploy-workflow, versioning, engineering-standards |
+| 9 | `karvey-test` | Unit + E2E in the real runtime → `test_evidence.md`, findings, `BUG-NN` | targets, iteration-loop, incident-tracking |
+| 10 | `karvey-qa` | 9-dimension review (security gate, standards conformance…) → `REVISION_PR_*.md` | changelog-policy, versioning, iteration-loop |
+| 11 | `karvey-deploy` | feature → dev → PR master, PR gates verified, human OK, canary, **branch hygiene** | deploy-workflow, versioning, changelog-policy |
+| 12 | `karvey-archive` | Spec-deltas merged into living specs, Epic closed, backlog + branch sweep | living-specs, backlog, phase-close |
+
+### Support skills (any time, do not advance the phase)
+
+| Skill | Role |
+|---|---|
+| `karvey-context` | Read-only dashboard: config, changes, deploy queue, backlog, live branches |
+| `karvey-iterate` | Iteration engine: routes findings → `bug` / `spec-gap` / `emergent` |
+| `karvey-investigate` | Root-cause debugging — Iron Law: no fix without investigation; dates the symptom, asks what changed |
+| `karvey-second-opinion` | Adversarial cross-model review (Review / Challenge / Consult) |
+| `karvey-health` | 0-10 code-quality score with trend + method readiness (skills installed, pinned inputs) |
+| `karvey-browse` | Eyes on the real runtime: browser, simulator, terminal |
+| `karvey-checkpoint` | Save / restore work state **and the agent handoff** (+ `state.json`) |
+| `karvey-diagram` | Text → mermaid + excalidraw + SVG/PNG |
+| `karvey-docs` | Diataxis docs, stale-doc refresh, PDF export |
+| `karvey-guard` | Opt-in enforcement hooks, edit-lock, `--verify` checklist |
+| `karvey-devex` | Developer-experience / onboarding review |
+| `karvey-retro` | Cycle retrospective |
+| `karvey-scrape` | Web extraction codified as a reusable skill |
+| `karvey-benchmark-models` | Compare models: latency, tokens, cost, quality |
+| `karvey-import` | Convert Kiro / gstack specs into `docs/spec/` |
+| `karvey-standards` | Uplift the team's golden paths from the real system into its standards repo |
+| `karvey-team` | **Optional** team layer: roles, census, relay, cost |
+| `karvey-decisions` | Decision log (`D-NN` / `C-NN`) + `cross` before declaring a block |
+
+## Hooks — what runs on install and what is opt-in
+
+- **Active on install (plugin hooks, `plugins/karvey/hooks/`):** a `SessionStart` hook (`karvey-session-context.sh`, on startup / resume / compact / clear) that reinjects the agent handoff and contrasts it against the live repos (`matches` / `DRIFT`). It is **inert** (no output, exit 0) in a project with no Karvey handoff. The statusline script ships alongside but a plugin cannot declare it — install it by hand (see `plugins/karvey/hooks/README.md`).
+- **Opt-in per project (`plugins/karvey/skills/karvey/hooks/`):** `git-flow-guard.sh` and `plan-gate.sh`, installed and removed by `/karvey:karvey-guard` according to `project.json:enforcement`. Not active by default.
 
 ## Features
 
