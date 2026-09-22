@@ -2,7 +2,7 @@
 name: karvey-guard
 description: Safety guardrails for the Karvey method. Installs/disables the opt-in enforcement hooks (git-flow + plan-gate), grants temporary override, and can edit-lock work to a single directory. Triggers include "karvey guard", "guardrails", "freeze", "edit lock", "activar hooks", "enable hooks", "bloquear cambios", "lock changes", "candado", "lock".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [--install | --disable-hooks | --freeze <dir> | --unfreeze | --override]
+argument-hint: [--install | --disable-hooks | --freeze <dir> | --unfreeze | --override | --verify]
 ---
 
 # Karvey Guard
@@ -61,6 +61,20 @@ For sensitive work or debugging: restrict `Edit`/`Write` to a single directory.
 2. Install/register a `PreToolUse` hook over `Edit`/`Write`/`NotebookEdit` that **blocks** (exit 2) any write whose `file_path` is not under the boundary; persist the boundary (e.g., in a `KARVEY_FREEZE_DIR` marker or a freeze state file).
 3. Confirm the active boundary and remind that edits are only allowed inside `<dir>` until `--unfreeze`.
 
+### `--verify` — Verification checklist before reporting "done"
+
+Read `karvey/rules/verification.md` and walk the deliverable (report, handoff, PR description, phase
+close) against its failure modes. For every claim, ask what command proves it and whether that command
+was run **in this session**.
+
+1. List each claim the deliverable makes about a file, a resource, a deployment or a test result.
+2. Mark each one `verified` (with the command and its output), or `unverified` **with the reason** —
+   an unverifiable claim is stated as such, never dropped and never softened into a claim.
+3. Block on the classics: a citation is not the thing cited; exit 0 is not success; a green test over
+   uncalled code proves nothing; a filename does not identify a version; a review appended at the end
+   leaves the body lying.
+4. Report the list. This is a checklist, **not** a gate: it does not approve `karvey-qa` on its own.
+
 ### `--unfreeze` — Remove the edit-lock
 
 1. Remove the freeze hook from `settings.json` and clear the boundary marker/state.
@@ -68,6 +82,7 @@ For sensitive work or debugging: restrict `Edit`/`Write` to a single directory.
 
 ## Notes
 
+- `--verify` is read-only and always safe to run; the rest of this skill writes.
 - `--install`/`--freeze` edit `settings.json` and copy scripts: respect the approved-plan gate like any other change.
 - This skill **complements** the phase gates (`karvey-qa`, etc.) but does not replace them or approve them on its own.
 - After touching artifacts in `docs/spec/`, sync knowledge per `karvey/rules/knowledge-sync.md`.
