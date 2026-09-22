@@ -26,6 +26,11 @@ Read:
 
 The requirements must derive from the PRD and cover its objectives and acceptance criteria.
 
+**Multi-agent / multi-repo context** (see `karvey/rules/multi-agent.md`):
+- If `links.parent` is set, also read the **parent change's** `prd.md` and acceptance criteria in its repo: this child's requirements trace to the parent PRD.
+- For each `decisions` entry (`D-NN@{repo}`), read the decision in the operations repo's decision log.
+- For each `inputs.*` entry (`design`, `design_system`, `copy`, `legal`), read the file **at the pinned commit** (`git -C {repo} show {commit}:{path}`), not the working copy. If an input the requirements need is missing or unpinned, ask for it — never assume "the latest version".
+
 If there's a `karvey-grill` brief in the conversation, incorporate it.
 
 If the codebase is brownfield: dispatch a subagent to explore existing implementations:
@@ -55,7 +60,7 @@ Document structure:
 WHEN {event},
 the {system} SHALL {observable behavior}.
 
-Traces to PRD: {PRD section or objective}
+Traces to PRD: {PRD section or objective}{ · Decision: D-NN (if it exists because of a business decision)}{ · Input: copy|legal|design @{commit} (if it comes from a pinned input)}
 
 #### Scenario: {Success case}
 GIVEN {precondition}
@@ -89,6 +94,8 @@ Check the draft:
 - [ ] Each requirement has at least one success scenario and one error scenario
 - [ ] The explicit exclusions cover the most likely edges
 - [ ] The security requirements reflect the Security Tier declared in spec.json
+- [ ] Every requirement that exists because of a business decision cites its `D-NN`, and no requirement contradicts a decision linked in `spec.json:decisions` (a contradiction needs a new decision first — blocking)
+- [ ] Legal/copy texts are taken from the pinned `inputs.legal` / `inputs.copy` commit, not rewritten
 
 If there are issues local to the draft: fix and re-check (maximum 2 iterations).
 If there's a real ambiguity that requires a user decision: ask before continuing.
@@ -138,7 +145,9 @@ Do you approve the requirements to continue?
 
 If the `-y` flag is present: auto-approve.
 
-If the user approves: update `spec.json` with `approvals.requirements.approved: true`.
+If the user approves: update `spec.json` with `approvals.requirements.approved: true` plus `by`, `role` (`human` | `ceo-delegate`), `date` and `ref` (the `D-NN` where the approval is recorded) — see `karvey/rules/multi-agent.md` §4.
+
+**`ops` changes** (`spec.json:type = "ops"`): requirements are **lite** — the verifiable goal, one EARS requirement per observable end state (e.g. "the deploy service account SHALL hold role X on project Y") and the rollback expectation. No mockup/design phases follow; the next step is `/karvey-infra`.
 
 ### Step 8A — Create Features in ClickUp (if management=clickup)
 

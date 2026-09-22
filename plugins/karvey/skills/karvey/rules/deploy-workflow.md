@@ -7,7 +7,7 @@ Defines the ordered deployment flow the method uses. It is applied by `karvey-im
 1. **Never commit directly to `dev` or `master`.** Always a feature branch.
 2. **Never deploy manually.** The deploy is triggered by the pipeline: push to `dev` → deploy dev; merge to `master` → deploy prod. Manual `func azure functionapp publish` or equivalents are forbidden.
 3. **`pull` before starting and `pull` before each merge/PR.** Avoid working on a stale base.
-4. **Prod requires explicit human OK.** The PR to `master` is not merged without approval.
+4. **Prod requires explicit human OK.** The PR to `master` is not merged without approval, recorded in the repo as `spec.json:approvals.prod = { by, date, ref: D-NN }` (see `multi-agent.md` §4).
 5. **Zero downtime**: the deployment must not cause a service outage.
 
 ## Step-by-step flow
@@ -41,6 +41,11 @@ Only after all 6 → the pipeline deploys dev. For prod, repeat the verification
 ## Multi-repo
 
 If the change touches several repos, apply the flow in **each one**, respecting the dependency order declared in `architecture.md` (e.g. DB before backend before frontend). Record the progress per repo in the management tool (ClickUp/`PLAN.md`).
+
+## Hotfixes and documentation-only PRs
+
+- **Hotfix:** same flow, faster — but the PR must carry the fix + `BUG-NN` + regression test together (`multi-agent.md` §7).
+- **Docs-only PR** (only `docs/**`, `*.md`, `spec.json`): light CI (spec lint) instead of build/test/deploy; merged by `project.json:docs_pr.merged_by`; never triggers a deploy (`multi-agent.md` §8).
 
 ## Management
 

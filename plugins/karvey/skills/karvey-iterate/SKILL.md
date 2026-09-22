@@ -36,6 +36,7 @@ Read:
 - `docs/spec/changes/{change-id}/findings.md` (the inbox; if it doesn't exist, there's nothing to iterate — tell the user and stop)
 - `docs/spec/changes/{change-id}/requirements.md` and `spec-delta.md` (for spec-gap routing)
 - `docs/spec/project.json` (management, repos, backlog_list_id)
+- `spec.json:type`, `links` and `inputs` (hotfix lane, parent/child ripple and input drift — see `karvey/rules/multi-agent.md`). A `spec-gap` in a **child** change that alters the parent's acceptance criteria is also reported to the parent change.
 
 If `--finding F-NN` is given, process only that finding. Otherwise process every `open` finding.
 
@@ -56,6 +57,11 @@ If a finding's type is ambiguous or its routing is irreversible (re-opening requ
 3. If the cause is unclear → recommend/invoke `/karvey-investigate` (Iron Law: no fix without investigating); paste its result as Root cause and move the incident to `DIAGNOSTICADO`.
 4. The fix itself runs through the existing micro-loop: `/karvey-impl {change-id}` (fix) → `/karvey-test {change-id}` (incl. its regression test, Step 4C) → `/karvey-qa {change-id}`. The incident reaches `RESUELTO` only once a regression test exists.
 5. If `management=clickup`, create/link the ClickUp task and record its id on the `BUG-NN`.
+6. **Hotfix lane** (`spec.json:type = "hotfix"`, or a production defect that cannot wait — including one found **during an E2E run in production**), see `karvey/rules/multi-agent.md` §7:
+   - **Rule: fix + `BUG-NN` + regression test in the same PR.** The PR that ships the fix also adds the tracker entry, the `findings.md` entry and a regression test that fails without the fix. A fix PR missing any of the three is not mergeable.
+   - The Iron Law still holds: if the incident is live, the root cause may be written right after the fix, but the incident stays `EN FIX` until it is; `RESUELTO` only with the regression test green.
+   - Each hotfix is its own release (rev bump + CHANGELOG). Chained hotfixes on the same day append one `revision_history` entry each: `{ "date", "finding": "F-NN", "bug": "BUG-NN", "release": "x.y.z", "reason" }`.
+   - If the E2E run that found it is still in progress, record the run as interrupted in `test_evidence.md` and re-run it in full after the hotfix deploys — never resume it from the middle.
 
 #### 3b · `spec-gap` → re-open requirements (spec-revision sub-cycle)
 1. In `spec.json`: set `approvals.requirements.approved = false`, increment `iteration_count`, append to `revision_history` (date, finding id, reason).
@@ -65,6 +71,12 @@ If a finding's type is ambiguous or its routing is irreversible (re-opening requ
 5. Re-run `test`/`qa` for the affected scope.
 
 > Be surgical. The point of the ripple set is to avoid redoing the whole pipeline for a one-line spec fix.
+
+#### 3b-bis · Input drift → automatic ripple candidate
+When a pinned input (`spec.json:inputs.design|design_system|copy|legal`, format `{repo} {path} @{commit}`) is behind its source repo — reported by `karvey-health` or noticed by any agent — create a `spec-gap` candidate finding and handle it here (see `karvey/rules/multi-agent.md` §3):
+1. Diff the input: `git -C {repo} diff {pinned}..{head} -- {path}`.
+2. No behavioral impact (typo, formatting) → re-pin, append `revision_history` `{ "date", "input": "{key}", "from": "{old}", "to": "{new}", "reason", "ripple": [] }`, close the finding.
+3. Impact → treat as a `spec-gap` (3b): re-pin, amend the affected requirement, and ripple by input type — `design`/`design_system` → design-graphic (+ impl of the touched components) · `copy` → impl of the touched texts · `legal` → requirements + impl, and QA re-checks the legal texts verbatim.
 
 #### 3c · `emergent` → discovery backlog
 1. Add to `docs/spec/backlog.md` as `BL-NN` (origin = this change + finding id, rough scope, priority). See `backlog.md`.
@@ -87,6 +99,8 @@ Run the phase-close ritual (`phase-close.md`): comment + status on management, e
 Findings processed: {N}
   → bug:       {N}  (BUG-{list})  → QA micro-loop
   → spec-gap:  {N}  (requirements re-opened; ripple: {phases})
+  → input drift: {N}  (re-pinned: {keys} · ripple: {phases | none})
+  → hotfix:    {N}  (BUG-{list} · release {x.y.z} · fix+BUG+regression in PR #{n})
   → emergent:  {N}  (backlog BL-{list})
 
 Open findings remaining: {N bug/spec-gap blocking · N emergent captured}

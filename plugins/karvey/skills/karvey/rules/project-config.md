@@ -40,7 +40,10 @@ docs/spec/project.json
   "enforcement": {
     "git_flow_hook": false,
     "plan_gate_hook": false
-  }
+  },
+  "ops_repo": "repo-with-the-decision-log-and-parent-changes",
+  "karvey_version": "3.7.0",
+  "docs_pr": { "ci": "spec-lint", "merged_by": "{name or role}" }
 }
 ```
 
@@ -58,6 +61,9 @@ docs/spec/project.json
   - `source: "local"` → standards live in `dir` inside the `spec_repo` (single-repo / simplest case).
   - `source: "git"` → standards live in a **separate, team-owned repo** (e.g. a private Azure DevOps repo) given by `repo` + `ref` + `path`. Phases resolve it by cloning/pulling a shallow working copy into a cache (`.karvey/standards/`) and reading from there. This keeps the **method** (public plugin) and the **standards** (org's private data) decoupled and independently installable/versioned.
   - `by_layer` maps a layer to its standard file. Loaded as a **hard constraint** by `karvey-architecture` and `karvey-impl`; populated/refreshed by `karvey-standards`. The standards repo is **never** the public plugin repo. Optional but recommended; if absent, those phases fall back to `standards/_index.md` and, failing that, treat non-trivial pattern choices as gray zones to ask (never silently picked).
+- **`ops_repo`** (optional, multi-agent/multi-repo): the repo that holds the business decision log (`D-NN`) and the **parent** changes. Defaults to `spec_repo`. See `multi-agent.md`.
+- **`karvey_version`** (optional): the Karvey version the project expects every agent environment to have installed; checked by `karvey-health` (method readiness).
+- **`docs_pr`** (optional): the documentation-only PR lane — `ci` is the light job that runs (spec lint) and `merged_by` who merges them. See `multi-agent.md` §8.
 - **`enforcement`**: opt-in activation of the hooks in `enforcement.md`. `karvey-init` asks and `karvey-guard` manages them. Default both `false`.
 
 > **Note — `goal`**: the change's goal does NOT live in `project.json` but per change, in `prd.md` and in `spec.json` (`"goal"`). It sets the direction to pursue the outcome without stopping, while respecting the plan and security gates.

@@ -99,6 +99,12 @@ Ask (or infer from the pre-spec context):
 4. **Brief description**: 1-2 lines of the problem it solves
 5. **Goal (the change's north star)**: the concrete objective being pursued — what observable, verifiable result defines the success of this change. Ask: "What is this change's north star? What concrete result do we want to achieve?". Save it verbatim in `spec.json` (`goal`) and reflect it as a highlighted section in `prd.md`.
 
+6. **Change type**: `feature` (default) · `ops` (no application code: IAM, DNS, secrets, console config) · `hotfix` (urgent production fix). See `karvey/rules/multi-agent.md` §6–7.
+7. **Multi-repo / multi-agent links** (ask only if `project.json:repos` has more than one repo or an operations repo exists):
+   - Does this change belong to a **parent change** in another repo? → `links.parent = "{change-id}@{repo}"`, and append this change as `"{change-id}@{this-repo}"` to the parent's `links.children` (if the parent repo is out of reach, say so and leave the instruction for its owner). If this change **is** the parent, fill `links.children` as the children are created.
+   - Which **business decisions** (`D-NN`) is it based on? → `decisions: ["D-NN@{ops-repo}"]`.
+   - Does it consume work from other agents (design, design system, copy, legal)? → `inputs.{design|design_system|copy|legal} = "{repo} {path} @{commit}"`, pinning the commit actually read.
+
 > **Note — the goal provides persistence.** The `goal` remains the change's north star across all phases: each Karvey phase re-reads it on start to pursue the result without stopping until it's achieved, always respecting the plan and security gates.
 
 ### Step 6 — Create the directory structure
@@ -131,6 +137,14 @@ Write `docs/spec/changes/{change-id}/spec.json` with:
   "management": "{clickup|markdown}",
   "security_tier": {1-4},
   "phase": "init",
+  "type": "{feature|ops|hotfix}",
+  "links": { "parent": "{change-id@repo or empty}", "children": [] },
+  "decisions": ["{D-NN@repo}"],
+  "inputs": {
+    "design": "{repo path @commit — only the keys that apply}"
+  },
+  "iteration_count": 0,
+  "revision_history": [],
   "clickup": {
     "epic_id": "",
     "feature_ids": [],
@@ -145,10 +159,13 @@ Write `docs/spec/changes/{change-id}/spec.json` with:
     "tasks": { "generated": false, "approved": false },
     "infra": { "generated": false, "approved": false },
     "qa": { "generated": false, "approved": false },
-    "deploy": { "generated": false, "approved": false }
+    "deploy": { "generated": false, "approved": false },
+    "prod": { "by": "", "date": "", "ref": "" }
   }
 }
 ```
+
+Each approval, when granted, also records `by`, `role` (`human` | `ceo-delegate`), `date` and `ref` (`D-NN`) — see `karvey/rules/multi-agent.md` §4. Omit `links`/`decisions`/`inputs` values that don't apply (keep the keys empty), and the full schema is in `karvey/rules/living-specs.md`.
 
 ### Step 8 — Create prd.md
 
@@ -306,8 +323,11 @@ Files created:
 Management: {ClickUp Epic E{n} created | PLAN.md created}
 Security Tier: {N}
 
+Type: {feature | ops | hotfix}   Links: {parent → … | children: … | none}
+
 Next step:
-/karvey-requirements {change-id}
+/karvey-requirements {change-id}      (feature, ops — lite requirements)
+/karvey-iterate {change-id}           (hotfix — register BUG-NN + finding first)
 ```
 
 ## Safety

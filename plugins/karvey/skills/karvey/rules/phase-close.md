@@ -29,6 +29,7 @@ Leave a short, factual close comment on the unit of work.
 
 ### 4. Update spec.json + knowledge
 - Update `docs/spec/changes/{change-id}/spec.json` (`phase`, the relevant `approvals.*`, `updated_at`).
+- When the phase's gate was **approved**, record who and where on that approval: `approvals.<phase>.by`, `role` (`human` | `ceo-delegate`), `date`, `ref` (the `D-NN` of the decision log where the approval is written). An approval without `ref` in a multi-agent project is incomplete (see `multi-agent.md` §4).
 - Sync knowledge per `knowledge-sync.md`.
 
 ## Gate before advancing

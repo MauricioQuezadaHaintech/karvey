@@ -24,6 +24,8 @@ Verify `approvals.mockup.approved = true`. If not, stop.
 
 Check whether a `PRODUCT.md` or `DESIGN.md` exists in the project to understand the existing brand.
 
+**Design produced by another agent or repo** (see `karvey/rules/multi-agent.md` §3): if `spec.json:inputs.design` or `inputs.design_system` is set, read them **at the pinned commit** (`git -C {repo} show {commit}:{path}`). The design system is a hard input: tokens, type and components come from it and are not re-invented here — this phase maps them onto the change and scores the result. If a designer agent delivers a new version, update the pin (`inputs.design = "{repo} {path} @{new-commit}"`) and record the re-pin in `revision_history`; `karvey-iterate` decides the ripple. When **this** phase is the one producing the design for other repos, finish by giving the consumers the reference to pin: `{repo} docs/spec/changes/{change-id}/design-spec.md @{commit}`.
+
 ### Step 2 — Identify the design register
 
 Determine the product type:

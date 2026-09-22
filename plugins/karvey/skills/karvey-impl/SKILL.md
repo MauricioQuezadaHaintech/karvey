@@ -21,6 +21,7 @@ Read:
 - `docs/spec/changes/{change-id}/architecture.md`
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/deviations.md` (if it exists — deviations already approved at design time)
+- Pinned inputs from other agents (`spec.json:inputs` — design, design system, copy, legal), read **at the pinned commit**. Copy and legal texts are implemented verbatim from that commit; if the source moved on, stop and route it through `/karvey-iterate` instead of silently taking the newer version (`karvey/rules/multi-agent.md` §3).
 - **Engineering standards** for the layers being implemented: resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and read the relevant `standards/{layer}.md` (see `karvey/rules/engineering-standards.md`). These are a **hard constraint** on the code you write.
 
 Verify `approvals.tasks.approved = true`. If not, stop.
@@ -35,6 +36,11 @@ Identify the next pending task while respecting dependencies:
 - Do not execute [Backend] until its dependent [DB] is completed
 - Do not execute [Frontend] until its dependent [Backend] is completed
 - Tasks marked `(P)` can be executed in parallel with subagents
+- **`[human]` tasks are never executed by the agent** (see `karvey/rules/multi-agent.md` §5). When one is next:
+  1. Present its command, verification and rollback to the executor exactly as written in `tasks.md`.
+  2. Set it to **`awaiting-human`** — ClickUp: comment "🙋 AWAITING HUMAN: {executor} · {command}" + status/tag `awaiting-human`; Markdown: `🙋 awaiting-human` in `PLAN.md`.
+  3. Skip to the next task that does **not** depend on it. Dependents stay blocked.
+  4. When the human reports it done, run the **read-only verification** yourself. Matches the expected result → fill **Executed** (who · date · evidence) and close the task. Does not match → keep `awaiting-human` and report the difference; never "fix" it with privileged commands of your own.
 
 ### Step 3 — Start the task in management
 
@@ -155,6 +161,7 @@ Update `PLAN.md`: overall status `✅ Implementation complete`.
 ✅ Implementation complete
 
 Tasks executed: {N}/{N}
+Awaiting human: {N} ({task ids · executor}) — dependents blocked
 Total estimated time: {sum} | Actual time: {sum}
 
 Files created/modified:

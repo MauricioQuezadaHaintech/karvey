@@ -41,6 +41,10 @@ docs/spec/
   "management": "clickup",
   "security_tier": 2,
   "phase": "requirements",
+  "type": "feature",
+  "links": { "parent": "", "children": [] },
+  "decisions": [],
+  "inputs": {},
   "iteration_count": 0,
   "revision_history": [],
   "seed_backlog_id": "",
@@ -58,15 +62,25 @@ docs/spec/
     "infra": { "generated": false, "approved": false },
     "tasks": { "generated": false, "approved": false },
     "qa": { "approved": false },
-    "deploy": { "approved": false }
+    "deploy": { "approved": false },
+    "prod": { "by": "", "date": "", "ref": "" }
   }
 }
 ```
 
+### Multi-agent / multi-repo fields (see `multi-agent.md`)
+
+- `type` — `feature` (default) · `ops` (no application code: IAM, DNS, secrets, console config — short pipeline) · `hotfix` (fast lane: fix + `BUG-NN` + regression test in the same PR).
+- `links.parent` / `links.children` — `"{change-id}@{repo}"` references between a parent change (operations repo) and its per-repo children.
+- `decisions` — business decisions this change depends on, `"D-NN@{repo}"`. Requirements cite them.
+- `inputs` — pinned work from other agents: `design`, `design_system`, `copy`, `legal`, each `"{repo} {path} @{commit}"`. Only the applicable keys are present.
+- `approvals.<phase>` — besides `generated`/`approved`, records `by` (who), `role` (`human` | `ceo-delegate`), `date` and `ref` (the `D-NN` where the approval is written down).
+- `approvals.prod` — `{ by, date, ref }`; mandatory before the merge to the production branch; never delegated to an agent.
+
 ### Iteration fields
 
 - `iteration_count` — how many times this change went through a feedback loop (incremented by `karvey-iterate` on a `spec-gap` re-open). A high count is a signal the spec was weak — useful for the retro.
-- `revision_history` — append-only log of spec-revision sub-cycles: `[{ "date", "finding": "F-NN", "reason", "ripple": ["mockup","tasks"] }]`. Records *why* requirements were re-opened and which downstream phases were rippled.
+- `revision_history` — append-only log of spec-revision sub-cycles: `[{ "date", "finding": "F-NN", "reason", "ripple": ["mockup","tasks"] }]`. Records *why* requirements were re-opened and which downstream phases were rippled. Hotfix entries also carry `"bug": "BUG-NN"` and `"release": "x.y.z"`; an input re-pin carries `"input": "design"` and the old/new commit.
 - `seed_backlog_id` — if this change was promoted from a discovery backlog item (`BL-NN`), its id, for traceability (see `backlog.md`).
 
 > The `qa` and `deploy` approvals were already used by the qa/deploy skills; they are made explicit in the schema here. `infra` likewise. The `approvals.*.approved` flags are what `karvey-iterate` resets (only for the affected phases) during a spec-revision ripple.

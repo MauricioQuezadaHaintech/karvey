@@ -26,6 +26,7 @@ Read in parallel:
 Entry checks:
 - If `docs/spec/project.json` **does not exist** → **stop** and indicate to run `karvey-init` first (see `project-config.md`).
 - Verify `approvals.architecture.approved = true`. If it is **not** approved → **stop**: the architecture must be approved before generating infra.
+  - Exception: **`ops` changes** (`spec.json:type = "ops"`) come straight from lite requirements; architecture is required only if the plan changes trust boundaries. See Step 5-bis.
 
 ### Step 2 — Discovery of existing infra (idempotency)
 
@@ -162,6 +163,17 @@ Checklist format:
 
 **Gate:** **critical and high findings must be resolved** before continuing (fix the IaC/pipeline and re-review). Medium/low findings are documented in `infra.md`.
 
+### Step 5-bis — Operations plan (`ops` changes) and human-executed IAM
+
+For changes **without application code** (IAM, DNS, secrets rotation, quotas, console configuration — `spec.json:type = "ops"`, see `karvey/rules/multi-agent.md` §6), this phase produces a **command plan** instead of (or besides) IaC. Its lifecycle is **plan → execution → verification → archive**:
+
+1. **Plan** — in `infra.md`, an ordered table: step · exact command (or console path) · executor (agent / `[human]`) · read-only verification + expected output · rollback. Prefer IaC; when a step can only be done by a person (IAM grants on a production project, registrar DNS, destructive deletions), it becomes a `[human]` task in `karvey-tasks`.
+2. **Versioned script** — every IAM/permission change a human runs lives as a script in the repo (e.g. `infra/iam/{change-id}.sh`, idempotent, with its rollback counterpart). The human runs **that** script, not an ad-hoc command, so what was executed is reviewable in git.
+3. **Verification as an infra test** — for each binding the script grants, write a read-only check that asserts the **binding itself**, not only its effect (e.g. `gcloud projects get-iam-policy {project} --flatten=bindings --filter="bindings.role={role} AND bindings.members={member}"`, `az role assignment list --assignee … --role …`, `aws iam list-attached-role-policies …`). It lives next to the script (e.g. `infra/iam/{change-id}.verify.sh`) and `karvey-test` runs it as the change's infrastructure test. An effect-only test (e.g. "the deploy worked") does not prove least privilege and does not detect over-granting.
+4. **Execution + verification** are recorded per step (who, when, output). The change goes to `archive` only when every verification passes.
+
+The infra security review (Step 5) applies to the plan too: least privilege per binding, no owner-level roles without justification.
+
 ### Step 6 — Hard restrictions (apply during all steps)
 
 - **NEVER apply to PRODUCTION** (`terraform apply` / `az deployment ... create` / `pulumi up` against prod) without an **explicit human OK**.
@@ -228,6 +240,7 @@ Hard gates that are **NEVER** skipped:
 
 - **No prod without a human OK**: never apply IaC nor deploy to production without explicit human approval. The actual deploy is triggered by the pipeline (push to `dev`, merge to `master`), never a manual apply (see `deploy-workflow.md`).
 - **No hardcoded secrets**: no secret in `.tf`/`.bicep`/Pulumi/YAML nor in pipeline variables in cleartext. Everything via Key Vault / Secret Manager / Secrets Manager.
+- **Human-executed steps**: IAM grants, destructive deletions and console-only changes that the agent must not run are `[human]` tasks with command, verification and rollback — the agent prepares and verifies, it does not execute them.
 - **Idempotency**: never recreate existing infra; only create what is missing or modify what is needed. Respect the discovery from Step 2.
 - **Zero downtime**: no infra change may cause a service outage.
 - **Security gate**: critical/high findings from Step 5 block progress until resolved.

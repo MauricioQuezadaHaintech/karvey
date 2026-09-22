@@ -2,6 +2,34 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.7.0] - 2026-09-18
+
+### Added
+- **New shared rule `rules/multi-agent.md`** — the minimum contract for work split across several agents and repos. Every cross-agent or cross-repo dependency becomes a pinned, verifiable reference in `spec.json`. Registered in the orchestrator's rules table.
+- **Parent / child changes** (`spec.json:links.parent` / `links.children`, `"{change-id}@{repo}"`): a change that spans repos (web + app + DNS + cloud) has a parent in the operations repo and one child per repo. `karvey-init` asks for and fills both sides; the orchestrator shows the children's phases and closes the parent only when every child is deployed (#1).
+- **Business decisions linked to changes** (`spec.json:decisions: ["D-NN@repo"]`): requirements cite the decision they come from, and contradicting a linked decision is a blocking review-gate failure in `karvey-requirements` (#2).
+- **`[human]` tasks** in `karvey-tasks` with executor, exact command, read-only verification, rollback and an **Executed** record; new **`awaiting-human`** state in `karvey-impl` — the agent prepares and verifies, the human executes, only dependents wait (#3).
+- **Pinned inputs from non-programmer agents** (`spec.json:inputs.design | design_system | copy | legal`, `"{repo} {path} @{commit}"`): read at the pinned commit by `karvey-requirements`, `karvey-design-graphic` and `karvey-impl`; input drift is routed by `karvey-iterate` as an automatic ripple candidate (#4, #11).
+- **`approvals.prod = { by, date, ref: D-NN }`** — mandatory in `karvey-deploy` before the merge to the production branch, committed in the repo, never delegated to an agent. Keeps the prod approval in git history where the platform cannot enforce required reviewers (#5).
+- **Change type `ops`** (`spec.json:type`) for changes without application code (IAM, DNS, secrets, console config): lite requirements → command plan in `karvey-infra` (Step 5-bis) → `[human]`/`[Infra]` tasks → execution → verification → archive (#6).
+- **Hotfix lane** (`type: "hotfix"`) in `karvey-iterate` and `karvey-deploy`: **fix + `BUG-NN` + regression test in the same PR**, each chained same-day hotfix its own release, recorded in `revision_history` with `bug` and `release`; an interrupted production E2E run is re-run in full after the hotfix (#7, #13).
+- **Documentation-only PR lane** in `karvey-deploy` Step 0-bis + `deploy-workflow.md`: light CI (spec lint) instead of build/test/deploy, merger declared in `project.json:docs_pr.merged_by`, never triggers a deploy (#8).
+- **Method readiness checks in `karvey-health`** (Step 6, separate from the 0–10 code score): Karvey skills installed in the agent's environment at the expected `project.json:karvey_version`, with install instructions per environment (#9); every `inputs.* @commit`, `links` and `decisions` reference exists, and drift of the source repo is flagged (#11).
+- **IAM binding verification as an infrastructure test**: `karvey-infra` requires a versioned, idempotent script for human-executed IAM plus a read-only `.verify.sh` that asserts the binding itself (member · role · resource); `karvey-test` Step 4-bis runs it and records it in `test_evidence.md` (#12).
+
+### Changed
+- **Approvals record who and where** (`approvals.<phase>.by`, `role: human | ceo-delegate`, `date`, `ref: D-NN`) — applied at every gate through `phase-close.md` and `karvey-requirements` (#10).
+- `spec.json` schema (`living-specs.md`, `karvey-init`) gains `type`, `links`, `decisions`, `inputs`, `approvals.prod`; `project.json` (`project-config.md`) gains optional `ops_repo`, `karvey_version`, `docs_pr`.
+- Orchestrator: "Method directory structure" documents where parent changes and the decision log live and the cross-repo reference formats; the status view shows type, links, decisions, inputs, `awaiting-human` tasks and prod approval; routing notes for `ops`, `hotfix` and parent changes.
+- `enforcement.md`: a note — **outside the method** — on approval markers with expiry in the user's own hooks (how a human delegates approvals to a coordinating agent or extends a marker is the user's environment, not Karvey) (#14).
+
+### Why
+A real project ran with **four specialist agents in four repos** (designer, web, app, operations), **a browser-operator agent**, and **a human who runs the IAM** grants the agents must not run. Audit D-47 found the code itself in good shape — every web change had its test in CI — but the method had no place for what crossed agent and repo boundaries: a change spanning web + app + DNS + cloud had no parent; business decisions (`D-NN`) were not linked to requirements; design, copy and legal arrived as "the latest file" instead of a pinned commit; human-executed steps lived in chat; prod approvals were not recorded in the repo (no GitHub Enterprise to enforce reviewers); chained same-day hotfixes and a hotfix during a production E2E run had no lane; docs-only PRs had no defined CI or merger; and one agent environment did not even have the skills installed. The records drifted as a result (`revision_history` stopped at 1.0.9, ripple out of date). This release makes each of those dependencies an explicit, verifiable field.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5
+> 🔗 Karvey phase: method refinement (multi-agent/multi-repo) · Apache 2.0
+
 ## [3.6.0] - 2026-09-08
 
 ### Added
