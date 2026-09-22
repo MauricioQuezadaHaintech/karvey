@@ -60,16 +60,16 @@
     "semantic_hash": "4ff7275effbf12549fe2075de6b4f480"
   },
   "CHANGELOG.md": {
-    "mtime": 1790100935.1012955,
-    "seen": 1790101421.2678587,
-    "ast_hash": "6961e9cc8b56f72a33be57040b35c0f9",
-    "semantic_hash": "6961e9cc8b56f72a33be57040b35c0f9"
+    "mtime": 1790101478.2358894,
+    "seen": 1790101924.1510692,
+    "ast_hash": "d035097a6cf374462a1ca935ff4af4eb",
+    "semantic_hash": "d035097a6cf374462a1ca935ff4af4eb"
   },
   "README.md": {
-    "mtime": 1790100935.1012955,
-    "seen": 1790101421.2678597,
-    "ast_hash": "e4758e5749e8b196f8b271587ad01281",
-    "semantic_hash": "e4758e5749e8b196f8b271587ad01281"
+    "mtime": 1790101478.2358894,
+    "seen": 1790101924.151071,
+    "ast_hash": "cebeb1dc93de7e6aac900e95c8242706",
+    "semantic_hash": "cebeb1dc93de7e6aac900e95c8242706"
   },
   "TRADEMARK.md": {
     "mtime": 1789235373.2879353,
@@ -78,10 +78,10 @@
     "semantic_hash": "de37f2c8e546101d13369736ac46507c"
   },
   "docs/spec/backlog.md": {
-    "mtime": 1790100935.1012955,
-    "seen": 1790101421.2678614,
-    "ast_hash": "dfc645f1f04e9c613ae1967d8df444fa",
-    "semantic_hash": "dfc645f1f04e9c613ae1967d8df444fa"
+    "mtime": 1790101478.2358894,
+    "seen": 1790101924.1510735,
+    "ast_hash": "5f7e55b2430bb95019de1a20cc45fb43",
+    "semantic_hash": "5f7e55b2430bb95019de1a20cc45fb43"
   },
   "docs/spec/changes/team-layer/findings.md": {
     "mtime": 1790100322.6700416,
