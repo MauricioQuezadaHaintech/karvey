@@ -19,3 +19,6 @@ __pycache__/
 *.pyc
 .idea/
 .vscode/
+
+# graphify — machine-specific interpreter path (the rest of graphify-out/ is versioned)
+graphify-out/.graphify_python
