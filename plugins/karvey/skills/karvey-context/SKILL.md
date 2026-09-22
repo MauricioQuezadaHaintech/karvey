@@ -160,6 +160,10 @@ Deployed versions per component/repo (top of CHANGELOG.md):
     {repo1}: {x.y.z}   {repo2}: {x.y.z}   {repo3}: {no CHANGELOG}
     (if local git is available: "{repo}: {N} commits in {integration} not released to {production}")
 
+LIVE BRANCHES  (read-only — see deploy-workflow.md → Branch hygiene)
+    {repo}: {branch}  — ABSORBED into {production} → should be deleted (karvey-deploy 2.12)
+    {repo}: {branch}  — {N} unreleased commits · PR #{n} · last commit {date}
+
 ACTIVE SPRINT
 ━━━━━━━━━━━━
 {verify with clickup_get_workspace_hierarchy or indicate "not applicable (markdown)"}

@@ -27,7 +27,8 @@ docs/spec/project.json
   "branch_flow": {
     "feature_prefix": "feature/",
     "integration": "dev",
-    "production": "master"
+    "production": "master",
+    "protected_branches": ["release/*"]
   },
   "standards": {
     "source": "git",
@@ -56,7 +57,7 @@ docs/spec/project.json
 - **`iac_tool`**: `none` means infra is managed manually; `karvey-infra` still generates/validates the CI/CD pipelines.
 - **`knowledge_sync`**: see `knowledge-sync.md`.
 - **`targets`**: the project's platforms (at least 1). Defines how each phase verifies/designs. See `targets.md`. Stack-agnostic: never assume `web` by default.
-- **`branch_flow`**: branch convention; respected by `karvey-impl`, `karvey-qa` and `karvey-deploy`. Default: `feature/*` → `dev` → `master`.
+- **`branch_flow`**: branch convention; respected by `karvey-impl`, `karvey-qa` and `karvey-deploy`. Default: `feature/*` → `dev` → `master`. `protected_branches` (optional, globs) lists long-lived branches besides `integration`/`production` that the branch-hygiene cleanup never deletes (see `deploy-workflow.md` → *Branch hygiene*).
 - **`standards`**: engineering golden paths per layer (see `engineering-standards.md`). Two source modes:
   - `source: "local"` → standards live in `dir` inside the `spec_repo` (single-repo / simplest case).
   - `source: "git"` → standards live in a **separate, team-owned repo** (e.g. a private Azure DevOps repo) given by `repo` + `ref` + `path`. Phases resolve it by cloning/pulling a shallow working copy into a cache (`.karvey/standards/`) and reading from there. This keeps the **method** (public plugin) and the **standards** (org's private data) decoupled and independently installable/versioned.

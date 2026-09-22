@@ -211,6 +211,19 @@ az repos pr update --id {pr} --status completed # Azure Repos ⇒ triggers PROD 
 
 **2.11 — Post-deploy canary in PROD (see Step 2-bis):** after the merge to `master`, wait for the PROD pipeline and run the **canary loop** over the actual production runtime (`prod_url` / health from Step 1.5). It is the direct reinforcement of zero-downtime: if the canary detects a regression, **alert and recommend an immediate rollback**.
 
+**2.12 — Branch hygiene: delete what production absorbed (see `karvey/rules/deploy-workflow.md` → *Branch hygiene*).**
+Once PROD is merged and the canary is OK, no branch of this change stays alive. For each repo:
+```bash
+git fetch origin --prune
+git branch -r --merged origin/{production}      # + the cherry / tree checks of the rule for squash or cherry-pick
+git push origin --delete feature/{change-id}     # only if absorbed
+git branch -d feature/{change-id}
+git fetch origin --prune
+```
+Extend the check to the **other** non-protected branches of the repo: absorbed ones are deleted (closing their
+PR if still open, with a comment naming what absorbed them); **not absorbed ones are never deleted** — list
+them with their unique commits and PR for the human to decide. Report deleted / kept counts.
+
 ### Step 2-bis — Post-deploy canary loop (zero-downtime reinforcement)
 
 Inspired by gstack's `/canary` and adapted to the target's actual runtime (see `karvey/rules/targets.md`). It runs **after each deploy** (in DEV after 2.7 and in PROD after 2.11), pointing at the just-deployed environment (`dev_url`/`prod_url` and health from Step 1.5). It watches that the deploy did not degrade the service.
@@ -255,6 +268,7 @@ Only after the 6 → the pipeline deploys dev. For prod, repeat the verification
 - **Hotfix = fix + BUG-NN + regression test in the same PR.** Never a bare fix.
 - **Docs-only PRs** run the light CI and never trigger a deploy.
 - **NEVER deploy without bumping the version** (semver + CHANGELOG per component and repo).
+- **NEVER leave an absorbed branch alive, NEVER delete one that is not absorbed** (2.12). Absorption is verified (`--merged` / `cherry` / tree test), never assumed.
 - **Zero downtime**: the deployment cannot cause a service outage; the post-deploy canary reinforces this and, on a prod regression, recommends a rollback (via pipeline, never manual).
 
 ### Step 5 — Record in management
@@ -310,6 +324,7 @@ QA gate: OK (0 critical, 0 high) · Tests: PASS · Version bumped + CHANGELOG: O
 Prod approval: {by} · {date} · {D-NN}   Type: {feature | ops | hotfix (BUG-NN, release x.y.z)}
 Deploy platform: {Fly | Render | Vercel | Netlify | Azure | GitHub Actions | ...} · Prod URL: {prod_url}
 Post-deploy canary: DEV {OK / REGRESSION} · PROD {OK / REGRESSION → rollback recommended / N/A}
+Branches: deleted {N} ({list}) · kept {N} ({branch}: not absorbed, {N} commits, PR #{n})
 {If there is a frontend} Version visible in UI: {yes / recommended to the user}
 
 Management: {[Deploy] {change-id} in ClickUp | PLAN.md updated}
