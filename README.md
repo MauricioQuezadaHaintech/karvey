@@ -99,7 +99,7 @@ Skills never assume a tool or a status name: they speak in logical states and th
 
 ## Method explainer (`docs/karvey.html`)
 
-A self-contained page (no external requests) that complements this README: what the method is, the meaning of the name (*Karvey* = **Afán**, from the Ona language of the Selknam people of Patagonia), and a map of the whole plugin — orchestrator, phases, support skills, rules, hooks, artifacts and team settings. Open it locally in any browser.
+A self-contained page (no external requests), **in English by default with a switch to Español, Português, Deutsch and 中文** (`?lang=es|pt|de|zh`, remembered per browser), that complements this README: what the method is, the meaning of the name (*Karvey* = **Afán**, from the Ona language of the Selknam people of Patagonia), and a map of the whole plugin — orchestrator, phases, support skills, rules, hooks, artifacts and team settings. Open it locally in any browser.
 
 ## Hooks — what runs on install and what is opt-in
 
@@ -118,7 +118,7 @@ A self-contained page (no external requests) that complements this README: what 
 - **Discovery backlog** (Markdown + ClickUp) so emergent ideas become future change-ids, swept at archive.
 - **Mandatory phase-close** ritual: every phase/task updates management (ClickUp comment + status + cascade) so nothing goes stale.
 - **Ordered deployment** `feature → dev → PR master`, pipeline-triggered, verifying the **PR gates** (CI + branch policies) before the prod OK, with **canary** post-deploy and **branch hygiene** (absorbed branches deleted, unreleased ones reported — nothing left in branches).
-- **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability.
+- **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability; every deploy bumps the version, and a front shows the **dev version in DEV** (`x.y.z-dev.N+sha`) and the **release version in PROD**, read from the version file and checked by the canary.
 - **Multi-agent & multi-repo work**: parent/child changes across repos, `D-NN` decisions and pinned inputs (`repo path @commit`) from design/copy/legal agents, approvals that record who and where, `[human]` tasks with verification and rollback, `ops` and `hotfix` change types, light CI for docs-only PRs.
 - **Optional team layer** (`rules/team.md`): roles, a **rotation handoff captured by commands** (not composed from memory), census, decision log with a cross-check that stops you re-asking what was already decided, and **cost measurement**. Opt-in, and the rule opens by telling you when *not* to use it: the measured run behind it cost ≈US$1,000 over 3 days with 6 agents and ended back on a single agent.
 - **Verification rules before reporting "done"** (`rules/verification.md`): the failure modes that make a green report false — a citation is not the thing cited, exit 0 is not success, a green test over uncalled code, a filename that does not identify a version.

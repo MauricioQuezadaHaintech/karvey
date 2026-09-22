@@ -7,7 +7,7 @@
     "Backend"
   ],
   "created_at": "2026-09-22T19:00:00Z",
-  "updated_at": "2026-09-22T20:30:00Z",
+  "updated_at": "2026-09-22T22:00:00Z",
   "language": "en",
   "management": "markdown",
   "security_tier": 1,
@@ -19,8 +19,22 @@
   },
   "decisions": [],
   "inputs": {},
-  "iteration_count": 0,
-  "revision_history": [],
+  "iteration_count": 1,
+  "revision_history": [
+    {
+      "date": "2026-09-22",
+      "by": "Mauricio Quezada Ibáñez",
+      "reason": "owner feedback: HTML must be English by default with a language switch (es/pt/de/zh); the method missed the dev-vs-prod visible version",
+      "added": [
+        "REQ-ADP-031"
+      ],
+      "ripple": [
+        "docs/karvey.html",
+        "rules/versioning.md",
+        "karvey-deploy 2.4-bis/2.7/2.11"
+      ]
+    }
+  ],
   "seed_backlog_id": "BL-02",
   "approvals": {
     "requirements": {

@@ -2,6 +2,20 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.11.0] - 2026-09-22
+
+### Added
+- **Visible version by environment** (`rules/versioning.md`, `karvey-deploy` 2.4-bis): a front shows the **dev version in DEV** — the bumped version as a semver pre-release + build metadata, `v3.10.1-dev.42+74571ae`, with a visible `DEV` mark — and the **release version in PROD**, clean `v3.10.1`. The version is read from the **version file** at build time, never from a pipeline variable (it goes stale silently: the label lies while the code is current); the pipeline stage only provides environment, build number and commit.
+- **The canary checks the visible version** (`karvey-deploy` 2.7 / 2.11): DEV must show `-dev` of the version just bumped, PROD exactly the released one; a mismatch is a finding (stale build, wrong stage variable, wrong version source).
+- **`docs/karvey.html` is multilingual** (REQ-ADP-031): **English by default** (what renders without JavaScript) with a switch to **Español · Português · Deutsch · 中文**, all in the same self-contained file; `?lang=xx` selects a language and the choice is remembered per browser. Ids are namespaced per language (`en-…`, `es-…`), filters and table-of-contents highlighting work per block, CJK font fallbacks for Chinese. New card on version bump + visible version, in every language. The version history now opens by explaining why it starts at 3.0.0: pure whim — Paáutin, HainTech's flagship software, was at version 3 when the plugin was built; there never was a 1.x or 2.x.
+
+### Why
+Owner feedback on 3.10.0: the page had to be consistently in English with a language switch, and the method's "show the version in the front" recommendation did not say that DEV and PROD must show different things — which is exactly how a stuck pipeline variable once made a production front display an old version while running new code.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5 (1M context)
+> 🔗 Karvey phase: change `team-adapters` iteration 1 (spec revision REQ-ADP-031 + versioning rule) · Apache 2.0
+
 ## [3.10.0] - 2026-09-22
 
 ### Added — team settings on first use (`team-adapters`)

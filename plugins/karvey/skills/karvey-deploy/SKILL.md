@@ -140,7 +140,7 @@ git pull origin {integration}     # default: dev
 3. **Document in `CHANGELOG.md` per component AND per repository** (`changelog-policy.md` format): an entry for the new version with the **responsible human** (name + contact, never empty nor "AI"), the **AI model** that assisted (e.g., `Claude Opus 4.8`), and the **why** of the change (not just the what). Indicate the incremented semver segment and why.
 4. **(If the repo has a frontend) recommend a version visible in the UI** — see Step 2.4-bis.
 
-**2.4-bis — Version visible in the front (recommendation).** If any `target` in `project.json` is `web`/mobile/desktop with a UI (check `project.json:targets`), **recommend to the user** exposing the version in the interface (footer, "About" screen) for visible traceability in production: inject the version at build time (e.g., `VITE_APP_VERSION` or the stack's equivalent) and show it in a discreet but accessible place. If the version is already visible, just confirm it was updated with the bump.
+**2.4-bis — Version visible in the front (recommendation).** If any `target` in `project.json` is `web`/mobile/desktop with a UI (check `project.json:targets`), **recommend to the user** exposing the version in the interface (footer, "About" screen), **differentiated by environment** (`karvey/rules/versioning.md`): **DEV shows the dev version** (`{version}-dev.{build}+{sha}` + a visible `DEV` mark) and **PROD shows the release version** (`{version}`). The version is read from the version file at build time — never from a pipeline variable, which goes stale silently; the pipeline stage only provides the environment, build number and commit. If the version is already visible, confirm it was updated with the bump and that it differs by environment.
 
 **2.5 — Merge feature → integration:**
 ```bash
@@ -153,7 +153,7 @@ git merge feature/{change-id}
 git push origin {integration}     # dev → triggers DEV pipeline
 ```
 
-**2.7 — Post-deploy canary in DEV (see Step 2-bis):** wait for the pipeline to deploy and run the **canary loop** over the actual DEV runtime (green pipeline build + health monitoring). Do not advance to prod if DEV did not end up healthy or if the canary detects a regression.
+**2.7 — Post-deploy canary in DEV (see Step 2-bis):** wait for the pipeline to deploy and run the **canary loop** over the actual DEV runtime (green pipeline build + health monitoring). Do not advance to prod if DEV did not end up healthy or if the canary detects a regression. **If there is a front, check the visible version:** DEV must show `-dev` of the version just bumped (`{version}-dev.…`); anything else is a finding (stale build, wrong stage variable, version read from the wrong source).
 
 **2.8 — Before the PR, `pull` production:**
 ```bash
@@ -209,7 +209,7 @@ gh pr merge --merge                            # GitHub    ⇒ triggers PROD pip
 az repos pr update --id {pr} --status completed # Azure Repos ⇒ triggers PROD pipeline
 ```
 
-**2.11 — Post-deploy canary in PROD (see Step 2-bis):** after the merge to `master`, wait for the PROD pipeline and run the **canary loop** over the actual production runtime (`prod_url` / health from Step 1.5). It is the direct reinforcement of zero-downtime: if the canary detects a regression, **alert and recommend an immediate rollback**.
+**2.11 — Post-deploy canary in PROD (see Step 2-bis):** after the merge to `master`, wait for the PROD pipeline and run the **canary loop** over the actual production runtime (`prod_url` / health from Step 1.5). It is the direct reinforcement of zero-downtime: if the canary detects a regression, **alert and recommend an immediate rollback**. **If there is a front, check the visible version:** PROD must show exactly the released `{version}`, with no `-dev` suffix and no DEV mark.
 
 **2.12 — Branch hygiene: delete what production absorbed (see `karvey/rules/deploy-workflow.md` → *Branch hygiene*).**
 Once PROD is merged and the canary is OK, no branch of this change stays alive. For each repo:
