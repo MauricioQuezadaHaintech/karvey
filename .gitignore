@@ -20,5 +20,6 @@ __pycache__/
 .idea/
 .vscode/
 
-# graphify — machine-specific interpreter path (the rest of graphify-out/ is versioned)
+# graphify — machine-specific files: interpreter path and mtime stat index (the rest of graphify-out/ is versioned)
 graphify-out/.graphify_python
+graphify-out/cache/stat-index.json
