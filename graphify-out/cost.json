@@ -13,8 +13,15 @@
       "output_tokens": 0,
       "files": 3,
       "note": "re-extract CHANGELOG/README/backlog; subagent total recorded as input"
+    },
+    {
+      "date": "2026-09-22T19:42:50.310842+00:00",
+      "input_tokens": 323270,
+      "output_tokens": 0,
+      "files": 34,
+      "note": "--update 3.10.0; subagent totals recorded as input"
     }
   ],
-  "total_input_tokens": 555065,
+  "total_input_tokens": 878335,
   "total_output_tokens": 0
 }

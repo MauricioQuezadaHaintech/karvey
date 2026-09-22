@@ -24,7 +24,7 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **Systemic graphic design** with 0-10 scoring: OKLCH colors, typography, spacing, per platform (WCAG/HIG/Material)
 - **Enterprise architecture**: layered security Tiers 1–4, diagrams, edge cases, trust boundaries, cloud infrastructure
 - **Infrastructure as code + CI/CD**: IaC and pipelines per cloud and git platform, with a security review
-- **10–30 min AI tasks** + ClickUp or Markdown management
+- **10–30 min AI tasks** + management in the **team's tracker** (ClickUp, Jira, Linear, Azure Boards, GitHub Projects, spreadsheet) or Markdown `PLAN.md` — tool and status flow are **team settings** in `project.json`, spoken as logical states `todo | in_progress | review | done | blocked` (`rules/management-adapters.md`); notifications go to the **team's channel** (`rules/notifications.md`)
 - **DB/Backend/Frontend + E2E testing** in the target's real runtime, with benchmark and regression
 - **9-dimension QA**: includes a blocking security gate (OWASP+STRIDE), cross-model second opinion, visual audit, and standards conformance (golden path + approved deviations)
 - **Orderly deployment**: feature branch → dev → PR to master, triggered by the pipeline, verifying the PR's gates (CI + branch policies) before the prod OK, with post-deploy canary
@@ -32,8 +32,8 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **Semver versioning + CHANGELOG** per component/repo, with human + AI model traceability
 - **Persistent goal**: a north star that every phase re-reads so it never stops until the result is achieved, while respecting the gates
 - **Spiral, not a line — iteration loop**: testing/QA/real-runtime surface defects and new ideas; the **iteration engine** (`karvey-iterate`) routes each finding back to its edge (`bug` → incident tracker + QA micro-loop · `spec-gap` → re-open requirements · `emergent` → discovery backlog) so **nothing is dropped**. See `rules/iteration-loop.md`.
-- **Incident tracker** (`BUG-NN` with state history) + **discovery backlog** (Markdown + ClickUp) so bugs and post-cycle ideas stay traceable (`rules/incident-tracking.md`, `rules/backlog.md`)
-- **Phase-close ritual**: every phase/task closes with a mandatory management update (ClickUp comment + status + cascade) so tasks never go stale — see `rules/phase-close.md`
+- **Incident tracker** (`BUG-NN` with state history) + **discovery backlog** (Markdown + the team's tracker) so bugs and post-cycle ideas stay traceable (`rules/incident-tracking.md`, `rules/backlog.md`)
+- **Phase-close ritual**: every phase/task closes with a mandatory management update (tracker comment + logical status + cascade) so tasks never go stale — see `rules/phase-close.md`
 - **Multi-agent and multi-repo work**: parent/child changes across repos, business decisions (`D-NN`) and pinned inputs from design/copy/legal agents (`repo path @commit`) in `spec.json`, approvals that cite who approved and where, `[human]` tasks for steps only a person may run, `ops` and `hotfix` change types, light CI for docs-only PRs — see `rules/multi-agent.md`
 - **Cross-cutting layer of support skills** (investigate, second-opinion, health, browse, etc.) callable at any time
 - **Agent handoff on every rotation** (`karvey-checkpoint`): identity, standing rules, board, closing checklist, **measured** repo state and scheduled tasks — for a single agent as much as for a team, and reinjected by the plugin's session hook, which also contrasts it against the live repos
@@ -45,13 +45,13 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 
 ```
 PHASE 0 ─── /karvey-grill          → Pre-spec + 10-star reframe (+ platform/cloud)
-PHASE 1 ─── /karvey-init           → change-id, project.json, prd.md, spec.json, ClickUp Epic
+PHASE 1 ─── /karvey-init           → change-id, project.json (+ team settings), prd.md, spec.json, Epic
 PHASE 2 ─── /karvey-requirements   → EARS requirements (trace to the PRD), spec-delta, approval
 PHASE 3 ─── /karvey-mockup         → Navigable 3–4 levels + spec↔mockup validation (+ shotgun mode)
 PHASE 4 ─── /karvey-design-graphic → OKLCH visual system + 0-10 scoring + visual components catalog
 PHASE 5 ─── /karvey-architecture   → Architecture, Tiers, diagrams, edge cases, Cloud Infra
 PHASE 6 ─── /karvey-infra          → IaC + CI/CD pipelines + infra security review
-PHASE 7 ─── /karvey-tasks          → 10–30 min tasks, E{n}.F{n}.T{n}, ClickUp sprint
+PHASE 7 ─── /karvey-tasks          → 10–30 min tasks, E{n}.F{n}.T{n}, team's tracker / sprint
 PHASE 8 ─── /karvey-impl           → Implementation DB→Backend→Frontend, commits + CHANGELOG
 PHASE 9 ─── /karvey-test           → Unit + E2E in the target's real runtime, benchmark, regression
 PHASE 10 ── /karvey-qa             → QA 9D + blocking security gate, REVISION_PR
@@ -162,8 +162,8 @@ Run the planning phases (0→5) in sequence, chaining approvals, escalating to t
 Pre-spec interrogation + "10-star product" reframe (optional). Produces a synthesis (input to the PRD). Asks about git platform, cloud, IaC.
 
 ### PHASE 1: /karvey-init
-Creates/reads `docs/spec/project.json` (git, cloud, IaC, knowledge_sync, targets, repos, spec_repo, branch_flow, enforcement). Captures the **goal**. Generates `change-id`, `prd.md`, `spec.json`. ClickUp Epic or `PLAN.md`.
-**Rules:** `project-config.md`, `clickup-protocol.md`, `living-specs.md`, `knowledge-sync.md`, `enforcement.md`
+Creates/reads `docs/spec/project.json` (git, cloud, IaC, knowledge_sync, targets, repos, spec_repo, branch_flow, enforcement) plus the **team settings** asked once — `notifications` (channel) and `management` (tool + status map); `/karvey-init --settings` re-runs only that step. Captures the **goal**. Generates `change-id`, `prd.md`, `spec.json`. Epic in the team's tracker or `PLAN.md`.
+**Rules:** `project-config.md`, `management-adapters.md`, `notifications.md`, `clickup-protocol.md`, `living-specs.md`, `knowledge-sync.md`, `enforcement.md`
 
 ### PHASE 2: /karvey-requirements
 EARS requirements, each one **traced to a section of the PRD**. `requirements.md`, `spec-delta.md`.
@@ -185,7 +185,7 @@ IaC (Terraform/Bicep/Pulumi) + CI/CD pipelines (GitHub Actions/Azure Pipelines),
 
 ### PHASE 7: /karvey-tasks
 10–30 min tasks, `E{n}.F{n}.T{n} [DB/Backend/Frontend/Infra]`. Reads `architecture.md` + `infra.md`. `tasks.md`.
-**Rules:** `clickup-protocol.md`
+**Rules:** `management-adapters.md`, `clickup-protocol.md`
 
 ### PHASE 8: /karvey-impl
 Executes tasks on `feature/{change-id}` (never dev/master). Version bump + CHANGELOG per commit (human + AI model + why).
@@ -196,12 +196,12 @@ Unit + E2E in the target's **real runtime**, performance benchmark, regression t
 **Rules:** `targets.md`, `iteration-loop.md`, `incident-tracking.md`, `phase-close.md`
 
 ### PHASE 10: /karvey-qa
-9-dimension QA: Security (blocking gate, OWASP+STRIDE), Errors, Consistency, Impact, Env vars, Versioning (CHANGELOG), cross-model Second-opinion, Visual audit, Standards conformance (golden path + `deviations.md`). Appends findings to `findings.md`; on open `bug`/`spec-gap` it routes via `/karvey-iterate` instead of advancing. `REVISION_PR_{n}_{date}.md`.
-**Rules:** `changelog-policy.md`, `versioning.md`, `iteration-loop.md`, `phase-close.md`
+9-dimension QA: Security (blocking gate, OWASP+STRIDE), Errors, Consistency, Impact, Env vars, Versioning (CHANGELOG), cross-model Second-opinion, Visual audit, Standards conformance (golden path + `deviations.md`). Appends findings to `findings.md`; on open `bug`/`spec-gap` it routes via `/karvey-iterate` instead of advancing. `REVISION_PR_{n}_{date}.md`. Notifies the team's channel (event `qa`).
+**Rules:** `changelog-policy.md`, `versioning.md`, `iteration-loop.md`, `phase-close.md`, `management-adapters.md`, `notifications.md`
 
 ### PHASE 11: /karvey-deploy
-Orderly per-repo flow: pull → feature → pull → merge dev (DEV pipeline) → canary → pull → PR dev→master → verify the PR's gates (CI + branch policies) → PROD with human OK → canary → **branch hygiene** (delete absorbed branches, report the rest). Detects the git host (`gh` / `az repos` / `glab`). Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended). Never deploy manually.
-**Rules:** `deploy-workflow.md`, `versioning.md`, `changelog-policy.md`, `project-config.md`
+Orderly per-repo flow: pull → feature → pull → merge dev (DEV pipeline) → canary → pull → PR dev→master → verify the PR's gates (CI + branch policies) → PROD with human OK → canary → **branch hygiene** (delete absorbed branches, report the rest). Detects the git host (`gh` / `az repos` / `glab`). Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended). Never deploy manually. Notifies the team's channel (event `deploy`).
+**Rules:** `deploy-workflow.md`, `versioning.md`, `changelog-policy.md`, `project-config.md`, `management-adapters.md`, `notifications.md`
 
 ### PHASE 12: /karvey-archive
 Merge spec-deltas into living specs, archive, close the Epic. **Backlog sweep:** review open `emergent` items from this change and offer to promote them into new `change-id`s (so post-cycle discoveries don't evaporate). Recommended optional: `/karvey-retro` + `/karvey-docs`.
@@ -217,7 +217,7 @@ In multi-repo work each repo with its own code keeps its own `docs/spec/` with *
 
 ```
 docs/spec/
-├── project.json                       ← Config (git, cloud, IaC, targets, knowledge_sync, repos, enforcement)
+├── project.json                       ← Config (git, cloud, IaC, targets, knowledge_sync, repos, enforcement, notifications, management)
 ├── backlog.md                         ← Discovery backlog (emergent items → future change-ids)
 ├── incidents-index.md                 ← Global index of all BUG-NN across repos + current state
 ├── standards/                         ← Engineering golden paths ("how we build here", per layer)
@@ -232,7 +232,7 @@ docs/spec/
     ├── infra.md  · tasks.md  · checkpoint.md
     ├── findings.md                    ← Triage inbox (bug/spec-gap/emergent) routed by karvey-iterate
     ├── deviations.md                  ← Approved departures from engineering standards (design mode)
-    ├── PLAN.md (if markdown)  · IMPLEMENTED
+    ├── PLAN.md (Markdown tracker)  · IMPLEMENTED
     └── archive/{YYYY-MM-DD}-{change-id}/
 ```
 
@@ -244,7 +244,9 @@ The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incid
 |---------|-----------|
 | `rules/project-config.md` | init, architecture, infra, deploy, context |
 | `rules/engineering-standards.md` | init, architecture, impl, qa, archive, guard |
-| `rules/clickup-protocol.md` | init, tasks, impl, qa, deploy, archive |
+| `rules/management-adapters.md` | init, requirements, tasks, impl, qa, deploy, archive, iterate, context, phase-close |
+| `rules/notifications.md` | init, qa, deploy, iterate |
+| `rules/clickup-protocol.md` | init, tasks, impl, qa, deploy, archive (ClickUp adapter + estimation) |
 | `rules/ears-format.md` | requirements |
 | `rules/security-tiers.md` | requirements, architecture, infra, qa |
 | `rules/living-specs.md` | init, requirements, archive |

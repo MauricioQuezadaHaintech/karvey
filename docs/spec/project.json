@@ -1,17 +1,45 @@
 {
   "project": "Karvey Method",
   "git_platform": "github",
-  "cloud": { "provider": "none" },
+  "cloud": {
+    "provider": "none"
+  },
   "iac_tool": "none",
   "knowledge_sync": "graphify",
-  "targets": ["cli"],
-  "repos": ["karvey"],
+  "targets": [
+    "cli"
+  ],
+  "repos": [
+    "karvey"
+  ],
   "spec_repo": "karvey",
   "branch_flow": {
     "feature_prefix": "feature/",
     "integration": "main",
     "production": "main"
   },
-  "enforcement": { "git_flow_hook": false, "plan_gate_hook": false },
-  "karvey_version": "3.9.1"
+  "enforcement": {
+    "git_flow_hook": false,
+    "plan_gate_hook": false
+  },
+  "karvey_version": "3.10.0",
+  "notifications": {
+    "channel": "none",
+    "target": "",
+    "via": "",
+    "events": []
+  },
+  "management": {
+    "tool": "markdown",
+    "location": "docs/spec/changes/{change-id}/PLAN.md",
+    "statuses": {
+      "todo": "⬜",
+      "in_progress": "🔄",
+      "review": "👀",
+      "done": "✅",
+      "blocked": "⛔"
+    },
+    "hierarchy": "epic>feature>task",
+    "via": "file"
+  }
 }

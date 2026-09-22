@@ -1,15 +1,15 @@
 ---
 name: karvey-init
-description: Initialize a new Karvey spec. Creates the directory structure, spec.json, and registers the Epic in ClickUp (or PLAN.md if not using ClickUp). Use after karvey-grill or when starting a new feature. Triggers include "karvey init", "iniciar spec", "init spec", "nueva feature", "new feature", "nuevo cambio", "new change", "spec-driven", "SDD", "kiro", "cc-sdd", "gstack", "Garry Tan", "PRD", "iniciar proyecto spec-driven", "start spec-driven project", "nuevo método", "new method", "scaffolding".
+description: Initialize a new Karvey spec. Creates the directory structure, spec.json, and registers the Epic in the team's tracker (ClickUp, Jira, Linear, Azure Boards, GitHub Projects, a spreadsheet or PLAN.md). On first use it asks the team settings (notification channel, task tool, status flow); `--settings` changes them later. Use after karvey-grill or when starting a new feature. Triggers include "karvey init", "iniciar spec", "init spec", "nueva feature", "new feature", "nuevo cambio", "new change", "karvey settings", "configurar equipo", "team settings", "spec-driven", "SDD", "kiro", "cc-sdd", "gstack", "Garry Tan", "PRD", "iniciar proyecto spec-driven", "start spec-driven project", "nuevo método", "new method", "scaffolding".
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
-argument-hint: <change-id> [--capability <nombre>]
+argument-hint: <change-id> [--capability <nombre>] | --settings
 ---
 
 # Karvey Init
 
 ## Purpose
 
-Initialize the structure of a new specification and register the Epic in the management system (ClickUp or Markdown).
+Initialize the structure of a new specification and register the Epic in the team's management tool (`karvey/rules/management-adapters.md`). The first time Karvey is used in a project it also asks the **team settings** — notification channel, task-management tool and its status flow — because a plugin cannot run anything at install time (Step 3.2).
 
 ## Execution steps
 
@@ -44,6 +44,32 @@ Check whether `docs/spec/project.json` exists.
 
 Write `docs/spec/project.json` with these values (see the schema in `karvey/rules/project-config.md`).
 
+### Step 3.2 — Team settings (first use, or `--settings`)
+
+A plugin cannot run anything at install time, so the team's settings are asked **here, the first time**
+Karvey is used in the project. Run this step when `project.json` lacks `notifications` or `management`, or
+when invoked as `/karvey-init --settings` (to change them later). If both blocks exist and there is no
+`--settings`, skip it and ask nothing.
+
+Ask with `AskUserQuestion`, one block at a time, showing examples — never assume the answer:
+
+1. **Notifications** (`karvey/rules/notifications.md`) — *Where does the team get QA and deploy notices?*
+   `Google Chat` · `Slack` · `Microsoft Teams` · `E-mail` · `Webhook` · `None`.
+   Then: the **target** (space id, `#channel`, team/channel, list, or the *name* of the secret holding the
+   webhook — never the URL itself), **how** this session reaches it (`mcp` · `cli` · `webhook` · `api`,
+   checking what is actually available), and the **events** (default `qa`, `deploy`).
+2. **Task management** (`karvey/rules/management-adapters.md`) — *Where does the team track its work?*
+   `ClickUp` · `Jira` · `Linear` · `Azure Boards` · `GitHub Projects` · `Spreadsheet (Excel/Sheets/CSV)` ·
+   `Markdown (PLAN.md)` · `Other`. Then the **location** (list id, project key, team, file path) and **via**.
+3. **Status flow** — map the team's real statuses to the 5 logical states `todo · in_progress · review ·
+   done · blocked`. For a tracker, **read the statuses from the tool** (list/project/workflow) and propose
+   the mapping; the user confirms or corrects it. For a spreadsheet or `Other`, ask the names. For
+   `Markdown`, the markers are fixed (`⬜ 🔄 👀 ✅ ⛔`).
+
+Write both blocks into `project.json`. Credentials go to `.connections.json` (git-ignored) or the team's
+vault — never into `project.json`. Report the result in one line, e.g.
+`Settings: notifications slack #dev-releases (webhook) · management jira PAY (5 states mapped)`.
+
 ### Step 3.5 — Enforcement opt-in (hooks)
 
 After creating `project.json`, ask the user whether they want to enable the Karvey method's **enforcement hooks**. See the detail in `karvey/rules/enforcement.md`.
@@ -75,19 +101,16 @@ Do you want to enable Karvey's enforcement hooks? (OPT-IN, you can enable them l
 }
 ```
 
-### Step 4 — Ask about the management system
+### Step 4 — Management for this change
 
-```
-Does this project use ClickUp for management?
-```
+Use the team's tool from `project.json:management` (Step 3.2) — do not ask "ClickUp or not?". Set
+`spec.json:management` to that tool name. Only ask if this change must be tracked somewhere else than the
+project default (rare: e.g. a client's board).
 
-**If YES (ClickUp):**
-- Ask: Which project/backlog does it belong to? (get the ClickUp `backlog_list_id`)
-- Read the rule: `rules/clickup-protocol.md`
-
-**If NO (Markdown):**
-- A `PLAN.md` will be created in the change's directory
-- No additional configuration is required
+- **ClickUp:** the Epic goes to `management.location` (the `backlog_list_id`); protocol in `rules/clickup-protocol.md`.
+- **Jira / Linear / Azure Boards / GitHub Projects / Spreadsheet / Other:** the logical operations of
+  `karvey/rules/management-adapters.md`, resolved for that tool.
+- **Markdown:** a `PLAN.md` is created in the change's directory; nothing else to configure.
 
 ### Step 5 — Collect metadata
 
@@ -134,7 +157,7 @@ Write `docs/spec/changes/{change-id}/spec.json` with:
   "created_at": "{ISO timestamp}",
   "updated_at": "{ISO timestamp}",
   "language": "es",
-  "management": "{clickup|markdown}",
+  "management": "{project.json:management.tool — clickup|jira|linear|azure-boards|github-projects|spreadsheet|markdown|other}",
   "security_tier": {1-4},
   "phase": "init",
   "type": "{feature|ops|hotfix}",
@@ -210,7 +233,13 @@ This goal is the north star that all Karvey phases pursue: each phase re-reads i
 {verifiable conditions to consider the change complete}
 ```
 
-### Step 9A — Create the Epic in ClickUp (if management=clickup)
+### Step 9A — Create the Epic in the team's tracker
+
+`create_epic(change)` in the tool of `project.json:management.tool` (`karvey/rules/management-adapters.md`),
+at `management.location`. Credentials from `.connections.json` (git-ignored), env vars or a vault — never in the repo.
+The Epic description format below is the same for every tool.
+
+**ClickUp adapter example** (protocol in `rules/clickup-protocol.md`):
 
 Read credentials from `.connections.json` (see `rules/clickup-protocol.md`). If it doesn't exist, create it and add it to `.gitignore` before continuing.
 Determine the next Epic number by searching in ClickUp:
@@ -230,7 +259,15 @@ clickup_create_task
   tags: ["{client_tag}"]
 ```
 
-Update `spec.json` with `clickup.epic_id`.
+Update `spec.json` with `clickup.epic_id` (the tracker-ids block keeps this historical key for every tool).
+
+**Other tools** — same operation, per `management-adapters.md` → Adapters:
+- **Jira:** create an issue of type Epic in the project key (Atlassian MCP, `jira` CLI or REST); store the issue key.
+- **Linear:** create a project/parent issue in the team (Linear MCP or GraphQL); store its id.
+- **Azure Boards:** `az boards work-item create --type Epic` in the project/area; store the work-item id.
+- **GitHub Projects:** create an issue and `gh project item-add` it to the project; store the item id.
+- **Spreadsheet:** append an `epic` row (`id, level, title, layer, estimate_min, status=todo, updated_at, link`).
+- **Other:** as recorded in `management.location` + `via`; with no programmatic path, create `PLAN.md` (9B) and tell the user what to copy.
 
 Epic description format:
 ```
@@ -253,14 +290,14 @@ Features:
 Built with the Karvey Method
 ```
 
-### Step 9B — Create PLAN.md (if management=markdown)
+### Step 9B — Create PLAN.md (Markdown)
 
 Write `docs/spec/changes/{change-id}/PLAN.md`:
 ```markdown
 # Plan: {change-id}
 
 **Capability:** {capability} | **Security Tier:** {N} | **Layers:** {list}
-**Created:** {date} | **Status:** 🟡 In progress
+**Created:** {date} | **Status:** 🔄 in_progress
 
 ---
 
@@ -290,6 +327,8 @@ Write `docs/spec/changes/{change-id}/PLAN.md`:
 ---
 
 ## Task status
+> Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked`
+
 | Task | Status | Estimated time | Actual time |
 |------|--------|----------------|-------------|
 | (pending) | | | |
@@ -317,10 +356,10 @@ Project config: docs/spec/project.json (created | read)
 Files created:
   - docs/spec/changes/{change-id}/spec.json
   - docs/spec/changes/{change-id}/prd.md
-  - docs/spec/changes/{change-id}/PLAN.md (if markdown)
+  - docs/spec/changes/{change-id}/PLAN.md (if Markdown)
   - docs/spec/specs/{capability}/spec.md (if new capability)
 
-Management: {ClickUp Epic E{n} created | PLAN.md created}
+Management: {Epic E{n} created in {tool} ({location}) | PLAN.md created}
 Security Tier: {N}
 
 Type: {feature | ops | hotfix}   Links: {parent → … | children: … | none}
@@ -333,7 +372,7 @@ Next step:
 ## Safety
 
 - If `docs/spec/changes/{change-id}` already exists with a `spec.json`, ask before overwriting
-- If ClickUp fails, offer to continue in markdown mode as a fallback
+- If the tracker fails, offer to continue with `PLAN.md` as a fallback (and say so)
 - Validate that the `change-id` is URL-safe (only lowercase letters, numbers, and hyphens)
 
 

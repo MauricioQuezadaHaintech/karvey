@@ -7,6 +7,8 @@
 #
 # Thresholds (env): KARVEY_ROTATE_CTX_YELLOW (def. 100000) · KARVEY_ROTATE_CTX_RED (def. 150000)
 #                   KARVEY_ROTATE_HOURS (def. 8)
+#                   KARVEY_TZ (IANA zone for the reset clock, e.g. America/Santiago; def. the system's)
+# Each account window shows when it resets and how long is left: `5h 29% ↻18:05 (1h31m)`.
 # 150k comes from measurement: at 588k a turn costs 7x what it costs at 80k, and rotating costs ~40k.
 #
 # A plugin cannot declare a statusline (only `agent` and `subagentStatusLine` are accepted), so this
@@ -114,12 +116,30 @@ if read: parts.append(f'cache {k(read)}')
 parts.append(f'{h:.1f}h')
 
 # account limit consumption: the number that actually decides a rotation
+
+# next reset of each account window: local clock time + time left (resets_at = epoch seconds)
+def _reset(w, week=False):
+    ts = (w or {}).get('resets_at')
+    if not ts:
+        return ''
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(os.environ.get('KARVEY_TZ') or '') if (os.environ.get('KARVEY_TZ') or '') else None
+    except Exception:
+        tz = None
+    at = datetime.datetime.fromtimestamp(float(ts), tz) if tz else datetime.datetime.fromtimestamp(float(ts))
+    left = max(0, int(float(ts) - datetime.datetime.now().timestamp()))
+    d_, r_ = divmod(left, 86400); h_, r_ = divmod(r_, 3600); m_ = r_ // 60
+    rem = f'{d_}d{h_}h' if d_ else (f'{h_}h{m_:02d}m' if h_ else f'{m_}m')
+    day = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][at.weekday()] + ' ' if week else ''
+    return f' ↻{day}{at:%H:%M} ({rem})'
+
 l5 = (limits.get('five_hour') or {}).get('used_percentage')
 l7 = (limits.get('seven_day') or {}).get('used_percentage')
 if l5 is not None or l7 is not None:
     lim = 'limit'
-    if l5 is not None: lim += f' 5h {l5:.0f}%'
-    if l7 is not None: lim += f' · 7d {l7:.0f}%'
+    if l5 is not None: lim += f' 5h {l5:.0f}%' + _reset(limits.get('five_hour'))
+    if l7 is not None: lim += f' · 7d {l7:.0f}%' + _reset(limits.get('seven_day'), week=True)
     parts.append(lim)
     if (l5 or 0) >= 80 or (l7 or 0) >= 80:
         light = '🔴'

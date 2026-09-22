@@ -1,0 +1,70 @@
+{
+  "change_id": "team-adapters",
+  "capability": "method",
+  "description": "Team settings on first use (notification channel, task-management tool, status flow) + logical states + self-contained method HTML",
+  "goal": "No skill assumes a tool the team does not use; HainTech's own flow keeps working by declaring it in project.json.",
+  "layers": [
+    "Backend"
+  ],
+  "created_at": "2026-09-22T19:00:00Z",
+  "updated_at": "2026-09-22T20:30:00Z",
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 1,
+  "phase": "deploy",
+  "type": "feature",
+  "links": {
+    "parent": "",
+    "children": []
+  },
+  "decisions": [],
+  "inputs": {},
+  "iteration_count": 0,
+  "revision_history": [],
+  "seed_backlog_id": "BL-02",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "date": "2026-09-22"
+    },
+    "mockup": {
+      "generated": false,
+      "approved": false
+    },
+    "design_graphic": {
+      "generated": false,
+      "approved": false
+    },
+    "architecture": {
+      "generated": false,
+      "approved": false
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "date": "2026-09-22"
+    },
+    "infra": {
+      "generated": false,
+      "approved": false
+    },
+    "qa": {
+      "generated": false,
+      "approved": false
+    },
+    "deploy": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "date": "2026-09-22"
+    },
+    "prod": {
+      "by": "Mauricio Quezada Ibáñez",
+      "date": "2026-09-22",
+      "ref": "session approval: 'perfecto, luego commit, push, merge'"
+    }
+  }
+}

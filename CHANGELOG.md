@@ -2,14 +2,31 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
-## [Unreleased] - repo maintenance (no plugin change)
+## [3.10.0] - 2026-09-22
 
-### Added
+### Added — team settings on first use (`team-adapters`)
+- **A plugin cannot run anything at install time**, so `karvey-init` now asks the team's settings **the first time Karvey is used** in a project (new Step 3.2) and stores them in `project.json`; `/karvey:karvey-init --settings` changes them later. The session hook prints a one-line reminder when a Karvey project (one with `docs/spec/`) lacks them — and stays silent everywhere else.
+- **New rule `rules/notifications.md`** — the team's channel: `google-chat | slack | teams | email | webhook | none`, with `target`, `via` (`mcp | cli | webhook | api`) and `events` (`qa`, `deploy`, opt-in `incident`). Same content in each channel's own markup; unset or `none` → skipped **and said**; destinations are never read from a `CLAUDE.md` table; no webhook URL or token in the repo.
+- **New rule `rules/management-adapters.md`** — the team's tracker: `clickup | jira | linear | azure-boards | github-projects | spreadsheet | markdown | other`, the logical operations (`create_epic`, `create_feature`, `create_task`, `set_status`, `comment`, `cascade`, `link`, `mirror_backlog`) and how each tool does them, and **5 logical states** — `todo · in_progress · review · done · blocked` — mapped to the team's real statuses in `project.json:management.statuses`.
+- `karvey-context` shows the team settings (channel, tool, whether the statuses are mapped).
+- **Statusline:** each account window now shows **when it resets and how long is left** — `5h 29% ↻18:05 (1h31m) · 7d 35% ↻Thu 21:20 (2d4h)` — from `rate_limits.*.resets_at`, which the CLI already provided and the script ignored; clock zone via `KARVEY_TZ`.
+- **`docs/karvey.html`** — self-contained explainer complementary to the README: what the method is, the name (*Karvey* = **Afán**, Ona language of the Selknam people of Patagonia), and a map of the whole plugin.
+
+### Changed
+- **No skill assumes a tool or a status name any more.** ~20 skills and rules that branched on "ClickUp or Markdown" or wrote `listo! para pap` literally now use the logical operations/states; ClickUp commands survive only as the ClickUp adapter (`clickup-protocol.md`) or labeled examples. `karvey-qa` Step 4 notifies the configured channel instead of Google Chat via `CLAUDE.md`; `karvey-deploy` notifies the `deploy` event; `karvey-iterate` the opt-in `incident` event. `PLAN.md` gains the `👀 review` marker. Rule copies re-synced byte-identical.
+
+### Compatibility
+- `spec.json:management` still names the tool, so existing changes (`"clickup"`, `"markdown"`) stay valid. A project with only `"management": "clickup"` and no status map keeps working: the statuses are read from the list and the mapping is confirmed once. **HainTech repos must declare `notifications` (Google Chat) in their `project.json`** — until then QA skips the notice and says so.
+
+### Repo maintenance (no plugin change)
 - **`graphify-out/`** — knowledge graph of the method's own repo (82 files → 399 nodes, 753 edges, 21 communities), versioned with repo-relative paths; `.graphify_python` (machine-specific) is git-ignored. Closes backlog **BL-01**. It lives outside `plugins/karvey/`, so the installed plugin is unchanged and no version bump applies. README documents how to refresh it (`graphify . --update`).
+
+### Why
+A graphify review of the repo showed the "stack-agnostic" plugin hard-coded one team's tooling: QA always notified Google Chat through a HainTech `CLAUDE.md` table, and every status update used ClickUp with a HainTech status name. Another team hit steps that failed or did not apply. The owner asked for both to be asked when the plugin is first used, for any tool (Slack, Jira, a spreadsheet…). Backlog BL-02 and BL-03, promoted to `team-adapters`.
 
 > 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
 > 🤖 AI-assisted: Claude Opus 5.5 (1M context)
-> 🔗 Karvey phase: knowledge sync (`rules/knowledge-sync.md`, graphify) · Apache 2.0
+> 🔗 Karvey phase: change `team-adapters` (requirements → impl) · Apache 2.0
 
 ## [3.9.1] - 2026-09-22
 

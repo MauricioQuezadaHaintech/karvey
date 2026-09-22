@@ -1,7 +1,7 @@
 # Incident Tracking — `BUG-NN` with state history
 
 > Karvey keeps a **dedicated, persistent incident tracker** for bugs, with **state history** —
-> complementary to ClickUp, not a replacement. ClickUp tracks *work/tasks*; this tracker keeps
+> complementary to the team's tracker (`management-adapters.md`), not a replacement. The tracker holds *work/tasks*; this tracker keeps
 > the **technical history** of each incident (reproduction, root cause, state transitions over time).
 
 ## Where it lives — per repo + global index
@@ -18,7 +18,7 @@ A `bug`-type finding (see `iteration-loop.md`) is promoted to a `BUG-NN` here by
 - **Priority:** high
 - **Detected:** 2026-06-17 · **Component:** db / sip.GetClaims
 - **Change / origin:** add-claim-filter (finding F-01, source: test UT-BD-03)
-- **ClickUp:** task abc123 (if management=clickup)
+- **Tracker:** abc123 (if the team uses one — `project.json:management.tool`)
 - **Current state:** EN FIX
 
 ### Reproduction
@@ -61,7 +61,7 @@ DETECTADO ─→ DIAGNOSTICADO ─→ EN FIX ─→ RESUELTO
 ## Relationship with the rest of the method
 
 - **vs `findings.md`:** `findings.md` is the per-change inbox/triage. The incident tracker is the **persistent, cross-change** record of confirmed bugs. A finding of type `bug` → one `BUG-NN`.
-- **vs ClickUp:** if `management=clickup`, the `BUG-NN` references its ClickUp task and vice-versa. Status changes are mirrored at the phase-close ritual (`phase-close.md`).
+- **vs the team's tracker:** if one is configured, the `BUG-NN` references its tracker item and vice-versa. Status changes are mirrored at the phase-close ritual (`phase-close.md`).
 - **vs `karvey-investigate`:** complex bugs get a formal root-cause via `/karvey-investigate`; its output becomes the `Root cause` section and flips the state to `DIAGNOSTICADO`.
 - **vs regression tests:** an incident only reaches `RESUELTO` once its regression test is in the suite. No regression test → it stays `EN FIX`.
 

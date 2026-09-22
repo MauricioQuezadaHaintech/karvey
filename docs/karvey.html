@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Método Karvey</title>
+<meta name="description" content="Qué es el Método Karvey (Afán, en ona) y mapa completo del plugin para Claude Code: orquestador, pipeline 0–12, capa transversal, reglas, hooks, artefactos y configuración del equipo.">
+<style>
+:root{
+  --bg:#f3eee3;
+  --surface:#fbf8f2;
+  --surface-2:#ebe3d2;
+  --ink:#1d2831;
+  --ink-2:#4a5560;
+  --line:#d3c6ad;
+  --ochre:#8f5312;
+  --ochre-soft:#ecd3a4;
+  --slate:#2b4256;
+  --slate-soft:#d6e0e8;
+  --moss:#44632f;
+  --moss-soft:#dbe6cf;
+  --rust:#973a1e;
+  --rust-soft:#f1d5c9;
+  --focus:#1c5d96;
+  --shadow:0 1px 0 rgba(40,30,10,.05),0 6px 18px -12px rgba(40,30,10,.25);
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#10161c;
+    --surface:#17202a;
+    --surface-2:#202b36;
+    --ink:#ebe5d8;
+    --ink-2:#a8b1ba;
+    --line:#34424f;
+    --ochre:#e2ab5f;
+    --ochre-soft:#433018;
+    --slate:#a3bfd8;
+    --slate-soft:#1f3244;
+    --moss:#a1c487;
+    --moss-soft:#243420;
+    --rust:#eb937a;
+    --rust-soft:#3f2219;
+    --focus:#7fb6ea;
+    --shadow:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:4.2rem;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:1rem;line-height:1.6;overflow-x:hidden}
+a{color:var(--slate);text-underline-offset:2px}
+a:hover{color:var(--ochre)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
+code,kbd,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--surface-2);padding:.08em .35em;border-radius:4px;overflow-wrap:anywhere}
+pre{font-family:var(--mono);font-size:.86rem;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:.9rem 1rem;overflow-x:auto;line-height:1.5;margin:.6rem 0}
+pre code{background:none;padding:0}
+h1,h2,h3,h4{line-height:1.25;margin:0 0 .5rem;letter-spacing:-.01em}
+h2{font-size:clamp(1.4rem,3.2vw,1.9rem);margin-top:0}
+h3{font-size:1.1rem}
+p{margin:.4rem 0 .8rem}
+.skip{position:absolute;left:-999px;top:0;background:var(--ink);color:var(--bg);padding:.5rem .8rem;z-index:20}
+.skip:focus{left:8px;top:8px}
+
+/* Top bar + TOC */
+.topbar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:1rem;padding:.45rem 16px}
+.brand{font-weight:700;text-decoration:none;color:var(--ink);white-space:nowrap;display:flex;align-items:center;gap:.45rem}
+.brand svg{flex:none}
+.toc{overflow-x:auto;scrollbar-width:thin;flex:1;min-width:0}
+.toc ol{list-style:none;margin:0;padding:.15rem 0;display:flex;gap:.2rem;white-space:nowrap}
+.toc a{display:block;text-decoration:none;color:var(--ink-2);font-size:.86rem;padding:.3rem .55rem;border-radius:6px}
+.toc a:hover,.toc a[aria-current="true"]{background:var(--surface-2);color:var(--ink)}
+
+main{max-width:1180px;margin:0 auto;padding:0 16px}
+section.block{padding:3rem 0 1rem;border-top:1px solid var(--line)}
+section.block:first-of-type{border-top:0}
+.lede{font-size:1.08rem;color:var(--ink-2);max-width:70ch}
+.eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ochre);margin:0 0 .35rem}
+
+/* Hero */
+.hero{position:relative;padding:3.2rem 0 2.4rem;overflow:hidden}
+.hero-wind{position:absolute;inset:auto 0 0 0;width:100%;height:120px;color:var(--line);pointer-events:none}
+.hero h1{font-size:clamp(2.4rem,7vw,4.2rem);margin:.2rem 0 .3rem;letter-spacing:-.03em}
+.hero .meaning{font-size:clamp(1.15rem,2.6vw,1.45rem);margin:0 0 1rem;color:var(--ink-2)}
+.hero .meaning strong{color:var(--ochre)}
+.badges{display:flex;flex-wrap:wrap;gap:.45rem;margin:1rem 0 1.4rem;padding:0;list-style:none}
+.badge{font-family:var(--mono);font-size:.8rem;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.2rem .7rem;white-space:nowrap}
+.badge.v{background:var(--slate);color:var(--bg);border-color:var(--slate);font-weight:700}
+.hero-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:1.6rem;position:relative}
+.origin{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ochre);border-radius:10px;padding:1rem 1.2rem;box-shadow:var(--shadow)}
+.origin dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.35rem .8rem}
+.origin dt{font-weight:600;color:var(--ink-2);font-size:.9rem}
+.origin dd{margin:0}
+.counts{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin:1.2rem 0 0;padding:0;list-style:none}
+.counts li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.7rem .8rem}
+.counts b{display:block;font-size:1.6rem;line-height:1.1;color:var(--slate)}
+.counts span{font-size:.82rem;color:var(--ink-2)}
+
+/* Generic cards */
+.grid{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;box-shadow:var(--shadow);min-width:0}
+.card h3{margin-bottom:.3rem}
+.card p{margin:.2rem 0 .5rem;font-size:.95rem}
+.muted{color:var(--ink-2)}
+.small{font-size:.88rem}
+.tag{display:inline-block;font-family:var(--mono);font-size:.72rem;padding:.08rem .45rem;border-radius:999px;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line);margin:.1rem .15rem .1rem 0;white-space:nowrap}
+.tag.o{background:var(--ochre-soft);color:var(--ink);border-color:transparent}
+.tag.s{background:var(--slate-soft);color:var(--ink);border-color:transparent}
+.tag.m{background:var(--moss-soft);color:var(--ink);border-color:transparent}
+.tag.r{background:var(--rust-soft);color:var(--ink);border-color:transparent}
+.note{border-left:4px solid var(--slate);background:var(--surface);padding:.7rem 1rem;border-radius:0 8px 8px 0;margin:1rem 0}
+.note.warn{border-left-color:var(--rust)}
+.note.ok{border-left-color:var(--moss)}
+
+/* Principles */
+.principles{counter-reset:p;list-style:none;padding:0;margin:1rem 0 0;display:grid;gap:.8rem;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.principles li{counter-increment:p;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem .9rem 3.1rem;position:relative}
+.principles li::before{content:counter(p,decimal-leading-zero);position:absolute;left:1rem;top:.9rem;font-family:var(--mono);font-weight:700;color:var(--ochre)}
+.principles strong{display:block;margin-bottom:.15rem}
+
+/* Org chart */
+.org{margin-top:1.4rem}
+.org-node{margin:0 auto;max-width:520px;text-align:center;background:var(--slate);color:var(--bg);border-radius:12px;padding:.8rem 1rem;box-shadow:var(--shadow)}
+.org-node .t{font-weight:700;font-size:1.1rem}
+.org-node .d{font-size:.86rem;opacity:.9}
+.org-node.orch{background:var(--ochre);color:#1a1206}
+@media (prefers-color-scheme: dark){.org-node{color:#0f151b}.org-node.orch{color:#1a1206}}
+.org-stem{width:2px;height:22px;background:var(--line);margin:0 auto}
+.org-branches{position:relative;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));padding-top:22px}
+.org-branches::before{content:"";position:absolute;top:0;left:12%;right:12%;height:2px;background:var(--line)}
+.branch{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:1rem;min-width:0}
+.branch::before{content:"";position:absolute;top:-22px;left:50%;width:2px;height:22px;background:var(--line)}
+.branch.wide{grid-column:1/-1}
+.branch h3{display:flex;align-items:center;gap:.5rem;font-size:1rem;margin-bottom:.6rem}
+.branch h3 .l{display:inline-grid;place-items:center;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--surface-2);font-family:var(--mono);font-size:.8rem;border:1px solid var(--line);flex:none}
+.branch h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);margin:.8rem 0 .3rem;font-weight:600}
+.chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.35rem}
+.chips li{font-family:var(--mono);font-size:.78rem;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.18rem .45rem;overflow-wrap:anywhere}
+.chips.opt li{border-style:dashed}
+.flow{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.5rem 1.35rem}
+.flow li{position:relative;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:.4rem .6rem;min-width:7.2rem}
+.flow li .n{font-family:var(--mono);font-weight:700;color:var(--ochre);margin-right:.35rem}
+.flow li .c{font-family:var(--mono);font-size:.8rem}
+.flow li .w{display:block;font-size:.76rem;color:var(--ink-2);line-height:1.3}
+.flow li:not(:last-child)::after{content:"→";position:absolute;right:-1.1rem;top:50%;transform:translateY(-50%);color:var(--ink-2)}
+.tree{font-family:var(--mono);font-size:.8rem;list-style:none;margin:0;padding:0}
+.tree ul{list-style:none;margin:.1rem 0 .1rem .9rem;padding-left:.6rem;border-left:1px dashed var(--line)}
+.tree li{padding:.08rem 0;overflow-wrap:anywhere}
+.tree .c{color:var(--ink-2);font-family:var(--sans);font-size:.78rem}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+.legend{display:flex;flex-wrap:wrap;gap:1rem;font-size:.84rem;color:var(--ink-2);margin:.8rem 0 0}
+.legend span::before{content:"";display:inline-block;width:.9rem;height:.9rem;border:1px solid var(--line);background:var(--surface-2);border-radius:3px;vertical-align:-2px;margin-right:.35rem}
+.legend span.dash::before{border-style:dashed}
+
+/* Phases */
+.phases{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));margin-top:1rem}
+.phase{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;display:flex;flex-direction:column;gap:.35rem;box-shadow:var(--shadow);min-width:0}
+.phase header{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+.phase .num{font-family:var(--mono);font-weight:800;font-size:1.5rem;color:var(--ochre);line-height:1}
+.phase h3{margin:0;font-size:1.05rem}
+.phase .cmd{font-family:var(--mono);font-size:.82rem;color:var(--slate);overflow-wrap:anywhere}
+.phase dl{margin:.2rem 0 0;display:grid;grid-template-columns:5.6rem 1fr;gap:.3rem .6rem;font-size:.9rem}
+.phase dt{color:var(--ink-2);font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;padding-top:.15rem}
+.phase dd{margin:0;min-width:0}
+.gate{border-top:1px dashed var(--line);margin-top:.4rem;padding-top:.5rem;font-size:.88rem}
+.gate b{color:var(--moss)}
+
+/* Tables */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);margin:1rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:.55rem .75rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--surface-2);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td code{white-space:nowrap}
+td.wrap code{white-space:normal}
+
+/* Filter */
+.filter{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:1rem 0 .4rem}
+.filter input{font:inherit;font-size:.95rem;padding:.5rem .7rem;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);width:min(100%,340px)}
+.filter output{font-size:.85rem;color:var(--ink-2)}
+.hide{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Loop figure */
+figure{margin:1rem 0}
+.figure-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.8rem}
+.figure-wrap svg{display:block;min-width:640px;width:100%;height:auto}
+figcaption{font-size:.88rem;color:var(--ink-2);margin-top:.5rem}
+svg .n{fill:var(--surface-2);stroke:var(--line);stroke-width:1.5}
+svg .n-o{fill:var(--ochre-soft);stroke:var(--ochre);stroke-width:1.5}
+svg .n-r{fill:var(--rust-soft);stroke:var(--rust);stroke-width:1.5}
+svg .n-s{fill:var(--slate-soft);stroke:var(--slate);stroke-width:1.5}
+svg .n-m{fill:var(--moss-soft);stroke:var(--moss);stroke-width:1.5}
+svg .t{fill:var(--ink);font-family:var(--sans);font-size:14px}
+svg .tb{fill:var(--ink);font-family:var(--mono);font-size:13px;font-weight:700}
+svg .tm{fill:var(--ink-2);font-family:var(--sans);font-size:12px}
+svg .e{stroke:var(--ink-2);stroke-width:1.6;fill:none}
+svg .e-d{stroke:var(--ink-2);stroke-width:1.4;fill:none;stroke-dasharray:5 4}
+svg .ah{fill:var(--ink-2)}
+
+/* Deploy */
+.lane{list-style:none;margin:1rem 0;padding:0;display:flex;flex-wrap:wrap;gap:.4rem;align-items:stretch}
+.lane li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:.5rem .7rem;font-size:.88rem;flex:1 1 150px;min-width:0}
+.lane li b{display:block;font-family:var(--mono);font-size:.82rem;color:var(--slate)}
+.lane li.prod{border-color:var(--moss);box-shadow:inset 0 0 0 1px var(--moss)}
+ol.steps{margin:.4rem 0 0;padding-left:1.4rem}
+ol.steps li{margin:.2rem 0}
+
+/* Timeline */
+.timeline{list-style:none;margin:1rem 0 0;padding:0 0 0 1.2rem;border-left:2px solid var(--line)}
+.timeline li{position:relative;margin:0 0 1rem;padding-left:.6rem}
+.timeline li::before{content:"";position:absolute;left:calc(-1.2rem - 6px);top:.45rem;width:10px;height:10px;border-radius:50%;background:var(--ochre);border:2px solid var(--bg)}
+.timeline li.now::before{background:var(--slate);width:12px;height:12px;left:calc(-1.2rem - 7px)}
+.timeline .ver{font-family:var(--mono);font-weight:700}
+.timeline .date{font-family:var(--mono);font-size:.8rem;color:var(--ink-2);margin-left:.4rem}
+
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.2rem 1rem;margin:.6rem 0}
+details summary{cursor:pointer;padding:.55rem 0;font-weight:600}
+details[open] summary{border-bottom:1px solid var(--line);margin-bottom:.5rem}
+
+footer.site{border-top:1px solid var(--line);margin-top:3rem;padding:2rem 16px 3rem;color:var(--ink-2);font-size:.9rem}
+footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1rem 2rem;justify-content:space-between}
+
+@media (max-width: 860px){
+  .hero-grid{grid-template-columns:1fr}
+  .counts{grid-template-columns:repeat(2,1fr)}
+  .split{grid-template-columns:1fr}
+}
+@media (max-width: 640px){
+  .org-branches{grid-template-columns:1fr;padding-top:0;padding-left:14px;border-left:2px solid var(--line);margin-left:6px}
+  .org-branches::before{display:none}
+  .branch::before{top:1.3rem;left:-15px;width:14px;height:2px}
+  .org-stem.last{height:14px}
+  .phases,.grid,.principles{grid-template-columns:1fr}
+  .phase dl{grid-template-columns:1fr}
+  .phase dt{padding-top:0}
+  .flow{gap:.5rem}
+  .flow li{flex:1 1 100%}
+  .flow li:not(:last-child)::after{content:"↓";right:auto;left:1rem;top:auto;bottom:-1.05rem;transform:none}
+  .flow{row-gap:1.2rem}
+  .brand .full{display:none}
+}
+@media print{
+  .topbar,.filter{display:none}
+  body{background:#fff;color:#000}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#inicio" aria-label="Karvey, volver al inicio">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 16c4-3 7-3 10 0s6 3 10 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M2 10c4-3 7-3 10 0s6 3 10 0" fill="none" stroke="var(--ochre)" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Karvey <span class="full muted">· Afán</span></span>
+    </a>
+    <nav class="toc" aria-label="Tabla de contenidos">
+      <ol>
+        <li><a href="#como">Cómo se piensa</a></li>
+        <li><a href="#organigrama">Organigrama</a></li>
+        <li><a href="#pipeline">Pipeline 0–12</a></li>
+        <li><a href="#iteracion">Iteración</a></li>
+        <li><a href="#transversal">Capa transversal</a></li>
+        <li><a href="#reglas">Reglas</a></li>
+        <li><a href="#hooks">Hooks</a></li>
+        <li><a href="#equipo-config">Config. del equipo</a></li>
+        <li><a href="#deploy">Deploy y ramas</a></li>
+        <li><a href="#capa-equipo">Equipo de agentes</a></li>
+        <li><a href="#instalar">Instalar</a></li>
+        <li><a href="#versiones">Versiones</a></li>
+      </ol>
+    </nav>
+  </div>
+</header>
+
+<main id="contenido">
+
+<!-- 1. HERO -->
+<section class="hero" id="inicio" aria-labelledby="t-hero">
+  <svg class="hero-wind" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 92 C 180 80, 320 104, 520 90 S 880 70, 1200 88" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M0 106 C 220 96, 380 116, 600 104 S 940 92, 1200 104" fill="none" stroke="currentColor" stroke-width="1"/>
+    <path d="M120 60 C 260 52, 360 66, 470 58" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+    <path d="M760 44 C 880 36, 980 50, 1100 42" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+  </svg>
+  <div class="hero-grid">
+    <div>
+      <p class="eyebrow">Plugin para Claude Code · Método de desarrollo</p>
+      <h1 id="t-hero">Karvey</h1>
+      <p class="meaning"><em>Karvey</em> es una palabra del <strong>ona</strong>, la lengua del pueblo <strong>selknam</strong> de la Patagonia, que significa <strong>Afán</strong> (de hacer).</p>
+      <ul class="badges" aria-label="Datos del plugin">
+        <li class="badge v">v3.10.0</li>
+        <li class="badge">Apache-2.0</li>
+        <li class="badge">SDD · spec-driven</li>
+        <li class="badge">agnóstico de stack</li>
+        <li class="badge">en espiral</li>
+      </ul>
+      <p class="lede">Karvey es un método de <strong>desarrollo guiado por especificaciones (SDD)</strong> para Claude Code. Lleva un cambio desde la idea hasta producción por un pipeline de 13 fases (0–12) con compuertas de aprobación, más una capa transversal de skills de apoyo que puedes invocar en cualquier momento. Es <strong>agnóstico de stack</strong> (web, iOS/Android, escritorio, CLI, API, embebido) y trabaja <strong>en espiral, no en línea</strong>: lo que aparece en pruebas, QA o en el runtime real vuelve a su lugar para que nada quede botado.</p>
+      <p class="muted">Esta página complementa el <a href="https://github.com/MauricioQuezadaHaintech/karvey">README del repo</a>: explica cómo se piensa el método y dibuja el mapa completo del plugin.</p>
+    </div>
+    <aside class="origin" aria-label="Autoría y origen">
+      <dl>
+        <dt>Autor</dt><dd><strong>Mauricio Quezada Ibáñez</strong></dd>
+        <dt>Casa</dt><dd><strong>HainTech</strong>, para facilitar y organizar las tareas de desarrollo</dd>
+        <dt>Origen</dt><dd>Síntesis de experiencia propia + ideas conceptuales de <strong>Kiro</strong> (cc-sdd) y <strong>gstack</strong> (Garry Tan). Inspiración conceptual: no incorpora código de esos proyectos.</dd>
+        <dt>Licencia</dt><dd>Apache-2.0. «Karvey» y la convención <code>karvey-*</code> son marca de HainTech.</dd>
+        <dt>Idioma</dt><dd>Los skills están escritos en inglés (lo que lee Claude); los artefactos se generan en el idioma del proyecto y los triggers son bilingües.</dd>
+      </dl>
+    </aside>
+  </div>
+  <ul class="counts" aria-label="Cifras del plugin">
+    <li><b>32</b><span>skills = 1 orquestador + 13 fases + 18 de apoyo</span></li>
+    <li><b>13</b><span>fases del pipeline (0–12)</span></li>
+    <li><b>22</b><span>reglas compartidas en <code>rules/</code></span></li>
+    <li><b>1 + 2</b><span>hook activo al instalar + scripts opt-in incluidos (y 2 más descritos en la regla)</span></li>
+  </ul>
+</section>
+
+<!-- 2. CÓMO SE PIENSA -->
+<section class="block" id="como" aria-labelledby="t-como">
+  <p class="eyebrow">02 · Principios</p>
+  <h2 id="t-como">Cómo se piensa</h2>
+  <p class="lede">Siete ideas sostienen todo el método. Cada skill y cada regla es la forma concreta de alguna de ellas.</p>
+  <ol class="principles">
+    <li><strong>Guiado por especificaciones</strong>Todo cambio nace de un PRD (<code>prd.md</code>); los requisitos EARS se trazan a él y las <em>specs vivas</em> acumulan por capability lo que el sistema hace.</li>
+    <li><strong>Agnóstico de stack</strong>El proyecto declara sus <code>targets</code> y cada fase se adapta: el mockup de una CLI es una transcripción de comandos; el de una API, ejemplos de request/response.</li>
+    <li><strong>Compuertas de aprobación</strong>Cada fase produce un documento en <code>docs/spec/</code> y pide tu OK antes de avanzar. <code>--autoplan</code> agrupa las compuertas de planificación, no las salta.</li>
+    <li><strong>Espiral, no línea</strong>El pipeline es el camino feliz. Los hallazgos vuelven por tres aristas (bug, spec-gap, emergente) y un cambio solo está listo cuando converge.</li>
+    <li><strong>Nada queda en el aire</strong>Ritual de cierre obligatorio en cada fase y tarea, backlog de descubrimiento, tracker <code>BUG-NN</code> y limpieza de ramas absorbidas: nada queda botado.</li>
+    <li><strong>OK humano para producción</strong>El merge a la rama de producción exige aprobación explícita, registrada en <code>approvals.prod</code>. Nunca se delega a un agente y nunca hay deploy manual.</li>
+    <li><strong>Medido, no recordado</strong>Se reporta lo verificado en la sesión, con comando y evidencia. El handoff se captura con comandos y el hook de sesión contrasta el estado guardado contra los repos vivos.</li>
+  </ol>
+</section>
+
+<!-- 3. ORGANIGRAMA -->
+<section class="block" id="organigrama" aria-labelledby="t-org">
+  <p class="eyebrow">03 · Mapa completo</p>
+  <h2 id="t-org">Organigrama del plugin</h2>
+  <p class="lede">Todo lo que trae el plugin <code>karvey</code>, de un vistazo. En el celular las ramas se apilan.</p>
+
+  <div class="org" role="group" aria-label="Organigrama del plugin karvey">
+    <div class="org-node">
+      <div class="t">Plugin <code style="background:none;color:inherit">karvey</code></div>
+      <div class="d">marketplace <span class="mono">karvey-methods</span> · 32 skills · 22 reglas · hooks</div>
+    </div>
+    <div class="org-stem" aria-hidden="true"></div>
+    <div class="org-node orch">
+      <div class="t"><span class="mono">/karvey:karvey</span> · Orquestador</div>
+      <div class="d">Punto de entrada: muestra fase y aprobaciones, indica el siguiente skill, <span class="mono">--phase</span>, <span class="mono">--autoplan</span></div>
+    </div>
+    <div class="org-stem last" aria-hidden="true"></div>
+
+    <div class="org-branches">
+      <!-- (a) Pipeline -->
+      <section class="branch wide" aria-labelledby="org-a">
+        <h3 id="org-a"><span class="l" aria-hidden="true">a</span> Pipeline 0–12 · 13 skills de fase</h3>
+        <ol class="flow">
+          <li><span class="n">0</span><span class="c">grill</span><span class="w">pre-spec</span></li>
+          <li><span class="n">1</span><span class="c">init</span><span class="w">change-id, PRD</span></li>
+          <li><span class="n">2</span><span class="c">requirements</span><span class="w">EARS</span></li>
+          <li><span class="n">3</span><span class="c">mockup</span><span class="w">navegable</span></li>
+          <li><span class="n">4</span><span class="c">design-graphic</span><span class="w">sistema visual</span></li>
+          <li><span class="n">5</span><span class="c">architecture</span><span class="w">Tiers, cloud</span></li>
+          <li><span class="n">6</span><span class="c">infra</span><span class="w">IaC + CI/CD</span></li>
+          <li><span class="n">7</span><span class="c">tasks</span><span class="w">10–30 min</span></li>
+          <li><span class="n">8</span><span class="c">impl</span><span class="w">feature branch</span></li>
+          <li><span class="n">9</span><span class="c">test</span><span class="w">runtime real</span></li>
+          <li><span class="n">10</span><span class="c">qa</span><span class="w">9 dimensiones</span></li>
+          <li><span class="n">11</span><span class="c">deploy</span><span class="w">feature→dev→PR</span></li>
+          <li><span class="n">12</span><span class="c">archive</span><span class="w">specs vivas</span></li>
+        </ol>
+      </section>
+
+      <!-- (b) Capa transversal -->
+      <section class="branch" aria-labelledby="org-b">
+        <h3 id="org-b"><span class="l" aria-hidden="true">b</span> Capa transversal · 18 skills</h3>
+        <h4>Iteración / diagnóstico</h4>
+        <ul class="chips"><li>iterate</li><li>investigate</li></ul>
+        <h4>Calidad / revisión</h4>
+        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li></ul>
+        <h4>Ojos / evidencia</h4>
+        <ul class="chips"><li>browse</li></ul>
+        <h4>Estado / handoff</h4>
+        <ul class="chips"><li>checkpoint</li></ul>
+        <h4>Documentación / diagramas</h4>
+        <ul class="chips"><li>docs</li><li>diagram</li></ul>
+        <h4>Guardrails</h4>
+        <ul class="chips"><li>guard</li></ul>
+        <h4>Equipo (opcional)</h4>
+        <ul class="chips opt"><li>team</li><li>decisions</li></ul>
+        <h4>Estándares / importación</h4>
+        <ul class="chips"><li>standards</li><li>import</li></ul>
+        <h4>Benchmark / scrape</h4>
+        <ul class="chips"><li>benchmark-models</li><li>scrape</li></ul>
+        <h4>Contexto</h4>
+        <ul class="chips"><li>context</li></ul>
+      </section>
+
+      <!-- (c) Reglas -->
+      <section class="branch" aria-labelledby="org-c">
+        <h3 id="org-c"><span class="l" aria-hidden="true">c</span> Reglas compartidas · 22</h3>
+        <h4>Proyecto y configuración</h4>
+        <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
+        <h4>Equipo y herramientas (3.10)</h4>
+        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>clickup-protocol</li></ul>
+        <h4>Especificación y diseño</h4>
+        <ul class="chips"><li>ears-format</li><li>security-tiers</li><li>engineering-standards</li></ul>
+        <h4>Espiral y cierre</h4>
+        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>phase-close</li><li>verification</li></ul>
+        <h4>Entrega</h4>
+        <ul class="chips"><li>deploy-workflow</li><li>versioning</li><li>changelog-policy</li><li>enforcement</li></ul>
+        <h4>Colaboración</h4>
+        <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
+        <ul class="chips opt" style="margin-top:.35rem"><li>team (opcional)</li></ul>
+      </section>
+
+      <!-- (d) Hooks -->
+      <section class="branch" aria-labelledby="org-d">
+        <h3 id="org-d"><span class="l" aria-hidden="true">d</span> Hooks</h3>
+        <h4>Activos al instalar</h4>
+        <ul class="chips"><li>SessionStart · karvey-session-context.sh</li></ul>
+        <h4>Se instala a mano, una vez</h4>
+        <ul class="chips"><li>statusline · karvey-statusline.sh</li></ul>
+        <h4>Opt-in por proyecto · scripts incluidos (karvey-guard)</h4>
+        <ul class="chips opt"><li>git-flow-guard.sh</li><li>plan-gate.sh</li><li>--freeze (edit-lock)</li></ul>
+        <h4>Opt-in · descritos en la regla (sin script incluido)</h4>
+        <ul class="chips opt"><li>standards-guard</li><li>clickup-sync-guard</li></ul>
+      </section>
+
+      <!-- (e) Artefactos -->
+      <section class="branch" aria-labelledby="org-e">
+        <h3 id="org-e"><span class="l" aria-hidden="true">e</span> Artefactos · <code>docs/spec/</code></h3>
+        <ul class="tree">
+          <li>project.json <span class="c">config + settings del equipo</span></li>
+          <li>team.json <span class="c">solo si hay equipo</span></li>
+          <li>backlog.md · incidents-index.md</li>
+          <li>standards/ <span class="c">golden paths</span></li>
+          <li>specs/{capability}/spec.md <span class="c">specs vivas</span></li>
+          <li>agent/ <span class="c">handoff.md · state.json · board.md</span></li>
+          <li>changes/{change-id}/
+            <ul>
+              <li>spec.json · prd.md</li>
+              <li>requirements.md · spec-delta.md</li>
+              <li>mockup.* · design-spec.md · design-components.md</li>
+              <li>architecture.md · infra.md · tasks.md</li>
+              <li>findings.md · deviations.md</li>
+              <li>checkpoint.md · PLAN.md</li>
+            </ul>
+          </li>
+        </ul>
+        <h4>Fuera de <code>docs/spec/</code></h4>
+        <ul class="chips"><li>docs/bugs_dev_testing.md (por repo)</li><li>test_plan.md · test_evidence.md</li><li>REVISION_PR_{n}_{fecha}.md</li><li>CHANGELOG.md (por repo)</li><li>{ops_repo}/decisions/ (D-NN · C-NN)</li></ul>
+      </section>
+
+      <!-- (f) Config del equipo -->
+      <section class="branch" aria-labelledby="org-f">
+        <h3 id="org-f"><span class="l" aria-hidden="true">f</span> Configuración del equipo · nuevo en 3.10</h3>
+        <h4>notifications.channel</h4>
+        <ul class="chips"><li>google-chat</li><li>slack</li><li>teams</li><li>email</li><li>webhook</li><li>none</li></ul>
+        <h4>management.tool</h4>
+        <ul class="chips"><li>clickup</li><li>jira</li><li>linear</li><li>azure-boards</li><li>github-projects</li><li>spreadsheet</li><li>markdown</li><li>other</li></ul>
+        <h4>5 estados lógicos</h4>
+        <ul class="chips"><li>todo</li><li>in_progress</li><li>review</li><li>done</li><li>blocked</li></ul>
+        <p class="small muted" style="margin:.6rem 0 0">Se pregunta en el primer uso: <code>/karvey:karvey-init</code> (paso 3.2) o <code>--settings</code>.</p>
+      </section>
+    </div>
+    <p class="legend"><span>parte del flujo por defecto</span><span class="dash">opcional / opt-in</span></p>
+  </div>
+</section>
+
+<!-- 4. PIPELINE -->
+<section class="block" id="pipeline" aria-labelledby="t-pipe">
+  <p class="eyebrow">04 · El camino feliz</p>
+  <h2 id="t-pipe">Pipeline 0–12</h2>
+  <p class="lede">Cada fase produce un documento en <code>docs/spec/</code> y pide tu OK antes de avanzar. <code>/karvey:karvey &lt;change-id&gt;</code> siempre te dice en qué fase estás y cuál sigue; <code>--autoplan</code> encadena las fases de planificación (0→5) escalándote solo las decisiones de fondo (gusto, alcance, seguridad).</p>
+
+  <div class="phases">
+    <article class="phase" aria-labelledby="ph0">
+      <header><span class="num">0</span><h3 id="ph0">Interrogatorio pre-spec</h3></header>
+      <div class="cmd">/karvey:karvey-grill</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Te entrevista sin tregua sobre el problema antes de escribir cualquier spec. Reencuadre opcional de «producto 10 estrellas». Pregunta por plataforma git, cloud e IaC.</dd>
+        <dt>Produce</dt><dd>Síntesis pre-spec (problema, stack detectado, restricciones, criterios de éxito, riesgos, change-id sugerido) que alimenta el PRD.</dd>
+        <dt>Reglas</dt><dd>—</dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> sin compuerta formal; es la entrada a <code>init</code>.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph1">
+      <header><span class="num">1</span><h3 id="ph1">Inicio del cambio</h3></header>
+      <div class="cmd">/karvey:karvey-init &lt;change-id&gt; [--settings]</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Crea o lee <code>project.json</code> (git, cloud, IaC, knowledge_sync, targets, repos, spec_repo, branch_flow, enforcement), captura el <em>goal</em> (estrella polar), pregunta los settings del equipo (paso 3.2) y ofrece activar los hooks (paso 3.5).</dd>
+        <dt>Produce</dt><dd><code>project.json</code>, <code>change-id</code>, <code>prd.md</code>, <code>spec.json</code>, Epic en el tracker del equipo o <code>PLAN.md</code>.</dd>
+        <dt>Reglas</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">clickup-protocol</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> sin aprobación propia; el siguiente paso es generar requisitos.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph2">
+      <header><span class="num">2</span><h3 id="ph2">Requisitos</h3></header>
+      <div class="cmd">/karvey:karvey-requirements &lt;change-id&gt;</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Requisitos en formato EARS, cada uno trazado a una sección del PRD. Crea Features en el tracker o actualiza <code>PLAN.md</code>. Re-abre en modo revisión cuando llega un spec-gap.</dd>
+        <dt>Produce</dt><dd><code>requirements.md</code> + <code>spec-delta.md</code> (ADDED / MODIFIED / REMOVED sobre las specs vivas).</dd>
+        <dt>Reglas</dt><dd><span class="tag">ears-format</span><span class="tag">living-specs</span><span class="tag">security-tiers</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> <code>approvals.requirements.approved</code>.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph3">
+      <header><span class="num">3</span><h3 id="ph3">Mockup navegable</h3></header>
+      <div class="cmd">/karvey:karvey-mockup &lt;change-id&gt; [--shotgun]</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Mockup de 3–4 niveles de profundidad adaptado al target; modo shotgun para N variantes. Pasada de validación spec↔mockup para cazar spec-gaps antes de diseñar (corrección barata).</dd>
+        <dt>Produce</dt><dd><code>mockup.html</code> o el equivalente del target.</dd>
+        <dt>Reglas</dt><dd><span class="tag">targets</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> <code>approvals.mockup.approved</code>, iterando contigo hasta aprobar.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph4">
+      <header><span class="num">4</span><h3 id="ph4">Diseño gráfico</h3></header>
+      <div class="cmd">/karvey:karvey-design-graphic &lt;change-id&gt;</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Sistema visual OKLCH, tipografía, layout y motion con puntaje 0–10 por dimensión, guía por plataforma (WCAG / HIG / Material). Deriva el catálogo de componentes visuales desde el mockup.</dd>
+        <dt>Produce</dt><dd><code>design-spec.md</code> + <code>design-components.md</code> (brief de arte por pantalla, modal y componente, claro y oscuro).</dd>
+        <dt>Reglas</dt><dd><span class="tag">targets</span><span class="tag">multi-agent</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> <code>approvals.design_graphic.approved</code>.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph5">
+      <header><span class="num">5</span><h3 id="ph5">Arquitectura</h3></header>
+      <div class="cmd">/karvey:karvey-architecture &lt;change-id&gt;</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Límites de componentes, seguridad por Tier, diagramas mermaid, casos borde, fronteras de confianza, plan de cobertura de pruebas y sección de infraestructura cloud. Gate de conformidad con los estándares.</dd>
+        <dt>Produce</dt><dd><code>architecture.md</code>.</dd>
+        <dt>Reglas</dt><dd><span class="tag">security-tiers</span><span class="tag">engineering-standards</span><span class="tag">targets</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> <code>approvals.architecture.approved</code>; salirse del golden path es una <em>Deviation Request</em> en modo diseño.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph6">
+      <header><span class="num">6</span><h3 id="ph6">Infraestructura</h3></header>
+      <div class="cmd">/karvey:karvey-infra &lt;change-id&gt;</div>
+      <dl>
+        <dt>Qué hace</dt><dd>IaC (Terraform / Bicep / Pulumi) y pipelines CI/CD (GitHub Actions / Azure Pipelines), idempotente sobre lo existente, con autodetección de plataforma y revisión de seguridad de infra. En cambios <code>ops</code>, plan de comandos.</dd>
+        <dt>Produce</dt><dd><code>infra.md</code> + código de IaC y pipelines en cada repo.</dd>
+        <dt>Reglas</dt><dd><span class="tag">project-config</span><span class="tag">deploy-workflow</span><span class="tag">security-tiers</span><span class="tag">changelog-policy</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> <code>approvals.infra.approved</code>.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph7">
+      <header><span class="num">7</span><h3 id="ph7">Tareas</h3></header>
+      <div class="cmd">/karvey:karvey-tasks &lt;change-id&gt;</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Parte el trabajo en tareas IA de 10–30 min <code>E{n}.F{n}.T{n} [DB/Backend/Frontend/Infra]</code> con dependencias, estimadas en minutos (tope ~60, si no se divide). Tareas <code>[human]</code> con ejecutor, comando, verificación y rollback.</dd>
+        <dt>Produce</dt><dd><code>tasks.md</code> + tareas en el tracker o checklist en <code>PLAN.md</code>.</dd>
+        <dt>Reglas</dt><dd><span class="tag">clickup-protocol</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> <code>approvals.tasks.approved</code>.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph8">
+      <header><span class="num">8</span><h3 id="ph8">Implementación</h3></header>
+      <div class="cmd">/karvey:karvey-impl &lt;change-id&gt; [F{n}.T{n}]</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Ejecuta las tareas en <code>feature/{change-id}</code> (nunca en dev/master), en orden DB → Backend → Frontend, con ciclo leer → ejecutar → probar → validar por tarea. Estado <code>awaiting-human</code> para pasos que solo ejecuta una persona.</dd>
+        <dt>Produce</dt><dd>Código, commit por tarea, bump de versión + entrada en <code>CHANGELOG.md</code> (humano + modelo IA + por qué).</dd>
+        <dt>Reglas</dt><dd><span class="tag">deploy-workflow</span><span class="tag">versioning</span><span class="tag">changelog-policy</span><span class="tag">engineering-standards</span><span class="tag">phase-close</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> cada tarea cierra con el ritual de cierre; luego se prueba.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph9">
+      <header><span class="num">9</span><h3 id="ph9">Pruebas</h3></header>
+      <div class="cmd">/karvey:karvey-test &lt;change-id&gt;</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Pruebas unitarias y E2E en el runtime real del target, benchmark de rendimiento (línea base) y regresión. Anota observaciones clasificadas en <code>findings.md</code> y promueve bugs confirmados a <code>BUG-NN</code>.</dd>
+        <dt>Produce</dt><dd><code>test_plan.md</code>, <code>test_evidence.md</code> (request / response / PASS / FAIL), hallazgos.</dd>
+        <dt>Reglas</dt><dd><span class="tag">targets</span><span class="tag">iteration-loop</span><span class="tag">incident-tracking</span><span class="tag">phase-close</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> con hallazgos abiertos, el siguiente paso es <code>karvey-iterate</code>, no QA.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph10">
+      <header><span class="num">10</span><h3 id="ph10">QA en 9 dimensiones</h3></header>
+      <div class="cmd">/karvey:karvey-qa &lt;change-id&gt;</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Seguridad (gate bloqueante OWASP Top 10 + STRIDE), errores, consistencia, impacto, variables de entorno, versionado, segunda opinión cross-model, auditoría visual vs <code>design-spec.md</code> y conformidad con estándares. Notifica por el canal del equipo.</dd>
+        <dt>Produce</dt><dd><code>REVISION_PR_{n}_{fecha}.md</code>, hallazgos en <code>findings.md</code>, tareas en el tracker.</dd>
+        <dt>Reglas</dt><dd><span class="tag">changelog-policy</span><span class="tag">versioning</span><span class="tag">iteration-loop</span><span class="tag">phase-close</span><span class="tag">notifications</span><span class="tag">verification</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> <code>approvals.qa.approved</code> sin críticos ni altos + convergencia (sin bug/spec-gap abiertos, emergentes capturados).</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph11">
+      <header><span class="num">11</span><h3 id="ph11">Despliegue ordenado</h3></header>
+      <div class="cmd">/karvey:karvey-deploy &lt;change-id&gt;</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Por repo: pull → feature → pull → merge a dev (pipeline DEV) → canary → PR dev→master → verificación de los gates del PR → PROD con OK humano → canary → higiene de ramas. Detecta el host git (<code>gh</code> / <code>az repos</code> / <code>glab</code>). Nunca manual.</dd>
+        <dt>Produce</dt><dd>Versión semver + CHANGELOG por componente/repo, evidencia de canary, reporte de ramas borradas / conservadas.</dd>
+        <dt>Reglas</dt><dd><span class="tag">deploy-workflow</span><span class="tag">versioning</span><span class="tag">changelog-policy</span><span class="tag">project-config</span><span class="tag">notifications</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> <code>approvals.prod = { by, date, ref }</code>, OK humano explícito sobre gates en verde.</p>
+    </article>
+
+    <article class="phase" aria-labelledby="ph12">
+      <header><span class="num">12</span><h3 id="ph12">Archivo</h3></header>
+      <div class="cmd">/karvey:karvey-archive &lt;change-id&gt;</div>
+      <dl>
+        <dt>Qué hace</dt><dd>Fusiona los spec-deltas en las specs vivas, archiva el cambio y cierra el Epic. Barrido de backlog (ofrece promover emergentes a nuevos change-id) y de ramas. Recomendado: <code>karvey-retro</code> + <code>karvey-docs</code>.</dd>
+        <dt>Produce</dt><dd><code>specs/{capability}/spec.md</code> actualizado, <code>changes/archive/{fecha}-{change-id}/</code>.</dd>
+        <dt>Reglas</dt><dd><span class="tag">living-specs</span><span class="tag">backlog</span><span class="tag">phase-close</span><span class="tag">deploy-workflow</span></dd>
+      </dl>
+      <p class="gate"><b>Gate:</b> verificación de completitud; el cambio no se cierra con una rama suya viva.</p>
+    </article>
+  </div>
+
+  <details>
+    <summary>Tipos de cambio: <code>feature</code>, <code>ops</code>, <code>hotfix</code> y cambio padre</summary>
+    <ul>
+      <li><strong><code>ops</code></strong> (IAM, DNS, secretos, consola): <code>init → requirements (lite) → infra (plan de comandos) → tasks ([human]/[Infra]) → ejecución + verificación → archive</code>. Se saltan mockup, diseño y arquitectura (esta última solo si cambian fronteras de confianza).</li>
+      <li><strong><code>hotfix</code></strong>: <code>iterate (BUG-NN) → impl → test (regresión) → deploy</code>, con fix + <code>BUG-NN</code> + test de regresión en el <strong>mismo PR</strong>. Los requisitos se reabren solo si el defecto es un spec-gap.</li>
+      <li><strong>Cambio padre</strong> (<code>links.children</code>): no tiene código propio; muestra la fase de cada hijo (<code>{change-id}@{repo}</code>) y pasa a <code>deployed</code> solo cuando todos los hijos están desplegados o descartados por decisión.</li>
+      <li><strong>PR solo de documentación</strong>: CI liviano (spec lint) en vez de build/test/deploy; nunca dispara un despliegue.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- 5. ITERACIÓN -->
+<section class="block" id="iteracion" aria-labelledby="t-iter">
+  <p class="eyebrow">05 · La espiral</p>
+  <h2 id="t-iter">El bucle de iteración</h2>
+  <p class="lede"><em>Afán</em>: no te detienes hasta que el resultado se logra de verdad. <code>test</code>, <code>qa</code> y <code>browse</code> solo <strong>observan y clasifican</strong> (anotan en <code>findings.md</code>); <code>karvey-iterate</code> es el único que <strong>enruta</strong>.</p>
+
+  <figure>
+    <div class="figure-wrap">
+      <svg viewBox="0 0 820 330" role="img" aria-labelledby="loop-title loop-desc">
+        <title id="loop-title">Bucle de iteración de Karvey</title>
+        <desc id="loop-desc">Los hallazgos de test, qa y browse llegan a findings.md. karvey-iterate los clasifica y enruta: bug va al tracker BUG-NN y al micro-loop impl, test, qa; spec-gap reabre requirements y propaga solo a las fases afectadas; emergent va al backlog de descubrimiento y se vuelve un futuro change-id, barrido en archive.</desc>
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah"/></marker>
+        </defs>
+        <rect x="10" y="135" width="150" height="60" rx="10" class="n"/>
+        <text x="85" y="162" text-anchor="middle" class="tb">test · qa</text>
+        <text x="85" y="181" text-anchor="middle" class="tb">browse</text>
+
+        <rect x="200" y="135" width="140" height="60" rx="10" class="n-s"/>
+        <text x="270" y="162" text-anchor="middle" class="tb">findings.md</text>
+        <text x="270" y="181" text-anchor="middle" class="tm">bandeja única</text>
+
+        <rect x="380" y="130" width="160" height="70" rx="10" class="n-o"/>
+        <text x="460" y="160" text-anchor="middle" class="tb">karvey-iterate</text>
+        <text x="460" y="180" text-anchor="middle" class="tm">clasifica y enruta</text>
+
+        <path d="M160 165 H196" class="e" marker-end="url(#arr)"/>
+        <path d="M340 165 H376" class="e" marker-end="url(#arr)"/>
+
+        <rect x="600" y="20" width="210" height="80" rx="10" class="n-r"/>
+        <text x="705" y="46" text-anchor="middle" class="tb">bug</text>
+        <text x="705" y="66" text-anchor="middle" class="t">BUG-NN (tracker)</text>
+        <text x="705" y="86" text-anchor="middle" class="tm">micro-loop impl → test → qa</text>
+
+        <rect x="600" y="125" width="210" height="80" rx="10" class="n-s"/>
+        <text x="705" y="151" text-anchor="middle" class="tb">spec-gap</text>
+        <text x="705" y="171" text-anchor="middle" class="t">reabre requirements</text>
+        <text x="705" y="191" text-anchor="middle" class="tm">ripple solo a fases afectadas</text>
+
+        <rect x="600" y="230" width="210" height="80" rx="10" class="n-m"/>
+        <text x="705" y="256" text-anchor="middle" class="tb">emergent</text>
+        <text x="705" y="276" text-anchor="middle" class="t">backlog de descubrimiento</text>
+        <text x="705" y="296" text-anchor="middle" class="tm">futuro change-id (archive)</text>
+
+        <path d="M540 150 C 570 150, 570 60, 596 60" class="e" marker-end="url(#arr)"/>
+        <path d="M540 165 H596" class="e" marker-end="url(#arr)"/>
+        <path d="M540 180 C 570 180, 570 270, 596 270" class="e" marker-end="url(#arr)"/>
+
+        <path d="M600 40 C 300 0, 110 40, 85 131" class="e-d" marker-end="url(#arr)"/>
+        <text x="300" y="30" text-anchor="middle" class="tm">vuelve a probar el alcance afectado</text>
+      </svg>
+    </div>
+    <figcaption>El pipeline 0→12 es el camino feliz; estas tres aristas son la realidad. Un cambio solo está <strong>listo</strong> cuando <code>findings.md</code> no tiene <code>bug</code> ni <code>spec-gap</code> abiertos y todo <code>emergent</code> quedó capturado en el backlog.</figcaption>
+  </figure>
+
+  <div class="table-wrap">
+    <table>
+      <caption class="sr">Tipos de hallazgo y su arista</caption>
+      <thead><tr><th scope="col">Tipo</th><th scope="col">Prueba de tornasol</th><th scope="col">Arista</th><th scope="col">¿Bloquea?</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag r">bug</span></td><td>«La spec está bien, el código está mal».</td><td>Tracker <code>BUG-NN</code> con historial de estados (DETECTADO → DIAGNOSTICADO → EN FIX → RESUELTO → REABIERTO) → micro-loop impl→test→qa.</td><td>Sí, hasta resolverse.</td></tr>
+        <tr><td><span class="tag s">spec-gap</span></td><td>«Si lo hubiéramos especificado bien, la implementación habría sido otra».</td><td>Sub-ciclo de revisión: <code>approvals.requirements</code> a false, +1 <code>iteration_count</code>, entrada en <code>revision_history</code>, se enmienda solo el requisito afectado y se re-aprueba.</td><td>Sí, hasta resolverse.</td></tr>
+        <tr><td><span class="tag m">emergent</span></td><td>«Buena idea, pero es otro cambio».</td><td><code>docs/spec/backlog.md</code> (fuente de verdad) + espejo en el tracker → nuevo change-id en el barrido de archive.</td><td>No; solo debe quedar capturado.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6. CAPA TRANSVERSAL -->
+<section class="block" id="transversal" aria-labelledby="t-sup">
+  <p class="eyebrow">06 · En cualquier momento</p>
+  <h2 id="t-sup">Capa transversal · 18 skills de apoyo</h2>
+  <p class="lede">No son fases: no empujan <code>spec.json:phase</code> hacia adelante. La única excepción es <code>karvey-iterate</code>, que puede hacer la transición controlada <em>hacia atrás</em> del sub-ciclo de revisión. Respetan las mismas compuertas y hooks.</p>
+
+  <div class="filter" id="sup-filter" hidden>
+    <label for="sup-q">Filtrar skills</label>
+    <input id="sup-q" type="search" placeholder="p. ej. handoff, modelo, PDF…" autocomplete="off">
+    <output id="sup-count" for="sup-q" aria-live="polite"></output>
+  </div>
+
+  <div class="grid" id="sup-grid">
+    <article class="card" data-f><h3><code>karvey-iterate</code></h3><span class="tag o">iteración</span><p>Motor de iteración: lee <code>findings.md</code>, confirma el tipo y enruta cada hallazgo a bug, spec-gap o emergent. El único lugar donde vive la lógica del bucle.</p><p class="small muted"><b>Cuándo:</b> aparecieron hallazgos o la spec resultó incorrecta o incompleta.</p></article>
+    <article class="card" data-f><h3><code>karvey-investigate</code></h3><span class="tag o">diagnóstico</span><p>Depuración de causa raíz. <strong>Ley de Hierro: no hay fix sin investigar.</strong> Fecha el síntoma, pregunta qué cambió antes de qué está mal, sigue el dato entre repos y separa la causa de la fragilidad latente.</p><p class="small muted"><b>Cuándo:</b> algo falla y no se entiende por qué.</p></article>
+    <article class="card" data-f><h3><code>karvey-second-opinion</code></h3><span class="tag s">revisión</span><p>Revisión adversarial con <em>otro</em> modelo (Claude vs GPT/Codex/Gemini). Modos Review (PASS/FAIL), Challenge y Consult. Complementa el gate de seguridad de QA, no lo aprueba solo.</p><p class="small muted"><b>Cuándo:</b> antes de liberar algo sensible.</p></article>
+    <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">calidad</span><p>Puntaje 0–10 de calidad (type-check, lint, tests, código muerto) con tendencia, más preparación del método: skills instalados e inputs fijados (<code>repo path @commit</code>) vigentes.</p><p class="small muted"><b>Cuándo:</b> chequeo periódico o trabajo multi-repo.</p></article>
+    <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">revisión</span><p>Revisa la experiencia del desarrollador: recorre el onboarding real, mide time-to-hello-world y encuentra fricciones y «docs que mienten». Modos plan y live.</p><p class="small muted"><b>Cuándo:</b> auditar onboarding o DX.</p></article>
+    <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">revisión</span><p>Retrospectiva del ciclo: velocidad, salud de tests, desglose por persona, rachas y oportunidades de mejora desde el historial de commits.</p><p class="small muted"><b>Cuándo:</b> al cerrar un ciclo (recomendado en archive).</p></article>
+    <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">ojos</span><p>Le da ojos al agente en el runtime real: navegador (web), simulador o dispositivo (móvil), terminal (CLI). Clic, captura, inspección; importa cookies para vistas autenticadas.</p><p class="small muted"><b>Cuándo:</b> ver lo que ve el usuario; también escribe en <code>findings.md</code>.</p></article>
+    <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">estado / handoff</span><p><code>save</code> / <code>restore</code> del checkpoint del cambio <strong>y del handoff del agente</strong>: identidad, manifiesto, tablero, checklist, estado medido de los repos (<code>state.json</code>), decisiones vigentes y tareas programadas.</p><p class="small muted"><b>Cuándo:</b> al rotar sesión o traspasar trabajo, con uno o varios agentes.</p></article>
+    <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">documentación</span><p>Ingeniero de documentación: genera docs Diátaxis (tutorial, how-to, referencia, explicación) desde el código, actualiza docs desfasadas y exporta Markdown a PDF.</p><p class="small muted"><b>Cuándo:</b> tras lo liberado (recomendado en archive).</p></article>
+    <article class="card" data-f><h3><code>karvey-diagram</code></h3><span class="tag">diagramas</span><p>Lenguaje natural a diagrama: fuente mermaid + <code>.excalidraw</code> editable + SVG/PNG renderizado. Funciona offline.</p><p class="small muted"><b>Cuándo:</b> flujo, secuencia, arquitectura o ER.</p></article>
+    <article class="card" data-f><h3><code>karvey-guard</code></h3><span class="tag r">guardrails</span><p>Instala o quita los hooks de enforcement, da un override temporal del plan-gate, aplica un edit-lock a un directorio (<code>--freeze</code>) y corre el checklist de verificación (<code>--verify</code>, solo lectura).</p><p class="small muted"><b>Cuándo:</b> trabajo sensible o para forzar el flujo.</p></article>
+    <article class="card" data-f><h3><code>karvey-team</code></h3><span class="tag">equipo · opcional</span><p>Capa de equipo opt-in: <code>init</code>, <code>census</code>, <code>relay</code>, <code>cost</code>. Roles, manifiestos, tableros, censo, relevo y <strong>medición del gasto</strong>.</p><p class="small muted"><b>Cuándo:</b> solo tras leer <code>rules/team.md</code>; Karvey está completo con un agente.</p></article>
+    <article class="card" data-f><h3><code>karvey-decisions</code></h3><span class="tag">equipo · decisiones</span><p>Registro numerado único (<code>D-NN</code> negocio, <code>C-NN</code> dirección) que los cambios citan. <code>cross</code> contrasta una pregunta contra el registro <strong>antes</strong> de declarar algo bloqueado.</p><p class="small muted"><b>Cuándo:</b> tomar, consultar o citar una decisión.</p></article>
+    <article class="card" data-f><h3><code>karvey-standards</code></h3><span class="tag">estándares</span><p>Levanta los golden paths del equipo (db, backend, frontend…) desde el <strong>sistema real</strong> hacia el repo de estándares del equipo. Re-ejecutable; <code>--refresh</code> promueve desviaciones recurrentes. Nunca escribe en el plugin público.</p><p class="small muted"><b>Cuándo:</b> arrancar o refrescar los estándares.</p></article>
+    <article class="card" data-f><h3><code>karvey-import</code></h3><span class="tag">importación</span><p>Convierte specs de Kiro (<code>.kiro/specs/*</code>) o gstack a la estructura <code>docs/spec/</code>. No destructivo con el origen; los gates entran sin aprobar para revalidarlos.</p><p class="small muted"><b>Cuándo:</b> migrar desde Kiro o gstack.</p></article>
+    <article class="card" data-f><h3><code>karvey-benchmark-models</code></h3><span class="tag">benchmark</span><p>Compara modelos lado a lado en un skill o tarea: latencia, tokens, costo y calidad juzgada por LLM (opcional).</p><p class="small muted"><b>Cuándo:</b> decidir qué modelo conviene.</p></article>
+    <article class="card" data-f><h3><code>karvey-scrape</code></h3><span class="tag">scrape</span><p>Extrae datos de una web: la primera vez prototipa la extracción, luego la codifica como script o skill reutilizable y probado.</p><p class="small muted"><b>Cuándo:</b> extraer datos web de forma repetible.</p></article>
+    <article class="card" data-f><h3><code>karvey-context</code></h3><span class="tag">contexto · solo lectura</span><p>Tablero: config del proyecto, capabilities, cambios activos y archivados, sprint, cola de despliegue / landing report (qué está en dev, en prod, listo para liberar), backlog y ramas vivas.</p><p class="small muted"><b>Cuándo:</b> en cualquier momento; nunca escribe.</p></article>
+  </div>
+  <p class="small muted" id="sup-empty" hidden>Ningún skill coincide con el filtro.</p>
+
+  <details>
+    <summary>Si vienes de Kiro o gstack: equivalencias</summary>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Kiro / gstack</th><th scope="col">En Karvey</th></tr></thead>
+        <tbody>
+          <tr><td>kiro <code>/spec</code>, <code>/kiro-spec-*</code></td><td>grill + PRD + requisitos EARS (fases 0–2)</td></tr>
+          <tr><td>office-hours, plan-ceo-review</td><td>reencuadre 10 estrellas en <code>karvey-grill</code></td></tr>
+          <tr><td>plan-design-review, design-consultation, design-shotgun</td><td><code>karvey-design-graphic</code> + <code>karvey-mockup</code> (shotgun)</td></tr>
+          <tr><td>plan-eng-review, diagram</td><td><code>karvey-architecture</code> + <code>karvey-diagram</code></td></tr>
+          <tr><td>setup-deploy</td><td><code>karvey-infra</code></td></tr>
+          <tr><td>review, cso, codex, design-review</td><td><code>karvey-qa</code> (9 dim.) + <code>karvey-second-opinion</code></td></tr>
+          <tr><td>qa, browse, benchmark</td><td><code>karvey-test</code> + <code>karvey-browse</code> + <code>karvey-health</code></td></tr>
+          <tr><td>ship, land-and-deploy, canary</td><td><code>karvey-deploy</code></td></tr>
+          <tr><td>investigate · health · retro</td><td><code>karvey-investigate</code> · <code>karvey-health</code> · <code>karvey-retro</code></td></tr>
+          <tr><td>(sin equivalente: bucle de retroalimentación)</td><td><code>karvey-iterate</code></td></tr>
+          <tr><td>context-save/restore</td><td><code>karvey-checkpoint</code></td></tr>
+          <tr><td>document-generate/release, make-pdf</td><td><code>karvey-docs</code></td></tr>
+          <tr><td>learn, gbrain</td><td><code>knowledge-sync</code> (graphify / obsidian)</td></tr>
+          <tr><td>careful, freeze, guard</td><td><code>karvey-guard</code> + hooks de <code>enforcement.md</code></td></tr>
+          <tr><td>devex-review · scrape, skillify · benchmark-models</td><td><code>karvey-devex</code> · <code>karvey-scrape</code> · <code>karvey-benchmark-models</code></td></tr>
+          <tr><td>ios-qa, ios-fix, ios-design-review</td><td>generalizados vía <code>targets.md</code> (runtime real por target)</td></tr>
+          <tr><td><code>.kiro/specs/*</code> / specs de gstack existentes</td><td><code>karvey-import --from kiro|gstack</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
+
+<!-- 7. REGLAS -->
+<section class="block" id="reglas" aria-labelledby="t-rules">
+  <p class="eyebrow">07 · Contrato común</p>
+  <h2 id="t-rules">Reglas compartidas · 22</h2>
+  <p class="lede">Viven en <code>plugins/karvey/skills/karvey/rules/</code>. Los skills las citan en vez de repetirlas; las copias locales deben ser idénticas byte a byte a la canónica.</p>
+
+  <div class="filter" id="rules-filter" hidden>
+    <label for="rules-q">Filtrar reglas</label>
+    <input id="rules-q" type="search" placeholder="p. ej. deploy, qa, estados…" autocomplete="off">
+    <output id="rules-count" for="rules-q" aria-live="polite"></output>
+  </div>
+  <div class="table-wrap">
+    <table id="rules-table">
+      <caption class="sr">Reglas compartidas del método Karvey</caption>
+      <thead><tr><th scope="col">Regla</th><th scope="col">Qué gobierna</th><th scope="col">Se aplica en</th></tr></thead>
+      <tbody>
+        <tr><td><code>project-config.md</code></td><td>El <code>project.json</code> de proyecto: git, cloud, IaC, knowledge_sync, targets, repos (1 o más, nunca cero), spec_repo, branch_flow, enforcement, standards y los bloques de equipo.</td><td>init, architecture, infra, deploy, context</td></tr>
+        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>La herramienta de gestión del equipo y su flujo de estados: 5 estados lógicos, operaciones lógicas (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) y un adaptador por herramienta.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
+        <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>El canal de avisos del equipo (nunca uno asumido): destino, vía, eventos (<code>qa</code>, <code>deploy</code>, <code>incident</code> opcional) y formato por canal.</td><td>init, qa, deploy, iterate</td></tr>
+        <tr><td><code>clickup-protocol.md</code></td><td>El adaptador de ClickUp: credenciales en <code>.connections.json</code> (nunca commiteado), jerarquía, nombres y estimación en minutos IA (10–30, tope ~60) válida para cualquier herramienta.</td><td>init, tasks, impl, qa, deploy, archive</td></tr>
+        <tr><td><code>engineering-standards.md</code></td><td>Los golden paths por capa (tercera fuente de verdad), el gate de conformidad en modo diseño y <code>deviations.md</code>; separación método público / estándares del equipo.</td><td>init, architecture, impl, qa, archive, guard</td></tr>
+        <tr><td><code>ears-format.md</code></td><td>Sintaxis EARS: ubicuo, por evento (WHEN), por estado (WHILE), condicional (IF/THEN), opcional (WHERE) y combinado.</td><td>requirements</td></tr>
+        <tr><td><code>security-tiers.md</code></td><td>Tiers 1–4 (público, autenticado, privilegiado, crítico) con sus controles mínimos por capa.</td><td>requirements, architecture, infra, qa</td></tr>
+        <tr><td><code>living-specs.md</code></td><td>Estructura de <code>docs/spec/</code>, specs vivas acumulativas por capability y protocolo de spec-delta.</td><td>init, requirements, archive</td></tr>
+        <tr><td><code>knowledge-sync.md</code></td><td>Grafo de conocimiento entre iteraciones: Obsidian si hay MCP; si no, graphify como piso mínimo. Nunca sin sincronización.</td><td>todas las fases (al cierre)</td></tr>
+        <tr><td><code>targets.md</code></td><td>Agnosticismo de stack: cómo cada fase se adapta a web, iOS, Android, escritorio, CLI, API, embebido y otros.</td><td>mockup, design-graphic, architecture, test, qa, deploy</td></tr>
+        <tr><td><code>deploy-workflow.md</code></td><td>Flujo feature → dev → PR master disparado por pipeline, checklist de 6 pasos, gates del PR, OK humano, cero downtime e higiene de ramas.</td><td>infra, impl, deploy, archive (barrido), context (ramas vivas)</td></tr>
+        <tr><td><code>changelog-policy.md</code></td><td>Toda línea de código en un CHANGELOG: quién, cuándo y por qué, con el modelo IA explícito y siempre un humano responsable.</td><td>impl, infra, deploy, qa</td></tr>
+        <tr><td><code>versioning.md</code></td><td>Semver <code>major.minor.rev</code> por componente y repo. Regla dura: nunca desplegar sin incrementar la versión.</td><td>impl, deploy, qa</td></tr>
+        <tr><td><code>enforcement.md</code></td><td>Hooks <code>PreToolUse</code> opt-in que sí bloquean (git-flow-guard, plan-gate), override y reversión, por proyecto.</td><td>init, guard</td></tr>
+        <tr><td><code>support-skills.md</code></td><td>Catálogo de la capa transversal y sus reglas de invocación (no avanzan la fase; respetan los gates).</td><td>capa transversal</td></tr>
+        <tr><td><code>iteration-loop.md</code></td><td>Las tres aristas de retroalimentación, <code>findings.md</code>, el sub-ciclo de revisión de spec y la regla de convergencia.</td><td>test, qa, browse, iterate</td></tr>
+        <tr><td><code>incident-tracking.md</code></td><td>Tracker <code>BUG-NN</code> por repo (<code>docs/bugs_dev_testing.md</code>) + índice global, numeración que nunca se reinicia e historial de estados.</td><td>test, qa, iterate, investigate</td></tr>
+        <tr><td><code>backlog.md</code></td><td>Backlog de descubrimiento dual: Markdown como fuente de verdad, espejado en el tracker; barrido en archive.</td><td>iterate, archive, context</td></tr>
+        <tr><td><code>phase-close.md</code></td><td>Ritual obligatorio de 4 acciones al cerrar cada fase y tarea: comentar, cambiar estado (+ cascada), barrer hallazgos y backlog, actualizar <code>spec.json</code> + conocimiento.</td><td>todas las fases (al cierre), impl, iterate</td></tr>
+        <tr><td><code>verification.md</code></td><td>18 modos de falla que vuelven falso un reporte en verde (una cita no es lo citado, exit 0 no es éxito, un test verde sobre código que nadie llama…).</td><td>todas las fases (antes de decir «listo»), guard, qa, health</td></tr>
+        <tr><td><code>multi-agent.md</code></td><td>Trabajo multi-agente y multi-repo: cambios padre/hijo, decisiones <code>D-NN</code>, inputs fijados <code>@commit</code>, aprobaciones con quién y dónde, tareas <code>[human]</code>, tipos <code>ops</code> y <code>hotfix</code>, PR solo docs.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health y todo gate</td></tr>
+        <tr><td><code>team.md</code> <span class="tag">opcional</span></td><td>Capa de equipo de agentes: <code>team.json</code>, roles, rotación, direccionamiento, comunicación mínima y costo medido.</td><td>checkpoint (handoff), team, decisions, context</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted" id="rules-empty" hidden>Ninguna regla coincide con el filtro.</p>
+  <p class="small muted">La columna «Se aplica en» sigue la tabla del orquestador; para <code>management-adapters</code> y <code>notifications</code> (aún no listadas ahí) se toma de la propia regla.</p>
+</section>
+
+<!-- 8. HOOKS -->
+<section class="block" id="hooks" aria-labelledby="t-hooks">
+  <p class="eyebrow">08 · Lo que corre solo y lo que eliges</p>
+  <h2 id="t-hooks">Hooks</h2>
+  <p class="lede">Un skill es guía: el modelo la sigue voluntariamente y no garantiza nada. Un hook sí bloquea. Karvey separa lo que viene activo con el plugin de lo que cada proyecto decide activar.</p>
+
+  <div class="split">
+    <div class="card">
+      <h3>Activos al instalar</h3>
+      <p><span class="tag m">automático</span> <strong><code>SessionStart</code> · <code>karvey-session-context.sh</code></strong> (en <code>startup|resume|compact|clear</code>, timeout 10 s).</p>
+      <ul class="small">
+        <li>Reinyecta identidad, manifiesto, tablero, checklist y handoff (busca <code>docs/spec/team.json</code>, un <code>.ceo-agentes</code> heredado o <code>docs/spec/agent/</code>).</li>
+        <li><strong>Mide</strong>: por cada repo de <code>state.json</code> compara rama, último commit y cambios sin commitear contra el árbol vivo → <code>matches</code> o <code>DRIFT — branch X -&gt; Y</code>.</li>
+        <li>Indica correr <code>/karvey-checkpoint restore</code> primero si hay cambio activo, deriva o no hay handoff.</li>
+        <li><span class="tag o">3.10</span> En un proyecto Karvey sin settings del equipo imprime una línea que apunta a <code>/karvey:karvey-init --settings</code>.</li>
+        <li>Fuera de un proyecto Karvey es <strong>inerte</strong>: no imprime nada y sale con 0. Los hooks del plugin se suman a los tuyos, no los reemplazan.</li>
+      </ul>
+      <p><span class="tag">a mano, una vez</span> <strong>Statusline · <code>karvey-statusline.sh</code></strong>: contexto, límites de la cuenta con la <strong>hora del próximo reinicio y el tiempo restante</strong> de cada ventana (p. ej. <code>5h 29% ↻18:05 (1h31m) · 7d 35% ↻jue 21:20 (2d4h)</code>, reloj según <code>KARVEY_TZ</code>, por defecto la zona del sistema), horas, costo y aviso «TIME TO ROTATE». Un plugin no puede declarar un statusline, así que se pega en tu <code>~/.claude/settings.json</code>. Corre fuera del turno (no gasta tokens) y requiere <code>bash</code> + <code>python3</code>.</p>
+      <pre><code>{
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/plugins/&lt;marketplace&gt;/karvey/&lt;version&gt;/hooks/karvey-statusline.sh",
+    "padding": 0
+  }
+}</code></pre>
+      <p class="small muted">Umbrales: <code>KARVEY_ROTATE_CTX_YELLOW</code> (100000), <code>KARVEY_ROTATE_CTX_RED</code> (150000), <code>KARVEY_ROTATE_HOURS</code> (8). Los 150k salen de medir: a 588k de contexto un turno cuesta 7× lo que cuesta a 80k.</p>
+    </div>
+    <div class="card">
+      <h3>Opcionales por proyecto</h3>
+      <p><span class="tag r">opt-in</span> <code>karvey-init</code> pregunta si activarlos (paso 3.5) y <code>karvey-guard</code> los administra después. Se escriben en el <code>settings.json</code> del proyecto, parametrizados con <code>branch_flow</code>. Nunca se imponen globalmente.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Hook</th><th scope="col">Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td><code>git-flow-guard</code><br><span class="tag m">script incluido</span></td><td class="wrap">Bloquea <code>git push</code> directo a producción, <code>git commit</code> en dev/master y el deploy manual. Flujo permitido: <code>feature/* → dev → PR → master</code>.</td></tr>
+            <tr><td><code>plan-gate</code><br><span class="tag m">script incluido</span></td><td class="wrap">Bloquea Edit/Write o comandos destructivos sin marcador de plan aprobado; el marcador se crea al aprobar el plan.</td></tr>
+            <tr><td><code>standards-guard</code><br><span class="tag">descrito en la regla</span></td><td class="wrap">Avisa o bloquea cuando impl toca un patrón <code>MUST NOT</code> (o uno <code>deprecated</code> en migración) sin desviación aprobada en <code>deviations.md</code>.</td></tr>
+            <tr><td><code>clickup-sync-guard</code><br><span class="tag">descrito en la regla</span></td><td class="wrap">Pese al nombre, agnóstico de herramienta: avisa cuando la fase avanza sin el comentario/estado de cierre correspondiente.</td></tr>
+            <tr><td><code>--freeze &lt;dir&gt;</code></td><td class="wrap">Edit-lock: bloquea toda escritura fuera del directorio límite hasta <code>--unfreeze</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <pre><code>/karvey:karvey-guard --install        # instala los hooks del proyecto
+/karvey:karvey-guard --disable-hooks  # los quita del settings.json
+/karvey:karvey-guard --override       # override puntual del plan-gate
+/karvey:karvey-guard --freeze &lt;dir&gt;   # edit-lock   ·  --unfreeze
+/karvey:karvey-guard --verify         # checklist de verificación (solo lectura)</code></pre>
+      <p class="small muted">Los únicos scripts opt-in que trae el plugin son <code>git-flow-guard.sh</code> y <code>plan-gate.sh</code> (en <code>skills/karvey/hooks/</code>). <code>standards-guard</code> y <code>clickup-sync-guard</code> están <strong>descritos en la regla</strong> (<code>enforcement.md</code>, con detalle en <code>engineering-standards.md</code> y <code>phase-close.md</code>), no se entregan como scripts.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 9. CONFIG EQUIPO -->
+<section class="block" id="equipo-config" aria-labelledby="t-cfg">
+  <p class="eyebrow">09 · Nuevo en 3.10</p>
+  <h2 id="t-cfg">Configuración del equipo</h2>
+  <p class="lede">Antes, Karvey asumía Google Chat para avisar y ClickUp con un estado propio de un equipo (<code>listo! para pap</code>). Ahora el canal, la herramienta y su flujo de estados son <strong>settings del equipo</strong> guardados en <code>project.json</code>, y cada fase habla en <strong>estados lógicos</strong>. El flujo de HainTech sigue funcionando porque lo declara, no porque sea el valor por defecto.</p>
+
+  <div class="note">
+    <strong>¿Por qué en el primer uso y no al instalar?</strong> Un plugin de Claude Code no tiene hook de instalación: nada puede correr cuando se instala. El primer momento posible es el primer uso: el hook de sesión <em>avisa</em> y <code>karvey-init</code> <em>pregunta</em>.
+  </div>
+
+  <ol class="lane" aria-label="Flujo de settings en el primer uso">
+    <li><b>1 · Sesión</b>El hook detecta <code>docs/spec/</code> sin <code>notifications</code> o <code>management</code> y deja una línea de aviso.</li>
+    <li><b>2 · karvey-init</b>Paso 3.2: pregunta un bloque a la vez, con ejemplos, sin asumir la respuesta.</li>
+    <li><b>3 · Notificaciones</b>Canal, destino, vía (<code>mcp · cli · webhook · api</code>) y eventos (por defecto <code>qa</code>, <code>deploy</code>).</li>
+    <li><b>4 · Gestión</b>Herramienta, ubicación y vía.</li>
+    <li><b>5 · Estados</b>Lee los estados reales de la herramienta, propone el mapeo a los 5 lógicos y lo confirmas una vez.</li>
+    <li class="prod"><b>6 · project.json</b>Escribe ambos bloques; credenciales a <code>.connections.json</code> o bóveda. Con los bloques presentes no vuelve a preguntar, salvo <code>--settings</code>.</li>
+  </ol>
+
+  <div class="split">
+    <div class="card">
+      <h3>Canal de avisos · <code>notifications.channel</code></h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Valor</th><th scope="col">Destino (<code>target</code>) y formato</th></tr></thead>
+          <tbody>
+            <tr><td><code>google-chat</code></td><td class="wrap">id de espacio (<code>spaces/XXXX</code>); <code>*negrita*</code>, sin tablas Markdown.</td></tr>
+            <tr><td><code>slack</code></td><td class="wrap">canal (<code>#dev-releases</code>); mrkdwn, tablas como bloque de código.</td></tr>
+            <tr><td><code>teams</code></td><td class="wrap">equipo/canal; subconjunto Markdown o Adaptive Card vía webhook.</td></tr>
+            <tr><td><code>email</code></td><td class="wrap">dirección o lista; HTML simple, asunto <code>[Karvey] {evento} — {change-id}</code>.</td></tr>
+            <tr><td><code>webhook</code></td><td class="wrap">el <em>nombre</em> del secreto con la URL, nunca la URL; JSON genérico.</td></tr>
+            <tr><td><code>none</code></td><td class="wrap">respuesta válida y explícita: se omite el aviso y se dice.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted">Nunca se leen destinos desde tablas de <code>CLAUDE.md</code>; un envío fallido se reporta, no se traga.</p>
+    </div>
+    <div class="card">
+      <h3>Herramienta · <code>management.tool</code></h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Valor</th><th scope="col">Cómo lo hace la sesión</th></tr></thead>
+          <tbody>
+            <tr><td><code>clickup</code></td><td class="wrap">MCP o REST (<code>time_estimate</code> solo por REST).</td></tr>
+            <tr><td><code>jira</code></td><td class="wrap">MCP de Atlassian, CLI <code>jira</code> o REST; cambiar estado es una <em>transición</em>.</td></tr>
+            <tr><td><code>linear</code></td><td class="wrap">MCP o GraphQL; estados por equipo.</td></tr>
+            <tr><td><code>azure-boards</code></td><td class="wrap"><code>az boards work-item create/update</code>.</td></tr>
+            <tr><td><code>github-projects</code></td><td class="wrap"><code>gh project item-add/item-edit</code>; estado = campo single-select.</td></tr>
+            <tr><td><code>spreadsheet</code></td><td class="wrap">CSV/xlsx en el repo o Sheet; una fila por ítem.</td></tr>
+            <tr><td><code>markdown</code></td><td class="wrap"><code>PLAN.md</code>; siempre válido como respaldo.</td></tr>
+            <tr><td><code>other</code></td><td class="wrap">se pregunta cómo trackea el equipo; si no hay vía programática, <code>PLAN.md</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:1.4rem">Los 5 estados lógicos</h3>
+  <p>Los skills escriben <code>status → review</code>, nunca un nombre literal. Los ejemplos son <strong>valores que declara un equipo</strong>, no valores por defecto. Si falta el mapa (proyectos anteriores a 3.10), se leen los estados reales antes del primer cambio, se propone el mapeo y se confirma una vez; nunca se adivina.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">Lógico</th><th scope="col">Significado</th><th scope="col">ClickUp (HainTech)</th><th scope="col">Jira</th><th scope="col">Planilla</th><th scope="col">Markdown</th></tr></thead>
+      <tbody>
+        <tr><td><code>todo</code></td><td>planificado, sin iniciar</td><td><code>to do</code></td><td><code>To Do</code></td><td><code>Pending</code></td><td>⬜</td></tr>
+        <tr><td><code>in_progress</code></td><td>en trabajo</td><td><code>in progress</code></td><td><code>In Progress</code></td><td><code>In progress</code></td><td>🔄</td></tr>
+        <tr><td><code>review</code></td><td>implementado, esperando validación o revisión humana</td><td><code>listo! para pap</code></td><td><code>In Review</code></td><td><code>Review</code></td><td>👀</td></tr>
+        <tr><td><code>done</code></td><td>validado / liberado</td><td><code>complete</code></td><td><code>Done</code></td><td><code>Done</code></td><td>✅</td></tr>
+        <tr><td><code>blocked</code></td><td>no puede avanzar</td><td><code>blocked</code></td><td><code>Blocked</code></td><td><code>Blocked</code></td><td>⛔</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <pre><code>"notifications": { "channel": "slack", "target": "#dev-releases", "via": "webhook", "events": ["qa", "deploy"] },
+"management": {
+  "tool": "jira", "location": "PAY", "via": "cli", "hierarchy": "epic&gt;feature&gt;task",
+  "statuses": { "todo": "To Do", "in_progress": "In Progress", "review": "In Review", "done": "Done", "blocked": "Blocked" }
+}</code></pre>
+  <p class="small muted">Resultado en una línea, por ejemplo: <code>Settings: notifications slack #dev-releases (webhook) · management jira PAY (5 states mapped)</code>.</p>
+</section>
+
+<!-- 10. DEPLOY -->
+<section class="block" id="deploy" aria-labelledby="t-dep">
+  <p class="eyebrow">10 · Entrega</p>
+  <h2 id="t-dep">Deploy y ramas</h2>
+  <p class="lede">El despliegue lo dispara el pipeline, nunca una persona ni un agente a mano: push a <code>dev</code> despliega dev; merge a <code>master</code> despliega prod. Los nombres salen de <code>project.json:branch_flow</code>.</p>
+
+  <ol class="lane" aria-label="Flujo de ramas">
+    <li><b>feature/{change-id}</b>Desarrollo y commit por tarea. Nunca commit en dev ni master.</li>
+    <li><b>dev</b>pull → merge → push ⇒ pipeline DEV → canary.</li>
+    <li><b>PR dev → master</b>pull antes; gates del PR (CI + políticas de rama) en verde.</li>
+    <li class="prod"><b>master</b>Merge solo con OK humano ⇒ pipeline PROD → canary.</li>
+    <li><b>Higiene</b>Ramas absorbidas borradas (remota + local); las no absorbidas se reportan.</li>
+  </ol>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Checklist de 6 pasos</h3>
+      <ol class="steps small">
+        <li>¿Estoy en una feature branch?</li>
+        <li>¿Actualicé <code>CHANGELOG.md</code>?</li>
+        <li>¿Commiteé todo lo pendiente?</li>
+        <li>¿Hice push de la rama?</li>
+        <li>¿Hice merge a <code>dev</code>?</li>
+        <li>¿Hice push de <code>dev</code>?</li>
+      </ol>
+      <p class="small muted">Recién ahí el pipeline despliega dev. Para prod se repite la verificación y el PR con aprobación.</p>
+    </div>
+    <div class="card">
+      <h3>Gates del PR y OK humano</h3>
+      <p class="small">CI y políticas de rama (build validation, revisores obligatorios, status checks) corren sobre el merge commit y ven lo que el chequeo local no ve. <strong>Nunca se pide aprobar sobre un gate rojo</strong>: eso vuelve la aprobación un timbre. Saltarse una política es decisión y responsabilidad del humano.</p>
+      <p class="small">El OK queda en git: <code>approvals.prod = { by, date, ref: D-NN }</code>. El gate de producción nunca se delega a un agente.</p>
+    </div>
+    <div class="card">
+      <h3>Canary post-deploy</h3>
+      <p class="small">Tras cada deploy (dev y prod), varias iteraciones espaciadas sobre el runtime real: consola, rendimiento, páginas/endpoints, con evidencia. En dev una regresión detiene el paso a prod; en prod se alerta y se recomienda rollback, también por pipeline. Refuerza el <strong>cero downtime</strong>.</p>
+    </div>
+    <div class="card">
+      <h3>Higiene de ramas</h3>
+      <p class="small">La absorción se <strong>verifica</strong>: <code>git branch -r --merged</code>, <code>git cherry</code> y la prueba de árbol con <code>git merge-tree --write-tree</code> (squash). Absorbida → se borra (<code>git branch -d</code>, nunca <code>-D</code>). No absorbida → nunca se borra: se reporta con sus commits y el humano decide. Se informan los conteos, nunca se limpia en silencio.</p>
+    </div>
+  </div>
+  <p class="small muted">Multi-repo: el flujo se aplica en cada repo respetando el orden de dependencias de <code>architecture.md</code> (p. ej. DB → backend → frontend). Semver + CHANGELOG antes del push; versión visible en el frontend (recomendado).</p>
+</section>
+
+<!-- 11. CAPA EQUIPO -->
+<section class="block" id="capa-equipo" aria-labelledby="t-team">
+  <p class="eyebrow">11 · Opcional</p>
+  <h2 id="t-team">Capa de equipo de agentes</h2>
+  <p class="lede">El pipeline lleva el eje del <em>trabajo</em>; esta capa suma el eje del <em>trabajador</em>: quién lo lleva, qué rol tiene, cómo sobrevive a un reinicio de contexto y cómo se coordinan varios sin pisarse. <strong>Es opt-in y no es la opción recomendada por defecto.</strong> Sin <code>docs/spec/team.json</code>, la capa no existe para el proyecto.</p>
+
+  <div class="note warn">
+    <strong>Aviso honesto de costo (medido, no teórico).</strong> La corrida que originó la regla: un equipo de 6 agentes en un producto real, 3 días, <strong>≈ US$1.000</strong>, y terminó <strong>volviendo a un solo agente con buenas instrucciones</strong>. Un turno a 588k de contexto costó 7× que a 80k; el 31% de los turnos concentró el 48% del gasto. Cada salto entre agentes es contexto nuevo para quien recibe: no hay caché compartida entre sesiones y el mismo trasfondo se relee y se paga en cada lado.
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h3>No uses un equipo cuando…</h3>
+      <ul class="small">
+        <li>el presupuesto importa;</li>
+        <li>el trabajo cabe en un contexto;</li>
+        <li>la división sería por <em>tema</em> y no por <em>repo con dueño real</em>;</li>
+        <li>nadie está midiendo el gasto.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Se gana su costo con…</h3>
+      <ul class="small">
+        <li>trabajo realmente paralelo en repos separados;</li>
+        <li>líneas largas e independientes;</li>
+        <li>roles que necesitan otras herramientas o permisos (una máquina con navegador, una consola operada por una persona).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Si está encendida, mídela</h3>
+      <p class="small"><code>karvey-team cost</code> escribe el reporte en el repo. Además: <code>init</code> (muestra la tabla de costos y confirma antes de escribir), <code>census</code> (inventario, no libreta de direcciones) y <code>relay</code> (sesiones listas para rotar). Rotación por umbral: 150k de contexto o 24 h por defecto.</p>
+    </div>
+  </div>
+  <p class="small muted">El handoff y el hook de sesión funcionan igual con un solo agente (<code>docs/spec/agent/</code>); con equipo solo cambia dónde vive (<code>{ops_repo}/agents/&lt;rol&gt;/</code>).</p>
+</section>
+
+<!-- 12. INSTALAR -->
+<section class="block" id="instalar" aria-labelledby="t-inst">
+  <p class="eyebrow">12 · Empezar</p>
+  <h2 id="t-inst">Instalar y actualizar</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Instalar (dentro de Claude Code)</h3>
+      <pre><code>/plugin marketplace add MauricioQuezadaHaintech/karvey
+/plugin install karvey@karvey-methods</code></pre>
+    </div>
+    <div class="card">
+      <h3>Actualizar (terminal)</h3>
+      <pre><code>claude plugin marketplace update karvey-methods
+claude plugin update karvey@karvey-methods</code></pre>
+      <p class="small">Luego <code>/reload-plugins</code> o reinicia la sesión para cargar la versión nueva. Verifica con <code>claude plugin list</code> (o <code>/plugin</code>).</p>
+    </div>
+    <div class="card">
+      <h3>Primer uso</h3>
+      <pre><code>/karvey:karvey-grill        # entrevista pre-spec
+/karvey:karvey-init &lt;id&gt;    # crea el cambio + settings del equipo
+/karvey:karvey &lt;id&gt;         # estado y siguiente paso
+/karvey:karvey-context      # tablero del proyecto</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- 13. VERSIONES -->
+<section class="block" id="versiones" aria-labelledby="t-ver">
+  <p class="eyebrow">13 · Historia</p>
+  <h2 id="t-ver">Historial de versiones</h2>
+  <ol class="timeline">
+    <li class="now"><span class="ver">3.10.0</span><span class="date">22-09-2026 · change team-adapters</span><br>Settings del equipo en el primer uso: canal de notificaciones, herramienta de gestión y flujo de estados; 5 estados lógicos; reglas <code>notifications.md</code> y <code>management-adapters.md</code>; aviso del hook de sesión; esta página.</li>
+    <li><span class="ver">3.9.1</span><span class="date">2026-09-22</span><br>Corrección de deriva documental: conteos (13 fases, 18 de apoyo, 32 skills), hooks activos vs opt-in, QA de 9 dimensiones; catálogo de skills en el README; re-sincronización de copias locales de reglas.</li>
+    <li><span class="ver">3.9.0</span><span class="date">2026-09-22</span><br>Higiene de ramas (nada queda en ramas); conformidad con estándares en QA; gates del PR y detección del host git en deploy.</li>
+    <li><span class="ver">3.8.0</span><span class="date">2026-09-22</span><br>Handoff del agente para uno o varios; capa de equipo opcional (<code>team.md</code>, <code>karvey-team</code>, <code>karvey-decisions</code>); reglas de verificación; hook <code>SessionStart</code> y statusline de rotación; <code>karvey-guard --verify</code>.</li>
+    <li><span class="ver">3.7.0</span><span class="date">2026-09-18</span><br>Trabajo multi-agente y multi-repo: cambios padre/hijo, decisiones <code>D-NN</code>, inputs fijados, <code>approvals.prod</code>, tareas <code>[human]</code>, tipos <code>ops</code> y <code>hotfix</code>, PR solo docs, chequeos de preparación en health.</li>
+    <li><span class="ver">3.6.0</span><span class="date">2026-09-08</span><br>Disciplina causal en <code>karvey-investigate</code>: fechar el síntoma, qué cambió antes de qué está mal, gate de coherencia causal, trazar entre repos.</li>
+    <li><span class="ver">3.5.0</span><span class="date">2026-07-05</span><br>Catálogo de componentes visuales (<code>design-components.md</code>) en design-graphic.</li>
+    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Estimación en minutos de IA (10–30 min, tope ~60) en <code>clickup-protocol.md</code>.</li>
+    <li><span class="ver">3.3.0</span><span class="date">2026-06-23</span><br>Capa de estándares de ingeniería (golden paths), gate de conformidad en modo diseño, <code>deviations.md</code>, <code>karvey-standards</code>.</li>
+    <li><span class="ver">3.2.0</span><span class="date">2026-06-17</span><br>Karvey se vuelve espiral: <code>karvey-iterate</code>, bucle de iteración, tracker <code>BUG-NN</code>, backlog dual, ritual de cierre de fase; mockup de 3–4 niveles con validación.</li>
+    <li><span class="ver">3.1.0</span><span class="date">2026-06-14</span><br><code>karvey-import</code>: migración desde Kiro y gstack.</li>
+    <li><span class="ver">3.0.0</span><span class="date">2026-06-14</span><br>Primera publicación como plugin/marketplace de Claude Code: pipeline 0–12, 12 skills de apoyo, agnosticismo de stack, gate de seguridad, deploy ordenado con canary, semver, enforcement opcional, licencia Apache 2.0.</li>
+  </ol>
+</section>
+
+</main>
+
+<footer class="site">
+  <div class="in">
+    <p style="margin:0">Método <strong>Karvey</strong> — <em>Afán</em>, palabra ona (selknam). Creado por Mauricio Quezada Ibáñez · HainTech.</p>
+    <p style="margin:0">Código bajo <strong>Apache License 2.0</strong>. «Karvey» y la convención <code>karvey-*</code> son marca de <strong>HainTech</strong>; las adaptaciones mantienen la atribución.</p>
+    <p style="margin:0">Repo: <a href="https://github.com/MauricioQuezadaHaintech/karvey">github.com/MauricioQuezadaHaintech/karvey</a></p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  function setupFilter(boxId, inputId, countId, items, emptyId, label){
+    var box=document.getElementById(boxId), input=document.getElementById(inputId),
+        out=document.getElementById(countId), empty=document.getElementById(emptyId);
+    if(!box||!input||!items.length) return;
+    box.hidden=false;
+    function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+    var texts=items.map(function(el){return norm(el.textContent);});
+    function run(){
+      var q=norm(input.value.trim()), n=0;
+      items.forEach(function(el,i){var ok=!q||texts[i].indexOf(q)!==-1; el.classList.toggle('hide',!ok); if(ok) n++;});
+      out.textContent=n+' de '+items.length+' '+label;
+      if(empty) empty.hidden=n!==0;
+    }
+    input.addEventListener('input',run); run();
+  }
+  setupFilter('sup-filter','sup-q','sup-count',[].slice.call(document.querySelectorAll('#sup-grid [data-f]')),'sup-empty','skills');
+  setupFilter('rules-filter','rules-q','rules-count',[].slice.call(document.querySelectorAll('#rules-table tbody tr')),'rules-empty','reglas');
+
+  // Highlight current section in the TOC
+  var links=[].slice.call(document.querySelectorAll('.toc a'));
+  if('IntersectionObserver' in window){
+    var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting && map[e.target.id]){
+          links.forEach(function(a){a.removeAttribute('aria-current');});
+          map[e.target.id].setAttribute('aria-current','true');
+        }
+      });
+    },{rootMargin:'-45% 0px -50% 0px'});
+    Object.keys(map).forEach(function(id){var s=document.getElementById(id); if(s) io.observe(s);});
+  }
+})();
+</script>
+</body>
+</html>

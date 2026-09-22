@@ -7,7 +7,7 @@ optional) only changes where the agent's profile lives.
 | File | What it is | How it is installed |
 |---|---|---|
 | `hooks.json` + `karvey-session-context.sh` | `SessionStart` hook (`startup\|resume\|compact\|clear`): reinjects identity, manifest, board, checklist and handoff; **measures the live repos against `state.json`**; and tells the session to run `/karvey-checkpoint restore` first | **Automatic** with the plugin |
-| `karvey-statusline.sh` | Rotation statusline: context, account limits, hours, cost, and a "TIME TO ROTATE" warning | **By hand, once** — see below |
+| `karvey-statusline.sh` | Rotation statusline: context, account limits **with the next reset time and time left** (`5h 29% ↻18:05 (1h31m) · 7d 35% ↻Thu 21:20 (2d4h)`; clock in `KARVEY_TZ`, default the system zone), hours, cost, and a "TIME TO ROTATE" warning | **By hand, once** — see below |
 
 ## The session hook needs no installation
 

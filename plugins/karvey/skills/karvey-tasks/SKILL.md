@@ -1,6 +1,6 @@
 ---
 name: karvey-tasks
-description: Generate implementation tasks from approved architecture. Creates Tasks in ClickUp (E{n}.F{n}.T{n}) with dependencies, or updates PLAN.md checklist. Triggers include "karvey tasks", "generar tareas", "generate tasks", "planificar implementación", "plan implementation".
+description: Generate implementation tasks from approved architecture. Creates Tasks (E{n}.F{n}.T{n}) with dependencies in the team's tracker, or updates PLAN.md checklist. Triggers include "karvey tasks", "generar tareas", "generate tasks", "planificar implementación", "plan implementation".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: <change-id> [-y] [--sequential]
 ---
@@ -9,7 +9,7 @@ argument-hint: <change-id> [-y] [--sequential]
 
 ## Purpose
 
-Generate the implementation task plan from the approved architecture. Record it in ClickUp (Epic > Feature > Tasks with dependencies) or in a PLAN.md checklist. Target size: 10–30 minutes per task (AI timings).
+Generate the implementation task plan from the approved architecture. Record it in the team's tracker (Epic > Feature > Tasks with dependencies — `karvey/rules/management-adapters.md`) or in a PLAN.md checklist. Target size: 10–30 minutes per task (AI timings).
 
 ## Execution steps
 
@@ -20,7 +20,8 @@ Read:
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/architecture.md`
 - `docs/spec/changes/{change-id}/infra.md`
-- `rules/clickup-protocol.md`
+- `docs/spec/project.json` → `management` (tool, location, statuses) and `karvey/rules/management-adapters.md`
+- `rules/clickup-protocol.md` (estimation rules for every tool; the ClickUp adapter when `management.tool = clickup`)
 
 Verify `approvals.infra.approved = true`. If not, stop.
 
@@ -140,9 +141,16 @@ Coverage:
 Do you approve the tasks to continue?
 ```
 
-### Step 6A — Create Tasks in ClickUp (if management=clickup)
+### Step 6A — Create Tasks in the team's tracker (`management-adapters.md`)
 
-Read `spec.json` for `clickup.epic_id`, `clickup.feature_ids`, `clickup.backlog_list_id`.
+Read `spec.json` for the tracker ids (`clickup.epic_id`, `clickup.feature_ids`, `clickup.backlog_list_id` — historical key, used for every tool).
+
+For each task: `create_task(feature, E{n}.F{n}.T{n}, estimate_min)` in `project.json:management.tool`, initial state `todo`,
+then the dependencies below with the tool's own mechanism (Jira issue links, Linear relations, ADO predecessor/successor
+links, GitHub sub-issues/"blocked by", spreadsheet `depends_on` column). Credentials from `.connections.json` (git-ignored),
+env vars or a vault — never in the repo.
+
+**ClickUp adapter example:**
 
 Read credentials from `.connections.json` (see `rules/clickup-protocol.md`). If it does not exist, create it and add it to `.gitignore` before continuing.
 
@@ -178,9 +186,9 @@ Dependencies:
 Estimate: {N}min
 
 When finished:
-1. Stop time tracking
+1. Stop time tracking (if the tool has it)
 2. Comment: a summary of what was done, modified files
-3. Change status to "listo! para pap"
+3. Change status to the team's `review` state ({status:review})
 
 Done with the Karvey Method
 ```
@@ -205,13 +213,13 @@ curl -s -X POST "https://api.clickup.com/api/v2/task/{B_ID}/dependency" \
   -d '{"depends_on":"{A_ID}"}'
 ```
 
-Dependencies to create:
+Dependencies to create (every tool):
 - Feature ← its Tasks (the Feature depends on all its Tasks finishing)
 - Epic ← its Features
 - [Backend] → [DB] within each Feature
 - [Frontend] → [Backend] within each Feature
 
-Check the active sprint and add the tasks:
+Check the active sprint and add the tasks (ClickUp; other tools: their sprint/iteration/cycle, if the team uses one):
 ```bash
 curl -s -X POST "https://api.clickup.com/api/v2/list/{SPRINT_LIST_ID}/task/{TASK_ID}" \
   -H "Authorization: $API_KEY" -H "Content-Type: application/json"
@@ -219,7 +227,7 @@ curl -s -X POST "https://api.clickup.com/api/v2/list/{SPRINT_LIST_ID}/task/{TASK
 
 Update `spec.json` with the IDs of the created tasks.
 
-### Step 6B — Update PLAN.md (if management=markdown)
+### Step 6B — Update PLAN.md (Markdown)
 
 Replace the "Tasks" and "Task status" sections with the full checklist:
 
@@ -233,11 +241,13 @@ Replace the "Tasks" and "Task status" sections with the full checklist:
 - [ ] F1.T3 [Frontend] {description} — est: 25min (depends F1.T2)
 
 ## Task status
+> Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked`
+
 | Task | Status | Estimate | Actual | Notes |
 |------|--------|----------|------|-------|
-| F1.T1 [DB] | ⬜ pending | 15min | — | |
-| F1.T2 [Backend] | ⬜ pending | 20min | — | |
-| F1.T3 [Frontend] | ⬜ pending | 25min | — | |
+| F1.T1 [DB] | ⬜ todo | 15min | — | |
+| F1.T2 [Backend] | ⬜ todo | 20min | — | |
+| F1.T3 [Frontend] | ⬜ todo | 25min | — | |
 ```
 
 ### Step 7 — Final output
@@ -247,7 +257,7 @@ On approval: `approvals.tasks.approved: true`, `phase: "tasks-approved"`.
 ```
 ✅ Tasks approved
 
-Management: {N tasks created in ClickUp with dependencies | PLAN.md updated}
+Management: {N tasks created in {tool} with dependencies | PLAN.md updated}
 
 Next step:
 /karvey-impl {change-id}

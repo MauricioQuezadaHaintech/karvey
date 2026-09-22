@@ -273,9 +273,11 @@ Only after the 6 → the pipeline deploys dev. For prod, repeat the verification
 
 ### Step 5 — Record in management
 
-Read `management` from `spec.json`.
+Read `management` from `spec.json` (the tool; its settings in `project.json:management` — `karvey/rules/management-adapters.md`).
 
-**If `management = clickup`:** create task `[Deploy] {change-id}` with the 6-step checklist as subtasks and close it on prod confirmation:
+**In the team's tracker:** `create_task("[Deploy] {change-id}")` with the 6-step checklist as subtasks, `set_status(…, in_progress)`
+while the deploy runs, `link(…, PR)`, and `set_status(…, done)` on prod confirmation (`blocked` if the release gate or the
+canary stops it). ClickUp adapter example:
 ```
 clickup_create_task
   name: "[Deploy] {change-id}"
@@ -284,7 +286,7 @@ clickup_create_task
 ```
 For each repo, record DEV and PROD deploy status. Close the task on confirming the merge to prod (PROD pipeline OK).
 
-**If `management = markdown`:** add an entry in `PLAN.md` with the deploy status **per repo and environment**:
+**Markdown (`PLAN.md`):** add an entry in `PLAN.md` with the deploy status **per repo and environment**:
 ```markdown
 ## Deploy — {change-id}
 | Repo | DEV | PROD |
@@ -310,7 +312,12 @@ Run the sync step of `karvey/rules/knowledge-sync.md` per `knowledge_sync` in `p
 - `graphify` → `/graphify docs/spec/ --update` (if `docs/spec/graphify-out/` does not exist, without `--update`).
 - Multi-repo with code changes → graphify also in each affected repo.
 
-### Step 8 — Final output
+### Step 8 — Notify the team + final output
+
+Send the `deploy` notification per `karvey/rules/notifications.md`: read `project.json:notifications`; if `channel` is
+unset, `none`, or `deploy` is not in `events` → skip and say so. Otherwise post to `target` via `via`, in the channel's own
+markup: repos + versions, DEV/PROD state, canary result, branches cleaned. Never read the destination from `CLAUDE.md`;
+a failed send is reported, not swallowed.
 
 ```
 ✅ Deploy complete — {change-id}
@@ -327,7 +334,8 @@ Post-deploy canary: DEV {OK / REGRESSION} · PROD {OK / REGRESSION → rollback 
 Branches: deleted {N} ({list}) · kept {N} ({branch}: not absorbed, {N} commits, PR #{n})
 {If there is a frontend} Version visible in UI: {yes / recommended to the user}
 
-Management: {[Deploy] {change-id} in ClickUp | PLAN.md updated}
+Management: {[Deploy] {change-id} in {tool} → {done | in_progress (PR open) | blocked} | PLAN.md updated}
+Notification: {channel → target | skipped (none) | not configured}
 Knowledge sync: {obsidian | graphify} updated
 
 Next step: /karvey-archive {change-id}

@@ -189,9 +189,9 @@ Any IaC/pipeline generated or modified **must record an entry** in the `CHANGELO
 
 ### Step 8 — Management
 
-Record in the project's management, reading `management` from `spec.json`:
-- `management = clickup` → create tasks with the `[Infra]` prefix per relevant resource/pipeline.
-- `management = markdown` → add entries in `PLAN.md` with the status of the infra and pipelines per repo/environment.
+Record in the project's management, reading `management` from `spec.json` (settings in `project.json:management`, `karvey/rules/management-adapters.md`):
+- Team's tracker → `create_task` with the `[Infra]` prefix per relevant resource/pipeline (state `todo`).
+- Markdown (`PLAN.md`) → add entries in `PLAN.md` with the status of the infra and pipelines per repo/environment.
 
 ### Step 9 — Write output and update spec.json
 

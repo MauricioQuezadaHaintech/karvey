@@ -1,5 +1,9 @@
 # ClickUp Protocol — Karvey Method
 
+> This is the **ClickUp adapter** of `management-adapters.md` (used when `project.json:management.tool = clickup`).
+> Other trackers (Jira, Linear, Azure Boards, GitHub Projects, spreadsheet, Markdown) are described there;
+> the estimation rules below apply to every tool.
+
 ## Credentials — `.connections.json`
 
 Credentials are stored in `.connections.json` at the project root. **This file is NEVER committed to the repository.**
@@ -150,15 +154,19 @@ can be one Epic (~15 min–2 h of pure AI, ~1 day with review). Testing is inclu
 and runs tests as part of development).
 
 ## Status flow
+
+ClickUp statuses are the **team's** — mapped in `project.json:management.statuses` to the logical states
+`todo | in_progress | review | done | blocked` (see `management-adapters.md`). HainTech example:
 ```
 to do → in progress → listo! para pap → complete
 ```
+Below, `{status:in_progress}` / `{status:review}` mean "the ClickUp status the team mapped to that logical state".
 
 > **Mandatory, not optional.** Updating ClickUp at the close of every task **and every phase** is the `phase-close.md` ritual — a numbered step, not a "should". Tasks left stale (work done but ClickUp not moved) are a process defect. See `phase-close.md`.
 
 ### When starting a task
 ```
-clickup_update_task(task_id, status="in progress")
+clickup_update_task(task_id, status="{status:in_progress}")   # set_status(task, in_progress)
 clickup_start_time_tracking(task_id)
 ```
 
@@ -166,12 +174,12 @@ clickup_start_time_tracking(task_id)
 ```
 clickup_stop_time_tracking()
 clickup_create_task_comment(task_id, "SUMMARY:\n- what was done\n- files modified\n- result: OK")
-clickup_update_task(task_id, status="listo! para pap")
+clickup_update_task(task_id, status="{status:review}")   # set_status(task, review)
 ```
 
 ### Status cascade
-- When ALL tasks of a Feature → Feature to "listo! para pap"
-- When ALL Features of an Epic → Epic to "listo! para pap"
+- When ALL tasks of a Feature → Feature to `review`
+- When ALL Features of an Epic → Epic to `review`
 - A Feature only changes when ALL layers (BD+Backend+Frontend+Infra) are done
 
 ### Phase-level status (not just leaf tasks)

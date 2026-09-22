@@ -1,6 +1,6 @@
 ---
 name: karvey-archive
-description: Archive a completed change: merge spec-deltas into living specs, move to archive, close Epic in ClickUp. Triggers include "karvey archive", "archivar", "archive", "cerrar epic", "close epic", "merge specs".
+description: Archive a completed change: merge spec-deltas into living specs, move to archive, close the Epic in the team's tracker (or PLAN.md). Triggers include "karvey archive", "archivar", "archive", "cerrar epic", "close epic", "merge specs".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <change-id>
 ---
@@ -9,7 +9,7 @@ argument-hint: <change-id>
 
 ## Purpose
 
-Complete the change's lifecycle: merge spec-deltas into the living specs, archive the change directory, and close the Epic in ClickUp or mark it complete in PLAN.md.
+Complete the change's lifecycle: merge spec-deltas into the living specs, archive the change directory, and close the Epic in the team's tracker (`karvey/rules/management-adapters.md`) or mark it done in PLAN.md.
 
 ## Execution steps
 
@@ -90,15 +90,16 @@ git commit -m "chore: archive {change-id}
 Spec deltas merged into living specs. Change archived."
 ```
 
-### Step 6A — Close Epic in ClickUp (if management=clickup)
+### Step 6A — Close the Epic in the team's tracker (`management-adapters.md`)
 
 ```
-clickup_create_task_comment(epic_id,
+comment(epic,
   "✅ Epic completed and archived.\n\nSpec deltas merged into: docs/spec/specs/{capability}/spec.md\nArchived in: docs/spec/changes/archive/{date}-{change-id}\n\nDone with the Karvey Method")
-clickup_update_task(epic_id, status="complete")
+set_status(epic, done)
 ```
+ClickUp adapter example: `clickup_create_task_comment(epic_id, …)` + `clickup_update_task(epic_id, status="{status:done}")`. Missing status map → read the tool's statuses, confirm once, persist (`management-adapters.md`).
 
-### Step 6B — Close PLAN.md (if management=markdown)
+### Step 6B — Close PLAN.md (Markdown)
 
 Update `docs/spec/changes/archive/{date}-{change-id}/PLAN.md`:
 - General status: `✅ Completed and archived`
@@ -159,7 +160,7 @@ A closing cycle almost always surfaced ideas and out-of-scope work. Before finis
 
 1. Read `docs/spec/backlog.md`. List the `open` items whose origin is this change (and any other `open` items, for visibility).
 2. For each, decide with the user: **promote** (create a future `change-id` now via `/karvey-grill` or `/karvey-init`, carrying the backlog context as PRD seed and recording `seed_backlog_id`), **keep** (leave `open` for later), or **discard** (with a reason).
-3. Update each item's `status` (`promoted` + `Promoted to change-id`, or `discarded` + reason). If `management=clickup`, mirror the status to the backlog list.
+3. Update each item's `status` (`promoted` + `Promoted to change-id`, or `discarded` + reason). If the team uses a tracker, mirror the status to its backlog (`mirror_backlog`).
 4. **Report the counts explicitly** — promoted / kept / discarded. Never sweep silently: a silent sweep reads as "all captured" when it isn't.
 
 This is the step that guarantees post-cycle discoveries don't get lost.
@@ -186,7 +187,7 @@ Spec deltas merged:
 Archived in: docs/spec/changes/archive/{date}-{change-id}
 IMPLEMENTED: {yes / no — not marked}
 
-Management: {Epic E{n} closed in ClickUp | PLAN.md marked complete}
+Management: {Epic E{n} → done in {tool} | PLAN.md marked done}
 
 Commits:
   - "spec: merge deltas from {change-id}"

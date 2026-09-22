@@ -19,7 +19,7 @@ docs/spec/
     │   ├── architecture.md         # Technical design and architecture
     │   ├── tasks.md                # Implementation task plan
     │   ├── findings.md             # Triage inbox (bug/spec-gap/emergent) — see iteration-loop.md
-    │   ├── PLAN.md                 # (only if management=markdown) Plan and checklist
+    │   ├── PLAN.md                 # (Markdown tracker only) Plan and checklist
     │   ├── mockup.html             # Navigable HTML mockup
     │   └── IMPLEMENTED             # Empty file that marks: deployed to production
     └── archive/                    # Completed and archived changes
@@ -38,7 +38,7 @@ docs/spec/
   "created_at": "2026-05-31T00:00:00Z",
   "updated_at": "2026-05-31T00:00:00Z",
   "language": "es",
-  "management": "clickup",
+  "management": "{tool from project.json:management.tool}",
   "security_tier": 2,
   "phase": "requirements",
   "type": "feature",
@@ -67,6 +67,11 @@ docs/spec/
   }
 }
 ```
+
+### Tracker fields (see `management-adapters.md`)
+
+- `management` — the tracker **tool** of this change (`clickup`, `jira`, `linear`, `azure-boards`, `github-projects`, `spreadsheet`, `markdown`…), copied from `project.json:management.tool`.
+- `clickup` — the change's **tracker ids** (`epic_id`, `feature_ids`, `backlog_list_id`, `client_tag`). The key keeps its historical name so existing changes stay valid; it holds the ids of whichever tracker the team uses (ClickUp ids, Jira keys, Linear ids, work-item ids…).
 
 ### Multi-agent / multi-repo fields (see `multi-agent.md`)
 

@@ -1,6 +1,6 @@
 ---
 name: karvey-requirements
-description: Generate EARS-format requirements and spec-delta for a Karvey spec. Creates Features in ClickUp or updates PLAN.md. Use after karvey-init. Triggers include "karvey requirements", "generar requisitos", "generate requirements", "especificar requisitos", "specify requirements".
+description: Generate EARS-format requirements and spec-delta for a Karvey spec. Creates Features in the team's tracker or updates PLAN.md. Use after karvey-init. Triggers include "karvey requirements", "generar requisitos", "generate requirements", "especificar requisitos", "specify requirements".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, WebSearch, AskUserQuestion
 argument-hint: <change-id> [-y]
 ---
@@ -9,7 +9,7 @@ argument-hint: <change-id> [-y]
 
 ## Purpose
 
-Generate requirements in EARS format for the change, produce the spec-delta with ADDED/MODIFIED/REMOVED operations, and register the Features in ClickUp or PLAN.md.
+Generate requirements in EARS format for the change, produce the spec-delta with ADDED/MODIFIED/REMOVED operations, and register the Features in the team's tracker (`karvey/rules/management-adapters.md`) or PLAN.md.
 
 ## Execution steps
 
@@ -149,11 +149,13 @@ If the user approves: update `spec.json` with `approvals.requirements.approved: 
 
 **`ops` changes** (`spec.json:type = "ops"`): requirements are **lite** — the verifiable goal, one EARS requirement per observable end state (e.g. "the deploy service account SHALL hold role X on project Y") and the rollback expectation. No mockup/design phases follow; the next step is `/karvey-infra`.
 
-### Step 8A — Create Features in ClickUp (if management=clickup)
+### Step 8A — Create Features in the team's tracker (`management-adapters.md`)
 
-Read `spec.json` to get `clickup.epic_id` and `clickup.backlog_list_id`.
-Create one Feature per functional area in requirements.md:
+Read `spec.json` to get the tracker ids (`clickup.epic_id`, `clickup.backlog_list_id` — the block keeps its historical key for every tool).
+Create one Feature per functional area in requirements.md: `create_feature(epic, area)` in `project.json:management.tool`
+(skip the level if `management.hierarchy` has no feature level; Jira/ADO: issue/work item of type Feature, Linear: sub-issue or project milestone, GitHub Projects: issue added to the project, spreadsheet: a `feature` row).
 
+**ClickUp adapter example:**
 ```
 clickup_create_task
   name: "E{n}.F{n} {Feature name}"
@@ -184,16 +186,16 @@ Tasks: (pending — karvey-tasks)
 Estimated time: (pending)
 ```
 
-Create the Epic ← Feature dependency via REST API:
+Link Epic ← Feature (parent/child or dependency, per tool). ClickUp: dependency via REST API:
 ```bash
 curl -s -X POST "https://api.clickup.com/api/v2/task/{EPIC_ID}/dependency" \
   -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
   -d '{"depends_on":"{FEATURE_ID}"}'
 ```
 
-Update `spec.json` with `clickup.feature_ids`.
+Update `spec.json` with `clickup.feature_ids` (the tracker's ids).
 
-### Step 8B — Update PLAN.md (if management=markdown)
+### Step 8B — Update PLAN.md (Markdown)
 
 Add a Features section in `PLAN.md` with the list of features and their covered requirements.
 
@@ -212,7 +214,7 @@ Files created/updated:
   - docs/spec/changes/{change-id}/specs/{capability}/spec-delta.md
   - spec.json updated
 
-Management: {Features E{n}.F1..F{n} created in ClickUp | PLAN.md updated}
+Management: {Features E{n}.F1..F{n} created in {tool} | PLAN.md updated}
 
 Next step:
 /karvey-mockup {change-id}
