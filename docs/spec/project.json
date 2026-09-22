@@ -1,0 +1,17 @@
+{
+  "project": "Karvey Method",
+  "git_platform": "github",
+  "cloud": { "provider": "none" },
+  "iac_tool": "none",
+  "knowledge_sync": "graphify",
+  "targets": ["cli"],
+  "repos": ["karvey"],
+  "spec_repo": "karvey",
+  "branch_flow": {
+    "feature_prefix": "feature/",
+    "integration": "main",
+    "production": "main"
+  },
+  "enforcement": { "git_flow_hook": false, "plan_gate_hook": false },
+  "karvey_version": "3.8.0"
+}

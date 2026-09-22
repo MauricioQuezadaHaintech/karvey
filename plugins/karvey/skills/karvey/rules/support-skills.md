@@ -11,7 +11,7 @@ In addition to the 12 pipeline phases (linear, with gates), Karvey has a **cross
 | `karvey-second-opinion` | Cross-model reviewer | Before releasing something sensitive: adversarial review with ANOTHER model (Claude vs GPT/other). | codex |
 | `karvey-health` | Code quality | Periodic check: score 0–10 (type-check + lint + tests + dead code) with trend. | health |
 | `karvey-browse` | Eyes on the runtime | Inspect/click/screenshot in the target's real runtime (browser/simulator/CLI). | browse, setup-browser-cookies |
-| `karvey-checkpoint` | Work state | Save/restore working context (git state, decisions, WIP) across sessions/handoffs. | context-save/restore |
+| `karvey-checkpoint` | Work state | Save/restore working context (git state, decisions, WIP) across sessions/handoffs. With a team configured it also captures the agent's **rotation handoff** (`rules/team.md`). | context-save/restore |
 | `karvey-diagram` | Diagrammer | Generate diagrams: text → mermaid + excalidraw + SVG/PNG. | diagram |
 | `karvey-docs` | Doc Engineer | Generate Diataxis docs (tutorial/how-to/reference/explanation), update stale docs, export PDF. | document-generate/release, make-pdf |
 | `karvey-guard` | Guardrails | Activate/remove enforcement hooks; edit-lock on a directory for sensitive work. | careful, freeze, guard |
@@ -20,6 +20,8 @@ In addition to the 12 pipeline phases (linear, with gates), Karvey has a **cross
 | `karvey-scrape` | Web extractor | Extract data from a website and encode the scrape as a reusable skill. | scrape, skillify |
 | `karvey-benchmark-models` | Model benchmark | Compare models (latency/tokens/cost/quality) for a skill or task. | benchmark-models |
 | `karvey-import` | Migration | Convert existing Kiro (`.kiro/specs/*`) or gstack specs into Karvey's `docs/spec/` structure. Non-destructive on the source. | — |
+| `karvey-team` | Team layer (**optional**) | Set up and run a team of agents (roles, manifests, boards, census, relay) and **measure what it costs**. Opt-in: Karvey is complete with one agent, and a team is expensive — read `rules/team.md` first. | — (Karvey) |
+| `karvey-decisions` | Decision log | Single numbered registry (`D-NN` business, `C-NN` direction) that changes cite; **`cross` checks a question against the log before anything is declared blocked**. | — (Karvey) |
 | `karvey-standards` | Standards uplift | Distill the team's engineering golden paths (db/backend/frontend…) from the **real system** into the team's standards repo (`project.json:standards`), in the `engineering-standards.md` format. Re-runnable to refresh. Never writes into the public plugin. | — (Karvey) |
 
 ## Invocation rules

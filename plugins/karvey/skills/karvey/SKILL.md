@@ -35,6 +35,8 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **Phase-close ritual**: every phase/task closes with a mandatory management update (ClickUp comment + status + cascade) so tasks never go stale — see `rules/phase-close.md`
 - **Multi-agent and multi-repo work**: parent/child changes across repos, business decisions (`D-NN`) and pinned inputs from design/copy/legal agents (`repo path @commit`) in `spec.json`, approvals that cite who approved and where, `[human]` tasks for steps only a person may run, `ops` and `hotfix` change types, light CI for docs-only PRs — see `rules/multi-agent.md`
 - **Cross-cutting layer of support skills** (investigate, second-opinion, health, browse, etc.) callable at any time
+- **Optional team layer** (`rules/team.md`): roles, rotation handoff, census, decision log and **cost measurement** for work split across several agent sessions. **Opt-in and not the default** — Karvey is complete with one agent, and the measured run behind this layer cost ≈US$1,000 in 3 days before going back to one.
+- **Verification rules before reporting "done"** (`rules/verification.md`): the failure modes that make a green report false
 - **Optional enforcement via hooks** (git-flow + plan-gate) and **archive** with spec merge
 
 ## Complete pipeline
@@ -78,7 +80,7 @@ These are not phases; they do not advance `spec.json:phase` forward. See `rules/
 /karvey-second-opinion     → Adversarial cross-model review (Claude vs another model)
 /karvey-health             → 0-10 dashboard (type/lint/tests/dead-code) + trend
 /karvey-browse             → "Give it eyes": the target's real runtime (browser/sim/CLI)
-/karvey-checkpoint         → Save/restore work state (handoff)
+/karvey-checkpoint         → Save/restore work state (+ rotation handoff, if a team is configured)
 /karvey-diagram            → Text → mermaid + excalidraw + SVG/PNG
 /karvey-docs               → Diataxis + update stale docs + PDF
 /karvey-guard              → Install/remove enforcement hooks; edit-lock
@@ -88,6 +90,8 @@ These are not phases; they do not advance `spec.json:phase` forward. See `rules/
 /karvey-benchmark-models   → Compare models (latency/tokens/cost/quality)
 /karvey-import             → Convert Kiro/gstack specs into Karvey (docs/spec/)
 /karvey-standards          → Uplift engineering standards (golden paths) from the real system → standards repo
+/karvey-team               → OPTIONAL team layer: roles, census, relay, cost (one agent is the default)
+/karvey-decisions          → Decision log (D-NN / C-NN) + cross-check before declaring a block
 ```
 
 Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue.
@@ -254,6 +258,8 @@ The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incid
 | `rules/backlog.md` | iterate, archive, context |
 | `rules/phase-close.md` | all phases (at close), impl, iterate |
 | `rules/multi-agent.md` | init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health — and every approval gate |
+| `rules/team.md` | **optional** team layer: checkpoint (handoff), team, decisions, context |
+| `rules/verification.md` | all phases (before reporting "done"), guard, qa, health |
 
 ## If you come from Kiro or gstack — equivalences
 
@@ -294,6 +300,7 @@ Phases: grill init requirements mockup design-graphic architecture infra
         tasks impl test qa deploy archive
 Support: iterate investigate second-opinion health browse checkpoint diagram
         docs guard devex retro scrape benchmark-models import standards
+        team decisions   (optional team layer — see rules/team.md)
 ```
 
 ---

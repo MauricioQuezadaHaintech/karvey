@@ -30,7 +30,9 @@ A change is *done* only when no open `bug`/`spec-gap` remains and every `emergen
 
 ## Cross-cutting layer (support skills, invokable any time)
 
-`iterate` · `investigate` · `second-opinion` · `health` · `browse` · `checkpoint` · `diagram` · `docs` · `guard` · `devex` · `retro` · `scrape` · `benchmark-models`
+`iterate` · `investigate` · `second-opinion` · `health` · `browse` · `checkpoint` · `diagram` · `docs` · `guard` · `devex` · `retro` · `scrape` · `benchmark-models` · `import` · `standards`
+
+Optional team layer (opt-in, **not** the default — Karvey is complete with one agent): `team` · `decisions`.
 
 ## Features
 
@@ -46,6 +48,8 @@ A change is *done* only when no open `bug`/`spec-gap` remains and every `emergen
 - **Ordered deployment** `feature → dev → PR master`, pipeline-triggered, with **canary** post-deploy.
 - **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability.
 - **Multi-agent & multi-repo work**: parent/child changes across repos, `D-NN` decisions and pinned inputs (`repo path @commit`) from design/copy/legal agents, approvals that record who and where, `[human]` tasks with verification and rollback, `ops` and `hotfix` change types, light CI for docs-only PRs.
+- **Optional team layer** (`rules/team.md`): roles, a **rotation handoff captured by commands** (not composed from memory), census, decision log with a cross-check that stops you re-asking what was already decided, and **cost measurement**. Opt-in, and the rule opens by telling you when *not* to use it: the measured run behind it cost ≈US$1,000 over 3 days with 6 agents and ended back on a single agent.
+- **Verification rules before reporting "done"** (`rules/verification.md`): the failure modes that make a green report false — a citation is not the thing cited, exit 0 is not success, a green test over uncalled code, a filename that does not identify a version.
 - **Optional hook-based enforcement** (git-flow + plan-gate) — opt-in per project.
 
 ## Install (as a Claude Code plugin)

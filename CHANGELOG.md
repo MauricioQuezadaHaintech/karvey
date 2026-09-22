@@ -2,6 +2,25 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.8.0] - 2026-09-22
+
+### Added
+- **New shared rule `rules/team.md` — the OPTIONAL team layer.** Karvey carried the axis of the *work*; this adds the axis of the *worker*: roles, rotation, addressing, minimal communication and the shared-index trap. **It is opt-in and explicitly not the default**, and the rule opens with *When NOT to use a team*, written from a measured failure rather than from theory: 6 agents, 3 days, **≈US$1,000**, ending back on a single agent — because every hop between sessions is new context for the receiver, there is no shared cache, and at 588k a turn costs **7×** what it costs at 80k. A project that never writes `docs/spec/team.json` never sees this layer, and no phase or gate depends on it (team-layer).
+- **New shared rule `rules/verification.md`** — the 18 failure modes that make a green report false, each one from a real incident: a citation is not the thing cited · exit 0 is not success · a green test over code nobody calls · "it failed" vs "it never ran" (the discriminator is duration) · a pipe whose first link fails silently returns a *false answer*, not an error · a filename does not identify a version · a versioned file does not prove what is applied · a switch is not a permission · merging onto someone else's file without bringing their branch reverts their fix **without a conflict** · a frozen baseline ages · sweeping by word leaves the promise intact. Registered for every phase close and shipped as a checklist by `karvey-guard --verify` (team-layer).
+- **New skill `karvey-team`** (`init` · `census` · `relay` · `cost`) — sets up and runs a team of agent sessions, and **measures what it spends**. `init` shows the cost table and confirms before writing anything; `census` is an inventory that states in the file that it is **not** an address book; `relay` produces the list of sessions ready to rotate and stops there, because no agent can rotate another or itself; `cost` writes spend per agent against the single-agent counterfactual and **says so in the report** when the team is not paying for itself (team-layer).
+- **New skill `karvey-decisions`** (`log` · `cross` · `show`) — one numbered, cross-cutting registry (`D-NN` business, `C-NN` direction) that changes cite via `spec.json:decisions`, so a decision taken in one change is visible to the next. Every entry carries **what it does NOT say**, the field that prevents over-applying a decision. **`cross` is mandatory before any deliverable claims to be blocked on a decision**: in the run behind this release, 14 items were escalated as blocked and **13 were already answered** (team-layer).
+- **Plugin `hooks/`** — `hooks.json` with a `SessionStart` hook (`startup|resume|compact|clear`) that reinjects identity, compact manifest and the agent's handoff via `${CLAUDE_PLUGIN_ROOT}`. Plugin hooks **add to** the user's hooks rather than replacing them, and **without a team configured the hook prints nothing and exits 0** — inert on a single-agent project. Plus `karvey-statusline.sh`, the rotation statusline (context, account limits, hours, cost, "TIME TO ROTATE"), which **a plugin cannot declare** — only `agent` and `subagentStatusLine` are accepted — so it ships with the three lines the user pastes once, documented rather than installed behind their back (team-layer).
+
+### Changed
+- **`karvey-checkpoint` now saves two faces instead of one.** `save` keeps writing the change's checkpoint and, **when a team is configured**, also captures the agent's **rotation handoff** into `{ops_repo}/agents/<role>/handoff.md`. The handoff is **produced, not composed**: its state section is command output, every "done" runs the check that measures it, and scheduled tasks are recorded with their full prompt because they die with a context reset in silence. `restore` now contrasts the handoff the same way it already contrasted git — **if the branch it declares no longer exists, it says the handoff has aged before anything in it is believed** — and crosses open questions against the decision log before repeating them. Without a team, behaviour is unchanged (team-layer).
+- **`karvey-guard` gains `--verify`**, a read-only checklist over `rules/verification.md` for any deliverable before it reports "done". It is a checklist, not a gate: it does not approve `karvey-qa` on its own (team-layer).
+- **Orchestrator, support-skills catalog and README** updated with the two new skills, the two new rules and the optional team layer, stating in each place that **one agent is the default**.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5 (1M context) — as `agente-M5D-arquitecto`
+> 🔗 Change: team-layer · Karvey phase: impl
+> 📌 Origin: the proposal written on 2026-09-21 after running a 6-agent team on a real product, and the decision to keep teams available **as an option, never as an obligation**.
+
 ## [3.7.0] - 2026-09-18
 
 ### Added
