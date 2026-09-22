@@ -18,7 +18,9 @@ The pipeline (0→12) is the happy path. `karvey-iterate` is the **feedback brai
 Read these rules before acting:
 - `karvey/rules/iteration-loop.md` — the three feedback edges, `findings.md`, the spec-revision sub-cycle, convergence.
 - `karvey/rules/incident-tracking.md` — the `BUG-NN` tracker with state history.
-- `karvey/rules/backlog.md` — the dual (Markdown + ClickUp) discovery backlog.
+- `karvey/rules/backlog.md` — the dual (Markdown + the team's tracker) discovery backlog.
+- `karvey/rules/management-adapters.md` — the team's tracker and its logical states.
+- `karvey/rules/notifications.md` — the team's channel (event `incident`, opt-in).
 - `karvey/rules/phase-close.md` — the close ritual.
 
 ## When to run it
@@ -35,7 +37,7 @@ Read:
 - `docs/spec/changes/{change-id}/spec.json`
 - `docs/spec/changes/{change-id}/findings.md` (the inbox; if it doesn't exist, there's nothing to iterate — tell the user and stop)
 - `docs/spec/changes/{change-id}/requirements.md` and `spec-delta.md` (for spec-gap routing)
-- `docs/spec/project.json` (management, repos, backlog_list_id)
+- `docs/spec/project.json` (management, notifications, repos, backlog_list_id)
 - `spec.json:type`, `links` and `inputs` (hotfix lane, parent/child ripple and input drift — see `karvey/rules/multi-agent.md`). A `spec-gap` in a **child** change that alters the parent's acceptance criteria is also reported to the parent change.
 
 If `--finding F-NN` is given, process only that finding. Otherwise process every `open` finding.
@@ -56,7 +58,8 @@ If a finding's type is ambiguous or its routing is irreversible (re-opening requ
 2. Mirror to the global index `docs/spec/incidents-index.md`.
 3. If the cause is unclear → recommend/invoke `/karvey-investigate` (Iron Law: no fix without investigating); paste its result as Root cause and move the incident to `DIAGNOSTICADO`.
 4. The fix itself runs through the existing micro-loop: `/karvey-impl {change-id}` (fix) → `/karvey-test {change-id}` (incl. its regression test, Step 4C) → `/karvey-qa {change-id}`. The incident reaches `RESUELTO` only once a regression test exists.
-5. If `management=clickup`, create/link the ClickUp task and record its id on the `BUG-NN`.
+5. If the team uses a tracker (`project.json:management.tool` ≠ `markdown`), create/link the item there (`create_task` / `link`, see `management-adapters.md`) and record its id on the `BUG-NN`.
+   If `project.json:notifications.events` includes `incident`, notify the team's channel when the `BUG-NN` reaches `DIAGNOSTICADO` or `REABIERTO` (`notifications.md`); otherwise skip.
 6. **Hotfix lane** (`spec.json:type = "hotfix"`, or a production defect that cannot wait — including one found **during an E2E run in production**), see `karvey/rules/multi-agent.md` §7:
    - **Rule: fix + `BUG-NN` + regression test in the same PR.** The PR that ships the fix also adds the tracker entry, the `findings.md` entry and a regression test that fails without the fix. A fix PR missing any of the three is not mergeable.
    - The Iron Law still holds: if the incident is live, the root cause may be written right after the fix, but the incident stays `EN FIX` until it is; `RESUELTO` only with the regression test green.
@@ -80,7 +83,7 @@ When a pinned input (`spec.json:inputs.design|design_system|copy|legal`, format 
 
 #### 3c · `emergent` → discovery backlog
 1. Add to `docs/spec/backlog.md` as `BL-NN` (origin = this change + finding id, rough scope, priority). See `backlog.md`.
-2. If `management=clickup`, also create it in the `backlog_list_id` list and record the task id.
+2. If the team uses a tracker, also mirror it there (`mirror_backlog` — ClickUp: the `backlog_list_id` list) and record the tracker id.
 3. Never absorb emergent scope into the current change silently. It is captured, not done now.
 
 ### Step 4 — Update findings status
@@ -89,7 +92,7 @@ For each routed finding, set `status: routed` and fill `routed to` (BUG-NN / spe
 
 ### Step 5 — Phase-close + knowledge sync
 
-Run the phase-close ritual (`phase-close.md`): comment + status on management, ensure findings/backlog are synced, update `spec.json`, sync knowledge (`knowledge-sync.md`).
+Run the phase-close ritual (`phase-close.md`): comment + status in the team's tracker (or `PLAN.md`), ensure findings/backlog are synced, update `spec.json`, sync knowledge (`knowledge-sync.md`).
 
 ### Step 6 — Report convergence status
 
@@ -104,6 +107,7 @@ Findings processed: {N}
   → emergent:  {N}  (backlog BL-{list})
 
 Open findings remaining: {N bug/spec-gap blocking · N emergent captured}
+Notification (incident): {channel → target | skipped (none) | not configured | not in events}
 
 Convergence: {CONVERGED — no open bug/spec-gap, all emergent captured → can proceed to deploy/archive}
             {NOT YET — {what's left}}

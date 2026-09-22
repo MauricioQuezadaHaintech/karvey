@@ -85,9 +85,25 @@ Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 18 support sk
 | `karvey-team` | **Optional** team layer: roles, census, relay, cost |
 | `karvey-decisions` | Decision log (`D-NN` / `C-NN`) + `cross` before declaring a block |
 
+## Team settings — asked on first use
+
+A Claude Code plugin cannot run anything at install time, so Karvey asks the team's settings **the first time it is used** in a project (`/karvey:karvey-init`, Step 3.2) and stores them in `docs/spec/project.json`. Change them any time with `/karvey:karvey-init --settings`. Until they are set, the session hook prints a one-line reminder (only inside a Karvey project).
+
+| Setting | Options | Rule |
+|---|---|---|
+| **Notifications** (QA / deploy / incidents) | Google Chat · Slack · Microsoft Teams · e-mail · webhook · none | `rules/notifications.md` |
+| **Task management** | ClickUp · Jira · Linear · Azure Boards · GitHub Projects · spreadsheet (Excel/Sheets/CSV) · Markdown (`PLAN.md`) · other | `rules/management-adapters.md` |
+| **Status flow** | the team's real statuses mapped to 5 logical states: `todo` · `in_progress` · `review` · `done` · `blocked` | `rules/management-adapters.md` |
+
+Skills never assume a tool or a status name: they speak in logical states and the adapter resolves them. A project created before 3.10 with only `"management": "clickup"` keeps working — the statuses are read from the list and the mapping is confirmed once.
+
+## Method explainer (`docs/karvey.html`)
+
+A self-contained page (no external requests) that complements this README: what the method is, the meaning of the name (*Karvey* = **Afán**, from the Ona language of the Selknam people of Patagonia), and a map of the whole plugin — orchestrator, phases, support skills, rules, hooks, artifacts and team settings. Open it locally in any browser.
+
 ## Hooks — what runs on install and what is opt-in
 
-- **Active on install (plugin hooks, `plugins/karvey/hooks/`):** a `SessionStart` hook (`karvey-session-context.sh`, on startup / resume / compact / clear) that reinjects the agent handoff and contrasts it against the live repos (`matches` / `DRIFT`). It is **inert** (no output, exit 0) in a project with no Karvey handoff. The statusline script ships alongside but a plugin cannot declare it — install it by hand (see `plugins/karvey/hooks/README.md`).
+- **Active on install (plugin hooks, `plugins/karvey/hooks/`):** a `SessionStart` hook (`karvey-session-context.sh`, on startup / resume / compact / clear) that reinjects the agent handoff and contrasts it against the live repos (`matches` / `DRIFT`), and reminds you to set the team settings when a Karvey project lacks them. It is **inert** (no output, exit 0) outside Karvey projects. The statusline script (context, account limits **with the next reset time and time left**, hours, cost, rotation warning) ships alongside but a plugin cannot declare it — install it by hand (see `plugins/karvey/hooks/README.md`).
 - **Opt-in per project (`plugins/karvey/skills/karvey/hooks/`):** `git-flow-guard.sh` and `plan-gate.sh`, installed and removed by `/karvey:karvey-guard` according to `project.json:enforcement`. Not active by default.
 
 ## Features

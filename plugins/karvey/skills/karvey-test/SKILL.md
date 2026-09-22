@@ -314,7 +314,7 @@ If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` witho
 
 ### Step 5D — Phase-close
 
-Run the phase-close ritual (`karvey/rules/phase-close.md`): comment + status on management (ClickUp/PLAN.md), ensure findings/incidents are recorded, update `spec.json` (`phase: "test"`, `updated_at`).
+Run the phase-close ritual (`karvey/rules/phase-close.md`): comment + status in the team's tracker (`management-adapters.md`) or `PLAN.md`, ensure findings/incidents are recorded, update `spec.json` (`phase: "test"`, `updated_at`).
 
 ### Step 6 — Report to the user
 

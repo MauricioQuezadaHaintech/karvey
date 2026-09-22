@@ -22,7 +22,27 @@ while [ "$DIR" != "/" ] && [ -n "$DIR" ]; do
   if [ -d "$DIR/docs/spec/agent" ];     then ROOT="$DIR"; CFG="$DIR/docs/spec/agent";     KIND="solo"; break; fi
   DIR=$(dirname "$DIR")
 done
-[ -z "$ROOT" ] && exit 0
+# Team settings nudge (REQ-ADP-003): only inside a Karvey project (has docs/spec/), never elsewhere.
+settings_nudge() {
+  local d="$START"
+  while [ "$d" != "/" ] && [ -n "$d" ]; do
+    if [ -d "$d/docs/spec" ]; then
+      local pj="$d/docs/spec/project.json" missing=""
+      if [ ! -f "$pj" ]; then missing="project.json"
+      elif command -v python3 >/dev/null 2>&1; then
+        missing=$(python3 -c "import json,sys
+try: d=json.load(open(sys.argv[1],encoding='utf-8'))
+except Exception: print('project.json (unreadable)'); sys.exit()
+print(' + '.join(k for k in ('notifications','management') if not isinstance(d.get(k),dict)))" "$pj")
+      fi
+      [ -n "$missing" ] && printf 'Karvey: team settings missing (%s) — run `/karvey:karvey-init --settings` to set notifications, task tool and status flow.\n' "$missing"
+      return
+    fi
+    d=$(dirname "$d")
+  done
+}
+
+[ -z "$ROOT" ] && { settings_nudge; exit 0; }
 
 REL="${START#"$ROOT"/}"; [ "$REL" = "$START" ] && REL=""
 TOP="${REL%%/*}"
@@ -105,6 +125,7 @@ elif [ -f "$HANDOFF" ]; then
 fi
 
 ACTIVE=$(ls -1dt "$ROOT"/docs/spec/changes/*/ 2>/dev/null | head -1)
+settings_nudge
 printf '\n=== First action ===\n'
 if [ -n "$ACTIVE" ] || [ "$DRIFT" -eq 1 ] || [ ! -f "$HANDOFF" ]; then
   printf 'Run `/karvey-checkpoint restore` BEFORE anything else'

@@ -81,7 +81,7 @@ Report the counts explicitly — deleted / kept (with reason) — never clean si
 
 ## Multi-repo
 
-If the change touches several repos, apply the flow in **each one**, respecting the dependency order declared in `architecture.md` (e.g. DB before backend before frontend). Record the progress per repo in the management tool (ClickUp/`PLAN.md`).
+If the change touches several repos, apply the flow in **each one**, respecting the dependency order declared in `architecture.md` (e.g. DB before backend before frontend). Record the progress per repo in the team's tracker (`management-adapters.md`) or `PLAN.md`.
 
 ## Hotfixes and documentation-only PRs
 
@@ -91,5 +91,5 @@ If the change touches several repos, apply the flow in **each one**, respecting 
 ## Management
 
 `karvey-deploy` records the deployment in the project's management tool:
-- ClickUp: task `[Deploy] {change-id}` with the 6-step checklist as subtasks/comment and closure once prod is confirmed.
+- Team's tracker (`management-adapters.md`): task `[Deploy] {change-id}` with the 6-step checklist as subtasks/comment, `set_status(…, done)` once prod is confirmed.
 - Markdown: entry in `PLAN.md` with the deploy status per repo and environment.

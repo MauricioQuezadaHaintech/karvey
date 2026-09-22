@@ -1,6 +1,6 @@
 ---
 name: karvey-impl
-description: Execute implementation tasks sequentially with ClickUp time tracking or PLAN.md updates. Read → execute → test → validate cycle per task. Triggers include "karvey impl", "implementar", "implement", "ejecutar tasks", "execute tasks", "desarrollar", "develop".
+description: Execute implementation tasks sequentially updating the team's tracker (ClickUp, Jira, Linear, Azure Boards, GitHub Projects, spreadsheet) or PLAN.md. Read → execute → test → validate cycle per task. Triggers include "karvey impl", "implementar", "implement", "ejecutar tasks", "execute tasks", "desarrollar", "develop".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 argument-hint: <change-id> [F{n}.T{n}] [--from F{n}.T{n}]
 ---
@@ -9,7 +9,7 @@ argument-hint: <change-id> [F{n}.T{n}] [--from F{n}.T{n}]
 
 ## Purpose
 
-Execute the implementation tasks in DB→Backend→Frontend order. Per-task cycle: read → execute → test → validate. Update ClickUp or PLAN.md in real time.
+Execute the implementation tasks in DB→Backend→Frontend order. Per-task cycle: read → execute → test → validate. Update the team's tracker (`karvey/rules/management-adapters.md`) or `PLAN.md` in real time. States are logical (`todo | in_progress | review | done | blocked`), resolved through `project.json:management.statuses`.
 
 ## Execution steps
 
@@ -38,20 +38,21 @@ Identify the next pending task while respecting dependencies:
 - Tasks marked `(P)` can be executed in parallel with subagents
 - **`[human]` tasks are never executed by the agent** (see `karvey/rules/multi-agent.md` §5). When one is next:
   1. Present its command, verification and rollback to the executor exactly as written in `tasks.md`.
-  2. Set it to **`awaiting-human`** — ClickUp: comment "🙋 AWAITING HUMAN: {executor} · {command}" + status/tag `awaiting-human`; Markdown: `🙋 awaiting-human` in `PLAN.md`.
+  2. Set it to **`awaiting-human`** — tracker: `comment(task, "🙋 AWAITING HUMAN: {executor} · {command}")` + the tool's tag/label `awaiting-human` (the logical state stays `todo`, or `blocked` if the team maps it so); Markdown: `🙋 awaiting-human` in `PLAN.md`.
   3. Skip to the next task that does **not** depend on it. Dependents stay blocked.
   4. When the human reports it done, run the **read-only verification** yourself. Matches the expected result → fill **Executed** (who · date · evidence) and close the task. Does not match → keep `awaiting-human` and report the difference; never "fix" it with privileged commands of your own.
 
 ### Step 3 — Start the task in management
 
-**If ClickUp:**
+**In the team's tracker** (`management-adapters.md`): `set_status(task, in_progress)` — plus time tracking if the tool has it.
+ClickUp adapter example:
 ```
-clickup_update_task(task_id, status="in progress")
+clickup_update_task(task_id, status="{status:in_progress}")
 clickup_start_time_tracking(task_id)
 ```
 
-**If Markdown:**
-Edit `PLAN.md`, change `⬜ pending` → `🔄 in progress` for the task.
+**Markdown (`PLAN.md`):**
+Edit `PLAN.md`, change `⬜ todo` → `🔄 in_progress` for the task.
 
 ### Step 4 — Execute the task
 
@@ -107,32 +108,33 @@ If the test fails: fix it within the same task before advancing.
 
 This is the **per-task phase-close ritual** (`karvey/rules/phase-close.md`): comment + status + cascade, applied to every task. It is mandatory, not a "should" — a task is not done until its management record is updated.
 
-**If ClickUp:**
+**In the team's tracker:** `comment(task, "✅ COMPLETED …")` + `set_status(task, review)` + record the actual time where the tool supports it.
+ClickUp adapter example:
 ```
 clickup_stop_time_tracking()
 clickup_create_task_comment(task_id,
   "✅ COMPLETED\n\nDone:\n- {what was done}\n\nFiles:\n- {list}\n\nResult: OK")
-clickup_update_task(task_id, status="listo! para pap")
+clickup_update_task(task_id, status="{status:review}")
 ```
 
-Update the actual time via the REST API:
+ClickUp: update the actual time via the REST API:
 ```bash
 curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
   -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
   -d '{"time_estimate": {actual_time_ms}}'
 ```
 
-**ClickUp status cascade:**
-When ALL tasks of a Feature are in "listo! para pap":
+**Status cascade** (`cascade(feature)`):
+When ALL tasks of a Feature are in `review`:
 ```
-clickup_create_task_comment(feature_id, "All {layer} tasks completed.")
+comment(feature, "All {layer} tasks completed.")
 # Only change the Feature if ALL layers are finished
-clickup_update_task(feature_id, status="listo! para pap")  # if applicable
+set_status(feature, review)  # if applicable
 ```
 
-**If Markdown:**
+**Markdown (`PLAN.md`):**
 Edit `PLAN.md`:
-- Change `🔄 in progress` → `✅ completed`
+- Change `🔄 in_progress` → `👀 review` (it becomes `✅ done` once validated by test/qa)
 - Update the actual time in the status table
 - Update the date in the history
 
@@ -144,16 +146,16 @@ If there are `(P)` tasks: dispatch parallel subagents to execute them simultaneo
 
 ### Step 8 — Complete the Epic
 
-When ALL Features are in "listo! para pap":
+When ALL Features are in `review`:
 
-**If ClickUp:**
+**In the team's tracker:**
 ```
-clickup_create_task_comment(epic_id, "All Features completed. Epic ready for QA.")
-clickup_update_task(epic_id, status="listo! para pap")
+comment(epic, "All Features completed. Epic ready for QA.")
+set_status(epic, review)
 ```
 
-**If Markdown:**
-Update `PLAN.md`: overall status `✅ Implementation complete`.
+**Markdown (`PLAN.md`):**
+Update `PLAN.md`: overall status `👀 Implementation complete — ready for QA`.
 
 ### Step 9 — Final output
 
@@ -180,14 +182,13 @@ Next step:
 
 If a task cannot be completed:
 
-**If ClickUp:**
+**In the team's tracker:**
 ```
-clickup_stop_time_tracking()
-clickup_create_task_comment(task_id, "BLOCKED: {description of the blocker}\n\nI need: {what is needed to unblock}")
-clickup_update_task(task_id, status="blocked")
+comment(task, "BLOCKED: {description of the blocker}\n\nI need: {what is needed to unblock}")
+set_status(task, blocked)      # ClickUp: also clickup_stop_time_tracking()
 ```
 
-**If Markdown:**
+**Markdown (`PLAN.md`):**
 Mark `⛔ blocked` + a note in PLAN.md.
 
 Report to the user with the specific blocker and wait for it to be unblocked.

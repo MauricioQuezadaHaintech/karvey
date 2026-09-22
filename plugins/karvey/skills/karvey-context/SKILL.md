@@ -118,6 +118,9 @@ PROJECT  (docs/spec/project.json)
   Repos ({N}): {repo1, repo2, …}  (main: {spec_repo})
   Branch flow: {feature_prefix} → {integration} → {production}
   Enforcement: git_flow_hook={on|off}  plan_gate_hook={on|off}
+  Team settings: notifications={channel → target | none | not configured}
+                 management={tool} @ {location}  statuses={mapped (5/5) | partial ({N}/5) | not mapped}
+                 (missing → "run /karvey:karvey-init --settings"; see management-adapters.md / notifications.md)
   (if no project.json → "no project.json — run karvey-init")
 
 CAPABILITIES ({N} total)
@@ -131,7 +134,7 @@ ACTIVE CHANGES ({N})
   Phase: {phase}
   Capability: {capability}
   Security Tier: {N}
-  Management: {ClickUp Epic E{n} | Markdown}
+  Management: {{tool} Epic E{n} | Markdown (PLAN.md)}
   Approvals: requirements={✅|⬜} mockup={✅|⬜} design={✅|⬜} arch={✅|⬜} tasks={✅|⬜}
 
 {change-id-2}
@@ -166,22 +169,24 @@ LIVE BRANCHES  (read-only — see deploy-workflow.md → Branch hygiene)
 
 ACTIVE SPRINT
 ━━━━━━━━━━━━
-{verify with clickup_get_workspace_hierarchy or indicate "not applicable (markdown)"}
+{read from the team's tracker (read-only) or indicate "not applicable (markdown)"}
 ```
 
-### For the active sprint (if ClickUp is available)
+### For the active sprint (if the tracker has sprints/iterations)
+
+Read-only query in `project.json:management.tool` (Jira sprint, Linear cycle, ADO iteration, GitHub Projects iteration field…). ClickUp adapter example:
 
 ```
 clickup_get_workspace_hierarchy
   max_depth: 2
 ```
 
-Look for the "Dev Sprints Metodo Karvey" folder and the active sprint.
+Look for the team's sprints folder (e.g. "Dev Sprints") and the active sprint.
 
 Show:
 ```
 Active sprint: Sprint {N} (until {date})
-Sprint tasks: {total} | In progress: {N} | Ready for PAP: {N} | Blocked: {N}
+Sprint tasks: {total} | in_progress: {N} | review: {N} | blocked: {N}   (logical states via management.statuses)
 ```
 
 ---

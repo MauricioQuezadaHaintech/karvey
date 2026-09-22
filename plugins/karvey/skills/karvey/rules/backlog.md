@@ -2,14 +2,14 @@
 
 > Emergent ideas and out-of-scope discoveries (mid-cycle or post-archive) must land **somewhere
 > concrete** and become future `change-id`s. This rule defines a **dual** backlog: a Markdown source
-> of truth **mirrored** into ClickUp when `management=clickup`.
+> of truth **mirrored** into the team's tracker (`management-adapters.md` → `mirror_backlog`) when one is configured.
 
 ## Storage — both (mirror)
 
 - **Always:** `docs/spec/backlog.md` in the `spec_repo` — the source of truth, versioned with the specs.
-- **If `management=clickup`:** each item is **also** created in the ClickUp backlog list using `spec.json:clickup.backlog_list_id` (the field already exists). The Markdown item records the ClickUp task id; the two are kept in sync at the phase-close ritual.
+- **If the team uses a tracker** (`project.json:management.tool` ≠ `markdown`): each item is **also** created in the tracker's backlog (`mirror_backlog`, see `management-adapters.md`) — for ClickUp, the list in `spec.json:clickup.backlog_list_id` (the field already exists). The Markdown item records the tracker id; the two are kept in sync at the phase-close ritual.
 
-If `backlog_list_id` is empty and management is clickup, ask the user for it once (or get it via `clickup_get_workspace_hierarchy`) and store it in `spec.json`.
+If the backlog location is empty (`backlog_list_id` for ClickUp, `management.location` otherwise), ask the user for it once (ClickUp: or get it via `clickup_get_workspace_hierarchy`) and store it.
 
 ## What lands here
 
@@ -22,7 +22,7 @@ A `spec-gap` does **not** go to the backlog — it re-opens `requirements` for t
 ```markdown
 # Discovery Backlog — {project}
 
-| ID | Date | Origin | Type | Priority | Title | Status | ClickUp | Promoted to change-id |
+| ID | Date | Origin | Type | Priority | Title | Status | Tracker | Promoted to change-id |
 |----|------|--------|------|----------|-------|--------|---------|-----------------------|
 | BL-12 | 2026-06-17 | add-claim-filter / F-03 | feature | med | PDF export of the report | open | task xyz | — |
 | BL-13 | 2026-06-17 | retro add-claim-filter | tech-debt | low | extract claims helper | open | — | — |

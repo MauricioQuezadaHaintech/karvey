@@ -42,6 +42,19 @@ docs/spec/project.json
     "git_flow_hook": false,
     "plan_gate_hook": false
   },
+  "notifications": {
+    "channel": "google-chat | slack | teams | email | webhook | none",
+    "target": "{space / #channel / list / name of the secret holding the webhook}",
+    "via": "mcp | cli | webhook | api",
+    "events": ["qa", "deploy"]
+  },
+  "management": {
+    "tool": "clickup | jira | linear | azure-boards | github-projects | spreadsheet | markdown | other",
+    "location": "{list id | project key | team | spreadsheet path}",
+    "statuses": { "todo": "", "in_progress": "", "review": "", "done": "", "blocked": "" },
+    "hierarchy": "epic>feature>task",
+    "via": "mcp | cli | api | file"
+  },
   "ops_repo": "repo-with-the-decision-log-and-parent-changes",
   "karvey_version": "3.7.0",
   "docs_pr": { "ci": "spec-lint", "merged_by": "{name or role}" }
@@ -65,6 +78,8 @@ docs/spec/project.json
 - **`ops_repo`** (optional, multi-agent/multi-repo): the repo that holds the business decision log (`D-NN`) and the **parent** changes. Defaults to `spec_repo`. See `multi-agent.md`.
 - **`karvey_version`** (optional): the Karvey version the project expects every agent environment to have installed; checked by `karvey-health` (method readiness).
 - **`docs_pr`** (optional): the documentation-only PR lane — `ci` is the light job that runs (spec lint) and `merged_by` who merges them. See `multi-agent.md` §8.
+- **`notifications`** (team setting, asked by `karvey-init` on first use or with `--settings`): the team's channel for QA/deploy notices. `none` is valid. Never a webhook URL or token here — reference the secret. See `notifications.md`.
+- **`management`** (team setting, same moment): the team's tracker (`tool`, `location`, `via`) and its **status flow mapped to the 5 logical states** (`todo`, `in_progress`, `review`, `done`, `blocked`) that every skill uses. Missing `statuses` on a tracker → read them from the tool and confirm the mapping once. See `management-adapters.md`.
 - **`enforcement`**: opt-in activation of the hooks in `enforcement.md`. `karvey-init` asks and `karvey-guard` manages them. Default both `false`.
 
 > **Note — `goal`**: the change's goal does NOT live in `project.json` but per change, in `prd.md` and in `spec.json` (`"goal"`). It sets the direction to pursue the outcome without stopping, while respecting the plan and security gates.

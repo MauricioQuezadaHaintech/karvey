@@ -77,7 +77,7 @@ A step the agent must not or cannot execute (IAM grants, destructive deletions, 
 ```
 
 - The agent **prepares** the command, verification and rollback; the human **executes**; the agent **verifies** with the read-only check.
-- While waiting, the task is in state **`awaiting-human`** (ClickUp: a comment + a status/tag; Markdown: `🙋 awaiting-human` in `PLAN.md`). Dependent tasks do not start. Independent tasks continue.
+- While waiting, the task is in state **`awaiting-human`** (team's tracker: a comment + the tool's tag/label; Markdown: `🙋 awaiting-human` in `PLAN.md`). Dependent tasks do not start. Independent tasks continue.
 - A `[human]` task is done only when the verification output matches the expected result and it is recorded under **Executed**.
 - Where possible, the command lives as a **versioned script** in the repo (e.g. `infra/iam/grant-deploy-sa.sh`) so what the human ran is reviewable (see `karvey-infra` / `karvey-test`: IAM binding verification as an infra test).
 

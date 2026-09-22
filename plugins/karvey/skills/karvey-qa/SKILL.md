@@ -1,6 +1,6 @@
 ---
 name: karvey-qa
-description: QA code review in 9 dimensions (Security with OWASP Top 10 + STRIDE, Errors, Consistency, Impact, Env vars, Versioning, Second opinion cross-model, Visual audit vs design-spec, Standards conformance). Creates REVISION_PR document, ClickUp tasks or PLAN.md entries. Notifies Google Chat. Triggers include "karvey qa", "code review", "revisión de código", "QA".
+description: QA code review in 9 dimensions (Security with OWASP Top 10 + STRIDE, Errors, Consistency, Impact, Env vars, Versioning, Second opinion cross-model, Visual audit vs design-spec, Standards conformance). Creates REVISION_PR document, tasks in the team's tracker or PLAN.md entries. Notifies the team's configured channel. Triggers include "karvey qa", "code review", "revisión de código", "QA".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 argument-hint: <change-id> [--source <branch>] [--target <branch>]
 ---
@@ -9,7 +9,7 @@ argument-hint: <change-id> [--source <branch>] [--target <branch>]
 
 ## Purpose
 
-Code review across 9 dimensions, post-implementation. Generates a review document, creates subtasks in ClickUp or PLAN.md, and notifies the project's Google Chat group.
+Code review across 9 dimensions, post-implementation. Generates a review document, creates subtasks in the team's tracker (`karvey/rules/management-adapters.md`) or PLAN.md, and notifies the team's configured channel (`karvey/rules/notifications.md`).
 
 ## Execution steps
 
@@ -206,7 +206,13 @@ Structure:
 - {area}: {reason}
 ```
 
-### Step 3A — Create tasks in ClickUp (if management=clickup)
+### Step 3A — Create tasks in the team's tracker (`management-adapters.md`)
+
+Create a parent item `QA Review {change-id} ({source} → {target})` (priority high) and one child per critical/high
+finding (`create_task`, state `todo`, estimate per the table below, assignee = the file's author per git log), in
+`project.json:management.tool` — in the active sprint/iteration if the team uses one. `link(parent, REVISION_PR)`.
+
+**ClickUp adapter example:**
 
 Get the active sprint: `clickup_get_list` with name "Sprint XX".
 
@@ -236,7 +242,7 @@ Fix estimation:
 - Complex fix (extract helper, move to env var): 30min
 - Mass migration: 45-60min
 
-### Step 3B — Update PLAN.md (if management=markdown)
+### Step 3B — Update PLAN.md (Markdown)
 
 Add a "QA Review" section at the end of PLAN.md with the list of findings and pending actions.
 
@@ -265,14 +271,21 @@ Then **route them** with `/karvey-iterate {change-id}` (the engine confirms type
 
 ### Step 3F — Phase-close
 
-Run the phase-close ritual (`karvey/rules/phase-close.md`): comment + status on management, ensure findings/incidents/backlog are synced, update `spec.json` (`updated_at`).
+Run the phase-close ritual (`karvey/rules/phase-close.md`): comment + status in the team's tracker (or `PLAN.md`), ensure findings/incidents/backlog are synced, update `spec.json` (`updated_at`).
 
-### Step 4 — Notify via Google Chat
+### Step 4 — Notify the team (per `notifications.md`)
 
-Identify the project's space in the known-spaces table.
-Send a summary to the group using the Google Chat protocol from CLAUDE.md.
+Read `docs/spec/project.json:notifications` (`karvey/rules/notifications.md`):
+- `channel` unset → skip and say `Notification: not configured — run /karvey:karvey-init --settings`.
+- `channel: none`, or `qa` not in `events` → skip and say so.
+- Otherwise send the summary to `target` through `via` (MCP, CLI, webhook or API — whatever is actually available;
+  if it is not, say so). Webhook URLs/tokens come from the secret `target` references, never from the repo.
+  A failed send is reported, not swallowed; the phase still closes.
 
-Message format (Google Chat):
+Never look the destination up in `CLAUDE.md` or any other file.
+
+Content (event `qa`): change-id, source → target, findings by severity, manual-testing areas, review document.
+Write it in the **channel's own markup** (`notifications.md` → Message format per channel). Google Chat / Slack example:
 ```
 *QA Review — {change-id}*
 
@@ -299,8 +312,8 @@ Full document: `REVISION_PR_{n}_{date}.md`
 Findings: {N} total ({critical}, {high}, {medium}, {low})
 Document: REVISION_PR_{n}_{date}.md
 
-Management: {N subtasks created in ClickUp | PLAN.md updated}
-Google Chat: notification sent to {group}
+Management: {N subtasks created in {tool} | PLAN.md updated}
+Notification: {channel → target | skipped (none) | not configured}
 
 Findings recorded: {N bug · N spec-gap · N emergent} → findings.md
 

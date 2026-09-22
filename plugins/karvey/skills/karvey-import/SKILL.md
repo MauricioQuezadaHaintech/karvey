@@ -55,7 +55,7 @@ For **each** `.kiro/specs/{feature-name}/`:
    | `steering/tech.md` | feeds `project.json` (stack/targets) + architecture context | |
 
 4. **Generate `prd.md`** (Kiro has no formal PRD): synthesize from `steering/product.md` + the intent of `requirements.md` into Karvey's PRD structure (executive summary, problem & context, goals & success metrics, user stories, scope/out-of-scope, stakeholders, constraints, acceptance criteria). Mark inferred parts as `> inferred from Kiro — review`.
-5. **Generate `spec.json`**: `change_id`, `capability` (infer or ask), `goal` (from product/requirements; ask if unclear), `language`, `management`, `security_tier` (ask; default per project), `phase` and `approvals` set to the **furthest phase the imported content supports** (e.g. if requirements+design+tasks exist → `phase: "tasks"`, with `requirements/architecture/tasks` marked generated; approvals left `approved:false` so the user re-validates each gate). Map Kiro `approvals` where present.
+5. **Generate `spec.json`**: `change_id`, `capability` (infer or ask), `goal` (from product/requirements; ask if unclear), `language`, `management` (from `project.json:management.tool`), `security_tier` (ask; default per project), `phase` and `approvals` set to the **furthest phase the imported content supports** (e.g. if requirements+design+tasks exist → `phase: "tasks"`, with `requirements/architecture/tasks` marked generated; approvals left `approved:false` so the user re-validates each gate). Map Kiro `approvals` where present.
 6. **spec-delta.md / living specs**: create a `spec-delta.md` stub for `karvey-archive` to merge later.
 7. Report per feature: what mapped cleanly vs. what needs review (the TODO placeholders).
 
