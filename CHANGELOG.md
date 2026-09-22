@@ -2,6 +2,15 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [Unreleased] - repo maintenance (no plugin change)
+
+### Added
+- **`graphify-out/`** — knowledge graph of the method's own repo (82 files → 399 nodes, 753 edges, 21 communities), versioned with repo-relative paths; `.graphify_python` (machine-specific) is git-ignored. Closes backlog **BL-01**. It lives outside `plugins/karvey/`, so the installed plugin is unchanged and no version bump applies. README documents how to refresh it (`graphify . --update`).
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5 (1M context)
+> 🔗 Karvey phase: knowledge sync (`rules/knowledge-sync.md`, graphify) · Apache 2.0
+
 ## [3.9.1] - 2026-09-22
 
 ### Fixed — documentation drift

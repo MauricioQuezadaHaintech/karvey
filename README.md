@@ -134,6 +134,14 @@ Then invoke the namespaced skills, for example:
 
 The skills' bodies are in English (what Claude reads), but **artifacts are generated in the project's language** (`spec.json` `language` field) and Claude replies in your language. Triggers are bilingual (English + Spanish).
 
+## Knowledge graph (`graphify-out/`)
+
+The repo ships a [graphify](https://github.com/safishamsi/graphify) knowledge graph of the method itself (`project.json:knowledge_sync = "graphify"`): skills, shared rules, releases and the concepts that connect them.
+
+- `graphify-out/GRAPH_REPORT.md` — communities, god nodes, surprising connections, suggested questions.
+- `graphify-out/graph.html` — interactive graph, opens in any browser. `graphify-out/graph.json` — raw graph.
+- All paths inside are **relative to the repo root**. After changing skills or rules, refresh it incrementally with `graphify . --update` from the repo root and commit the result.
+
 ## License and trademark
 
 Code under the **Apache License 2.0** (see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE)). You may use, modify and adapt `karvey-*` with attribution.
