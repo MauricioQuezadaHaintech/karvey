@@ -23,13 +23,21 @@ The version file depends on the stack (detect it): `package.json`, `pyproject.to
 
 Each entry follows the format of `changelog-policy.md` (human owner + AI model + the **why**, not just the what) and indicates the semver segment that was incremented and why.
 
-## Version visible in the frontend (recommendation)
+## Version visible in the frontend (recommendation) — DEV shows the dev version, PROD the release
 
-If the project has a **frontend**, it is **recommended to expose the version in the UI** (footer, "About" screen, or similar) for visible traceability in production:
-- Inject the version at build time (e.g. `VITE_APP_VERSION`, environment variable, or reading the version file).
-- Show it in a discreet but accessible place.
+If the project has a **frontend** (any `target` with a UI), it is **recommended to expose the version in the UI** (footer, "About" screen, or similar), **differentiated by environment**, so anyone looking at a screen knows which build they are on:
 
-`karvey-deploy` must **recommend this to the user** when it detects that the project has a frontend layer and the version is not visible.
+| Environment | What the UI shows | Example |
+|---|---|---|
+| **DEV** (`integration` branch) | the **dev version**: the bumped version as a semver pre-release + build metadata, and a visible environment mark | `v3.10.1-dev.42+74571ae` · `DEV` badge |
+| **PROD** (`production` branch) | the **release version**, clean | `v3.10.1` (commit only in a tooltip / About screen, if wanted) |
+
+How to build it:
+- **The version comes from the version file** (`package.json`, `pyproject.toml`, `*.csproj`, `VERSION`…) read at build time — **never from a pipeline variable**, which silently stays stuck on an old value while the code moves on (the label lies, the code does not). E.g. Vite: `define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version) }`.
+- **The environment and the build identity come from the pipeline:** the stage sets `APP_ENV` (`dev` | `prod`), the CI provides the build number and the short commit (`git rev-parse --short HEAD`). The code composes: `APP_ENV === 'prod' ? version : `${version}-dev.${build}+${sha}``.
+- Discreet but accessible place; the DEV mark must be impossible to confuse with production.
+
+`karvey-deploy` must **recommend this to the user** when it detects a frontend layer whose version is not visible or not differentiated by environment, and its canary **checks the visible version** (see `karvey-deploy` 2.7 / 2.11): DEV shows `-dev` of the version just bumped; PROD shows exactly the released version. A mismatch is a finding (stale build, wrong stage variable, or a version read from the wrong source).
 
 ## In the step-by-step deployment (`karvey-deploy`)
 
@@ -37,4 +45,4 @@ Before the push to the integration branch (part of the 6-step checklist):
 1. Determine the segment to increment (major/minor/rev) according to the nature of the change.
 2. Bump the version in each affected component/repo.
 3. Document the changes: update `CHANGELOG.md` per component and per repo.
-4. (If there is a front) verify/recommend a visible version in the UI.
+4. (If there is a front) verify/recommend a visible version in the UI — **dev version in DEV, release version in PROD** — and check it in the canary.
