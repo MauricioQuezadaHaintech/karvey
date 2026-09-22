@@ -35,7 +35,8 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **Phase-close ritual**: every phase/task closes with a mandatory management update (ClickUp comment + status + cascade) so tasks never go stale — see `rules/phase-close.md`
 - **Multi-agent and multi-repo work**: parent/child changes across repos, business decisions (`D-NN`) and pinned inputs from design/copy/legal agents (`repo path @commit`) in `spec.json`, approvals that cite who approved and where, `[human]` tasks for steps only a person may run, `ops` and `hotfix` change types, light CI for docs-only PRs — see `rules/multi-agent.md`
 - **Cross-cutting layer of support skills** (investigate, second-opinion, health, browse, etc.) callable at any time
-- **Optional team layer** (`rules/team.md`): roles, rotation handoff, census, decision log and **cost measurement** for work split across several agent sessions. **Opt-in and not the default** — Karvey is complete with one agent, and the measured run behind this layer cost ≈US$1,000 in 3 days before going back to one.
+- **Agent handoff on every rotation** (`karvey-checkpoint`): identity, standing rules, board, closing checklist, **measured** repo state and scheduled tasks — for a single agent as much as for a team, and reinjected by the plugin's session hook, which also contrasts it against the live repos
+- **Optional team layer** (`rules/team.md`): roles, census, decision log and **cost measurement** for work split across several agent sessions. **Opt-in and not the default** — Karvey is complete with one agent, and the measured run behind this layer cost ≈US$1,000 in 3 days before going back to one.
 - **Verification rules before reporting "done"** (`rules/verification.md`): the failure modes that make a green report false
 - **Optional enforcement via hooks** (git-flow + plan-gate) and **archive** with spec merge
 
@@ -80,7 +81,7 @@ These are not phases; they do not advance `spec.json:phase` forward. See `rules/
 /karvey-second-opinion     → Adversarial cross-model review (Claude vs another model)
 /karvey-health             → 0-10 dashboard (type/lint/tests/dead-code) + trend
 /karvey-browse             → "Give it eyes": the target's real runtime (browser/sim/CLI)
-/karvey-checkpoint         → Save/restore work state (+ rotation handoff, if a team is configured)
+/karvey-checkpoint         → Save/restore work state + the agent's handoff (who I am, rules, board, checklist, state)
 /karvey-diagram            → Text → mermaid + excalidraw + SVG/PNG
 /karvey-docs               → Diataxis + update stale docs + PDF
 /karvey-guard              → Install/remove enforcement hooks; edit-lock

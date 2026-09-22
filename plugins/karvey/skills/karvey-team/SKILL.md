@@ -18,7 +18,8 @@ pipeline, which is the work itself. **NOT a phase** — it never touches `spec.j
 > it — but it is a choice made with the number in front of you.
 
 **Karvey is complete with one agent.** No phase requires this layer, and no gate is weakened without
-it. A project that never runs `init` never sees it.
+it. A project that never runs `init` never sees it — **including the handoff**, which
+`karvey-checkpoint` writes for a lone agent just the same. This layer adds the roster, not the memory.
 
 ## Execution steps
 
@@ -35,10 +36,13 @@ last cost report) and offer the options.
    Nothing else; the rest has defaults.
 3. **Write `docs/spec/team.json`** (schema in `rules/team.md`), including `rotation` thresholds
    (defaults 150000 / 24h) and `cost_report`.
-4. **Create the ops structure**: `agents/<role>/manifest.md`, `agents/<role>/handoff.md` (empty, with
-   the section headings from `karvey-checkpoint`), `board/<role>.md`, `agents/census.md`, and the
-   **compact manifest** (`agents/manifest-compact.md`) — the 15–20 line version that a session reload
-   can reinject whole.
+4. **Create the ops structure**: `agents/<role>/manifest.md`, `agents/<role>/handoff.md`,
+   `agents/<role>/checklist.md`, `board/<role>.md`, `agents/census.md`, and the **compact manifest**
+   (`agents/manifest-compact.md`) — the 15–20 line version that a session reload can reinject whole.
+   **If the project already has a single-agent profile in `docs/spec/agent/`, MIGRATE it** (git mv,
+   keeping history) instead of creating an empty one beside it: that agent already has a manifest, a
+   board, a checklist and a handoff worth keeping, and two profiles for the same agent is how one of
+   them starts lying.
 5. **Offer the session hook** (`hooks/` in this plugin) so each session re-reads its identity, compact
    manifest and handoff on startup, resume, compact and clear. Explain that a plugin **cannot** declare
    a statusline (only `agent` and `subagentStatusLine` are accepted), so the rotation statusline is

@@ -11,7 +11,7 @@ In addition to the 12 pipeline phases (linear, with gates), Karvey has a **cross
 | `karvey-second-opinion` | Cross-model reviewer | Before releasing something sensitive: adversarial review with ANOTHER model (Claude vs GPT/other). | codex |
 | `karvey-health` | Code quality | Periodic check: score 0–10 (type-check + lint + tests + dead code) with trend. | health |
 | `karvey-browse` | Eyes on the runtime | Inspect/click/screenshot in the target's real runtime (browser/simulator/CLI). | browse, setup-browser-cookies |
-| `karvey-checkpoint` | Work state | Save/restore working context (git state, decisions, WIP) across sessions/handoffs. With a team configured it also captures the agent's **rotation handoff** (`rules/team.md`). | context-save/restore |
+| `karvey-checkpoint` | Work state + agent handoff | Save/restore working context (git state, decisions, WIP) **and the agent's handoff** — identity, manifest, board, checklist, measured repo state, scheduled tasks — across sessions and rotations. Works with a single agent; a team only changes where it lives. | context-save/restore |
 | `karvey-diagram` | Diagrammer | Generate diagrams: text → mermaid + excalidraw + SVG/PNG. | diagram |
 | `karvey-docs` | Doc Engineer | Generate Diataxis docs (tutorial/how-to/reference/explanation), update stale docs, export PDF. | document-generate/release, make-pdf |
 | `karvey-guard` | Guardrails | Activate/remove enforcement hooks; edit-lock on a directory for sensitive work. | careful, freeze, guard |

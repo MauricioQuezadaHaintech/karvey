@@ -7,8 +7,8 @@ Traced to `prd.md`.
 - **REQ-TEAM-001** — WHERE no team configuration exists (`docs/spec/team.json` or a legacy
   `.ceo-agentes`), THE method SHALL behave exactly as before this change, and no phase or gate SHALL
   require the team layer.
-- **REQ-TEAM-002** — WHEN the session hook runs on a project without team configuration, THE hook
-  SHALL print nothing and exit 0.
+- **REQ-TEAM-002** — WHEN the session hook runs on a project with no agent profile and no team
+  configuration, THE hook SHALL print nothing and exit 0.
 - **REQ-TEAM-003** — WHEN `karvey-team init` is invoked, THE skill SHALL present the measured cost of
   the reference run and obtain confirmation BEFORE writing any file.
 - **REQ-TEAM-004** — THE team rule SHALL state, before its configuration section, the conditions under
@@ -16,16 +16,31 @@ Traced to `prd.md`.
 
 ## Handoff (PRD §4)
 
-- **REQ-TEAM-010** — WHEN `karvey-checkpoint save` runs WHILE a team is configured, THE skill SHALL
-  write the change checkpoint AND the agent handoff at `{ops_repo}/agents/<role>/handoff.md`.
+- **REQ-TEAM-010** — WHEN `karvey-checkpoint save` runs, THE skill SHALL write the change checkpoint
+  AND the agent handoff, **whether or not a team is configured**: at `docs/spec/agent/handoff.md` for a
+  single agent, or at `{ops_repo}/agents/<role>/handoff.md` when a team is.
+- **REQ-TEAM-010b** — WHERE no agent profile exists yet, THE skill SHALL create it during the save
+  (manifest, board, checklist, handoff) rather than failing or skipping the handoff.
+- **REQ-TEAM-010c** — THE handoff SHALL carry, besides repository state: who the agent is and what is
+  not theirs, the standing rules **referenced with their commit** rather than copied, the board of open
+  items, and the closing checklist.
+- **REQ-TEAM-010d** — WHEN the handoff is written, THE skill SHALL also write `state.json` beside it
+  with the measured branch, commit and uncommitted count of each owned repo.
 - **REQ-TEAM-011** — THE handoff's state section SHALL be the output of commands; IF a claim of "done"
   cannot be verified in that session, THEN it SHALL be recorded as unverified with its reason.
 - **REQ-TEAM-012** — THE handoff SHALL record every scheduled task with its full prompt.
 - **REQ-TEAM-013** — WHEN the handoff is committed to a shared ops repo, THE skill SHALL commit by
   explicit path (`git commit -- <paths>`) and SHALL NOT stage other paths.
-- **REQ-TEAM-014** — WHEN `karvey-checkpoint restore` runs WHILE a team is configured, THE skill SHALL
-  contrast the handoff against the real repository state and SHALL report that the handoff has aged
-  BEFORE presenting its content as current.
+- **REQ-TEAM-014** — WHEN `karvey-checkpoint restore` runs, THE skill SHALL contrast the handoff
+  against the real repository state and SHALL report that the handoff has aged BEFORE presenting its
+  content as current.
+- **REQ-TEAM-014b** — WHEN a session starts, resumes, compacts or is cleared AND an agent profile
+  exists, THE session hook SHALL reinject identity, manifest, board, checklist and handoff, SHALL
+  compare `state.json` against the live repositories, and SHALL instruct the session to run
+  `/karvey-checkpoint restore` before anything else when there is an active change, drift, or no
+  handoff.
+- **REQ-TEAM-014c** — WHERE `state.json` is absent or unreadable, THE hook SHALL state that nothing was
+  measured and that the handoff's claims are unverified.
 - **REQ-TEAM-015** — THE method SHALL NOT allow an agent to rotate itself or another agent; on reaching
   a rotation threshold THE agent SHALL write the handoff, commit it, report readiness, and continue
   working normally.

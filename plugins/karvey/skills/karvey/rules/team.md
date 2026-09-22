@@ -87,7 +87,13 @@ is scheduled, not improvised:
 - **Scheduled tasks die with the reset, silently.** Whatever the session had scheduled must be
   written into the handoff **with its full prompt**, or it stops existing and nobody is told.
 
-`karvey-checkpoint save` is what produces the handoff. See that skill for its format.
+**The handoff is not part of this layer.** `karvey-checkpoint save` writes it **with or without a
+team**: a single agent rotates too, and it is the case with the least safety net, because nobody else
+holds the context. Without a team the agent's profile lives in `docs/spec/agent/` (manifest, board,
+checklist, handoff, `state.json`); a team only **moves** those files to `{ops_repo}/agents/<role>/`
+and adds the roster around them. See `karvey-checkpoint` for the format and for what the handoff
+carries: who I am, the rules I work under, the board, the closing checklist, the measured repo state
+and the scheduled tasks.
 
 ## Addressing another agent — names are not identifiers
 
@@ -138,6 +144,6 @@ paths and ignores the rest of the index. Pull with `--rebase --autostash` before
   `[human]` tasks, approvals). **This rule covers the agents themselves.** They are complementary and
   independent: multi-repo work does not require this layer.
 - `karvey-team` manages the layer (`init`, `census`, `relay`, `cost`).
-- `karvey-checkpoint` writes and restores the handoff.
+- `karvey-checkpoint` writes and restores the handoff — **independently of this layer**; here it only changes path and gains the roster.
 - `karvey-decisions` keeps the decision log the whole team cites.
 - `verification.md` holds the verification rules that a team violates faster than one agent does.

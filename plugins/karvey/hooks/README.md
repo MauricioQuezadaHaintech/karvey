@@ -1,23 +1,34 @@
 # Karvey hooks
 
 Two pieces that keep a session from forgetting who it is and from running past the point where
-rotating is cheaper than continuing. **Both belong to the OPTIONAL team layer** (`karvey/rules/team.md`)
-— read that rule, including "When NOT to use a team", before adopting them.
+rotating is cheaper than continuing. **They work for a single agent**; a team (`karvey/rules/team.md`,
+optional) only changes where the agent's profile lives.
 
 | File | What it is | How it is installed |
 |---|---|---|
-| `hooks.json` + `karvey-session-context.sh` | `SessionStart` hook (`startup\|resume\|compact\|clear`): reinjects identity + compact manifest + this agent's handoff | **Automatic** with the plugin |
+| `hooks.json` + `karvey-session-context.sh` | `SessionStart` hook (`startup\|resume\|compact\|clear`): reinjects identity, manifest, board, checklist and handoff; **measures the live repos against `state.json`**; and tells the session to run `/karvey-checkpoint restore` first | **Automatic** with the plugin |
 | `karvey-statusline.sh` | Rotation statusline: context, account limits, hours, cost, and a "TIME TO ROTATE" warning | **By hand, once** — see below |
 
 ## The session hook needs no installation
 
 Plugin hooks **add to** the user's own hooks, they do not replace them. With the plugin installed, the
-hook runs on every session start. **Without a team configured it prints nothing and exits 0** — on a
-single-agent project it is inert, which is the default and the recommended state.
+hook runs on every session start, resume, compact and clear.
 
-It finds the team by walking up from the session's directory looking for `docs/spec/team.json` (or a
-legacy `.ceo-agentes`). The role comes from the directory's name relative to the team root; anything
-not listed, and the root itself, is `ceo`.
+It walks up from the session's directory looking for, in order: `docs/spec/team.json`, a legacy
+`.ceo-agentes`, or `docs/spec/agent/` (the single-agent profile). **With none of them it prints
+nothing and exits 0.** With a team, the role comes from the directory's name relative to the team
+root; anything not listed, and the root itself, is `ceo`.
+
+**What it does, and what it deliberately does not.** It reinjects the documents *and* measures: for
+each repo in `state.json` it compares branch, last commit and uncommitted count against the live tree
+and prints `matches` or `DRIFT — branch X -> Y`. Then it tells the session to run
+`/karvey-checkpoint restore` **before anything else** when there is an active change, when the state
+drifted, or when there is no handoff at all.
+
+**A hook cannot invoke a skill**, so it stops there. Crossing open questions against the decision log,
+recreating the scheduled tasks and proposing the next step are the skill's job — the hook's
+contribution is that the session starts knowing it must ask for them, and knowing which parts of the
+handoff are already suspect.
 
 ## The statusline is installed by the user, once
 
