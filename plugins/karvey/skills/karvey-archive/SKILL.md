@@ -164,6 +164,14 @@ A closing cycle almost always surfaced ideas and out-of-scope work. Before finis
 
 This is the step that guarantees post-cycle discoveries don't get lost.
 
+### Step 7F — Branch sweep (nothing left in branches)
+
+The change is not closed while one of its branches is still alive. In each repo of the change, apply
+`karvey/rules/deploy-workflow.md` → *Branch hygiene*: `git fetch --prune`, then every non-protected branch
+**absorbed** into `{production}` is deleted (remote + local, closing its PR if open); every branch **not
+absorbed** is listed with its unique commits and PR, and the human decides (rescue / keep / discard). If
+`karvey-deploy` 2.12 already cleaned, this confirms it. Report the counts — never sweep silently.
+
 ### Step 8 — Final output
 
 ```
@@ -183,6 +191,10 @@ Management: {Epic E{n} closed in ClickUp | PLAN.md marked complete}
 Commits:
   - "spec: merge deltas from {change-id}"
   - "chore: archive {change-id}"
+
+Branches swept:
+  - Deleted: {N} ({list})
+  - Kept (not absorbed): {N} ({branch} — {reason})
 
 Discovery backlog swept:
   - Promoted to new change-ids: {N} ({list})

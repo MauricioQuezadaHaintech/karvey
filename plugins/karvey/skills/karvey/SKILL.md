@@ -53,7 +53,7 @@ PHASE 6 ─── /karvey-infra          → IaC + CI/CD pipelines + infra secur
 PHASE 7 ─── /karvey-tasks          → 10–30 min tasks, E{n}.F{n}.T{n}, ClickUp sprint
 PHASE 8 ─── /karvey-impl           → Implementation DB→Backend→Frontend, commits + CHANGELOG
 PHASE 9 ─── /karvey-test           → Unit + E2E in the target's real runtime, benchmark, regression
-PHASE 10 ── /karvey-qa             → QA 8D + blocking security gate, REVISION_PR
+PHASE 10 ── /karvey-qa             → QA 9D + blocking security gate, REVISION_PR
 PHASE 11 ── /karvey-deploy         → Orderly deployment feature→dev→PR master + canary
 PHASE 12 ── /karvey-archive        → Merge spec-deltas, retro, docs, close Epic + backlog sweep
 ```
@@ -273,7 +273,7 @@ Karvey absorbs the value of both. What in gstack are standalone commands lives h
 | plan-design-review, design-consultation, design-shotgun | `karvey-design-graphic` + `karvey-mockup` (shotgun) |
 | plan-eng-review, diagram | `karvey-architecture` + `karvey-diagram` |
 | setup-deploy | `karvey-infra` (platform auto-detection) |
-| review, cso (OWASP+STRIDE), codex, design-review | `karvey-qa` (8 dim) + `karvey-second-opinion` |
+| review, cso (OWASP+STRIDE), codex, design-review | `karvey-qa` (9 dim) + `karvey-second-opinion` |
 | qa, browse, benchmark | `karvey-test` + `karvey-browse` + `karvey-health` |
 | ship, land-and-deploy, canary | `karvey-deploy` |
 | investigate | `karvey-investigate` |

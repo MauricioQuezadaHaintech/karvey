@@ -40,12 +40,12 @@ Optional team layer (opt-in, **not** the default — Karvey is complete with one
 - **Navigable mockup** (with shotgun variant mode) and **design** with 0-10 scoring per platform (WCAG/HIG/Material).
 - **Architecture** with diagrams, edge cases, trust boundaries and a **Cloud Infrastructure** section.
 - **IaC + CI/CD pipelines** (Terraform/Bicep/Pulumi · GitHub Actions/Azure Pipelines) with security review.
-- **8-dimension QA** with a **blocking security gate** (OWASP + STRIDE) and cross-model second opinion.
+- **9-dimension QA** with a **blocking security gate** (OWASP + STRIDE), a **standards-conformance** dimension (golden path + approved deviations) and cross-model second opinion.
 - **Iteration loop** that routes findings back to their edge (`bug` / `spec-gap` / `emergent`) so the method guides you through iteration, not just the happy path.
 - **Incident tracker** (`BUG-NN` with state history) per repo + a global index — complementary to ClickUp.
 - **Discovery backlog** (Markdown + ClickUp) so emergent ideas become future change-ids, swept at archive.
 - **Mandatory phase-close** ritual: every phase/task updates management (ClickUp comment + status + cascade) so nothing goes stale.
-- **Ordered deployment** `feature → dev → PR master`, pipeline-triggered, with **canary** post-deploy.
+- **Ordered deployment** `feature → dev → PR master`, pipeline-triggered, verifying the **PR gates** (CI + branch policies) before the prod OK, with **canary** post-deploy and **branch hygiene** (absorbed branches deleted, unreleased ones reported — nothing left in branches).
 - **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability.
 - **Multi-agent & multi-repo work**: parent/child changes across repos, `D-NN` decisions and pinned inputs (`repo path @commit`) from design/copy/legal agents, approvals that record who and where, `[human]` tasks with verification and rollback, `ops` and `hotfix` change types, light CI for docs-only PRs.
 - **Optional team layer** (`rules/team.md`): roles, a **rotation handoff captured by commands** (not composed from memory), census, decision log with a cross-check that stops you re-asking what was already decided, and **cost measurement**. Opt-in, and the rule opens by telling you when *not* to use it: the measured run behind it cost ≈US$1,000 over 3 days with 6 agents and ended back on a single agent.

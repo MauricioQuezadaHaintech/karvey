@@ -27,7 +27,8 @@ docs/spec/project.json
   "branch_flow": {
     "feature_prefix": "feature/",
     "integration": "dev",
-    "production": "master"
+    "production": "master",
+    "protected_branches": ["release/*"]
   },
   "standards": {
     "source": "git",
@@ -51,12 +52,12 @@ docs/spec/project.json
 
 - **`repos`**: mandatory array with **at least 1** entry. Validate on create/read; if it comes in empty, stop and ask for at least one repo.
 - **`spec_repo`**: if `repos` has 1 element, `spec_repo` = that repo. If it has several, ask which one is the main one.
-- **`git_platform`**: determines which pipelines `karvey-infra` generates (GitHub Actions vs Azure Pipelines).
+- **`git_platform`**: determines which pipelines `karvey-infra` generates (GitHub Actions vs Azure Pipelines) **and which CLI `karvey-deploy` uses to open, verify and merge the PR** (`gh pr` vs `az repos pr` vs `glab mr`) — they are not interchangeable. If a repo's remote contradicts it, the remote wins and the config is stale.
 - **`cloud.provider`**: `mixed` means services from more than one cloud are used; the detail of which service from which cloud is specified in the "Cloud Infrastructure" section of `architecture.md` for each change.
 - **`iac_tool`**: `none` means infra is managed manually; `karvey-infra` still generates/validates the CI/CD pipelines.
 - **`knowledge_sync`**: see `knowledge-sync.md`.
 - **`targets`**: the project's platforms (at least 1). Defines how each phase verifies/designs. See `targets.md`. Stack-agnostic: never assume `web` by default.
-- **`branch_flow`**: branch convention; respected by `karvey-impl`, `karvey-qa` and `karvey-deploy`. Default: `feature/*` → `dev` → `master`.
+- **`branch_flow`**: branch convention; respected by `karvey-impl`, `karvey-qa` and `karvey-deploy`. Default: `feature/*` → `dev` → `master`. `protected_branches` (optional, globs) lists long-lived branches besides `integration`/`production` that the branch-hygiene cleanup never deletes (see `deploy-workflow.md` → *Branch hygiene*).
 - **`standards`**: engineering golden paths per layer (see `engineering-standards.md`). Two source modes:
   - `source: "local"` → standards live in `dir` inside the `spec_repo` (single-repo / simplest case).
   - `source: "git"` → standards live in a **separate, team-owned repo** (e.g. a private Azure DevOps repo) given by `repo` + `ref` + `path`. Phases resolve it by cloning/pulling a shallow working copy into a cache (`.karvey/standards/`) and reading from there. This keeps the **method** (public plugin) and the **standards** (org's private data) decoupled and independently installable/versioned.
@@ -71,6 +72,6 @@ docs/spec/project.json
 ## Who creates / reads it
 
 - **Creates**: `karvey-init` (first time in the project). Pre-populated from the `karvey-grill` synthesis if it exists.
-- **Reads**: all phases. In particular `karvey-architecture` (cloud, **standards**), `karvey-impl` (**standards**, branch_flow), `karvey-infra` (git_platform, cloud, iac_tool, repos), `karvey-deploy` (branch_flow, repos), and any phase that syncs knowledge (`knowledge_sync`).
+- **Reads**: all phases. In particular `karvey-architecture` (cloud, **standards**), `karvey-impl` (**standards**, branch_flow), `karvey-infra` (git_platform, cloud, iac_tool, repos), `karvey-deploy` (branch_flow, repos, git_platform), and any phase that syncs knowledge (`knowledge_sync`).
 
 If a phase needs `project.json` and it does not exist, stop and indicate to run `karvey-init` first.

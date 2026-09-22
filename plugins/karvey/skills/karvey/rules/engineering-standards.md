@@ -85,9 +85,10 @@ Each `standards/{layer}.md` MUST follow this shape so the agent can apply it mec
 
 ## The conformance gate (where it plugs into the pipeline)
 
-Two phases load the relevant standards as a **mandatory input** and validate against them. The relevant
-standards are those of the change's `layers`/`targets` (from `spec.json`/`project.json`), resolved via
-`standards/_index.md`.
+Three phases load the relevant standards as a **mandatory input** and validate against them: design decides,
+implementation obeys, **QA verifies**. Without the third the method only trusts — a departure that never
+raised a Deviation Request would reach production unchecked. The relevant standards are those of the change's
+`layers`/`targets` (from `spec.json`/`project.json`), resolved via `standards/_index.md`.
 
 ### In `karvey-architecture` (PHASE 5)
 After drafting the design and before writing `architecture.md`, classify it against the loaded standards:
@@ -103,6 +104,20 @@ Same contract at code level. Before writing code that would step outside the sta
 (e.g. using a `deprecated` pattern, a new schema, an unapproved library), **raise the deviation first** —
 not after the code is written. Code that conforms cites the standard; code that deviates needs an
 approved entry in `deviations.md`.
+
+### In `karvey-qa` (PHASE 10) — Dimension 9
+The verification. Reviews the diff against the standards of the layers it touches and checks that every
+departure has an approved entry in `deviations.md`:
+
+| Outcome | Action |
+|---------|--------|
+| ✅ **Conforms**, or departs with an approved deviation | Not a finding. Record it — it is evidence the gate worked. |
+| ⚠️ **Gray zone** the standard does not cover | Medium finding tagged `gray-zone` → escalate to design mode. Never Critical by the reviewer's own reading. |
+| ❌ **Departs with no approved entry** in `deviations.md` | **High**, blocking. This is the failure the dimension exists to catch: the code left the golden path and nobody decided it. |
+
+A standard in `draft` does not by itself produce Critical/High findings — only an explicit `MUST` violation
+does. With no standards for the project, the dimension is recorded as **not evaluated**, which is not the
+same as conformant.
 
 ## Deviation Request — the "design mode" escalation
 
@@ -190,8 +205,10 @@ and if that is missing too, to the "no standard found → ask" behavior above.
 
 - **Writes / updates:** `karvey-standards` (uplift/refresh — the main author), `karvey-init` (may trigger the
   bootstrap), maintainers (manually), `karvey-archive` (folds recurring deviations back into the standard).
-- **Reads (as a hard constraint):** `karvey-architecture`, `karvey-impl`, and `karvey-qa` (the Consistency
-  dimension checks conformance + that every deviation has an approved entry).
+- **Reads (as a hard constraint):** `karvey-architecture`, `karvey-impl`, and `karvey-qa` (Dimension 9,
+  Standards conformance, checks agreement with the standard + that every departure has an approved entry in
+  `deviations.md`). Note it is **not** the Consistency dimension: that one measures coherence internal to the
+  module, not agreement with the documented standard.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0.*
