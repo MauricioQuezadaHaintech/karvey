@@ -71,6 +71,9 @@ with the same meaning when `team.json` is absent, so existing setups keep workin
 
 Per-agent artifacts live in the ops repo: `agents/<role>/manifest.md`, `agents/<role>/handoff.md`,
 `board/<role>.md`.
+When `team.json` lives inside the repo it names (`ops_repo` is this same repo, or empty), the "ops repo" is the
+folder that holds `team.json` — `docs/spec/agents/<role>/…` and `docs/spec/board/<role>.md`. The session hook and
+`karvey-checkpoint` resolve both layouts the same way.
 
 ## Rotation — a session does not last forever
 

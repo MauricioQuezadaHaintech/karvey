@@ -2,6 +2,22 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.11.3] - 2026-09-23 — hotfix
+
+### Fixed
+- **BUG-18 — the SessionStart hook never ran, since 3.8.0.** `hooks.json` wrapped `${CLAUDE_PLUGIN_ROOT}` in single quotes; bash does not expand it and the CLI does not substitute it, so every session start failed with `No such file or directory` — no handoff reinjection, no drift check, no settings notice. Now double-quoted (the CLI's own guidance), and paths with spaces stay one word.
+- **BUG-19 — `team.json` inside the repo resolved a profile that did not exist.** The hook built `<repo>/<ops_repo>/agents/<role>` while `karvey-checkpoint save` writes `docs/spec/agents/<role>/` and `docs/spec/board/<role>.md`. The hook now resolves both layouts (sibling ops repo, or the folder that holds `team.json`), looks the role up by the root's name when the session starts at the root, finds `manifest-compact` inside the profile, and says so when the profile or the handoff is missing. `karvey-checkpoint` and `rules/team.md` document both layouts.
+
+### Added
+- Regression tests in `plugins/karvey/hooks/tests/test-hooks.sh` (28 cases): the SessionStart `command` is now executed **exactly as declared in `hooks.json`** — the gap that let BUG-18 through — and the in-repo team layout. 5 of them fail on 3.11.2.
+
+### Why
+Reported by `agente-kloketen` (paautin-kloketen), relayed at the owner's request, both reproduced: its session started without identity and `/karvey-checkpoint restore` found no handoff. The 3.11.2 tests ran the script directly and never the declared command, so a quoting error that disabled the hook for every user since 3.8.0 went unseen. Bug-now protocol: hotfix. Knowledge sync (graphify) for this hotfix is deferred to the `wave1-hardening` archive, which moves graphify to archive only (REQ-W1-062).
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5 (1M context)
+> 🔗 Karvey phase: hotfix lane (BUG-18, BUG-19 + regression tests) · Apache 2.0
+
 ## [3.11.2] - 2026-09-23 — hotfix
 
 ### Fixed

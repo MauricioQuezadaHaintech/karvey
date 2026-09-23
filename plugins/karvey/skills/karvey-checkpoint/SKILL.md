@@ -260,7 +260,10 @@ and how I communicate. `docs/spec/agent/board.md` — a table of `id · priority
 adding whatever this project has paid for once. `handoff.md` — the format above.
 
 With a team these same four files move to `{ops_repo}/agents/<role>/` and the board to
-`{ops_repo}/board/<role>.md`; `karvey-team init` migrates them rather than duplicating them.
+`{ops_repo}/board/<role>.md` — where `{ops_repo}` is the sibling ops repo under the team root, or, when
+`team.json` lives **inside** the repo it names (`ops_repo` = this repo, or empty), the folder that holds
+`team.json` (`docs/spec/`), i.e. `docs/spec/agents/<role>/` and `docs/spec/board/<role>.md`. The session
+hook resolves the same two layouts; `karvey-team init` migrates them rather than duplicating them.
 
 ## Notes
 
