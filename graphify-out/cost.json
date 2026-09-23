@@ -27,8 +27,15 @@
       "output_tokens": 0,
       "files": 7,
       "note": "--update 3.10.0; subagent totals recorded as input"
+    },
+    {
+      "date": "2026-09-23T16:00:52.274327+00:00",
+      "input_tokens": 111376,
+      "output_tokens": 0,
+      "files": 4,
+      "note": "--update 3.10.0; subagent totals recorded as input"
     }
   ],
-  "total_input_tokens": 1071986,
+  "total_input_tokens": 1183362,
   "total_output_tokens": 0
 }

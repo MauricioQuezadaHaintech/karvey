@@ -6,12 +6,14 @@
 <title>Karvey Method</title>
 <meta name="description" content="What the Karvey Method is (Afán — zeal, the drive to get things done, in the Ona language) and a complete map of the Claude Code plugin: orchestrator, 0–12 pipeline, support layer, rules, hooks, artefacts and team settings. Available in English, Spanish, Portuguese, German and Chinese.">
 <script>
-/* Early language pick (avoids a flash of English): ?lang= -> saved choice -> en.
+/* Early language pick (avoids a flash of English): ?lang= -> saved choice -> the browser's
+   language (its primary one, if it is en/es/pt/de/zh) -> en.
    The script at the end of <body> checks that the block exists and falls back to en. */
 (function(){
   var L=['en','es','pt','de','zh'],l=null;
   try{var m=/[?&]lang=([a-zA-Z]{2})(?:&|$)/.exec(location.search);if(m)l=m[1].toLowerCase();}catch(e){}
   if(L.indexOf(l)<0){l=null;try{l=localStorage.getItem('karvey-lang');}catch(e){}}
+  if(L.indexOf(l)<0){l=null;try{var n=(navigator.languages&&navigator.languages[0])||navigator.language||'';l=String(n).slice(0,2).toLowerCase();}catch(e){}}
   if(L.indexOf(l)<0)l='en';
   document.documentElement.setAttribute('data-lang',l);
 })();
@@ -122,7 +124,8 @@ section.block:first-of-type{border-top:0}
 
 /* Hero */
 .hero{position:relative;padding:3.2rem 0 2.4rem;overflow:hidden}
-.hero-wind{position:absolute;inset:auto 0 0 0;width:100%;height:120px;color:var(--line);pointer-events:none}
+.hero-wind{position:absolute;inset:auto 0 0 0;width:100%;height:120px;color:var(--line);pointer-events:none;z-index:0}
+.hero>*:not(.hero-wind){position:relative;z-index:1}
 .hero h1{font-size:clamp(2.4rem,7vw,4.2rem);margin:.2rem 0 .3rem;letter-spacing:-.03em}
 .hero .meaning{font-size:clamp(1.15rem,2.6vw,1.45rem);margin:0 0 1rem;color:var(--ink-2)}
 .hero .meaning strong{color:var(--ochre)}
@@ -348,7 +351,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
       <h1 id="en-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> is a word of the <strong>Ona</strong> language of the <strong>Selknam</strong> people of Patagonia, meaning <strong>Afán</strong> — zeal, the drive to get things done.</p>
       <ul class="badges" aria-label="Plugin facts">
-        <li class="badge v">v3.11.0</li>
+        <li class="badge v">v3.11.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">stack-agnostic</li>
@@ -1174,7 +1177,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="es-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> es una palabra del <strong>ona</strong>, la lengua del pueblo <strong>selknam</strong> de la Patagonia, que significa <strong>Afán</strong> (de hacer).</p>
       <ul class="badges" aria-label="Datos del plugin">
-        <li class="badge v">v3.11.0</li>
+        <li class="badge v">v3.11.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">agnóstico de stack</li>
@@ -1999,7 +2002,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="pt-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> é uma palavra da língua <strong>Ona</strong> do povo <strong>Selknam</strong> da Patagônia, que significa <strong>Afán</strong> — empenho, o ímpeto de fazer as coisas acontecerem.</p>
       <ul class="badges" aria-label="Dados do plugin">
-        <li class="badge v">v3.11.0</li>
+        <li class="badge v">v3.11.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · orientado a especificação</li>
         <li class="badge">agnóstico de stack</li>
@@ -2824,7 +2827,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="de-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> ist ein Wort aus der <strong>Ona</strong>-Sprache des <strong>Selknam</strong>-Volkes in Patagonien und bedeutet <strong>Afán</strong> — Eifer, der Antrieb, Dinge zu erledigen.</p>
       <ul class="badges" aria-label="Eckdaten des Plugins">
-        <li class="badge v">v3.11.0</li>
+        <li class="badge v">v3.11.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">stack-agnostisch</li>
@@ -3649,7 +3652,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="zh-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> 是巴塔哥尼亚<strong>塞尔克南人</strong>（Selknam）<strong>欧纳语</strong>（Ona）中的一个词，意为 <strong>Afán</strong>——热忱，把事情做成的干劲。</p>
       <ul class="badges" aria-label="插件概况">
-        <li class="badge v">v3.11.0</li>
+        <li class="badge v">v3.11.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · 规格驱动</li>
         <li class="badge">技术栈无关</li>
@@ -4446,11 +4449,11 @@ claude plugin update karvey@karvey-methods</code></pre>
   var root=document.documentElement, KEY='karvey-lang';
   /* UI strings for the shared bar (outside the language blocks) */
   var UI={
-    en:{label:'Language',skip:'Skip to content',home:'Karvey, back to top'},
-    es:{label:'Idioma',skip:'Saltar al contenido',home:'Karvey, volver al inicio'},
-    pt:{label:'Idioma',skip:'Pular para o conteúdo',home:'Karvey, voltar ao início'},
-    de:{label:'Sprache',skip:'Zum Inhalt springen',home:'Karvey, zurück zum Anfang'},
-    zh:{label:'语言',skip:'跳到正文',home:'Karvey，返回顶部'}
+    en:{title:'Karvey Method',label:'Language',skip:'Skip to content',home:'Karvey, back to top'},
+    es:{title:'Método Karvey',label:'Idioma',skip:'Saltar al contenido',home:'Karvey, volver al inicio'},
+    pt:{title:'Método Karvey',label:'Idioma',skip:'Pular para o conteúdo',home:'Karvey, voltar ao início'},
+    de:{title:'Karvey-Methode',label:'Sprache',skip:'Zum Inhalt springen',home:'Karvey, zurück zum Anfang'},
+    zh:{title:'Karvey 方法',label:'语言',skip:'跳到正文',home:'Karvey，返回顶部'}
   };
   var LANGS=['en','es','pt','de','zh'];
   var blocks=[].slice.call(document.querySelectorAll('.lang-block[data-lang]'));
@@ -4508,6 +4511,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     if(skip){skip.textContent=t.skip; skip.setAttribute('href','#'+l+'-content');}
     if(brand){brand.setAttribute('aria-label',t.home); brand.setAttribute('href','#'+l+'-top');}
     if(label) label.textContent=t.label;
+    if(t.title) document.title=t.title;
     if(remember && LANGS.indexOf(req)!==-1){try{localStorage.setItem(KEY,req);}catch(e){}}
     current=l; return l;
   }

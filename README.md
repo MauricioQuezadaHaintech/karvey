@@ -99,7 +99,7 @@ Skills never assume a tool or a status name: they speak in logical states and th
 
 ## Method explainer (`docs/karvey.html`)
 
-A self-contained page (no external requests), **in English by default with a switch to Español, Português, Deutsch and 中文** (`?lang=es|pt|de|zh`, remembered per browser), that complements this README: what the method is, the meaning of the name (*Karvey* = **Afán**, from the Ona language of the Selknam people of Patagonia), and a map of the whole plugin — orchestrator, phases, support skills, rules, hooks, artifacts and team settings. Open it locally in any browser.
+A self-contained page (no external requests), **in English by default with a switch to Español, Português, Deutsch and 中文** (`?lang=es|pt|de|zh`, remembered per browser; on a first visit it picks the browser's language if it is one of the five, otherwise English), that complements this README: what the method is, the meaning of the name (*Karvey* = **Afán**, from the Ona language of the Selknam people of Patagonia), and a map of the whole plugin — orchestrator, phases, support skills, rules, hooks, artifacts and team settings. Open it locally in any browser.
 
 ## Hooks — what runs on install and what is opt-in
 

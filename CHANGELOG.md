@@ -2,6 +2,17 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.11.1] - 2026-09-23
+
+### Fixed
+- **`docs/karvey.html` picks the browser's language** on a first visit: order `?lang=` → saved choice → the browser's primary language (`navigator.languages[0]`) if it is `en/es/pt/de/zh` → English. A browser in French or Japanese gets English. Tested in 9 cases (explicit param, saved choice, `es-CL`, `pt-BR`, `zh-CN`, `de-AT`, unsupported language, empty, `localStorage` throwing).
+- **The tab title follows the language** (`Karvey Method` · `Método Karvey` · `Karvey-Methode` · `Karvey 方法`) instead of staying in English — reported by the Mac review.
+- **The hero's decorative wind lines no longer cross the figure cards** (32 / 13 / 22 / 1+2): the SVG now sits behind the content (`z-index`) — reported by the Mac review.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5 (1M context)
+> 🔗 Karvey phase: change `team-adapters` iteration (QA findings on REQ-ADP-031, browser review) · Apache 2.0
+
 ## [3.11.0] - 2026-09-22
 
 ### Added
