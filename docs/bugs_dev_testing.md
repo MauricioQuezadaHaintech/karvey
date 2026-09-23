@@ -535,3 +535,64 @@ The hook only knew the sibling-ops-repo layout; `karvey-checkpoint` and `rules/t
 | 2026-09-23 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | hotfix/karvey-3.11.3-session-hook |
 | 2026-09-23 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | 3.11.3 + regression test |
 
+## BUG-20 — False "NOT FOUND" drift when state.json names the repo itself
+- **Priority:** medium
+- **Detected:** 2026-09-23 · **Component:** plugins/karvey/hooks/karvey-session-context.sh (live state vs handoff)
+- **Change / origin:** team-layer (3.8.0) — residue of BUG-19, reported by agente-kloketen after verifying 3.11.3
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+In-repo team layout; `state.json` `repos[].path = "<repo name>"` (as the save writes it) → the hook resolved `$ROOT/<repo name>`.
+
+### Actual vs expected
+- Actual: `<repo>: NOT FOUND at <repo>/<repo> — the handoff describes a tree that is not here` on every session start, a false "your handoff aged" alarm in the section that exists to detect real drift.
+- Expected: the repo is found and branch / commit / uncommitted are compared.
+
+### Root cause
+same class as BUG-19: the state comparison only knew the sibling layout (`$ROOT/<path>`).
+
+### Fix
+a path equal to the root's own name, `.` or empty resolves to `$ROOT` (the joined path is still tried as a fallback).
+
+### Regression test
+`plugins/karvey/hooks/tests/test-hooks.sh`, section "state.json paths (BUG-20) and worktrees (BUG-21)" — fails on 3.11.3, passes on 3.11.4.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-23 | DETECTADO | agente-kloketen / Claude | measured on paautin-kloketen with 3.11.3 |
+| 2026-09-23 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | reproduced in a fixture |
+| 2026-09-23 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | hotfix/karvey-3.11.4-state-paths |
+| 2026-09-23 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | 3.11.4 + regression test; verified read-only against paautin-kloketen |
+
+## BUG-21 — Git worktrees reported as NOT FOUND in the live-state comparison
+- **Priority:** medium
+- **Detected:** 2026-09-23 · **Component:** plugins/karvey/hooks/karvey-session-context.sh (live state vs handoff)
+- **Change / origin:** team-layer (3.8.0) — finding F-01 of the wave1-hardening architecture
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A handoff whose `repos[].path` is a git worktree (it has a `.git` file, not a `.git/` directory).
+
+### Actual vs expected
+- Actual: `NOT FOUND` for every worktree, although the tree exists.
+- Expected: the worktree is recognised as a repo.
+
+### Root cause
+the hook tested `os.path.isdir(<repo>/.git)`.
+
+### Fix
+ask git: `git -C <path> rev-parse --git-dir`.
+
+### Regression test
+`plugins/karvey/hooks/tests/test-hooks.sh`, section "state.json paths (BUG-20) and worktrees (BUG-21)" — fails on 3.11.3, passes on 3.11.4.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-23 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | architecture review of wave1-hardening (F-01) |
+| 2026-09-23 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | reproduced in a fixture |
+| 2026-09-23 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | hotfix/karvey-3.11.4-state-paths |
+| 2026-09-23 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | 3.11.4 + regression test; verified read-only against paautin-kloketen |

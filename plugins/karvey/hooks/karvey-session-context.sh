@@ -114,10 +114,22 @@ def git(repo, *a):
         return subprocess.run(['git','-C',repo,*a], capture_output=True, text=True, timeout=10).stdout.strip()
     except Exception:
         return ''
+def resolve(p):
+    # '', '.' or the root's own name mean the root itself (team.json inside the repo it names) — BUG-20
+    if p in ('', '.') or p.rstrip('/') == os.path.basename(root.rstrip('/')):
+        cands = [root] + ([os.path.join(root, p)] if p not in ('', '.') else [])
+    else:
+        cands = [p] if os.path.isabs(p) else [os.path.join(root, p)]
+    for c in cands:
+        if is_repo(c): return c
+    return cands[-1]
+def is_repo(path):
+    # a worktree has a .git FILE, not a directory — ask git instead of looking for .git/ (BUG-21)
+    return os.path.isdir(path) and bool(git(path, 'rev-parse', '--git-dir'))
 for r in d.get('repos', []):
     p = r.get('path','')
-    rp = p if os.path.isabs(p) else os.path.join(root, p)
-    if not os.path.isdir(os.path.join(rp, '.git')):
+    rp = resolve(p)
+    if not is_repo(rp):
         print(f"  {p}: NOT FOUND at {rp} — the handoff describes a tree that is not here."); drift = True; continue
     br  = git(rp,'rev-parse','--abbrev-ref','HEAD')
     cm  = git(rp,'log','-1','--pretty=%h')

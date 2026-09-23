@@ -22,7 +22,7 @@
     "git_flow_hook": false,
     "plan_gate_hook": false
   },
-  "karvey_version": "3.11.3",
+  "karvey_version": "3.11.4",
   "notifications": {
     "channel": "none",
     "target": "",
