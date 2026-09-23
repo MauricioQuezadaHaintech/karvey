@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression tests for the plugin hooks (BUG-01..BUG-04, Karvey 3.11.2). No dependencies beyond bash + python3.
+# Regression tests for the plugin hooks (BUG-01..04 in 3.11.2, BUG-18..19 in 3.11.3). No dependencies beyond bash + python3.
 # Run: bash plugins/karvey/hooks/tests/test-hooks.sh   → exit 0 if all pass.
 set -u
 H="$(cd "$(dirname "$0")/.." && pwd)"
@@ -24,6 +24,29 @@ out=$(ctx "$T/k2");                                               [ -z "$out" ] 
 echo '[1]' > "$T/k2/docs/spec/project.json"; out=$(ctx "$T/k2"); [[ "$out" == *"not an object"* ]] && ok "non-object JSON → notice" || bad "non-object" "$out"
 [[ "$(ctx "$T/k1")" == *"creates no change"* ]] && ok "notice says settings-only (BUG-01 guard)" || bad "notice wording" "$(ctx "$T/k1")"
 ( cd "$T" && out=$(CLAUDE_PROJECT_DIR=plain timeout 5 bash "$H/karvey-session-context.sh"; echo "rc=$?"); [[ "$out" == *"rc=0"* ]] && echo ok ) >/dev/null && ok "relative CLAUDE_PROJECT_DIR does not hang" || bad "relative dir" "timeout"
+
+echo "hooks.json: the declared command runs as written (BUG-18)"
+CMD=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['hooks']['SessionStart'][0]['hooks'][0]['command'])" "$H/hooks.json")
+out=$(cd "$T" && CLAUDE_PLUGIN_ROOT="$(dirname "$H")" CLAUDE_PROJECT_DIR="$T/plain" bash -c "$CMD" 2>&1; echo "rc=$?")
+[[ "$out" == *"rc=0"* && "$out" != *"No such file"* ]] && ok "SessionStart command expands CLAUDE_PLUGIN_ROOT" || bad "SessionStart command" "$out"
+out=$(cd "$T" && CLAUDE_PLUGIN_ROOT="$T/with space/plugin" bash -c "$CMD" 2>&1; echo "rc=$?")
+[[ "$out" == *"with space/plugin/hooks"* ]] && ok "path with spaces stays one word" || bad "path with spaces" "$out"
+
+echo "session-context: team.json inside the repo (BUG-19)"
+R="$T/myrepo"; mkdir -p "$R/docs/spec/agents/ceo" "$R/docs/spec/board"
+echo '{"ops_repo":"myrepo","roles":{"myrepo":"ceo"},"display_names":{"ceo":"agente-x"}}' > "$R/docs/spec/team.json"
+echo "MANIFEST-X" > "$R/docs/spec/agents/ceo/manifest.md"; echo "COMPACT-X" > "$R/docs/spec/agents/ceo/manifest-compact.md"
+echo "HANDOFF-X" > "$R/docs/spec/agents/ceo/handoff.md"; echo "BOARD-X" > "$R/docs/spec/board/ceo.md"
+out=$(ctx "$R")
+[[ "$out" == *"Profile: $R/docs/spec/agents/ceo"* ]] && ok "profile resolves to docs/spec/agents/<role>" || bad "in-repo profile" "$out"
+[[ "$out" == *"COMPACT-X"* && "$out" == *"MANIFEST-X"* && "$out" == *"HANDOFF-X"* ]] && ok "manifest-compact, manifest and handoff reinjected" || bad "in-repo reinjection" "$out"
+[[ "$out" == *"agente-x"* ]] && ok "role from the root's own name when the session starts at the root" || bad "role at root" "$out"
+rm "$R/docs/spec/agents/ceo/handoff.md"; out=$(ctx "$R")
+[[ "$out" == *"no handoff at"* ]] && ok "missing handoff is said, not silent" || bad "missing handoff" "$out"
+S="$T/team"; mkdir -p "$S/docs/spec" "$S/ops/agents/dev" "$S/app"
+echo '{"ops_repo":"ops","roles":{"app":"dev"}}' > "$S/docs/spec/team.json"; echo "SIB-HANDOFF" > "$S/ops/agents/dev/handoff.md"
+out=$(ctx "$S/app")
+[[ "$out" == *"Profile: $S/ops/agents/dev"* && "$out" == *"SIB-HANDOFF"* ]] && ok "sibling ops repo layout still works" || bad "sibling layout" "$out"
 
 echo "statusline: reset time (BUG-03) and private debug copy (BUG-04)"
 NOW=$(date +%s)

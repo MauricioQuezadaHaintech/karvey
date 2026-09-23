@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh'",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh\"",
             "timeout": 10
           }
         ]
