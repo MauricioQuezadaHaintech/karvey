@@ -98,3 +98,28 @@ corrected, not annotated at the end.
   - It does not archive `team-adapters` now; it converges when `wave1-hardening` converges.
   - It does not require a cross-model second opinion; if none is available, QA says so (as in the
     team-adapters review).
+
+## D-05 — Requirements of `wave1-hardening` approved
+
+- **What:** the 109 EARS requirements REQ-W1-001..109 in `docs/spec/changes/wave1-hardening/requirements.md` are approved; the change advances to architecture.
+- **Who / when:** Mauricio Quezada Ibáñez (owner), 2026-09-23, structured question at the requirements gate.
+  - **Question:** «¿Apruebas los requisitos de wave1-hardening (109 EARS en docs/spec/changes/wave1-hardening/requirements.md) para pasar a arquitectura?»
+  - **His answer, verbatim:** «Apruebo»
+- **What it does NOT say:** it does not approve architecture, tasks or prod; it does not bring H-04/H-05/H-06/H-21/H-35 into Wave 1 (they stay in Wave 2).
+
+## D-06 — Rotation threshold: 8 hours (Q-01)
+
+- **What:** the statusline raises TIME TO ROTATE at 8 h of session (`KARVEY_ROTATE_HOURS` default stays 8).
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-23.
+  - **Question:** «Umbral de horas del statusline para avisar 'HORA DE ROTAR' (Q-01; lo necesita la fase tasks).»
+  - **His answer, verbatim:** «8 horas (Recomendado)»
+- **What it does NOT say:** it does not change the context thresholds (100k yellow / 150k red).
+
+## D-07 — Defaults that make the requirements testable
+
+- **What:** plan-approval marker expires after **120 min**; a change is **stalled** after **7 days** without a phase change; estimates are **recalibrated** when a work type deviates by more than **±30 %** in each of the last **3** changes. All three configurable in `project.json`.
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-23.
+  - **Question:** «Valores por defecto que hacen testeables los requisitos: el marcador de aprobación vence a los 120 min; un change queda 'estancado' tras 7 días sin cambio de fase; se recalibra la estimación si un tipo de trabajo se desvía >±30% en los últimos 3 changes. ¿Los acepto?»
+  - **His answer, verbatim:** «Sí, los tres (Recomendado)»
+- **What it does NOT say:** they are initial values, not fixed rules; a project may override them.
+

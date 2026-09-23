@@ -8,15 +8,29 @@
     "Infra"
   ],
   "created_at": "2026-09-23T19:22:52Z",
-  "updated_at": "2026-09-23T19:22:52Z",
+  "updated_at": "2026-09-23T21:00:00Z",
   "language": "en",
   "management": "markdown",
   "security_tier": 2,
   "security_tier_reason": "adds hooks that gate git operations and the merge to production; values from project.json reach shell commands",
-  "phase": "requirements",
+  "phase": "architecture",
   "phase_history": [
-    { "phase": "init", "entered_at": "2026-09-23T19:22:52Z", "exited_at": "2026-09-23T19:22:52Z" },
-    { "phase": "requirements", "entered_at": "2026-09-23T19:22:52Z" }
+    {
+      "phase": "init",
+      "entered_at": "2026-09-23T19:22:52Z",
+      "exited_at": "2026-09-23T19:22:52Z"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-23T19:22:52Z"
+    },
+    {
+      "from": "requirements",
+      "to": "architecture",
+      "at": "2026-09-23T21:00:00Z",
+      "by": "Mauricio Quezada Ibáñez",
+      "ref": "D-05"
+    }
   ],
   "type": "feature",
   "lane": "standard",
@@ -36,7 +50,10 @@
     "D-01",
     "D-02",
     "D-03",
-    "D-04"
+    "D-04",
+    "D-05",
+    "D-06",
+    "D-07"
   ],
   "inputs": {
     "panel_review": "karvey docs/spec/reviews/2026-09-23-panel-review.md @d38abc9",
@@ -67,14 +84,46 @@
     "client_tag": ""
   },
   "approvals": {
-    "requirements": { "generated": true, "approved": false },
-    "mockup": { "generated": false, "approved": false },
-    "design_graphic": { "generated": false, "approved": false },
-    "architecture": { "generated": false, "approved": false },
-    "tasks": { "generated": false, "approved": false },
-    "infra": { "generated": false, "approved": false },
-    "qa": { "generated": false, "approved": false },
-    "deploy": { "generated": false, "approved": false },
-    "prod": { "by": "", "date": "", "ref": "" }
+    "requirements": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-23",
+      "ref": "D-05"
+    },
+    "mockup": {
+      "generated": false,
+      "approved": false
+    },
+    "design_graphic": {
+      "generated": false,
+      "approved": false
+    },
+    "architecture": {
+      "generated": false,
+      "approved": false
+    },
+    "tasks": {
+      "generated": false,
+      "approved": false
+    },
+    "infra": {
+      "generated": false,
+      "approved": false
+    },
+    "qa": {
+      "generated": false,
+      "approved": false
+    },
+    "deploy": {
+      "generated": false,
+      "approved": false
+    },
+    "prod": {
+      "by": "",
+      "date": "",
+      "ref": ""
+    }
   }
 }
