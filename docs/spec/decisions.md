@@ -123,3 +123,28 @@ corrected, not annotated at the end.
   - **His answer, verbatim:** «Sí, los tres (Recomendado)»
 - **What it does NOT say:** they are initial values, not fixed rules; a project may override them.
 
+## D-08 — Retroactive record of the prod approval of `team-adapters` (3.10.0 → 3.11.1)
+
+- **What:** `team-adapters` reached `main` (prod of this repo) in PR #17 (3.10.0), #18 (3.11.0) and #19 (3.11.1) without a D-NN. This entry records, **retroactively**, the owner's words that authorised those merges. It does **not** approve QA: the retroactive QA (`REVISION_PR_17-19_20260923.md`) is NOT approved and stays so until `wave1-hardening` converges.
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-22/23, in the session that built the change.
+  - PR #17 (3.10.0): «perfecto, luego commit,push, merge (lo que corresponda) y actualizas en local, le avisas a todos los agentes que actualicen el plugin»
+  - PR #18 (3.11.0) and PR #19 (3.11.1): merged under that same standing instruction, after the owner's requests «el html tiene que estar consecuentemente en inglés y con un swich a español, portugues, aleman, chino» and «agrega que descubra el idioma del explorador y lo seleccione, si no está en la lista, inglés.» — no separate prod word was given for these two; recorded as such, not upgraded.
+- **Answer that created this entry:** «D-NN retroactivo citando tus mensajes (Recomendado)»
+- **What it does NOT say:** it does not make the missing `approvals.qa` acceptable; it does not back-fill `team-layer` (that change keeps its `gates_skipped`, reported as warnings).
+
+## D-09 — Architecture of `wave1-hardening` approved
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-23. **Question:** «¿Apruebas la arquitectura de wave1-hardening para pasar a tareas?» **Answer, verbatim:** «Apruebo»
+- **Includes the architect's recommended defaults** stated at the gate: legacy phase map only with `--accept-proposed`; script name `karvey-spec-merge.py`; keep `karvey-config.py`; multi-repo prod-gate gap documented for 3.12.0; `node --test` without npm in CI; `git push origin dev` from a feature branch allowed. Branch protection on `main` is a human task at deploy.
+- **What it does NOT say:** it does not approve tasks or prod.
+
+## D-10 — A prod approval needs an approval word AND a production word in the human's own prompt
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-23. **Answer, verbatim:** «Sí, ambas palabras (Recomendado)»
+- **What:** the approval hook records a prod approval only when the human's prompt contains both (e.g. «ok, merge a prod»); a bare «ok» is not a prod approval.
+
+## D-11 — Compatibility with the owner's personal plan hooks: `KARVEY_COMPAT_MARKER`
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-23. **Answer, verbatim:** «KARVEY_COMPAT_MARKER (Recomendado)»
+- **What:** an env var in his `~/.claude/settings.json` makes Karvey's approval hook also write his legacy marker `/tmp/claude-plan-approved-*`, so his `require-plan*.sh` keep working after the CLAUDE.md change (D-01). The diff to his settings is shown to him before editing; it is not part of this repo.
+

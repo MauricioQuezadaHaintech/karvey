@@ -8,12 +8,12 @@
     "Infra"
   ],
   "created_at": "2026-09-23T19:22:52Z",
-  "updated_at": "2026-09-23T23:41:23Z",
+  "updated_at": "2026-09-23T22:30:00Z",
   "language": "en",
   "management": "markdown",
   "security_tier": 2,
   "security_tier_reason": "adds hooks that gate git operations and the merge to production; values from project.json reach shell commands",
-  "phase": "architecture",
+  "phase": "tasks",
   "phase_history": [
     {
       "phase": "init",
@@ -30,6 +30,13 @@
       "at": "2026-09-23T21:00:00Z",
       "by": "Mauricio Quezada Ibáñez",
       "ref": "D-05"
+    },
+    {
+      "from": "architecture",
+      "to": "tasks",
+      "at": "2026-09-23T22:30:00Z",
+      "by": "Mauricio Quezada Ibáñez",
+      "ref": "D-09"
     }
   ],
   "type": "feature",
@@ -53,7 +60,11 @@
     "D-04",
     "D-05",
     "D-06",
-    "D-07"
+    "D-07",
+    "D-08",
+    "D-09",
+    "D-10",
+    "D-11"
   ],
   "inputs": {
     "panel_review": "karvey docs/spec/reviews/2026-09-23-panel-review.md @d38abc9",
@@ -102,7 +113,11 @@
     },
     "architecture": {
       "generated": true,
-      "approved": false
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-23",
+      "ref": "D-09"
     },
     "tasks": {
       "generated": false,
