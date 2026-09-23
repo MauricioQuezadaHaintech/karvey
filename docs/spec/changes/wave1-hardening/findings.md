@@ -13,3 +13,6 @@ REQ-W1-080..106 (traceability in `requirements.md`; convergence rule REQ-W1-107,
 
 | # | Date | Source phase | Type | Severity | Title | Status | Routed to |
 |---|------|--------------|------|----------|-------|--------|-----------|
+| F-01 | 2026-09-23 | architecture | bug | medium | Session hook checks for a `.git` *directory*, so every git worktree is reported as "NOT FOUND" (worktrees have a `.git` file). Fixed by design with `git rev-parse --git-dir`. | open |
+| F-02 | 2026-09-23 | architecture | spec-gap | medium | Hook payload field names are unconfirmed (installed CLI 2.1.281 vs local docs: `prompt` vs `user_prompt`, …). Tolerant parser designed (assumptions A-1..A-10); first test task captures one real payload per event. | open |
+
