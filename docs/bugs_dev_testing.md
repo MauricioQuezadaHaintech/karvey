@@ -472,3 +472,66 @@ Applied in the 3.11.2 working tree: "Why" added to [3.11.1] (with a note that it
 | 2026-09-23 17:28 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D3 C-21; D6 by the orchestrator |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | no release-doc check |
 | 2026-09-23 19:01 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fixed in CHANGELOG.md and docs/karvey.html on hotfix/karvey-3.11.2-settings-nudge; awaiting a regression check |
+
+## BUG-18 — SessionStart hook never ran: `${CLAUDE_PLUGIN_ROOT}` inside single quotes
+- **Priority:** high
+- **Detected:** 2026-09-23 · **Component:** plugins/karvey/hooks/hooks.json
+- **Change / origin:** team-layer (3.8.0, commit 76905fa) — reported by agente-kloketen (paautin-kloketen), relayed at the owner's request
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`CLAUDE_PLUGIN_ROOT=<plugin> bash -c "bash '\${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh'"` → `No such file or directory`, rc 127. Every session start showed `SessionStart:startup hook error`.
+
+### Actual vs expected
+- Actual: the command in hooks.json wrapped the placeholder in single quotes; bash does not expand it and Claude Code 2.1.281 does not substitute it in the text, so the script never ran — no handoff reinjection, no drift check, no settings notice, since 3.8.0.
+- Expected: the hook runs on startup / resume / compact / clear.
+
+### Root cause
+Quoting: single quotes suppress expansion. The CLI's own guidance is to wrap the placeholder in double quotes. The 3.11.2 tests executed the script directly, never the `command` as declared, so they could not see it.
+
+### Fix
+`"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh\""` (double quotes; paths with spaces stay one word).
+
+### Regression test
+`plugins/karvey/hooks/tests/test-hooks.sh`, section "hooks.json: the declared command runs as written" — extracts the command from hooks.json and runs it with `bash -c`, plus a path with spaces. Fails on 3.11.2, passes on 3.11.3.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-23 | DETECTADO | agente-kloketen / Claude | reported with repro; local patch applied on the owner's OK in the plugin cache only |
+| 2026-09-23 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | reproduced: rc 127 with single quotes, rc 0 with double |
+| 2026-09-23 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | hotfix/karvey-3.11.3-session-hook |
+| 2026-09-23 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | 3.11.3 + regression test |
+
+## BUG-19 — team.json inside the repo: the hook resolved a profile path that does not exist
+- **Priority:** high
+- **Detected:** 2026-09-23 · **Component:** plugins/karvey/hooks/karvey-session-context.sh (profile resolution)
+- **Change / origin:** team-layer (3.8.0) — reported by agente-kloketen (paautin-kloketen)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Repo with `docs/spec/team.json` = `{"ops_repo": "<this repo>", "roles": {"<this repo>": "ceo"}}` and the files `karvey-checkpoint save` writes: `docs/spec/agents/ceo/{handoff,manifest,manifest-compact,checklist}.md`, `state.json`, `docs/spec/board/ceo.md`.
+
+### Actual vs expected
+- Actual: `PROFILE=$ROOT/$OPS/agents/$ROLE` → `<repo>/<repo>/agents/ceo`, which does not exist; nothing reinjected and nothing said. The role came out `ceo` only by default (TOP empty at the root); `manifest-compact` was looked for in `$PROFILE/..`.
+- Expected: the same layout the save writes; a clear message when the profile or handoff is missing.
+
+### Root cause
+The hook only knew the sibling-ops-repo layout; `karvey-checkpoint` and `rules/team.md` did not state the in-repo layout, so save and hook diverged.
+
+### Fix
+`OPSDIR` = `$ROOT/$OPS` when it is a sibling repo that exists, else the folder holding `team.json` (`docs/spec/`); role looked up by the root's own name when the session starts at the root; `manifest-compact` looked for inside the profile first; explicit messages for a missing profile or handoff. `karvey-checkpoint` and `rules/team.md` now document both layouts.
+
+### Regression test
+`plugins/karvey/hooks/tests/test-hooks.sh`, section "team.json inside the repo" (in-repo profile, reinjection, role at root, missing handoff said, sibling layout still works). Fails on 3.11.2, passes on 3.11.3. Verified read-only against the real paautin-kloketen layout.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-23 | DETECTADO | agente-kloketen / Claude | session started without identity; restore found no handoff |
+| 2026-09-23 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | reproduced against paautin-kloketen (read-only) |
+| 2026-09-23 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | hotfix/karvey-3.11.3-session-hook |
+| 2026-09-23 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | 3.11.3 + regression test |
+

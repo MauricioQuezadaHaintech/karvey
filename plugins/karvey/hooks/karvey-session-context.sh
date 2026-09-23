@@ -57,17 +57,24 @@ NAME=""; ROLE="solo"; PROFILE="$ROOT/docs/spec/agent"; BOARD="$PROFILE/board.md"
 
 case "$KIND" in
   team)
-    eval "$(python3 - "$CFG" "$TOP" <<'PY'
+    eval "$(python3 - "$CFG" "$TOP" "$(basename "$ROOT")" <<'PY'
 import json, sys, shlex
 try:    d = json.load(open(sys.argv[1], encoding='utf-8'))
 except Exception: sys.exit(0)
-role = (d.get('roles') or {}).get(sys.argv[2], 'ceo')
+roles = d.get('roles') or {}
+# the session may start at the team root itself (TOP empty): then the root's own name is the key
+role = roles.get(sys.argv[2]) or (roles.get(sys.argv[3]) if not sys.argv[2] else None) or 'ceo'
 name = (d.get('display_names') or {}).get(role) or f"agent-{d.get('code','')}-{role}"
 print(f"ROLE={shlex.quote(role)}"); print(f"NAME={shlex.quote(name)}")
 print(f"OPS={shlex.quote(str(d.get('ops_repo','')))}")
 PY
 )"
-    PROFILE="$ROOT/${OPS:-}/agents/${ROLE}"; BOARD="$ROOT/${OPS:-}/board/${ROLE}.md" ;;
+    # ops_repo is a sibling repo under the team root — unless team.json lives inside the repo it names
+    # (ops_repo = this repo, or empty): then the ops area is the folder that holds team.json (docs/spec/),
+    # which is where karvey-checkpoint save writes agents/<role>/ and board/<role>.md.
+    if [ -n "${OPS:-}" ] && [ "$OPS" != "$(basename "$ROOT")" ] && [ -d "$ROOT/$OPS" ]; then OPSDIR="$ROOT/$OPS"
+    else OPSDIR=$(dirname "$CFG"); fi
+    PROFILE="$OPSDIR/agents/${ROLE}"; BOARD="$OPSDIR/board/${ROLE}.md" ;;
   legacy)
     CODE=$(grep -E '^(CODIGO|CODE)=' "$CFG" | head -1 | cut -d= -f2-)
     OPS=$(grep -E '^OPS=' "$CFG" | head -1 | cut -d= -f2-)
@@ -83,7 +90,10 @@ printf '=== Karvey — session context (%s) ===\n' "$KIND"
 printf 'You are `%s`%s. Profile: %s\n' "$NAME" "$( [ "$ROLE" != "solo" ] && printf ' (role: %s)' "$ROLE" )" "$PROFILE"
 
 emit() { [ -f "$1" ] && { printf '\n=== %s ===\n' "$2"; cat "$1"; }; }
-emit "$PROFILE/../manifest-compact.md" "Compact manifest"
+if [ -f "$PROFILE/manifest-compact.md" ]; then emit "$PROFILE/manifest-compact.md" "Compact manifest"
+else emit "$PROFILE/../manifest-compact.md" "Compact manifest"; fi
+[ -d "$PROFILE" ] || printf '\n(profile directory not found: %s — nothing to reinject; run `/karvey-checkpoint save` to create it)\n' "$PROFILE"
+[ -d "$PROFILE" ] && [ ! -f "$PROFILE/handoff.md" ] && printf '\n(no handoff at %s — the previous session did not save one)\n' "$PROFILE/handoff.md"
 emit "$PROFILE/manifest.md"            "Manifest ($NAME)"
 emit "$PROFILE/checklist.md"           "Closing checklist"
 emit "$BOARD"                          "Board"

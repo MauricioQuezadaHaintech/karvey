@@ -25,6 +25,8 @@ Last updated: 2026-09-23 (retroactive QA of `team-adapters`, hotfix 3.11.2).
 | BUG-15 | karvey | low | `clickup-sync-guard` hook referenced but nothing installs it | team-adapters / F-29 | DIAGNOSTICADO | — | wave1-hardening |
 | BUG-16 | karvey | low | hooks/README says the session hook prints nothing without team/agent files | team-adapters / F-30 | EN FIX | — | wave1-hardening |
 | BUG-17 | karvey | low | 3.11.1 release docs incomplete (CHANGELOG "Why", page history) | team-adapters / F-31 | EN FIX | — (CI linter, BL-10) | wave1-hardening |
+| BUG-18 | karvey | high | SessionStart hook never ran (single-quoted ${CLAUDE_PLUGIN_ROOT}) | team-layer / agente-kloketen | RESUELTO | — | 3.11.3 |
+| BUG-19 | karvey | high | team.json inside the repo: profile path did not exist | team-layer / agente-kloketen | RESUELTO | — | 3.11.3 |
 
 ## Summary by state
 

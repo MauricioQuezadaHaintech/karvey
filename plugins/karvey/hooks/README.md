@@ -20,7 +20,9 @@ nothing and exits 0** — with one exception: inside a Karvey project (`docs/spe
 `docs/spec/changes/`) whose team settings (`notifications`, `management`) are missing, it prints one
 informational line pointing to `/karvey:karvey-init --settings` (settings only; it creates nothing). A bare
 `docs/spec/` folder (OpenAPI, RFCs, studies) is not a Karvey project and stays silent. With a team, the role comes from the directory's name relative to the team
-root; anything not listed, and the root itself, is `ceo`.
+root (at the root itself, the root's own name is looked up in `roles`); anything not listed is `ceo`. The
+profile lives in the sibling ops repo (`{ops_repo}/agents/<role>/`) or — when `team.json` sits inside the
+repo it names — in `docs/spec/agents/<role>/`. If the profile or the handoff is missing, the hook says so.
 
 **What it does, and what it deliberately does not.** It reinjects the documents *and* measures: for
 each repo in `state.json` it compares branch, last commit and uncommitted count against the live tree
