@@ -16,7 +16,10 @@ hook runs on every session start, resume, compact and clear.
 
 It walks up from the session's directory looking for, in order: `docs/spec/team.json`, a legacy
 `.ceo-agentes`, or `docs/spec/agent/` (the single-agent profile). **With none of them it prints
-nothing and exits 0.** With a team, the role comes from the directory's name relative to the team
+nothing and exits 0** — with one exception: inside a Karvey project (`docs/spec/project.json` or
+`docs/spec/changes/`) whose team settings (`notifications`, `management`) are missing, it prints one
+informational line pointing to `/karvey:karvey-init --settings` (settings only; it creates nothing). A bare
+`docs/spec/` folder (OpenAPI, RFCs, studies) is not a Karvey project and stays silent. With a team, the role comes from the directory's name relative to the team
 root; anything not listed, and the root itself, is `ceo`.
 
 **What it does, and what it deliberately does not.** It reinjects the documents *and* measures: for
@@ -65,7 +68,7 @@ at 80k, and rotating costs ~40k to re-read the handoff — it amortizes in under
 
 - **A statusline that vanishes is indistinguishable from one that is off.** If the CLI changes the
   stdin format, the script prints the failure instead of nothing, and keeps the last stdin in
-  `$TMPDIR/.karvey-statusline-last.json` so the change can be seen.
+  `$TMPDIR/.karvey-statusline-last.<uid>.json` (per user, mode 600) so the change can be seen.
 - **`current_usage` changed from an integer to an object.** Both shapes are accepted.
 - **Windows + WSL:** the CLI hands over `C:\...` transcript paths that do not exist inside WSL.
   Untranslated, `isfile()` returns False **silently** and the statusline quietly loses half its data.

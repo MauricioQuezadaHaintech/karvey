@@ -7,11 +7,11 @@
     "Backend"
   ],
   "created_at": "2026-09-22T19:00:00Z",
-  "updated_at": "2026-09-22T22:00:00Z",
+  "updated_at": "2026-09-23T22:10:00Z",
   "language": "en",
   "management": "markdown",
   "security_tier": 1,
-  "phase": "deploy",
+  "phase": "qa",
   "type": "feature",
   "links": {
     "parent": "",
@@ -66,8 +66,10 @@
       "approved": false
     },
     "qa": {
-      "generated": false,
-      "approved": false
+      "generated": true,
+      "approved": false,
+      "date": "2026-09-23",
+      "ref": "REVISION_PR_17-19_20260923.md"
     },
     "deploy": {
       "generated": true,
@@ -80,5 +82,6 @@
       "date": "2026-09-22",
       "ref": "session approval: 'perfecto, luego commit, push, merge'"
     }
-  }
+  },
+  "qa_note": "QA was run retroactively on 2026-09-23, after release (3.10.0-3.11.1 via PRs #17-#19). approvals.prod had been recorded on 2026-09-22 without approvals.qa - a process failure found by the expert panel (H-22, docs/spec/reviews/2026-09-23-panel-review.md). approvals.prod is kept as history, not deleted. Result: NOT APPROVED (48 findings after dedup: 0 critical, 5 high, 16 medium, 27 low; security gate passes). BUG-01..04 fixed in hotfix 3.11.2; BUG-05..17 and all spec-gaps routed to wave1-hardening; emergent to BL-38..BL-43 (+BL-07, BL-10). Findings: findings.md; incidents: docs/bugs_dev_testing.md."
 }

@@ -13,6 +13,21 @@ Initialize the structure of a new specification and register the Epic in the tea
 
 ## Execution steps
 
+### Step 0 — Settings-only mode (`--settings`) — STOP after it
+
+If invoked as `/karvey-init --settings` (or the user only asks to configure the team — "karvey settings",
+"configurar equipo"), this is **settings-only mode**:
+1. Read `docs/spec/project.json`. If it does not exist, say so and ask whether to create a minimal one
+   (Step 3 fields) — do not create anything else.
+2. Run **Step 3.2 only**, pre-filling every question with the **current values** and changing only what the
+   user changes. Merge the answers into the existing blocks — never drop keys the user did not touch
+   (`events`, `location`, custom keys).
+3. Write `project.json`, report the one-line summary of Step 3.2, and **STOP**.
+
+In settings-only mode **do NOT** generate a change-id, create `docs/spec/changes/…`, write `spec.json` or
+`prd.md`, create an Epic/Feature/Task in any tracker, or advance to any phase. Configuring the team is
+not starting a change.
+
 ### Step 1 — Verify pre-spec context
 
 If a `karvey-grill` summary exists in the conversation, use it to pre-populate the fields.
@@ -48,8 +63,8 @@ Write `docs/spec/project.json` with these values (see the schema in `karvey/rule
 
 A plugin cannot run anything at install time, so the team's settings are asked **here, the first time**
 Karvey is used in the project. Run this step when `project.json` lacks `notifications` or `management`, or
-when invoked as `/karvey-init --settings` (to change them later). If both blocks exist and there is no
-`--settings`, skip it and ask nothing.
+when invoked as `/karvey-init --settings` (to change them later — see Step 0: in that mode it is the ONLY
+step that runs). If both blocks exist and there is no `--settings`, skip it and ask nothing.
 
 Ask with `AskUserQuestion`, one block at a time, showing examples — never assume the answer:
 

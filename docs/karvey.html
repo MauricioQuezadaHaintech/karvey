@@ -351,7 +351,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
       <h1 id="en-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> is a word of the <strong>Ona</strong> language of the <strong>Selknam</strong> people of Patagonia, meaning <strong>Afán</strong> — zeal, the drive to get things done.</p>
       <ul class="badges" aria-label="Plugin facts">
-        <li class="badge v">v3.11.1</li>
+        <li class="badge v">v3.11.2</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">stack-agnostic</li>
@@ -1115,7 +1115,9 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="en-t-ver">Version history</h2>
   <p class="lede">Why does the history start at <strong>3.0.0</strong>? Pure whim: our flagship software, <strong>Paáutin</strong>, was at version 3 when we built the plugin, so Karvey was born as a 3 too. There never was a 1.x or a 2.x.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>Multilingual method page (EN by default · ES · PT · DE · 中文); the version shown in a front differs by environment — dev version in DEV, release version in PROD — read from the version file and checked by the canary.</li>
+    <li class="now"><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>Hotfix: <code>karvey-init --settings</code> only configures the team and stops (it no longer creates a change or a tracker Epic); the session notice only appears in real Karvey projects; the statusline survives odd reset values; its debug copy is private per user. Regression tests for the hooks.</li>
+    <li><span class="ver">3.11.1</span><span class="date">2026-09-23</span><br>The page picks the browser’s language on a first visit; the tab title follows the language; hero decoration behind the figures.</li>
+    <li><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>Multilingual method page (EN by default · ES · PT · DE · 中文); the version shown in a front differs by environment — dev version in DEV, release version in PROD — read from the version file and checked by the canary.</li>
     <li><span class="ver">3.10.0</span><span class="date">2026-09-22 · change team-adapters</span><br>Team settings on first use: notification channel, management tool and status flow; 5 logical states; <code>notifications.md</code> and <code>management-adapters.md</code> rules; session-hook notice; this page.</li>
     <li><span class="ver">3.9.1</span><span class="date">2026-09-22</span><br>Documentation drift fix: counts (13 phases, 18 support, 32 skills), active vs opt-in hooks, 9-dimension QA; skills catalogue in the README; re-sync of local rule copies.</li>
     <li><span class="ver">3.9.0</span><span class="date">2026-09-22</span><br>Branch hygiene (nothing is left on branches); standards conformance in QA; PR gates and git host detection in deploy.</li>
@@ -1177,7 +1179,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="es-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> es una palabra del <strong>ona</strong>, la lengua del pueblo <strong>selknam</strong> de la Patagonia, que significa <strong>Afán</strong> (de hacer).</p>
       <ul class="badges" aria-label="Datos del plugin">
-        <li class="badge v">v3.11.1</li>
+        <li class="badge v">v3.11.2</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">agnóstico de stack</li>
@@ -1941,7 +1943,9 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="es-t-ver">Historial de versiones</h2>
   <p class="lede">¿Por qué el historial parte en la <strong>3.0.0</strong>? Por puro capricho: nuestro software emblema, <strong>Paáutin</strong>, estaba en la versión 3 cuando hicimos el plugin, así que Karvey nació también como 3. Nunca existieron una 1.x ni una 2.x.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.11.0</span><span class="date">22-09-2026</span><br>Página del método multilingüe (EN por defecto · ES · PT · DE · 中文); la versión que muestra un front depende del ambiente — versión de desarrollo en DEV, de release en PROD —, se lee del archivo de versión y la verifica el canary.</li>
+    <li class="now"><span class="ver">3.11.2</span><span class="date">23-09-2026</span><br>Hotfix: <code>karvey-init --settings</code> solo configura el equipo y se detiene (ya no crea un change ni un Epic en el tracker); el aviso de sesión solo aparece en proyectos Karvey reales; el statusline resiste valores de reset raros; su copia de depuración es privada por usuario. Tests de regresión para los hooks.</li>
+    <li><span class="ver">3.11.1</span><span class="date">23-09-2026</span><br>La página toma el idioma del navegador en la primera visita; el título de la pestaña sigue al idioma; la decoración del hero queda detrás de las cifras.</li>
+    <li><span class="ver">3.11.0</span><span class="date">22-09-2026</span><br>Página del método multilingüe (EN por defecto · ES · PT · DE · 中文); la versión que muestra un front depende del ambiente — versión de desarrollo en DEV, de release en PROD —, se lee del archivo de versión y la verifica el canary.</li>
     <li><span class="ver">3.10.0</span><span class="date">22-09-2026 · change team-adapters</span><br>Settings del equipo en el primer uso: canal de notificaciones, herramienta de gestión y flujo de estados; 5 estados lógicos; reglas <code>notifications.md</code> y <code>management-adapters.md</code>; aviso del hook de sesión; esta página.</li>
     <li><span class="ver">3.9.1</span><span class="date">2026-09-22</span><br>Corrección de deriva documental: conteos (13 fases, 18 de apoyo, 32 skills), hooks activos vs opt-in, QA de 9 dimensiones; catálogo de skills en el README; re-sincronización de copias locales de reglas.</li>
     <li><span class="ver">3.9.0</span><span class="date">2026-09-22</span><br>Higiene de ramas (nada queda en ramas); conformidad con estándares en QA; gates del PR y detección del host git en deploy.</li>
@@ -2002,7 +2006,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="pt-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> é uma palavra da língua <strong>Ona</strong> do povo <strong>Selknam</strong> da Patagônia, que significa <strong>Afán</strong> — empenho, o ímpeto de fazer as coisas acontecerem.</p>
       <ul class="badges" aria-label="Dados do plugin">
-        <li class="badge v">v3.11.1</li>
+        <li class="badge v">v3.11.2</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · orientado a especificação</li>
         <li class="badge">agnóstico de stack</li>
@@ -2766,7 +2770,9 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="pt-t-ver">Histórico de versões</h2>
   <p class="lede">Por que o histórico começa na <strong>3.0.0</strong>? Por puro capricho: nosso software emblemático, o <strong>Paáutin</strong>, estava na versão 3 quando criamos o plugin, então o Karvey também nasceu como 3. Nunca existiram uma 1.x nem uma 2.x.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>Página do método multilíngue (EN por padrão · ES · PT · DE · 中文); a versão exibida no front depende do ambiente — versão de desenvolvimento em DEV, de release em PROD —, lida do arquivo de versão e verificada pelo canary.</li>
+    <li class="now"><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>Hotfix: <code>karvey-init --settings</code> só configura a equipe e para (não cria mais uma mudança nem um Epic no tracker); o aviso de sessão só aparece em projetos Karvey reais; o statusline resiste a valores de reset estranhos; sua cópia de depuração é privada por usuário. Testes de regressão para os hooks.</li>
+    <li><span class="ver">3.11.1</span><span class="date">2026-09-23</span><br>A página usa o idioma do navegador na primeira visita; o título da aba acompanha o idioma; a decoração do hero fica atrás dos números.</li>
+    <li><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>Página do método multilíngue (EN por padrão · ES · PT · DE · 中文); a versão exibida no front depende do ambiente — versão de desenvolvimento em DEV, de release em PROD —, lida do arquivo de versão e verificada pelo canary.</li>
     <li><span class="ver">3.10.0</span><span class="date">2026-09-22 · mudança team-adapters</span><br>Configuração da equipe no primeiro uso: canal de notificação, ferramenta de gestão e fluxo de status; 5 estados lógicos; regras <code>notifications.md</code> e <code>management-adapters.md</code>; aviso no hook de sessão; esta página.</li>
     <li><span class="ver">3.9.1</span><span class="date">2026-09-22</span><br>Correção de desvios na documentação: contagens (13 fases, 18 de apoio, 32 skills), hooks ativos vs opt-in, QA em 9 dimensões; catálogo de skills no README; ressincronização das cópias locais das regras.</li>
     <li><span class="ver">3.9.0</span><span class="date">2026-09-22</span><br>Higiene de branches (nada fica esquecido em branches); conformidade com os padrões no QA; gates do PR e detecção do host git no deploy.</li>
@@ -2827,7 +2833,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="de-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> ist ein Wort aus der <strong>Ona</strong>-Sprache des <strong>Selknam</strong>-Volkes in Patagonien und bedeutet <strong>Afán</strong> — Eifer, der Antrieb, Dinge zu erledigen.</p>
       <ul class="badges" aria-label="Eckdaten des Plugins">
-        <li class="badge v">v3.11.1</li>
+        <li class="badge v">v3.11.2</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">stack-agnostisch</li>
@@ -3591,7 +3597,9 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="de-t-ver">Versionshistorie</h2>
   <p class="lede">Warum beginnt die Historie bei <strong>3.0.0</strong>? Aus reiner Laune: Unsere Vorzeigesoftware <strong>Paáutin</strong> war bei Version 3, als wir das Plugin gebaut haben, also kam auch Karvey als 3 zur Welt. Eine 1.x oder 2.x hat es nie gegeben.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>Mehrsprachige Methodenseite (standardmäßig EN · ES · PT · DE · 中文); die im Frontend angezeigte Version hängt von der Umgebung ab — Entwicklungsversion in DEV, Release-Version in PROD —, aus der Versionsdatei gelesen und vom Canary geprüft.</li>
+    <li class="now"><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>Hotfix: <code>karvey-init --settings</code> konfiguriert nur das Team und hält an (legt keine Änderung und kein Epic im Tracker mehr an); der Sitzungshinweis erscheint nur in echten Karvey-Projekten; die Statuszeile übersteht ungewöhnliche Reset-Werte; ihre Debug-Kopie ist pro Benutzer privat. Regressionstests für die Hooks.</li>
+    <li><span class="ver">3.11.1</span><span class="date">2026-09-23</span><br>Die Seite übernimmt beim ersten Besuch die Sprache des Browsers; der Tab-Titel folgt der Sprache; die Hero-Dekoration liegt hinter den Kennzahlen.</li>
+    <li><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>Mehrsprachige Methodenseite (standardmäßig EN · ES · PT · DE · 中文); die im Frontend angezeigte Version hängt von der Umgebung ab — Entwicklungsversion in DEV, Release-Version in PROD —, aus der Versionsdatei gelesen und vom Canary geprüft.</li>
     <li><span class="ver">3.10.0</span><span class="date">2026-09-22 · Änderung team-adapters</span><br>Team-Einstellungen bei der ersten Verwendung: Benachrichtigungskanal, Management-Werkzeug und Statusablauf; 5 logische Zustände; Regeln <code>notifications.md</code> und <code>management-adapters.md</code>; Hinweis im Sitzungs-Hook; diese Seite.</li>
     <li><span class="ver">3.9.1</span><span class="date">2026-09-22</span><br>Korrektur von Dokumentationsdrift: Zahlen (13 Phasen, 18 Unterstützung, 32 Skills), aktive vs. Opt-in-Hooks, QA in 9 Dimensionen; Skill-Katalog in der README; erneute Synchronisierung lokaler Regelkopien.</li>
     <li><span class="ver">3.9.0</span><span class="date">2026-09-22</span><br>Branch-Hygiene (nichts bleibt auf Branches liegen); Standardkonformität in der QA; PR-Gates und Git-Host-Erkennung im Deploy.</li>
@@ -3652,7 +3660,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="zh-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> 是巴塔哥尼亚<strong>塞尔克南人</strong>（Selknam）<strong>欧纳语</strong>（Ona）中的一个词，意为 <strong>Afán</strong>——热忱，把事情做成的干劲。</p>
       <ul class="badges" aria-label="插件概况">
-        <li class="badge v">v3.11.1</li>
+        <li class="badge v">v3.11.2</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · 规格驱动</li>
         <li class="badge">技术栈无关</li>
@@ -4416,7 +4424,9 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="zh-t-ver">版本历史</h2>
   <p class="lede">为什么版本历史从 <strong>3.0.0</strong> 开始？纯属心血来潮：我们开发这个插件时，我们的旗舰软件 <strong>Paáutin</strong> 正处于第 3 版，所以 Karvey 也从 3 起步。从来没有 1.x 或 2.x。</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>多语言方法页面（默认 EN · ES · PT · DE · 中文）；前端显示的版本按环境区分——DEV 为开发版本，PROD 为发布版本——从版本文件读取并由金丝雀检查核对。</li>
+    <li class="now"><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>热修复：<code>karvey-init --settings</code> 只配置团队设置并随即停止（不再创建变更或在跟踪器中创建 Epic）；会话提示只出现在真正的 Karvey 项目中；状态栏能容忍异常的重置值；其调试副本按用户私有。为钩子新增回归测试。</li>
+    <li><span class="ver">3.11.1</span><span class="date">2026-09-23</span><br>首次访问时页面采用浏览器语言；标签页标题随语言变化；首屏装饰位于数字卡片之后。</li>
+    <li><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>多语言方法页面（默认 EN · ES · PT · DE · 中文）；前端显示的版本按环境区分——DEV 为开发版本，PROD 为发布版本——从版本文件读取并由金丝雀检查核对。</li>
     <li><span class="ver">3.10.0</span><span class="date">2026-09-22 · 变更 team-adapters</span><br>首次使用时的团队设置：通知渠道、管理工具和状态流；5 个逻辑状态；<code>notifications.md</code> 和 <code>management-adapters.md</code> 规则；会话 hook 提示；本页面。</li>
     <li><span class="ver">3.9.1</span><span class="date">2026-09-22</span><br>修复文档漂移：数量（13 个阶段、18 个支持技能、32 个技能）、生效与可选启用的 hooks、9 个维度的 QA；README 中的技能目录；重新同步本地规则副本。</li>
     <li><span class="ver">3.9.0</span><span class="date">2026-09-22</span><br>分支清理（不在分支上遗留任何东西）；QA 中的标准符合性；deploy 中的 PR 关卡与 git 托管平台识别。</li>

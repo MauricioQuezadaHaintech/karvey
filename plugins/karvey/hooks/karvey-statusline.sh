@@ -15,8 +15,9 @@
 # is installed by the user, once, in their own settings.json. See hooks/README.md.
 exec 2>/dev/null
 IN=$(cat)
-DBG="${TMPDIR:-/tmp}/.karvey-statusline-last.json"
-printf '%s' "$IN" > "$DBG" 2>/dev/null
+# per user and private: a fixed /tmp name was shared across OS users and world-readable (session ids)
+DBG="${TMPDIR:-/tmp}/.karvey-statusline-last.$(id -u).json"
+( umask 077; printf '%s' "$IN" > "$DBG" ) 2>/dev/null
 # The output is captured instead of printed directly: if the CLI changes the stdin format (it did,
 # with current_usage), the traceback shows up in the statusline instead of leaving it empty.
 # A statusline that disappears is indistinguishable from one that is switched off.
@@ -119,20 +120,41 @@ parts.append(f'{h:.1f}h')
 
 # next reset of each account window: local clock time + time left (resets_at = epoch seconds)
 def _reset(w, week=False):
-    ts = (w or {}).get('resets_at')
-    if not ts:
-        return ''
+    # Never let a strange value take the whole statusline down (it would hide the rotation warning).
     try:
-        from zoneinfo import ZoneInfo
-        tz = ZoneInfo(os.environ.get('KARVEY_TZ') or '') if (os.environ.get('KARVEY_TZ') or '') else None
-    except Exception:
+        ts = (w or {}).get('resets_at')
+        if ts in (None, '', 0):
+            return ''
+        if isinstance(ts, str):
+            s = ts.strip()
+            try:
+                ts = float(s)
+            except ValueError:
+                ts = datetime.datetime.fromisoformat(s.replace('Z', '+00:00')).timestamp()
+        ts = float(ts)
+        if ts != ts or ts in (float('inf'), float('-inf')):
+            return ''
+        if ts > 1e11:                      # milliseconds
+            ts /= 1000.0
+        now = datetime.datetime.now().timestamp()
+        if ts <= now or ts - now > 400 * 86400:
+            return ''                      # already reset, or absurd
         tz = None
-    at = datetime.datetime.fromtimestamp(float(ts), tz) if tz else datetime.datetime.fromtimestamp(float(ts))
-    left = max(0, int(float(ts) - datetime.datetime.now().timestamp()))
-    d_, r_ = divmod(left, 86400); h_, r_ = divmod(r_, 3600); m_ = r_ // 60
-    rem = f'{d_}d{h_}h' if d_ else (f'{h_}h{m_:02d}m' if h_ else f'{m_}m')
-    day = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][at.weekday()] + ' ' if week else ''
-    return f' ↻{day}{at:%H:%M} ({rem})'
+        name = os.environ.get('KARVEY_TZ') or ''
+        if name:
+            try:
+                from zoneinfo import ZoneInfo
+                tz = ZoneInfo(name)
+            except Exception:
+                tz = None
+        at = datetime.datetime.fromtimestamp(ts, tz) if tz else datetime.datetime.fromtimestamp(ts)
+        left = int(round((ts - now) / 60.0)) * 60
+        d_, r_ = divmod(left, 86400); h_, r_ = divmod(r_, 3600); m_ = r_ // 60
+        rem = f'{d_}d{h_}h' if d_ else (f'{h_}h{m_:02d}m' if h_ else f'{max(m_, 1)}m')
+        day = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][at.weekday()] + ' ' if week else ''
+        return f' ↻{day}{at:%H:%M} ({rem})'
+    except Exception:
+        return ''
 
 l5 = (limits.get('five_hour') or {}).get('used_percentage')
 l7 = (limits.get('seven_day') or {}).get('used_percentage')
