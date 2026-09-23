@@ -35,6 +35,10 @@
 | BL-31 | 2026-09-23 | panel review R-28 | feature | med | [Ola 3] Vista de portafolio multi-cliente | open | — | — |
 | BL-32 | 2026-09-23 | panel review R-29 | feature | low | [Ola 3] Backlog con priorización (WSJF) y estado `done-direct` | open | — | — |
 | BL-33 | 2026-09-23 | panel review R-30 | feature | low | [Ola 3] Portabilidad a otros runtimes y equipos | open | — | — |
+| BL-34 | 2026-09-23 | team-layer / F-01 | emergent | med | karvey-health checks team-layer readiness (handoff age per role, stale board) | open | — | — |
+| BL-35 | 2026-09-23 | team-layer / F-02 | emergent | low | Sampled weekly audit where the auditor also audits whoever directs (retro/health) | open | — | — |
+| BL-36 | 2026-09-23 | team-layer / F-04 | emergent | low | Statusline cannot be declared by a plugin — revisit if the plugin API changes | open | — | — |
+| BL-37 | 2026-09-23 | team-layer / F-03 | spec-gap (deferred) | med | karvey-team cost: per-session usage collection is runtime-specific and unproven | open | — | — |
 
 ## BL-01 — Run graphify over the repo at the end of all the changes
 - **Origin:** owner request (Mauricio Quezada Ibáñez), 2026-09-22, after publishing 3.8.0 / 3.9.0 and during the 3.9.1 docs sync.
@@ -201,3 +205,20 @@
 - **Origin:** expert panel review 2026-09-23, `R-30` in `docs/spec/reviews/2026-09-23-panel-review.md` (problem, recommendation, justification, benefit, effort and risk there).
 - **Wave:** 3 · **Priority:** baja
 - **Status:** open
+
+## BL-34 — karvey-health checks team-layer readiness (handoff age per role, stale board)
+- **Origin:** change `team-layer`, finding F-01 (emergent), swept at archive on 2026-09-23.
+- **Status:** open
+
+## BL-35 — Sampled weekly audit where the auditor also audits whoever directs (retro/health)
+- **Origin:** change `team-layer`, finding F-02 (emergent), swept at archive on 2026-09-23.
+- **Status:** open
+
+## BL-36 — Statusline cannot be declared by a plugin — revisit if the plugin API changes
+- **Origin:** change `team-layer`, finding F-04 (emergent), swept at archive on 2026-09-23.
+- **Status:** open
+
+## BL-37 — karvey-team cost: per-session usage collection is runtime-specific and unproven
+- **Origin:** change `team-layer`, finding F-03 (spec-gap (deferred)), swept at archive on 2026-09-23.
+- **Status:** open
+- **Note:** a spec-gap normally re-opens requirements; `team-layer` had already shipped in 3.8.0, so it is deferred here as a known limitation instead of silently dropped.
