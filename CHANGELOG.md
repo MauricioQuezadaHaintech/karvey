@@ -2,6 +2,22 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.11.4] - 2026-09-23 — hotfix
+
+### Fixed
+- **BUG-20 — false "NOT FOUND" drift for in-repo teams.** `state.json` writes `repos[].path` as the repo's name; with `team.json` inside that repo the hook resolved `<repo>/<repo>` and announced, on every session start, that the handoff described a tree that is not there. A path equal to the root's name, `.` or empty now resolves to the root.
+- **BUG-21 — git worktrees reported as NOT FOUND.** The live-state check looked for a `.git/` directory; worktrees have a `.git` file. It now asks git (`rev-parse --git-dir`).
+
+### Added
+- Regression tests for both (test-hooks.sh 32 cases; 2 fail on 3.11.3). Verified read-only against paautin-kloketen: the section now compares for real and reports actual drift instead of NOT FOUND.
+
+### Why
+`agente-kloketen` verified 3.11.3 in its repo and found this residue of BUG-19 in the one section meant to detect real drift; a false alarm there on every start trains agents to ignore it. BUG-21 was found independently as finding F-01 of the `wave1-hardening` architecture and shares the same function. Knowledge sync deferred to the `wave1-hardening` archive.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5 (1M context)
+> 🔗 Karvey phase: hotfix lane (BUG-20, BUG-21 + regression tests) · Apache 2.0
+
 ## [3.11.3] - 2026-09-23 — hotfix
 
 ### Fixed

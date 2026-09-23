@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression tests for the plugin hooks (BUG-01..04 in 3.11.2, BUG-18..19 in 3.11.3). No dependencies beyond bash + python3.
+# Regression tests for the plugin hooks (BUG-01..04 in 3.11.2, BUG-18..19 in 3.11.3, BUG-20..21 in 3.11.4). No dependencies beyond bash + python3.
 # Run: bash plugins/karvey/hooks/tests/test-hooks.sh   → exit 0 if all pass.
 set -u
 H="$(cd "$(dirname "$0")/.." && pwd)"
@@ -47,6 +47,25 @@ S="$T/team"; mkdir -p "$S/docs/spec" "$S/ops/agents/dev" "$S/app"
 echo '{"ops_repo":"ops","roles":{"app":"dev"}}' > "$S/docs/spec/team.json"; echo "SIB-HANDOFF" > "$S/ops/agents/dev/handoff.md"
 out=$(ctx "$S/app")
 [[ "$out" == *"Profile: $S/ops/agents/dev"* && "$out" == *"SIB-HANDOFF"* ]] && ok "sibling ops repo layout still works" || bad "sibling layout" "$out"
+
+echo "session-context: state.json paths (BUG-20) and worktrees (BUG-21)"
+R2="$T/repoA"; mkdir -p "$R2/docs/spec/agents/ceo"; git -C "$R2" init -q -b main; git -C "$R2" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+echo '{"ops_repo":"repoA","roles":{"repoA":"ceo"}}' > "$R2/docs/spec/team.json"; echo H > "$R2/docs/spec/agents/ceo/handoff.md"
+C=$(git -C "$R2" log -1 --pretty=%h)
+for pth in repoA . ""; do
+  printf '{"repos":[{"path":"%s","branch":"main","commit":"%s","uncommitted":0}]}' "$pth" "$C" > "$R2/docs/spec/agents/ceo/state.json"
+  git -C "$R2" add -A >/dev/null; git -C "$R2" -c user.email=t@t -c user.name=t commit -q -m s; C=$(git -C "$R2" log -1 --pretty=%h)
+  printf '{"repos":[{"path":"%s","branch":"main","commit":"%s","uncommitted":0}]}' "$pth" "$C" > "$R2/docs/spec/agents/ceo/state.json"
+  git -C "$R2" -c user.email=t@t -c user.name=t commit -qam s2 >/dev/null 2>&1; C=$(git -C "$R2" log -1 --pretty=%h)
+  printf '{"repos":[{"path":"%s","branch":"main","commit":"%s","uncommitted":1}]}' "$pth" "$C" > "$R2/docs/spec/agents/ceo/state.json"
+  out=$(ctx "$R2")
+  [[ "$out" != *"NOT FOUND"* && "$out" == *"matches"* ]] && ok "state path '$pth' resolves to the root itself" || bad "state path '$pth'" "$(echo "$out" | grep -A2 'Live state')"
+done
+W="$T/wt"; git -C "$R2" worktree add -q "$W" -b wtb >/dev/null 2>&1
+mkdir -p "$T/wteam/docs/spec/agent"; WC=$(git -C "$W" log -1 --pretty=%h)
+printf '{"repos":[{"path":"%s","branch":"wtb","commit":"%s","uncommitted":0}]}' "$W" "$WC" > "$T/wteam/docs/spec/agent/state.json"; echo H > "$T/wteam/docs/spec/agent/handoff.md"
+out=$(ctx "$T/wteam")
+[[ "$out" != *"NOT FOUND"* ]] && ok "a git worktree (.git file) is found" || bad "worktree" "$(echo "$out" | grep -A2 'Live state')"
 
 echo "statusline: reset time (BUG-03) and private debug copy (BUG-04)"
 NOW=$(date +%s)
