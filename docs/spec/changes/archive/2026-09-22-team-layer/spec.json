@@ -1,0 +1,80 @@
+{
+  "change_id": "team-layer",
+  "capability": "method",
+  "description": "Optional team layer: rotation handoff inside karvey-checkpoint, karvey-team, karvey-decisions, verification rules and plugin session hook",
+  "goal": "Karvey can run a team of agent sessions as an OPTION -- with the handoff captured by commands, the decision log cross-checked and the cost measured -- while a single agent remains the default and loses nothing.",
+  "layers": [
+    "Backend"
+  ],
+  "created_at": "2026-09-22T15:56:00Z",
+  "updated_at": "2026-09-23T12:00:00Z",
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 1,
+  "phase": "archived",
+  "type": "feature",
+  "links": {
+    "parent": "",
+    "children": []
+  },
+  "decisions": [],
+  "inputs": {
+    "proposal": "m5d-ops docs/proceso/propuesta-karvey-equipo.md @c0aed70"
+  },
+  "iteration_count": 0,
+  "revision_history": [],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada",
+      "date": "2026-09-22"
+    },
+    "mockup": {
+      "generated": false,
+      "approved": false
+    },
+    "design_graphic": {
+      "generated": false,
+      "approved": false
+    },
+    "architecture": {
+      "generated": false,
+      "approved": false
+    },
+    "tasks": {
+      "generated": false,
+      "approved": false
+    },
+    "infra": {
+      "generated": false,
+      "approved": false
+    },
+    "qa": {
+      "generated": false,
+      "approved": false
+    },
+    "deploy": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "date": "2026-09-22",
+      "ref": "PR #11 merged on the owner's 'dale con todo'"
+    },
+    "prod": {
+      "by": "Mauricio Quezada Ibáñez",
+      "date": "2026-09-22",
+      "ref": "PR #11 (merged to main)"
+    }
+  },
+  "gates_skipped": {
+    "phases": [
+      "architecture",
+      "tasks",
+      "qa"
+    ],
+    "reason": "built outside the pipeline by agente-M5D-arquitecto and published as a ready branch (PR #11); merged without those gates. Recorded, not back-filled. Found by the 2026-09-23 expert panel (H-22)."
+  },
+  "released_in": "3.8.0",
+  "archived_at": "2026-09-23"
+}
