@@ -1,9 +1,9 @@
 {
   ".claude-plugin/marketplace.json": {
-    "mtime": 1790109234.4419289,
-    "seen": 1790109363.2656674,
-    "ast_hash": "6c6a7f9dae9b4dd6e20719656903fde8",
-    "semantic_hash": "6c6a7f9dae9b4dd6e20719656903fde8"
+    "mtime": 1790179081.8369656,
+    "seen": 1790179282.9724016,
+    "ast_hash": "b8675cb8a3708dc17d15eb122ca20008",
+    "semantic_hash": "b8675cb8a3708dc17d15eb122ca20008"
   },
   "docs/spec/changes/team-layer/spec.json": {
     "mtime": 1790100322.6700416,
@@ -12,16 +12,16 @@
     "semantic_hash": "461bad98964e0cc3832ae2745951d458"
   },
   "docs/spec/project.json": {
-    "mtime": 1790109234.4429288,
-    "seen": 1790109363.2656825,
-    "ast_hash": "35da80099506aa18c966e74d4e2f89c9",
-    "semantic_hash": "35da80099506aa18c966e74d4e2f89c9"
+    "mtime": 1790179081.8369656,
+    "seen": 1790179282.9724114,
+    "ast_hash": "a7252f7a4c88dd078f0ab299fc75c168",
+    "semantic_hash": "a7252f7a4c88dd078f0ab299fc75c168"
   },
   "plugins/karvey/.claude-plugin/plugin.json": {
-    "mtime": 1790109234.4419289,
-    "seen": 1790109363.2656837,
-    "ast_hash": "880c3356dda440be9b57bd02a8392579",
-    "semantic_hash": "880c3356dda440be9b57bd02a8392579"
+    "mtime": 1790179081.8359656,
+    "seen": 1790179282.9724126,
+    "ast_hash": "8b1b8f17c03e407c6da7ab75b8aa9e34",
+    "semantic_hash": "8b1b8f17c03e407c6da7ab75b8aa9e34"
   },
   "plugins/karvey/hooks/hooks.json": {
     "mtime": 1790100322.6700416,
@@ -60,16 +60,16 @@
     "semantic_hash": "4ff7275effbf12549fe2075de6b4f480"
   },
   "CHANGELOG.md": {
-    "mtime": 1790109306.6668777,
-    "seen": 1790109363.265694,
-    "ast_hash": "119480e985ad4a100ae979aa4f908b7b",
-    "semantic_hash": "119480e985ad4a100ae979aa4f908b7b"
+    "mtime": 1790179081.8429656,
+    "seen": 1790179282.9724221,
+    "ast_hash": "e215a41b1949d1fd5b51bb5d69c40292",
+    "semantic_hash": "e215a41b1949d1fd5b51bb5d69c40292"
   },
   "README.md": {
-    "mtime": 1790109234.4429288,
-    "seen": 1790109363.2656953,
-    "ast_hash": "de9c42ae6bfecabda4e5aa441f4cc99d",
-    "semantic_hash": "de9c42ae6bfecabda4e5aa441f4cc99d"
+    "mtime": 1790179081.8429656,
+    "seen": 1790179282.9724233,
+    "ast_hash": "2740205cb42a98311226226d37103a66",
+    "semantic_hash": "2740205cb42a98311226226d37103a66"
   },
   "TRADEMARK.md": {
     "mtime": 1789235373.2879353,
@@ -168,8 +168,8 @@
     "semantic_hash": "d3045e986ea836db98b86aa45a89b051"
   },
   "plugins/karvey/skills/karvey-deploy/SKILL.md": {
-    "mtime": 1790109149.7319884,
-    "seen": 1790109363.2657204,
+    "mtime": 1790109404.1908088,
+    "seen": 1790179282.9724503,
     "ast_hash": "41f1847f0002cdd7761537cf9918a25b",
     "semantic_hash": "41f1847f0002cdd7761537cf9918a25b"
   },
@@ -360,8 +360,8 @@
     "semantic_hash": "bf91130c308c094a3bec80904e4b7296"
   },
   "plugins/karvey/skills/karvey/SKILL.md": {
-    "mtime": 1790109155.9129841,
-    "seen": 1790109363.2657554,
+    "mtime": 1790109404.1908088,
+    "seen": 1790179282.972487,
     "ast_hash": "93574a731ffc28ef21491947bed0a1ac",
     "semantic_hash": "93574a731ffc28ef21491947bed0a1ac"
   },
@@ -486,22 +486,22 @@
     "semantic_hash": "7f10abe099bf91af8643919f1b605a99"
   },
   "plugins/karvey/skills/karvey/rules/versioning.md": {
-    "mtime": 1790109149.7309885,
-    "seen": 1790109363.2657797,
+    "mtime": 1790109404.1908088,
+    "seen": 1790179282.9725204,
     "ast_hash": "dc0e6aa3a497c7fd52e2f569306f6d30",
     "semantic_hash": "dc0e6aa3a497c7fd52e2f569306f6d30"
   },
   "docs/spec/changes/team-adapters/spec.json": {
-    "mtime": 1790109234.4429288,
-    "seen": 1790109363.265677,
+    "mtime": 1790109404.1848087,
+    "seen": 1790179282.9724064,
     "ast_hash": "11dd89e88d6b3dfab0a66eb2f694f243",
     "semantic_hash": "11dd89e88d6b3dfab0a66eb2f694f243"
   },
   "docs/karvey.html": {
-    "mtime": 1790109301.3838816,
-    "seen": 1790109363.2656977,
-    "ast_hash": "67fb50028b0759b9d7772f29e5d68cc2",
-    "semantic_hash": "67fb50028b0759b9d7772f29e5d68cc2"
+    "mtime": 1790179081.8419657,
+    "seen": 1790179282.972426,
+    "ast_hash": "7665ecb6cca563ee368894d4f164f996",
+    "semantic_hash": "7665ecb6cca563ee368894d4f164f996"
   },
   "docs/spec/changes/team-adapters/prd.md": {
     "mtime": 1790106264.9398012,
@@ -510,10 +510,10 @@
     "semantic_hash": "e1f23f1bb2774c4b55ec6134ccbacf7b"
   },
   "docs/spec/changes/team-adapters/requirements.md": {
-    "mtime": 1790108327.3735414,
-    "seen": 1790109363.2657013,
-    "ast_hash": "ed36cd5602fbc2598083d6d61bcb79c9",
-    "semantic_hash": "ed36cd5602fbc2598083d6d61bcb79c9"
+    "mtime": 1790179090.330951,
+    "seen": 1790179282.972431,
+    "ast_hash": "6f03903064f172e2740738afbaf16350",
+    "semantic_hash": "6f03903064f172e2740738afbaf16350"
   },
   "plugins/karvey/skills/karvey/rules/management-adapters.md": {
     "mtime": 1790106264.9528012,
