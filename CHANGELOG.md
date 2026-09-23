@@ -2,12 +2,34 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [3.11.2] - 2026-09-23 — hotfix
+
+### Fixed
+- **BUG-01 — `karvey-init --settings` created a phantom change and a real tracker Epic.** The settings step had no end: after asking the team settings the skill kept going through Step 1…9 (change-id, `spec.json`, `prd.md`, Epic in ClickUp/Jira…). New **Step 0 — settings-only mode**: it reads `project.json`, runs Step 3.2 with the current values pre-filled, merges the answers without dropping untouched keys, writes, reports and **stops**; it never creates a change or any tracker item.
+- **BUG-02 — the session-hook settings notice fired where it should not.** It now appears only in a Karvey project (`docs/spec/project.json` or `docs/spec/changes/`) — not in a bare `docs/spec/` (OpenAPI, RFCs, studies) — checks the project root the hook already found instead of the nearest `docs/spec` (nested repos), treats a BOM, a non-object JSON and empty blocks correctly, no longer hangs on a relative `CLAUDE_PROJECT_DIR`, and is worded as information for the user ("settings only, creates nothing"), not as an order to the agent.
+- **BUG-03 — an odd `resets_at` took the whole statusline down** (and with it the TIME TO ROTATE warning). The reset clock now accepts seconds, milliseconds and ISO strings, ignores NaN/inf/absurd/past values, and rounds the time left instead of truncating it. Applied to the plugin script and noted for hand-installed copies.
+- **BUG-04 — the statusline debug copy was shared across OS users** (`/tmp/.karvey-statusline-last.json`, world-readable, exposing another user's session id). It is now per user and private: `$TMPDIR/.karvey-statusline-last.<uid>.json`, mode 600.
+
+### Added
+- **`plugins/karvey/hooks/tests/test-hooks.sh`** — regression tests for BUG-01…04 (21 cases). Passes 21/21 on this release and fails 15/21 against the 3.11.1 hooks (clean, isolated `TMPDIR`).
+- **Retroactive QA of `team-adapters`** (`REVISION_PR_17-19_20260923.md`): NOT approved (open highs; security gate passes). Its remaining bugs are tracked as BUG-05+ in `docs/bugs_dev_testing.md` and fixed inside `wave1-hardening`.
+
+### Why
+The retroactive QA that the expert panel asked for (the change had reached prod without `approvals.qa`) found a live risk: the notice shown on every session in ~60 `docs/spec` folders recommended a command that could create junk Epics in a client's tracker. Following the bug-now / change-later protocol, the four defects with active impact ship as a hotfix; the structural fixes wait for Wave 1.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5 (1M context)
+> 🔗 Karvey phase: hotfix lane (BUG-01…04 + regression test) from the retroactive QA of `team-adapters` · Apache 2.0
+
 ## [3.11.1] - 2026-09-23
 
 ### Fixed
 - **`docs/karvey.html` picks the browser's language** on a first visit: order `?lang=` → saved choice → the browser's primary language (`navigator.languages[0]`) if it is `en/es/pt/de/zh` → English. A browser in French or Japanese gets English. Tested in 9 cases (explicit param, saved choice, `es-CL`, `pt-BR`, `zh-CN`, `de-AT`, unsupported language, empty, `localStorage` throwing).
 - **The tab title follows the language** (`Karvey Method` · `Método Karvey` · `Karvey-Methode` · `Karvey 方法`) instead of staying in English — reported by the Mac review.
 - **The hero's decorative wind lines no longer cross the figure cards** (32 / 13 / 22 / 1+2): the SVG now sits behind the content (`z-index`) — reported by the Mac review.
+
+### Why
+The real-browser review on the Mac found that the multilingual page still showed an English tab title in every language and that the hero decoration crossed the figures; the owner also asked for the browser's language to be picked on a first visit. (Section added in 3.11.2: the 3.11.1 entry shipped without its "Why", flagged by QA Dimension 6.)
 
 > 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
 > 🤖 AI-assisted: Claude Opus 5.5 (1M context)

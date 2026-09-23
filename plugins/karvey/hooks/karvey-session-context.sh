@@ -10,11 +10,14 @@
 # recreating scheduled tasks, proposing the next step) is the skill's job, told to the session here.
 #
 # Works with a SINGLE agent (docs/spec/agent/) and with a team (docs/spec/team.json or a legacy
-# .ceo-agentes). With neither, it prints NOTHING and exits 0.
+# .ceo-agentes). With neither, it prints nothing — except, inside a Karvey project (docs/spec/project.json
+# or docs/spec/changes/), a one-line notice when the team settings are missing — and exits 0.
 set -u
 exec 2>/dev/null
 
 START="${CLAUDE_PROJECT_DIR:-$PWD}"
+# absolute path: a relative CLAUDE_PROJECT_DIR made the dirname loops below spin forever on "."
+START=$(cd "$START" 2>/dev/null && pwd -P) || exit 0
 DIR="$START"; ROOT=""; CFG=""; KIND=""
 while [ "$DIR" != "/" ] && [ -n "$DIR" ]; do
   if [ -f "$DIR/docs/spec/team.json" ]; then ROOT="$DIR"; CFG="$DIR/docs/spec/team.json"; KIND="team"; break; fi
@@ -24,22 +27,26 @@ while [ "$DIR" != "/" ] && [ -n "$DIR" ]; do
 done
 # Team settings nudge (REQ-ADP-003): only inside a Karvey project (has docs/spec/), never elsewhere.
 settings_nudge() {
-  local d="$START"
-  while [ "$d" != "/" ] && [ -n "$d" ]; do
-    if [ -d "$d/docs/spec" ]; then
-      local pj="$d/docs/spec/project.json" missing=""
-      if [ ! -f "$pj" ]; then missing="project.json"
-      elif command -v python3 >/dev/null 2>&1; then
-        missing=$(python3 -c "import json,sys
-try: d=json.load(open(sys.argv[1],encoding='utf-8'))
-except Exception: print('project.json (unreadable)'); sys.exit()
-print(' + '.join(k for k in ('notifications','management') if not isinstance(d.get(k),dict)))" "$pj")
-      fi
-      [ -n "$missing" ] && printf 'Karvey: team settings missing (%s) — run `/karvey:karvey-init --settings` to set notifications, task tool and status flow.\n' "$missing"
-      return
-    fi
+  # Only a Karvey project: docs/spec/project.json or docs/spec/changes/ (a bare docs/spec/ can be an
+  # OpenAPI folder, RFCs, a study). The root found above wins over walking up from the cwd.
+  local d="${ROOT:-$START}" kp=""
+  while [ -n "$d" ] && [ "$d" != "/" ]; do
+    if [ -f "$d/docs/spec/project.json" ] || [ -d "$d/docs/spec/changes" ]; then kp="$d"; break; fi
+    [ -n "$ROOT" ] && break
     d=$(dirname "$d")
   done
+  [ -z "$kp" ] && return
+  local pj="$kp/docs/spec/project.json" missing=""
+  if [ ! -f "$pj" ]; then missing="no project.json"
+  elif command -v python3 >/dev/null 2>&1; then
+    missing=$(python3 -c "import json,sys
+try: d=json.load(open(sys.argv[1],encoding='utf-8-sig'))
+except Exception: print('project.json unreadable'); sys.exit()
+if not isinstance(d,dict): print('project.json is not an object'); sys.exit()
+print(' + '.join(k for k in ('notifications','management') if not isinstance(d.get(k),dict) or not d.get(k)))" "$pj")
+  else missing="unknown: python3 not available to check"
+  fi
+  [ -n "$missing" ] && printf 'Karvey (info): team settings not set (%s). To set them, the user can run `/karvey:karvey-init --settings` — settings only, it creates no change and nothing in any tracker.\n' "$missing"
 }
 
 [ -z "$ROOT" ] && { settings_nudge; exit 0; }
