@@ -1,45 +1,52 @@
-# Phase-Close Ritual — every phase and every task closes the same way
+# Phase-Close Ritual — every phase closes the same way
 
-> The problem: Karvey **documented** tracker updates (ClickUp at the time) as a "should", so in practice they got skipped
-> and tasks were left stale. This rule makes the close a **mandatory, numbered step** at the end of
-> every phase skill and every impl task. No phase advances silently.
+> The problem: tracker updates were a "should", so they got skipped and tasks were left stale. The close
+> is a **numbered step** at the end of the skills that run it. No phase advances silently.
 
-## When it runs
+## Who runs it
 
-- At the **end of every pipeline phase** (`requirements`, `mockup`, `design-graphic`, `architecture`, `infra`, `tasks`, `impl`, `test`, `qa`, `deploy`, `archive`), before asking the user to advance.
-- At the **end of every impl task** (`karvey-impl` already does this per task — see its Step 6; this rule is the shared contract).
+`karvey-impl`, `karvey-test` and `karvey-qa` run this ritual at their close and cite this rule;
+`karvey-iterate` runs action 3 when it routes findings. Granularity:
+
+- **Status per task:** each impl task moves its own status when it closes (`todo → in_progress → review`).
+- **Comment and cascade per Feature:** the close comment and the cascade run once per Feature (when its last
+  task closes) and once at the phase close — never per task.
 
 ## The ritual (4 actions, in order)
 
 ### 1. Comment what happened
-Leave a short, factual close comment on the unit of work.
+A short, factual close comment on the Feature (or the Epic item that represents the phase): what was done ·
+artifacts produced · result. Team's tracker: the `comment` operation of `management-adapters.md`.
+Markdown: a history row in `PLAN.md`.
 
-- **Team's tracker** (`project.json:management.tool`, see `management-adapters.md`): `comment(<item>, "<summary>")` where `<item>` is the task (impl), or the Feature/Epic that represents the phase. Summary = what was done · artifacts produced · result. ClickUp adapter example: `clickup_create_task_comment(<id>, "<summary>")`.
-- **Markdown** (`PLAN.md`): append a history row in `PLAN.md` for the phase/task.
+### 2. Change state
+- `set_status(<item>, <logical state>)`, resolved through `management-adapters.md` (resolution order and the
+  missing-map clause live there; this rule does not restate them).
+- **Cascade:** apply the one cascade of `management-adapters.md` → `cascade`. The Epic reaches `done` only at
+  archive.
+- Markdown: flip the marker in `PLAN.md` (legend in `management-adapters.md`, 🙋 included) and fill the actual
+  time. The estimate column is never overwritten.
 
-### 2. Change state (+ cascade)
-- **Team's tracker:** `set_status(<item>, <logical state>)` following the logical flow `todo → in_progress → review → done` (`blocked` when it cannot advance), resolved to the tool's names via `project.json:management.statuses` (`management-adapters.md`; missing map → read the tool's statuses, confirm once, persist).
-  - **Cascade:** when ALL tasks of a Feature are `review` → move the Feature; when ALL Features of an Epic are done → move the Epic. A Feature only advances when ALL its layers (BD+Backend+Frontend+Infra) are done. (See `management-adapters.md` → `cascade`; ClickUp detail in `clickup-protocol.md`.)
-  - **Phase-level state:** each pipeline phase maps to a Feature/checklist item in the Epic; closing the phase advances that item, so the board reflects pipeline progress, not just leaf tasks.
-- **Markdown:** flip the phase/task marker in `PLAN.md` (`🔄 → 👀` for review, `→ ✅` when done), update actual time and date.
+### 3. Sweep findings, backlog and the outbox
+- Findings from `test`/`qa`/`browse` are in `findings.md` (`iteration-loop.md`); if any is `open`, point the
+  user to `/karvey-iterate` before advancing.
+- `emergent` items reached `backlog.md` (mirrored to the tracker if the team wants it).
+- **Outbox retry:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" outbox list {change-id}`; apply
+  each ready entry, then `outbox done {change-id} <entry_id>` (or `--failed "<error>"` to keep it).
 
-### 3. Sweep findings & backlog
-- If this phase produced findings (`test`/`qa`/`browse`), make sure they are appended to `findings.md` (see `iteration-loop.md`) and, if any are still `open`, **point the user to `/karvey-iterate`** before advancing.
-- If any `emergent` items were noted, ensure they reached the backlog (`backlog.md`) — mirrored to the team's tracker if applicable (`mirror_backlog`).
-
-### 4. Update spec.json + knowledge
-- Update `docs/spec/changes/{change-id}/spec.json` (`phase`, the relevant `approvals.*`, `updated_at`).
-- When the phase's gate was **approved**, record who and where on that approval: `approvals.<phase>.by`, `role` (`human` | `ceo-delegate`), `date`, `ref` (the `D-NN` of the decision log where the approval is written). An approval without `ref` in a multi-agent project is incomplete (see `multi-agent.md` §4).
-- Sync knowledge per `knowledge-sync.md`.
+### 4. Record the state
+- `phase` and approvals are written only by `karvey-state.py` (`generated`, `approve`, `advance`; see
+  `state-machine.md`), never by hand.
+- An approval carries `--by`, `--role` (`human` | `ceo-delegate`) and `--ref` (the `D-NN`, or a URL).
+- Knowledge sync does not run here: it runs at archive and on demand (`knowledge-sync.md`).
 
 ## Gate before advancing
 
-Do not run the "Shall we advance to the next phase?" prompt until actions 1–4 are done. If a tracker is configured and the comment/status update failed (API error, missing `backlog_list_id` / location, unmapped status, etc.), **say so** — do not pretend the phase closed cleanly.
-
-## Optional enforcement
-
-`karvey-guard` can install a `clickup-sync-guard` hook (tracker-agnostic despite the name) that warns when a phase advances (`spec.json:phase` changes) without a corresponding close comment/status in the cycle. Opt-in, like the other enforcement hooks (`enforcement.md`). A skill never forces this on its own — only the hook blocks.
+Do not ask "Shall we advance to the next phase?" until actions 1–4 are done. If a tracker update failed (API
+error, missing location, unmapped status), **say so** and leave it in the outbox — do not pretend the phase
+closed cleanly.
 
 ## Credentials
 
-Tracker credentials come from `.connections.json` (never committed), env vars or a vault — see `management-adapters.md` (ClickUp: `clickup-protocol.md`).
+Tracker credentials come from `.connections.json` (never committed), env vars or a vault — see
+`management-adapters.md` (ClickUp: `clickup-protocol.md`).

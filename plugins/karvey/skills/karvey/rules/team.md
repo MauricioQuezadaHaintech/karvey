@@ -55,7 +55,7 @@ behaves exactly as in a single-agent project.
     "Client_CODE_design": "designer"
   },
   "display_names": { "designer": "agent-M5D-designer" },
-  "rotation": { "context_threshold": 150000, "max_session_hours": 24 },
+  "rotation": { "context_threshold": 150000, "max_session_hours": 8 },
   "cost_report": "reports/cost/"
 }
 ```
@@ -63,7 +63,7 @@ behaves exactly as in a single-agent project.
 - **`code`** — the business code; the agent's name is `agent-{code}-{role}`.
 - **`roles`** — maps a working directory to a role. A directory not listed, and the root, are `ceo`.
 - **`display_names`** — legacy names kept after a rename, so messages keep resolving.
-- **`rotation`** — when a session must hand off (see below). Defaults: 150000 and 24.
+- **`rotation`** — when a session must hand off (see below). Omitted values come from `karvey_lib/defaults.json` (`context_tokens.red`, `rotation_hours`; D-06).
 - **`cost_report`** — where `karvey-team cost` writes, inside `ops_repo`.
 
 A legacy `.ceo-agentes` file (`CODIGO=` / `OPS=` / `AGENTE_<dir>=<role>` / `NOMBRE_<role>=`) is read
@@ -80,7 +80,7 @@ folder that holds `team.json` — `docs/spec/agents/<role>/…` and `docs/spec/b
 A long session drifts from its own rules, **and the one drifting is the last to notice**. So rotation
 is scheduled, not improvised:
 
-- **Thresholds:** `context_threshold` (default 150k) or `max_session_hours` (default 24), whichever
+- **Thresholds:** `context_threshold` or `max_session_hours` (defaults: `karvey_lib/defaults.json`), whichever
   comes first, or the close of a work block. Restarting costs ~40k of context to re-read the
   handoff — it amortizes in under half a turn at that size.
 - **An agent cannot rotate itself.** Clearing the context is a terminal command, not a tool. The

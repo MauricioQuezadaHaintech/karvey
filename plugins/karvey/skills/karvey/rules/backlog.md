@@ -7,9 +7,9 @@
 ## Storage — both (mirror)
 
 - **Always:** `docs/spec/backlog.md` in the `spec_repo` — the source of truth, versioned with the specs.
-- **If the team uses a tracker** (`project.json:management.tool` ≠ `markdown`): each item is **also** created in the tracker's backlog (`mirror_backlog`, see `management-adapters.md`) — for ClickUp, the list in `spec.json:clickup.backlog_list_id` (the field already exists). The Markdown item records the tracker id; the two are kept in sync at the phase-close ritual.
+- **If the team uses a tracker** (`karvey-config.py resolve management` reports `external: true`): each item is **also** created in the tracker's backlog (`mirror_backlog`, find-or-create by its `BL-NN` key; see `management-adapters.md`) in the resolved `location`. The Markdown item records the tracker id; the two are reconciled at the phase-close ritual.
 
-If the backlog location is empty (`backlog_list_id` for ClickUp, `management.location` otherwise), ask the user for it once (ClickUp: or get it via `clickup_get_workspace_hierarchy`) and store it.
+If the resolved `location` is empty, ask the user for it once and store it on a docs branch; never pick one.
 
 ## What lands here
 

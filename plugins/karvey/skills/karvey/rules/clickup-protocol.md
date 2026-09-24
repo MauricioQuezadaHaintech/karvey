@@ -109,7 +109,11 @@ curl -s -X POST "https://api.clickup.com/api/v2/list/{SPRINT_LIST_ID}/task/{TASK
   -H "Content-Type: application/json"
 ```
 
-### Update time_estimate (MANDATORY, MCP does not save it)
+### Update time_estimate (MANDATORY at creation, MCP does not save it)
+
+`time_estimate` is written **once**, by `karvey-tasks`, from the task's estimate. It is never overwritten
+afterwards: the actual time is a time entry (start/stop tracking, or a manual entry), so estimate vs actual
+stays measurable.
 ```bash
 curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
   -H "Authorization: $API_KEY" \
@@ -162,7 +166,7 @@ to do → in progress → listo! para pap → complete
 ```
 Below, `{status:in_progress}` / `{status:review}` mean "the ClickUp status the team mapped to that logical state".
 
-> **Mandatory, not optional.** Updating ClickUp at the close of every task **and every phase** is the `phase-close.md` ritual — a numbered step, not a "should". Tasks left stale (work done but ClickUp not moved) are a process defect. See `phase-close.md`.
+> **Mandatory, not optional.** Status changes per task; the comment and the cascade run per Feature and at every phase close: the `phase-close.md` ritual — a numbered step, not a "should". Tasks left stale (work done but ClickUp not moved) are a process defect. See `phase-close.md`.
 
 ### When starting a task
 ```
@@ -172,15 +176,15 @@ clickup_start_time_tracking(task_id)
 
 ### When completing a task
 ```
-clickup_stop_time_tracking()
-clickup_create_task_comment(task_id, "SUMMARY:\n- what was done\n- files modified\n- result: OK")
+clickup_stop_time_tracking()                              # the actual, as a time entry
 clickup_update_task(task_id, status="{status:review}")   # set_status(task, review)
 ```
+When the last task of a Feature closes: one summary comment on the Feature (what was done · files · result)
+and the cascade (`phase-close.md`).
 
 ### Status cascade
-- When ALL tasks of a Feature → Feature to `review`
-- When ALL Features of an Epic → Epic to `review`
-- A Feature only changes when ALL layers (BD+Backend+Frontend+Infra) are done
+The one cascade is defined in `management-adapters.md` → *The cascade*; ClickUp applies it with
+`clickup_update_task(<feature or epic id>, status=…)`.
 
 ### Phase-level status (not just leaf tasks)
 

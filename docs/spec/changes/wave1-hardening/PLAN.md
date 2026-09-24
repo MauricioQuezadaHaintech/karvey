@@ -248,7 +248,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F12.T7 [Backend] | ✅ done | 45 | 7 | 0 | no human review yet; 11 skills + multi-agent.md, 1312 → 1159 lines; 59 → 0 errors; findings F-31, F-32 |
 | E1.F12.T8 [Backend] | ✅ done | 20 | 3 | 0 | no human review yet; 7 descriptions 200–223 chars; L-01..L-04 green on all 32 skills |
 | E1.F12.T9 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; enforcement 40 → 99 lines (one anchored line per promise); L-23 residue in project-config/support-skills handled in T10 |
-| E1.F12.T10 [Backend] | ⬜ todo | 50 | — | — |  |
+| E1.F12.T10 [Backend] | ✅ done | 50 | 5 | 0 | no human review yet; 9 rules + support-skills.md, 935 → 1034 lines (the one cascade, missing-map clause, outbox, natural keys and schema fields now live here, cited by the skills); L-24 comma heuristic narrowed (F-34) |
 | E1.F12.T11 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; hooks/README 'What ships' table anchored to table cases; clickup-sync-guard/standards-guard named only as not shipped; plugin.json/marketplace.json descriptions (versions untouched) |
 | E1.F12.T12 [Backend] | ✅ done | 10 | 3 | 0 | no human review yet; git mv; 11 references updated (CHANGELOG, backlog, decisions, team-adapters spec.json/findings, prd); graphify-out left for the archive sync; the qa/deploy L-25 hits close in T5/T6 |
 | E1.F12.T13 [Backend] | ⬜ todo | 30 | — | — |  |

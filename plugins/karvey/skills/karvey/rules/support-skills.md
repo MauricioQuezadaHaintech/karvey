@@ -27,10 +27,10 @@ In addition to the 13 pipeline phases (0–12) (linear, with gates), Karvey has 
 
 ## Invocation rules
 
-- Support skills **do not advance the change's phase forward** (`spec.json:phase` does not move toward deploy unless a phase skill does it). Exception: `karvey-iterate` may perform the controlled **backward** transition of the spec-revision sub-cycle (re-opening `requirements` and resetting the affected `approvals`), since closing the feedback loop is its whole purpose.
+- Support skills **do not advance the change's phase forward**; only phase skills call `karvey-state.py advance`. Exception: `karvey-iterate` performs the controlled **backward** transition of the spec-revision sub-cycle with `karvey-state.py reopen`, since closing the feedback loop is its whole purpose.
 - They can be invoked before, during or after any phase.
 - They respect the same gates: `karvey-guard`/hooks still apply; `karvey-second-opinion` does not by itself approve the `karvey-qa` security gate, it complements it.
-- When producing artifacts in `docs/spec/`, they sync knowledge according to `knowledge-sync.md`.
+- They do not run the knowledge sync: it runs at archive and on demand only (`knowledge-sync.md`).
 
 ## Quick equivalences (if you come from gstack)
 

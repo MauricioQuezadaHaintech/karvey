@@ -159,7 +159,9 @@ def iter_lines(lines):
         m = FENCE_RE.match(line)
         if m:
             if fence is None:
-                fence, lang = m.group(1)[0] * 3, (m.group(2) or "").lower()
+                # keep the full opening run: a ````markdown wrapper is closed only by a fence at
+                # least as long (CommonMark), not by the first inner ``` (F-34)
+                fence, lang = m.group(1), (m.group(2) or "").lower()
                 yield n, line, None
                 continue
             if m.group(1).startswith(fence) and not m.group(2):
@@ -1130,7 +1132,8 @@ def _verb_classes(line):
 def _case_fits(case, classes):
     exp = case.get("expect", {}) if isinstance(case.get("expect"), dict) else {}
     decision = exp.get("decision")
-    prints = bool(exp.get("stdout_contains") or exp.get("stderr_contains"))
+    # a session case asserts what the hook adds to the context (context_contains): that is its output
+    prints = bool(exp.get("stdout_contains") or exp.get("stderr_contains") or exp.get("context_contains"))
     silent = decision == "allow" and not prints
     for c in classes:
         if c == "block" and decision == "block":
@@ -1353,8 +1356,10 @@ def l23_sync_only_at_archive(ctx):
 
 
 # --------------------------------------------------------------------------- L-24
+# "per task … comment" must not cross a comma: "Status per task, comment and cascade per Feature" is the
+# rule itself (F-34).
 PER_TASK_RITUAL_RE = re.compile(r"\b(comment|cascade)\w*\b[^.;\n]{0,80}\b(per[- ]task|(?:each|every)\s+(?:impl\s+)?task)\b"
-                                r"|\b(per[- ]task|(?:each|every)\s+(?:impl\s+)?task)\b[^.;\n]{0,40}\b(comment|cascade)",
+                                r"|\b(per[- ]task|(?:each|every)\s+(?:impl\s+)?task)\b[^.;,\n]{0,40}\b(comment|cascade)",
                                 re.I)
 
 

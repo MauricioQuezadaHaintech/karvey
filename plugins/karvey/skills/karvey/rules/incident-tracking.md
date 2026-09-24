@@ -18,7 +18,7 @@ A `bug`-type finding (see `iteration-loop.md`) is promoted to a `BUG-NN` here by
 - **Priority:** high
 - **Detected:** 2026-06-17 · **Component:** db / sip.GetClaims
 - **Change / origin:** add-claim-filter (finding F-01, source: test UT-BD-03)
-- **Tracker:** abc123 (if the team uses one — `project.json:management.tool`)
+- **Tracker:** abc123 (if `karvey-config.py resolve management` reports `external: true`)
 - **Current state:** EN FIX
 
 ### Reproduction
@@ -33,6 +33,9 @@ A `bug`-type finding (see `iteration-loop.md`) is promoted to a `BUG-NN` here by
 
 ### Fix
 {proposed / applied fix, files, commit}
+
+### Regression
+`tests/unit/test_claims.py::test_empty_input` (the test, or `L-NN`, that fails if the bug returns)
 
 ### State history
 | Date | State | By (human + AI model) | Note |
@@ -53,7 +56,7 @@ DETECTADO ─→ DIAGNOSTICADO ─→ EN FIX ─→ RESUELTO
 - **DETECTADO** — logged from a finding, not yet root-caused.
 - **DIAGNOSTICADO** — root cause established (with evidence). Complex cases: use `karvey-investigate` (diagnoses, does **not** fix) and paste its result here.
 - **EN FIX** — a fix is being applied on the change's feature branch.
-- **RESUELTO** — fixed + a **regression test** exists (see `karvey-test` Step 4C) so it fails again if it reappears.
+- **RESUELTO** — fixed + a **regression test** exists so it fails again if it reappears. The incident's `### Regression` section **names** it: a test file path that exists, or a lint id (`L-NN`); `lint-plugin.py` L-32 checks it.
 - **REABIERTO** — a `RESUELTO` incident regressed; re-opens with a new history row, keeping the same `BUG-NN`.
 
 **Every transition appends a row to "State history"** (date + responsible human + AI model + note). The history is never overwritten — that is the whole point.
@@ -63,7 +66,7 @@ DETECTADO ─→ DIAGNOSTICADO ─→ EN FIX ─→ RESUELTO
 - **vs `findings.md`:** `findings.md` is the per-change inbox/triage. The incident tracker is the **persistent, cross-change** record of confirmed bugs. A finding of type `bug` → one `BUG-NN`.
 - **vs the team's tracker:** if one is configured, the `BUG-NN` references its tracker item and vice-versa. Status changes are mirrored at the phase-close ritual (`phase-close.md`).
 - **vs `karvey-investigate`:** complex bugs get a formal root-cause via `/karvey-investigate`; its output becomes the `Root cause` section and flips the state to `DIAGNOSTICADO`.
-- **vs regression tests:** an incident only reaches `RESUELTO` once its regression test is in the suite. No regression test → it stays `EN FIX`.
+- **vs regression tests:** an incident only reaches `RESUELTO` once its named regression test is in the suite. No named regression → it stays `EN FIX`.
 
 ## When to use which
 

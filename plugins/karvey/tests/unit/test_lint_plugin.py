@@ -605,6 +605,27 @@ class L16(LintCase):
         self.assertFails("L-16", "contradicts")
 
 
+    def test_context_contains_counts_as_prints(self):
+        # session cases assert what the hook adds to the context (F-34)
+        case = {"expect": {"decision": "allow", "context_contains": ["[karvey]"]}}
+        self.assertTrue(lp._case_fits(case, {"prints"}))
+        self.assertFalse(lp._case_fits(case, {"silent"}))
+
+
+class Fences(unittest.TestCase):
+    def test_longer_outer_fence_is_not_closed_by_an_inner_one(self):
+        lines = ["````markdown", "```bash", "echo hi", "```", "still inside", "````", "outside"]
+        langs = {line: lang for _, line, lang in lp.iter_lines(lines)}
+        self.assertEqual(langs["still inside"], "markdown")
+        self.assertIsNone(langs["outside"])
+
+    def test_plain_fence_still_closes(self):
+        lines = ["```json", "{}", "```", "prose"]
+        langs = {line: lang for _, line, lang in lp.iter_lines(lines)}
+        self.assertEqual(langs["{}"], "json")
+        self.assertIsNone(langs["prose"])
+
+
 class L19(LintCase):
     def test_pass(self):
         self.assertPasses("L-19")
@@ -712,6 +733,10 @@ class L24(LintCase):
     def test_comment_per_task(self):
         self.t.append(IMPL, "\nThis is the per-task close ritual: comment + status + cascade, applied to every task.\n")
         self.assertFails("L-24", "per task", file=IMPL)
+
+    def test_status_per_task_then_comment_per_feature_passes(self):
+        self.t.append(IMPL, "\nStatus per task, comment and cascade per Feature.\n")
+        self.assertPasses("L-24")
 
     def test_phase_close_without_per_feature(self):
         self.t.write(RULES + "/phase-close.md", "# Rule: phase close\n\nComment and set the status.\n")
