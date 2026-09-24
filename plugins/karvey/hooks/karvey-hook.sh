@@ -136,6 +136,24 @@ nopy_plan_gate() {
   return 0
 }
 
+# git-flow without python (§3.2): when enabled, block every commit/push/merge/cherry-pick/revert/am
+# and the manual deploys (the target branch cannot be resolved without python).
+nopy_git_flow() {
+  local root cmd
+  root="$(karvey_root)"
+  if [ "$FORCE" != "1" ]; then [ -z "$root" ] && return 0; flag_on "$root" git_flow_hook || return 0; fi
+  cmd="$(json_field command)"
+  if printf '%s' "$cmd" | grep -Eq '\bgit\b[^;&|]*[[:space:]](commit|push|merge|cherry-pick|revert|am)\b'; then
+    echo "[karvey] BLOCK git-flow: cannot resolve the target repository without python; rewrite without variables or retry with python3 available" >&2
+    return 2
+  fi
+  if printf '%s' "$cmd" | grep -Eq 'func +azure +functionapp +publish|az +webapp +up|config-zip|vercel .*--prod|netlify +deploy .*--prod|firebase +deploy|gcloud +(app|run) +deploy'; then
+    echo "[karvey] BLOCK git-flow: manual deploy is forbidden; deploys run from the pipeline (no python)" >&2
+    return 2
+  fi
+  return 0
+}
+
 FORCE=0
 for a in "$@"; do [ "$a" = "--force-enabled" ] && FORCE=1; done
 ONLY=""
@@ -149,6 +167,7 @@ for g in $GUARDS; do
     selftest) nopy_selftest; rc=$? ;;
     protect-paths) nopy_protect_paths; rc=$? ;;
     plan-gate) nopy_plan_gate; rc=$? ;;
+    git-flow)  nopy_git_flow; rc=$? ;;
     *)        nopy_stub "$g"; rc=$? ;;
   esac
   if [ "$rc" -eq 2 ]; then exit 2; fi

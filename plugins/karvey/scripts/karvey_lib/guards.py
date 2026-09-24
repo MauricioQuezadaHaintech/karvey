@@ -10,6 +10,8 @@ subprocess call is an argv list (§3.1 rule 1). Critical output is ASCII (``[kar
                     fail open (no marker is the safe side).
     plan-gate       opt-in (``enforcement.plan_gate_hook``): Edit/Write and the write /
                     destructive command classes of §3.4 need a live marker; fail closed.
+    git-flow        opt-in (``enforcement.git_flow_hook``): the §3.4 rule table on the target
+                    repository of each segment; fail closed when enabled.
 
 Configuration that can weaken a guard is read from the reviewed line (§3.5) through the small
 local helpers below (``project_wc`` / ``project_reviewed`` / ``enforcement``). They are the
@@ -19,6 +21,7 @@ orchestrator reconciles them at merge (finding F-10).
 import os
 import posixpath
 import re
+import shlex
 
 from . import PLUGIN_ROOT, approval, audit, hookio
 from . import project as pj
@@ -443,6 +446,288 @@ def plan_gate(ctx):
                           record={"reason": classes[0], "change": change, "marker": why})
 
 
+# --------------------------------------------------------------------------- git targets (shared)
+GIT_GATED = frozenset({"commit", "push", "merge", "cherry-pick", "revert", "am"})
+GIT_BUILTINS = frozenset({
+    "add", "am", "annotate", "apply", "archive", "bisect", "blame", "branch", "bundle", "cat-file", "checkout",
+    "cherry", "cherry-pick", "clean", "clone", "commit", "config", "describe", "diff", "difftool", "fetch",
+    "format-patch", "fsck", "gc", "grep", "help", "init", "log", "ls-files", "ls-remote", "ls-tree", "merge",
+    "merge-base", "mv", "notes", "pull", "push", "range-diff", "rebase", "reflog", "remote", "reset", "restore",
+    "rev-list", "rev-parse", "revert", "rm", "shortlog", "show", "show-ref", "sparse-checkout", "stash", "status",
+    "submodule", "switch", "symbolic-ref", "tag", "update-ref", "version", "worktree", "for-each-ref",
+    "name-rev", "var", "hash-object", "whatchanged", "maintenance", "prune", "repack"})
+
+
+class GitTarget:
+    """The repository one git segment acts on (§3.4 target resolution)."""
+
+    __slots__ = ("dir", "git_dir", "work_tree", "unresolved", "sub", "args", "via_alias")
+
+    def __init__(self, seg):
+        g = seg.git or {}
+        self.dir, self.git_dir, self.work_tree = g.get("dir"), g.get("git_dir"), g.get("work_tree")
+        self.unresolved = bool(g.get("unresolved")) or self.dir is None
+        for v in (self.git_dir, self.work_tree):
+            if isinstance(v, str) and ("$" in v or "`" in v):
+                self.unresolved = True
+        self.sub, self.args, self.via_alias = g.get("sub"), list(g.get("args") or []), None
+
+    def prefix(self):
+        a = []
+        if self.git_dir:
+            a += ["--git-dir", self.git_dir]
+        if self.work_tree:
+            a += ["--work-tree", self.work_tree]
+        return a
+
+    def git(self, ctx, *args):
+        if self.unresolved or not self.dir or not os.path.isdir(self.dir):
+            return 128, ""
+        key = ("git", self.dir, tuple(self.prefix()), args)
+        return _memo(ctx, key, lambda: pj.git(self.prefix() + list(args), self.dir))
+
+    def config_dir(self):
+        """Where the target's project config is looked up: the work tree, else the directory that
+        holds ``--git-dir``/``GIT_DIR`` (``/x/.git`` → ``/x``), else the segment's directory."""
+        if self.work_tree:
+            return self.work_tree
+        if self.git_dir:
+            gd = posixpath.normpath(self.git_dir)
+            return posixpath.dirname(gd) if posixpath.basename(gd) == ".git" else gd
+        return self.dir
+
+    def branch(self, ctx):
+        rc, out = self.git(ctx, "symbolic-ref", "--quiet", "--short", "HEAD")
+        return out if rc == 0 and out else None
+
+    def toplevel(self, ctx):
+        rc, out = self.git(ctx, "rev-parse", "--show-toplevel")
+        if rc == 0 and out:
+            return out
+        return self.git_dir or self.dir
+
+    def resolve_alias(self, ctx):
+        """Replace an alias subcommand by what it runs (``git config --get alias.X``)."""
+        if not self.sub or self.sub in GIT_BUILTINS or self.unresolved:
+            return None
+        rc, val = self.git(ctx, "config", "--get", "alias." + self.sub)
+        if rc != 0 or not val:
+            return None
+        self.via_alias = self.sub
+        if val.startswith("!"):
+            return val[1:] + (" " + " ".join(shlex.quote(a) for a in self.args) if self.args else "")
+        try:
+            words = shlex.split(val)
+        except ValueError:
+            return None
+        if words:
+            self.sub, self.args = words[0], words[1:] + self.args
+        return None
+
+
+def git_targets(ctx, parsed=None):
+    """``[(segment, GitTarget)]`` for every git segment, aliases expanded (shell aliases parsed)."""
+    from . import shellparse
+    out = []
+    parsed = parsed or ctx.parsed
+    for seg in parsed.segments:
+        if seg.argv0 != "git" or not seg.git:
+            continue
+        t = GitTarget(seg)
+        script = t.resolve_alias(ctx)
+        if script is not None:
+            sub = shellparse.parse(script, cwd=t.dir)
+            for s2 in sub.segments:
+                if s2.argv0 == "git" and s2.git:
+                    t2 = GitTarget(s2)
+                    t2.via_alias = t.via_alias
+                    out.append((s2, t2))
+            continue
+        out.append((seg, t))
+    return out
+
+
+def flow_config(ctx, target_dir):
+    """``(root, integration, production)`` for a target dir: its own Karvey project, else the
+    session's; ``(None, None, None)`` when neither is a Karvey project."""
+    root = None
+    if target_dir and os.path.isdir(target_dir):
+        root = _memo(ctx, ("root-of", target_dir), lambda: pj.find_root(start=target_dir))
+    root = root or ctx.root
+    if root is None:
+        return None, None, None
+    wc, _ = project_wc(ctx, root)
+    _, integ, prod = pj.branch_flow(wc or {})
+    return root, integ, prod
+
+
+def _push_parse(args):
+    """``(remote, refspecs, flags)`` of ``git push`` arguments."""
+    flags, pos = set(), []
+    with_arg = {"--repo", "-o", "--push-option", "--receive-pack", "--exec"}
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "--":
+            pos += args[i + 1:]
+            break
+        if a in with_arg:
+            i += 2
+            continue
+        if a.startswith("--"):
+            flags.add(a.split("=", 1)[0])
+        elif a.startswith("-") and len(a) > 1:
+            for ch in a[1:]:
+                flags.add("-" + ch)
+        else:
+            pos.append(a)
+        i += 1
+    remote = pos[0] if pos else None
+    return remote, pos[1:], flags
+
+
+def _strip_heads(ref):
+    for p in ("refs/heads/", "heads/"):
+        if ref.startswith(p):
+            return ref[len(p):]
+    return ref
+
+
+def push_destinations(args, head):
+    """``[(src, dst, forced, delete)]`` for a push, ``[]`` for a bare push."""
+    remote, specs, flags = _push_parse(args)
+    forced_all = bool(flags & {"-f", "--force", "--force-with-lease", "--force-if-includes"})
+    out = []
+    for spec in specs:
+        forced = forced_all or spec.startswith("+")
+        spec = spec.lstrip("+")
+        if ":" in spec:
+            src, dst = spec.split(":", 1)
+        else:
+            src, dst = spec, spec
+        if src == "HEAD" and dst == "HEAD":
+            dst = head or "HEAD"
+        delete = src == "" or "--delete" in flags or "-d" in flags
+        if delete and ":" not in spec:
+            src = ""
+        out.append((_strip_heads(src), _strip_heads(dst), forced, delete))
+    return out, flags
+
+
+# --------------------------------------------------------------------------- git-flow (§3.4)
+DEPLOY_PATTERNS = (
+    ("func", ("azure", "functionapp", "publish")),
+    ("az", ("webapp", "up")),
+    ("az", ("functionapp", "deployment", "source", "config-zip")),
+    ("az", ("webapp", "deployment", "source", "config-zip")),
+    ("firebase", ("deploy",)),
+    ("gcloud", ("app", "deploy")),
+    ("gcloud", ("run", "deploy")),
+)
+
+
+def manual_deploy(seg):
+    n, args = seg.argv0, [a for a in seg.argv[1:] if not a.startswith("-")]
+    for name, words in DEPLOY_PATTERNS:
+        if n == name and tuple(args[:len(words)]) == words:
+            return " ".join((name,) + words)
+    if n == "vercel" and "--prod" in seg.argv:
+        return "vercel --prod"
+    if n == "netlify" and "deploy" in args[:1] and "--prod" in seg.argv:
+        return "netlify deploy --prod"
+    return None
+
+
+def _gf_block(rule, repo, branch):
+    return Decision.block("[karvey] BLOCK git-flow: %s (%s@%s)" % (rule, repo or "?", branch or "?"),
+                          record={"reason": rule, "branch": branch})
+
+
+def git_flow_enabled(ctx):
+    """Runs when forced, or when the command has a git or deploy segment (cheap); whether the
+    target's project has git-flow on is decided per segment in :func:`git_flow`."""
+    if ctx.force_enabled:
+        return True
+    cmd = ctx.payload.command or ""
+    return bool(re.search(r"\bgit\b|functionapp|webapp|vercel|netlify|firebase|gcloud", cmd))
+
+
+def _gf_on(ctx, root):
+    return ctx.force_enabled or opt_in_enabled(ctx, "git_flow_hook", root)
+
+
+def git_flow(ctx):
+    cmd = ctx.payload.command or ""
+    parsed = ctx.parsed
+    if parsed.unparsed:
+        if _gf_on(ctx, ctx.root) and re.search(r"\bgit\b.*\b(commit|push|merge|cherry-pick|revert|am)\b", cmd):
+            return _gf_block("cannot parse the command; rewrite it without unbalanced quotes", None, None)
+        return None
+    for seg in parsed.segments:
+        d = manual_deploy(seg)
+        if d and _gf_on(ctx, ctx.root):
+            return _gf_block("manual deploy (%s) is forbidden; deploys run from the pipeline" % d, None, None)
+    for seg, t in git_targets(ctx, parsed):
+        if t.sub not in GIT_GATED:
+            continue
+        root, integ, prod = flow_config(ctx, t.config_dir())
+        if root is None and not ctx.force_enabled:
+            continue
+        if not _gf_on(ctx, root):
+            continue
+        if ctx.force_enabled and root is None:  # legacy shim outside a project: the template defaults
+            integ = ctx.env.get("KARVEY_BRANCH_INTEGRATION") or "dev"
+            prod = ctx.env.get("KARVEY_BRANCH_PRODUCTION") or "master"
+        if t.unresolved:
+            return _gf_block("cannot resolve the target repository; rewrite without variables "
+                             "(use a literal path with git -C or cd)", t.dir, None)
+        prods = {prod} if prod else {"main", "master"}
+        trunk = integ is not None and integ in prods
+        protected = prods | ({integ} if integ else set())
+        repo = t.toplevel(ctx)
+        head = t.branch(ctx)
+        how = " via alias %s" % t.via_alias if t.via_alias else ""
+        if t.sub in ("commit", "cherry-pick", "revert", "am"):
+            if t.sub != "commit" and any(a in ("--abort", "--quit", "--skip") for a in t.args):
+                continue
+            if head in protected:
+                return _gf_block("%s%s on %s; work on a feature branch" % (t.sub, how, head), repo, head)
+            continue
+        if t.sub == "merge":
+            if any(a in ("--abort", "--quit") for a in t.args):
+                continue
+            if head in prods:
+                return _gf_block("merge%s on the production branch; merges into %s go through a PR" % (how, head),
+                                 repo, head)
+            continue
+        # push
+        dests, flags = push_destinations(t.args, head)
+        if "--dry-run" in flags or "-n" in flags:
+            continue
+        if "--all" in flags or "--mirror" in flags:
+            return _gf_block("push --all/--mirror also pushes the protected branches", repo, head)
+        forced = bool(flags & {"-f", "--force", "--force-with-lease", "--force-if-includes"})
+        if not dests:
+            if head in prods or (trunk and head == integ):
+                return _gf_block("bare push%s on the production branch" % how, repo, head)
+            if forced and head in protected:
+                return _gf_block("force push to %s" % head, repo, head)
+            continue
+        for src, dst, f, delete in dests:
+            if "$" in dst or "`" in dst or "$" in src:
+                return _gf_block("cannot resolve the push destination; rewrite without variables", repo, head)
+            if dst in prods:
+                return _gf_block("push to the production branch %s%s; it goes through a PR" % (dst, how), repo, head)
+            if integ and dst == integ:
+                if f or delete:
+                    return _gf_block("force push or delete of the integration branch %s" % dst, repo, head)
+                local_integ = src in (integ, "refs/heads/" + integ) or (src == "HEAD" and head == integ)
+                if not local_integ:
+                    return _gf_block("push of %s into the integration branch %s; merge locally into %s, then "
+                                     "push %s" % (src or "?", dst, integ, integ), repo, head)
+    return None
+
+
 # --------------------------------------------------------------------------- approval hook
 def _audit(root, record):
     try:
@@ -479,4 +764,5 @@ def approval_hook(ctx):
         return None
 
 
-__all__ = ["Decision", "protect_paths", "approval_hook", "plan_gate", "plan_gate_enabled", "EDIT_TOOLS", "hookio"]
+__all__ = ["Decision", "protect_paths", "approval_hook", "plan_gate", "plan_gate_enabled", "git_flow",
+           "git_flow_enabled", "EDIT_TOOLS", "hookio"]
