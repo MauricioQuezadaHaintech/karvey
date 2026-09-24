@@ -228,6 +228,17 @@ def approvals_snapshot(common):
 
 def nopy_path(tmp, stubs_dir):
     """A PATH with every executable of the current PATH except the python interpreters."""
+    if os.name == "nt":
+        # Symlinks need a privilege Windows runners lack, and Git Bash's tools need their DLLs beside
+        # them: drop every PATH directory that holds an interpreter instead (F-45). Git's usr\bin has none.
+        keep = [str(stubs_dir)]
+        for part in os.environ.get("PATH", "").split(os.pathsep):
+            try:
+                if part and os.path.isdir(part) and not any(_PY.match(n.lower()) for n in os.listdir(part)):
+                    keep.append(part)
+            except OSError:
+                continue
+        return os.pathsep.join(keep)
     d = tmp / "nopy-bin"
     if d.is_dir():
         return "%s:%s" % (stubs_dir, d)
@@ -409,7 +420,7 @@ def run_case(case, nopy=False, keep=False):
                     (stub_data / ("%s.%s" % (name, k))).write_text(
                         t.s(v) if isinstance(v, str) else (json.dumps(v) if k in ("stdout", "stderr") else str(v)),
                         encoding="utf-8")
-        env["PATH"] = nopy_path(tmp, STUBS) if nopy else "%s:%s" % (STUBS, env["PATH"])
+        env["PATH"] = nopy_path(tmp, STUBS) if nopy else os.pathsep.join((str(STUBS), env["PATH"]))
         env.update({"CLAUDE_PLUGIN_ROOT": str(PLUGIN_ROOT), "CLAUDE_PROJECT_DIR": str(cwd),
                     "KARVEY_STUB_DATA": str(stub_data)})
         for k, v in (given.get("env") or {}).items():
