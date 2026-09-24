@@ -13,6 +13,10 @@ Commands:
            [--fix [--dry-run] [--accept-proposed]]   legacy migration (§2.5)
   next <change>                         the computed next phase (REQ-W1-005)
   active                                the active change (§5), shared with hooks and dashboard
+  advance <change> <to> [--by] [--pipeline-run URL --post-deploy-check pass]
+  generated <change> <phase>            approvals.<phase>.generated = true
+  skip <change> <phase> --reason R      skipped[phase] = R (skippable phases only)
+  reopen <change> <phase> --reason R [--ref]   backward edge for karvey-iterate (spec-gap)
 """
 import argparse
 import copy
@@ -26,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import atomicio, project as pj, schema_lite as sl  # noqa: E402
+from karvey_lib import approval, atomicio, project as pj, schema_lite as sl  # noqa: E402
 
 TOOL = "karvey-state"
 SCHEMA_VERSION = 1
@@ -781,8 +785,12 @@ def cmd_next(args, root):
 
 
 def read_ledger_safe(root, change):
-    """``(ledger, known)``: known is False when the release ledger is not available."""
-    return None, False
+    """``(ledger, known)``: known is False when the release ledger cannot be located."""
+    try:
+        ledger, status = approval.read_ledger(root, change)
+    except (approval.ApprovalError, OSError):
+        return None, False
+    return (ledger if status == "ok" else None), True
 
 
 def cmd_active(args, root):
@@ -796,7 +804,245 @@ def cmd_active(args, root):
     return kl.EXIT_OK, res, [], [], human
 
 
-COMMANDS = {"validate": cmd_validate, "next": cmd_next, "active": cmd_active}
+# --------------------------------------------------------------------------- transitions
+def _approvals(data):
+    if not isinstance(data.get("approvals"), dict):
+        data["approvals"] = {}
+    return data["approvals"]
+
+
+def _normalise_owned(data):
+    """Bring the fields the tool owns to their normal form (§1.2 legacy files): an exact-tier
+    phase and hand-written history transitions; every other legacy field is left as is."""
+    mapped, tier = map_phase(data.get("phase"))
+    if tier == "unmappable":
+        raise Refused("phase %r is unmappable legacy: run validate --fix --dry-run" % (data.get("phase"),),
+                      code="state.unmappable")
+    if tier == "proposed":
+        raise Refused("phase %r is a proposed-tier legacy value (→ %r): run validate --fix --dry-run "
+                      "--accept-proposed" % (data.get("phase"), mapped), code="state.unmappable")
+    data["phase"] = mapped
+    if "phase_history" in data:
+        data["phase_history"] = _fix_history(data["phase_history"], False, [])
+    return mapped
+
+
+def _last_entry_ok(data):
+    hist = data.get("phase_history")
+    if hist is None:
+        data["phase_history"] = []
+        return
+    if not isinstance(hist, list):
+        raise Refused("phase_history is not a list: run validate", code="state.history_corrupt")
+    if not hist:
+        return
+    last = hist[-1]
+    if not isinstance(last, dict) or not isinstance(last.get("phase"), str) or not last.get("entered_at"):
+        raise Refused("phase_history last entry is corrupt (no phase/entered_at): %s"
+                      % json.dumps(last, ensure_ascii=False)[:120], code="state.history_corrupt")
+
+
+def _move_history(data, to, now, by=None, ref=None, evidence=None):
+    hist = data["phase_history"]
+    if hist and "exited_at" not in hist[-1]:
+        hist[-1] = with_exited(hist[-1], now)
+    entry = {"phase": to, "entered_at": now}
+    if by:
+        entry["by"] = by
+    if ref:
+        entry["ref"] = ref
+    if evidence:
+        entry["evidence"] = evidence
+    hist.append(entry)
+
+
+def _key_of(phase):
+    """The approval key of a phase id (or an approval key itself, e.g. ``deploy``)."""
+    pdef = phase_def(phase)
+    if pdef and pdef["approval"]:
+        return pdef["approval"]
+    keys = {p["approval"] for p in machine()["phases"] if p["approval"]}
+    return phase if phase in keys else None
+
+
+def transact(root, change, mutate):
+    """Read → mutate a copy → check the write keeps the owned fields valid → atomic CAS write."""
+    path, loaded = load_change(root, change)
+    before = loaded.data
+    data = copy.deepcopy(before)
+    result = mutate(data)
+    if data == before:
+        return path, result, False
+    name = rel(root, path)
+    old = {(i["code"], i["path"]) for i in validate_data(before, "spec", False, name) if i["severity"] == "error"}
+    new = [i for i in validate_data(data, "spec", False, name) if i["severity"] == "error"
+           and (i["code"], i["path"]) not in old]
+    if new:
+        raise Refused("the write would make %s invalid: %s" % (name, "; ".join(
+            "%s %s" % (i["path"], i["message"]) for i in new[:3])), code="state.invalid_write")
+    atomicio.write_json(path, data, loaded=loaded)
+    return path, result, True
+
+
+def consume_on_close(root, change, data, closing):
+    """Consume the markers of the phase that closed (REQ-W1-016); filled in by E1.F3.T6."""
+    return []
+
+
+def cmd_advance(args, root):
+    to = args.to
+    if to not in phase_ids():
+        raise Usage("unknown phase %r (one of %s)" % (to, ", ".join(phase_ids())))
+    if (args.pipeline_run or args.post_deploy_check) and to != "deployed":
+        raise Usage("--pipeline-run and --post-deploy-check are only for 'deployed'")
+    now = now_iso()
+    info = {}
+
+    def mutate(data):
+        cur = _normalise_owned(data)
+        _last_entry_ok(data)
+        ci, ti = phase_index(cur), phase_index(to)
+        if ti == ci:
+            raise Refused("%s is already in %s" % (args.change, to), code="state.edge")
+        if ti < ci:
+            raise Refused("edge not in the graph: %s → %s (backward: use reopen)" % (cur, to), code="state.edge")
+        for ph in gate_phases_before(ti):
+            if approval_state(data, ph) == "pending":
+                raise Refused("%s not approved or skipped" % ph, code="state.precondition")
+        for p in machine()["phases"][ci + 1:ti]:
+            if is_skipped(data, p["id"]) or (p["approval"] and approval_state(data, p["id"]) == "approved"):
+                continue
+            raise Refused("edge not in the graph: %s → %s (%s not passed)" % (cur, to, p["id"]), code="state.edge")
+        evidence = None
+        if to == "deployed":
+            ledger, _ = read_ledger_safe(root, args.change)
+            missing = []
+            prod = (ledger or {}).get("prod") if ledger else None
+            if not (isinstance(prod, dict) and prod.get("by") and prod.get("role") == "human" and prod.get("ref")):
+                missing.append("release ledger has no human prod approval (approve %s prod)" % args.change)
+            if not args.pipeline_run:
+                missing.append("--pipeline-run <url> (the green production pipeline)")
+            if args.post_deploy_check != "pass":
+                missing.append("--post-deploy-check pass")
+            if missing:
+                raise Refused("deployed needs release evidence: " + "; ".join(missing), code="state.evidence")
+            evidence = {"pipeline_run": args.pipeline_run, "post_deploy_check": "pass"}
+            info["ledger"] = "release"
+        if to == "archived" and approval_state(data, "deployed") != "approved":
+            raise Refused("archived needs approvals.prod in spec.json (by, role human, ref): run "
+                          "approve %s prod --write-spec on the archive branch" % args.change, code="state.precondition")
+        _move_history(data, to, now, by=args.by, evidence=evidence)
+        data["phase"] = to
+        data["updated_at"] = now
+        info.update({"from": cur, "to": to})
+        return info
+
+    path, loaded = load_change(root, args.change)  # exit 4 before touching the ledger
+    if to == "deployed":
+        # validate first, then write the ledger, then spec.json (a re-run is idempotent)
+        mutate(copy.deepcopy(loaded.data))
+        approval.record_release(root, args.change, args.pipeline_run, "pass", at=now)
+    info.clear()
+    path, res, _ = transact(root, args.change, mutate)
+    res["consumed"] = consume_on_close(root, args.change, loaded.data, res["from"])
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], [], "%s: %s → %s" % (args.change, res["from"], res["to"])
+
+
+def cmd_generated(args, root):
+    key = _key_of(args.phase)
+    if key is None or key == "prod":
+        raise Refused("unknown or non-generable phase %r" % args.phase, code="state.unknown_phase")
+
+    def mutate(data):
+        ap = _approvals(data)
+        cur = ap.get(key) if isinstance(ap.get(key), dict) else {"generated": False, "approved": False}
+        cur = dict(cur)
+        cur["generated"] = True
+        cur.setdefault("approved", False)
+        ap[key] = cur
+        data["updated_at"] = now_iso()
+        return {"change": args.change, "approval": key, "generated": True}
+
+    path, res, changed = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], [], "%s: approvals.%s.generated = true" % (args.change, key)
+
+
+def cmd_skip(args, root):
+    pdef = phase_def(args.phase)
+    skippable = [p["id"] for p in machine()["phases"] if p["skippable"]]
+    if not pdef or not pdef["skippable"]:
+        raise Refused("phase %r is not skippable (skippable: %s)" % (args.phase, ", ".join(skippable)),
+                      code="state.not_skippable")
+    reason = (args.reason or "").strip()
+    if not reason:
+        raise Refused("a skip needs a non-empty --reason", code="state.reason")
+    warnings = []
+
+    def mutate(data):
+        sk = data.get("skipped")
+        if not isinstance(sk, dict):
+            sk = {}
+            data["skipped"] = sk
+        sk[args.phase] = reason
+        data["updated_at"] = now_iso()
+        if approval_state(dict(data, skipped={}), args.phase) == "approved":
+            warnings.append(kl.issue("state.skipped_and_approved", "phase %r is also approved" % args.phase,
+                                     severity="warning", path="$.skipped.%s" % args.phase))
+        return {"change": args.change, "skipped": args.phase, "reason": reason}
+
+    path, res, _ = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], warnings, "%s: skipped.%s = %r" % (args.change, args.phase, reason)
+
+
+def cmd_reopen(args, root):
+    targets = machine()["reopen_targets"]
+    if args.phase not in targets:
+        raise Refused("%r is not a reopen target (%s)" % (args.phase, ", ".join(targets)), code="state.edge")
+    reason = (args.reason or "").strip()
+    if not reason:
+        raise Refused("a reopen needs a non-empty --reason", code="state.reason")
+    now = now_iso()
+
+    def mutate(data):
+        cur = _normalise_owned(data)
+        _last_entry_ok(data)
+        ci, ti = phase_index(cur), phase_index(args.phase)
+        if ci > phase_index("qa"):
+            raise Refused("reopen is allowed up to qa; %s is in %s" % (args.change, cur), code="state.edge")
+        if ti > ci:
+            raise Refused("cannot reopen forward: %s is in %s" % (args.change, cur), code="state.edge")
+        ap = _approvals(data)
+        superseded = {}
+        for p in machine()["phases"][ti:]:
+            key = p["approval"]
+            if key and key != "prod" and isinstance(ap.get(key), dict):
+                superseded[key] = copy.deepcopy(ap[key])
+                ap[key] = {"generated": ap[key].get("generated", False) is True, "approved": False}
+        rh = data.get("revision_history")
+        if not isinstance(rh, list):
+            rh = []
+            data["revision_history"] = rh
+        entry = {"at": now, "reopened": args.phase, "from_phase": cur, "reason": reason}
+        if args.ref:
+            entry["ref"] = args.ref
+        entry["superseded_approvals"] = superseded
+        rh.append(entry)
+        _move_history(data, args.phase, now, ref=args.ref)
+        data["phase"] = args.phase
+        data["updated_at"] = now
+        return {"change": args.change, "from": cur, "to": args.phase, "superseded": sorted(superseded)}
+
+    path, res, _ = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], [], "%s: reopened %s (from %s); superseded: %s" % (
+        args.change, res["to"], res["from"], ", ".join(res["superseded"]) or "none")
+
+
+COMMANDS = {"validate": cmd_validate, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
+            "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen}
 
 
 def build_parser():
@@ -820,6 +1066,24 @@ def build_parser():
     n = sub.add_parser("next", parents=[common], help="the computed next phase of a change")
     n.add_argument("change")
     sub.add_parser("active", parents=[common], help="the active change (§5)")
+    a = sub.add_parser("advance", parents=[common], help="apply a forward edge of the phase graph")
+    a.add_argument("change")
+    a.add_argument("to")
+    a.add_argument("--by", help="who applies it (recorded in phase_history)")
+    a.add_argument("--pipeline-run", help="deployed only: URL of the green production pipeline run")
+    a.add_argument("--post-deploy-check", choices=["pass"], help="deployed only: the post-deploy check passed")
+    gnr = sub.add_parser("generated", parents=[common], help="approvals.<phase>.generated = true")
+    gnr.add_argument("change")
+    gnr.add_argument("phase")
+    sk = sub.add_parser("skip", parents=[common], help="record a skipped phase with its reason")
+    sk.add_argument("change")
+    sk.add_argument("phase")
+    sk.add_argument("--reason")
+    ro = sub.add_parser("reopen", parents=[common], help="backward edge (karvey-iterate, spec-gap)")
+    ro.add_argument("change")
+    ro.add_argument("phase")
+    ro.add_argument("--reason")
+    ro.add_argument("--ref")
     return p
 
 
