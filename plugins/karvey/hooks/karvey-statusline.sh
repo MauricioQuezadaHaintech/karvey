@@ -5,13 +5,18 @@
 # Uses the fields Claude Code provides on stdin (context_window, rate_limits, cost).
 # If this CLI version does not provide them, it falls back to reading the transcript.
 #
-# Thresholds (env): KARVEY_ROTATE_CTX_YELLOW (def. 100000) · KARVEY_ROTATE_CTX_RED (def. 150000)
-#                   KARVEY_ROTATE_HOURS (def. `rotation_hours` of scripts/karvey_lib/defaults.json, the one
-#                   place for it, D-06 / REQ-W1-049; `rot?` is shown when that file cannot be found)
+# Thresholds (env), each defaulting to scripts/karvey_lib/defaults.json, the one place for them (REQ-W1-049):
+#                   KARVEY_ROTATE_CTX_YELLOW_PCT · KARVEY_ROTATE_CTX_RED_PCT (`context_pct`, D-18): percent of
+#                   the context window, used whenever the percentage is known (native or computed from
+#                   context_window_size)
+#                   KARVEY_ROTATE_CTX_YELLOW · KARVEY_ROTATE_CTX_RED (`context_tokens`): tokens, only when the
+#                   window size is unknown
+#                   KARVEY_ROTATE_HOURS (`rotation_hours` of defaults.json, D-06; `rot?` is shown when that file cannot be found)
 #                   KARVEY_TZ (IANA zone for the reset clock, e.g. America/Santiago; def. the system's;
 #                   an invalid zone shows the system time marked `(TZ?)`, REQ-W1-100)
 # Each account window shows when it resets and how long is left: `5h 29% ↻18:05 (1h31m)`.
-# 150k comes from measurement: at 588k a turn costs 7x what it costs at 80k, and rotating costs ~40k.
+# A percentage scales with the window (200k or 1M); the token pair is the fallback. Cost grows with
+# context: at 588k a turn costs 7x what it costs at 80k, and rotating costs ~40k.
 #
 # A plugin cannot declare a statusline (only `agent` and `subagentStatusLine` are accepted), so this
 # is installed by the user, once, in their own settings.json. See hooks/README.md.
@@ -35,25 +40,34 @@ try:
 except Exception:
     d = {}
 
-CTX_Y = int(os.environ.get('KARVEY_ROTATE_CTX_YELLOW', 100_000))
-CTX_R = int(os.environ.get('KARVEY_ROTATE_CTX_RED', 150_000))
+def _load_defaults():
+    try:
+        with open(os.environ.get('KARVEY_DEFAULTS_JSON') or '', encoding='utf-8-sig') as fh:
+            v = json.load(fh)
+        return v if isinstance(v, dict) else {}
+    except Exception:
+        return {}
 
-def _rotation_hours():
-    # KARVEY_ROTATE_HOURS wins; else defaults.json:rotation_hours; else None (shown as `rot?`).
-    v = os.environ.get('KARVEY_ROTATE_HOURS')
+DEFAULTS = _load_defaults()
+
+def _threshold(env, *keys):
+    # The env variable wins; else defaults.json at keys; else None (a missing threshold never fires).
+    v = os.environ.get(env)
     if v not in (None, ''):
         try:
             return float(v)
         except ValueError:
             pass
-    try:
-        with open(os.environ.get('KARVEY_DEFAULTS_JSON') or '', encoding='utf-8-sig') as fh:
-            r = json.load(fh).get('rotation_hours')
-        return float(r) if isinstance(r, (int, float)) and not isinstance(r, bool) and r > 0 else None
-    except Exception:
-        return None
+    r = DEFAULTS
+    for key in keys:
+        r = r.get(key) if isinstance(r, dict) else None
+    return float(r) if isinstance(r, (int, float)) and not isinstance(r, bool) and r > 0 else None
 
-HOURS = _rotation_hours()
+PCT_Y = _threshold('KARVEY_ROTATE_CTX_YELLOW_PCT', 'context_pct', 'yellow')
+PCT_R = _threshold('KARVEY_ROTATE_CTX_RED_PCT', 'context_pct', 'red')
+CTX_Y = _threshold('KARVEY_ROTATE_CTX_YELLOW', 'context_tokens', 'yellow')
+CTX_R = _threshold('KARVEY_ROTATE_CTX_RED', 'context_tokens', 'red')
+HOURS = _threshold('KARVEY_ROTATE_HOURS', 'rotation_hours')
 
 # The reset-clock zone, resolved once per run. An invalid KARVEY_TZ is not silent (BUG-08).
 TZ, TZ_BAD = None, False
@@ -132,9 +146,17 @@ def k(n):
     if n >= 1_000:     return f'{n/1_000:.0f}k'
     return str(int(n))
 
-if   ctx >= CTX_R: light, why = '🔴', 'context'
-elif ctx >= CTX_Y: light, why = '🟡', ''
-else:              light, why = '🟢', ''
+# Percentage of the window when it is known (D-18), tokens otherwise.
+size = cw.get('context_window_size')
+if pct is None and ctx and isinstance(size, (int, float)) and not isinstance(size, bool) and size > 0:
+    pct = ctx * 100.0 / size
+if pct is not None and (PCT_Y is not None or PCT_R is not None):
+    level, y, r = pct, PCT_Y, PCT_R
+else:
+    level, y, r = ctx, CTX_Y, CTX_R
+if   r is not None and level >= r: light, why = '🔴', 'context'
+elif y is not None and level >= y: light, why = '🟡', ''
+else:                              light, why = '🟢', ''
 if HOURS is not None and h >= HOURS:
     light = '🔴'
     why = f'{why} + hours' if why else 'hours'

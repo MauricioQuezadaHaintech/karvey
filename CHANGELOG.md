@@ -78,6 +78,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 - F-37 — the CI `tests` job runs the guard tables once: `test-hooks.sh` gets `KARVEY_SKIP_TABLES=1` because `run_tables.py --junit` already runs them in the previous step; `test_ci_workflow.py` checks the switch. Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5. Why: each of the four legs ran every table twice for no extra coverage.
 - F-38 — a legacy `project.json` `management.status_flow` keyed by the logical states is proposed as `statuses` by `karvey-config.py propose-settings --from-legacy` and moved there by `karvey-state.py validate --fix --accept-proposed` (plain `--fix` names it and keeps it; a map with other keys is kept); `validate --fix` also rewrites the `google_chat` channel alias to `google-chat`. Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5. Why: a repo that already wrote its status map (Tarien's shape) was asked for it again, because the tools ignored `status_flow`.
 
+### Changed
+- Statusline context lights by percent of the window: amber at 30 %, red + TIME TO ROTATE at 50 % (`defaults.json:context_pct`, env `KARVEY_ROTATE_CTX_{YELLOW,RED}_PCT`); the 100k/150k token pair is only the fallback without a window size. Why: fixed tokens fired at 15 % of a 1M window (D-18, F-41, F-33).
+
 ## [3.11.4] - 2026-09-23 — hotfix
 
 ### Fixed

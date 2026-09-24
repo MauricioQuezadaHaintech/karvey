@@ -247,6 +247,6 @@ hook resolves the same two layouts; `karvey-team init` migrates them rather than
 - It does not replace the living specs nor `spec.json`; it only saves/restores the work-in-progress.
 - It never advances the change's phase.
 - **On session start** the plugin's hook reinjects identity, the compact **or** the full manifest (never both), board and handoff, compares `state.json` against the live repos, and **tells the session to run `/karvey-checkpoint restore` first** when there is an active change or the state has drifted. The hook reinjects and measures; the restore itself — crossing decisions, recreating scheduled tasks, proposing the next step — is this skill's job, because a hook cannot invoke a skill.
-- Rotation thresholds: `team.json:rotation` when there is a team, otherwise `rotation_hours` and `context_tokens` in `${CLAUDE_PLUGIN_ROOT}/scripts/karvey_lib/defaults.json` (D-06), or the close of a work block.
+- Rotation thresholds: `team.json:rotation` when there is a team, otherwise `rotation_hours`, `context_pct` (percent of the window, D-18; `context_tokens` when the window size is unknown) in `${CLAUDE_PLUGIN_ROOT}/scripts/karvey_lib/defaults.json` (D-06), or the close of a work block.
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

@@ -65,11 +65,12 @@ It runs outside the turn (no model tokens) and shows context, account limits wit
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `KARVEY_ROTATE_CTX_YELLOW` | `100000` | amber light |
-| `KARVEY_ROTATE_CTX_RED` | `150000` | red light + "TIME TO ROTATE" |
+| `KARVEY_ROTATE_CTX_YELLOW_PCT` | `context_pct.yellow` in `../scripts/karvey_lib/defaults.json` (D-18) | amber light, percent of the context window |
+| `KARVEY_ROTATE_CTX_RED_PCT` | `context_pct.red` in `../scripts/karvey_lib/defaults.json` (D-18) | red light + "TIME TO ROTATE" |
+| `KARVEY_ROTATE_CTX_YELLOW` · `KARVEY_ROTATE_CTX_RED` | `context_tokens` in `../scripts/karvey_lib/defaults.json` | token thresholds, used only when the window size is unknown |
 | `KARVEY_ROTATE_HOURS` | `rotation_hours` in `../scripts/karvey_lib/defaults.json` (D-06) | session hours before red |
 
-**Why a context threshold:** a turn at 588k of context costs **7×** one at 80k, and rotating costs ~40k to
+**Why a context threshold:** a percentage scales with the window (200k or 1M). A turn at 588k of context costs **7×** one at 80k, and rotating costs ~40k to
 re-read the handoff.
 
 ## Lessons kept in the scripts

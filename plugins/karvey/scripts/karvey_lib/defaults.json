@@ -1,7 +1,8 @@
 {
   "$comment": "The one place for the D-06/D-07 defaults (REQ-W1-049). Scripts, hooks, the statusline and the docs read or cite these values; a second literal elsewhere is a lint failure.",
   "rotation_hours": 8,
-  "context_tokens": {"yellow": 100000, "red": 150000},
+  "context_pct": {"$comment": "D-18: percent of the context window; the statusline uses it whenever the percentage is known.", "yellow": 30, "red": 50},
+  "context_tokens": {"$comment": "Fallback when the window size is unknown.", "yellow": 100000, "red": 150000},
   "plan_marker_ttl_min": 120,
   "plan_marker_ttl_bounds": {"minimum": 5, "maximum": 1440},
   "stall_days": 7,

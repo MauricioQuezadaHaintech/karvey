@@ -174,6 +174,12 @@ corrected, not annotated at the end.
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Answer, verbatim:** «Cerrarlo ahora (Recomendado)»
 - **What:** `karvey-config.py notify-check --confirm` counts only when backed by a human-written confirmation captured by the UserPromptSubmit hook, like the approval markers; the agent cannot confirm a changed destination by itself.
 
+## D-18 — Statusline context lights by percent of the window
+
+- **What:** the statusline turns amber at **30 %** of the context window and red with TIME TO ROTATE at **50 %** (`defaults.json:context_pct`, env `KARVEY_ROTATE_CTX_{YELLOW,RED}_PCT`). The token pair (`context_tokens`, 100k/150k) stays only as the fallback when the window size is unknown. Resolves F-33 and records F-41.
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Request, verbatim:** «aprovecha de cambiar los colores y alerta del statusline: al 30% del ctx amarillo, 50% rojo rotar»
+- **What it does NOT say:** it does not change `rotation_hours` (D-06) nor `team.json:rotation.context_threshold`; on a 1M window red now fires at 500k (was 150k), on a 200k window at 100k.
+
 ## D-17 — Minor implementation decisions accepted
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Answer, verbatim:** «Sí, todas (Recomendado)»
