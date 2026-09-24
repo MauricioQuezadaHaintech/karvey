@@ -76,3 +76,6 @@ jobs:
       - run: cd plugins/karvey/tests/unit && python -m unittest -v test_paths test_hookio test_atomicio
       # the dispatcher through Git Bash: the smoke cases tagged windows (never an empty selection)
       - run: python plugins/karvey/tests/hooks/run_tables.py --tag windows -v
+        env:
+          # process start-up on Windows runners is ~2x Linux; the 1 s case limit doubles here (F-46)
+          KARVEY_TABLES_TIME_FACTOR: '2'

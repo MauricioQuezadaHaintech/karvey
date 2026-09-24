@@ -62,6 +62,11 @@ STUBS = HERE / "stubs"
 # The bash on PATH, resolved once: on Windows CreateProcess searches System32 before PATH, so a bare
 # "bash" runs WSL's bash.exe instead of Git Bash (F-43).
 BASH = shutil.which("bash") or "bash"
+# Multiplies every case's time limit; the Windows CI job sets 2 (slower process start-up, F-46).
+try:
+    TIME_FACTOR = max(1.0, float(os.environ.get("KARVEY_TABLES_TIME_FACTOR") or 1))
+except ValueError:
+    TIME_FACTOR = 1.0
 sys.path.insert(0, str(PLUGIN_ROOT / "scripts"))
 from karvey_lib import approval  # noqa: E402
 
@@ -387,6 +392,8 @@ def assert_expect(expect, rc, out, err, created, duration, tags):
     if "marker_created" in expect and bool(expect["marker_created"]) != created:
         problems.append("marker_created %s, expected %s" % (created, expect["marker_created"]))
     limit = expect.get("max_s", None if "network" in tags else 1.0)
+    if limit is not None:
+        limit *= TIME_FACTOR
     if limit is not None and duration >= limit:
         problems.append("took %.2f s (limit %.2f s)" % (duration, limit))
     return problems

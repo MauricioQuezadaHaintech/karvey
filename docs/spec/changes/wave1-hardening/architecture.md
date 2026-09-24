@@ -505,6 +505,7 @@ jobs:
         with: { python-version: '3.12' }
       - run: cd plugins/karvey/tests/unit && python -m unittest -v test_paths test_hookio test_atomicio
       - run: python plugins/karvey/tests/hooks/run_tables.py --tag windows -v
+        env: { KARVEY_TABLES_TIME_FACTOR: '2' }   # Windows process start-up ~2x (F-46)
 ```
 
 The `windows` tag (F-36) marks the smoke cases that exercise the dispatcher through Git Bash (allow, block, an
