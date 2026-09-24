@@ -69,7 +69,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F1: Hook contract capture (T-0)
 
-- [ ] E1.F1.T1 [Test] Capture one real hook payload per event in a throw-away plugin (T-0) — est: 30min
+- [x] E1.F1.T1 [Test] Capture one real hook payload per event in a throw-away plugin (T-0) — est: 30min
 - [ ] E1.F1.T2 [human] (Conditional) capture the payloads interactively if F1.T1 could not — executor: owner (depends E1.F1.T1)
 
 ### Feature E1.F2: Shared library and schemas
@@ -195,8 +195,8 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 | Task | Status | estimate_min | actual_ai_min | actual_review_min | Notes |
 |------|--------|--------------|---------------|-------------------|-------|
-| E1.F1.T1 [Test] | ⬜ todo | 30 | — | — |  |
-| E1.F1.T2 [human] | ⬜ todo | — | — | — | conditional: only if F1.T1 cannot capture headless |
+| E1.F1.T1 [Test] | ✅ done | 30 | 3 | 0 | captured headless (CLI 2.1.281); A-1..A-7 confirmed, A-8 nuance → F-04; no human review yet |
+| E1.F1.T2 [human] | ➖ not needed | — | — | — | conditional: F1.T1 captured headless, no human step required |
 | E1.F2.T1 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F2.T2 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F2.T3 [Backend] | ⬜ todo | 25 | — | — |  |

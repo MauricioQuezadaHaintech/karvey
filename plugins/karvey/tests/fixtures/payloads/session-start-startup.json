@@ -1,0 +1,7 @@
+{
+  "session_id": "00000000-0000-0000-0000-000000000000",
+  "transcript_path": "/SCRATCH/transcript/00000000-0000-0000-0000-000000000000.jsonl",
+  "cwd": "/SCRATCH/proj",
+  "hook_event_name": "SessionStart",
+  "source": "startup"
+}

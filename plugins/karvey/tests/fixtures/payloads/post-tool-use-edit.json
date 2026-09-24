@@ -1,0 +1,39 @@
+{
+  "session_id": "00000000-0000-0000-0000-000000000000",
+  "transcript_path": "/SCRATCH/transcript/00000000-0000-0000-0000-000000000000.jsonl",
+  "cwd": "/SCRATCH/proj",
+  "prompt_id": "00000000-0000-0000-0000-0000000000aa",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "/SCRATCH/proj/a.txt",
+    "old_string": "hi",
+    "new_string": "hello",
+    "replace_all": false
+  },
+  "tool_response": {
+    "filePath": "/SCRATCH/proj/a.txt",
+    "oldString": "hi",
+    "newString": "hello",
+    "originalFile": "hi",
+    "structuredPatch": [
+      {
+        "oldStart": 1,
+        "oldLines": 1,
+        "newStart": 1,
+        "newLines": 1,
+        "lines": [
+          "-hi",
+          "\\ No newline at end of file",
+          "+hello",
+          "\\ No newline at end of file"
+        ]
+      }
+    ],
+    "userModified": false,
+    "replaceAll": false
+  },
+  "tool_use_id": "toolu_000000000000000000000000",
+  "duration_ms": 15
+}

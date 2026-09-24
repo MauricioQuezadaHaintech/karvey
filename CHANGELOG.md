@@ -2,6 +2,11 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI traceability (Karvey policy).
 
+## [Unreleased]
+
+### Added
+- E1.F1.T1 — real hook payloads captured headless from CLI 2.1.281 into `plugins/karvey/tests/fixtures/payloads/` (9 sanitised fixtures); F-02 closed with a result per assumption A-1..A-10, A-8 nuance logged as F-04. Why: freeze the parser and guard tables on the real contract, not on docs.
+
 ## [3.11.4] - 2026-09-23 — hotfix
 
 ### Fixed

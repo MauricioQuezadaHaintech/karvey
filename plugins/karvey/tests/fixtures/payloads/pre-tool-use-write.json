@@ -1,0 +1,14 @@
+{
+  "session_id": "00000000-0000-0000-0000-000000000000",
+  "transcript_path": "/SCRATCH/transcript/00000000-0000-0000-0000-000000000000.jsonl",
+  "cwd": "/SCRATCH/proj",
+  "prompt_id": "00000000-0000-0000-0000-0000000000aa",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Write",
+  "tool_input": {
+    "file_path": "/SCRATCH/proj/a.txt",
+    "content": "hi"
+  },
+  "tool_use_id": "toolu_000000000000000000000000"
+}

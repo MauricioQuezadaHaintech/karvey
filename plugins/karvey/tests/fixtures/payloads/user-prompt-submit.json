@@ -1,0 +1,9 @@
+{
+  "session_id": "00000000-0000-0000-0000-000000000000",
+  "transcript_path": "/SCRATCH/transcript/00000000-0000-0000-0000-000000000000.jsonl",
+  "cwd": "/SCRATCH/proj",
+  "prompt_id": "00000000-0000-0000-0000-0000000000aa",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "Do exactly these steps in order, using tools: 1) run the Bash command: ls  2) run the Bash command: ls /tmp/kv-slow  3) use the Write tool to write the text hi to the file a.txt in the current directory  4) use the Write tool to write the text hi to block-me.txt in the current directory. Then answer: did you see the string KV-SENTINEL-6 in your context, and did you see KV-SENTINEL-4 after step 4? Quote any hook messages you got."
+}
