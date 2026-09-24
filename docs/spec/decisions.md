@@ -148,3 +148,13 @@ corrected, not annotated at the end.
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-23. **Answer, verbatim:** «KARVEY_COMPAT_MARKER (Recomendado)»
 - **What:** an env var in his `~/.claude/settings.json` makes Karvey's approval hook also write his legacy marker `/tmp/claude-plan-approved-*`, so his `require-plan*.sh` keep working after the CLAUDE.md change (D-01). The diff to his settings is shown to him before editing; it is not part of this repo.
 
+## D-12 — `infra` phase skipped for `wave1-hardening`
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Answer, verbatim:** «Omitida, con motivo (Recomendado)»
+- **What:** `skipped.infra = "no cloud; the CI workflow is built as tasks E1.F13"`.
+
+## D-13 — Tasks of `wave1-hardening` approved
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Question:** «¿Apruebas las tareas de wave1-hardening (73 tareas) para pasar a implementación?» **Answer, verbatim:** «Apruebo»
+- **What it does NOT say:** it does not approve QA or prod; the five `[human]` tasks stay his.
+

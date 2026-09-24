@@ -8,12 +8,12 @@
     "Infra"
   ],
   "created_at": "2026-09-23T19:22:52Z",
-  "updated_at": "2026-09-23T23:59:56Z",
+  "updated_at": "2026-09-24T00:10:00Z",
   "language": "en",
   "management": "markdown",
   "security_tier": 2,
   "security_tier_reason": "adds hooks that gate git operations and the merge to production; values from project.json reach shell commands",
-  "phase": "tasks",
+  "phase": "impl",
   "phase_history": [
     {
       "phase": "init",
@@ -37,13 +37,21 @@
       "at": "2026-09-23T22:30:00Z",
       "by": "Mauricio Quezada Ibáñez",
       "ref": "D-09"
+    },
+    {
+      "from": "tasks",
+      "to": "impl",
+      "at": "2026-09-24T00:10:00Z",
+      "by": "Mauricio Quezada Ibáñez",
+      "ref": "D-13"
     }
   ],
   "type": "feature",
   "lane": "standard",
   "skipped": {
     "mockup": "no UI",
-    "design_graphic": "no UI"
+    "design_graphic": "no UI",
+    "infra": "no cloud; the CI workflow is built as tasks E1.F13 (D-12)"
   },
   "lane_note": "The method has no lanes yet (R-09 is Wave 2). lane/skipped are recorded here as this change's own workaround; karvey-state must support them (REQ-W1-004, REQ-W1-007). Recorded by hand at init because the state tool does not exist yet.",
   "links": {
@@ -64,7 +72,9 @@
     "D-08",
     "D-09",
     "D-10",
-    "D-11"
+    "D-11",
+    "D-12",
+    "D-13"
   ],
   "inputs": {
     "panel_review": "karvey docs/spec/reviews/2026-09-23-panel-review.md @d38abc9",
@@ -121,7 +131,11 @@
     },
     "tasks": {
       "generated": true,
-      "approved": false
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-24",
+      "ref": "D-13"
     },
     "infra": {
       "generated": false,
