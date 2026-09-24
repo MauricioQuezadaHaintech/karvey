@@ -67,13 +67,13 @@ D="$H/karvey-hook.sh"
 BASHBIN="$(command -v bash)"
 NOPY="$T/nopy-bin"; mkdir -p "$NOPY"
 for c in bash sh cat dirname grep sed tr head env; do p=$(command -v "$c") && ln -sf "$p" "$NOPY/$c"; done
-disp() { printf '%s' "$2" | env -i HOME="$T" PATH="$1" ${3:+KARVEY_HOOK_SELFTEST=$3} "$BASHBIN" "$D" "$4" 2>&1; echo "rc=$?"; }
+disp() { ( cd "$T/plain" && printf '%s' "$2" | env -i HOME="$T" PATH="$1" ${3:+KARVEY_HOOK_SELFTEST=$3} "$BASHBIN" "$D" "$4" 2>&1; echo "rc=$?" ); }  # never the repo under test
 LS='{"tool_name":"Bash","tool_input":{"command":"ls"},"cwd":"'"$T/plain"'"}'
 TOK='{"tool_name":"Bash","tool_input":{"command":"echo KARVEY-SELFTEST-BLOCK"},"cwd":"'"$T/plain"'"}'
 out=$(disp "$PATH" "$LS" "" pre-bash);        [[ "$out" == "rc=0" ]] && ok "python: pre-bash ls → allow, silent" || bad "python allow" "$out"
 out=$(disp "$PATH" "$TOK" 1 pre-bash);        [[ "$out" == *"BLOCK selftest"*"rc=2" ]] && ok "python: a block exits 2 with the reason" || bad "python block" "$out"
 out=$(disp "$PATH" "not json" "" pre-bash);   [[ "$out" == *"BLOCK protect-paths: cannot evaluate"*"rc=2" ]] && ok "python: non-JSON payload → protect-paths fails closed" || bad "python non-json" "$out"
-out=$(disp "$PATH" '{"prompt":"ok"}' "" prompt); [[ "$out" == "rc=0" ]] && ok "python: prompt → silent (no marker yet)" || bad "python prompt" "$out"
+out=$(disp "$PATH" '{"prompt":"ok","cwd":"'"$T/plain"'"}' "" prompt); [[ "$out" == "rc=0" ]] && ok "python: prompt outside a Karvey project → silent, no marker" || bad "python prompt" "$out"
 out=$(disp "$PATH" "" "" nosuch);             [[ "$out" == *"unknown hook event"*"rc=0" ]] && ok "python: unknown event is not blocking" || bad "python unknown" "$out"
 out=$(disp "$NOPY" "$LS" "" pre-bash);        [[ "$out" == "rc=0" ]] && ok "no python: pre-bash ls → allow by fail mode" || bad "nopy allow" "$out"
 out=$(disp "$NOPY" "$TOK" 1 pre-bash);        [[ "$out" == *"BLOCK selftest"*"no python"*"rc=2" ]] && ok "no python: the classifier blocks (exit 2)" || bad "nopy block" "$out"

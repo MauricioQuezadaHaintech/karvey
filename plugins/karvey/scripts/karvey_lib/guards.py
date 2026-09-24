@@ -6,12 +6,19 @@ subprocess call is an argv list (§3.1 rule 1). Critical output is ASCII (``[kar
 
     protect-paths   always on, also outside a Karvey project (the state dirs are protected
                     wherever they live); fail closed.
+    approval        UserPromptSubmit: records the human's approval marker (D-01, D-10, D-11);
+                    fail open (no marker is the safe side).
+
+Configuration that can weaken a guard is read from the reviewed line (§3.5) through the small
+local helpers below (``project_wc`` / ``project_reviewed`` / ``enforcement``). They are the
+minimal subset of the settings resolver that ``karvey-config.py`` (lane B, E1.F7) owns; the
+orchestrator reconciles them at merge (finding F-10).
 """
 import os
 import posixpath
 import re
 
-from . import PLUGIN_ROOT, hookio
+from . import PLUGIN_ROOT, approval, audit, hookio
 from . import project as pj
 
 
@@ -79,6 +86,64 @@ def under(path, base):
         return False
     path, base = posixpath.normpath(path), posixpath.normpath(base)
     return path == base or path.startswith(base.rstrip("/") + "/")
+
+
+# --------------------------------------------------------------------------- config (§3.5), local helpers
+def _memo(ctx, key, fn):
+    if key not in ctx.cache:
+        ctx.cache[key] = fn()
+    return ctx.cache[key]
+
+
+def project_wc(ctx, root=None):
+    """``(data, error)`` of the working copy's ``project.json`` of ``root`` (default ctx.root)."""
+    root = root or ctx.root
+    if root is None:
+        return None, "no project"
+    return _memo(ctx, ("wc", str(root)), lambda: pj.load_project_json(root))
+
+
+def project_reviewed(ctx, root=None, production=None):
+    """``(data, status)`` of ``project.json`` on ``origin/{production}`` (local ref, no fetch)."""
+    root = root or ctx.root
+    if root is None:
+        return None, "no project"
+    return _memo(ctx, ("rev", str(root), production),
+                 lambda: pj.read_reviewed_project_json(root, production=production))
+
+
+def enforcement(data):
+    enf = data.get("enforcement") if isinstance(data, dict) else None
+    return enf if isinstance(enf, dict) else {}
+
+
+def reviewed_setting(ctx, key, root=None):
+    """``enforcement.<key>`` from the reviewed line, or None."""
+    data, status = project_reviewed(ctx, root)
+    return enforcement(data).get(key) if status == "ok" else None
+
+
+def opt_in_enabled(ctx, key, root=None):
+    """git-flow / plan-gate: on if ``true`` in the working copy OR on the reviewed line (§3.5)."""
+    if ctx.force_enabled:
+        return True
+    root = root or ctx.root
+    if root is None:
+        return False
+    wc, _ = project_wc(ctx, root)
+    return enforcement(wc).get(key) is True or reviewed_setting(ctx, key, root) is True
+
+
+def active_change(ctx, root=None):
+    root = root or ctx.root
+    if root is None:
+        return {"change": None, "reason": "none", "candidates": []}
+    return _memo(ctx, ("active", str(root)), lambda: pj.active_change(root, project=project_wc(ctx, root)[0]))
+
+
+def ttl_min(ctx, root=None):
+    """``plan_marker_ttl_min`` from the reviewed line, else the default; clamped (D-07)."""
+    return approval.clamp_ttl(reviewed_setting(ctx, "plan_marker_ttl_min", root))
 
 
 # --------------------------------------------------------------------------- protect-paths
@@ -213,4 +278,40 @@ def protect_paths(ctx):
     return None
 
 
-__all__ = ["Decision", "protect_paths", "EDIT_TOOLS", "hookio"]
+# --------------------------------------------------------------------------- approval hook
+def _audit(root, record):
+    try:
+        audit.append(pj.state_dir(root), record)
+    except Exception:
+        pass
+
+
+def approval_hook(ctx):
+    """UserPromptSubmit (REQ-W1-017, 019; D-01, D-10, D-11). Silent unless it records a marker;
+    it never blocks the prompt. Outside a Karvey project it does nothing."""
+    root = ctx.root
+    text = ctx.payload.prompt
+    if root is None or not isinstance(text, str) or not text.strip():
+        return None
+    try:
+        vocab = approval.vocabulary(reviewed_setting(ctx, "approval_vocabulary"))
+        verdict = approval.classify(text, vocab)
+        approval.gc(root)
+        if not verdict["approved"]:
+            return None
+        ids = [c["id"] for c in pj.list_changes(root)]
+        scope = approval.scope_for(verdict["cleaned"], ids, active_change(ctx)["change"])
+        ttl = ttl_min(ctx)
+        marker = approval.write_marker(root, verdict["kind"], scope, text, session_id=ctx.payload.session_id,
+                                       ttl_min=ttl, compat=ctx.env.get(approval.COMPAT_ENV, ""))
+        created = approval.parse_dt(marker["created_at"])
+        expires = (created + approval.timedelta(minutes=marker["ttl_min"])).strftime("%H:%M")
+        return Decision.allow(stdout=["[karvey] approval recorded (%s, %s, expires %s)"
+                                      % (verdict["kind"], scope, expires)])
+    except Exception as exc:  # fail open: no marker is the safe side (§3.2)
+        _audit(root, {"guard": "approval", "event": "prompt", "decision": "error",
+                      "reason": "approval-hook error: %s: %s" % (type(exc).__name__, exc)})
+        return None
+
+
+__all__ = ["Decision", "protect_paths", "approval_hook", "EDIT_TOOLS", "hookio"]

@@ -12,7 +12,9 @@ PAYLOADS = _path.FIXTURES_DIR / "payloads"
 def run(event, payload, env=None, **kw):
     out, err = io.StringIO(), io.StringIO()
     text = payload if isinstance(payload, str) else json.dumps(payload)
-    code = kh.dispatch(event, text, env=env or {}, out=out, err=err, **kw)
+    env = dict(env or {})
+    env.setdefault("CLAUDE_PROJECT_DIR", "/nonexistent-karvey-unit")  # never the repo under test
+    code = kh.dispatch(event, text, env=env, out=out, err=err, **kw)
     return code, out.getvalue(), err.getvalue()
 
 
@@ -33,7 +35,7 @@ class Registry(unittest.TestCase):
         self.assertFalse(default["plan-gate"])       # opt-in
 
     def test_wired_guards(self):
-        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths"])
+        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths", "approval"])
 
     def test_only_filter(self):
         self.assertEqual([g.name for g in kh.guards_for("pre-bash", ["git-flow"])], ["git-flow"])

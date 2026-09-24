@@ -57,10 +57,12 @@ sys.path.insert(0, str(PLUGIN_ROOT / "scripts"))
 from karvey_lib import approval  # noqa: E402
 
 CASE_KEYS = {"id", "guard", "given", "input", "event", "expect", "expect_nopy", "tags", "limitation", "note"}
-GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir"}
-REPO_KEYS = {"branch", "remote_branches", "project_json", "spec", "ledger", "marker", "files", "default_branch"}
+GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir", "outer_files", "no_python"}
+REPO_KEYS = {"branch", "remote_branches", "project_json", "spec", "ledger", "marker", "files", "default_branch",
+             "wc_files", "origin_files", "git_config", "at", "worktree", "no_origin", "commit_files"}
 EXPECT_KEYS = {"decision", "stdout_contains", "stderr_contains", "stdout_not_contains", "stderr_not_contains",
-               "stdout_empty", "stderr_empty", "marker_created", "max_s"}
+               "stdout_empty", "stderr_empty", "marker_created", "max_s", "marker", "files_exist",
+               "files_absent", "file_contains"}
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 SESSION = "00000000-0000-0000-0000-000000000000"
 _PY = re.compile(r"^(python|py)(\d[\d.]*)?(-config)?(\.exe)?$")
@@ -94,6 +96,7 @@ class Templ:
     def __init__(self, root=None, repo=None, home=None):
         self.root, self.repo, self.home = root, repo, home
         self.plugin = PLUGIN_ROOT
+        self.tmp = None
         self.now = datetime.now().astimezone()
 
     def s(self, text):
@@ -106,7 +109,7 @@ class Templ:
             return (self.now + delta if sign == "+" else self.now - delta).isoformat(timespec="seconds")
         text = re.sub(r"\{\{now([+-])(\d+)([mh])\}\}", now, text)
         text = text.replace("{{now}}", self.now.isoformat(timespec="seconds"))
-        for k in ("root", "repo", "home", "plugin"):
+        for k in ("root", "repo", "home", "plugin", "tmp"):
             v = getattr(self, k)
             if v is not None:
                 text = text.replace("{{%s}}" % k, str(v))
@@ -129,8 +132,8 @@ def write_file(path, content):
 
 
 def build_repo(spec, tmp, env):
-    root = tmp / "repo"
-    root.mkdir()
+    root = tmp / spec.get("at", "repo")
+    root.mkdir(parents=True)
     default = spec.get("default_branch", "main")
     git(["init", "-q", "-b", default], root, env)
     git(["config", "commit.gpgsign", "false"], root, env)
@@ -141,8 +144,12 @@ def build_repo(spec, tmp, env):
         write_file(root / "docs/spec/changes" / cid / "spec.json", t.deep(data))
     for rel, content in (spec.get("files") or {}).items():
         write_file(root / rel, t.deep(content))
+    for k, v in (spec.get("git_config") or {}).items():
+        git(["config", k, v], root, env)
     git(["add", "-A"], root, env)
     git(["commit", "-q", "--allow-empty", "-m", "table fixture"], root, env)
+    if spec.get("no_origin"):
+        return _finish_repo(spec, root, tmp, env, t, default)
     bare = tmp / "origin.git"
     git(["init", "-q", "--bare", "-b", default, str(bare)], tmp, env)
     git(["remote", "add", "origin", str(bare)], root, env)
@@ -150,8 +157,21 @@ def build_repo(spec, tmp, env):
     for b in spec.get("remote_branches") or []:
         if b != default:
             git(["push", "-q", "origin", "HEAD:refs/heads/%s" % b], root, env)
+    for ob, files in (spec.get("origin_files") or {}).items():
+        git(["checkout", "-q", "-b", "karvey-table-origin-tmp"], root, env)
+        for rel, content in files.items():
+            write_file(root / rel, t.deep(content))
+        git(["add", "-A"], root, env)
+        git(["commit", "-q", "--allow-empty", "-m", "origin-only fixture"], root, env)
+        git(["push", "-q", "-f", "origin", "HEAD:refs/heads/%s" % ob], root, env)
+        git(["checkout", "-q", default], root, env)
+        git(["branch", "-q", "-D", "karvey-table-origin-tmp"], root, env)
     git(["fetch", "-q", "origin"], root, env)
     git(["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/%s" % default], root, env)
+    return _finish_repo(spec, root, tmp, env, t, default)
+
+
+def _finish_repo(spec, root, tmp, env, t, default):
     branch = spec.get("branch", default)
     if branch != default:
         git(["checkout", "-q", "-b", branch], root, env)
@@ -170,6 +190,16 @@ def build_repo(spec, tmp, env):
         d = common / "karvey" / "approvals"
         d.mkdir(parents=True, exist_ok=True, mode=0o700)
         write_file(d / (scope + ".json"), t.deep(data) if not isinstance(data, str) else data)
+    if spec.get("commit_files"):
+        for rel, content in spec["commit_files"].items():
+            write_file(root / rel, t.deep(content))
+        git(["add", "-A"], root, env)
+        git(["commit", "-q", "-m", "branch fixture"], root, env)
+    for rel, content in (spec.get("wc_files") or {}).items():
+        write_file(root / rel, t.deep(content))
+    if spec.get("worktree"):
+        wt = tmp / spec["worktree"]
+        git(["worktree", "add", "-q", "-b", "wt-" + spec["worktree"], str(wt)], root, env)
     return root, common, t
 
 
@@ -242,6 +272,41 @@ def _as_list(v):
     return v if isinstance(v, list) else [v]
 
 
+def assert_files(expect, t, common):
+    """``marker: {scope, kind, excerpt?}`` · ``files_exist`` / ``files_absent`` · ``file_contains: {path: s}``."""
+    problems = []
+    m = expect.get("marker")
+    if m:
+        p = (common / "karvey" / "approvals" / (m["scope"] + ".json")) if common else None
+        try:
+            data = json.loads(p.read_text(encoding="utf-8")) if p else None
+        except (OSError, ValueError):
+            data = None
+        if not isinstance(data, dict):
+            problems.append("no marker for scope %s" % m["scope"])
+        else:
+            for k in ("kind", "prompt_excerpt", "ttl_min"):
+                if k in m and data.get(k) != m[k]:
+                    problems.append("marker %s=%r, expected %r" % (k, data.get(k), m[k]))
+            if len(data.get("prompt_excerpt", "")) > 80:
+                problems.append("marker excerpt longer than 80 characters")
+    for f in _as_list(expect.get("files_exist")):
+        if not Path(t.s(f)).exists():
+            problems.append("missing file %s" % t.s(f))
+    for f in _as_list(expect.get("files_absent")):
+        if Path(t.s(f)).exists():
+            problems.append("unexpected file %s" % t.s(f))
+    for f, sub in (expect.get("file_contains") or {}).items():
+        try:
+            text = Path(t.s(f)).read_text(encoding="utf-8")
+        except OSError:
+            text = None
+        for x in _as_list(sub):
+            if text is None or t.s(x) not in text:
+                problems.append("%s lacks %r" % (t.s(f), x))
+    return problems
+
+
 def assert_expect(expect, rc, out, err, created, duration, tags):
     problems = []
     want = expect["decision"]
@@ -280,12 +345,16 @@ def run_case(case, nopy=False, keep=False):
         given = case.get("given") or {}
         root = common = None
         t = Templ(home=env["HOME"])
+        for rel, content in (given.get("outer_files") or {}).items():
+            write_file(tmp / rel, Templ(home=env["HOME"]).deep(content))
         if given.get("repo") is not None:
             root, common, t = build_repo(given["repo"], tmp, env)
         else:
             root = tmp / given.get("dir", "plain")
             root.mkdir(parents=True, exist_ok=True)
-        cwd = (root / t.s(given.get("cwd", "."))).resolve()
+        t.tmp = tmp
+        cwd_s = t.s(given.get("cwd", "."))
+        cwd = (Path(cwd_s) if cwd_s.startswith("/") else root / cwd_s).resolve()
         cwd.mkdir(parents=True, exist_ok=True)
         stub_data = tmp / "stub-data"
         stub_data.mkdir()
@@ -320,6 +389,7 @@ def run_case(case, nopy=False, keep=False):
         err = cp.stderr.decode("utf-8", "replace")
         expect = case.get("expect_nopy", case["expect"]) if nopy else case["expect"]
         problems = assert_expect(expect, cp.returncode, out, err, created, duration, case.get("tags") or [])
+        problems += assert_files(expect, t, common)
         return problems, {"rc": cp.returncode, "stdout": out, "stderr": err, "duration": duration,
                           "tmp": str(tmp) if keep else None}
     finally:

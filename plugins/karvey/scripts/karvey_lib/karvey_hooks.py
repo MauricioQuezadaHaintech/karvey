@@ -121,7 +121,7 @@ REGISTRY = [
     Guard("plan-gate", ("pre-bash", "pre-edit"), "closed", False),       # E1.F5.T3
     Guard("spec-write", ("post-edit",), "open", True),                   # E1.F5.T7
     Guard("pending-sync", ("post-edit",), "open", True),                 # E1.F5.T7
-    Guard("approval", ("prompt",), "open", True),                        # E1.F5.T2
+    Guard("approval", ("prompt",), "open", True, wired=True, run=guards.approval_hook),  # E1.F5.T2
 ]
 
 

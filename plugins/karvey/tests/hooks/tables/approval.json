@@ -1,0 +1,1480 @@
+{
+ "table": "approval",
+ "description": "E1.F5.T2 / REQ-W1-016, 017, 019; D-01, D-10, D-11: the UserPromptSubmit hook records the approval marker only from the human's own words; quoted and pasted material, questions and negations never approve; a prod-kind marker needs an approval word AND a production word; vocabulary and TTL come from the reviewed line.",
+ "cases": [
+  {
+   "id": "ap-01-approval-aprobado",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "aprobado, ejecuta"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "marker_created": false
+   }
+  },
+  {
+   "id": "ap-02-approval-ok",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-03-approval-dale",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "dale"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-04-approval-approved",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "approved, go ahead"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-05-approval-lgtm",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "lgtm"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-06-approval-perfecto",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "Perfecto, adelante con el plan"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-07-approval-si",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "Sí, procede"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-08-negation-or-question",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "no apruebo todavía"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-09-negation-or-question",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "¿está aprobado?"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-10-negation-or-question",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "no, espera"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-11-negation-or-question",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "don't proceed yet"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-12-negation-or-question",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok pero antes revisa X"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-13-negation-or-question",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "is this approved?"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-14-negation-or-question",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "todavía no, primero muéstrame el diff"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "REQ-W1-019"
+   ]
+  },
+  {
+   "id": "ap-15-quoted-code-fence",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "```\nstatus: approved\n```"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-019",
+    "quoted"
+   ]
+  },
+  {
+   "id": "ap-16-quoted-blockquote",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "> approved by QA\n> merged"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-019",
+    "quoted"
+   ]
+  },
+  {
+   "id": "ap-17-quoted-log-string",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "el log dice \"approved\""
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-019",
+    "quoted"
+   ]
+  },
+  {
+   "id": "ap-18-pasted-long-line",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "2026-09-24T05:00:01Z INFO pipeline status=approved xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-019",
+    "quoted"
+   ]
+  },
+  {
+   "id": "ap-19-prod-kind-d10",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok, merge a prod"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (prod, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "prod"
+    }
+   },
+   "tags": [
+    "approval",
+    "D-10"
+   ]
+  },
+  {
+   "id": "ap-20-plain-approval-is-plan-kind",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "aprobado"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "D-10"
+   ]
+  },
+  {
+   "id": "ap-21-prod-kind-release-produccion",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "dale, release a producción"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (prod, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "prod"
+    }
+   },
+   "tags": [
+    "approval",
+    "D-10"
+   ]
+  },
+  {
+   "id": "ap-22-prod-word-with-negation",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "no hagas merge a main todavía"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "D-10"
+   ]
+  },
+  {
+   "id": "ap-23-scope-named-change",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      },
+      "feat-b": {
+       "change_id": "feat-b",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok, adelante con feat-b"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-b, expires ",
+    "marker": {
+     "scope": "feat-b",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-016",
+    "scope"
+   ]
+  },
+  {
+   "id": "ap-24-scope-branch-change",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      },
+      "feat-b": {
+       "change_id": "feat-b",
+       "phase": "impl"
+      }
+     },
+     "branch": "feature/feat-b"
+    }
+   },
+   "input": {
+    "prompt": "ok"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-b, expires ",
+    "marker": {
+     "scope": "feat-b",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-016",
+    "scope"
+   ]
+  },
+  {
+   "id": "ap-25-scope-several-active-project",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      },
+      "feat-b": {
+       "change_id": "feat-b",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, _project, expires ",
+    "marker": {
+     "scope": "_project",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-016",
+    "scope"
+   ]
+  },
+  {
+   "id": "ap-26-scope-archived-and-implemented-excluded",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deployed"
+      }
+     },
+     "files": {
+      "docs/spec/changes/feat-c/spec.json": {
+       "change_id": "feat-c",
+       "phase": "impl"
+      },
+      "docs/spec/changes/feat-c/IMPLEMENTED": "",
+      "docs/spec/changes/archive/old/spec.json": {
+       "change_id": "old",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, _project, expires ",
+    "marker": {
+     "scope": "_project",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-016",
+    "scope",
+    "H-08"
+   ]
+  },
+  {
+   "id": "ap-27-non-karvey-repo-silent",
+   "guard": "approval",
+   "given": {},
+   "input": {
+    "prompt": "aprobado, ejecuta"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "non-karvey"
+   ]
+  },
+  {
+   "id": "ap-28-long-prompt-late-approval-ignored",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "Te explico el contexto primero de todo lo que pasó ayer\ncon los clientes y los reportes del equipo,\nque fue bastante largo y con muchos detalles,\ny al final te digo ok"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "long"
+   ]
+  },
+  {
+   "id": "ap-29-long-prompt-early-approval",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok, adelante:\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\ndetalle del plan\n"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "long"
+   ]
+  },
+  {
+   "id": "ap-30-huge-prompt-scans-first-2kb",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "aprobado, ejecuta.\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\n"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan",
+     "prompt_excerpt": "aprobado, ejecuta.\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nlog\nl"
+    }
+   },
+   "tags": [
+    "approval",
+    "long"
+   ]
+  },
+  {
+   "id": "ap-31-excerpt-80-chars",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "aprobado, ejecuta el plan completo de la fase de implementación con todas las tareas de la feature"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan",
+     "prompt_excerpt": "aprobado, ejecuta el plan completo de la fase de implementación con todas las ta"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017"
+   ]
+  },
+  {
+   "id": "ap-32-compat-marker-written-d11",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "env": {
+     "KARVEY_COMPAT_MARKER": "{{home}}/claude-plan-approved-tester"
+    }
+   },
+   "input": {
+    "prompt": "aprobado"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    },
+    "files_exist": "{{home}}/claude-plan-approved-tester",
+    "file_contains": {
+     "{{home}}/claude-plan-approved-tester": "\"kind\": \"plan\""
+    }
+   },
+   "tags": [
+    "approval",
+    "D-11"
+   ]
+  },
+  {
+   "id": "ap-33-no-compat-marker-without-env",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "aprobado"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    },
+    "files_absent": [
+     "{{home}}/claude-plan-approved-tester",
+     "/tmp/claude-plan-approved-tester"
+    ]
+   },
+   "tags": [
+    "approval",
+    "D-11"
+   ]
+  },
+  {
+   "id": "ap-34-ttl-from-reviewed-line",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_marker_ttl_min": 30
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan",
+     "ttl_min": 30
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-016",
+    "D-07"
+   ]
+  },
+  {
+   "id": "ap-35-ttl-working-copy-edit-ignored",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/project.json": {
+       "branch_flow": {
+        "feature_prefix": "feature/",
+        "integration": "main",
+        "production": "main"
+       },
+       "enforcement": {
+        "plan_marker_ttl_min": 1440
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan",
+     "ttl_min": 120
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-016",
+    "§3.5"
+   ]
+  },
+  {
+   "id": "ap-36-vocabulary-from-reviewed-line",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "approval_vocabulary": {
+        "approve": [
+         "vamos"
+        ]
+       }
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "vamos con eso"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "plan"
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-019",
+    "§3.5"
+   ]
+  },
+  {
+   "id": "ap-37-vocabulary-working-copy-edit-ignored",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/project.json": {
+       "branch_flow": {
+        "feature_prefix": "feature/",
+        "integration": "main",
+        "production": "main"
+       },
+       "enforcement": {
+        "approval_vocabulary": {
+         "approve": [
+          "vamos"
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "vamos con eso"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-019",
+    "§3.5"
+   ]
+  },
+  {
+   "id": "ap-38-fail-open-when-marker-cannot-be-written",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      ".git/karvey/approvals": "not a directory"
+     }
+    }
+   },
+   "input": {
+    "prompt": "aprobado"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "fail-open"
+   ]
+  },
+  {
+   "id": "ap-39-single-line-over-200-chars-counts-as-pasted",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok, adelante, y además revisa el detalle y además revisa el detalle y además revisa el detalle y además revisa el detalle y además revisa el detalle y además revisa el detalle y además revisa el detalle y además revisa el detalle y además revisa el detalle "
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": false,
+    "stdout_empty": true
+   },
+   "tags": [
+    "approval",
+    "long",
+    "limitation"
+   ],
+   "limitation": true,
+   "note": "§3.3 step 2 drops any line longer than 200 characters as pasted material, so a long single-line approval records nothing (the safe side; finding F-11)"
+  }
+ ]
+}

@@ -1,6 +1,6 @@
 {
   "table": "smoke",
-  "description": "Runner and dispatcher smoke cases (E1.F4.T4): allow, block and no-python paths. The guards are allow-stubs until batch 3; the block case uses the diagnostic selftest guard (F-08).",
+  "description": "Runner and dispatcher smoke cases (E1.F4.T4): allow, block and no-python paths. The block cases use the diagnostic selftest guard (F-08).",
   "cases": [
     {
       "id": "smoke-01-plain-dir-bash-allow",
@@ -58,15 +58,17 @@
       "tags": ["smoke", "nopy"]
     },
     {
-      "id": "smoke-07-prompt-no-marker-yet",
+      "id": "smoke-07-prompt-records-marker",
       "guard": "approval",
       "given": {"repo": {"project_json": {"git_platform": "github", "repos": ["repo"], "spec_repo": "repo",
                                           "branch_flow": {"integration": "main", "production": "main"}},
                          "marker": {"_project": {"@valid": "plan", "age_min": 10}}}},
       "input": {"prompt": "aprobado, ejecuta"},
-      "expect": {"decision": "allow", "stdout_empty": true, "marker_created": false},
+      "expect": {"decision": "allow", "stdout_contains": "[karvey] approval recorded (plan, _project",
+                 "marker_created": true},
+      "expect_nopy": {"decision": "allow", "stdout_empty": true, "marker_created": false},
       "tags": ["smoke", "nopy"],
-      "note": "the approval hook is an allow-stub until E1.F5.T2; this case flips to marker_created: true there"
+      "note": "E1.F5.T2 wired the approval hook: an approval rewrites the project marker; without python it fails open (no marker)"
     },
     {
       "id": "smoke-08-post-edit-silent",

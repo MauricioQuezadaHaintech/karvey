@@ -1,7 +1,8 @@
 """Approval markers and the release ledger (architecture §2.4, §3.3).
 
-This module holds the marker + ledger half. The vocabulary half (the matching of the human's
-prompt, REQ-W1-017/019) joins it in E1.F5.T2.
+Two halves: the marker + ledger store, and the vocabulary that decides whether the human's
+prompt is an approval (REQ-W1-017/019, §3.3 "Approval vocabulary"; default lists in
+``vocabulary.json``, the one place).
 
 Location: ``<git-common-dir>/karvey/`` (``project.state_dir``), shared by every worktree of the
 clone and never tracked by git; directories 0700, files 0600::
@@ -23,6 +24,7 @@ import hashlib
 import json
 import os
 import re
+import unicodedata
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -391,3 +393,111 @@ def record_release(root, change, pipeline_run, post_deploy_check, at=None):
     return _update_ledger(root, change, "release", {"pipeline_run": pipeline_run,
                                                      "post_deploy_check": post_deploy_check,
                                                      "at": at or iso(now_dt())})
+
+
+# --------------------------------------------------------------------------- vocabulary (§3.3)
+VOCAB_FILE = Path(__file__).resolve().parent / "vocabulary.json"
+VOCAB_KEYS = ("approve", "negate", "prod_terms")
+_VOCAB = None
+_FENCE = re.compile(r"(^|\n)[ \t]*(```|~~~)[^\n]*\n.*?(\n[ \t]*\2[^\n]*(?=\n|$)|$)", re.S)
+_INLINE = re.compile(r"`[^`\n]*`")
+_QUOTED = re.compile(r'"[^"\n]*"|\u201c[^\u201d\n]*\u201d|\u00ab[^\u00bb\n]*\u00bb')
+
+
+def default_vocabulary():
+    global _VOCAB
+    if _VOCAB is None:
+        with open(VOCAB_FILE, encoding="utf-8-sig") as fh:
+            _VOCAB = json.load(fh)
+    return json.loads(json.dumps(_VOCAB))
+
+
+def vocabulary(override=None):
+    """The default vocabulary with the lists of ``override`` (``approval_vocabulary``) replacing
+    the defaults key by key. Invalid override entries are ignored."""
+    v = default_vocabulary()
+    if isinstance(override, dict):
+        for k in VOCAB_KEYS:
+            terms = override.get(k)
+            if isinstance(terms, list):
+                clean = [t for t in terms if isinstance(t, str) and t.strip() and len(t) <= 40]
+                if clean:
+                    v[k] = clean
+    return v
+
+
+def normalise(text):
+    """NFKD, accents stripped, casefolded, typographic apostrophes unified, whitespace collapsed."""
+    t = unicodedata.normalize("NFKD", text or "")
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    t = t.replace("\u2019", "'").replace("\u2018", "'").casefold()
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def strip_quoted(text, pasted_line_chars=200):
+    """Remove quoted and pasted material: fenced blocks, inline code, ``>`` lines, text inside
+    ``"…"``, ``\u201c…\u201d`` and ``\u00ab…\u00bb``, and lines longer than ``pasted_line_chars``."""
+    t = (text or "").replace("\r\n", "\n")
+    t = _FENCE.sub("\n", t)
+    lines = [ln for ln in t.split("\n")
+             if len(ln) <= pasted_line_chars and not ln.lstrip().startswith(">")]
+    t = "\n".join(lines)
+    t = _INLINE.sub(" ", t)
+    return _QUOTED.sub(" ", t)
+
+
+def _term_re(term):
+    words = [re.escape(w) for w in normalise(term).split(" ") if w]
+    return re.compile(r"(?<![\w'])" + r"\s+".join(words) + r"(?![\w'])") if words else None
+
+
+def find_term(text, terms):
+    """The first of ``terms`` found in ``text`` on word boundaries, or None."""
+    for term in terms:
+        rx = _term_re(term)
+        if rx is not None and rx.search(text):
+            return term
+    return None
+
+
+def classify(prompt, vocab=None):
+    """Decide whether ``prompt`` is an approval. Returns a dict:
+    ``{approved, kind, reason, term, cleaned}``; ``kind`` is ``plan`` or ``prod`` (D-10) when
+    approved. Order (§3.3): strip, then reject questions and negations, then the position rule."""
+    vocab = vocab or default_vocabulary()
+    rules = vocab.get("rules") or default_vocabulary()["rules"]
+    raw = prompt if isinstance(prompt, str) else ""
+    if len(raw.encode("utf-8")) > rules["huge_prompt_bytes"]:
+        raw = raw.encode("utf-8")[:rules["scan_limit_bytes"]].decode("utf-8", "ignore")
+    cleaned = normalise(strip_quoted(raw, rules["pasted_line_chars"]))
+    res = {"approved": False, "kind": None, "reason": None, "term": None, "cleaned": cleaned}
+    if not cleaned:
+        res["reason"] = "empty after removing quoted material"
+        return res
+    if cleaned.endswith("?") or "\u00bf" in cleaned:
+        res["reason"] = "question"
+        return res
+    neg = find_term(cleaned, vocab["negate"])
+    if neg:
+        res["reason"] = "negation: %s" % neg
+        return res
+    window = cleaned if len(cleaned) <= rules["short_prompt_chars"] else " ".join(
+        cleaned.split(" ")[:rules["position_words"]])
+    term = find_term(window, vocab["approve"])
+    if not term:
+        res["reason"] = "no approval term" + ("" if window is cleaned else " in the first %d words"
+                                              % rules["position_words"])
+        return res
+    res.update(approved=True, term=term, reason="approval: %s" % term,
+               kind="prod" if find_term(cleaned, vocab["prod_terms"]) else "plan")
+    return res
+
+
+def scope_for(prompt_cleaned, change_ids, active=None):
+    """A change id named in the prompt; else the single active change; else ``_project``."""
+    for cid in sorted(change_ids, key=len, reverse=True):
+        if valid_scope(cid) and re.search(r"(?<![\w-])%s(?![\w-])" % re.escape(cid.casefold()), prompt_cleaned):
+            return cid
+    if active and valid_scope(active):
+        return active
+    return SCOPE_PROJECT
