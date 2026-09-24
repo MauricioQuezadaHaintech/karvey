@@ -8,3 +8,5 @@ argument-hint: <change-id>
 # karvey-requirements
 
 Read `docs/spec/changes/{change-id}/prd.md`.
+
+Close the phase per `../karvey/rules/phase-close.md`.

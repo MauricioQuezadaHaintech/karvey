@@ -252,5 +252,164 @@ class L04(LintCase):
         self.assertFails("L-04", "karvey-guard")
 
 
+# --------------------------------------------------------------------------- L-05 .. L-10, L-14
+INIT = SKILLS + "/karvey-init/SKILL.md"
+REQS = SKILLS + "/karvey-requirements/SKILL.md"
+ORCH = SKILLS + "/karvey/SKILL.md"
+
+
+class L05(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-05")
+
+    def test_legacy_phase_in_skill(self):
+        self.t.append(INIT, '\nUpdate spec.json: `phase: "tasks-generated"`.\n')
+        self.assertFails("L-05", "tasks-generated", file=INIT)
+
+    def test_legacy_phase_in_rule(self):
+        self.t.append(RULES + "/phase-close.md", '\n```json\n{"phase": "qa-approved"}\n```\n')
+        self.assertFails("L-05", "qa-approved", file=RULES + "/phase-close.md")
+
+    def test_enum_value_passes(self):
+        self.t.append(INIT, '\nThe change starts at `phase: "init"`.\n')
+        self.assertPasses("L-05")
+
+
+class L06(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-06")
+
+    def test_hand_approval_edit(self):
+        self.t.append(REQS, "\nIf the user approves: update `spec.json` with `approvals.requirements.approved: true`.\n")
+        self.assertFails("L-06", "hand edit", file=REQS)
+
+    def test_hand_phase_edit(self):
+        self.t.append(REQS, '\nUpdate spec.json: `phase: "requirements"`.\n')
+        self.assertFails("L-06", file=REQS)
+
+    def test_json_block_written_by_hand(self):
+        self.t.append(INIT, '\n```json\n{\n  "change_id": "x",\n  "phase": "init",\n  "approvals": {}\n}\n```\n')
+        fs = self.assertFails("L-06", "spec.json block", file=INIT)
+        self.assertEqual(len(fs), 1)
+
+    def test_state_tool_call_passes(self):
+        self.t.append(REQS, '\nOn approval run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" approve '
+                            '{id} requirements --by X --role human --ref D-NN` (sets `approvals.requirements.approved: true`).\n')
+        self.assertPasses("L-06")
+
+    def test_precondition_read_passes(self):
+        self.t.append(REQS, "\n- Verify `approvals.architecture.approved = true` before starting.\n")
+        self.assertPasses("L-06")
+
+
+class L07(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-07")
+
+    def test_phase_table(self):
+        self.t.append(ORCH, "\n| `phase` | `approvals` | Next skill |\n|---|---|---|\n"
+                            "| `init` | x | `/karvey-requirements` |\n| `tasks` | x | `/karvey-impl` |\n")
+        self.assertFails("L-07", "phase→next table")
+
+    def test_no_next_call(self):
+        self.t.replace(ORCH, "karvey-state.py\" next", "karvey-state.py\" active")
+        self.assertFails("L-07", "does not call")
+
+
+class L08(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-08")
+
+    def test_proposal_md(self):
+        self.t.append(REQS, "\nRead `docs/spec/changes/{change-id}/proposal.md`.\n")
+        self.assertFails("L-08", "proposal.md", file=REQS)
+
+    def test_capability_spec_delta(self):
+        self.t.append(REQS, "\nWrite `docs/spec/changes/{change-id}/specs/{capability}/spec-delta.md`.\n")
+        self.assertFails("L-08", "change root", file=REQS)
+
+    def test_reads_an_artifact_produced_later(self):
+        self.t.append(REQS, "\nRead `docs/spec/changes/{change-id}/tasks.md` first.\n")
+        self.assertFails("L-08", "produced only later", file=REQS)
+
+    def test_state_machine_read_without_producer(self):
+        sm = json.loads((_path.SCHEMAS_DIR / "state-machine.json").read_text(encoding="utf-8"))
+        sm["phases"][1]["reads"] = ["nothing.md"]
+        self.t.write("plugins/karvey/schemas/state-machine.json", sm)
+        self.assertFails("L-08", "nothing.md", file="plugins/karvey/schemas/state-machine.json")
+
+
+class L09(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-09")
+
+    def test_rule_cited_without_the_folder(self):
+        self.t.append(REQS, "\nSee `karvey/rules/phase-close.md`.\n")
+        self.assertFails("L-09", "karvey/rules/phase-close.md", file=REQS)
+
+    def test_rules_prefix_from_a_skill_without_rules(self):
+        self.t.append(REQS, "\nSee rules/phase-close.md for the ritual.\n")
+        self.assertFails("L-09", "rules/phase-close.md", file=REQS)
+
+    def test_missing_plugin_root_path(self):
+        self.t.append(REQS, '\nRun `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/missing.py"`.\n')
+        self.assertFails("L-09", "scripts/missing.py")
+
+    def test_markdown_link(self):
+        self.t.append(RULES + "/phase-close.md", "\nSee [the rule](nope.md).\n")
+        self.assertFails("L-09", "nope.md")
+
+    def test_placeholders_and_project_paths_are_not_citations(self):
+        self.t.append(REQS, "\nRead `docs/spec/changes/{change-id}/prd.md` and `rules/{name}.md`.\n")
+        self.assertPasses("L-09")
+
+
+class L10(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-10")
+
+    def test_hand_kept_copy(self):
+        self.t.write(SKILLS + "/karvey-init/rules/phase-close.md", self.t.read(RULES + "/phase-close.md"))
+        fs = self.assertFails("L-10", "hand-kept rule copy")
+        self.assertIn(RULES + "/phase-close.md", fs[0]["message"])
+
+    def test_generated_identical_copy_passes(self):
+        src = self.t.read(RULES + "/phase-close.md")
+        self.t.write(SKILLS + "/karvey-init/rules/phase-close.md",
+                     "<!-- generated-from: ../../karvey/rules/phase-close.md -->\n" + src)
+        self.assertPasses("L-10")
+
+    def test_generated_copy_that_differs(self):
+        self.t.write(SKILLS + "/karvey-init/rules/phase-close.md",
+                     "<!-- generated-from: ../../karvey/rules/phase-close.md -->\nedited by hand\n")
+        self.assertFails("L-10", "differs")
+
+
+class L14(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-14")
+
+    def test_write_without_write(self):
+        self.t.append(SKILLS + "/karvey-guard/SKILL.md", "\nWrite `docs/spec/changes/{id}/findings.md` with the result.\n")
+        self.assertFails("L-14", "lacks Write")
+
+    def test_ask_without_ask_user_question(self):
+        self.t.append(SKILLS + "/karvey-guard/SKILL.md", "\nThen **ask the user** whether to continue.\n")
+        self.assertFails("L-14", "lacks AskUserQuestion")
+
+    def test_agent_without_agent(self):
+        self.t.append(SKILLS + "/karvey-guard/SKILL.md", "\nLaunch two subagents in parallel.\n")
+        self.assertFails("L-14", "lacks Agent")
+
+    def test_bash_fence_without_bash(self):
+        self.t.replace(SKILLS + "/karvey-guard/SKILL.md", "allowed-tools: Read, Edit, Bash", "allowed-tools: Read, Edit")
+        self.t.append(SKILLS + "/karvey-guard/SKILL.md", "\n```bash\ngit status\n```\n")
+        self.assertFails("L-14", "lacks Bash")
+
+    def test_negated_write_passes(self):
+        self.t.append(SKILLS + "/karvey-guard/SKILL.md", "\nNever write `docs/spec/project.json` by hand here.\n")
+        self.assertPasses("L-14")
+
+
 if __name__ == "__main__":
     unittest.main()

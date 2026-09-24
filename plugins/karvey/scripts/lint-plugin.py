@@ -369,6 +369,324 @@ def l04_user_only(ctx):
             yield path, 1, "%s must declare 'disable-model-invocation: true' (user-invoked only)" % name
 
 
+# --------------------------------------------------------------------------- shared helpers (T2)
+NEGATION_RE = re.compile(r"\b(?:(?i:never|do not|don't|must not|does not|doesn't|cannot|can't|no longer|"
+                         r"not by hand|forbid\w*)|NOT)\b")
+STATE_TOOL_RE = re.compile(r"karvey-state(\.py)?\b")
+
+
+def phase_enum(ctx):
+    return [p.get("id") for p in ctx.machine().get("phases", []) if p.get("id")]
+
+
+def phase_index_of_skill(ctx):
+    """``{skill: index}``: the first phase of state-machine.json each skill runs."""
+    out = {}
+    for i, p in enumerate(ctx.machine().get("phases", [])):
+        s = p.get("skill")
+        if s and s not in out:
+            out[s] = i
+    return out
+
+
+def body_lines(ctx, path):
+    """``(lineno, line, fence_lang)`` of a SKILL.md body (after the frontmatter)."""
+    lines = ctx.lines(path)
+    _, end, _ = parse_frontmatter(lines)
+    for n, line, lang in iter_lines(lines):
+        if n > end:
+            yield n, line, lang
+
+
+# --------------------------------------------------------------------------- L-05
+PHASE_LIT_RE = re.compile(r"\bphase\b[`\"']?\s*(?::|==|=)\s*[`\"']([A-Za-z][\w-]*)[`\"']")
+PHASE_YAML_RE = re.compile(r"^\s*-?\s*phase:\s*([a-z][\w-]*)\s*$")
+
+
+@check("L-05", "Every phase literal in skill or rule text belongs to the state-machine.json enum",
+       reqs=("001", "055"))
+def l05_phase_literals(ctx):
+    enum = set(phase_enum(ctx))
+    for path in ctx.text_files():
+        for n, line, _ in iter_lines(ctx.lines(path)):
+            values = [m.group(1) for m in PHASE_LIT_RE.finditer(line)]
+            m = PHASE_YAML_RE.match(line)
+            if m:
+                values.append(m.group(1))
+            for v in values:
+                if v not in enum:
+                    yield (path, n, "phase literal %r is not in the state-machine.json enum (%s)"
+                           % (v, " | ".join(sorted(enum, key=lambda x: phase_enum(ctx).index(x)))))
+
+
+# --------------------------------------------------------------------------- L-06
+OWNED_RES = (
+    re.compile(r"\bphase\b[`\"']?\s*(?::|=(?!=))\s*[`\"']?[A-Za-z{]"),
+    re.compile(r"\bapprovals\.[\w]+\.(approved|generated|by|role|date|ref)\b[`\"']?\s*(?::|=(?!=))"),
+    re.compile(r"[\"']approvals[\"']\s*:\s*\{"),
+    re.compile(r"\bskipped\b[`\"']?\s*(?::|=(?!=))\s*[{`\"']"),
+    re.compile(r"\bphase_history\b"),
+)
+WRITE_VERB_RE = re.compile(r"\b(set|sets|update|updates|write|writes|mark|marks|record|records|flip|put|"
+                           r"add|append|appends|on approval|becomes)\b|→", re.I)
+PRECONDITION_RE = re.compile(r"^\s*(?:[-*]\s*(?:\[[ x]\]\s*)?)?\**(verify|check|requires?|must be)\b", re.I)
+
+
+@check("L-06", "No instruction to edit phase, approvals, skipped or phase_history by hand "
+               "(every hit is a karvey-state.py call)", reqs=("013",))
+def l06_no_hand_phase_edits(ctx):
+    for name, path in ctx.skills().items():
+        reported_fence = None
+        fence_start = None
+        prev_lang = None
+        for n, line, lang in body_lines(ctx, path):
+            if lang is not None and prev_lang is None:
+                fence_start = n
+            prev_lang = lang
+            if STATE_TOOL_RE.search(line):
+                continue
+            if not any(r.search(line) for r in OWNED_RES):
+                continue
+            if lang is not None and lang in ("json", "yaml", "yml", ""):
+                if reported_fence == fence_start:
+                    continue
+                reported_fence = fence_start
+                yield (path, n, "%s: a spec.json block with phase/approvals/skipped/phase_history written by "
+                                "hand; create or change it through karvey-state.py" % name)
+                continue
+            if NEGATION_RE.search(line) or PRECONDITION_RE.search(line) or not WRITE_VERB_RE.search(line):
+                continue
+            yield (path, n, "%s instructs a hand edit of phase/approvals/skipped/phase_history; use "
+                            "karvey-state.py (advance | generated | skip | approve | reopen)" % name)
+
+
+# --------------------------------------------------------------------------- L-07
+@check("L-07", "The orchestrator has no phase→next table; it calls karvey-state.py next", reqs=("005",))
+def l07_orchestrator_next(ctx):
+    path = ctx.skill("karvey")
+    if path is None:
+        return
+    lines = ctx.lines(path)
+    calls_next = False
+    table, start = [], 0
+    rows = list(iter_lines(lines)) + [(len(lines) + 1, "", None)]
+    for n, line, lang in rows:
+        if lang is None and re.search(r"karvey-state(\.py)?[\"'`]?\s+next\b", line):
+            calls_next = True
+        if lang is None and line.lstrip().startswith("|"):
+            if not table:
+                start = n
+            table.append(line)
+            continue
+        if table:
+            header = [c.strip().lower() for c in table[0].strip().strip("|").split("|")]
+            body = [r for r in table[2:]] if len(table) > 2 else []
+            phase_col = any("phase" in c or "fase" in c for c in header)
+            next_col = any("next" in c or "siguiente" in c for c in header)
+            skill_rows = sum(1 for r in body if "/karvey-" in r)
+            if (phase_col and next_col) or (phase_col and skill_rows >= 3):
+                yield (path, start, "orchestrator holds a phase→next table (%d rows); answer from "
+                                    "`karvey-state.py next {id} --json` instead" % len(body))
+            table = []
+    if not calls_next:
+        yield path, 1, "orchestrator does not call `karvey-state.py next`"
+
+
+# --------------------------------------------------------------------------- L-08
+DEPRECATED_ARTIFACTS = (
+    (re.compile(r"\bproposal\.md\b"), "proposal.md: the product document is prd.md"),
+    (re.compile(r"\bspecs/[{<]?[\w-]+[}>]?/spec-delta\.md\b"),
+     "specs/{capability}/spec-delta.md: the spec-delta lives at the change root (spec-delta.md)"),
+)
+CHANGE_ARTIFACT_RE = re.compile(r"changes/(?:\{[^}]+\}|<[^>]+>|[\w-]+)/([\w.*/-]*[\w*/])")
+READ_VERB_RE = re.compile(r"\b(read|reads|reading|cat|load|loads|consume|consumes|from|input|inputs|"
+                          r"lee|leer)\b", re.I)
+
+
+def _artifact_matches(produced, name):
+    p = produced.rstrip("?")
+    if p.endswith("/"):
+        return name == p or name.startswith(p) or name == p.rstrip("/")
+    if "*" in p:
+        return re.match("^" + re.escape(p).replace(r"\*", "[^/]*") + "$", name) is not None
+    return name == p
+
+
+def producer_index(ctx, name):
+    for i, p in enumerate(ctx.machine().get("phases", [])):
+        if any(_artifact_matches(x, name) for x in p.get("produces", [])):
+            return i
+    return None
+
+
+@check("L-08", "Every change artifact a skill reads is produced by an earlier phase "
+               "(state-machine.json produces/reads); proposal.md and specs/*/spec-delta.md fail",
+       reqs=("012", "057"))
+def l08_artifacts(ctx):
+    phases = ctx.machine().get("phases", [])
+    sm = ctx.schemas_dir() / "state-machine.json"
+    for i, p in enumerate(phases):
+        for r in p.get("reads", []):
+            optional = r.endswith("?")
+            j = producer_index(ctx, r.rstrip("?"))
+            if j is None or (j >= i and not optional):
+                yield (sm, 0, "phase %s reads %s, which no earlier phase produces" % (p.get("id"), r))
+    index = phase_index_of_skill(ctx)
+    for name, path in ctx.skills().items():
+        mine = index.get(name)
+        for n, line, _ in body_lines(ctx, path):
+            for rx, why in DEPRECATED_ARTIFACTS:
+                if rx.search(line):
+                    yield path, n, "%s reads %s" % (name, why)
+            if mine is None:
+                continue
+            for m in CHANGE_ARTIFACT_RE.finditer(line):
+                art = m.group(1)
+                j = producer_index(ctx, art)
+                if j is not None and j > mine and READ_VERB_RE.search(line):
+                    yield (path, n, "%s (phase %s) reads %s, produced only later by phase %s"
+                           % (name, phases[mine]["id"], art, phases[j]["id"]))
+
+
+# --------------------------------------------------------------------------- L-09
+PLUGIN_SEGMENTS = ("rules", "karvey", "hooks", "scripts", "schemas", "skills", "tests", "references",
+                   "templates", "..", ".")
+README_SEGMENTS = PLUGIN_SEGMENTS + ("plugins", "docs", ".claude-plugin", ".github")
+PATH_EXT_RE = re.compile(r"\.(md|sh|py|json|mjs|js|html|txt|yml|yaml|csv)$")
+TICK_RE = re.compile(r"`([^`\s]+)`")
+LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+BARE_RULE_RE = re.compile(r"(?<![\w/.${}-])((?:\.\./)*(?:\./)?(?:karvey/)?rules/[\w.-]+\.md)\b")
+PLUGIN_ROOT_RE = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/([\w./-]+[\w/])")
+
+
+def cited_paths(line, segments):
+    """Relative file paths a line cites (backticks, markdown links, bare rule paths)."""
+    out = []
+    for m in LINK_RE.finditer(line):
+        target = m.group(1).split("#")[0]
+        if target and not re.match(r"^[a-z]+:", target) and not target.startswith("/"):
+            out.append(target)
+    for m in TICK_RE.finditer(line):
+        tok = re.sub(r":\d+(-\d+)?(,\d+(-\d+)?)*$", "", m.group(1)).rstrip(".,;:)")
+        if "/" not in tok or not (PATH_EXT_RE.search(tok) or tok.endswith("/")):
+            continue
+        if tok.split("/")[0] not in segments:
+            continue
+        out.append(tok)
+    for m in BARE_RULE_RE.finditer(line):
+        out.append(m.group(1))
+    clean = []
+    for t in out:
+        if any(ch in t for ch in "{}<>*$…") or "..." in t.replace("../", ""):
+            continue
+        if t not in clean:
+            clean.append(t)
+    return clean
+
+
+def citing_files(ctx):
+    files = [(p, PLUGIN_SEGMENTS) for p in ctx.text_files()]
+    for p in (ctx.plugin / "hooks" / "README.md", ctx.plugin / "README.md", ctx.root / "README.md"):
+        if p.is_file():
+            files.append((p, README_SEGMENTS))
+    return files
+
+
+@check("L-09", "Every cited path resolves from the citing file, or is written ${CLAUDE_PLUGIN_ROOT}/…",
+       reqs=("053",))
+def l09_paths(ctx):
+    for path, segments in citing_files(ctx):
+        base = path.parent
+        for n, line, lang in iter_lines(ctx.lines(path)):
+            for m in PLUGIN_ROOT_RE.finditer(line):
+                rel = m.group(1)
+                if any(ch in rel for ch in "{}<>*"):
+                    continue
+                if not (ctx.plugin / rel).exists():
+                    yield path, n, "${CLAUDE_PLUGIN_ROOT}/%s does not exist in the plugin" % rel
+            if lang is not None:
+                continue
+            for tok in cited_paths(PLUGIN_ROOT_RE.sub("", line), segments):
+                if not (base / tok).exists():
+                    yield (path, n, "cited path %s does not resolve from %s (use ../karvey/rules/x.md or "
+                                    "${CLAUDE_PLUGIN_ROOT}/…)" % (tok, ctx.rel(base)))
+
+
+# --------------------------------------------------------------------------- L-10
+GENERATED_RE = re.compile(r"^<!--\s*generated-from:\s*(\S+)\s*-->\s*$")
+
+
+@check("L-10", "No skills/*/rules/ copy; a copy declared generated is byte-identical to its source",
+       reqs=("052",))
+def l10_rule_copies(ctx):
+    if not ctx.skills_dir.is_dir():
+        return
+    for d in sorted(ctx.skills_dir.glob("*/rules")):
+        if d.parent.name == "karvey" or not d.is_dir():
+            continue
+        for f in sorted(p for p in d.rglob("*") if p.is_file()):
+            text = ctx.read(f) or ""
+            first, _, rest = text.partition("\n")
+            m = GENERATED_RE.match(first)
+            source = ctx.rules_dir / f.name
+            if m:
+                src = (f.parent / m.group(1)).resolve()
+                src_text = ctx.read(src)
+                if src_text is None:
+                    yield f, 1, "generated copy names a missing source %s" % m.group(1)
+                elif src_text != rest:
+                    yield f, 1, "generated copy %s differs from its source %s" % (ctx.rel(f), ctx.rel(src))
+                continue
+            yield (f, 1, "hand-kept rule copy %s (source %s): delete it and cite ../karvey/rules/%s"
+                   % (ctx.rel(f), ctx.rel(source), f.name))
+
+
+# --------------------------------------------------------------------------- L-14
+FILE_TOKEN = r"`[^`\s]*\.(?:md|json|html|txt|yml|yaml|sh|py|csv|mjs|js)`"
+TOOL_NEEDS = (
+    ("Write", ("Write",), re.compile(r"\b(write|writes|create|creates|save|saves|generate|generates)\b"
+                                     r"[^`\n]{0,30}" + FILE_TOKEN, re.I)),
+    ("Edit", ("Edit", "Write", "MultiEdit"), re.compile(r"\b(edit|edits|update|updates|modify|append|"
+                                                        r"appends|amend|patch)\b[^`\n]{0,30}" + FILE_TOKEN,
+                                                        re.I)),
+    ("AskUserQuestion", ("AskUserQuestion",), re.compile(r"AskUserQuestion|\bask the (user|human|owner)\b",
+                                                         re.I)),
+    ("Agent", ("Agent", "Task"), re.compile(r"\bsub-?agents?\b|\bAgent tool\b|\blaunch(?:es)? (?:\w+ ){0,2}"
+                                            r"agents?\b|\bspawn(?:s)? (?:\w+ ){0,2}agents?\b", re.I)),
+    ("Bash", ("Bash",), re.compile(r"\b[Rr]un\s+`(?:git|python3?|bash|sh|gh|az|glab|npm|npx|node|curl|make|"
+                                   r"pytest|ls|cat|grep|jq)\b")),
+)
+SHELL_FENCES = ("bash", "sh", "shell", "zsh", "console")
+
+
+@check("L-14", "An instructed action (Write, Edit, AskUserQuestion, Bash, Agent) is declared in allowed-tools",
+       reqs=("056",))
+def l14_allowed_tools(ctx):
+    for name, path in ctx.skills().items():
+        fields, _, _ = ctx.frontmatter(path)
+        if not fields or fm_value(fields, "allowed-tools") is None:
+            continue
+        have = allowed_tools(fields)
+        first = {}
+        for n, line, lang in body_lines(ctx, path):
+            if lang in SHELL_FENCES:
+                first.setdefault("Bash", n)
+                continue
+            if lang is not None:
+                continue
+            for tool, satisfied_by, rx in TOOL_NEEDS:
+                if tool in first:
+                    continue
+                if tool in ("Write", "Edit") and NEGATION_RE.search(line):
+                    continue
+                if rx.search(line):
+                    first[tool] = n
+        for tool, satisfied_by, _ in TOOL_NEEDS:
+            if tool in first and not have.intersection(satisfied_by):
+                yield (path, first[tool], "%s instructs a %s action but allowed-tools lacks %s"
+                       % (name, tool, tool))
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""
