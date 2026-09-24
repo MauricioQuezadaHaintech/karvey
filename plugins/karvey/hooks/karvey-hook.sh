@@ -76,7 +76,7 @@ nopy_protect_paths() {
   if [ "$EVENT" = "pre-edit" ]; then subject="$(json_field file_path)"; [ -z "$subject" ] && subject="$(json_field notebook_path)"
   else subject="$(json_field command)"; fi
   [ -z "$subject" ] && return 0
-  needles="karvey/approvals karvey/ledger .git/karvey"
+  needles="karvey/approvals karvey/ledger .git/karvey notify-last.json approvals/notify"
   if [ -n "${KARVEY_COMPAT_MARKER:-}" ]; then base="${KARVEY_COMPAT_MARKER##*/}"; needles="$needles $base"; fi
   for n in $needles; do
     case "$subject" in *"$n"*)

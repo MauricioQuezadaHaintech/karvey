@@ -31,6 +31,7 @@ the plugin's own files are never written by the agent.
 
 - Blocks `touch`, redirections, `cp`/`mv` and interpreter writes that name them. <!-- guard-case: pp-01-touch-marker, pp-02-echo-redirect-into-marker, pp-04-mv-ledger, pp-05-python-writes-marker -->
 - Blocks Write/Edit on a marker, the ledger or a plugin file. <!-- guard-case: pp-07-write-tool-on-marker, pp-08-edit-tool-on-ledger-relative, pp-10-edit-plugin-hook -->
+- Blocks writing the notification confirmation (`approvals/notify/`) or the notify record (`notify-last.json`). <!-- guard-case: nc-10-protect-paths-blocks-writing-the-confirmation, nc-11-protect-paths-blocks-editing-the-confirmation, nc-12-protect-paths-blocks-writing-the-notify-record -->
 - Allows running the plugin's scripts and reading the audit log. <!-- guard-case: pp-14-running-plugin-script-allowed, pp-16-reading-the-audit-log-allowed -->
 
 ## Approval hook (UserPromptSubmit, D-01, D-10)
@@ -46,6 +47,8 @@ the phase it approved closes.
 - A prod-kind marker needs an approval word **and** a production word naming the change (D-10). <!-- guard-case: ap-19-prod-kind-d10, ap-22-prod-word-with-negation -->
 - With `KARVEY_COMPAT_MARKER` set, the hook also writes that path (D-11). <!-- guard-case: ap-32-compat-marker-written-d11 -->
 - An empty file created by hand is not a marker: plan-gate still blocks. <!-- guard-case: pg-51-touch-empty-file-is-forged -->
+- A changed notification destination is confirmed only by the human typing `confirmo notificacion <code>` (or `confirm notification <code>`; the 8-hex code `notify-check` prints): the hook records it for this project and that destination, with the same TTL, and prints `[karvey] notification destination confirmation recorded (<code>, expires hh:mm)` (D-16). <!-- guard-case: nc-01-human-phrase-records-the-confirmation, nc-02-english-phrase-and-approval-together -->
+- `karvey-config.py notify-check --confirm` without that confirmation (the agent alone), or with one for another destination or project, or an expired one, prints `NOT CONFIRMED` with the phrase to type and returns status 10; the destination stays unconfirmed. <!-- guard-case: nc-05-agent-alone-cannot-confirm, nc-07-marker-for-another-destination-does-not-count, nc-08-marker-for-another-project-does-not-count, nc-09-expired-marker-does-not-count -->
 
 Approval delegation (multi-agent): a coordinating agent may record a non-prod phase approval with
 `karvey-state.py approve … --role ceo-delegate --ref D-NN` when the human delegated it (`multi-agent.md` §4).

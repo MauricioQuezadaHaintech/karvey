@@ -247,7 +247,7 @@ Run the phase-close ritual (`../karvey/rules/phase-close.md`): status in the tea
 Resolve the destination with `karvey-config.py resolve notifications`; never look it up in `CLAUDE.md` or any other file.
 - `channel` unset → skip and say `Notification: not configured — run /karvey:karvey-init --settings`.
 - `channel: none`, or `qa` not in `events` → skip and say so.
-- Otherwise run `karvey-config.py notify-check` first: exit 10 means the destination changed since the last confirmed send — show it and ask the human before sending (`notify-check --confirm` after their OK). Then send through `via`. A failed send is reported, not swallowed; the phase still closes.
+- Otherwise run `karvey-config.py notify-check` first: exit 10 means the destination changed since the last confirmed send — show it and ask the human to type the phrase it prints (`confirmo notificacion <code>`); only then does `notify-check --confirm` record it (D-16). Then send through `via`. A failed send is reported, not swallowed; the phase still closes.
 
 Content (event `qa`): change-id, source → target, **counts** by severity and the review path (`detail: counts`, the default); finding titles and manual-testing areas only with `detail: full`.
 Write it in the **channel's own markup** (`notifications.md` → Message format per channel). Google Chat / Slack example:

@@ -8,6 +8,10 @@ Location: ``<git-common-dir>/karvey/`` (``project.state_dir``), shared by every 
 clone and never tracked by git; directories 0700, files 0600::
 
     approvals/<scope>.json   scope = change-id | _project — written ONLY by the approval hook
+    approvals/notify/confirm-<key>.json
+                             a human confirmation of a changed notification destination (D-16,
+                             F-15), key = hash of the project root within the clone — written ONLY
+                             by the approval hook, consumed by ``karvey-config.py notify-check --confirm``
     ledger/<change>.json     release facts — written by karvey-state.py approve prod / advance deployed
 
 A marker is valid only as JSON ``v: 1`` with ``kind`` in plan|prod, the expected ``scope``,
@@ -342,6 +346,135 @@ def evidence(marker, scope):
     return {"marker": marker_rel(scope), "marker_created_at": marker.get("created_at", ""),
             "prompt_excerpt": (marker.get("prompt_excerpt") or "")[:EXCERPT_MAX],
             "session": marker.get("session_id", "")}
+
+
+# --------------------------------------------------------------------------- notify confirmation (D-16)
+NOTIFY_KIND = "notify"
+NOTIFY_CODE_LEN = 8
+_HEXCODE = re.compile(r"^[0-9a-f]{%d}$" % NOTIFY_CODE_LEN)
+
+
+def project_key(root):
+    """The project inside its clone: the root relative to the git top level (``.`` at the top), so
+    every worktree of the clone shares it; outside git, the realpath."""
+    top = pj.git_toplevel(root)
+    real = os.path.realpath(str(root))
+    if top is None:
+        return real
+    return os.path.relpath(real, os.path.realpath(str(top))).replace(os.sep, "/")
+
+
+def notify_code(dest_hash):
+    """The short code a human types to confirm a destination: the first 8 hex of its hash."""
+    return (dest_hash or "")[:NOTIFY_CODE_LEN]
+
+
+def notify_marker_path(root, create=True):
+    key = hashlib.sha256(project_key(root).encode("utf-8")).hexdigest()[:16]
+    d = approvals_dir(root, create) / "notify"
+    if create:
+        d.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return d / ("confirm-%s.json" % key)
+
+
+def notify_phrase(dest_hash, lang="es"):
+    """What the human types, e.g. ``confirmo notificacion a1b2c3d4``."""
+    code = notify_code(dest_hash)
+    return ("confirmo notificacion %s" % code) if lang == "es" else ("confirm notification %s" % code)
+
+
+def classify_notify(prompt, vocab=None):
+    """The destination code a human confirmation carries, or None.
+
+    The phrase is a confirm verb, a notification noun and the 8-hex code, in the human's own
+    words: fenced blocks, ``>`` lines and lines over 200 characters are removed first (inline
+    code and quotes are kept, so a pasted ``confirmo notificacion a1b2c3d4`` counts); a question
+    or a negation records nothing."""
+    vocab = vocab or default_vocabulary()
+    rules = vocab.get("rules") or default_vocabulary()["rules"]
+    nc = vocab.get("notify_confirm") or default_vocabulary()["notify_confirm"]
+    raw = prompt if isinstance(prompt, str) else ""
+    if len(raw.encode("utf-8")) > rules["huge_prompt_bytes"]:
+        raw = raw.encode("utf-8")[:rules["scan_limit_bytes"]].decode("utf-8", "ignore")
+    t = _FENCE.sub("\n", raw.replace("\r\n", "\n"))
+    t = "\n".join(ln for ln in t.split("\n")
+                  if len(ln) <= rules["pasted_line_chars"] and not ln.lstrip().startswith(">"))
+    cleaned = normalise(t.replace("`", " "))
+    if not cleaned or cleaned.endswith("?") or "\u00bf" in cleaned:
+        return None
+    if find_term(cleaned, vocab.get("negate") or []):
+        return None
+    alt = lambda terms: "|".join(re.escape(normalise(x)) for x in sorted(terms, key=len, reverse=True))
+    rx = re.compile(r"(?<![\w'])(?:%s)\s*[:,]?\s+(?:%s)\s*[:,]?\s+([0-9a-f]{%d})(?![\w'])"
+                    % (alt(nc["verbs"]), alt(nc["nouns"]), NOTIFY_CODE_LEN))
+    codes = set(rx.findall(cleaned))
+    return codes.pop() if len(codes) == 1 else None
+
+
+def write_notify_marker(root, code, prompt, session_id="", ttl_min=None, now=None):
+    """Record the human's confirmation of destination ``code`` (only the approval hook calls this)."""
+    if not isinstance(code, str) or not _HEXCODE.match(code):
+        raise ApprovalError("invalid destination code %r" % (code,))
+    now = now or now_dt()
+    marker = {
+        "v": MARKER_VERSION, "kind": NOTIFY_KIND, "repo": repo_id(root), "project": project_key(root),
+        "code": code, "created_at": iso(now),
+        "ttl_min": clamp_ttl(ttl_min if ttl_min is not None else defaults()["plan_marker_ttl_min"]),
+        "session_id": session_id or "", "prompt_sha256": prompt_hash(prompt),
+        "prompt_excerpt": (prompt or "")[:EXCERPT_MAX], "consumed_at": None,
+    }
+    _write_private(notify_marker_path(root), marker)
+    _audit(root, {"guard": "approval", "event": "notify-confirm", "decision": "recorded", "reason": code,
+                  "session_id": session_id or "", "prompt_excerpt": marker["prompt_excerpt"]})
+    return marker
+
+
+def check_notify_marker(root, dest_hash, now=None):
+    """``(ok, reason)``: a live human confirmation of exactly this destination in this project."""
+    try:
+        path = notify_marker_path(root, create=False)
+        data = json.loads(path.read_bytes().decode("utf-8-sig"))
+    except FileNotFoundError:
+        return False, "no human confirmation recorded"
+    except (OSError, UnicodeDecodeError, ValueError):
+        data = None
+    if not isinstance(data, dict) or data.get("v") != MARKER_VERSION or data.get("kind") != NOTIFY_KIND or \
+            not isinstance(data.get("prompt_sha256"), str) or not _HEX64.match(data["prompt_sha256"]):
+        _audit(root, {"guard": "approval", "event": "notify-confirm", "decision": "ignored",
+                      "reason": "forged-or-corrupt notify confirmation ignored"})
+        return False, "forged or corrupt confirmation ignored"
+    if data.get("repo") != repo_id(root):
+        return False, "confirmation recorded for another repository"
+    if data.get("project") != project_key(root):
+        return False, "confirmation recorded for another project (%s)" % data.get("project")
+    if data.get("code") != notify_code(dest_hash):
+        return False, "confirmation is for another destination (%s)" % data.get("code")
+    if data.get("consumed_at") is not None:
+        return False, "confirmation already used"
+    created = parse_dt(data.get("created_at"))
+    if created is None:
+        return False, "forged or corrupt confirmation ignored"
+    now = now or now_dt()
+    ttl = clamp_ttl(data.get("ttl_min"))
+    if now - created > timedelta(minutes=ttl):
+        return False, "confirmation expired (older than %d min)" % ttl
+    if created - now > timedelta(minutes=5):
+        return False, "confirmation created in the future"
+    return True, "ok"
+
+
+def consume_notify_marker(root, now=None):
+    path = notify_marker_path(root, create=False)
+    try:
+        data = json.loads(path.read_bytes().decode("utf-8-sig"))
+    except (OSError, UnicodeDecodeError, ValueError):
+        return False
+    if not isinstance(data, dict) or data.get("consumed_at") is not None:
+        return False
+    data["consumed_at"] = iso(now or now_dt())
+    _write_private(path, data)
+    _audit(root, {"guard": "approval", "event": "notify-confirm", "decision": "consumed", "reason": data.get("code")})
+    return True
 
 
 # --------------------------------------------------------------------------- ledger

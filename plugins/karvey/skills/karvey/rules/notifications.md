@@ -36,9 +36,15 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" notify-check --json
 ```
 
 Exit `0`: the destination is the one the human last confirmed — send. Exit `10`: it changed (or was never
-confirmed) — show the new and previous destination, ask the human, and only after their OK run
-`notify-check --confirm` and send. The command also validates the target (§3.1 patterns); an invalid target is
-reported, never sent to.
+confirmed) — show the new and previous destination and ask the human to confirm it **by typing** the phrase
+the command prints, `confirmo notificacion <code>` (or `confirm notification <code>`), where `<code>` is the
+first 8 hex characters of the destination's hash. The approval hook records that confirmation for this project
+and exactly that destination, with the approval-marker TTL (`plan_marker_ttl_min`, `karvey_lib/defaults.json`).
+Then run `notify-check --confirm` and send. `--confirm` counts only against that confirmation (D-16): without
+it — the agent alone, a confirmation of another destination or project, or an expired one — it records nothing
+and exits `10` again with the phrase to type. The confirmation is used once; the agent can never write it
+(protect-paths). The command also validates the target (§3.1 patterns); an invalid target is reported, never
+sent to.
 
 ## Who notifies, and what
 

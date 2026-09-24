@@ -6,6 +6,9 @@
              "don't", "do not", "wait", "hold", "nope", "stop"],
   "prod_terms": ["prod", "produccion", "production", "pr a prod", "merge", "release", "master", "main", "publica",
                  "libera"],
+  "notify_confirm": {"$comment": "D-16: a human confirms a changed notification destination with verb + noun + the 8-hex code notify-check prints, e.g. 'confirmo notificacion a1b2c3d4'. Not overridable per project.",
+                     "verbs": ["confirmo", "confirma", "confirmar", "confirm", "confirmed"],
+                     "nouns": ["notificacion", "notificaciones", "destino", "notification", "notifications", "notify", "destination"]},
   "rules": {"position_words": 12, "short_prompt_chars": 120, "pasted_line_chars": 200,
             "scan_limit_bytes": 2048, "huge_prompt_bytes": 20480}
 }

@@ -162,7 +162,9 @@ def ttl_min(ctx, root=None):
 PROTECT_MSG = ("[karvey] BLOCK protect-paths: approval comes only from the human's message (D-01). "
                "The Karvey approval markers, release ledger and plugin files are written only by the "
                "hooks and the state tool; wait for the human to approve in their own message.")
-STATE_NEEDLES = ("karvey/approvals", "karvey/ledger", ".git/karvey")
+# notify-last.json and approvals/notify also name the notification record and its human confirmation
+# outside git (the XDG state dir, D-16 / F-15)
+STATE_NEEDLES = ("karvey/approvals", "karvey/ledger", ".git/karvey", "notify-last.json", "approvals/notify")
 READ_ONLY = frozenset({"cat", "ls", "head", "tail", "stat", "wc", "file", "less", "more", "grep", "egrep",
                        "fgrep", "rg", "jq", "test", "[", "diff", "cmp", "sha256sum", "shasum", "md5sum",
                        "readlink", "realpath", "basename", "dirname", "du", "tree"})
@@ -1051,19 +1053,26 @@ def approval_hook(ctx):
         return None
     try:
         vocab = approval.vocabulary(reviewed_setting(ctx, "approval_vocabulary"))
-        verdict = approval.classify(text, vocab)
         approval.gc(root)
-        if not verdict["approved"]:
-            return None
-        ids = [c["id"] for c in pj.list_changes(root)]
-        scope = approval.scope_for(verdict["cleaned"], ids, active_change(ctx)["change"])
         ttl = ttl_min(ctx)
-        marker = approval.write_marker(root, verdict["kind"], scope, text, session_id=ctx.payload.session_id,
-                                       ttl_min=ttl, compat=ctx.env.get(approval.COMPAT_ENV, ""))
-        created = approval.parse_dt(marker["created_at"])
-        expires = (created + approval.timedelta(minutes=marker["ttl_min"])).strftime("%H:%M")
-        return Decision.allow(stdout=["[karvey] approval recorded (%s, %s, expires %s)"
-                                      % (verdict["kind"], scope, expires)])
+        lines = []
+        # D-16 / F-15: a human confirmation of a changed notification destination
+        code = approval.classify_notify(text, vocab)
+        if code is not None:
+            nm = approval.write_notify_marker(root, code, text, session_id=ctx.payload.session_id, ttl_min=ttl)
+            created = approval.parse_dt(nm["created_at"])
+            lines.append("[karvey] notification destination confirmation recorded (%s, expires %s)"
+                         % (code, (created + approval.timedelta(minutes=nm["ttl_min"])).strftime("%H:%M")))
+        verdict = approval.classify(text, vocab)
+        if verdict["approved"]:
+            ids = [c["id"] for c in pj.list_changes(root)]
+            scope = approval.scope_for(verdict["cleaned"], ids, active_change(ctx)["change"])
+            marker = approval.write_marker(root, verdict["kind"], scope, text, session_id=ctx.payload.session_id,
+                                           ttl_min=ttl, compat=ctx.env.get(approval.COMPAT_ENV, ""))
+            created = approval.parse_dt(marker["created_at"])
+            expires = (created + approval.timedelta(minutes=marker["ttl_min"])).strftime("%H:%M")
+            lines.append("[karvey] approval recorded (%s, %s, expires %s)" % (verdict["kind"], scope, expires))
+        return Decision.allow(stdout=lines) if lines else None
     except Exception as exc:  # fail open: no marker is the safe side (§3.2)
         _audit(root, {"guard": "approval", "event": "prompt", "decision": "error",
                       "reason": "approval-hook error: %s: %s" % (type(exc).__name__, exc)})

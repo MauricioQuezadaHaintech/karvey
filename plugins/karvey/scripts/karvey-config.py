@@ -19,7 +19,9 @@ Commands:
   propose-settings [--from-legacy]   prints a management / notifications snippet; never writes
   notify-check [--confirm]           exit 0 = destination unchanged since the last confirmed
                                      send; exit 10 = changed (or never confirmed): show it to the
-                                     human; --confirm records it after the human's OK (REQ-W1-097)
+                                     human; --confirm records it only when the human typed
+                                     "confirmo notificacion <code>" (the approval hook records
+                                     it for this project and destination, TTL; D-16), else 10
   outbox add <change> --op OP [--args JSON] [--key K] [--parent-key P] [--error MSG]
   outbox list <change>               pending tracker operations (REQ-W1-090); a child whose
                                      parent is itself pending is ``blocked_by`` it, never sent
@@ -44,7 +46,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import atomicio, outbox as obx, project as pj, safe_values as sv  # noqa: E402
+from karvey_lib import approval, atomicio, outbox as obx, project as pj, safe_values as sv  # noqa: E402
 
 TOOL = "karvey-config"
 
@@ -421,12 +423,7 @@ def destination_hash(nt):
 
 def _root_key(root):
     """The record key: the root relative to the git top level, so every worktree shares it."""
-    top = pj.git_toplevel(root)
-    real = os.path.realpath(str(root))
-    if top is None:
-        return real
-    rel = os.path.relpath(real, os.path.realpath(str(top))).replace(os.sep, "/")
-    return rel
+    return approval.project_key(root)
 
 
 def notify_check(root, confirm=False):
@@ -450,16 +447,27 @@ def notify_check(root, confirm=False):
     result = {"destination": dest, "hash": h, "send": nt["channel"] != "none",
               "last": ({"hash": last.get("hash"), "destination": last.get("destination"),
                         "confirmed_at": last.get("confirmed_at")} if last else None),
-              "changed": last is None or last.get("hash") != h, "recorded": False}
+              "changed": last is None or last.get("hash") != h, "recorded": False,
+              "code": approval.notify_code(h), "confirm_phrase": approval.notify_phrase(h),
+              "human_confirmation": None}
+    if not result["send"]:
+        return kl.EXIT_OK, result, warnings  # channel none: nothing is sent, nothing to confirm
+    if not result["changed"]:
+        return kl.EXIT_OK, result, warnings  # already the confirmed destination: nothing to record
     if confirm:
+        # D-16 / F-15: only a confirmation the human typed (recorded by the UserPromptSubmit hook for
+        # this project and exactly this destination, within its TTL) lets the destination be recorded
+        ok, why = approval.check_notify_marker(root, h)
+        result["human_confirmation"] = why
+        if not ok:
+            return EXIT_CONFIRM, result, warnings
         entries[key] = {"hash": h, "destination": dest, "confirmed_at": now_iso()}
         record = {"schema_version": 1, "entries": entries}
         atomicio.write_json(path, record, expected_sha256=sha, mode=0o600)
+        approval.consume_notify_marker(root)
         result.update({"recorded": True, "changed": False})
         return kl.EXIT_OK, result, warnings
-    if not result["send"]:
-        return kl.EXIT_OK, result, warnings  # channel none: nothing is sent, nothing to confirm
-    return (EXIT_CONFIRM if result["changed"] else kl.EXIT_OK), result, warnings
+    return EXIT_CONFIRM, result, warnings
 
 
 def _dest_line(dest):
@@ -570,10 +578,14 @@ def cmd_notify_check(args, root):
         human = "notify-check: channel none, nothing to send"
     elif code == EXIT_CONFIRM:
         prev = _dest_line(res["last"]["destination"]) if res["last"] and res["last"].get("destination") else "never confirmed"
-        human = ("notify-check: CONFIRMATION REQUIRED — the destination changed since the last send.\n"
-                 "  new:      %s\n  previous: %s\n"
-                 "Show it to the human; after an explicit OK run: karvey-config.py notify-check --confirm"
-                 % (dest, prev))
+        head = ("notify-check: NOT CONFIRMED — %s. The agent cannot confirm a destination; the human must.\n"
+                % res["human_confirmation"]) if args.confirm else \
+            "notify-check: CONFIRMATION REQUIRED — the destination changed since the last send.\n"
+        human = (head + "  new:      %s\n  previous: %s\n"
+                 "Show both to the human. To confirm, the human types in their own message:\n"
+                 "  %s\n"
+                 "(or: confirm notification %s); then run: karvey-config.py notify-check --confirm"
+                 % (dest, prev, res["confirm_phrase"], res["code"]))
     else:
         human = "notify-check: unchanged: " + dest
     return code, res, [], warnings, human
@@ -682,7 +694,8 @@ def build_parser():
     ps.add_argument("--from-legacy", action="store_true", help="build it from the legacy shapes")
     nc = sub.add_parser("notify-check", parents=[common],
                         help="exit 10 when the destination changed since the last confirmed send")
-    nc.add_argument("--confirm", action="store_true", help="record the destination after the human's OK")
+    nc.add_argument("--confirm", action="store_true",
+                    help="record the destination; needs the human's typed confirmation (D-16)")
     ob = sub.add_parser("outbox", parents=[common], help="pending tracker operations of a change")
     ob.add_argument("action", choices=["add", "list", "done"])
     ob.add_argument("change")
