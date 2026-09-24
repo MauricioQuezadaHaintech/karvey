@@ -1,0 +1,13 @@
+{
+  "saved_at": "2026-09-24T14:18:18+00:00",
+  "repos": [
+    {
+      "path": "karvey",
+      "branch": "feature/wave1-hardening",
+      "commit": "da3d70a",
+      "uncommitted": 1,
+      "measured": true
+    }
+  ],
+  "scheduled_tasks": 0
+}
