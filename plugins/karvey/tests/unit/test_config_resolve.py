@@ -2,6 +2,7 @@
 
 REQ-W1-010, 080, 082, 083, 086, 087, 088, 093, 099.
 """
+import json
 import unittest
 
 import _config as C
@@ -331,6 +332,83 @@ class OriginIntegrationFallback(Base):
         g.write(self.root, "docs/spec/project.json", {"branch_flow": {"integration": "main"},
                                                        "management": "markdown"})
         self.assertEqual(self.resolve()[1]["result"]["tool"], "markdown")
+
+
+class Outbox(Base):
+    """REQ-W1-090: failed tracker operations queued; a child of a pending parent is never sent."""
+
+    def setUp(self):
+        super().setUp()
+        self.project({"management": {"tool": "clickup", "location": "1"}}, {"feat-a": {"phase": "tasks"}})
+        self.file = self.root / "docs/spec/changes/feat-a/tracker-outbox.jsonl"
+
+    def add(self, *extra):
+        return C.run_json("outbox", "add", "feat-a", "--root", self.root, *extra)
+
+    def listing(self):
+        return C.run_json("outbox", "list", "feat-a", "--root", self.root)[1]["result"]
+
+    def test_add_list_done(self):
+        code, env = self.add("--op", "set_status", "--args", '{"task": "E1.F1.T1", "status": "review"}',
+                             "--key", "E1.F1.T1", "--error", "HTTP 503")
+        self.assertEqual(code, 0)
+        e = env["result"]
+        for k in ("id", "op", "args", "parent_key", "created_at", "attempts", "last_error"):
+            self.assertIn(k, e)
+        self.assertEqual((e["op"], e["attempts"], e["last_error"], e["state"]), ("set_status", 1, "HTTP 503", "ready"))
+        lines = self.file.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(json.loads(lines[0])["args"], {"task": "E1.F1.T1", "status": "review"})
+        r = self.listing()
+        self.assertEqual((r["pending"], r["ready"], r["blocked"]), (1, [e["id"]], []))
+        code, env = C.run_json("outbox", "done", "feat-a", e["id"], "--root", self.root)
+        self.assertEqual((code, env["result"]["removed"]), (0, True))
+        self.assertEqual(self.listing()["pending"], 0)
+
+    def test_failed_retry_keeps_entry_and_counts(self):
+        e = self.add("--op", "set_status", "--error", "timeout")[1]["result"]
+        code, env = C.run_json("outbox", "done", "feat-a", e["id"], "--failed", "HTTP 500", "--root", self.root)
+        self.assertEqual((code, env["result"]["removed"], env["result"]["attempts"]), (0, False, 2))
+        entry = self.listing()["entries"][0]
+        self.assertEqual((entry["attempts"], entry["last_error"]), (2, "HTTP 500"))
+
+    def test_child_under_pending_parent_is_blocked_never_sent(self):
+        epic = self.add("--op", "create_epic", "--key", "E1", "--error", "HTTP 503")[1]["result"]
+        feat = self.add("--op", "create_feature", "--key", "E1.F1", "--parent-key", "E1")[1]["result"]
+        self.assertEqual((feat["blocked_by"], feat["state"]), (epic["id"], "blocked"))
+        r = self.listing()
+        self.assertEqual((r["ready"], r["blocked"]), ([epic["id"]], [feat["id"]]))
+        code, env = C.run_json("outbox", "done", "feat-a", feat["id"], "--root", self.root)
+        self.assertEqual((code, env["errors"][0]["code"]), (3, "config.outbox_blocked"))
+        # the parent is applied: the child becomes ready
+        code, env = C.run_json("outbox", "done", "feat-a", epic["id"], "--root", self.root)
+        self.assertEqual(env["result"]["unblocked"], [feat["id"]])
+        r = self.listing()
+        self.assertEqual((r["ready"], r["blocked"]), ([feat["id"]], []))
+
+    def test_child_of_a_parent_not_pending_is_ready(self):
+        e = self.add("--op", "create_task", "--key", "E1.F1.T1", "--parent-key", "E1.F1")[1]["result"]
+        self.assertEqual((e["blocked_by"], e["state"]), (None, "ready"))
+
+    def test_ids_never_reused(self):
+        a = self.add("--op", "create_epic", "--key", "E1")[1]["result"]
+        C.run_json("outbox", "done", "feat-a", a["id"], "--root", self.root)
+        b = self.add("--op", "create_epic", "--key", "E1")[1]["result"]
+        self.assertNotEqual(a["id"], b["id"])
+
+    def test_invalid_input(self):
+        self.assertEqual(self.add("--op", "rm -rf")[0], 2)
+        self.assertEqual(self.add("--op", "set_status", "--args", "[1]")[0], 2)
+        self.assertEqual(self.add("--op", "set_status", "--key", "a\nb")[0], 2)
+        self.assertEqual(self.add()[0], 2)
+        self.assertEqual(C.run_json("outbox", "list", "nope", "--root", self.root)[0], 4)
+        self.assertEqual(C.run_json("outbox", "list", "../x", "--root", self.root)[0], 2)
+        self.assertEqual(C.run_json("outbox", "done", "feat-a", "ob-x", "--root", self.root)[0], 4)
+
+    def test_corrupt_line_is_exit_4(self):
+        self.file.write_text('{"id": "ob-1", "op": "x"}\nnot json\n', encoding="utf-8")
+        code, env = C.run_json("outbox", "list", "feat-a", "--root", self.root)
+        self.assertEqual((code, env["errors"][0]["code"]), (4, "config.outbox_corrupt"))
 
 
 if __name__ == "__main__":

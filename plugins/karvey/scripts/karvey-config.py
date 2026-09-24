@@ -17,15 +17,28 @@ Commands:
                                      --shell: the validated value (§3.1) or exit 3 naming the
                                      key and the rule; skills do VALUE=$(… get K --shell) || stop
   propose-settings [--from-legacy]   prints a management / notifications snippet; never writes
+  notify-check [--confirm]           exit 0 = destination unchanged since the last confirmed
+                                     send; exit 10 = changed (or never confirmed): show it to the
+                                     human; --confirm records it after the human's OK (REQ-W1-097)
+  outbox add <change> --op OP [--args JSON] [--key K] [--parent-key P] [--error MSG]
+  outbox list <change>               pending tracker operations (REQ-W1-090); a child whose
+                                     parent is itself pending is ``blocked_by`` it, never sent
+  outbox done <change> <id> [--failed MSG]   applied → removed; --failed keeps it, attempts+1
+
+Exit codes: the shared ones plus ``10`` = confirmation required (notify-check).
 
 Settings missing from the working copy are looked up on ``origin/{integration}`` (local ref,
 no fetch) before being declared missing (REQ-W1-083).
 """
 import argparse
 import copy
+import hashlib
 import json
 import os
+import re
 import sys
+import uuid
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -47,6 +60,12 @@ DETAILS = ("counts", "full")
 DEFAULT_DETAIL = "counts"
 OVERRIDE_FIELDS = ("tool", "location", "statuses", "sprints")
 MARKDOWN_LOCATION = "docs/spec/changes/{change-id}/PLAN.md"
+EXIT_CONFIRM = 10  # notify-check: the destination changed, the human must confirm it
+NOTIFY_FILE = "notify-last.json"
+NOTIFY_FIELDS = ("channel", "target", "via", "events", "detail")
+OUTBOX_FILE = "tracker-outbox.jsonl"
+OP_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
+ITEM_KEY_MAX = 200
 
 
 class Refused(Exception):
@@ -385,7 +404,218 @@ def propose_settings(settings, from_legacy=False):
     return {"snippet": snippet, "notes": notes, "from_legacy": bool(from_legacy), "written": False}
 
 
+# --------------------------------------------------------------------------- notify-check
+def now_iso():
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def destination(nt):
+    """The part of the resolved notifications block that decides where a notice goes."""
+    return {k: nt[k] for k in NOTIFY_FIELDS}
+
+
+def destination_hash(nt):
+    blob = json.dumps(destination(nt), sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def _root_key(root):
+    """The record key: the root relative to the git top level, so every worktree shares it."""
+    top = pj.git_toplevel(root)
+    real = os.path.realpath(str(root))
+    if top is None:
+        return real
+    rel = os.path.relpath(real, os.path.realpath(str(top))).replace(os.sep, "/")
+    return rel
+
+
+def notify_check(root, confirm=False):
+    """``(exit_code, result)``: 0 unchanged / recorded, 10 confirmation required (REQ-W1-097)."""
+    nt, warnings = resolve_notifications(Settings(root))
+    dest = destination(nt)
+    if nt["target_error"] is not None:
+        raise Refused("notifications.target refused: %s" % nt["target_error"], code="config.unsafe_value",
+                      result={"key": "notifications.target", "rule": nt["target_error"], "destination": dest})
+    h = destination_hash(nt)
+    path = pj.state_dir(root) / NOTIFY_FILE
+    try:
+        loaded = atomicio.read_json(path)
+        record = loaded.data if isinstance(loaded.data, dict) else {}
+        sha = loaded.sha256
+    except atomicio.ReadError:
+        record, sha = {}, atomicio.file_sha256(path)
+    entries = record.get("entries") if isinstance(record.get("entries"), dict) else {}
+    key = _root_key(root)
+    last = entries.get(key) if isinstance(entries.get(key), dict) else None
+    result = {"destination": dest, "hash": h, "send": nt["channel"] != "none",
+              "last": ({"hash": last.get("hash"), "destination": last.get("destination"),
+                        "confirmed_at": last.get("confirmed_at")} if last else None),
+              "changed": last is None or last.get("hash") != h, "recorded": False}
+    if confirm:
+        entries[key] = {"hash": h, "destination": dest, "confirmed_at": now_iso()}
+        record = {"schema_version": 1, "entries": entries}
+        atomicio.write_json(path, record, expected_sha256=sha, mode=0o600)
+        result.update({"recorded": True, "changed": False})
+        return kl.EXIT_OK, result, warnings
+    if not result["send"]:
+        return kl.EXIT_OK, result, warnings  # channel none: nothing is sent, nothing to confirm
+    return (EXIT_CONFIRM if result["changed"] else kl.EXIT_OK), result, warnings
+
+
+def _dest_line(dest):
+    return "%s → %s (via %s, events %s, detail %s)" % (
+        dest["channel"], dest["target"] or '""', dest["via"] or '""', ",".join(dest["events"]) or "none",
+        dest["detail"])
+
+
+# --------------------------------------------------------------------------- outbox
+def outbox_path(root, change):
+    if not isinstance(change, str) or not re.match(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$", change):
+        raise Usage("invalid change id %r" % (change,))
+    d = Path(root) / pj.CHANGES_DIR / change
+    if not d.is_dir():
+        raise NotFound("change %s not found" % change)
+    return d / OUTBOX_FILE
+
+
+def read_outbox(path):
+    """``(entries, sha256)``; a corrupt line is exit 4 (never silently dropped)."""
+    if not path.is_file():
+        return [], None
+    raw = path.read_bytes()
+    entries = []
+    for n, line in enumerate(raw.decode("utf-8-sig").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            e = json.loads(line)
+        except ValueError:
+            raise NotFound("%s:%d: invalid JSON line" % (path, n), code="config.outbox_corrupt")
+        if not isinstance(e, dict) or not isinstance(e.get("id"), str):
+            raise NotFound("%s:%d: not an outbox entry" % (path, n), code="config.outbox_corrupt")
+        entries.append(e)
+    return entries, atomicio.sha256_bytes(raw)
+
+
+def write_outbox(path, entries, sha):
+    text = "".join(json.dumps(e, ensure_ascii=False, sort_keys=False) + "\n" for e in entries)
+    atomicio.write_text_atomic(path, text, expected_sha256=sha)
+
+
+def _item_key(value, name):
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip() or len(value) > ITEM_KEY_MAX \
+            or re.search(r"[\x00-\x1f\x7f]", value):
+        raise Usage("%s must be a one-line natural key of at most %d characters" % (name, ITEM_KEY_MAX))
+    return value
+
+
+def annotate(entries):
+    """Adds ``state`` (ready | blocked) to each entry: blocked while its parent entry is pending."""
+    pending = {e["id"] for e in entries}
+    out = []
+    for e in entries:
+        e = dict(e)
+        e["state"] = "blocked" if e.get("blocked_by") in pending else "ready"
+        out.append(e)
+    return out
+
+
+def outbox_add(root, change, op, args_json=None, key=None, parent_key=None, error=None):
+    path = outbox_path(root, change)
+    if not isinstance(op, str) or not OP_PATTERN.match(op):
+        raise Usage("--op must match %s (e.g. create_task, set_status)" % OP_PATTERN.pattern)
+    try:
+        op_args = json.loads(args_json) if args_json else {}
+    except ValueError as exc:
+        raise Usage("--args is not JSON: %s" % exc)
+    if not isinstance(op_args, dict):
+        raise Usage("--args must be a JSON object")
+    key = _item_key(key, "--key")
+    parent_key = _item_key(parent_key, "--parent-key")
+    entries, sha = read_outbox(path)
+    # a random id, so an id is never reused after its entry is removed (blocked_by stays exact)
+    entry = {"id": "ob-" + uuid.uuid4().hex[:12], "op": op, "args": op_args, "key": key, "parent_key": parent_key,
+             "created_at": now_iso(), "attempts": 1 if error else 0, "last_error": error, "blocked_by": None}
+    if parent_key:
+        parent = next((e for e in entries if e.get("key") == parent_key), None)
+        if parent is not None:
+            entry["blocked_by"] = parent["id"]  # REQ-W1-090: never created under a missing parent
+    entries.append(entry)
+    write_outbox(path, entries, sha)
+    return annotate(entries)[-1]
+
+
+def outbox_done(root, change, entry_id, failed=None):
+    path = outbox_path(root, change)
+    entries, sha = read_outbox(path)
+    ann = {e["id"]: e for e in annotate(entries)}
+    if entry_id not in ann:
+        raise NotFound("outbox %s: no pending entry %s" % (change, entry_id), code="config.outbox_no_entry")
+    if ann[entry_id]["state"] == "blocked":
+        raise Refused("outbox %s: %s is blocked by pending %s; it is never sent before its parent"
+                      % (change, entry_id, ann[entry_id]["blocked_by"]), code="config.outbox_blocked")
+    if failed is not None:
+        for e in entries:
+            if e["id"] == entry_id:
+                e["attempts"] = int(e.get("attempts") or 0) + 1
+                e["last_error"] = str(failed)[:500]
+        write_outbox(path, entries, sha)
+        return {"id": entry_id, "removed": False, "attempts": ann[entry_id].get("attempts", 0) + 1}
+    entries = [e for e in entries if e["id"] != entry_id]
+    write_outbox(path, entries, sha)
+    return {"id": entry_id, "removed": True, "unblocked": [e["id"] for e in entries if e.get("blocked_by") == entry_id]}
+
+
 # --------------------------------------------------------------------------- commands
+def cmd_notify_check(args, root):
+    code, res, warnings = notify_check(root, args.confirm)
+    dest = _dest_line(res["destination"])
+    if res["recorded"]:
+        human = "notify-check: destination confirmed and recorded: " + dest
+    elif not res["send"]:
+        human = "notify-check: channel none, nothing to send"
+    elif code == EXIT_CONFIRM:
+        prev = _dest_line(res["last"]["destination"]) if res["last"] and res["last"].get("destination") else "never confirmed"
+        human = ("notify-check: CONFIRMATION REQUIRED — the destination changed since the last send.\n"
+                 "  new:      %s\n  previous: %s\n"
+                 "Show it to the human; after an explicit OK run: karvey-config.py notify-check --confirm"
+                 % (dest, prev))
+    else:
+        human = "notify-check: unchanged: " + dest
+    return code, res, [], warnings, human
+
+
+def cmd_outbox(args, root):
+    if args.action == "add":
+        if args.entry_id:
+            raise Usage("outbox add takes no entry id")
+        if not args.op:
+            raise Usage("outbox add requires --op")
+        e = outbox_add(root, args.change, args.op, args.args, args.key, args.parent_key, args.error)
+        human = "outbox %s: %s %s%s" % (args.change, e["id"], e["op"],
+                                         (" (blocked by %s)" % e["blocked_by"]) if e["blocked_by"] else "")
+        return kl.EXIT_OK, e, [], [], human
+    if args.action == "list":
+        entries, _ = read_outbox(outbox_path(root, args.change))
+        ann = annotate(entries)
+        res = {"change": args.change, "entries": ann, "pending": len(ann),
+               "ready": [e["id"] for e in ann if e["state"] == "ready"],
+               "blocked": [e["id"] for e in ann if e["state"] == "blocked"]}
+        lines = ["outbox %s: %d pending" % (args.change, len(ann))]
+        lines += ["  %s %-7s %s %s%s" % (e["id"], e["state"], e["op"], e.get("key") or "",
+                                        (" ← %s" % e["blocked_by"]) if e["state"] == "blocked" else "")
+                  for e in ann]
+        return kl.EXIT_OK, res, [], [], "\n".join(lines)
+    if not args.entry_id:
+        raise Usage("outbox done requires an entry id")
+    res = outbox_done(root, args.change, args.entry_id, args.failed)
+    human = ("outbox %s: %s applied and removed" % (args.change, args.entry_id) if res["removed"]
+             else "outbox %s: %s failed again (attempts %d)" % (args.change, args.entry_id, res["attempts"]))
+    return kl.EXIT_OK, res, [], [], human
+
+
 def cmd_resolve(args, root):
     settings = Settings(root)
     if args.what == "management":
@@ -427,7 +657,8 @@ def cmd_propose(args, root):
     return kl.EXIT_OK, res, [], [], human
 
 
-COMMANDS = {"resolve": cmd_resolve, "get": cmd_get, "propose-settings": cmd_propose}
+COMMANDS = {"resolve": cmd_resolve, "get": cmd_get, "propose-settings": cmd_propose,
+            "notify-check": cmd_notify_check, "outbox": cmd_outbox}
 
 
 def resolve_root(args):
@@ -457,6 +688,19 @@ def build_parser():
     g.add_argument("--shell", action="store_true", help="validate (§3.1) and print the bare value, or exit 3")
     ps = sub.add_parser("propose-settings", parents=[common], help="print a settings snippet; never writes")
     ps.add_argument("--from-legacy", action="store_true", help="build it from the legacy shapes")
+    nc = sub.add_parser("notify-check", parents=[common],
+                        help="exit 10 when the destination changed since the last confirmed send")
+    nc.add_argument("--confirm", action="store_true", help="record the destination after the human's OK")
+    ob = sub.add_parser("outbox", parents=[common], help="pending tracker operations of a change")
+    ob.add_argument("action", choices=["add", "list", "done"])
+    ob.add_argument("change")
+    ob.add_argument("entry_id", nargs="?", help="done: the entry id")
+    ob.add_argument("--op", help="add: the tracker operation (create_task, set_status, …)")
+    ob.add_argument("--args", help="add: the operation's arguments as a JSON object")
+    ob.add_argument("--key", help="add: natural key of the item the operation creates or changes")
+    ob.add_argument("--parent-key", help="add: natural key of the parent item")
+    ob.add_argument("--error", help="add: the error of the failed attempt")
+    ob.add_argument("--failed", metavar="ERROR", help="done: the retry failed again; keep it, attempts+1")
     return p
 
 
@@ -490,6 +734,11 @@ def main(argv=None):
         return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL,
                                    errors=[kl.issue("internal", "%s: %s" % (type(exc).__name__, exc))]),
                        args.json)
+    if code == EXIT_CONFIRM:
+        # not a shared exit code: build the envelope as "findings", then state the real code
+        env = kl.envelope(TOOL, kl.EXIT_FINDINGS, result=result, errors=errors, warnings=warnings)
+        env["exit"] = EXIT_CONFIRM
+        return kl.emit(env, args.json, human=human)
     return kl.emit(kl.envelope(TOOL, code, result=result, errors=errors, warnings=warnings), args.json,
                    human=human)
 
