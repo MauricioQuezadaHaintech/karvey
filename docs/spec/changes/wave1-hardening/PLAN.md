@@ -83,7 +83,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F3: State tool `karvey-state.py`
 
-- [ ] E1.F3.T1 [Backend] `karvey-state.py` CLI and `validate` (schema + semantic checks, advisory/strict) — est: 30min (depends E1.F2.T2, E1.F2.T4, E1.F2.T5, E1.F2.T6)
+- [x] E1.F3.T1 [Backend] `karvey-state.py` CLI and `validate` (schema + semantic checks, advisory/strict) — est: 30min (depends E1.F2.T2, E1.F2.T4, E1.F2.T5, E1.F2.T6)
 - [ ] E1.F3.T2 [Backend] `validate --fix` migration (exact tier, `--accept-proposed`, `--dry-run`, idempotent) — est: 45min (depends E1.F3.T1)
 - [ ] E1.F3.T3 [Backend] `next` and `active` commands — est: 20min (depends E1.F3.T2)
 - [ ] E1.F3.T4 [Backend] `advance`, `generated`, `skip`, `reopen` with history, lock and legacy in-memory mapping — est: 40min (depends E1.F3.T3)
@@ -203,7 +203,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F2.T4 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet |
 | E1.F2.T5 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; F-06 logged |
 | E1.F2.T6 [Backend] | ✅ done | 15 | 1 | 0 | no human review yet |
-| E1.F3.T1 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F3.T1 [Backend] | ✅ done | 30 | 7 | 0 | no human review yet; F-07 logged (legacy shapes as state.legacy_* warnings) |
 | E1.F3.T2 [Backend] | ⬜ todo | 45 | — | — |  |
 | E1.F3.T3 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F3.T4 [Backend] | ⬜ todo | 40 | — | — |  |
