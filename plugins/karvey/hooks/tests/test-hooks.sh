@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Regression tests for the plugin hooks (BUG-01..04 in 3.11.2, BUG-18..19 in 3.11.3, BUG-20..21 in 3.11.4). No dependencies beyond bash + python3.
+# Regression tests for the plugin hooks (BUG-01..04 in 3.11.2, BUG-18..19 in 3.11.3, BUG-20..21 in 3.11.4) and the
+# wave1 dispatcher (E1.F4.T3: every hooks.json command run as written, no-python fail modes). Needs bash + python3.
 # Run: bash plugins/karvey/hooks/tests/test-hooks.sh   → exit 0 if all pass.
 set -u
 H="$(cd "$(dirname "$0")/.." && pwd)"
@@ -25,12 +26,61 @@ echo '[1]' > "$T/k2/docs/spec/project.json"; out=$(ctx "$T/k2"); [[ "$out" == *"
 [[ "$(ctx "$T/k1")" == *"creates no change"* ]] && ok "notice says settings-only (BUG-01 guard)" || bad "notice wording" "$(ctx "$T/k1")"
 ( cd "$T" && out=$(CLAUDE_PROJECT_DIR=plain timeout 5 bash "$H/karvey-session-context.sh"; echo "rc=$?"); [[ "$out" == *"rc=0"* ]] && echo ok ) >/dev/null && ok "relative CLAUDE_PROJECT_DIR does not hang" || bad "relative dir" "timeout"
 
-echo "hooks.json: the declared command runs as written (BUG-18)"
-CMD=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['hooks']['SessionStart'][0]['hooks'][0]['command'])" "$H/hooks.json")
-out=$(cd "$T" && CLAUDE_PLUGIN_ROOT="$(dirname "$H")" CLAUDE_PROJECT_DIR="$T/plain" bash -c "$CMD" 2>&1; echo "rc=$?")
-[[ "$out" == *"rc=0"* && "$out" != *"No such file"* ]] && ok "SessionStart command expands CLAUDE_PLUGIN_ROOT" || bad "SessionStart command" "$out"
-out=$(cd "$T" && CLAUDE_PLUGIN_ROOT="$T/with space/plugin" bash -c "$CMD" 2>&1; echo "rc=$?")
-[[ "$out" == *"with space/plugin/hooks"* ]] && ok "path with spaces stays one word" || bad "path with spaces" "$out"
+echo "hooks.json: every declared command runs as written (BUG-18, generalised)"
+FIX="$(dirname "$H")/tests/fixtures/payloads"
+python3 - "$H/hooks.json" > "$T/cmds.tsv" <<'PY'
+import json, sys
+for ev, groups in json.load(open(sys.argv[1]))["hooks"].items():
+    for g in groups:
+        for h in g["hooks"]:
+            print("%s\x1f%s\x1f%s" % (ev, g.get("matcher", "") or "-", h["command"]))
+PY
+payload_for() {  # event matcher → a captured payload, cwd rewritten to $2
+  case "$1:$3" in
+    SessionStart:*)         f=session-start-startup.json ;;
+    UserPromptSubmit:*)     f=user-prompt-submit.json ;;
+    PreToolUse:Bash)        f=pre-tool-use-bash.json ;;
+    PreToolUse:*)           f=pre-tool-use-edit.json ;;
+    PostToolUse:*)          f=post-tool-use-write.json ;;
+  esac
+  [ -s "$FIX/$f" ] || { echo "MISSING-FIXTURE $f" >&2; return 1; }
+  sed "s#/SCRATCH/proj#$2#g" "$FIX/$f"
+}
+N=$(wc -l < "$T/cmds.tsv" | tr -d ' ')
+[ "$N" -ge 5 ] && ok "hooks.json declares $N commands (SessionStart, UserPromptSubmit, PreToolUse x2, PostToolUse)" || bad "hooks.json commands" "$N"
+if grep -qF "'\${CLAUDE_PLUGIN_ROOT}" "$H/hooks.json"; then bad "no single-quoted CLAUDE_PLUGIN_ROOT (BUG-18)" "$(grep -nF "'\${" "$H/hooks.json")"; else ok "no single-quoted CLAUDE_PLUGIN_ROOT (BUG-18)"; fi
+SP="$T/with space/plugin"; mkdir -p "$SP"; cp -R "$(dirname "$H")/hooks" "$(dirname "$H")/scripts" "$(dirname "$H")/schemas" "$(dirname "$H")/.claude-plugin" "$SP/"
+US="$(printf '\037')"
+while IFS="$US" read -r ev matcher cmd; do
+  for root in "$(dirname "$H")" "$SP"; do
+    out=$(cd "$T" && payload_for "$ev" "$T/plain" "$matcher" | CLAUDE_PLUGIN_ROOT="$root" CLAUDE_PROJECT_DIR="$T/plain" bash -c "$cmd" 2>&1; echo "rc=$?")
+    label="$ev [$matcher] @ $( [ "$root" = "$SP" ] && echo 'path with spaces' || echo 'plugin root')"
+    [[ "$out" == *"rc=0"* && "$out" != *"No such file"* && "$out" != *"MISSING-FIXTURE"* ]] && ok "$label runs as written" || bad "$label runs as written" "$out"
+  done
+done < "$T/cmds.tsv"
+CMD=$(head -1 "$T/cmds.tsv" | cut -d "$US" -f3)
+out=$(cd "$T" && CLAUDE_PLUGIN_ROOT="$T/missing space/plugin" bash -c "$CMD" 2>&1; echo "rc=$?")
+[[ "$out" == *"missing space/plugin/hooks"* ]] && ok "a missing path with spaces stays one word" || bad "path with spaces" "$out"
+
+echo "dispatcher: python path and no-python fail modes (§3.2)"
+D="$H/karvey-hook.sh"
+BASHBIN="$(command -v bash)"
+NOPY="$T/nopy-bin"; mkdir -p "$NOPY"
+for c in bash sh cat dirname grep sed tr head env; do p=$(command -v "$c") && ln -sf "$p" "$NOPY/$c"; done
+disp() { printf '%s' "$2" | env -i HOME="$T" PATH="$1" ${3:+KARVEY_HOOK_SELFTEST=$3} "$BASHBIN" "$D" "$4" 2>&1; echo "rc=$?"; }
+LS='{"tool_name":"Bash","tool_input":{"command":"ls"},"cwd":"'"$T/plain"'"}'
+TOK='{"tool_name":"Bash","tool_input":{"command":"echo KARVEY-SELFTEST-BLOCK"},"cwd":"'"$T/plain"'"}'
+out=$(disp "$PATH" "$LS" "" pre-bash);        [[ "$out" == "rc=0" ]] && ok "python: pre-bash ls → allow, silent" || bad "python allow" "$out"
+out=$(disp "$PATH" "$TOK" 1 pre-bash);        [[ "$out" == *"BLOCK selftest"*"rc=2" ]] && ok "python: a block exits 2 with the reason" || bad "python block" "$out"
+out=$(disp "$PATH" "not json" "" pre-bash);   [[ "$out" == "rc=0" ]] && ok "python: non-JSON payload, stub guards → allow" || bad "python non-json" "$out"
+out=$(disp "$PATH" '{"prompt":"ok"}' "" prompt); [[ "$out" == "rc=0" ]] && ok "python: prompt → silent (no marker yet)" || bad "python prompt" "$out"
+out=$(disp "$PATH" "" "" nosuch);             [[ "$out" == *"unknown hook event"*"rc=0" ]] && ok "python: unknown event is not blocking" || bad "python unknown" "$out"
+out=$(disp "$NOPY" "$LS" "" pre-bash);        [[ "$out" == "rc=0" ]] && ok "no python: pre-bash ls → allow by fail mode" || bad "nopy allow" "$out"
+out=$(disp "$NOPY" "$TOK" 1 pre-bash);        [[ "$out" == *"BLOCK selftest"*"no python"*"rc=2" ]] && ok "no python: the classifier blocks (exit 2)" || bad "nopy block" "$out"
+for ev in prompt post-edit pre-edit session; do
+  out=$(disp "$NOPY" '{}' "" "$ev");          [[ "$out" == "rc=0" ]] && ok "no python: $ev → open (exit 0)" || bad "nopy $ev" "$out"
+done
+out=$(disp "$NOPY" "" "" nosuch);             [[ "$out" == *"unknown hook event"*"rc=0" ]] && ok "no python: unknown event is not blocking" || bad "nopy unknown" "$out"
 
 echo "session-context: team.json inside the repo (BUG-19)"
 R="$T/myrepo"; mkdir -p "$R/docs/spec/agents/ceo" "$R/docs/spec/board"
