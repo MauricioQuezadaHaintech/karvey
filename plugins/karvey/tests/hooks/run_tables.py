@@ -482,8 +482,11 @@ def check_stubs():
         for name in ("gh", "az", "glab"):
             (tmp / (name + ".stdout")).write_text('{"stub":"%s"}' % name)
             (tmp / (name + ".rc")).write_text("3")
-            cp = subprocess.run([str(STUBS / name), "pr", "view"], env={"KARVEY_STUB_DATA": str(tmp),
-                                                                       "PATH": os.environ.get("PATH", "")},
+            # through bash, as every other script here: Windows cannot exec a shebang (F-43)
+            env = {"KARVEY_STUB_DATA": str(tmp), "PATH": os.environ.get("PATH", "")}
+            if os.environ.get("SYSTEMROOT"):
+                env["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
+            cp = subprocess.run(["bash", str(STUBS / name), "pr", "view"], env=env,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
             if cp.returncode != 3 or json.loads(cp.stdout.decode() or "{}").get("stub") != name:
                 problems.append("stub %s: rc=%d out=%r" % (name, cp.returncode, cp.stdout))
