@@ -85,7 +85,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 - [x] E1.F3.T1 [Backend] `karvey-state.py` CLI and `validate` (schema + semantic checks, advisory/strict) — est: 30min (depends E1.F2.T2, E1.F2.T4, E1.F2.T5, E1.F2.T6)
 - [x] E1.F3.T2 [Backend] `validate --fix` migration (exact tier, `--accept-proposed`, `--dry-run`, idempotent) — est: 45min (depends E1.F3.T1)
-- [ ] E1.F3.T3 [Backend] `next` and `active` commands — est: 20min (depends E1.F3.T2)
+- [x] E1.F3.T3 [Backend] `next` and `active` commands — est: 20min (depends E1.F3.T2)
 - [ ] E1.F3.T4 [Backend] `advance`, `generated`, `skip`, `reopen` with history, lock and legacy in-memory mapping — est: 40min (depends E1.F3.T3)
 - [ ] E1.F3.T5 [Backend] Marker store and release ledger in `approval.py` — est: 30min (depends E1.F2.T2, E1.F2.T4) (P)
 - [ ] E1.F3.T6 [Backend] `approve` (prod → ledger, `--write-spec`), `check-prod`, marker consumption on `advance` — est: 30min (depends E1.F3.T4, E1.F3.T5)
@@ -205,7 +205,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F2.T6 [Backend] | ✅ done | 15 | 1 | 0 | no human review yet |
 | E1.F3.T1 [Backend] | ✅ done | 30 | 7 | 0 | no human review yet; F-07 logged (legacy shapes as state.legacy_* warnings) |
 | E1.F3.T2 [Backend] | ✅ done | 45 | 2 | 0 | no human review yet |
-| E1.F3.T3 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F3.T3 [Backend] | ✅ done | 20 | 2 | 0 | no human review yet |
 | E1.F3.T4 [Backend] | ⬜ todo | 40 | — | — |  |
 | E1.F3.T5 [Backend] | ⬜ todo | 30 | — | — |  |
 | E1.F3.T6 [Backend] | ⬜ todo | 30 | — | — |  |

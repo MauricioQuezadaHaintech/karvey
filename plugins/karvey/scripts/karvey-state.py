@@ -11,6 +11,8 @@ Shared CLI contract (§1.1): ``--root DIR`` (else walk up from the cwd to the gi
 Commands:
   validate [PATH…|--all] [--strict]     schema + semantic checks (§2.2, §2.3)
            [--fix [--dry-run] [--accept-proposed]]   legacy migration (§2.5)
+  next <change>                         the computed next phase (REQ-W1-005)
+  active                                the active change (§5), shared with hooks and dashboard
 """
 import argparse
 import copy
@@ -651,7 +653,150 @@ def cmd_validate(args, root):
     return worst, result, errors, warnings, "\n".join(lines)
 
 
-COMMANDS = {"validate": cmd_validate}
+def change_spec_path(root, change):
+    """``docs/spec/changes/<change>/spec.json``, else the newest ``changes/archive/*<change>``."""
+    if not isinstance(change, str) or not change or "/" in change or "\\" in change or change.startswith("."):
+        raise Usage("invalid change id %r" % (change,))
+    base = Path(root) / pj.CHANGES_DIR
+    p = base / change / "spec.json"
+    if p.is_file():
+        return p
+    arch = base / pj.ARCHIVE_NAME
+    if arch.is_dir():
+        hits = sorted(d for d in arch.iterdir() if d.is_dir() and (d.name == change or d.name.endswith("-" + change)))
+        if hits and (hits[-1] / "spec.json").is_file():
+            return hits[-1] / "spec.json"
+    raise NotFound("change %r not found (no %s)" % (change, rel(root, p)))
+
+
+def load_change(root, change):
+    path = change_spec_path(root, change)
+    loaded = load(path)
+    check_schema_version(loaded.data, rel(root, path))
+    if not isinstance(loaded.data, dict):
+        raise NotFound("%s is not a JSON object" % rel(root, path))
+    return path, loaded
+
+
+def is_skipped(data, pid):
+    pdef = phase_def(pid)
+    return bool(pdef and pdef["skippable"] and approval_state(data, pid) == "skipped")
+
+
+def next_phase_of(data, index):
+    ids = phase_ids()
+    for pid in ids[index + 1:]:
+        if not is_skipped(data, pid):
+            return pid
+    return None
+
+
+def release_evidence(ledger):
+    """Missing pieces of the release evidence that ``deployed`` needs (REQ-W1-011)."""
+    missing = []
+    prod = (ledger or {}).get("prod") if isinstance(ledger, dict) else None
+    rel_ = (ledger or {}).get("release") if isinstance(ledger, dict) else None
+    if not (isinstance(prod, dict) and prod.get("by") and prod.get("role") == "human" and prod.get("ref")):
+        missing.append("release ledger has no human prod approval (approve <change> prod)")
+    if not (isinstance(rel_, dict) and rel_.get("pipeline_run")):
+        missing.append("no pipeline run recorded (--pipeline-run)")
+    if not (isinstance(rel_, dict) and rel_.get("post_deploy_check") == "pass"):
+        missing.append("post-deploy check not passed (--post-deploy-check pass)")
+    return missing
+
+
+def compute_next(data, ledger=None, ledger_known=False):
+    """The next-phase record of §1.2 for a parsed, valid spec.json."""
+    raw = data.get("phase")
+    mapped, tier = map_phase(raw)
+    idx = phase_index(mapped)
+    cur = phase_def(mapped)
+    nxt = next_phase_of(data, idx)
+    res = {"change": data.get("change_id"), "phase": mapped, "status": "in-progress", "next_phase": nxt,
+           "skill": cur["skill"], "preconditions": [], "blockers": []}
+    if tier in ("exact", "proposed"):
+        res["phase_raw"] = raw
+    if nxt is None:
+        res.update(status="ready", skill=None, terminal=True)
+        return res
+    for ph in gate_phases_before(phase_index(nxt)):
+        st = approval_state(data, ph)
+        res["preconditions"].append({"phase": ph, "state": st})
+        if st == "pending":
+            res["blockers"].append("%s not approved or skipped" % ph)
+    key = cur["approval"]
+    if nxt == "deployed":
+        if ledger_known:
+            res["blockers"] += release_evidence(ledger)
+        else:
+            res["blockers"].append("release evidence is checked by advance deployed (ledger)")
+        satisfied = not res["blockers"]
+    elif nxt == "archived":
+        if approval_state(data, "deployed") != "approved":
+            res["blockers"].append("approvals.prod not in spec.json (approve <change> prod --write-spec)")
+        satisfied = not res["blockers"]
+    elif key and key not in ("deploy", "prod"):
+        st = approval_state(data, mapped)
+        ap = (data.get("approvals") or {}).get(key) if isinstance(data.get("approvals"), dict) else None
+        if st in ("approved", "skipped"):
+            satisfied = True
+        elif isinstance(ap, dict) and ap.get("generated") is True:
+            res["status"] = "awaiting-approval"
+            satisfied = False
+        else:
+            satisfied = False
+        if st == "pending":
+            res["blockers"].append("%s not approved or skipped" % mapped)
+    else:
+        satisfied = False  # no approval: the phase's own skill says when it is done
+    if satisfied and not [b for b in res["blockers"]]:
+        res["status"] = "ready"
+        res["skill"] = phase_def(nxt)["skill"]
+    elif satisfied:
+        res["status"] = "awaiting-approval"
+    return res
+
+
+def cmd_next(args, root):
+    path, loaded = load_change(root, args.change)
+    name = rel(root, path)
+    strict = schema_mode(root) == "strict"
+    issues = validate_data(loaded.data, "spec", strict, file=name)
+    errs = [i for i in issues if i["severity"] == "error"]
+    warns = [i for i in issues if i["severity"] == "warning"]
+    mapped, _ = map_phase(loaded.data.get("phase"))
+    if errs or mapped is None:
+        res = {"change": args.change, "phase": loaded.data.get("phase"), "status": "invalid", "next_phase": None,
+               "skill": None, "preconditions": [], "blockers": ["%s fails validation" % name], "file": name}
+        return kl.EXIT_FINDINGS, res, errs, warns, "%s: invalid — fix the validation errors first" % args.change
+    ledger, known = read_ledger_safe(root, args.change)
+    res = compute_next(loaded.data, ledger, known)
+    res["file"] = name
+    human = "%s: phase %s · %s · next %s%s" % (
+        args.change, res["phase"], res["status"], res["next_phase"] or "—",
+        (" (" + res["skill"] + ")") if res.get("skill") else "")
+    for b in res["blockers"]:
+        human += "\n  blocker: " + b
+    return kl.EXIT_OK, res, [], warns, human
+
+
+def read_ledger_safe(root, change):
+    """``(ledger, known)``: known is False when the release ledger is not available."""
+    return None, False
+
+
+def cmd_active(args, root):
+    res = pj.active_change(root)
+    if res["change"]:
+        human = "active: %s (%s)" % (res["change"], res["reason"])
+    elif res["reason"] == "several":
+        human = "several active: %s" % ", ".join(res["candidates"])
+    else:
+        human = "no active change"
+    return kl.EXIT_OK, res, [], [], human
+
+
+COMMANDS = {"validate": cmd_validate, "next": cmd_next, "active": cmd_active}
 
 
 def build_parser():
@@ -672,6 +817,9 @@ def build_parser():
     v.add_argument("--fix", action="store_true", help="migrate legacy shapes (§2.5); the diff is printed first")
     v.add_argument("--dry-run", action="store_true", help="with --fix: show the diff, write nothing")
     v.add_argument("--accept-proposed", action="store_true", help="with --fix: also apply the proposed tier (D-09)")
+    n = sub.add_parser("next", parents=[common], help="the computed next phase of a change")
+    n.add_argument("change")
+    sub.add_parser("active", parents=[common], help="the active change (§5)")
     return p
 
 
