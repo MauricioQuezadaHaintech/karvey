@@ -8,5 +8,7 @@
   "calibration": {"threshold_pct": 30, "window": 3},
   "session": {"board_rows_max": 40, "handoff_bytes_max": 6144},
   "lock_stale_seconds": 30,
-  "audit_rotate_bytes": 1048576
+  "audit_rotate_bytes": 1048576,
+  "pre_3_12_history": {"$comment": "D-14 / F-35: approval-format errors of an ARCHIVED change whose approval dates are all before the 3.12.0 release are warnings (recorded history, never back-filled). released_on is the 3.12.0 release date (YYYY-MM-DD), set at the release (L-35 checks it against CHANGELOG.md); null = not released yet, every archived approval so far predates it.",
+                       "version": "3.12.0", "released_on": null}
 }

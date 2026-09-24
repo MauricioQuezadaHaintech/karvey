@@ -713,6 +713,7 @@ reports it until then. This file is *this repo's* dogfooding debt; see §7.1.
 | `management` is `none` or a string | warning (legacy alias) |
 | A `project.json` value fails `safe_values` (§3.1) | error |
 | `enforcement.prod_gate_hook` is not a boolean | error (and the gate stays on, REQ-W1-027) |
+| An **archived** change (`docs/spec/changes/archive/**`) whose approval dates all predate the 3.12.0 release (`karvey_lib/defaults.json:pre_3_12_history.released_on`; `null` until the release, L-35 checks it then): its approval-format errors (date-only, prose `ref`, missing `role`, "archived without a human approvals.prod") | warning, message suffixed "pre-3.12 recorded history (D-14)", in both modes; never back-filled (F-35). A non-archived change stays strict. |
 
 **Mode:** `project.json:schema_mode` is `advisory` (the default in 3.12.x) or `strict`. `--strict`
 overrides it. 4.0.0 flips the default (Wave 2, owner decision 3 in the panel's §6).

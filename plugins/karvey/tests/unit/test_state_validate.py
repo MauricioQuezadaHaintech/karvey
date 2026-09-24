@@ -1,10 +1,14 @@
 import copy
+import json
 import shutil
 import unittest
+from unittest import mock
 
 import _path
 import _gitrepo as g
-from _state import GOOD_SPEC, make_project, run, run_json
+from _state import GOOD_SPEC, make_project, run, run_json, state
+
+import karvey_lib as kl
 
 g.isolate_git()
 
@@ -253,6 +257,94 @@ class LegacyFixtures(unittest.TestCase):
             self.assertTrue({"phase-iterate", "phase-null", "phase-missing", "team-adapters-like"} <= bad, bad)
         finally:
             t.cleanup()
+
+REASON = "pre-3.12 recorded history (D-14)"
+
+
+class Pre312History(Base):
+    """D-14 / F-35: approval-format errors of archived pre-3.12 changes are warnings with the reason."""
+
+    TEAM_LAYER = {"change_id": "team-layer", "phase": "archived", "approvals": {
+        "requirements": {"generated": True, "approved": True, "by": "Owner", "date": "2026-09-22"},
+        "deploy": {"generated": True, "approved": True, "by": "Owner", "date": "2026-09-22", "ref": "PR #11"},
+        "prod": {"by": "Owner", "date": "2026-09-22", "ref": "PR #11 (merged to main)"}}}
+    FORMAT = {("schema.format", "$.approvals.prod.date"), ("schema.pattern", "$.approvals.prod.ref"),
+              ("schema.required", "$.approvals.prod.role"), ("state.prod_missing", "$.approvals.prod")}
+
+    def put(self, data, rel):
+        f = self.root / rel / "spec.json"
+        make_project(self.root)
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        return f
+
+    def check(self, f, *extra):
+        return run_json("validate", str(f), "--root", str(self.root), *extra)
+
+    def test_archived_pre_312_errors_are_warnings_with_the_reason(self):
+        f = self.put(self.TEAM_LAYER, "docs/spec/changes/archive/2026-09-22-team-layer")
+        code, env = self.check(f)
+        self.assertEqual((code, env["errors"]), (0, []))
+        warned = {(i["code"], i["path"]) for i in env["warnings"] if REASON in i["message"]}
+        self.assertTrue(self.FORMAT <= warned, warned)
+        # strict mode keeps its other errors (history, gates), but the approval format stays a warning
+        code, env = self.check(f, "--strict")
+        self.assertFalse([i for i in env["errors"] if i["path"].startswith("$.approvals.prod")], env["errors"])
+        self.assertTrue(self.FORMAT <= {(i["code"], i["path"]) for i in env["warnings"] if REASON in i["message"]})
+
+    def test_non_archived_change_stays_strict(self):
+        data = dict(self.TEAM_LAYER, change_id="team-adapters", phase="qa")
+        f = self.put(data, "docs/spec/changes/team-adapters")
+        code, env = self.check(f)
+        self.assertEqual(code, 1)
+        errs = set(codes(env))
+        self.assertTrue({("schema.format", "$.approvals.prod.date"), ("schema.pattern", "$.approvals.prod.ref"),
+                         ("schema.required", "$.approvals.prod.role")} <= errs, errs)
+        self.assertFalse(any(REASON in i["message"] for i in env["errors"] + env["warnings"]))
+
+    def test_archived_after_the_release_date_stays_an_error(self):
+        f = self.put(self.TEAM_LAYER, "docs/spec/changes/archive/2026-09-22-team-layer")
+        real = kl.defaults()
+        fake = dict(real, pre_3_12_history=dict(real["pre_3_12_history"], released_on="2026-09-20"))
+        with mock.patch.object(state.kl, "defaults", return_value=fake):
+            code, env = self.check(f)
+        self.assertEqual(code, 1)
+        self.assertTrue(self.FORMAT <= set(codes(env)), codes(env))
+
+    def test_archived_before_the_release_date_is_a_warning(self):
+        f = self.put(self.TEAM_LAYER, "docs/spec/changes/archive/2026-09-22-team-layer")
+        real = kl.defaults()
+        fake = dict(real, pre_3_12_history=dict(real["pre_3_12_history"], released_on="2026-10-01"))
+        with mock.patch.object(state.kl, "defaults", return_value=fake):
+            code, env = self.check(f)
+        self.assertEqual((code, env["errors"]), (0, []))
+
+    def test_archived_with_an_unreadable_date_stays_an_error(self):
+        data = copy.deepcopy(self.TEAM_LAYER)
+        data["approvals"]["prod"]["date"] = "yesterday"
+        f = self.put(data, "docs/spec/changes/archive/2026-09-22-team-layer")
+        code, env = self.check(f)
+        self.assertEqual(code, 1)
+        self.assertIn(("state.prod_missing", "$.approvals.prod"), codes(env))
+
+    def test_other_errors_of_an_archived_change_stay_errors(self):
+        data = dict(self.TEAM_LAYER, phase="qa-approved")
+        f = self.put(data, "docs/spec/changes/archive/2026-09-22-team-layer")
+        code, env = self.check(f)
+        self.assertEqual(code, 1)
+        self.assertIn(("schema.enum", "$.phase"), codes(env))
+
+    def test_this_repo_team_layer_is_warnings_team_adapters_errors(self):
+        root = _path.REPO_ROOT
+        tl = root / "docs/spec/changes/archive/2026-09-22-team-layer/spec.json"
+        ta = root / "docs/spec/changes/team-adapters/spec.json"
+        if not (tl.is_file() and ta.is_file()):
+            self.skipTest("not this repository")
+        self.assertEqual(run_json("validate", str(tl), "--root", str(root))[1]["errors"], [])
+        code, env = run_json("validate", str(ta), "--root", str(root))
+        if env["errors"]:  # until E1.F15.T2/T3 record the owner's prod phrase
+            self.assertTrue(all(i["path"].startswith("$.approvals.prod") for i in env["errors"]))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -997,6 +997,16 @@ class L35(LintCase):
                           "projects that relied on CLAUDE.md tables run `/karvey:karvey-init --settings`.\n")
         self.assertPasses("L-35")
 
+    def test_3_12_release_date_must_be_recorded_for_d14(self):
+        line = ("\n### Compatibility\n- Notification destinations are read only from project.json; "
+                "projects that relied on CLAUDE.md tables run `/karvey:karvey-init --settings`.\n")
+        self.release_3_12(line)
+        rel = "plugins/karvey/scripts/karvey_lib/defaults.json"
+        self.t.write(rel, {"pre_3_12_history": {"version": "3.12.0", "released_on": None}})
+        self.assertFails("L-35", "3.12.0 release date 2026-10-01", file=rel)
+        self.t.write(rel, {"pre_3_12_history": {"version": "3.12.0", "released_on": "2026-10-01"}})
+        self.assertPasses("L-35")
+
 
 class L36(LintCase):
     def test_pass(self):

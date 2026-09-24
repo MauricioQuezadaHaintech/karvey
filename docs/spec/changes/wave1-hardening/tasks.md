@@ -752,6 +752,7 @@ Total estimated time: 85 min (7 tasks)
 **Tests added:** L-12, L-13, L-35  
 **Done when:** `python3 plugins/karvey/scripts/lint-plugin.py` exits 0, and `git log --oneline -G'"(version|karvey_version)": "3\.' origin/main..HEAD -- plugins/karvey/.claude-plugin/plugin.json .claude-plugin/marketplace.json docs/spec/project.json | wc -l` → 1.
 - One commit changes every version field (REQ-W1-037). If `[Unreleased]` is empty, stop.
+- The same commit sets `plugins/karvey/scripts/karvey_lib/defaults.json:pre_3_12_history.released_on` to the `[3.12.0]` date (D-14 cut-off; L-35 fails otherwise).
 
 ### E1.F16.T2 [Backend] Prepare, never apply, the owner's global-config diffs (D-01, D-11) — _Depends: E1.F5.T2_ (P)
 

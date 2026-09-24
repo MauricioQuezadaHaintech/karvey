@@ -1779,7 +1779,8 @@ def _vtuple(v):
         return (0,)
 
 
-@check("L-35", "From 3.12.0 on, the top CHANGELOG release carries the CLAUDE.md-destinations compatibility line",
+@check("L-35", "From 3.12.0 on, the top CHANGELOG release carries the CLAUDE.md-destinations compatibility line "
+               "and defaults.json records the 3.12.0 release date (D-14)",
        reqs=("099",))
 def l35_claude_md_compat_line(ctx):
     changelog = ctx.root / "CHANGELOG.md"
@@ -1789,6 +1790,16 @@ def l35_claude_md_compat_line(ctx):
     if not any("CLAUDE.md" in b and re.search(r"compatib|destination|notification", b, re.I) for b in block):
         yield (changelog, line, "release %s lacks the compatibility line for projects that took notification "
                                 "destinations from CLAUDE.md tables (REQ-W1-099)" % version)
+    # D-14: the pre-3.12 history cut-off the validator uses is the 3.12.0 release date
+    dpath = ctx.plugin / "scripts" / "karvey_lib" / "defaults.json"
+    d = ctx.json(dpath) if dpath.is_file() else None
+    if isinstance(d, dict) and isinstance(d.get("pre_3_12_history"), dict):
+        m = re.search(r"^## \[3\.12\.0\] - (\d{4}-\d{2}-\d{2})", ctx.read(changelog) or "", re.M)
+        want = m.group(1) if m else None
+        got = d["pre_3_12_history"].get("released_on")
+        if want and got != want:
+            yield (dpath, 1, "pre_3_12_history.released_on is %r; set it to the 3.12.0 release date %s "
+                             "(CHANGELOG.md), the D-14 cut-off of karvey-state.py validate" % (got, want))
 
 
 # --------------------------------------------------------------------------- L-36

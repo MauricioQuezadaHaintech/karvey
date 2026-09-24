@@ -366,6 +366,43 @@ def semantic_project(data, strict, file):
     return out
 
 
+PRE_312_REASON = "pre-3.12 recorded history (D-14)"
+_DATE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}")
+
+
+def is_archived_path(file):
+    """True for a spec.json under ``docs/spec/changes/archive/``."""
+    f = "/" + str(file or "").replace("\\", "/").lstrip("/")
+    return "/docs/spec/changes/archive/" in f or f.startswith("/changes/archive/")
+
+
+def pre_312_history(data, file):
+    """D-14 / F-35: an archived change whose recorded approval dates all predate the 3.12.0 release
+    (``defaults.json:pre_3_12_history.released_on``; null = not released yet)."""
+    if not is_archived_path(file):
+        return False
+    approvals = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
+    dates = [a.get("date") for a in approvals.values() if isinstance(a, dict) and "date" in a]
+    if not dates or not all(isinstance(d, str) and _DATE_PREFIX.match(d) for d in dates):
+        return False
+    cutoff = (kl.defaults().get("pre_3_12_history") or {}).get("released_on")
+    return cutoff is None or all(d[:10] < cutoff for d in dates)
+
+
+def _downgrade_pre_312(issues, data, file):
+    """Approval-format errors of pre-3.12 archived history become warnings with their reason."""
+    if not pre_312_history(data, file):
+        return issues
+    out = []
+    for i in issues:
+        p = i.get("path") or ""
+        if i["severity"] == "error" and p.startswith("$.approvals") and \
+                (i["code"].startswith("schema.") or i["code"] == "state.prod_missing"):
+            i = dict(i, severity="warning", message="%s (warning: %s)" % (i["message"], PRE_312_REASON))
+        out.append(i)
+    return out
+
+
 def validate_data(data, kind, strict, file=None):
     """All issues (schema + semantic) of one parsed file."""
     if not isinstance(data, dict):
@@ -375,6 +412,7 @@ def validate_data(data, kind, strict, file=None):
     if kind == "spec":
         issues = _legacy_rewrite(issues, data, strict, file)
         issues += semantic_spec(data, strict, file)
+        issues = _downgrade_pre_312(issues, data, file)
     else:
         issues += semantic_project(data, strict, file)
     return issues
