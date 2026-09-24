@@ -164,7 +164,7 @@ Planned in wave1-hardening, together with the F-06 spec revision (who moves leav
 - **Detected:** 2026-09-23 · **Component:** plugins/karvey/skills/karvey-iterate/SKILL.md:61, karvey/rules/backlog.md:10, karvey/rules/management-adapters.md:43-47, karvey-init Step 3.2
 - **Change / origin:** team-adapters (F-08; sources I-02, C-03)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 A repo whose `project.json` has `"management": "markdown"` (15 HainTech repos; `"clickup"` in qcheck-v3). Route a finding with karvey-iterate or add a backlog item.
@@ -177,20 +177,25 @@ A repo whose `project.json` has `"management": "markdown"` (15 HainTech repos; `
 The pre-3.10 schema never defined `project.json:management`; sessions added it ad hoc as a string. 3.10 reused the key as an object with no migration; the compatibility text in management-adapters.md describes a state project.json never had (the string lived in spec.json).
 
 ### Fix
-Planned in wave1-hardening.
+On `feature/wave1-hardening`: `karvey-config.py resolve management` reads a legacy string as `{"tool": "<string>"}` and `project.json:clickup.backlog_list_id` as `location` (E1.F7.T2, 9c1a5cb); `karvey-state.py validate --fix` migrates the file (E1.F3.T2, aba6752); every skill and rule tests `external` from the resolver instead of `!= markdown` (E1.F12.T3, T6, T10). L-28 (E1.F10.T5, 165795e) forbids the `!= markdown` test.
+
+### Regression test
+L-28 (no `!= markdown` test, no direct `clickup.backlog_list_id` read) fails on `main` (14 errors) and passes on this branch; unit: `plugins/karvey/tests/unit/test_config_resolve.py` (`LegacyShapes`: string, `none`, clickup string with `backlog_list_id`; `LegacyProjectFixtures.test_resolve_management` over the anonymised project.json fixtures) and `plugins/karvey/tests/unit/test_state_fix.py` (`Management.test_project_string`, `Management.test_spec_none_to_markdown_and_string_kept`). `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:28 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D4 I-02, D3 C-03 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | 16 files measured; schema collision confirmed against ffb6df9 project-config.md |
+| 2026-09-24 04:09 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | resolver `karvey-config.py resolve management` reads a string as `{"tool": …}` and `clickup.backlog_list_id` as `location` (E1.F7.T2, 9c1a5cb); `validate --fix` migrates it (E1.F3.T2, aba6752); the `!= markdown` tests replaced by `external` in iterate, backlog, management-adapters and init (E1.F12.T3/T6/T10, 481503c, 122223d, 43e6f7d) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | L-28 red on main (14), green here; test_config_resolve.py and test_state_fix.py pass; test_incidents.py 10/10 |
 
 ## BUG-07 — README and plugin.json still describe ClickUp as the tracker
 - **Priority:** medium
 - **Detected:** 2026-09-23 · **Component:** README.md:52,117-119; plugins/karvey/.claude-plugin/plugin.json:4
 - **Change / origin:** team-adapters (F-09; sources C-05, C-06)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 Read README:52 ("Epic (ClickUp) or PLAN.md"), :117-119 and the plugin.json description ("discovery backlog (Markdown + ClickUp)").
@@ -203,20 +208,25 @@ Read README:52 ("Epic (ClickUp) or PLAN.md"), :117-119 and the plugin.json descr
 The 3.10 sweep replaced ClickUp wording in skills and rules but not in README and plugin.json.
 
 ### Fix
-Planned in wave1-hardening.
+On `feature/wave1-hardening`, E1.F12.T11 (842f8b8): README.md, plugins/karvey/README.md and the plugin.json / marketplace.json descriptions name the team's configured tracker; ClickUp appears only as one option.
+
+### Regression test
+L-31 (README and plugin.json present the tracker as the team's configured one; E1.F10.T6, 2bed707): 5 errors on `main`, 0 on this branch. `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:28 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D3 C-05/C-06 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | lines located |
+| 2026-09-24 04:07 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | README.md and plugin.json descriptions present the team's configured tracker (E1.F12.T11, 842f8b8) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | L-31 red on main (5), green here; test_incidents.py 10/10 |
 
 ## BUG-08 — An invalid `KARVEY_TZ` silently falls back to the system zone
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** plugins/karvey/hooks/karvey-statusline.sh (`_reset`, zone lookup)
 - **Change / origin:** team-adapters (F-22; sources S-04 = E-05)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 `KARVEY_TZ=Mars/Olympus` (or a typo) and a valid `resets_at`.
@@ -229,20 +239,25 @@ Planned in wave1-hardening.
 `except Exception: tz = None` with no signal. Security side verified: `zoneinfo` rejects traversal; the value never reaches a shell.
 
 ### Fix
-Planned in wave1-hardening.
+On `feature/wave1-hardening`, E1.F11.T1 (9165be1): `karvey-statusline.sh` falls back to the system zone with a visible `(TZ?)` marker and computes the zone once.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/statusline.json` cases `statusline-01-valid-tz-no-marker`, `statusline-02-invalid-tz-marked`, `statusline-03-no-tz-no-marker` (run by `run_tables.py` and `test-hooks.sh`). `statusline-02` fails with the `main` statusline script and passes on this branch. `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:24 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D1 S-04, D2 E-05 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | silent except branch |
+| 2026-09-24 02:53 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | statusline marks an invalid zone `(TZ?)`, zone computed once (E1.F11.T1, 9165be1) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | statusline.json 8/8; statusline-02 fails against the main script; test_incidents.py 10/10 |
 
 ## BUG-09 — Stray separator when only the 7-day window is present
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** plugins/karvey/hooks/karvey-statusline.sh (limit line)
 - **Change / origin:** team-adapters (F-23; source E-06)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 `rate_limits` with only `seven_day`.
@@ -255,20 +270,25 @@ Planned in wave1-hardening.
 The ` · ` prefix is hard-coded on the 7-day part instead of joining the present windows.
 
 ### Fix
-Planned in wave1-hardening (collect the parts and `' · '.join`).
+On `feature/wave1-hardening`, E1.F11.T1 (9165be1): the limit parts are collected and joined with `' · '`, so a lone 7-day window has no leading separator.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/statusline.json` cases `statusline-04-only-7d-no-leading-separator`, `statusline-05-both-windows-one-separator`, `statusline-06-only-5h`. `statusline-04` fails with the `main` statusline script (`limit ·`) and passes on this branch. `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:27 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D2 E-06 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | still present after hotfix 3.11.2 |
+| 2026-09-24 02:53 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | statusline joins the present windows with ' · ' (E1.F11.T1, 9165be1) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | statusline.json 8/8; statusline-04 fails against the main script; test_incidents.py 10/10 |
 
 ## BUG-10 — `docs/karvey.html`: a malformed hash throws `URIError` before the language switch binds
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** docs/karvey.html (`mapHash`, `decodeURIComponent`)
 - **Change / origin:** team-adapters (F-24; sources S-07 = E-15)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 Open `karvey.html?lang=es#%E0%A4%A`, then click DE.
@@ -281,20 +301,25 @@ Open `karvey.html?lang=es#%E0%A4%A`, then click DE.
 `decodeURIComponent` without `try/catch`, called before `switcher.forEach`.
 
 ### Fix
-Planned in wave1-hardening.
+On `feature/wave1-hardening`, E1.F11.T2 (9f0e1d9): the page script is split into pure functions; `safeDecodeHash` returns null on a malformed hash, and `init` binds the switch regardless.
+
+### Regression test
+`plugins/karvey/tests/page/test_page.mjs`: "safeDecodeHash returns null for a malformed or empty hash, never throws (BUG-10)" and "init with a malformed hash still binds the switch; DE changes language with no reload (BUG-10, REQ-W1-102)" (`node --test plugins/karvey/tests/page/`). Against the `main` page the file fails: the script has none of these functions. `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:24 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D1 S-07, D2 E-15 (reproduced in node / jsdom) |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | unguarded decode |
+| 2026-09-24 02:57 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | `safeDecodeHash` never throws; the switch binds first (E1.F11.T2, 9f0e1d9) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | node --test 22/22; fails against the main page; test_incidents.py 10/10 |
 
 ## BUG-11 — An invalid `?lang=` saves the browser language as the viewer's choice
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** docs/karvey.html (main script `remember` test vs early pick)
 - **Change / origin:** team-adapters (F-25; source E-14)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 jsdom with `?lang=xx` and navigator `es`; `?lang=es-CL` and navigator `de`.
@@ -307,20 +332,25 @@ jsdom with `?lang=xx` and navigator `es`; `?lang=es-CL` and navigator `de`.
 The main script's `/[?&]lang=/` is looser than the early script's `[a-zA-Z]{2}(?:&|$)`.
 
 ### Fix
-Planned in wave1-hardening.
+On `feature/wave1-hardening`, E1.F11.T2 (9f0e1d9): one language rule (`langOf`, `pickLang`) in both scripts; an invalid `?lang=` is ignored and nothing is saved; `xx-YY` is read by its first two letters.
+
+### Regression test
+`plugins/karvey/tests/page/test_page.mjs`: "pickLang: a ?lang= link is one-off when a choice was saved (BUG-11, REQ-W1-103)", "pickLang: an invalid ?lang= is ignored and nothing is saved; the browser rule applies", "init: ?lang=xx saves nothing (BUG-11)", and "the early head script follows the same language rule". `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:27 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D2 E-14 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | regex mismatch between the two scripts |
+| 2026-09-24 02:57 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | `pickLang`: only a valid `?lang=` is remembered, and only when nothing was saved (E1.F11.T2, 9f0e1d9) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | node --test 22/22; fails against the main page; test_incidents.py 10/10 |
 
 ## BUG-12 — Switching language drops the other query parameters
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** docs/karvey.html (switcher `replaceState`)
 - **Change / origin:** team-adapters (F-26; source E-16)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 Open `?foo=1&lang=es`, click DE.
@@ -333,20 +363,25 @@ Open `?foo=1&lang=es`, click DE.
 The URL is rebuilt as `'?lang=' + req` instead of editing `URLSearchParams`.
 
 ### Fix
-Planned in wave1-hardening.
+On `feature/wave1-hardening`, E1.F11.T2 (9f0e1d9): `withLang` changes only the `lang` parameter and keeps the others.
+
+### Regression test
+`plugins/karvey/tests/page/test_page.mjs`: "withLang changes only lang and keeps the other parameters (BUG-12, REQ-W1-104)" and "init: switching keeps the other query parameters (BUG-12)". `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:27 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D2 E-16 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | query string rebuilt from scratch |
+| 2026-09-24 02:57 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | `withLang` edits only `lang` in `URLSearchParams` (E1.F11.T2, 9f0e1d9) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | node --test 22/22; fails against the main page; test_incidents.py 10/10 |
 
 ## BUG-13 — No `hashchange` handling on the method page
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** docs/karvey.html (hash mapping at load only)
 - **Change / origin:** team-adapters (F-27; source E-18)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 With es shown, paste or click `#en-foo` in the same document.
@@ -359,20 +394,25 @@ With es shown, paste or click `#en-foo` in the same document.
 The mapping runs only once at load; there is no `hashchange` listener.
 
 ### Fix
-Planned in wave1-hardening.
+On `feature/wave1-hardening`, E1.F11.T2 (9f0e1d9): `init` binds `hashchange` and reuses `hashToBlock` + `replaceState` + jump.
+
+### Regression test
+`plugins/karvey/tests/page/test_page.mjs`: "init binds hashchange and jumps to the shown block (BUG-13, REQ-W1-105)" and "hashchange to a hash with no equivalent stays put without error". `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:27 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D2 E-18 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | missing listener |
+| 2026-09-24 02:57 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | `init` binds `hashchange` to the same mapping as at load (E1.F11.T2, 9f0e1d9) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | node --test 22/22; fails against the main page; test_incidents.py 10/10 |
 
 ## BUG-14 — Without JS the language switch is shown but does nothing
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** docs/karvey.html (CSS blocks ~105-112, switch links ~309-315)
 - **Change / origin:** team-adapters (F-28; source N-12)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 Disable JavaScript, click ES.
@@ -385,20 +425,25 @@ Disable JavaScript, click ES.
 Language selection depends on JS setting `data-lang`; the links are always rendered.
 
 ### Fix
-Planned in wave1-hardening.
+On `feature/wave1-hardening`, E1.F11.T2 (9f0e1d9): the switch links sit in a container hidden by CSS until the scripts add the `js` class to `<html>`; English still renders without JS.
+
+### Regression test
+`plugins/karvey/tests/unit/test_page_static.py` (`NoInertSwitch`: `test_switch_links_are_inside_a_hidden_container`, `test_css_hides_the_switch_until_js`, `test_scripts_add_the_js_class`; 3 failures against the `main` page) and `plugins/karvey/tests/page/test_page.mjs` "init shows the switch (hidden without JS, BUG-14) and marks html.js". `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:34 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D7 N-12 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | control rendered without its JS dependency |
+| 2026-09-24 02:57 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | switch hidden until the script sets `html.js` (E1.F11.T2, 9f0e1d9) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | test_page_static.py 10/10 here, 3 failures against the main page; node --test 22/22; test_incidents.py 10/10 |
 
 ## BUG-15 — `clickup-sync-guard` hook referenced but nothing installs it
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** plugins/karvey/skills/karvey/rules/phase-close.md:41
 - **Change / origin:** team-adapters (F-29; source C-10)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 Read phase-close.md:41; `karvey-guard` manages only git-flow and plan-gate; `hooks/` has no such script.
@@ -411,20 +456,25 @@ Read phase-close.md:41; `karvey-guard` manages only git-flow and plan-gate; `hoo
 Leftover reference to a planned hook.
 
 ### Fix
-Planned in wave1-hardening.
+On `feature/wave1-hardening`: the sentence is gone from `rules/phase-close.md` (E1.F12.T10, 43e6f7d); `hooks/README.md` names `clickup-sync-guard` / `standards-guard` only as not shipped (E1.F12.T11, 842f8b8).
+
+### Regression test
+L-15 (every hook named in skills or rules exists in hooks.json or the dispatcher and has guard-table cases; E1.F10.T4, 91758e0): it reports `phase-close.md:41 … clickup-sync-guard is cited but the plugin does not ship it` on `main` (9 errors) and 0 on this branch. `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:28 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D3 C-10 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | no installer anywhere in the plugin |
+| 2026-09-24 04:09 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | phase-close.md no longer promises `clickup-sync-guard`; hooks/README names it as not shipped (E1.F12.T10/T11, 43e6f7d, 842f8b8) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | L-15 red on main (9, incl. phase-close.md:41), green here; test_incidents.py 10/10 |
 
 ## BUG-16 — hooks/README says the session hook prints nothing without team/agent files
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** plugins/karvey/hooks/README.md:18-19
 - **Change / origin:** team-adapters (F-30; sources C-18, E-12 README part)
 - **Tracker:** —
-- **Current state:** EN FIX
+- **Current state:** RESUELTO
 
 ### Reproduction
 Read hooks/README.md:18-19 ("With none of them it prints nothing and exits 0.") and run the hook in a Karvey project without settings.
@@ -437,7 +487,10 @@ Read hooks/README.md:18-19 ("With none of them it prints nothing and exits 0.") 
 The 3.10 diff touched hooks/README but not this paragraph.
 
 ### Fix
-Planned in wave1-hardening.
+Text fixed in hotfix 3.11.2 (hooks/README.md states the Karvey-project exception). On `feature/wave1-hardening`, E1.F12.T11 (842f8b8) anchors every behaviour promise of hooks/README.md to a guard-table case (`<!-- guard-case: ID -->`).
+
+### Regression test
+L-16 (every behaviour promise in rules/enforcement.md and hooks/README.md carries a guard-case anchor whose table case matches; E1.F10.T4, 91758e0): 18 errors on `main`, 0 on this branch; `plugins/karvey/tests/hooks/tables/session.json` cases `ss-13-empty-notifications-startup-one-line`, `ss-15-bare-openapi-under-karvey-parent-silent`, `ss-20-non-karvey-dir-silent` prove the behaviour the README now states. `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
@@ -445,13 +498,14 @@ Planned in wave1-hardening.
 | 2026-09-23 17:27 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D2 E-12, D3 C-18 |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | confirmed on the 3.11.2 working tree |
 | 2026-09-23 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fixed in hotfix 3.11.2: hooks/README.md now states the Karvey-project exception; stays EN FIX until the wave1 plugin linter checks docs vs hook behaviour (no automated regression test yet) |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | L-16 red on main (18), green here; session.json 23/23; test_incidents.py 10/10 |
 
 ## BUG-17 — 3.11.1 release docs incomplete (CHANGELOG without "Why"; page history stops at 3.11.0)
 - **Priority:** low
 - **Detected:** 2026-09-23 · **Component:** CHANGELOG.md ([3.11.1]); docs/karvey.html (version history, 5 blocks)
 - **Change / origin:** team-adapters (F-31; sources D6, C-21)
 - **Tracker:** —
-- **Current state:** EN FIX
+- **Current state:** RESUELTO
 
 ### Reproduction
 At e3bc6f3: the [3.11.1] CHANGELOG entry has no "Why" section (policy `changelog-policy.md`); the page is stamped v3.11.1 but its history tops at 3.11.0 with `class="now"`.
@@ -464,7 +518,10 @@ At e3bc6f3: the [3.11.1] CHANGELOG entry has no "Why" section (policy `changelog
 No automated check ties the CHANGELOG sections and the page history to the version bump.
 
 ### Fix
-Applied in the 3.11.2 working tree: "Why" added to [3.11.1] (with a note that it was added in 3.11.2); 3.11.1 and 3.11.2 entries added to the page history in the 5 languages, `class="now"` moved. Stays EN FIX: no regression check exists yet; planned with the plugin CI linter (BL-10) in wave1-hardening. This deviates from "BUG-05 onward are DETECTADO/DIAGNOSTICADO" because the fix is already in place.
+Docs fixed in hotfix 3.11.2 ("Why" added to [3.11.1]; page history in the 5 languages). The missing check is L-13 on `feature/wave1-hardening` (E1.F10.T3, 20d84b6).
+
+### Regression test
+L-13 (the top CHANGELOG release has a "Why" section and docs/karvey.html lists that version as current in every language block): 6 errors at e3bc6f3 (3.11.1, page marks 3.11.0 as current), 0 on this branch. `plugins/karvey/tests/regression/test_incidents.py` (E1.F14.T3) indexes it and fails if a named check disappears.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
@@ -472,6 +529,7 @@ Applied in the 3.11.2 working tree: "Why" added to [3.11.1] (with a note that it
 | 2026-09-23 17:28 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D3 C-21; D6 by the orchestrator |
 | 2026-09-23 17:40 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | no release-doc check |
 | 2026-09-23 19:01 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fixed in CHANGELOG.md and docs/karvey.html on hotfix/karvey-3.11.2-settings-nudge; awaiting a regression check |
+| 2026-09-24 04:44 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | L-13 red at 3.11.1 e3bc6f3 (6), green here; test_incidents.py 10/10 |
 
 ## BUG-18 — SessionStart hook never ran: `${CLAUDE_PLUGIN_ROOT}` inside single quotes
 - **Priority:** high

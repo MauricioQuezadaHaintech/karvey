@@ -169,7 +169,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 - [x] E1.F14.T1 [Test] Legacy `spec.json` fixtures (anonymised) and the tests that iterate them — est: 40min (depends E1.F3.T2) (P)
 - [x] E1.F14.T2 [Test] Legacy `project.json` fixtures and config resolution over them — est: 20min (depends E1.F7.T2) (P)
-- [ ] E1.F14.T3 [Test] Regression index BUG-05..17 (`tests/regression/test_incidents.py`) and its CI step — est: 25min (depends E1.F10.T6, E1.F11.T1, E1.F11.T2, E1.F13.T1, E1.F6.T4)
+- [x] E1.F14.T3 [Test] Regression index BUG-05..17 (`tests/regression/test_incidents.py`) and its CI step — est: 25min (depends E1.F10.T6, E1.F11.T1, E1.F11.T2, E1.F13.T1, E1.F6.T4)
 - [x] E1.F14.T4 [Test] Agent-behaviour manual scripts under `tests/manual/` — est: 30min (depends E1.F12.T3, E1.F12.T5, E1.F12.T6, E1.F12.T10) (P)
 
 ### Feature E1.F15: Dogfood migration of this repo
@@ -256,7 +256,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F13.T2 [Infra] | ⬜ todo | 15 | — | — |  |
 | E1.F14.T1 [Test] | ✅ done | 40 | 5 | 0 | no human review yet; 57 hand-written synthetic fixtures: 35 phase shapes (8 enum incl. requirements, found in the 2026-09-24 re-scan, 10 exact, 14 proposed, iterate, null, missing ⊇ the 31 of §2.5), 6 embedded skips, approvals null / unknown keys, 4 management, 6 multi-type, gates-skipped, team-adapters-like, bom, unknown top-level keys; --fix idempotent and approval-neutral on all of them, with and without --accept-proposed |
 | E1.F14.T2 [Test] | ✅ done | 20 | 8 | 0 | no human review yet; 9 synthetic project.json fixtures (management markdown/clickup/absent/object, notifications absent/google_chat/none, clickup-backlog-list, trunk); resolve, propose-settings --from-legacy (never writes) and validate --fix (string → object, idempotent) over each; F-38 (status_flow not proposed as statuses) |
-| E1.F14.T3 [Test] | ⬜ todo | 25 | — | — |  |
+| E1.F14.T3 [Test] | ✅ done | 25 | 5 | 0 | no human review yet; test_incidents.py 10 tests: BUG-05..21 each name their check (lint id, table case, unit/node test, test-hooks section, manual script), named lint checks run live, tracker/index agreement; CI regression step added; BUG-06..17 RESUELTO (each check verified red on main or 3.11.1, green here), BUG-05 stays DETECTADO (F-39); index regression column filled for BUG-18..21, summary and next number corrected |
 | E1.F14.T4 [Test] | ✅ done | 30 | 4 | 0 | no human review yet; 10 scripts (setup, exact prompt, Expected:, evidence), none run yet — they are evidence for karvey-test / QA; the common setup is inlined in each file so the done-criterion counts exactly 10 |
 | E1.F15.T1 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F15.T2 [human] | ⬜ todo | — | — | — | [human] |

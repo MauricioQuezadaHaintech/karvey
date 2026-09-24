@@ -1,6 +1,7 @@
 # Plugin lint and tests (architecture §1.11; REQ-W1-030, REQ-W1-054, REQ-W1-109).
 # Read-only: no secrets, no write token, never pull_request_target. Actions are pinned by commit SHA
 # (tag in the trailing comment). No pip or npm installs: python 3 and node from the runner only.
+# The regression step (tests/regression, BUG-05..21 index) was added by E1.F14.T3.
 name: Plugin lint and tests
 
 on:
@@ -42,6 +43,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python3 -m unittest discover -s plugins/karvey/tests/unit -v
+      - run: python3 -m unittest discover -s plugins/karvey/tests/regression -v
       - run: python3 plugins/karvey/tests/hooks/run_tables.py --junit tables.xml
       - run: bash plugins/karvey/hooks/tests/test-hooks.sh
 
