@@ -1,4 +1,4 @@
-"""The CI workflow `.github/workflows/lint.yml` (architecture §1.11) selects real work (F-36, F-37).
+"""The CI workflow `.github/workflows/lint.yml` (architecture §1.11) selects real work, once (F-36, F-37).
 
 Read as text: no YAML parser in the standard library, and the checks only need the ``run:`` lines.
 """
@@ -50,6 +50,24 @@ class WindowsAdvisory(unittest.TestCase):
         for mod in ("test_paths", "test_hookio", "test_atomicio"):
             self.assertIn(mod, self.job)
             self.assertTrue((_path.UNIT_DIR / (mod + ".py")).is_file())
+
+
+@unittest.skipUnless(WORKFLOW.is_file(), "not this repository")
+class TablesRunOnce(unittest.TestCase):
+    """F-37: test-hooks.sh runs every guard table unless KARVEY_SKIP_TABLES=1; the tests job already runs
+    run_tables.py (with junit), so the test-hooks.sh step must skip them."""
+
+    def test_test_hooks_step_skips_the_tables_when_run_tables_runs(self):
+        job = jobs()["tests"]
+        self.assertIn("run_tables.py --junit", job)
+        steps = re.split(r"\n      - ", job)
+        hooks = [s for s in steps if s.startswith("run: bash") and "test-hooks.sh" in s]
+        self.assertEqual(len(hooks), 1, hooks)
+        self.assertRegex(hooks[0], r"KARVEY_SKIP_TABLES:\s*'?1'?")
+
+    def test_test_hooks_honours_the_switch(self):
+        text = (_path.PLUGIN_ROOT / "hooks" / "tests" / "test-hooks.sh").read_text(encoding="utf-8")
+        self.assertIn('"${KARVEY_SKIP_TABLES:-}" != "1"', text)
 
 
 if __name__ == "__main__":

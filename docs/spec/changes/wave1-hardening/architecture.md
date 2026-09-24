@@ -486,6 +486,7 @@ jobs:
       - run: python3 -m unittest discover -s plugins/karvey/tests/regression -v
       - run: python3 plugins/karvey/tests/hooks/run_tables.py --junit tables.xml
       - run: bash plugins/karvey/hooks/tests/test-hooks.sh
+        env: { KARVEY_SKIP_TABLES: '1' }  # the tables ran in the step above (F-37)
   page:
     runs-on: ubuntu-latest
     steps:
