@@ -727,7 +727,7 @@ Total estimated time: 35 min (3 tasks)
 **Verification:** The session shows `[karvey] approval recorded (prod, team-adapters, expires hh:mm)`; `python3 -c "import json,subprocess;d=subprocess.check_output(['git','rev-parse','--git-common-dir'],text=True).strip();print(json.load(open(d+'/karvey/approvals/team-adapters.json'))['kind'])"` → `prod`.  
 **Rollback:** Nothing to roll back: an unused marker expires after 120 min (D-07).  
 **Requirements:** REQ-W1-023, REQ-W1-108  
-**Executed:** (filled when done: name · YYYY-MM-DD HH:MM · evidence)
+**Executed:** Mauricio Quezada Ibáñez · 2026-09-24 18:39 -03 · typed «ok, registra la aprobación de prod de team-adapters con D-08» in a session loading the branch plugin; hook replied `[karvey] approval recorded (prod, team-adapters, expires 23:39)`
 
 ### E1.F15.T3 [Backend] Record the retro prod approval (`--write-spec`, D-08); this repo validates with 0 errors — _Depends: E1.F15.T2_
 

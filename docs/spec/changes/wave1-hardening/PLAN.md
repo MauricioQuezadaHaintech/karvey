@@ -175,8 +175,8 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 ### Feature E1.F15: Dogfood migration of this repo
 
 - [x] E1.F15.T1 [Backend] This repo through `validate --fix`: dry-run diff shown, then applied to `wave1-hardening` and `team-adapters` — est: 20min (depends E1.F3.T2, E1.F14.T1)
-- [ ] E1.F15.T2 [human] Owner's prod-kind approval phrase for the retroactive team-adapters record (D-08) — executor: owner (depends E1.F15.T1, E1.F5.T2, E1.F3.T6)
-- [ ] E1.F15.T3 [Backend] Record the retro prod approval (`--write-spec`, D-08); this repo validates with 0 errors — est: 15min (depends E1.F15.T2)
+- [x] E1.F15.T2 [human] Owner's prod-kind approval phrase for the retroactive team-adapters record (D-08) — executor: owner (depends E1.F15.T1, E1.F5.T2, E1.F3.T6)
+- [x] E1.F15.T3 [Backend] Record the retro prod approval (`--write-spec`, D-08); this repo validates with 0 errors — est: 15min (depends E1.F15.T2)
 
 ### Feature E1.F16: Release 3.12.0 (one versioning moment) and deploy-phase human steps
 
@@ -259,8 +259,8 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F14.T3 [Test] | ✅ done | 25 | 5 | 0 | no human review yet; test_incidents.py 10 tests: BUG-05..21 each name their check (lint id, table case, unit/node test, test-hooks section, manual script), named lint checks run live, tracker/index agreement; CI regression step added; BUG-06..17 RESUELTO (each check verified red on main or 3.11.1, green here), BUG-05 stays DETECTADO (F-39); index regression column filled for BUG-18..21, summary and next number corrected |
 | E1.F14.T4 [Test] | ✅ done | 30 | 4 | 0 | no human review yet; 10 scripts (setup, exact prompt, Expected:, evidence), none run yet — they are evidence for karvey-test / QA; the common setup is inlined in each file so the done-criterion counts exactly 10 |
 | E1.F15.T1 [Backend] | ✅ done | 20 | 4 | 0 | `--fix` dry-run: only wave1-hardening changes (3 legacy `{from,to,at}` history rows → `{phase, entered_at, exited_at}`); team-adapters and team-layer nothing to fix (team-layer kept as history, D-14); applied to wave1-hardening; second `--fix --dry-run` empty; `validate --all`: 3 errors, all `team-adapters approvals.prod` (F15.T3) |
-| E1.F15.T2 [human] | ⬜ todo | — | — | — | [human] |
-| E1.F15.T3 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F15.T2 [human] | ✅ done | — | — | — | [human] owner typed «ok, registra la aprobación de prod de team-adapters con D-08» 2026-09-24 18:39 -03; hook: `approval recorded (prod, team-adapters, expires 23:39)` |
+| E1.F15.T3 [Backend] | ✅ done | 15 | 3 | 0 | `approve team-adapters prod --by … --role human --ref D-08 --write-spec`: approvals.prod gains role, ISO date, ref `D-08` (the retroactive detail stays in D-08 and `qa_note`); approvals.qa stays false (REQ-W1-108); `validate --all` 0 errors / 35 warnings, rc 0; lint 3 → 0 errors, 3 warnings |
 | E1.F16.T1 [Backend] | ⬜ todo | 30 | — | — |  |
 | E1.F16.T2 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F16.T3 [human] | ⬜ todo | — | — | — | [human] |
