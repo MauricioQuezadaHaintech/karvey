@@ -49,16 +49,16 @@ Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 18 support sk
 | # | Skill | Produces | Key rules |
 |---|---|---|---|
 | 0 | `karvey-grill` | Pre-spec interview + "10-star" reframe → synthesis that seeds the PRD | — |
-| 1 | `karvey-init` | `project.json`, `change-id`, `prd.md`, `spec.json`, Epic (ClickUp) or `PLAN.md` | project-config, clickup-protocol, living-specs, enforcement |
+| 1 | `karvey-init` | `project.json`, `change-id`, `prd.md`, `spec.json`, Epic in the team's configured tracker or `PLAN.md` | project-config, clickup-protocol, living-specs, enforcement |
 | 2 | `karvey-requirements` | EARS `requirements.md` traced to the PRD + `spec-delta.md` | ears-format, living-specs, security-tiers |
 | 3 | `karvey-mockup` | Navigable mockup, 3–4 levels + spec↔mockup validation | targets |
 | 4 | `karvey-design-graphic` | `design-spec.md` (OKLCH, type, 0-10 scoring) + `design-components.md` | targets |
 | 5 | `karvey-architecture` | `architecture.md`: boundaries, security tier, diagrams, cloud; standards conformance gate | security-tiers, engineering-standards |
 | 6 | `karvey-infra` | IaC + CI/CD pipelines with infra security review → `infra.md` | project-config, deploy-workflow |
 | 7 | `karvey-tasks` | `tasks.md`: 10–30 min AI tasks `E{n}.F{n}.T{n}` with dependencies | clickup-protocol |
-| 8 | `karvey-impl` | Code on `feature/{change-id}`, per-task commit + version + CHANGELOG | deploy-workflow, versioning, engineering-standards |
+| 8 | `karvey-impl` | Code on `feature/{change-id}`, per-task commit + a CHANGELOG `[Unreleased]` line | deploy-workflow, versioning, engineering-standards |
 | 9 | `karvey-test` | Unit + E2E in the real runtime → `test_evidence.md`, findings, `BUG-NN` | targets, iteration-loop, incident-tracking |
-| 10 | `karvey-qa` | 9-dimension review (security gate, standards conformance…) → `REVISION_PR_*.md` | changelog-policy, versioning, iteration-loop |
+| 10 | `karvey-qa` | 9-dimension review (security gate, standards conformance…) → `docs/spec/changes/{change-id}/qa/REVISION_PR_*.md` | changelog-policy, versioning, iteration-loop |
 | 11 | `karvey-deploy` | feature → dev → PR master, PR gates verified, human OK, canary, **branch hygiene** | deploy-workflow, versioning, changelog-policy |
 | 12 | `karvey-archive` | Spec-deltas merged into living specs, Epic closed, backlog + branch sweep | living-specs, backlog, phase-close |
 
@@ -103,8 +103,11 @@ A self-contained page (no external requests), **in English by default with a swi
 
 ## Hooks — what runs on install and what is opt-in
 
-- **Active on install (plugin hooks, `plugins/karvey/hooks/`):** a `SessionStart` hook (`karvey-session-context.sh`, on startup / resume / compact / clear) that reinjects the agent handoff and contrasts it against the live repos (`matches` / `DRIFT`), and reminds you to set the team settings when a Karvey project lacks them. It is **inert** (no output, exit 0) outside Karvey projects. The statusline script (context, account limits **with the next reset time and time left**, hours, cost, rotation warning) ships alongside but a plugin cannot declare it — install it by hand (see `plugins/karvey/hooks/README.md`).
-- **Opt-in per project (`plugins/karvey/skills/karvey/hooks/`):** `git-flow-guard.sh` and `plan-gate.sh`, installed and removed by `/karvey:karvey-guard` according to `project.json:enforcement`. Not active by default.
+Requires python ≥ 3.9. Every hook is table-tested; the full list is in `plugins/karvey/hooks/README.md`.
+
+- **Active on install:** the `SessionStart` hook (reinjects the agent handoff and measures the live repos: `matches` / `DRIFT`; inert outside Karvey projects), the **approval** hook (records a marker only from the human's own approval words), **protect-paths** (the agent cannot write its own approval) and the **prod-gate** (no merge into production without a recorded human prod approval; switchable off per project), plus a post-edit validator for `spec.json` / `project.json`.
+- **Opt-in per project** (`project.json:enforcement`, set with `/karvey:karvey-guard`): **git-flow** (no commits on the integration or production branch, no manual deploys) and **plan-gate** (no writes without a fresh human approval).
+- **The statusline** (context, account limits with the next reset, hours, cost, rotation warning) ships alongside; a plugin cannot declare it, so install it by hand.
 
 ## Features
 
@@ -114,15 +117,15 @@ A self-contained page (no external requests), **in English by default with a swi
 - **IaC + CI/CD pipelines** (Terraform/Bicep/Pulumi · GitHub Actions/Azure Pipelines) with security review.
 - **9-dimension QA** with a **blocking security gate** (OWASP + STRIDE), a **standards-conformance** dimension (golden path + approved deviations) and cross-model second opinion.
 - **Iteration loop** that routes findings back to their edge (`bug` / `spec-gap` / `emergent`) so the method guides you through iteration, not just the happy path.
-- **Incident tracker** (`BUG-NN` with state history) per repo + a global index — complementary to ClickUp.
-- **Discovery backlog** (Markdown + ClickUp) so emergent ideas become future change-ids, swept at archive.
-- **Mandatory phase-close** ritual: every phase/task updates management (ClickUp comment + status + cascade) so nothing goes stale.
+- **Incident tracker** (`BUG-NN` with state history) per repo + a global index — complementary to the team's configured tracker (ClickUp, Jira, Linear…).
+- **Discovery backlog** (Markdown, or the team's configured tracker) so emergent ideas become future change-ids, swept at archive.
+- **Mandatory phase-close** ritual in the team's configured tracker: status per task, close comment and cascade per Feature, so nothing goes stale.
 - **Ordered deployment** `feature → dev → PR master`, pipeline-triggered, verifying the **PR gates** (CI + branch policies) before the prod OK, with **canary** post-deploy and **branch hygiene** (absorbed branches deleted, unreleased ones reported — nothing left in branches).
-- **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability; every deploy bumps the version, and a front shows the **dev version in DEV** (`x.y.z-dev.N+sha`) and the **release version in PROD**, read from the version file and checked by the canary.
+- **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability; each commit adds a line under `[Unreleased]` and each release bumps the version once, and a front shows the **dev version in DEV** (`x.y.z-dev.N+sha`) and the **release version in PROD**, read from the version file and checked by the canary.
 - **Multi-agent & multi-repo work**: parent/child changes across repos, `D-NN` decisions and pinned inputs (`repo path @commit`) from design/copy/legal agents, approvals that record who and where, `[human]` tasks with verification and rollback, `ops` and `hotfix` change types, light CI for docs-only PRs.
 - **Optional team layer** (`plugins/karvey/skills/karvey/rules/team.md`): roles, a **rotation handoff captured by commands** (not composed from memory), census, decision log with a cross-check that stops you re-asking what was already decided, and **cost measurement**. Opt-in, and the rule opens by telling you when *not* to use it: the measured run behind it cost ≈US$1,000 over 3 days with 6 agents and ended back on a single agent.
 - **Verification rules before reporting "done"** (`plugins/karvey/skills/karvey/rules/verification.md`): the failure modes that make a green report false — a citation is not the thing cited, exit 0 is not success, a green test over uncalled code, a filename that does not identify a version.
-- **Optional hook-based enforcement** (git-flow + plan-gate) — opt-in per project.
+- **Hook-based enforcement:** prod-gate on by default; git-flow and plan-gate opt-in per project.
 
 ## Install (as a Claude Code plugin)
 
@@ -144,7 +147,7 @@ Then **restart the session** for the new version to load. Verify with `claude pl
 Then invoke the namespaced skills, for example:
 
 ```
-/karvey:grill            # start pre-spec
+/karvey:karvey-grill     # start pre-spec
 /karvey:karvey <id>      # see status and next step
 ```
 
@@ -156,7 +159,7 @@ The repo ships a [graphify](https://github.com/safishamsi/graphify) knowledge gr
 
 - `graphify-out/GRAPH_REPORT.md` — communities, god nodes, surprising connections, suggested questions.
 - `graphify-out/graph.html` — interactive graph, opens in any browser. `graphify-out/graph.json` — raw graph.
-- All paths inside are **relative to the repo root**. After changing skills or rules, refresh it incrementally with `graphify . --update` from the repo root and commit the result.
+- All paths inside are **relative to the repo root**. It is refreshed at archive (or on demand) with `graphify . --update` from the repo root, and the result is committed.
 
 ## License and trademark
 

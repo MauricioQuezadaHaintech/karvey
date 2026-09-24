@@ -9,7 +9,7 @@
     {
       "name": "karvey",
       "source": "./plugins/karvey",
-      "description": "Karvey Method (Afán, Selknam): stack-agnostic SDD spiral of 13 phases (0–12) + 18 support skills with an iteration loop (findings → bug/spec-gap/emergent), incident tracker, discovery backlog and engineering standards (golden paths + design-mode conformance gate). A synthesis of first-hand experience + Kiro + gstack. Optional opt-in team layer (agent roles, rotation handoff, decision log, cost measurement) for teams of agent sessions.",
+      "description": "Karvey Method (Afán, Selknam): stack-agnostic spec-driven development as a spiral — 13-phase pipeline (0–12) with approval gates enforced by a state tool and hooks, plus 18 support skills: iteration loop, BUG-NN incident tracker, discovery backlog, engineering standards, QA with a security gate, ordered deployment. Works with the team's configured tracker (ClickUp, Jira, Linear, Azure Boards, GitHub Projects, spreadsheet or Markdown) and notification channel. Optional team layer for teams of agent sessions.",
       "version": "3.11.4",
       "author": {
         "name": "Mauricio Quezada Ibáñez",

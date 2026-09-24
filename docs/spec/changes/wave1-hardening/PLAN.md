@@ -249,7 +249,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F12.T8 [Backend] | ✅ done | 20 | 3 | 0 | no human review yet; 7 descriptions 200–223 chars; L-01..L-04 green on all 32 skills |
 | E1.F12.T9 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; enforcement 40 → 99 lines (one anchored line per promise); L-23 residue in project-config/support-skills handled in T10 |
 | E1.F12.T10 [Backend] | ⬜ todo | 50 | — | — |  |
-| E1.F12.T11 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F12.T11 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; hooks/README 'What ships' table anchored to table cases; clickup-sync-guard/standards-guard named only as not shipped; plugin.json/marketplace.json descriptions (versions untouched) |
 | E1.F12.T12 [Backend] | ✅ done | 10 | 3 | 0 | no human review yet; git mv; 11 references updated (CHANGELOG, backlog, decisions, team-adapters spec.json/findings, prd); graphify-out left for the archive sync; the qa/deploy L-25 hits close in T5/T6 |
 | E1.F12.T13 [Backend] | ⬜ todo | 30 | — | — |  |
 | E1.F13.T1 [Infra] | ⬜ todo | 25 | — | — |  |

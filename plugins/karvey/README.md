@@ -2,10 +2,9 @@
 
 The **Karvey** Method (stack-agnostic SDD) packaged as a Claude Code plugin.
 
-- **Skills:** under `skills/` — **1 orchestrator + 13 phase skills (0–12) + 18 support skills = 32**. Auto-discovered and invoked as `/karvey:<skill>`. Full catalog in the [repo README](../../README.md#skills-catalog-32).
-- **Shared rules:** `skills/karvey/rules/` (pipeline, iteration loop, deploy workflow + branch hygiene, standards, team layer, verification…). Phase skills keep local copies of the rules they need under their own `skills/karvey/rules/`.
-- **Hooks active on install:** `hooks/hooks.json` registers a `SessionStart` hook (`karvey-session-context.sh`) that reinjects the agent handoff and reports repo drift; inert in projects without a handoff. `hooks/karvey-statusline.sh` must be installed by hand (a plugin cannot declare a statusline) — see `hooks/README.md`.
-- **Opt-in enforcement hooks:** `skills/karvey/hooks/` (`git-flow-guard.sh`, `plan-gate.sh`) — `karvey-guard --install` installs them per project; they are NOT activated when installing the plugin.
+- **Skills:** under `skills/` — **1 orchestrator + 13 phase skills (0–12) + 18 support skills = 32**. Auto-discovered and invoked as `/karvey:karvey-<name>`. Full catalog in the [repo README](../../README.md#skills-catalog-32).
+- **Shared rules:** `skills/karvey/rules/` (pipeline, iteration loop, deploy workflow + branch hygiene, standards, team layer, verification…). Skills cite them relative to their own folder (`../karvey/rules/<rule>.md`); there are no local copies.
+- **Hooks** (python ≥ 3.9): `hooks/hooks.json` registers the session hook and the dispatcher `hooks/karvey-hook.sh` (approval, protect-paths, prod-gate on by default; git-flow and plan-gate opt-in through `project.json:enforcement`; spec-write validator). The statusline is installed by hand. See `hooks/README.md`.
 - **Orchestrator:** `/karvey:karvey [<change-id>]`.
 
 See the [repo README](../../README.md), `LICENSE`, `NOTICE` and `TRADEMARK.md`.
