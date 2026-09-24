@@ -271,6 +271,145 @@ class ReadOnly(Base):
         self.assertEqual(json.loads(out)["exit"], 4)
 
 
+def plan(rows):
+    head = ("| Task | Status | estimate_min | actual_ai_min | actual_review_min | Notes |\n"
+            "|------|--------|--------------|---------------|-------------------|-------|\n")
+    return "# Plan\n\n## Task status\n\n" + head + "".join(
+        "| %s | ✅ done | %s | %s | %s | |\n" % r for r in rows)
+
+
+class Calibration(Base):
+    def archive(self, name, rows):
+        self.write("docs/spec/changes/archive/%s/PLAN.md" % name, plan(rows))
+        self.write("docs/spec/changes/archive/%s/IMPLEMENTED" % name, "")
+
+    def three(self, devs):
+        for i, d in enumerate(devs, 1):
+            # Backend: estimate 100 → actual 100 + d; the Test row stays on target; [human] is skipped
+            self.archive("2026-0%d-01-ch%d" % (i, i), [("E1.F1.T1 [Backend]", "60", str(40 + d), "20"),
+                                                      ("E1.F1.T2 [Backend]", "40", "20", "20"),
+                                                      ("E1.F1.T3 [Test]", "10", "5", "5"),
+                                                      ("E1.F1.T4 [human]", "—", "—", "—")])
+
+    def test_three_changes_over_threshold_propose(self):
+        self.three([45, 38, 40])
+        code, env = self.dash("--section", "calibration")
+        self.assertEqual(code, 0)
+        c = env["result"]["calibration"]
+        self.assertTrue(c["enough_history"])
+        self.assertEqual([p["type"] for p in c["proposals"]], ["Backend"])
+        self.assertEqual(c["proposals"][0]["deviations_pct"], [45.0, 38.0, 40.0])
+        _, out, _ = self.text("--section", "calibration")
+        self.assertIn("recalibrate Backend", out)
+
+    def test_one_change_within_threshold_no_proposal(self):
+        self.three([45, 10, 40])
+        _, env = self.dash("--section", "calibration")
+        self.assertEqual(env["result"]["calibration"]["proposals"], [])
+
+    def test_fewer_than_window_not_enough_history(self):
+        self.archive("2026-01-01-ch1", [("E1.F1.T1 [Backend]", "60", "80", "20")])
+        self.archive("2026-02-01-ch2", [("E1.F1.T1 [Backend]", "60", "80", "20")])
+        _, env = self.dash("--section", "calibration")
+        c = env["result"]["calibration"]
+        self.assertFalse(c["enough_history"])
+        self.assertEqual(len(c["changes"]), 2, "the ratios are still reported")
+        self.assertEqual(c["changes"][0]["types"]["Backend"]["ratio"], round(100 / 60, 3))
+        _, out, _ = self.text("--section", "calibration")
+        self.assertIn("not enough history (2 of 3", out)
+
+    def test_threshold_and_window_from_project_json(self):
+        self.three([45, 38, 40])
+        pj = json.loads((self.root / "docs/spec/project.json").read_text())
+        pj["calibration"] = {"threshold_pct": 50, "window": 2}
+        self.write("docs/spec/project.json", pj)
+        _, env = self.dash("--section", "calibration")
+        c = env["result"]["calibration"]
+        self.assertEqual((c["threshold_pct"], c["window"], c["proposals"]), (50, 2, []))
+
+
+class CloseReport(Base):
+    def test_closed_task_without_actual_is_listed(self):
+        code, env = self.dash("--section", "close-report", "--change", "feat-a")
+        self.assertEqual(code, 0)
+        m = env["result"]["close-report"]["feat-a"]["missing"]
+        self.assertEqual([x["task"] for x in m], ["E1.F1.T3 [Backend]"])
+        self.assertEqual(m[0]["missing"], ["actual_ai_min", "actual_review_min"])
+        _, out, _ = self.text("--section", "close-report", "--change", "feat-a")
+        self.assertIn("E1.F1.T3 [Backend] — actual missing", out)
+
+
+class Convergence(Base):
+    def conv(self, change="feat-a"):
+        return self.dash("--section", "convergence", "--change", change)
+
+    def test_not_converged_lists_each_offender(self):
+        code, env = self.conv()
+        self.assertEqual(code, 1)
+        off = env["result"]["convergence"]["feat-a"]["offenders"]
+        self.assertEqual([(o["kind"], o["id"]) for o in off],
+                         [("finding", "F-01"), ("finding", "F-02"), ("bug", "BUG-02"), ("bug", "BUG-03")])
+        self.assertEqual(off[3]["reason"], "RESUELTO without a named regression test")
+        _, out, _ = self.text("--section", "convergence", "--change", "feat-a")
+        self.assertIn("NOT converged, 4 offender(s)", out)
+
+    def test_converged_exits_0(self):
+        f = self.root / "docs/spec/changes/feat-a/findings.md"
+        f.write_text(f.read_text().replace("| routed | BUG-02 |", "| closed | BUG-02 |")
+                     .replace("| open | — |", "| closed | spec revision |"), encoding="utf-8")
+        b = self.root / "docs/bugs_dev_testing.md"
+        b.write_text(b.read_text().replace("EN FIX", "RESUELTO")
+                     .replace("### Regression test\n—", "### Regression test\n`tests/test_x.py`"), encoding="utf-8")
+        i = self.root / "docs/spec/incidents-index.md"
+        i.write_text(i.read_text().replace("EN FIX", "RESUELTO").replace("| — | feat-a |", "| tests/test_x.py | feat-a |"),
+                     encoding="utf-8")
+        code, env = self.conv()
+        self.assertEqual(code, 0, env["result"]["convergence"])
+        self.assertTrue(env["result"]["convergence"]["feat-a"]["converged"])
+
+    def test_converges_list_is_in_scope(self):
+        spec = self.root / "docs/spec/changes/feat-b/spec.json"
+        data = json.loads(spec.read_text())
+        data["converges"] = ["feat-a"]
+        spec.write_text(json.dumps(data), encoding="utf-8")
+        code, env = self.conv("feat-b")
+        self.assertEqual(code, 1)
+        r = env["result"]["convergence"]["feat-b"]
+        self.assertEqual(r["scope"], ["feat-b", "feat-a"])
+        self.assertIn("F-02", [o["id"] for o in r["offenders"]])
+
+    def test_not_in_default_run_and_default_exit_0(self):
+        code, env = self.dash()
+        self.assertEqual(code, 0)
+        self.assertNotIn("convergence", env["result"])
+
+    def test_read_only(self):
+        before = tree_hash(self.root)
+        self.conv()
+        self.dash("--section", "calibration")
+        self.dash("--section", "close-report")
+        self.assertEqual(tree_hash(self.root), before)
+
+
+class AuditBlocks(Base):
+    def test_block_counts_per_guard(self):
+        from karvey_lib import audit, project as pjm
+        d = pjm.state_dir(self.root)
+        audit.append(d, {"guard": "prod-gate", "decision": "block", "reason": "no approval"})
+        audit.append(d, {"guard": "prod-gate", "decision": "block", "reason": "no approval"})
+        audit.append(d, {"guard": "flow-guard", "decision": "block"})
+        audit.append(d, {"guard": "prod-gate", "decision": "allow"})
+        _, env = self.dash("--section", "enforcement")
+        b = env["result"]["enforcement"]["blocks"]
+        self.assertEqual((b["total"], b["by_guard"]), (3, {"flow-guard": 1, "prod-gate": 2}))
+        _, out, _ = self.text("--section", "enforcement")
+        self.assertIn("blocks     3 (flow-guard 1, prod-gate 2)", out)
+
+    def test_no_audit_log(self):
+        _, out, _ = self.text("--section", "enforcement")
+        self.assertIn("blocks     none recorded", out)
+
+
 class Tables(unittest.TestCase):
     def test_escaped_pipe_and_short_rows(self):
         t = ctxmod.parse_tables("| A | B | C |\n|---|---|---|\n| x \\| y | 2 |\n")

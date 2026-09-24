@@ -17,9 +17,20 @@ Sections:
   approvals     every approval from requirements to prod: by, role, date, or ``skipped: <reason>``;
                 ``approved`` without ``by`` is ``approver missing`` (REQ-W1-070)
   enforcement   prod-gate ``on (default)`` / ``on`` / ``off (…reviewed on origin/<prod>)``, git-flow,
-                plan-gate and the approval marker (REQ-W1-026)
+                plan-gate, the approval marker (REQ-W1-026) and the guards' block counts from audit.log
+  close-report  closed tasks without an actual (``actual missing``, REQ-W1-043)
+  calibration   actual (AI + review) / estimate per work type over the last archived changes with data;
+                a recalibration is proposed only when a type deviates by more than ``threshold_pct`` in
+                each of the last ``window`` changes (D-07: 30 %, 3), else "not enough history" (REQ-W1-044)
+  convergence   ``--change X``: exit 1 while a ``bug``/``spec-gap`` finding of X (or of a change X
+                ``converges``) is ``open``/``routed``, or a BUG-NN routed to it is not RESUELTO with a
+                named regression; each offender is listed (REQ-W1-107, REQ-W1-108). Not in the default set.
 
-Exit: 0 · 4 when there is no ``docs/spec``. Python >= 3.9, standard library only.
+Work type (calibration): the task-status table's ``Type`` / ``work type`` column when present, else the
+layer tag of the task (``[Backend]``, ``[Frontend]``, ``[Test]``, ``[Infra]``); ``[human]`` rows are skipped.
+
+Exit: 0 · 1 only for ``--section convergence`` when not converged · 4 when there is no ``docs/spec``.
+Python >= 3.9, standard library only.
 """
 import argparse
 import importlib.util
@@ -33,11 +44,11 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import approval, project as pj  # noqa: E402
+from karvey_lib import approval, audit, project as pj  # noqa: E402
 
 TOOL = "karvey-context"
-SECTIONS = ("overview", "open-work", "approvals", "enforcement")
-DEFAULT_SECTIONS = SECTIONS
+SECTIONS = ("overview", "open-work", "approvals", "enforcement", "close-report", "calibration", "convergence")
+DEFAULT_SECTIONS = SECTIONS[:-1]
 ROW_MAX = 10 * 1024
 RESOLVED = "RESUELTO"
 
@@ -572,10 +583,206 @@ def enforcement(rd, ctx):
         else:
             markers.append({"scope": scope, "state": "invalid", "text": "%s: %s" % (scope, why)})
     res["marker"] = markers or [{"scope": None, "state": "none", "text": "none"}]
+    res["blocks"] = audit_blocks(rd)
     return res
 
 
-BUILDERS = {"overview": overview, "open-work": open_work, "approvals": approvals, "enforcement": enforcement}
+def audit_blocks(rd):
+    """Block decisions per guard in this clone's audit.log (read-only; no state dir is created)."""
+    try:
+        d = pj.state_dir(rd.root, create=False)
+    except OSError:
+        return {"total": 0, "by_guard": {}, "last": None}
+    recs = audit.read(d, include_rotated=True) if d.is_dir() else []
+    by, last = {}, None
+    for r in recs:
+        if isinstance(r, dict) and r.get("decision") == "block":
+            gname = str(r.get("guard") or "?")
+            by[gname] = by.get(gname, 0) + 1
+            last = r.get("ts") or last
+    return {"total": sum(by.values()), "by_guard": dict(sorted(by.items())), "last": last}
+
+
+# --------------------------------------------------------------------------- estimates (T2)
+_LAYER = re.compile(r"\[([A-Za-z][A-Za-z -]*)\]")
+
+
+def num(v):
+    m = re.match(r"^\s*(\d+(?:\.\d+)?)\s*(?:min)?\s*$", v or "")
+    return float(m.group(1)) if m else None
+
+
+def work_type(row):
+    if row.get("type"):
+        return row["type"].strip()
+    m = _LAYER.search(row.get("task") or "")
+    return m.group(1).strip() if m else "untyped"
+
+
+def is_human(row):
+    return "[human]" in (row.get("task") or "").lower()
+
+
+def is_done(row):
+    st = row.get("status") or ""
+    return "✅" in st or first_word(st) == "done"
+
+
+def close_report(rd, ctx):
+    res = {}
+    for c in ctx["targets"]:
+        rows, _ = read_plan_rows(rd, c["dir"])
+        if rows is None:
+            continue
+        missing = []
+        for r in rows:
+            if is_human(r) or not is_done(r):
+                continue
+            gaps = [k for k, v in (("actual_ai_min", r["actual_ai"]), ("actual_review_min", r["actual_review"]))
+                    if num(v) is None]
+            if gaps:
+                missing.append({"task": r["task"], "missing": gaps, "text": "actual missing"})
+        res[c["id"]] = {"missing": missing}
+    return res
+
+
+def change_ratios(rows):
+    """``{type: {estimate, actual, ratio, deviation_pct, tasks}}`` for rows with an estimate and an actual."""
+    acc = {}
+    for r in rows or []:
+        if is_human(r):
+            continue
+        est, ai, rev = num(r["estimate"]), num(r["actual_ai"]), num(r["actual_review"])
+        if not est or ai is None:
+            continue
+        a = acc.setdefault(work_type(r), {"estimate": 0.0, "actual": 0.0, "tasks": 0})
+        a["estimate"] += est
+        a["actual"] += ai + (rev or 0.0)
+        a["tasks"] += 1
+    for a in acc.values():
+        a["ratio"] = round(a["actual"] / a["estimate"], 3)
+        a["deviation_pct"] = round((a["ratio"] - 1.0) * 100, 1)
+    return acc
+
+
+def calibration(rd, ctx):
+    cal = ctx["calibration"]
+    thr, window = cal["threshold_pct"], cal["window"]
+    arch = rd.root / pj.CHANGES_DIR / pj.ARCHIVE_NAME
+    history = []
+    if arch.is_dir():
+        for d in sorted((x for x in arch.iterdir() if x.is_dir()), key=lambda x: x.name):
+            rows, _ = read_plan_rows(rd, d)
+            ratios = change_ratios(rows)
+            if ratios:
+                history.append({"change": d.name, "types": ratios})
+    last = history[-window:]
+    res = {"threshold_pct": thr, "window": window, "changes": last, "proposals": [],
+           "enough_history": len(history) >= window}
+    if not res["enough_history"]:
+        res["text"] = "not enough history (%d of %d archived changes with data)" % (len(history), window)
+        return res
+    types = set(last[0]["types"])
+    for h in last[1:]:
+        types &= set(h["types"])
+    for t in sorted(types):
+        devs = [h["types"][t]["deviation_pct"] for h in last]
+        if all(abs(x) > thr for x in devs):
+            factor = round(sum(h["types"][t]["ratio"] for h in last) / len(last), 2)
+            res["proposals"].append({"type": t, "deviations_pct": devs, "factor": factor,
+                                     "text": "recalibrate %s: estimates x%.2f (deviation %s in the last %d changes)"
+                                     % (t, factor, ", ".join("%+.0f%%" % x for x in devs), window)})
+    res["text"] = "%d recalibration(s) proposed" % len(res["proposals"]) if res["proposals"] else \
+        "no type deviates by more than %d%% in each of the last %d changes" % (thr, window)
+    return res
+
+
+# --------------------------------------------------------------------------- convergence (T2)
+_BUG_ID = re.compile(r"\bBUG-\d+\b")
+
+
+def routed_bugs(change, bugs, findings):
+    ids = set()
+    for b in bugs.values():
+        origin = (b.get("origin") or "").strip()
+        idx = (b.get("index_change") or "").strip()
+        planned = b.get("planned_in") or ""
+        if origin.split(" ")[0] == change or idx.split(" ")[0] == change or re.search(
+                r"(^|[\s,(])%s($|[\s,)])" % re.escape(change), planned):
+            ids.add(b["id"])
+    for f in findings or []:
+        ids.update(_BUG_ID.findall(f.get("routed_to") or ""))
+        ids.update(_BUG_ID.findall(f.get("status_text") or ""))
+    return sorted(ids, key=lambda x: int(x.split("-")[1]))
+
+
+def convergence(rd, ctx):
+    if ctx.get("bugs") is None:
+        ctx["bugs"] = read_bugs(rd)
+    bugs = ctx["bugs"]
+    by_id = {c["id"]: c for c in ctx["changes"]}
+    res, not_converged = {}, False
+    for c in ctx["targets"]:
+        scope = [c["id"]] + [x for x in ((c["data"] or {}).get("converges") or []) if isinstance(x, str)]
+        offenders = []
+        for cid in scope:
+            cc = by_id.get(cid)
+            if cc is None:
+                offenders.append({"kind": "change", "id": cid, "reason": "change not found"})
+                continue
+            findings = read_findings(rd, cc["dir"])
+            if findings is None:
+                offenders.append({"kind": "findings", "id": cid, "reason": "findings.md missing or unreadable"})
+                findings = []
+            for f in findings:
+                if f["type"] in ("bug", "spec-gap") and f["status"] in ("open", "routed"):
+                    offenders.append({"kind": "finding", "change": cid, "id": f["id"], "type": f["type"],
+                                      "reason": "%s %s" % (f["type"], f["status"])})
+            for bid in routed_bugs(cid, bugs, findings):
+                b = bugs.get(bid)
+                if b is None:
+                    offenders.append({"kind": "bug", "change": cid, "id": bid, "reason": "not in the incident tracker"})
+                elif (b.get("state") or "").upper() != RESOLVED:
+                    offenders.append({"kind": "bug", "change": cid, "id": bid, "reason": b.get("state") or "no state"})
+                elif not has_regression(b.get("regression")):
+                    offenders.append({"kind": "bug", "change": cid, "id": bid,
+                                      "reason": "RESUELTO without a named regression test"})
+        res[c["id"]] = {"scope": scope, "converged": not offenders, "offenders": offenders}
+        not_converged = not_converged or bool(offenders)
+    return res, (kl.EXIT_FINDINGS if not_converged else kl.EXIT_OK)
+
+
+def _render_t2(result, L):
+    cr = result.get("close-report")
+    if cr is not None:
+        L.append("== CLOSE REPORT ==")
+        for cid, r in sorted(cr.items()):
+            if not r["missing"]:
+                L.append("%s: every closed task has its actuals" % cid)
+            for m in r["missing"]:
+                L.append("%s: %s — actual missing (%s)" % (cid, m["task"], ", ".join(m["missing"])))
+    ca = result.get("calibration")
+    if ca is not None:
+        L.append("== CALIBRATION ==")
+        for h in ca["changes"]:
+            L.append("%s: %s" % (h["change"], "; ".join("%s %.2f (%+.0f%%)" % (t, v["ratio"], v["deviation_pct"])
+                                                       for t, v in sorted(h["types"].items()))))
+        L.append(ca["text"])
+        for p_ in ca["proposals"]:
+            L.append("  " + p_["text"])
+    cv = result.get("convergence")
+    if cv is not None:
+        L.append("== CONVERGENCE ==")
+        for cid, r in sorted(cv.items()):
+            L.append("%s (%s): %s" % (cid, ", ".join(r["scope"]), "converged" if r["converged"] else
+                                      "NOT converged, %d offender(s)" % len(r["offenders"])))
+            for o in r["offenders"]:
+                L.append("  %s %s%s: %s" % (o["kind"], (o.get("change") + " ") if o.get("change") else "", o["id"],
+                                            o["reason"]))
+
+
+BUILDERS = {"overview": overview, "open-work": open_work, "approvals": approvals, "enforcement": enforcement,
+            "close-report": close_report, "calibration": calibration, "convergence": convergence}
 
 
 # --------------------------------------------------------------------------- rendering
@@ -636,8 +843,10 @@ def render(result, ctx):
         L.append("git-flow   %s" % en["git_flow"]["text"])
         L.append("plan-gate  %s" % en["plan_gate"]["text"])
         L.append("marker     %s" % "; ".join(m["text"] for m in en["marker"]))
-    for extra in ctx.get("renderers", []):
-        extra(result, L)
+        b = en.get("blocks") or {}
+        L.append("blocks     %s" % ("none recorded" if not b.get("total") else "%d (%s) · last %s" % (
+            b["total"], ", ".join("%s %d" % kv for kv in b["by_guard"].items()), b.get("last") or "?")))
+    _render_t2(result, L)
     for u in result.get("unreadable", []):
         L.append("unreadable: %s (%s)" % (u["path"], u["reason"]))
     return "\n".join(L)
@@ -658,7 +867,8 @@ def build_context(args, rd):
     else:
         targets = [c for c in changes if is_active(c)]
     return {"project": project, "wip_limit": wip, "stall_days": stall, "calibration": cal,
-            "changes": changes, "targets": targets, "now": now_dt(args), "warnings": warns, "args": args}
+            "changes": changes, "targets": targets, "now": now_dt(args), "warnings": warns, "args": args,
+            "bugs": None}
 
 
 def run(args):
