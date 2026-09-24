@@ -26,6 +26,7 @@ Case format (§6.1)::
      "expect_nopy"?: {…}, "tags": […], "limitation"?: true}
 
 Strings may use ``{{root}}`` (the case's repo), ``{{repo}}`` (its git common dir), ``{{home}}``,
+``{{plugin}}`` (the plugin root under test),
 ``{{now}}`` and ``{{now-121m}}``-style offsets.
 
 Assertions: the decision (exit 0 allow, 2 block), the stdout/stderr substrings, ``marker_created``
@@ -92,6 +93,7 @@ def base_env(tmp):
 class Templ:
     def __init__(self, root=None, repo=None, home=None):
         self.root, self.repo, self.home = root, repo, home
+        self.plugin = PLUGIN_ROOT
         self.now = datetime.now().astimezone()
 
     def s(self, text):
@@ -104,7 +106,7 @@ class Templ:
             return (self.now + delta if sign == "+" else self.now - delta).isoformat(timespec="seconds")
         text = re.sub(r"\{\{now([+-])(\d+)([mh])\}\}", now, text)
         text = text.replace("{{now}}", self.now.isoformat(timespec="seconds"))
-        for k in ("root", "repo", "home"):
+        for k in ("root", "repo", "home", "plugin"):
             v = getattr(self, k)
             if v is not None:
                 text = text.replace("{{%s}}" % k, str(v))

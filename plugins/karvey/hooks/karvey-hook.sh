@@ -63,10 +63,44 @@ nopy_selftest() {
 }
 nopy_stub() { return 0; }
 
+# crude JSON string field extraction (no python, no jq): the first "<field>": "<value>", unescaped
+json_field() {
+  printf '%s' "$INPUT" | tr '\n' ' ' | sed -nE 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' | head -1 |
+    sed -e 's/\\"/"/g' -e 's#\\/#/#g' -e 's/\\\\/\\/g'
+}
+
+# protect-paths without python (§3.2): block any Bash command or Edit path naming the Karvey state
+# dirs or the compat marker; an Edit under the plugin root.
+nopy_protect_paths() {
+  local subject needles n base
+  if [ "$EVENT" = "pre-edit" ]; then subject="$(json_field file_path)"; [ -z "$subject" ] && subject="$(json_field notebook_path)"
+  else subject="$(json_field command)"; fi
+  [ -z "$subject" ] && return 0
+  needles="karvey/approvals karvey/ledger .git/karvey"
+  if [ -n "${KARVEY_COMPAT_MARKER:-}" ]; then base="${KARVEY_COMPAT_MARKER##*/}"; needles="$needles $base"; fi
+  for n in $needles; do
+    case "$subject" in *"$n"*)
+      echo "[karvey] BLOCK protect-paths: approval comes only from the human's message (D-01) (no python)" >&2
+      return 2 ;;
+    esac
+  done
+  if [ "$EVENT" = "pre-edit" ]; then
+    for base in "$ROOT" "${CLAUDE_PLUGIN_ROOT:-}"; do
+      [ -z "$base" ] && continue
+      case "$subject" in "$base"/*)
+        echo "[karvey] BLOCK protect-paths: the plugin files are not edited from a session (no python)" >&2
+        return 2 ;;
+      esac
+    done
+  fi
+  return 0
+}
+
 GUARDS="$(guards_for "$EVENT")" || { echo "[karvey] unknown hook event '$EVENT' (not blocking)" >&2; exit 0; }
 for g in $GUARDS; do
   case "$g" in
     selftest) nopy_selftest; rc=$? ;;
+    protect-paths) nopy_protect_paths; rc=$? ;;
     *)        nopy_stub "$g"; rc=$? ;;
   esac
   if [ "$rc" -eq 2 ]; then exit 2; fi

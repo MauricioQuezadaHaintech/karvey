@@ -17,8 +17,8 @@ Guard registry (order, fail mode — §3.2):
     post-edit  spec-write (open) → pending-sync (open)
     prompt     approval (open)
 
-In this version every guard is registered as an **allow-stub** (``wired = False``): it neither
-runs nor applies its fail mode. Batch 3 (E1.F5.*) implements and wires them one by one.
+The guards live in ``guards.py`` (and ``post_edit`` / ``approval_hook`` below); a guard
+registered with ``wired = False`` is an allow-stub that neither runs nor applies its fail mode.
 
 ``selftest`` is a diagnostic, block-only guard that runs first on the tool events, only when
 ``KARVEY_HOOK_SELFTEST=1`` is in the hook's environment, and blocks a call whose command or
@@ -37,10 +37,10 @@ import time
 
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from karvey_lib import HOOK_ALLOW, HOOK_BLOCK, audit, hookio, shellparse  # noqa: E402
+    from karvey_lib import HOOK_ALLOW, HOOK_BLOCK, audit, guards, hookio, shellparse  # noqa: E402
     from karvey_lib import project as pj  # noqa: E402
 else:
-    from . import HOOK_ALLOW, HOOK_BLOCK, audit, hookio, shellparse
+    from . import HOOK_ALLOW, HOOK_BLOCK, audit, guards, hookio, shellparse
     from . import project as pj
 
 EVENTS = ("prompt", "pre-bash", "pre-edit", "post-edit", "session")
@@ -51,19 +51,7 @@ SELFTEST_ENV = "KARVEY_HOOK_SELFTEST"
 SELFTEST_TOKEN = "KARVEY-SELFTEST-BLOCK"
 
 
-class Decision:
-    __slots__ = ("decision", "message", "stdout", "record")
-
-    def __init__(self, decision, message="", stdout=None, record=None):
-        self.decision, self.message, self.stdout, self.record = decision, message, list(stdout or []), record or {}
-
-    @classmethod
-    def allow(cls, stdout=None, record=None):
-        return cls("allow", stdout=stdout, record=record)
-
-    @classmethod
-    def block(cls, message, record=None):
-        return cls("block", message=message, record=record)
+Decision = guards.Decision
 
 
 class Context:
@@ -74,6 +62,7 @@ class Context:
         self.only, self.force_enabled = only, force_enabled
         self._parsed = self._root = None
         self._root_done = False
+        self.cache = {}  # per-event memo shared by the guards (config, active change, git lookups)
 
     @property
     def parsed(self):
@@ -125,7 +114,8 @@ def _selftest_run(ctx):
 REGISTRY = [
     Guard("selftest", ("pre-bash", "pre-edit"), "closed", False, wired=True, run=_selftest_run,
           enabled=_selftest_enabled),
-    Guard("protect-paths", ("pre-bash", "pre-edit"), "closed", True),   # E1.F5.T1
+    Guard("protect-paths", ("pre-bash", "pre-edit"), "closed", True, wired=True,
+          run=guards.protect_paths),                                    # E1.F5.T1
     Guard("prod-gate", ("pre-bash",), "closed", True),                   # E1.F5.T5, E1.F5.T6
     Guard("git-flow", ("pre-bash",), "closed", False),                   # E1.F5.T4
     Guard("plan-gate", ("pre-bash", "pre-edit"), "closed", False),       # E1.F5.T3
@@ -154,6 +144,18 @@ def _audit_block(ctx, guard, message, record=None):
         audit.append(pj.state_dir(base), rec)
     except Exception:
         pass  # logging never changes a decision
+
+
+def _audit_decision(ctx, guard, decision, record=None):
+    try:
+        base = ctx.root or (ctx.payload.cwd if ctx.payload.cwd and pj.git_common_dir(ctx.payload.cwd) else None)
+        if not base:
+            return
+        rec = {"guard": guard, "event": ctx.event, "decision": decision, "session_id": ctx.payload.session_id}
+        rec.update(record or {})
+        audit.append(pj.state_dir(base), rec)
+    except Exception:
+        pass
 
 
 class _Watchdog:
@@ -222,6 +224,8 @@ def dispatch(event, stdin_text, env=None, only=None, force_enabled=False, out=No
             continue
         for line in d.stdout:
             out.write(line.rstrip("\n") + "\n")
+        if d.decision == "allow" and d.audit:
+            _audit_decision(ctx, g.name, "allow", d.record)
         if d.decision == "block":
             err.write(d.message.rstrip("\n") + "\n")
             rec = dict(d.record)

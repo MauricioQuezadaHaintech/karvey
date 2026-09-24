@@ -32,8 +32,8 @@ class Registry(unittest.TestCase):
         self.assertFalse(default["git-flow"])        # opt-in
         self.assertFalse(default["plan-gate"])       # opt-in
 
-    def test_guards_are_allow_stubs_until_batch_3(self):
-        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest"])
+    def test_wired_guards(self):
+        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths"])
 
     def test_only_filter(self):
         self.assertEqual([g.name for g in kh.guards_for("pre-bash", ["git-flow"])], ["git-flow"])
@@ -76,7 +76,9 @@ class Dispatch(unittest.TestCase):
         code, _, err = run("pre-bash", "not json", env={"KARVEY_HOOK_SELFTEST": "1"})
         self.assertEqual(code, 2)
         self.assertIn("cannot evaluate", err)
-        self.assertEqual(run("pre-bash", "not json")[0], 0)  # stubs: no fail mode yet
+        code, _, err = run("pre-bash", "not json")  # protect-paths is always on and fails closed
+        self.assertEqual(code, 2)
+        self.assertIn("BLOCK protect-paths: cannot evaluate", err)
 
     def test_guard_exception_fail_modes(self):
         boom = kh.Guard("boom-closed", ("pre-bash",), "closed", True, wired=True,

@@ -72,7 +72,7 @@ LS='{"tool_name":"Bash","tool_input":{"command":"ls"},"cwd":"'"$T/plain"'"}'
 TOK='{"tool_name":"Bash","tool_input":{"command":"echo KARVEY-SELFTEST-BLOCK"},"cwd":"'"$T/plain"'"}'
 out=$(disp "$PATH" "$LS" "" pre-bash);        [[ "$out" == "rc=0" ]] && ok "python: pre-bash ls → allow, silent" || bad "python allow" "$out"
 out=$(disp "$PATH" "$TOK" 1 pre-bash);        [[ "$out" == *"BLOCK selftest"*"rc=2" ]] && ok "python: a block exits 2 with the reason" || bad "python block" "$out"
-out=$(disp "$PATH" "not json" "" pre-bash);   [[ "$out" == "rc=0" ]] && ok "python: non-JSON payload, stub guards → allow" || bad "python non-json" "$out"
+out=$(disp "$PATH" "not json" "" pre-bash);   [[ "$out" == *"BLOCK protect-paths: cannot evaluate"*"rc=2" ]] && ok "python: non-JSON payload → protect-paths fails closed" || bad "python non-json" "$out"
 out=$(disp "$PATH" '{"prompt":"ok"}' "" prompt); [[ "$out" == "rc=0" ]] && ok "python: prompt → silent (no marker yet)" || bad "python prompt" "$out"
 out=$(disp "$PATH" "" "" nosuch);             [[ "$out" == *"unknown hook event"*"rc=0" ]] && ok "python: unknown event is not blocking" || bad "python unknown" "$out"
 out=$(disp "$NOPY" "$LS" "" pre-bash);        [[ "$out" == "rc=0" ]] && ok "no python: pre-bash ls → allow by fail mode" || bad "nopy allow" "$out"

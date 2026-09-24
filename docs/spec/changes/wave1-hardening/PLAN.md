@@ -99,7 +99,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F5: Guards and the approval hook
 
-- [ ] E1.F5.T1 [Backend] protect-paths guard and its table — est: 20min (depends E1.F4.T4, E1.F3.T5)
+- [x] E1.F5.T1 [Backend] protect-paths guard and its table — est: 20min (depends E1.F4.T4, E1.F3.T5)
 - [ ] E1.F5.T2 [Backend] Approval hook: vocabulary, quote stripping, prod kind (D-10), scope, compat marker (D-11) — est: 45min (depends E1.F3.T5, E1.F4.T4) (P)
 - [ ] E1.F5.T3 [Backend] plan-gate classifier and its table — est: 45min (depends E1.F5.T1, E1.F5.T2)
 - [ ] E1.F5.T4 [Backend] git-flow guard (target repo per segment, aliases, whole-name match, trunk) and its table — est: 50min (depends E1.F5.T3)
@@ -213,7 +213,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F4.T2 [Backend] | ✅ done | 40 | 3 | 0 | no human review yet; hand-written lexer instead of shlex (fd redirections, $( ) positions) |
 | E1.F4.T3 [Backend] | ✅ done | 35 | 4 | 0 | no human review yet; guards registered as allow-stubs (wired in batch 3); diagnostic block-only selftest guard (F-08) |
 | E1.F4.T4 [Test] | ✅ done | 35 | 3 | 0 | no human review yet; smoke block case uses the selftest guard (F-08) |
-| E1.F5.T1 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F5.T1 [Backend] | ✅ done | 20 | 6 | 0 | no human review yet; 17 table cases (13 required + 4 allow); plugin-root rule vs dogfooding → F-09 |
 | E1.F5.T2 [Backend] | ⬜ todo | 45 | — | — |  |
 | E1.F5.T3 [Backend] | ⬜ todo | 45 | — | — |  |
 | E1.F5.T4 [Backend] | ⬜ todo | 50 | — | — |  |
