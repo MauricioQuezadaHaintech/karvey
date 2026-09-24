@@ -1,0 +1,23 @@
+{
+  "project": "…",
+  "git_platform": "github",
+  "cloud": {
+    "provider": "none"
+  },
+  "iac_tool": "none",
+  "knowledge_sync": "none",
+  "repos": [
+    "repo-a"
+  ],
+  "spec_repo": "repo-a",
+  "branch_flow": {
+    "integration": "main",
+    "production": "main",
+    "feature_prefix": "feature/"
+  },
+  "enforcement": {
+    "git_flow_hook": true,
+    "plan_gate_hook": false
+  },
+  "notes": "…"
+}

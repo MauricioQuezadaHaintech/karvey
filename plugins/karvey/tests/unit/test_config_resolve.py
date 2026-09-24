@@ -411,5 +411,102 @@ class Outbox(Base):
         self.assertEqual((code, env["errors"][0]["code"]), (4, "config.outbox_corrupt"))
 
 
+
+# --------------------------------------------------------------------------- E1.F14.T2: legacy project.json fixtures
+LEGACY_PROJECT = _path.FIXTURES_DIR / "legacy" / "project"
+EXPECTED_MANAGEMENT = {  # fixture → (tool, location, external, missing, warning expected)
+    "management-markdown.json": ("markdown", None, False, [], "config.legacy_management"),
+    "management-clickup.json": ("clickup", None, True, ["location", "statuses"], "config.legacy_management"),
+    "management-absent.json": ("markdown", None, False, [], "config.no_management"),
+    "management-object.json": ("clickup", "9013", True, ["statuses"], None),
+    "clickup-backlog-list.json": ("clickup", "9014", True, ["statuses"], "config.legacy_backlog_list_id"),
+    "notifications-absent.json": ("markdown", None, False, [], "config.no_management"),
+    "notifications-google_chat.json": ("markdown", None, False, [], "config.no_management"),
+    "notifications-none.json": ("markdown", None, False, [], "config.no_management"),
+    "trunk.json": ("markdown", None, False, [], "config.no_management"),
+}
+
+
+class LegacyProjectFixtures(Base):
+    """REQ-W1-010, 086, 087, 088 over every anonymised project.json shape (architecture §6.3)."""
+
+    def load(self, name):
+        self.project(json.loads((LEGACY_PROJECT / name).read_text(encoding="utf-8")))
+        return self.root / "docs/spec/project.json"
+
+    def test_catalogue_is_complete(self):
+        self.assertEqual({f.name for f in LEGACY_PROJECT.glob("*.json")}, set(EXPECTED_MANAGEMENT))
+
+    def test_resolve_management(self):
+        for name, (tool, location, external, missing, warning) in sorted(EXPECTED_MANAGEMENT.items()):
+            with self.subTest(fixture=name):
+                self.load(name)
+                code, env = self.resolve()
+                r = env["result"]
+                self.assertEqual(code, 0, env["errors"])
+                self.assertEqual((r["tool"], r["location"], r["external"], r["missing"]),
+                                 (tool, location, external, missing))
+                if warning:
+                    self.assertIn(warning, self.warning_codes(env))
+                self.assertIsNone(r["statuses"], "statuses are never invented (REQ-W1-080)")
+
+    def test_resolve_notifications(self):
+        expected = {"notifications-google_chat.json": ("google-chat", "config.legacy_alias"),
+                    "notifications-none.json": ("none", None), "notifications-absent.json": ("none", None)}
+        for name, (channel, warning) in expected.items():
+            with self.subTest(fixture=name):
+                self.load(name)
+                code, env = self.resolve("notifications")
+                self.assertEqual((code, env["result"]["channel"]), (0, channel))
+                if warning:
+                    self.assertIn(warning, self.warning_codes(env))
+
+    def test_propose_settings_from_legacy_never_writes(self):
+        for name, (tool, location, _, _, _) in sorted(EXPECTED_MANAGEMENT.items()):
+            with self.subTest(fixture=name):
+                self.load(name)
+                before = C.tree_digest(self.root)
+                code, env = C.run_json("propose-settings", "--from-legacy", "--root", self.root)
+                self.assertEqual(code, 0, env["errors"])
+                self.assertIs(env["result"]["written"], False)
+                self.assertEqual(C.tree_digest(self.root), before)
+                snip = env["result"]["snippet"]["management"]
+                self.assertEqual(snip["tool"], tool)
+                self.assertNotIn("statuses", snip)
+                if location:
+                    self.assertEqual(snip["location"], location)
+                self.assertIn("channel", env["result"]["snippet"]["notifications"])
+
+    def test_validate_fix_string_to_object_idempotent(self):
+        from _state import run_json as state_json
+        for name, (tool, location, _, _, _) in sorted(EXPECTED_MANAGEMENT.items()):
+            with self.subTest(fixture=name):
+                f = self.load(name)
+                before = json.loads(f.read_text(encoding="utf-8"))
+                code, env = state_json("validate", str(f), "--root", str(self.root), "--fix")
+                self.assertEqual(code, 0, env["errors"])
+                once = f.read_bytes()
+                code, env = state_json("validate", str(f), "--root", str(self.root), "--fix")
+                self.assertEqual(f.read_bytes(), once)
+                after = json.loads(once)
+                if "management" in before:
+                    self.assertIsInstance(after["management"], dict)
+                    self.assertEqual(after["management"]["tool"], tool)
+                    self.assertNotIn("statuses", after["management"])
+                else:
+                    self.assertNotIn("management", after, "an absent management is not invented")
+                if location and name == "clickup-backlog-list.json":
+                    self.assertEqual(after["management"]["location"], location)
+                    self.assertNotIn("backlog_list_id", after.get("clickup", {}))
+                for k in set(before) - {"management", "clickup"}:
+                    self.assertEqual(after[k], before[k], "only management/clickup are migrated (%s)" % k)
+                self.assertEqual(self.resolve()[1]["result"]["tool"], tool)
+
+    def test_trunk_branch_flow_read(self):
+        self.load("trunk.json")
+        for key in ("branch_flow.integration", "branch_flow.production"):
+            code, out, _ = C.run("get", key, "--shell", "--root", self.root)
+            self.assertEqual((code, out.strip()), (0, "main"))
+
 if __name__ == "__main__":
     unittest.main()
