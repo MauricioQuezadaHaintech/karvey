@@ -6,8 +6,10 @@
 # If this CLI version does not provide them, it falls back to reading the transcript.
 #
 # Thresholds (env): KARVEY_ROTATE_CTX_YELLOW (def. 100000) · KARVEY_ROTATE_CTX_RED (def. 150000)
-#                   KARVEY_ROTATE_HOURS (def. 8)
-#                   KARVEY_TZ (IANA zone for the reset clock, e.g. America/Santiago; def. the system's)
+#                   KARVEY_ROTATE_HOURS (def. `rotation_hours` of scripts/karvey_lib/defaults.json, the one
+#                   place for it, D-06 / REQ-W1-049; `rot?` is shown when that file cannot be found)
+#                   KARVEY_TZ (IANA zone for the reset clock, e.g. America/Santiago; def. the system's;
+#                   an invalid zone shows the system time marked `(TZ?)`, REQ-W1-100)
 # Each account window shows when it resets and how long is left: `5h 29% ↻18:05 (1h31m)`.
 # 150k comes from measurement: at 588k a turn costs 7x what it costs at 80k, and rotating costs ~40k.
 #
@@ -21,6 +23,9 @@ DBG="${TMPDIR:-/tmp}/.karvey-statusline-last.$(id -u).json"
 # The output is captured instead of printed directly: if the CLI changes the stdin format (it did,
 # with current_usage), the traceback shows up in the statusline instead of leaving it empty.
 # A statusline that disappears is indistinguishable from one that is switched off.
+# The rotation default lives in defaults.json, read relative to this script (no second literal).
+KARVEY_DEFAULTS_JSON="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/../scripts/karvey_lib/defaults.json"
+export KARVEY_DEFAULTS_JSON
 ERRF=$(mktemp 2>/dev/null || echo "${TMPDIR:-/tmp}/.karvey-statusline-err.$$")
 OUT=$(python3 - "$IN" 2>"$ERRF" <<'PY'
 import sys, json, os, datetime
@@ -32,7 +37,33 @@ except Exception:
 
 CTX_Y = int(os.environ.get('KARVEY_ROTATE_CTX_YELLOW', 100_000))
 CTX_R = int(os.environ.get('KARVEY_ROTATE_CTX_RED', 150_000))
-HOURS = float(os.environ.get('KARVEY_ROTATE_HOURS', 8))
+
+def _rotation_hours():
+    # KARVEY_ROTATE_HOURS wins; else defaults.json:rotation_hours; else None (shown as `rot?`).
+    v = os.environ.get('KARVEY_ROTATE_HOURS')
+    if v not in (None, ''):
+        try:
+            return float(v)
+        except ValueError:
+            pass
+    try:
+        with open(os.environ.get('KARVEY_DEFAULTS_JSON') or '', encoding='utf-8-sig') as fh:
+            r = json.load(fh).get('rotation_hours')
+        return float(r) if isinstance(r, (int, float)) and not isinstance(r, bool) and r > 0 else None
+    except Exception:
+        return None
+
+HOURS = _rotation_hours()
+
+# The reset-clock zone, resolved once per run. An invalid KARVEY_TZ is not silent (BUG-08).
+TZ, TZ_BAD = None, False
+_tzname = os.environ.get('KARVEY_TZ') or ''
+if _tzname:
+    try:
+        from zoneinfo import ZoneInfo
+        TZ = ZoneInfo(_tzname)
+    except Exception:
+        TZ, TZ_BAD = None, True
 
 cw     = d.get('context_window') or {}
 cost   = d.get('cost') or {}
@@ -104,7 +135,7 @@ def k(n):
 if   ctx >= CTX_R: light, why = '🔴', 'context'
 elif ctx >= CTX_Y: light, why = '🟡', ''
 else:              light, why = '🟢', ''
-if h >= HOURS:
+if HOURS is not None and h >= HOURS:
     light = '🔴'
     why = f'{why} + hours' if why else 'hours'
 
@@ -114,7 +145,7 @@ if pct is not None:
 parts = [left]
 if new:  parts.append(f'new {k(new)}')
 if read: parts.append(f'cache {k(read)}')
-parts.append(f'{h:.1f}h')
+parts.append(f'{h:.1f}h' + ('' if HOURS is not None else ' rot?'))
 
 # account limit consumption: the number that actually decides a rotation
 
@@ -139,30 +170,22 @@ def _reset(w, week=False):
         now = datetime.datetime.now().timestamp()
         if ts <= now or ts - now > 400 * 86400:
             return ''                      # already reset, or absurd
-        tz = None
-        name = os.environ.get('KARVEY_TZ') or ''
-        if name:
-            try:
-                from zoneinfo import ZoneInfo
-                tz = ZoneInfo(name)
-            except Exception:
-                tz = None
-        at = datetime.datetime.fromtimestamp(ts, tz) if tz else datetime.datetime.fromtimestamp(ts)
+        at = datetime.datetime.fromtimestamp(ts, TZ) if TZ else datetime.datetime.fromtimestamp(ts)
         left = int(round((ts - now) / 60.0)) * 60
         d_, r_ = divmod(left, 86400); h_, r_ = divmod(r_, 3600); m_ = r_ // 60
         rem = f'{d_}d{h_}h' if d_ else (f'{h_}h{m_:02d}m' if h_ else f'{max(m_, 1)}m')
         day = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][at.weekday()] + ' ' if week else ''
-        return f' ↻{day}{at:%H:%M} ({rem})'
+        return f' ↻{day}{at:%H:%M}' + (' (TZ?)' if TZ_BAD else '') + f' ({rem})'
     except Exception:
         return ''
 
 l5 = (limits.get('five_hour') or {}).get('used_percentage')
 l7 = (limits.get('seven_day') or {}).get('used_percentage')
 if l5 is not None or l7 is not None:
-    lim = 'limit'
-    if l5 is not None: lim += f' 5h {l5:.0f}%' + _reset(limits.get('five_hour'))
-    if l7 is not None: lim += f' · 7d {l7:.0f}%' + _reset(limits.get('seven_day'), week=True)
-    parts.append(lim)
+    windows = []   # joined, so no separator precedes the first present window (BUG-09)
+    if l5 is not None: windows.append(f'5h {l5:.0f}%' + _reset(limits.get('five_hour')))
+    if l7 is not None: windows.append(f'7d {l7:.0f}%' + _reset(limits.get('seven_day'), week=True))
+    parts.append('limit ' + ' · '.join(windows))
     if (l5 or 0) >= 80 or (l7 or 0) >= 80:
         light = '🔴'
         why = f'{why} + limit' if why else 'limit'

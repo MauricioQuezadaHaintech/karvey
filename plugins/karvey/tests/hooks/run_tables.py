@@ -28,6 +28,11 @@ Case format (§6.1)::
 Strings may use ``{{root}}`` (the case's repo), ``{{repo}}`` (its git common dir), ``{{home}}``,
 ``{{now}}`` and ``{{now-121m}}``-style offsets.
 
+Statusline cases (``"event": "statusline"``) run ``hooks/karvey-statusline.sh`` instead, with
+``input.stdin`` (an object) as its stdin; the script always exits 0, so their decision is ``allow``.
+``given.script_copy: true`` runs a copy of the script from the case's temp dir, where
+``defaults.json`` cannot be found (the ``rot?`` case, REQ-W1-049).
+
 Assertions: the decision (exit 0 allow, 2 block), the stdout/stderr substrings, ``marker_created``
 and a duration below 1 s per case unless tagged ``network`` or given ``max_s``. Cases tagged
 ``nopy`` run a second time with ``PATH`` stripped of every python interpreter, which exercises the
@@ -50,13 +55,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 PLUGIN_ROOT = HERE.parent.parent
 DISPATCHER = PLUGIN_ROOT / "hooks" / "karvey-hook.sh"
+STATUSLINE = PLUGIN_ROOT / "hooks" / "karvey-statusline.sh"
 TABLES = HERE / "tables"
 STUBS = HERE / "stubs"
 sys.path.insert(0, str(PLUGIN_ROOT / "scripts"))
 from karvey_lib import approval  # noqa: E402
 
 CASE_KEYS = {"id", "guard", "given", "input", "event", "expect", "expect_nopy", "tags", "limitation", "note"}
-GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir"}
+GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir", "script_copy"}
 REPO_KEYS = {"branch", "remote_branches", "project_json", "spec", "ledger", "marker", "files", "default_branch"}
 EXPECT_KEYS = {"decision", "stdout_contains", "stderr_contains", "stdout_not_contains", "stderr_not_contains",
                "stdout_empty", "stderr_empty", "marker_created", "max_s"}
@@ -307,9 +313,18 @@ def run_case(case, nopy=False, keep=False):
         else:
             payload.update(hook_event_name="PostToolUse" if event == "post-edit" else "PreToolUse",
                            tool_name=inp.get("tool_name"), tool_input=inp.get("tool_input") or {})
+        argv = ["bash", str(DISPATCHER), event]
+        if event == "statusline":
+            script = STATUSLINE
+            if given.get("script_copy"):
+                script = tmp / "copied" / STATUSLINE.name
+                script.parent.mkdir()
+                shutil.copy(str(STATUSLINE), str(script))
+            argv = ["bash", str(script)]
+            payload = inp.get("stdin") or {}
         before = approvals_snapshot(common)
         started = time.monotonic()
-        cp = subprocess.run(["bash", str(DISPATCHER), event], input=json.dumps(payload).encode("utf-8"),
+        cp = subprocess.run(argv, input=json.dumps(payload).encode("utf-8"),
                             cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
         duration = time.monotonic() - started
         after = approvals_snapshot(common)
