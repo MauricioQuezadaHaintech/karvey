@@ -117,32 +117,32 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F7: Settings resolver `karvey-config.py` and safe values
 
-- [ ] E1.F7.T1 [Backend] `safe_values.py` patterns and the no-shell rule — est: 25min (depends E1.F2.T1) (P)
-- [ ] E1.F7.T2 [Backend] `karvey-config.py resolve | get --shell | propose-settings` — est: 30min (depends E1.F7.T1, E1.F2.T4, E1.F2.T5)
-- [ ] E1.F7.T3 [Backend] `karvey-config.py notify-check [--confirm]` and `outbox add|list|done` — est: 30min (depends E1.F7.T2)
+- [x] E1.F7.T1 [Backend] `safe_values.py` patterns and the no-shell rule — est: 25min (depends E1.F2.T1) (P)
+- [x] E1.F7.T2 [Backend] `karvey-config.py resolve | get --shell | propose-settings` — est: 30min (depends E1.F7.T1, E1.F2.T4, E1.F2.T5)
+- [x] E1.F7.T3 [Backend] `karvey-config.py notify-check [--confirm]` and `outbox add|list|done` — est: 30min (depends E1.F7.T2)
 
 ### Feature E1.F8: Dashboard `karvey-context.py`
 
-- [ ] E1.F8.T1 [Backend] `karvey-context.py`: overview, open work, approvals, WIP, enforcement (read-only) — est: 45min (depends E1.F3.T3, E1.F7.T3, E1.F2.T4)
-- [ ] E1.F8.T2 [Backend] `karvey-context.py`: calibration, close report, convergence, audit block counts — est: 35min (depends E1.F8.T1)
+- [x] E1.F8.T1 [Backend] `karvey-context.py`: overview, open work, approvals, WIP, enforcement (read-only) — est: 45min (depends E1.F3.T3, E1.F7.T3, E1.F2.T4)
+- [x] E1.F8.T2 [Backend] `karvey-context.py`: calibration, close report, convergence, audit block counts — est: 35min (depends E1.F8.T1)
 
 ### Feature E1.F9: Spec-delta merge `karvey-spec-merge.py`
 
-- [ ] E1.F9.T1 [Backend] `karvey-spec-merge.py` (ADDED / MODIFIED / REMOVED, `--dry-run`) — est: 40min (depends E1.F2.T1, E1.F2.T2) (P)
+- [x] E1.F9.T1 [Backend] `karvey-spec-merge.py` (ADDED / MODIFIED / REMOVED, `--dry-run`) — est: 40min (depends E1.F2.T1, E1.F2.T2) (P)
 
 ### Feature E1.F10: Plugin linter `lint-plugin.py`
 
-- [ ] E1.F10.T1 [Backend] Linter framework (registry, `--list`, `--only`, `--paths`, formats) and L-01..L-04 — est: 45min (depends E1.F2.T1) (P)
-- [ ] E1.F10.T2 [Backend] Linter L-05..L-10 and L-14 (phase literals, no hand phase edits, `next`, produces/reads, paths, rule copies, allowed-tools) — est: 50min (depends E1.F10.T1, E1.F2.T6)
-- [ ] E1.F10.T3 [Backend] Linter L-11..L-13, L-17, L-18 (counts, versions, release docs, rule JSON vs schema, docs/spec validate) — est: 40min (depends E1.F10.T2, E1.F3.T1, E1.F2.T5)
-- [ ] E1.F10.T4 [Backend] Linter L-15, L-16 (hooks exist; guard-case anchors match the tables) and L-19..L-24 — est: 50min (depends E1.F10.T3)
-- [ ] E1.F10.T5 [Backend] Linter L-25..L-30 (QA, stack rules, deploy/archive, management, shell interpolation, H-33) — est: 45min (depends E1.F10.T4)
-- [ ] E1.F10.T6 [Backend] Linter L-31..L-35 (public tracker text, RESUELTO needs a regression, duplicate ids, subagent project.json writes, CHANGELOG compat line) — est: 30min (depends E1.F10.T5)
+- [x] E1.F10.T1 [Backend] Linter framework (registry, `--list`, `--only`, `--paths`, formats) and L-01..L-04 — est: 45min (depends E1.F2.T1) (P)
+- [x] E1.F10.T2 [Backend] Linter L-05..L-10 and L-14 (phase literals, no hand phase edits, `next`, produces/reads, paths, rule copies, allowed-tools) — est: 50min (depends E1.F10.T1, E1.F2.T6)
+- [x] E1.F10.T3 [Backend] Linter L-11..L-13, L-17, L-18 (counts, versions, release docs, rule JSON vs schema, docs/spec validate) — est: 40min (depends E1.F10.T2, E1.F3.T1, E1.F2.T5)
+- [x] E1.F10.T4 [Backend] Linter L-15, L-16 (hooks exist; guard-case anchors match the tables) and L-19..L-24 — est: 50min (depends E1.F10.T3)
+- [x] E1.F10.T5 [Backend] Linter L-25..L-30 (QA, stack rules, deploy/archive, management, shell interpolation, H-33) — est: 45min (depends E1.F10.T4)
+- [x] E1.F10.T6 [Backend] Linter L-31..L-35 (public tracker text, RESUELTO needs a regression, duplicate ids, subagent project.json writes, CHANGELOG compat line) — est: 30min (depends E1.F10.T5)
 
 ### Feature E1.F11: Statusline and method page
 
-- [ ] E1.F11.T1 [Backend] Statusline: visible invalid TZ, clean separators, rotation default from `defaults.json` — est: 25min (depends E1.F2.T1, E1.F4.T4) (P)
-- [ ] E1.F11.T2 [Frontend] Method page `docs/karvey.html`: pure functions + `init(window)`; BUG-10..14 fixed; node and static tests — est: 45min (P)
+- [x] E1.F11.T1 [Backend] Statusline: visible invalid TZ, clean separators, rotation default from `defaults.json` — est: 25min (depends E1.F2.T1, E1.F4.T4) (P)
+- [x] E1.F11.T2 [Frontend] Method page `docs/karvey.html`: pure functions + `init(window)`; BUG-10..14 fixed; node and static tests — est: 45min (P)
 
 ### Feature E1.F12: Skill and rule text changes
 
@@ -225,20 +225,20 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F6.T2 [Backend] | ✅ done | 30 | 1 | 0 | no human review yet; hooks.json SessionStart split (startup | resume|compact|clear), both double-quoted; test-hooks 57/57 |
 | E1.F6.T3 [Backend] | ✅ done | 25 | 2 | 0 | no human review yet; 8 unit tests; re-measures after writing when state.json is inside the measured repo; save-order note → F-14 |
 | E1.F6.T4 [Test] | ✅ done | 30 | 3 | 0 | no human review yet; 23 session cases (5 nopy); runner: session event, setup commands, context assertions; test-hooks 58/58 incl. all tables |
-| E1.F7.T1 [Backend] | ⬜ todo | 25 | — | — |  |
-| E1.F7.T2 [Backend] | ⬜ todo | 30 | — | — |  |
-| E1.F7.T3 [Backend] | ⬜ todo | 30 | — | — |  |
-| E1.F8.T1 [Backend] | ⬜ todo | 45 | — | — |  |
-| E1.F8.T2 [Backend] | ⬜ todo | 35 | — | — |  |
-| E1.F9.T1 [Backend] | ⬜ todo | 40 | — | — |  |
-| E1.F10.T1 [Backend] | ⬜ todo | 45 | — | — |  |
-| E1.F10.T2 [Backend] | ⬜ todo | 50 | — | — |  |
-| E1.F10.T3 [Backend] | ⬜ todo | 40 | — | — |  |
-| E1.F10.T4 [Backend] | ⬜ todo | 50 | — | — |  |
-| E1.F10.T5 [Backend] | ⬜ todo | 45 | — | — |  |
-| E1.F10.T6 [Backend] | ⬜ todo | 30 | — | — |  |
-| E1.F11.T1 [Backend] | ⬜ todo | 25 | — | — |  |
-| E1.F11.T2 [Frontend] | ⬜ todo | 45 | — | — |  |
+| E1.F7.T1 [Backend] | ✅ done | 25 | 8 | 0 | no human review yet; lane B; safe_values patterns; findings F-16..F-19 (§3.1 pattern gaps) |
+| E1.F7.T2 [Backend] | ✅ done | 30 | 3 | 0 | no human review yet; lane B |
+| E1.F7.T3 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; lane B; notify-check --confirm not tied to a human → F-15 |
+| E1.F8.T1 [Backend] | ✅ done | 45 | 4 | 0 | no human review yet; lane D; built without lane B: outbox format reconciled at integration (F-23) |
+| E1.F8.T2 [Backend] | ✅ done | 35 | 2 | 0 | no human review yet; lane D |
+| E1.F9.T1 [Backend] | ✅ done | 40 | 6 | 0 | no human review yet; lane D |
+| E1.F10.T1 [Backend] | ✅ done | 45 | 9 | 0 | no human review yet; lane C |
+| E1.F10.T2 [Backend] | ✅ done | 50 | 3 | 0 | no human review yet; lane C |
+| E1.F10.T3 [Backend] | ✅ done | 40 | 4 | 0 | no human review yet; lane C; L-17 found `capability` missing from spec.schema.json (fixed at integration, F-21) |
+| E1.F10.T4 [Backend] | ✅ done | 50 | 4 | 0 | no human review yet; lane C |
+| E1.F10.T5 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; lane C; L-29 flags 18 `branch_flow` placeholders in shell examples → E1.F12 (F-20) |
+| E1.F10.T6 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; lane C |
+| E1.F11.T1 [Backend] | ✅ done | 25 | 2 | 0 | no human review yet; lane D; 8 statusline table cases |
+| E1.F11.T2 [Frontend] | ✅ done | 45 | 4 | 0 | no human review yet; lane D; 22 node tests + static page tests |
 | E1.F12.T1 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F12.T2 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F12.T3 [Backend] | ⬜ todo | 45 | — | — |  |
@@ -281,3 +281,4 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-24 | impl | Batch 1 done: E1.F1.T1 (T-0 payload capture, headless; F-02 closed, F-04 opened; E1.F1.T2 [human] not needed) and E1.F2.T1..T6 (`karvey_lib` skeleton, `atomicio`, `schema_lite`, `project`, `audit`, the four schemas). 106 unit tests green; test-hooks.sh 32/32. New findings F-04, F-05, F-06 (F-06 must be decided before E1.F3.T1/E1.F15.T3). |
 | 2026-09-24 | impl | Batch 2 done: F-06/F-05 resolved (legacy date-only approvals are warnings, REQ-W1-003; §2.2 documents the subset). E1.F3.T1..T6 (`karvey-state.py` validate / --fix / next / active / advance / generated / skip / reopen / approve / check-prod; `approval.py` markers + ledger; T5 done before T4) and E1.F4.T1..T4 (`hookio`, `shellparse`, dispatcher `karvey-hook.sh` + `karvey_hooks.py` with allow-stub guards, `hooks.json` +UserPromptSubmit/PreToolUse/PostToolUse, `run_tables.py` + `smoke.json`). 275 unit tests green; test-hooks.sh 55/55; smoke table 9 cases / 16 runs. F-04 resolved; new findings F-07 (resolved), F-08 (open, owner). This change's own spec.json is not migrated yet (E1.F15.T1). |
 | 2026-09-24 | impl | Batch 3, lane A done: E1.F5.T1..T8 (protect-paths, approval hook with D-10 prod words and D-11 compat marker, plan-gate, git-flow, prod-gate ×2, post-edit validator + pending-sync, legacy shims) and E1.F6.T1..T4 (session hook ported to python on the 3.11.4 logic, settings notice on startup only with the `origin/{integration}` check, `karvey-handoff-capture.py`, `session.json`). Every guard wired in `hooks.json` is table-tested through the real dispatcher in throw-away repos (never through a live session); `KARVEY_COMPAT_MARKER` is implemented and tested, set nowhere. 295 unit tests green; test-hooks.sh 58/58 (it now also runs the tables); guard tables 281 cases / 343 runs (62 nopy). Estimate 405 min vs 39 min wall-clock (AI). New findings F-09..F-14 (F-10 is the lane A/lane B config-helper reconciliation for the merge). |
+| 2026-09-24 | impl | Batch 3, lanes B/C/D merged into `feature/wave1-hardening` (merge commits, `--no-ff`): E1.F7.T1..T3 (`safe_values.py`, `karvey-config.py`), E1.F10.T1..T6 (`lint-plugin.py`, L-01..L-35), E1.F8.T1..T2 (`karvey-context.py`), E1.F9.T1 (`karvey-spec-merge.py`), E1.F11.T1..T2 (statusline, method page). One conflict (`tests/hooks/run_tables.py`, lanes A and D), resolved keeping both. Integration fixes: `capability` in `spec.schema.json` (F-21), shared outbox format `karvey_lib/outbox.py` (F-23), §3.5 enforcement rules shared by guards and dashboard (F-10 resolved); test-pollution `audit.log` removed (F-22). Estimate 535 min vs 56 min wall-clock (AI). New findings F-15..F-23. The whole-repo lint fails as expected: it is the E1.F12 worklist. |

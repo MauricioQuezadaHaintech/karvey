@@ -44,7 +44,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import atomicio, project as pj, safe_values as sv  # noqa: E402
+from karvey_lib import atomicio, outbox as obx, project as pj, safe_values as sv  # noqa: E402
 
 TOOL = "karvey-config"
 
@@ -63,7 +63,7 @@ MARKDOWN_LOCATION = "docs/spec/changes/{change-id}/PLAN.md"
 EXIT_CONFIRM = 10  # notify-check: the destination changed, the human must confirm it
 NOTIFY_FILE = "notify-last.json"
 NOTIFY_FIELDS = ("channel", "target", "via", "events", "detail")
-OUTBOX_FILE = "tracker-outbox.jsonl"
+OUTBOX_FILE = obx.FILE
 OP_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 ITEM_KEY_MAX = 200
 
@@ -511,15 +511,7 @@ def _item_key(value, name):
     return value
 
 
-def annotate(entries):
-    """Adds ``state`` (ready | blocked) to each entry: blocked while its parent entry is pending."""
-    pending = {e["id"] for e in entries}
-    out = []
-    for e in entries:
-        e = dict(e)
-        e["state"] = "blocked" if e.get("blocked_by") in pending else "ready"
-        out.append(e)
-    return out
+annotate = obx.annotate  # the one ready/blocked rule, shared with karvey-context.py
 
 
 def outbox_add(root, change, op, args_json=None, key=None, parent_key=None, error=None):

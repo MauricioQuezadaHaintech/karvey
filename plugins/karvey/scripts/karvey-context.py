@@ -44,6 +44,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
+from karvey_lib import outbox as obx  # noqa: E402
 from karvey_lib import approval, audit, project as pj  # noqa: E402
 
 TOOL = "karvey-context"
@@ -435,11 +436,13 @@ def read_backlog(rd):
 
 
 def read_outbox(rd, cdir):
-    p = cdir / "tracker-outbox.jsonl"
+    """Pending entries in the format ``karvey-config.py outbox`` writes (``karvey_lib.outbox``), with the
+    same ready/blocked rule; an unparsable line is a warning here (the dashboard is read-only)."""
+    p = cdir / obx.FILE
     t = rd.text(p)
     if t is None:
         return []
-    out = []
+    entries = []
     for n, line in enumerate(t.split("\n"), 1):
         if not line.strip():
             continue
@@ -449,12 +452,12 @@ def read_outbox(rd, cdir):
             rd.warnings.append(kl.issue("context.outbox_line", "unparsable outbox line %d" % n, severity="warning",
                                         file=rd.rel(p)))
             continue
-        if not isinstance(e, dict) or e.get("done_at") or e.get("status") == "done":
-            continue
-        out.append({"id": e.get("id"), "op": e.get("op"), "parent_key": e.get("parent_key"),
-                    "blocked_by": e.get("blocked_by"), "attempts": e.get("attempts"),
-                    "last_error": e.get("last_error"), "created_at": e.get("created_at")})
-    return out
+        if obx.is_pending(e):
+            entries.append(e)
+    return [{"id": e.get("id"), "op": e.get("op"), "key": e.get("key"), "parent_key": e.get("parent_key"),
+             "blocked_by": e.get("blocked_by"), "state": e["state"], "attempts": e.get("attempts"),
+             "last_error": e.get("last_error"), "created_at": e.get("created_at")}
+            for e in obx.annotate(entries)]
 
 
 def open_work(rd, ctx):
@@ -543,29 +546,35 @@ def approvals(rd, ctx):
 
 def enforcement(rd, ctx):
     project = ctx["project"] or {}
-    enf = project.get("enforcement") if isinstance(project.get("enforcement"), dict) else {}
+    enf = pj.enforcement_of(project)
     _, _, prod = pj.branch_flow(project)
+    memo = []
+
+    def reviewed():  # read once, only when a rule needs it (karvey_lib/project.py §3.5 rules)
+        if not memo:
+            memo.append(pj.read_reviewed_project_json(rd.root))
+        return memo[0]
+
     res = {}
-    if "prod_gate_hook" not in enf:
+    on, code = pj.prod_gate_state(project, reviewed)
+    if code == "default":
         res["prod_gate"] = {"state": "on", "text": "on (default)"}
-    elif enf["prod_gate_hook"] is True:
+    elif code == "on":
         res["prod_gate"] = {"state": "on", "text": "on"}
-    elif enf["prod_gate_hook"] is False:
-        reviewed, status = pj.read_reviewed_project_json(rd.root)
-        renf = (reviewed or {}).get("enforcement") if isinstance((reviewed or {}).get("enforcement"), dict) else {}
-        if status == "ok" and renf.get("prod_gate_hook") is False:
-            res["prod_gate"] = {"state": "off", "text": "off (project.json, reviewed on origin/%s)" % prod}
-        else:
-            res["prod_gate"] = {"state": "on", "text": "on (off only in the working copy; origin/%s says otherwise: %s)"
-                                % (prod or "?", status)}
-    else:
+    elif code == "invalid":
         res["prod_gate"] = {"state": "on", "text": "on (invalid value %r)" % (enf["prod_gate_hook"],)}
+    elif code == "off":
+        res["prod_gate"] = {"state": "off", "text": "off (project.json, reviewed on origin/%s)" % prod}
+    else:
+        res["prod_gate"] = {"state": "on", "text": "on (off only in the working copy; origin/%s says otherwise: %s)"
+                            % (prod or "?", reviewed()[1])}
     for k, name in (("git_flow_hook", "git_flow"), ("plan_gate_hook", "plan_gate")):
-        v = enf.get(k)
-        res[name] = {"state": "on" if v is True else "off", "text": "on" if v is True else "off (opt-in)"}
+        v = pj.opt_in_state(k, project, reviewed)  # the guards' rule: working copy OR reviewed line
+        res[name] = {"state": "on" if v else "off", "text": "on" if v else "off (opt-in)"}
     markers = []
     scopes = [c["id"] for c in ctx["targets"] if approval.valid_scope(c["id"])] + [approval.SCOPE_PROJECT]
-    ttl = enf.get("plan_marker_ttl_min")
+    # the TTL the plan-gate applies: reviewed line only, clamped (guards.ttl_min)
+    ttl = approval.clamp_ttl(pj.reviewed_value("plan_marker_ttl_min", reviewed))
     for scope in scopes:
         m, status = approval.read_marker(rd.root, scope)
         if status == "missing":
@@ -824,7 +833,7 @@ def render(result, ctx):
         L.append("backlog open (%d): %s" % (len(ow["backlog"]), ", ".join(b["id"] for b in ow["backlog"]) or "none"))
         for cid, ob in sorted(ow["outbox"].items()):
             L.append("tracker outbox %s: %d pending%s" % (cid, len(ob), "".join(
-                " · %s %s%s" % (e.get("id"), e.get("op"), " blocked_by " + str(e["blocked_by"]) if e.get("blocked_by") else "")
+                " · %s %s%s" % (e.get("id"), e.get("op"), " blocked_by " + str(e["blocked_by"]) if e.get("state") == "blocked" else "")
                 for e in ob)))
     ap = result.get("approvals")
     if ap is not None:

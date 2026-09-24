@@ -211,5 +211,52 @@ class StateDir(Base):
         self.assertFalse(d.exists())
 
 
+class EnforcementRules(unittest.TestCase):
+    """§3.5 switch rules shared by the guards and karvey-context.py (F-10 reconciliation)."""
+
+    @staticmethod
+    def rev(enf=None, status="ok"):
+        calls = []
+
+        def f():
+            calls.append(1)
+            return ({"enforcement": enf} if enf is not None else {}), status
+        f.calls = calls
+        return f
+
+    def test_prod_gate_codes(self):
+        wc = lambda v: {"enforcement": {"prod_gate_hook": v}}  # noqa: E731
+        self.assertEqual(pj.prod_gate_state({}, self.rev()), (True, "default"))
+        self.assertEqual(pj.prod_gate_state(wc(True), self.rev()), (True, "on"))
+        self.assertEqual(pj.prod_gate_state(wc("no"), self.rev()), (True, "invalid"))
+        self.assertEqual(pj.prod_gate_state(wc(False), self.rev({"prod_gate_hook": False})), (False, "off"))
+        self.assertEqual(pj.prod_gate_state(wc(False), self.rev({})), (True, "wc-only"))
+        self.assertEqual(pj.prod_gate_state(wc(False), self.rev({"prod_gate_hook": False}, "no-ref")),
+                         (True, "wc-only"))
+        self.assertEqual(pj.prod_gate_state({}, self.rev({"prod_gate_hook": False})), (True, "default"))
+
+    def test_reviewed_line_read_only_when_needed(self):
+        r = self.rev({"prod_gate_hook": False})
+        pj.prod_gate_state({}, r)
+        pj.opt_in_state("git_flow_hook", {"enforcement": {"git_flow_hook": True}}, r)
+        self.assertEqual(r.calls, [])
+
+    def test_opt_in_working_copy_or_reviewed(self):
+        self.assertTrue(pj.opt_in_state("plan_gate_hook", {"enforcement": {"plan_gate_hook": True}}, self.rev()))
+        self.assertTrue(pj.opt_in_state("plan_gate_hook", {}, self.rev({"plan_gate_hook": True})))
+        self.assertFalse(pj.opt_in_state("plan_gate_hook", {}, self.rev({"plan_gate_hook": "yes"})))
+        self.assertFalse(pj.opt_in_state("plan_gate_hook", {}, self.rev({"plan_gate_hook": True}, "missing")))
+
+    def test_reviewed_value_and_enforcement_of(self):
+        self.assertEqual(pj.reviewed_value("plan_marker_ttl_min", self.rev({"plan_marker_ttl_min": 30})), 30)
+        self.assertIsNone(pj.reviewed_value("plan_marker_ttl_min", self.rev({"plan_marker_ttl_min": 30}, "invalid")))
+        self.assertEqual(pj.enforcement_of({"enforcement": "x"}), {})
+        self.assertEqual(pj.enforcement_of(None), {})
+
+    def test_guards_use_the_shared_rules(self):
+        from karvey_lib import guards
+        self.assertIs(guards.enforcement, pj.enforcement_of)
+
+
 if __name__ == "__main__":
     unittest.main()

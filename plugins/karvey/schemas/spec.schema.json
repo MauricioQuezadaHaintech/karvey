@@ -17,6 +17,11 @@
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
     },
+    "capability": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "x-karvey-note": "living spec docs/spec/specs/<capability>/spec.md (karvey-spec-merge.py)"
+    },
     "phase": {
       "$ref": "#/$defs/phase"
     },

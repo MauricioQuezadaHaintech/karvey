@@ -154,6 +154,13 @@ class SpecSchema(unittest.TestCase):
                    "impl", "test", "qa", "deploying", "deployed", "archived"):
             self.assertEqual(errs(SPEC.validate(spec(phase=ph))), [], ph)
 
+    def test_capability_is_declared(self):  # C2: living-specs.md documents it; spec-merge reads it
+        self.assertIn("capability", REG["karvey:spec.schema.json"]["properties"])
+        for ok in ("method", "demo", "team.adapters", "a_b-1"):
+            self.assertEqual(errs(SPEC.validate(spec(capability=ok))), [], ok)
+        for bad in ("Method", "-x", "a/b", "", 3):
+            self.assertEqual(paths(SPEC.validate(spec(capability=bad))), ["$.capability"], bad)
+
     def test_required_and_change_id(self):
         self.assertEqual(sorted(paths(SPEC.validate({}))), ["$.change_id", "$.phase"])
         self.assertEqual(paths(SPEC.validate(spec(change_id="Bad_ID"))), ["$.change_id"])

@@ -123,15 +123,16 @@ def project_reviewed(ctx, root=None, production=None):
                  lambda: pj.read_reviewed_project_json(root, production=production))
 
 
-def enforcement(data):
-    enf = data.get("enforcement") if isinstance(data, dict) else None
-    return enf if isinstance(enf, dict) else {}
+enforcement = pj.enforcement_of  # the §3.5 rules live in karvey_lib/project.py (shared with the dashboard)
+
+
+def _reviewed(ctx, root):
+    return lambda: project_reviewed(ctx, root)
 
 
 def reviewed_setting(ctx, key, root=None):
     """``enforcement.<key>`` from the reviewed line, or None."""
-    data, status = project_reviewed(ctx, root)
-    return enforcement(data).get(key) if status == "ok" else None
+    return pj.reviewed_value(key, _reviewed(ctx, root))
 
 
 def opt_in_enabled(ctx, key, root=None):
@@ -142,7 +143,7 @@ def opt_in_enabled(ctx, key, root=None):
     if root is None:
         return False
     wc, _ = project_wc(ctx, root)
-    return enforcement(wc).get(key) is True or reviewed_setting(ctx, key, root) is True
+    return pj.opt_in_state(key, wc, _reviewed(ctx, root))
 
 
 def active_change(ctx, root=None):
@@ -908,15 +909,16 @@ def _pg_block(change, missing, reason):
                           record={"reason": reason, "change": change, "missing": missing})
 
 
+_PG_WHY = {"default": "on (default)", "on": "on", "invalid": "on", "off": "off (project.json, reviewed)",
+           "wc-only": "on (false only in the working copy; not on origin/{production})"}
+
+
 def prod_gate_setting(ctx, root):
     """``(on, why)``: off only if ``false`` in the working copy AND on ``origin/{production}``
     (§3.5, REQ-W1-027); a missing key or a non-boolean counts as on (REQ-W1-026)."""
     wc, _ = project_wc(ctx, root)
-    if enforcement(wc).get("prod_gate_hook") is not False:
-        return True, "on (default)" if "prod_gate_hook" not in enforcement(wc) else "on"
-    if reviewed_setting(ctx, "prod_gate_hook", root) is False:
-        return False, "off (project.json, reviewed)"
-    return True, "on (false only in the working copy; not on origin/{production})"
+    on, code = pj.prod_gate_state(wc, _reviewed(ctx, root))
+    return on, _PG_WHY[code]
 
 
 def _evaluate_candidate(ctx, c, deadline):

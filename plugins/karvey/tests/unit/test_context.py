@@ -93,6 +93,25 @@ class OpenWork(Base):
         self.assertEqual([b["id"] for b in ow["backlog"]], ["BL-02"])
         self.assertEqual([e["id"] for e in ow["outbox"]["feat-a"]], ["ob-1", "ob-2"])
         self.assertEqual(ow["outbox"]["feat-a"][1]["blocked_by"], "ob-0")
+        # ob-0 is not pending any more, so ob-2 is ready (the karvey-config.py rule, karvey_lib.outbox)
+        self.assertEqual([e["state"] for e in ow["outbox"]["feat-a"]], ["ready", "ready"])
+
+    def test_outbox_written_by_karvey_config_reads_the_same(self):  # D2: one format, one ready/blocked rule
+        import _config as C
+        self.write("docs/spec/changes/feat-a/tracker-outbox.jsonl", "")
+        add = lambda *a: C.run_json("outbox", "add", "feat-a", "--root", self.root, *a)[1]["result"]  # noqa: E731
+        epic = add("--op", "create_epic", "--key", "E1", "--error", "HTTP 503")
+        feat = add("--op", "create_feature", "--key", "E1.F1", "--parent-key", "E1")
+        cfg = C.run_json("outbox", "list", "feat-a", "--root", self.root)[1]["result"]
+        ob = self.dash("--section", "open-work")[1]["result"]["open-work"]["outbox"]["feat-a"]
+        self.assertEqual([(e["id"], e["state"], e["key"]) for e in ob],
+                         [(epic["id"], "ready", "E1"), (feat["id"], "blocked", "E1.F1")])
+        self.assertEqual((cfg["ready"], cfg["blocked"]), ([epic["id"]], [feat["id"]]))
+        self.assertIn("blocked_by " + epic["id"], self.text("--section", "open-work")[1])
+        C.run_json("outbox", "done", "feat-a", epic["id"], "--root", self.root)  # applied → removed
+        ob = self.dash("--section", "open-work")[1]["result"]["open-work"]["outbox"]["feat-a"]
+        self.assertEqual([(e["id"], e["state"]) for e in ob], [(feat["id"], "ready")])
+        self.assertNotIn("blocked_by", self.text("--section", "open-work")[1])
 
     def test_human_text(self):
         code, out, _ = self.text("--section", "open-work")
@@ -241,6 +260,19 @@ class Enforcement(Base):
         _, env = self.dash("--section", "enforcement")
         self.assertEqual(env["result"]["enforcement"]["prod_gate"]["text"],
                          "off (project.json, reviewed on origin/main)")
+
+    def test_opt_in_guard_on_when_only_the_reviewed_line_enables_it(self):  # same rule as the guards (F-10)
+        pj = json.loads((self.root / "docs/spec/project.json").read_text())
+        pj["enforcement"] = {"git_flow_hook": True}
+        self.write("docs/spec/project.json", pj)
+        g.init(self.root, branch="main")
+        g.commit_all(self.root)
+        g.with_origin(self.root, "main")
+        g.run(["fetch", "-q", "origin"], self.root)
+        pj["enforcement"] = {}
+        self.write("docs/spec/project.json", pj)  # the working copy no longer says so; origin/main does
+        enf = self.dash("--section", "enforcement")[1]["result"]["enforcement"]
+        self.assertEqual((enf["git_flow"]["state"], enf["plan_gate"]["state"]), ("on", "off"))
 
     def test_valid_marker_shown(self):
         from karvey_lib import approval

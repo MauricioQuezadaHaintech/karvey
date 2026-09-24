@@ -215,6 +215,44 @@ def read_reviewed_project_json(root, production=None):
     return data, "ok"
 
 
+# --------------------------------------------------------------------------- §3.5 enforcement rules
+# One implementation of the switch rules, used by the guards (karvey_lib/guards.py) and by the dashboard
+# (karvey-context.py). ``reviewed`` is a zero-argument callable returning ``read_reviewed_project_json``'s
+# ``(data, status)``, so the git read happens only when a rule needs it.
+def enforcement_of(data):
+    """``data["enforcement"]`` when it is an object, else ``{}``."""
+    enf = data.get("enforcement") if isinstance(data, dict) else None
+    return enf if isinstance(enf, dict) else {}
+
+
+def reviewed_value(key, reviewed):
+    """``enforcement.<key>`` from the reviewed line, or None when absent or unreadable."""
+    data, status = reviewed()
+    return enforcement_of(data).get(key) if status == "ok" else None
+
+
+def opt_in_state(key, wc, reviewed):
+    """git-flow / plan-gate: on if ``true`` in the working copy OR on the reviewed line."""
+    return enforcement_of(wc).get(key) is True or reviewed_value(key, reviewed) is True
+
+
+def prod_gate_state(wc, reviewed):
+    """``(on, code)`` for prod-gate (REQ-W1-026, REQ-W1-027): off only if ``false`` in the working copy
+    AND on the reviewed line. ``code``: ``default`` (key absent) · ``on`` (true) · ``invalid`` (not a
+    boolean; counts as on) · ``off`` · ``wc-only`` (false only in the working copy; counts as on)."""
+    enf = enforcement_of(wc)
+    if "prod_gate_hook" not in enf:
+        return True, "default"
+    v = enf["prod_gate_hook"]
+    if v is True:
+        return True, "on"
+    if v is not False:
+        return True, "invalid"
+    if reviewed_value("prod_gate_hook", reviewed) is False:
+        return False, "off"
+    return True, "wc-only"
+
+
 def _xdg_state_home():
     x = os.environ.get("XDG_STATE_HOME")
     if x and os.path.isabs(x):
