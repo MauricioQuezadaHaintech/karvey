@@ -230,31 +230,31 @@
 - **Note:** a spec-gap normally re-opens requirements; `team-layer` had already shipped in 3.8.0, so it is deferred here as a known limitation instead of silently dropped.
 
 ## BL-38 — Validate team settings (required keys, enums, documented aliases) in the session hook / karvey-context
-- **Origin:** change `team-adapters`, finding F-21 (emergent; source I-03), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-21 (emergent; source I-03), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** Tarien stores `status_flow` instead of `statuses` and `google_chat` instead of `google-chat`; the hook only checks that each block is an object, so a drifted project looks configured and the first status change re-asks. Validate `tool`, `statuses` (5 keys), `channel`, `target`, `via` and print "settings invalid (...)", or accept documented aliases. Can reuse `project.schema.json` from BL-04. Fixing Tarien itself belongs to Tarien's repo.
 - **Status:** open
 
 ## BL-39 — Generate rule-citation tables, per-phase rule lists and command spellings from the source; one status notation
-- **Origin:** change `team-adapters`, finding F-42 (emergent; source C-08, C-12, C-13, C-14, C-17), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-42 (emergent; source C-08, C-12, C-13, C-14, C-17), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** The orchestrator's "Applies in" column, the management-adapters "Used by" column, the per-phase "Rules:" lines and README "Key rules" drift from what the skills actually cite; three notations for a status change and three spellings of the settings command. Generate them from citations and lint them (complements BL-10).
 - **Status:** open
 
 ## BL-40 — Settings nudge and skills for Karvey repos that keep specs under `spec/` instead of `docs/spec/`
-- **Origin:** change `team-adapters`, finding F-45 (emergent; source I-05), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-45 (emergent; source I-05), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** `paautin-newcapital` and `onnet_ams` keep changes under `spec/changes/`; the hook looks only for `docs/spec/`. Either detect `spec/project.json` / `spec/changes/*/spec.json` or document `docs/spec/` as required and list the repos that must move.
 - **Status:** open
 
 ## BL-41 — Statusline: keep the rotate warning visible on narrow terminals; recommend the copy-to-~/.claude install path
-- **Origin:** change `team-adapters`, finding F-46 (emergent; source I-08), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-46 (emergent; source I-08), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** The reset suffix made the line 34 characters longer (199 -> 233) and pushed "TIME TO ROTATE" from column 124 to 158, the part cut first on narrow terminals. Put the warning first or shorten the suffix; the README install path also pins `<version>`.
 - **Status:** open
 
 ## BL-42 — Method page: alias table for the 12 anchors renamed after 3.10.0
-- **Origin:** change `team-adapters`, finding F-47 (emergent; source I-09), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-47 (emergent; source I-09), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** 12 of the 59 ids published in 3.10.0 (`organigrama`, `inicio`, `como`, `instalar`, `iteracion`, `reglas`, `versiones`, ...) no longer resolve; no file links to them. Add an alias table in `mapHash` or note the rename in the CHANGELOG.
 - **Status:** open
 
 ## BL-43 — Notification deduplication: run id + timestamp in the payload; notify QA on first run and verdict changes
-- **Origin:** change `team-adapters`, finding F-48 (emergent; source N-13), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-48 (emergent; source N-13), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** Each micro-loop run and each deploy retry posts the full summary again; a noisy channel gets muted. Add `run`/`iteration` and `ts` to the payload; notify `qa` only on the first run and on verdict changes, or by option (`events: ["qa:verdict"]`).
 - **Status:** open

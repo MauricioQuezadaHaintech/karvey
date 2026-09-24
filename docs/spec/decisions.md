@@ -125,7 +125,7 @@ corrected, not annotated at the end.
 
 ## D-08 — Retroactive record of the prod approval of `team-adapters` (3.10.0 → 3.11.1)
 
-- **What:** `team-adapters` reached `main` (prod of this repo) in PR #17 (3.10.0), #18 (3.11.0) and #19 (3.11.1) without a D-NN. This entry records, **retroactively**, the owner's words that authorised those merges. It does **not** approve QA: the retroactive QA (`REVISION_PR_17-19_20260923.md`) is NOT approved and stays so until `wave1-hardening` converges.
+- **What:** `team-adapters` reached `main` (prod of this repo) in PR #17 (3.10.0), #18 (3.11.0) and #19 (3.11.1) without a D-NN. This entry records, **retroactively**, the owner's words that authorised those merges. It does **not** approve QA: the retroactive QA (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`) is NOT approved and stays so until `wave1-hardening` converges.
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-22/23, in the session that built the change.
   - PR #17 (3.10.0): «perfecto, luego commit,push, merge (lo que corresponda) y actualizas en local, le avisas a todos los agentes que actualicen el plugin»
   - PR #18 (3.11.0) and PR #19 (3.11.1): merged under that same standing instruction, after the owner's requests «el html tiene que estar consecuentemente en inglés y con un swich a español, portugues, aleman, chino» and «agrega que descubra el idioma del explorador y lo seleccione, si no está en la lista, inglés.» — no separate prod word was given for these two; recorded as such, not upgraded.

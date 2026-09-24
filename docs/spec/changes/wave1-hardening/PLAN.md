@@ -250,7 +250,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F12.T9 [Backend] | ⬜ todo | 45 | — | — |  |
 | E1.F12.T10 [Backend] | ⬜ todo | 50 | — | — |  |
 | E1.F12.T11 [Backend] | ⬜ todo | 30 | — | — |  |
-| E1.F12.T12 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F12.T12 [Backend] | ✅ done | 10 | 3 | 0 | no human review yet; git mv; 11 references updated (CHANGELOG, backlog, decisions, team-adapters spec.json/findings, prd); graphify-out left for the archive sync; the qa/deploy L-25 hits close in T5/T6 |
 | E1.F12.T13 [Backend] | ⬜ todo | 30 | — | — |  |
 | E1.F13.T1 [Infra] | ⬜ todo | 25 | — | — |  |
 | E1.F13.T2 [Infra] | ⬜ todo | 15 | — | — |  |

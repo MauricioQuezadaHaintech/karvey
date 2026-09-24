@@ -31,7 +31,7 @@ toward the result without stopping until it's achieved, respecting the plan and 
     description in the listing (H-23).
   - `team-adapters` reached production with no `approvals.qa`; its retroactive QA (NOT APPROVED) left 13 open
     bugs and 23 spec-gaps routed to this change (`docs/spec/changes/team-adapters/findings.md`,
-    `docs/bugs_dev_testing.md`, `REVISION_PR_17-19_20260923.md`).
+    `docs/bugs_dev_testing.md`, `docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Impact:** a gate that exists only in prose is skipped under pressure — which is exactly what happened to
   `team-layer` and `team-adapters`. Every structural improvement of Wave 2 (lanes, judges, metrics,
   release per change) needs a trustworthy phase state to stand on.
