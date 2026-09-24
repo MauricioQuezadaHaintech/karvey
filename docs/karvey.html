@@ -6,16 +6,18 @@
 <title>Karvey Method</title>
 <meta name="description" content="What the Karvey Method is (Afán — zeal, the drive to get things done, in the Ona language) and a complete map of the Claude Code plugin: orchestrator, 0–12 pipeline, support layer, rules, hooks, artefacts and team settings. Available in English, Spanish, Portuguese, German and Chinese.">
 <script>
-/* Early language pick (avoids a flash of English): ?lang= -> saved choice -> the browser's
-   language (its primary one, if it is en/es/pt/de/zh) -> en.
-   The script at the end of <body> checks that the block exists and falls back to en. */
+/* Early language pick (avoids a flash of English), the same rule as pickLang() at the end of <body>:
+   a valid ?lang= (one of en/es/pt/de/zh, or xx-YY read by its first two letters) -> the saved choice
+   -> the browser's primary language when it is one of the five -> en. Nothing is saved here.
+   The "js" class shows the language switch, which does nothing without JavaScript (BUG-14). */
 (function(){
-  var L=['en','es','pt','de','zh'],l=null;
-  try{var m=/[?&]lang=([a-zA-Z]{2})(?:&|$)/.exec(location.search);if(m)l=m[1].toLowerCase();}catch(e){}
-  if(L.indexOf(l)<0){l=null;try{l=localStorage.getItem('karvey-lang');}catch(e){}}
-  if(L.indexOf(l)<0){l=null;try{var n=(navigator.languages&&navigator.languages[0])||navigator.language||'';l=String(n).slice(0,2).toLowerCase();}catch(e){}}
-  if(L.indexOf(l)<0)l='en';
-  document.documentElement.setAttribute('data-lang',l);
+  var L=['en','es','pt','de','zh'],R=/^([a-zA-Z]{2})(?:[-_][a-zA-Z0-9]{1,8})*$/,l=null;
+  function ok(v){var m=R.exec(String(v==null?'':v));return m&&L.indexOf(m[1].toLowerCase())!==-1?m[1].toLowerCase():null;}
+  var d=document.documentElement;d.className=(d.className?d.className+' ':'')+'js';
+  try{var m=/[?&]lang=([^&#]*)/.exec(location.search);if(m)l=ok(decodeURIComponent(m[1]));}catch(e){}
+  if(!l){try{l=ok(localStorage.getItem('karvey-lang'));}catch(e){}}
+  if(!l){try{l=ok((navigator.languages&&navigator.languages[0])||navigator.language||'');}catch(e){}}
+  d.setAttribute('data-lang',l||'en');
 })();
 </script>
 <style>
@@ -87,6 +89,11 @@ p{margin:.4rem 0 .8rem}
 .brand{font-weight:700;text-decoration:none;color:var(--ink);white-space:nowrap;display:flex;align-items:center;gap:.45rem;min-width:0}
 .brand svg{flex:none}
 .langs{display:flex;align-items:center;gap:.5rem;min-width:0}
+/* No inert switch without JavaScript (BUG-14): hidden in the markup, shown once JS adds html.js */
+.langs[hidden]{display:none}
+html.js .langs[hidden]{display:flex}
+html:not(.js) .langs{display:none}
+.lang-note{font-size:.75rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .langs-label{display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--ink-2);white-space:nowrap}
 .langs-label svg{flex:none}
 .langs ul{list-style:none;margin:0;padding:0;display:flex;gap:.15rem}
@@ -303,7 +310,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 16c4-3 7-3 10 0s6 3 10 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M2 10c4-3 7-3 10 0s6 3 10 0" fill="none" stroke="var(--ochre)" stroke-width="2" stroke-linecap="round"/></svg>
       <span>Karvey <span class="full muted">· Afán</span></span>
     </a>
-    <nav class="langs" aria-labelledby="lang-label">
+    <nav class="langs" aria-labelledby="lang-label" hidden>
       <span class="langs-label"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18M12 3c2.6 2.8 3.9 5.8 3.9 9s-1.3 6.2-3.9 9c-2.6-2.8-3.9-5.8-3.9-9S9.4 5.8 12 3z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span id="lang-label">Language</span></span>
       <ul>
         <li><a href="?lang=en" hreflang="en" lang="en" data-set-lang="en" title="English" aria-current="true">EN</a></li>
@@ -312,6 +319,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
         <li><a href="?lang=de" hreflang="de" lang="de" data-set-lang="de" title="Deutsch">DE</a></li>
         <li><a href="?lang=zh" hreflang="zh-Hans" lang="zh-Hans" data-set-lang="zh" title="简体中文">中文</a></li>
       </ul>
+      <span class="lang-note" id="lang-note" hidden></span>
     </nav>
   </div>
 </header>
@@ -4465,110 +4473,180 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- LANG-BLOCKS-END -->
 
 <script>
-(function(){
-  var root=document.documentElement, KEY='karvey-lang';
+/* Method-page script. Pure functions (safeDecodeHash, langOf, pickLang, withLang, hashToBlock) plus one
+   init(window), so node can test them with a stub window (plugins/karvey/tests/page/test_page.mjs).
+   In a browser it runs init(window); under node it only exports the functions. */
+(function(g){
+  var LANGS=['en','es','pt','de','zh'], KEY='karvey-lang';
+  var TAG=/^([a-zA-Z]{2})(?:[-_][a-zA-Z0-9]{1,8})*$/, HANT=/^zh[-_](hant|tw|hk|mo)(?:[-_]|$)/i;
   /* UI strings for the shared bar (outside the language blocks) */
   var UI={
-    en:{title:'Karvey Method',label:'Language',skip:'Skip to content',home:'Karvey, back to top'},
-    es:{title:'Método Karvey',label:'Idioma',skip:'Saltar al contenido',home:'Karvey, volver al inicio'},
-    pt:{title:'Método Karvey',label:'Idioma',skip:'Pular para o conteúdo',home:'Karvey, voltar ao início'},
-    de:{title:'Karvey-Methode',label:'Sprache',skip:'Zum Inhalt springen',home:'Karvey, zurück zum Anfang'},
-    zh:{title:'Karvey 方法',label:'语言',skip:'跳到正文',home:'Karvey，返回顶部'}
+    en:{title:'Karvey Method',label:'Language',skip:'Skip to content',home:'Karvey, back to top',simplified:'Chinese is shown in Simplified characters'},
+    es:{title:'Método Karvey',label:'Idioma',skip:'Saltar al contenido',home:'Karvey, volver al inicio',simplified:'El chino se muestra en caracteres simplificados'},
+    pt:{title:'Método Karvey',label:'Idioma',skip:'Pular para o conteúdo',home:'Karvey, voltar ao início',simplified:'O chinês é exibido em caracteres simplificados'},
+    de:{title:'Karvey-Methode',label:'Sprache',skip:'Zum Inhalt springen',home:'Karvey, zurück zum Anfang',simplified:'Chinesisch wird in vereinfachten Schriftzeichen angezeigt'},
+    zh:{title:'Karvey 方法',label:'语言',skip:'跳到正文',home:'Karvey，返回顶部',simplified:'本页中文为简体中文'}
   };
-  var LANGS=['en','es','pt','de','zh'];
-  var blocks=[].slice.call(document.querySelectorAll('.lang-block[data-lang]'));
-  var switcher=[].slice.call(document.querySelectorAll('.langs a[data-set-lang]'));
-  var skip=document.querySelector('.skip'), brand=document.querySelector('.brand'), label=document.getElementById('lang-label');
-  var section={}, current='en';
-  function block(l){for(var i=0;i<blocks.length;i++){if(blocks[i].getAttribute('data-lang')===l) return blocks[i];} return null;}
-  function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 
-  /* Per-block features: filters and TOC highlighting, initialised once per block */
-  blocks.forEach(function(b){
-    var lang=b.getAttribute('data-lang');
-    [].forEach.call(b.querySelectorAll('.filter[data-filter]'),function(box){
-      var key=box.getAttribute('data-filter'), list=b.querySelector('[data-filter-list="'+key+'"]');
-      if(!list) return;
-      var items=[].slice.call(list.querySelectorAll(list.getAttribute('data-filter-items')||'[data-f]'));
-      var input=box.querySelector('input'), out=box.querySelector('output'), empty=b.querySelector('[data-filter-empty="'+key+'"]');
-      if(!input||!items.length) return;
-      box.hidden=false;
-      var tpl=(out&&out.getAttribute('data-tpl'))||'{n} / {total}';
-      var texts=items.map(function(el){return norm(el.textContent);});
-      function run(){
-        var q=norm(input.value.trim()), n=0;
-        items.forEach(function(el,i){var ok=!q||texts[i].indexOf(q)!==-1; el.classList.toggle('hide',!ok); if(ok) n++;});
-        if(out) out.textContent=tpl.replace('{n}',n).replace('{total}',items.length);
-        if(empty) empty.hidden=n!==0;
-      }
-      input.addEventListener('input',run); run();
-    });
-    var links=[].slice.call(b.querySelectorAll('.toc a[href^="#"]'));
-    if(!('IntersectionObserver' in window)||!links.length) return;
-    var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
-    var io=new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(e.isIntersecting && map[e.target.id]){
-          links.forEach(function(a){a.removeAttribute('aria-current');});
-          map[e.target.id].setAttribute('aria-current','true');
-          section[lang]=e.target.id.slice(lang.length+1);
+  /* '#…' decoded, or null when empty or malformed (BUG-10: never throws) */
+  function safeDecodeHash(h){
+    if(typeof h!=='string'||h.length<2||h.charAt(0)!=='#') return null;
+    try{return decodeURIComponent(h.slice(1));}catch(e){return null;}
+  }
+  /* One of LANGS for 'de', 'DE', 'es-CL', 'zh_TW'…; null otherwise (REQ-W1-103) */
+  function langOf(v){
+    var m=TAG.exec(String(v==null?'':v).trim());
+    if(!m) return null;
+    var l=m[1].toLowerCase();
+    return LANGS.indexOf(l)!==-1?l:null;
+  }
+  function urlLang(search){
+    var m=/[?&]lang=([^&#]*)/.exec(search||'');
+    if(!m) return {raw:null,lang:null};
+    var raw=m[1];
+    try{raw=decodeURIComponent(raw.replace(/\+/g,' '));}catch(e){}
+    return {raw:raw,lang:langOf(raw)};
+  }
+  /* The language to show and whether to remember it (BUG-11, REQ-W1-103):
+     a valid ?lang= applies for this visit and is saved only when nothing was saved before;
+     an invalid one is ignored (nothing saved); then the saved choice; then the browser's
+     primary language; then en. */
+  function pickLang(search,saved,navLangs){
+    var nav=(navLangs&&navLangs.length)?String(navLangs[0]||''):'';
+    var u=urlLang(search), s=langOf(saved), res;
+    if(u.lang) res={lang:u.lang,source:'url',remember:!s,tag:u.raw};
+    else if(s) res={lang:s,source:'saved',remember:false,tag:String(saved)};
+    else if(langOf(nav)) res={lang:langOf(nav),source:'browser',remember:false,tag:nav};
+    else res={lang:'en',source:'default',remember:false,tag:'en'};
+    res.traditional=res.lang==='zh'&&HANT.test(String(res.tag||''));
+    return res;
+  }
+  /* The query string with only 'lang' changed; every other parameter kept (BUG-12, REQ-W1-104) */
+  function withLang(search,lang){
+    var p=new URLSearchParams(search||'');
+    p.set('lang',lang);
+    return '?'+p.toString();
+  }
+  /* The id of the hash's section in the block of 'lang' (#es-pipeline or #pipeline), or null */
+  function hashToBlock(h,lang){
+    var id=safeDecodeHash(h);
+    if(!id) return null;
+    var m=/^([a-z]{2})-(.+)$/.exec(id);
+    var rest=(m&&LANGS.indexOf(m[1])!==-1)?m[2]:id;
+    return lang+'-'+rest;
+  }
+
+  function init(w){
+    var doc=w.document, root=doc.documentElement, loc=w.location;
+    var store=null; try{store=w.localStorage;}catch(e){}
+    function save(l){try{if(store) store.setItem(KEY,l);}catch(e){}}
+    function saved(){try{return store?store.getItem(KEY):null;}catch(e){return null;}}
+    function replace(url){try{w.history.replaceState(null,'',url);}catch(e){}}
+    var blocks=[].slice.call(doc.querySelectorAll('.lang-block[data-lang]'));
+    var switcher=[].slice.call(doc.querySelectorAll('.langs a[data-set-lang]'));
+    var nav=doc.querySelector('.langs'), note=doc.getElementById('lang-note');
+    var skip=doc.querySelector('.skip'), brand=doc.querySelector('.brand'), label=doc.getElementById('lang-label');
+    var section={}, current='en', traditional=false;
+    function block(l){for(var i=0;i<blocks.length;i++){if(blocks[i].getAttribute('data-lang')===l) return blocks[i];} return null;}
+    function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+    if(root.classList) root.classList.add('js');
+    if(nav) nav.hidden=false;
+
+    /* Per-block features: filters and TOC highlighting, initialised once per block */
+    blocks.forEach(function(b){
+      var lang=b.getAttribute('data-lang');
+      [].forEach.call(b.querySelectorAll('.filter[data-filter]'),function(box){
+        var key=box.getAttribute('data-filter'), list=b.querySelector('[data-filter-list="'+key+'"]');
+        if(!list) return;
+        var items=[].slice.call(list.querySelectorAll(list.getAttribute('data-filter-items')||'[data-f]'));
+        var input=box.querySelector('input'), out=box.querySelector('output'), empty=b.querySelector('[data-filter-empty="'+key+'"]');
+        if(!input||!items.length) return;
+        box.hidden=false;
+        var tpl=(out&&out.getAttribute('data-tpl'))||'{n} / {total}';
+        var texts=items.map(function(el){return norm(el.textContent);});
+        function run(){
+          var q=norm(input.value.trim()), n=0;
+          items.forEach(function(el,i){var ok=!q||texts[i].indexOf(q)!==-1; el.classList.toggle('hide',!ok); if(ok) n++;});
+          if(out) out.textContent=tpl.replace('{n}',n).replace('{total}',items.length);
+          if(empty) empty.hidden=n!==0;
         }
+        input.addEventListener('input',run); run();
       });
-    },{rootMargin:'-45% 0px -50% 0px'});
-    Object.keys(map).forEach(function(id){var s=document.getElementById(id); if(s) io.observe(s);});
-  });
-
-  function apply(req,remember){
-    var l=(LANGS.indexOf(req)!==-1 && block(req)) ? req : 'en';
-    var b=block(l); if(!b) return current;
-    root.setAttribute('data-lang',l);
-    root.lang=b.getAttribute('lang')||l;
-    blocks.forEach(function(x){var m=x.querySelector('main'); if(m) m.hidden=(x!==b);});
-    switcher.forEach(function(a){
-      if(a.getAttribute('data-set-lang')===l) a.setAttribute('aria-current','true'); else a.removeAttribute('aria-current');
+      var links=[].slice.call(b.querySelectorAll('.toc a[href^="#"]'));
+      if(!('IntersectionObserver' in w)||!links.length) return;
+      var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+      var io=new w.IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting && map[e.target.id]){
+            links.forEach(function(a){a.removeAttribute('aria-current');});
+            map[e.target.id].setAttribute('aria-current','true');
+            section[lang]=e.target.id.slice(lang.length+1);
+          }
+        });
+      },{rootMargin:'-45% 0px -50% 0px'});
+      Object.keys(map).forEach(function(id){var s=doc.getElementById(id); if(s) io.observe(s);});
     });
-    var t=UI[l]||UI.en;
-    if(skip){skip.textContent=t.skip; skip.setAttribute('href','#'+l+'-content');}
-    if(brand){brand.setAttribute('aria-label',t.home); brand.setAttribute('href','#'+l+'-top');}
-    if(label) label.textContent=t.label;
-    if(t.title) document.title=t.title;
-    if(remember && LANGS.indexOf(req)!==-1){try{localStorage.setItem(KEY,req);}catch(e){}}
-    current=l; return l;
-  }
-  function jump(el){
-    var prev=root.style.scrollBehavior; root.style.scrollBehavior='auto';
-    el.scrollIntoView(); root.style.scrollBehavior=prev;
-  }
-  /* Map a hash (#es-pipeline or #pipeline) onto the shown language's id */
-  function mapHash(h,l){
-    if(!h||h.length<2) return null;
-    var id=decodeURIComponent(h.slice(1)), m=/^([a-z]{2})-(.+)$/.exec(id);
-    var rest=(m && LANGS.indexOf(m[1])!==-1) ? m[2] : id;
-    return document.getElementById(l+'-'+rest);
-  }
 
-  var shown=apply(root.getAttribute('data-lang')||'en',/[?&]lang=/.test(location.search));
-  if(location.hash){
-    var target=mapHash(location.hash,shown);
-    if(target && '#'+target.id!==location.hash){
-      try{history.replaceState(null,'',location.pathname+location.search+'#'+target.id);}catch(e){}
-      requestAnimationFrame(function(){jump(target);});
+    function apply(req){
+      var l=(LANGS.indexOf(req)!==-1 && block(req)) ? req : 'en';
+      var b=block(l); if(!b) return current;
+      root.setAttribute('data-lang',l);
+      root.lang=b.getAttribute('lang')||l;
+      blocks.forEach(function(x){var m=x.querySelector('main'); if(m) m.hidden=(x!==b);});
+      switcher.forEach(function(a){
+        if(a.getAttribute('data-set-lang')===l) a.setAttribute('aria-current','true'); else a.removeAttribute('aria-current');
+      });
+      var t=UI[l]||UI.en;
+      if(skip){skip.textContent=t.skip; skip.setAttribute('href','#'+l+'-content');}
+      if(brand){brand.setAttribute('aria-label',t.home); brand.setAttribute('href','#'+l+'-top');}
+      if(label) label.textContent=t.label;
+      if(note){note.textContent=t.simplified; note.hidden=!(traditional && l==='zh');}
+      if(t.title) doc.title=t.title;
+      current=l; return l;
     }
+    function jump(el){
+      var prev=root.style.scrollBehavior; root.style.scrollBehavior='auto';
+      el.scrollIntoView(); root.style.scrollBehavior=prev;
+    }
+    /* Load and hashchange (BUG-13, REQ-W1-105): map the hash onto the shown block and jump there;
+       a hash with no equivalent leaves the page where it is */
+    function followHash(){
+      var id=hashToBlock(loc.hash,current), target=id?doc.getElementById(id):null;
+      if(!target||'#'+target.id===loc.hash) return false;
+      replace(loc.pathname+loc.search+'#'+target.id);
+      if(w.requestAnimationFrame) w.requestAnimationFrame(function(){jump(target);}); else jump(target);
+      return true;
+    }
+
+    var pick=pickLang(loc.search,saved(),(w.navigator&&(w.navigator.languages&&w.navigator.languages.length?w.navigator.languages:[w.navigator.language]))||[]);
+    traditional=pick.traditional;
+    apply(pick.lang);
+    if(pick.remember) save(pick.lang);
+    followHash();
+    w.addEventListener('hashchange',followHash);
+
+    switcher.forEach(function(a){
+      a.addEventListener('click',function(ev){
+        if(ev.defaultPrevented||ev.button!==0||ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.altKey) return;
+        ev.preventDefault();
+        var req=a.getAttribute('data-set-lang'), sec=section[current];
+        traditional=false;
+        var l=apply(req), hash='';
+        if(LANGS.indexOf(req)!==-1) save(req);
+        var target=(sec && w.scrollY>0) ? doc.getElementById(l+'-'+sec) : null;
+        if(!target){var id=hashToBlock(loc.hash,l); target=id?doc.getElementById(id):null;}
+        if(target){hash='#'+target.id; jump(target);}
+        replace(loc.pathname+withLang(loc.search,req)+hash);
+      });
+    });
+    return {apply:apply, current:function(){return current;}, followHash:followHash, pick:pick};
   }
 
-  switcher.forEach(function(a){
-    a.addEventListener('click',function(ev){
-      if(ev.defaultPrevented||ev.button!==0||ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.altKey) return;
-      ev.preventDefault();
-      var req=a.getAttribute('data-set-lang'), prev=current, sec=section[prev];
-      var l=apply(req,true), hash='';
-      var target=(sec && window.scrollY>0) ? document.getElementById(l+'-'+sec) : null;
-      if(!target && location.hash) target=mapHash(location.hash,l);
-      if(target){hash='#'+target.id; jump(target);}
-      try{history.replaceState(null,'',location.pathname+'?lang='+req+hash);}catch(e){}
-    });
-  });
-})();
+  var api={LANGS:LANGS, KEY:KEY, UI:UI, safeDecodeHash:safeDecodeHash, langOf:langOf, pickLang:pickLang,
+           withLang:withLang, hashToBlock:hashToBlock, init:init};
+  if(typeof module==='object'&&module&&module.exports) module.exports=api;
+  if(g&&g.document&&!g.KARVEY_NO_INIT) init(g);
+})(typeof window!=='undefined'?window:null);
 </script>
 </body>
 </html>
