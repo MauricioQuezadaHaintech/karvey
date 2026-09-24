@@ -173,7 +173,7 @@ ledger (§2.4); consuming the approval markers (§3.3).
 | `next <change>` | `--root`, `--json` | Computes from `state-machine.json` and returns `{change, phase, status: in-progress\|awaiting-approval\|ready\|invalid, next_phase, skill, preconditions:[{phase, state: approved\|skipped\|pending}], blockers:[…]}`. `invalid` carries the validation errors (REQ-W1-005 error scenario). | — (read-only; exit 4 if unreadable) |
 | `advance <change> <to>` | `--by`, `--pipeline-run`, `--post-deploy-check pass` (only for `deployed`), `--json` | Applies an edge. Closes the open `phase_history` entry with `exited_at` and appends `{phase, entered_at, by?}`. Sets `updated_at`. Consumes the markers of the phase that closed (REQ-W1-016). | Edge not in the graph. A preceding approvable phase is neither approved nor skipped (the message names it: `requirements not approved or skipped`). Last history entry corrupt (REQ-W1-008). `to=deployed` without pipeline and check evidence (REQ-W1-011). `to=archived` without `phase=deployed` and a human `approvals.prod` in spec.json. The phase value is unmappable legacy. |
 | `generated <change> <phase>` | | `approvals.<phase>.generated = true` (REQ-W1-001 success scenario). | Unknown phase. |
-| `approve <change> <phase>` | `--by`, `--role human\|ceo-delegate`, `--ref`, `--date?`, `--write-spec` (prod only) | Writes `{approved: true, by, role, date, ref, evidence}` (REQ-W1-006). **prod:** it writes the machine-local **release ledger**, not spec.json (D-03). With `--write-spec`, used by archive on its own branch, it copies the ledger or D-NN approval into `spec.json:approvals.prod` (REQ-W1-032). | Any of by/role/ref missing. `prod` with a role other than `human` ("production approval is never delegated"). `prod` without a valid **prod-kind approval marker** (§3.3, Q-A1). For the other phases, a missing marker is a warning in 3.12.0 and `evidence: {"marker": "none"}` is recorded. |
+| `approve <change> <phase>` | `--by`, `--role human\|ceo-delegate`, `--ref`, `--date?`, `--write-spec` (prod only) | Writes `{approved: true, by, role, date, ref, evidence}` (REQ-W1-006). **prod:** it writes the machine-local **release ledger**, not spec.json (D-03). With `--write-spec`, used by archive on its own branch, it copies the ledger or D-NN approval into `spec.json:approvals.prod` (REQ-W1-032). A **retroactive** record (prod happened before it was recorded, D-08) passes `--date` with the day prod actually happened; without `--date` the recording time is written (F-48, D-19, revision 1). | Any of by/role/ref missing. `prod` with a role other than `human` ("production approval is never delegated"). `prod` without a valid **prod-kind approval marker** (§3.3, Q-A1). For the other phases, a missing marker is a warning in 3.12.0 and `evidence: {"marker": "none"}` is recorded. |
 | `skip <change> <phase>` | `--reason` | `skipped[phase] = reason` (REQ-W1-007). | Empty reason. Phase not `skippable` in the graph (mockup, design_graphic, infra in Wave 1). |
 | `reopen <change> <phase>` | `--reason`, `--ref` | The backward edge used by `karvey-iterate` for a spec-gap. It moves the approvals of the reopened phase and of everything downstream into a new `revision_history[]` entry (`superseded_approvals`), sets them to `approved: false`, and appends a history entry. | The target is not a reopen target (`requirements`, `architecture`, `tasks`, `impl`). Missing reason. |
 | `validate [PATH…\|--all]` | `--fix`, `--dry-run`, `--accept-proposed`, `--strict`, `--json` | Validates spec.json and project.json against the schemas plus the semantic checks (§2.3). With `--fix` it migrates (§2.5): the unified diff always goes to stdout first, then the file is written unless `--dry-run`. `--fix` is idempotent (REQ-W1-009). | exit 1 on errors. In advisory mode warnings keep exit 0 (REQ-W1-003). Unmappable or unmigratable values make `--fix` exit 3 and write nothing. |
@@ -286,6 +286,14 @@ as modified.
 - **Worktree fix (latent defect found here):** the current `state.json` comparison tests
   `os.path.isdir(<repo>/.git)`. That test fails in git worktrees, where `.git` is a file, and reports
   "NOT FOUND". It is replaced by `git -C <repo> rev-parse --git-dir`. **To log as a finding** (see the reply).
+- **Profile-only commits are not drift (F-40, BUG-22, revision 1):** when the profile lives inside the repo
+  it measures, committing `state.json` (or `handoff.md` / `board.md`) after the capture moves HEAD by one
+  commit and lowers the uncommitted count. The comparison therefore treats a changed commit as matching when
+  the recorded commit is an ancestor of HEAD and every path touched by `git log <recorded>..HEAD` is one of
+  the profile's own files (`state.json`, `handoff.md`, `board.md`, `manifest.md`, `checklist.md`); in that
+  case an uncommitted count lower than the recorded one also matches. The line reads
+  `matches (<branch> @<commit>; profile-only commits since the save)`. Any other path, a non-ancestor
+  commit or a higher count is still DRIFT.
 
 ### 1.5 `karvey-handoff-capture.py`
 
@@ -947,7 +955,11 @@ or a cloned template, so they are untrusted input. Three rules apply:
    which validates and prints the value, or refuses with exit 3. The skill passes it double-quoted. L-29
    fails any command example that interpolates a `project.json` value another way.
 3. **`safe_values.py` patterns** (all of them also refuse control characters, the characters
-   `` ` $ ; | & < > \ ( ) { } `` , newlines and a leading `-`, which blocks option injection):
+   `` ` $ ; | & < > \ ( ) { } " `` , newlines and a leading `-`, which blocks option injection). Revision 1
+   (F-16..F-19): a kind whose own pattern needs one of those characters is exempted from the common refusal
+   **for that character only**, and its pattern confines it: `{ }` for the markdown location, `\` for Azure
+   Boards locations and sprints, `( )` for status names. Values reach a shell double-quoted (rule 2), where
+   `( )`, `{ }` and `\` followed by a letter are literal; `"`, `$` and `` ` `` stay refused everywhere:
 
 | Kind | Pattern |
 |---|---|
@@ -963,8 +975,10 @@ or a cloned template, so they are untrusted input. Three rules apply:
 | azure-boards | `^[\w .-]{1,128}(\\[\w .-]{1,128}){0,4}$` |
 | github-projects | `^[A-Za-z0-9-]{1,39}/\d{1,6}$` |
 | spreadsheet | a relative path, normalised, inside `docs/spec/`, no `..`, extension `.csv\|.xlsx\|.ods\|.md` (REQ-W1-093 error clause) |
-| markdown | `^docs/spec/[A-Za-z0-9_./{}-]+\.md$` |
-| status names | `^[^\x00-\x1f`$\\;\|&<>]{1,64}$` |
+| markdown | `^docs/spec/[A-Za-z0-9_./{}-]+\.md$`, and no `..` path segment (F-17) |
+| other | `^[\w .:/@-]{1,128}$` (F-18) |
+| `management.sprints` clickup | `^\d{1,20}$`; azure-boards: the azure-boards path pattern; any other tool `^[\w .:/-]{1,128}$` (F-18) |
+| status names | `^[^\x00-\x1f`$\\;\|&<>]{1,64}$`, `( )` allowed (F-19: real lists have `In Progress (QA)`) |
 
 ### 3.2 Fail-closed vs fail-open, per guard
 
@@ -1514,7 +1528,7 @@ it against `docs/bugs_dev_testing.md`. REQ-W1-107 requires each entry to name it
 | Full dogfood cycle of this change: every phase from `tasks` on recorded with `karvey-state.py`; `phase_history` complete at release | E2E | 013, 109, O-1 |
 | 3.12.0 release PR `feature/wave1-hardening → main` through the prod-gate: first blocked without approval, then allowed after the human's prod phrase + `approve prod` | E2E (real, owner present) | 023..025, 035, AC-3 |
 | Archive of this change on `chore/archive-wave1-hardening` via docs PR; `approvals.prod` written there; spec-merge dry-run shown | E2E | 031..033, 067 |
-| Agent-behaviour scripts under `plugins/karvey/tests/manual/`: missing status map (080/081/082), settings commit on docs branch (083), QA moves review → done (084), impl resume (085), find-or-create (089), init "not now" + Epic state (095), `--settings` merge (096) | manual | 080..085, 089, 095, 096 |
+| Agent-behaviour scripts under `plugins/karvey/tests/manual/`: missing status map (080/081/082), settings commit on docs branch (083), QA moves review → done (084), impl resume (085), find-or-create (089), init "not now" + Epic state (095), `--settings` merge (096). **Executor (F-47, D-19, revision 1):** a `[human]` task in the test phase, before QA: the owner runs them with the agent, each in its own session in a throw-away repo; a script whose Prompt is headless runs as `claude -p --plugin-dir …`; evidence under `qa/manual/<script>-<date>.md`. A script that cannot run (no tracker test list, no DEV front) is reported **not run** with the reason, never PASS. | manual | 080..085, 089, 095, 096 |
 | CI proof: the `lint` and `tests` jobs visible on the PR with non-trivial duration (verification.md §5) | CI | 030, 054 |
 
 ---
@@ -1589,6 +1603,12 @@ After this diff nothing creates that file, so every edit would be blocked. The o
 
 The diff and the chosen option are shown to him **outside this repo** and applied only after his approval
 (D-01, "What it does NOT say").
+
+**Revision 1 (F-49, D-19):** option (a) chosen, with the value
+`"KARVEY_COMPAT_MARKER": "/tmp/claude-plan-approved-mauricio-haintech"` (his `TMPDIR` is unset; his hooks
+accept the global name). The agent does **not** prepare these diffs by copying the live files: Claude Code's
+auto mode refuses that as self-modification. E1.F16.T2 is a `[human]` task that works from the text of this
+section.
 
 ### 7.4 Projects that installed the 3.11 templates
 
@@ -1866,3 +1886,9 @@ and validates the workflow file.
 *Generated by `karvey-architecture` (PHASE 5) on 2026-09-23 for `wave1-hardening`. Knowledge sync (Step 6B)
 deliberately not run: this change moves the sync to archive only (REQ-W1-062), as already recorded in
 `PLAN.md`.*
+
+## Revision history
+
+| Rev | Date | Ref | Sections | Why |
+|---|---|---|---|---|
+| 1 | 2026-09-24 | D-19 · F-16..F-19, F-40, F-47..F-49 | §1.4 (profile-only commits), §1.2 `approve` (`--date` on retro records), §3.1 (exemptions, `other`, sprints, `..`, status `( )`, `"`), §6.5 (manual executor), §7.3 (option a; `[human]` T2) | Test-phase spec-gaps; reopened from `test` with `karvey-state.py reopen … architecture --ref D-19`. |

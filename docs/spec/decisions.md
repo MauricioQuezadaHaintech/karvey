@@ -185,3 +185,9 @@ corrected, not annotated at the end.
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Answer, verbatim:** «Sí, todas (Recomendado)»
 - **What:** protect-paths blocks editing the plugin from a session that loads it from the same working copy (F-09; dogfood with another copy); a prompt line over 200 characters records no approval (F-11); the diagnostic `selftest` guard stays (F-08); low findings F-26..F-33 go to the Wave 2 backlog.
 
+
+## D-19 — Test-phase findings routed (F-47, F-48, F-49)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Answer, verbatim:** «Apruebo, avanza» — to the agent's proposal after the test phase: F-47 → run the 10 manual agent-behaviour scripts with the owner as a `[human]` task before QA, headless (`claude -p`) where the script allows it; F-49 → E1.F16.T2 becomes `[human]`, working from `architecture.md` §7.3, with `settings.json` `env.KARVEY_COMPAT_MARKER = "/tmp/claude-plan-approved-mauricio-haintech"` (option a); F-48 was left to the owner without a recommendation, and is resolved under this approval as below.
+- **What:** F-48 — a retroactive `approve … prod --write-spec` passes `--date` with the day prod actually happened; the recording time goes to the ledger. The `team-adapters` record written on 2026-09-24 is corrected at that change's archive (`--date 2026-09-22…`), not rewritten now.
+- **What it does NOT say:** it does not accept the manual scripts as pending into QA; it does not apply anything under `~/.claude/` (D-01, D-11).

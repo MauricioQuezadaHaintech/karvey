@@ -181,12 +181,18 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 ### Feature E1.F16: Release 3.12.0 (one versioning moment) and deploy-phase human steps
 
 - [ ] E1.F16.T1 [Backend] Release docs and the single version bump to 3.12.0 — est: 30min (depends E1.F13.T2, E1.F14.T2, E1.F14.T4)
-- [ ] E1.F16.T2 [Backend] Prepare, never apply, the owner's global-config diffs (D-01, D-11) — est: 15min (depends E1.F5.T2) (P)
+- [ ] E1.F16.T2 [human] Prepare the owner's global-config diffs from architecture §7.3 (D-01, D-11) — executor: owner (revision 1, F-49) (depends E1.F5.T2) (P)
 - [ ] E1.F16.T3 [human] Branch protection on `main`: require the CI checks (Q-A8, D-09) — executor: owner (depends E1.F13.T2)
 - [ ] E1.F16.T4 [Backend] Release PR ready; `advance deploying` on the feature branch; the unapproved merge is blocked (E2E evidence) — est: 20min (depends E1.F16.T1, E1.F16.T3)
 - [ ] E1.F16.T5 [human] The prod OK for 3.12.0 (D-10) and the D-NN answer — executor: owner (depends E1.F16.T4)
 - [ ] E1.F16.T6 [Backend] `approve prod` (ledger), merge through the prod-gate, release facts in the ledger — est: 20min (depends E1.F16.T5)
 - [ ] E1.F16.T7 [human] Apply the diffs to `~/.claude/CLAUDE.md` and `~/.claude/settings.json` after seeing them (D-01, D-11) — executor: owner (depends E1.F16.T6, E1.F16.T2)
+
+### Feature E1.F17: Test-phase iteration (revision 1, D-19)
+
+- [ ] E1.F17.T1 [Backend] BUG-22: profile-only commits after a save are not drift — est: 30min (depends E1.F6.T1)
+- [ ] E1.F17.T2 [Backend] Status names may contain `( )` (F-19) — est: 20min (depends E1.F7.T1)
+- [ ] E1.F17.T3 [human] Run the 10 manual agent-behaviour scripts with the agent (F-47) — executor: owner (depends E1.F14.T4, E1.F17.T1, E1.F17.T2)
 
 ---
 
@@ -262,12 +268,15 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F15.T2 [human] | ✅ done | — | — | — | [human] owner typed «ok, registra la aprobación de prod de team-adapters con D-08» 2026-09-24 18:39 -03; hook: `approval recorded (prod, team-adapters, expires 23:39)` |
 | E1.F15.T3 [Backend] | ✅ done | 15 | 3 | 0 | `approve team-adapters prod --by … --role human --ref D-08 --write-spec`: approvals.prod gains role, ISO date, ref `D-08` (the retroactive detail stays in D-08 and `qa_note`); approvals.qa stays false (REQ-W1-108); `validate --all` 0 errors / 35 warnings, rc 0; lint 3 → 0 errors, 3 warnings |
 | E1.F16.T1 [Backend] | ⬜ todo | 30 | — | — |  |
-| E1.F16.T2 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F16.T2 [human] | ⬜ todo | — | — | — | [human] revision 1 (F-49): auto mode refuses the agent's copy of the live files |
 | E1.F16.T3 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F16.T4 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F16.T5 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F16.T6 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F16.T7 [human] | ⬜ todo | — | — | — | [human] |
+| E1.F17.T1 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F17.T2 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F17.T3 [human] | ⬜ todo | — | — | — | [human] |
 
 ---
 

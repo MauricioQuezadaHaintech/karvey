@@ -660,3 +660,32 @@ ask git: `git -C <path> rev-parse --git-dir`.
 | 2026-09-23 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | reproduced in a fixture |
 | 2026-09-23 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | hotfix/karvey-3.11.4-state-paths |
 | 2026-09-23 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | 3.11.4 + regression test; verified read-only against paautin-kloketen |
+
+## BUG-22 — Committing state.json after a save is reported as drift
+- **Priority:** medium
+- **Detected:** 2026-09-24 · **Component:** plugins/karvey/hooks/karvey-session-context.sh (live state vs handoff)
+- **Change / origin:** wave1-hardening — finding F-40 (checkpoint dogfood); seen again on this session's start (`c793a5f -> 1dbd98e · uncommitted 1 -> 0`)
+- **Tracker:** —
+- **Current state:** DIAGNOSTICADO
+
+### Reproduction
+A profile inside the repo it measures (`docs/spec/agent/`). `karvey-checkpoint save`: commit the handoff, run `karvey-handoff-capture.py`, then commit `state.json`. Start a new session.
+
+### Actual vs expected
+- Actual: `karvey: DRIFT — commit X -> Y · uncommitted 1 -> 0`, and the session is told the handoff has aged.
+- Expected: `matches (…; profile-only commits since the save)` when the only commits since the save touch the profile's own files.
+
+### Root cause
+The capture records HEAD and the uncommitted count before `state.json` is committed; the comparison checks commit and count for equality, so the commit that stores `state.json` itself always reads as drift.
+
+### Fix
+Architecture §1.4 revision 1 (D-19): a changed commit matches when the recorded commit is an ancestor of HEAD and every path in `git log <recorded>..HEAD` is a profile file; then a lower uncommitted count also matches. Task E1.F17.T1.
+
+### Regression test
+(pending: E1.F17.T1)
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-24 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-40, first agente-karvey save (da3d70a → cb3946e) |
+| 2026-09-24 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-19): cause read in the hook's live-state block |

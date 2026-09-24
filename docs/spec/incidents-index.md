@@ -29,15 +29,16 @@ Last updated: 2026-09-24 (wave1-hardening F-39: BUG-05 RESUELTO with L-36; BUG-0
 | BUG-19 | karvey | high | team.json inside the repo: profile path did not exist | team-layer / agente-kloketen | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.3 |
 | BUG-20 | karvey | medium | False NOT FOUND drift when state.json names the repo itself | team-layer / agente-kloketen | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.4 |
 | BUG-21 | karvey | medium | Git worktrees reported NOT FOUND in the live-state check | team-layer / wave1 F-01 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.4 |
+| BUG-22 | karvey | medium | Committing state.json after a save reported as drift | wave1-hardening / F-40 | DIAGNOSTICADO | (pending: E1.F17.T1) | wave1-hardening |
 
 ## Summary by state
 
 | State | Count | BUGs |
 |-------|-------|------|
 | DETECTADO | 0 | — |
-| DIAGNOSTICADO | 0 | — |
+| DIAGNOSTICADO | 1 | BUG-22 |
 | EN FIX | 0 | — |
 | RESUELTO | 21 | BUG-01 .. BUG-21 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-22**.
+Next number: **BUG-23**.

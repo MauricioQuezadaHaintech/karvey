@@ -7,10 +7,10 @@
 
 | Item | Value |
 |---|---|
-| Features | 16 |
-| Tasks | 73 (58 Backend, 1 Frontend, 2 Infra, 7 Test, 5 human) |
-| Agent tasks / `[human]` tasks | 68 / 5 (E1.F1.T2 is conditional: only if T-0 cannot run headless) |
-| Total estimate (agent tasks, AI + human review) | **2150 min** (35.8 h) |
+| Features | 17 |
+| Tasks | 76 (59 Backend, 1 Frontend, 2 Infra, 7 Test, 7 human) — revision 1 (D-19): +E1.F17.T1..T3, E1.F16.T2 → `[human]` |
+| Agent tasks / `[human]` tasks | 69 / 7 (E1.F1.T2 is conditional: only if T-0 cannot run headless) |
+| Total estimate (agent tasks, AI + human review) | **2150 min** (35.8 h); revision 1: +50 (E1.F17) −15 (E1.F16.T2 to `[human]`) = **2185 min** |
 | Critical path (agent minutes; `[human]` waits not counted) | **550 min** (9.2 h), 18 tasks |
 | REQ-W1 coverage | 109/109 |
 | Largest task | 50 min (cap 60) |
@@ -754,14 +754,14 @@ Total estimated time: 85 min (7 tasks)
 - One commit changes every version field (REQ-W1-037). If `[Unreleased]` is empty, stop.
 - The same commit sets `plugins/karvey/scripts/karvey_lib/defaults.json:pre_3_12_history.released_on` to the `[3.12.0]` date (D-14 cut-off; L-35 fails otherwise).
 
-### E1.F16.T2 [Backend] Prepare, never apply, the owner's global-config diffs (D-01, D-11) — _Depends: E1.F5.T2_ (P)
+### E1.F16.T2 [human] Prepare the owner's global-config diffs from architecture §7.3 (D-01, D-11) — _Depends: E1.F5.T2_ (P)
 
-**Estimate:** 15 min  
-**Files:** `$SCRATCH/owner-diffs/CLAUDE.md.diff` (outside the repo); `$SCRATCH/owner-diffs/settings.json.diff` (outside the repo)  
+**Executor:** Mauricio Quezada Ibáñez (owner). Revision 1 (F-49, D-19): Claude Code's auto mode refuses the agent's copy of the live files as self-modification, so this is a `[human]` task.  
+**Command:** Read `architecture.md` §7.3 (the CLAUDE.md step-3 diff and option (a)); the `settings.json` change is `env."KARVEY_COMPAT_MARKER": "/tmp/claude-plan-approved-mauricio-haintech"`. Nothing is applied here: E1.F16.T7 applies them after the release.  
+**Verification:** the owner has seen both changes; `sha256sum ~/.claude/CLAUDE.md ~/.claude/settings.json` unchanged by this task.  
+**Rollback:** nothing to roll back.  
 **Requirements:** REQ-W1-017, REQ-W1-018  
-**Tests added:** `patch --dry-run` of each diff against a copy of the current file succeeds  
-**Done when:** `patch --dry-run -p0 < $SCRATCH/owner-diffs/CLAUDE.md.diff` on a copy exits 0; `sha256sum ~/.claude/CLAUDE.md ~/.claude/settings.json` equal before and after the task.
-- CLAUDE.md: the §7.3 diff (step 3 → approval recorded by the hook; the agent never creates, touches, copies, moves or deletes a marker; prod needs a prod word). settings.json: `env.KARVEY_COMPAT_MARKER` = the path his `require-plan*.sh` read (`${TMPDIR:-/tmp}/claude-plan-approved-$(id -un)`; the session-suffixed variant noted). Read the two files; write nothing under `~/.claude/`.
+**Executed:** (filled when done: name · YYYY-MM-DD HH:MM · evidence)
 
 ### E1.F16.T3 [human] Branch protection on `main`: require the CI checks (Q-A8, D-09) — _Depends: E1.F13.T2_
 
@@ -808,6 +808,39 @@ Total estimated time: 85 min (7 tasks)
 **Verification:** `grep -c 'touch /tmp/claude-plan-approved' ~/.claude/CLAUDE.md` → 0; `python3 -c "import json,os;print(json.load(open(os.path.expanduser('~/.claude/settings.json')))['env']['KARVEY_COMPAT_MARKER'])"` → the marker path; in a new session «ok» prints `[karvey] approval recorded` and the file at that path appears.  
 **Rollback:** `cp ~/.claude/CLAUDE.md.bak-3.12 ~/.claude/CLAUDE.md && cp ~/.claude/settings.json.bak-3.12 ~/.claude/settings.json`.  
 **Requirements:** REQ-W1-017, REQ-W1-018  
+**Executed:** (filled when done: name · YYYY-MM-DD HH:MM · evidence)
+
+## Feature E1.F17: Test-phase iteration (revision 1, D-19)
+
+Findings of the first test phase: BUG-22 (F-40), status names with parentheses (F-19), the manual scripts' executor (F-47).  
+Requirements covered: 048, 085, 093, 107, AC-7  
+Total estimated time: 50 min (2 agent tasks + 1 human)
+
+### E1.F17.T1 [Backend] BUG-22: profile-only commits after a save are not drift — _Depends: E1.F6.T1_
+
+**Estimate:** 30 min  
+**Files:** `plugins/karvey/hooks/karvey-session-context.sh` (live-state block); `plugins/karvey/tests/hooks/tables/session.json` or `hooks/tests/test-hooks.sh` (cases); `plugins/karvey/tests/regression/test_incidents.py` (BUG-22 entry); `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`  
+**Requirements:** REQ-W1-048, REQ-W1-107  
+**Tests added:** (1) capture, then commit only `state.json` → `matches (…; profile-only commits since the save)`, no DRIFT; (2) capture, then commit `state.json` plus another file → DRIFT; (3) HEAD not a descendant of the recorded commit → DRIFT; (4) a higher uncommitted count after a profile-only commit → DRIFT. Each verified red on `b9c7fab` before the fix.  
+**Done when:** the four cases pass; BUG-22 is RESUELTO with its regression check named in `test_incidents.py`; the full suite stays green.
+- Architecture §1.4 "Profile-only commits are not drift". Profile files: `state.json`, `handoff.md`, `board.md`, `manifest.md`, `checklist.md` of the resolved profile directory, as paths relative to the repo top level.
+
+### E1.F17.T2 [Backend] Status names may contain `( )` (F-19) — _Depends: E1.F7.T1_
+
+**Estimate:** 20 min  
+**Files:** `plugins/karvey/scripts/karvey_lib/safe_values.py` (`KIND_EXEMPTIONS["status"]`); `plugins/karvey/tests/unit/test_safe_values.py`  
+**Requirements:** REQ-W1-093  
+**Tests added:** `In Progress (QA)` accepted by `check_status` and by `karvey-config.py get … --shell`; `a$(b)`, `` a`b` ``, `a"b`, `a;b` still refused.  
+**Done when:** the unit suite is green and `test_safe_values.py` holds both the accepted and the refused cases.
+- Architecture §3.1 revision 1: the exemption is per character and per kind; the status pattern already refuses `` ` `` and `$`.
+
+### E1.F17.T3 [human] Run the 10 manual agent-behaviour scripts with the agent (F-47) — _Depends: E1.F14.T4, E1.F17.T1, E1.F17.T2_
+
+**Executor:** Mauricio Quezada Ibáñez (owner) with the agent, before QA (architecture §6.5 revision 1).  
+**Command:** for each `plugins/karvey/tests/manual/*.md`: a throw-away repo under `$SCRATCH`, a session with `--plugin-dir ~/Dev/karvey/plugins/karvey` (headless `claude -p` where the script's Prompt says so), the script's Setup, Prompt and Expected.  
+**Verification:** one `docs/spec/changes/wave1-hardening/qa/manual/<script>-<date>.md` per script with PASS / FAIL / not run (reason); every FAIL logged as a finding.  
+**Rollback:** delete the throw-away repos.  
+**Requirements:** REQ-W1-080..085, 089, 095, 096 (AC-7)  
 **Executed:** (filled when done: name · YYYY-MM-DD HH:MM · evidence)
 
 ## Traceability matrix (REQ-W1 → tasks)

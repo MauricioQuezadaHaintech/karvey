@@ -45,6 +45,13 @@
 | BL-41 | 2026-09-23 | team-adapters / F-46 | emergent | low | Statusline: keep the rotate warning visible on narrow terminals; recommend the copy-to-~/.claude install path | open | — | — |
 | BL-42 | 2026-09-23 | team-adapters / F-47 | emergent | low | Method page: alias table for the 12 anchors renamed after 3.10.0 | open | — | — |
 | BL-43 | 2026-09-23 | team-adapters / F-48 | emergent | low | Notification deduplication: run id + timestamp in the payload; notify QA on first run and verdict changes | open | — | — |
+| BL-44 | 2026-09-24 | wave1-hardening / F-26 | spec-gap (deferred) | low | Cross-repo decision refs (`D-12@{ops-repo}`) rejected by spec.schema.json | open | — | — |
+| BL-45 | 2026-09-24 | wave1-hardening / F-27 | spec-gap (deferred) | low | Time-entry / worklog operation in management-adapters.md | open | — | — |
+| BL-46 | 2026-09-24 | wave1-hardening / F-28 | spec-gap (deferred) | low | `approvals.deploy`: a write path or drop the key | open | — | — |
+| BL-47 | 2026-09-24 | wave1-hardening / F-29 | spec-gap (deferred) | low | Where the prod OK D-NN is written during deploy (D-03 vs a commit on a branch) | open | — | — |
+| BL-48 | 2026-09-24 | wave1-hardening / F-30 | spec-gap (deferred) | low | Release ledger is clone-local: `advance deployed` / `--write-spec` need the same clone | open | — | — |
+| BL-49 | 2026-09-24 | wave1-hardening / F-31 | spec-gap (deferred) | low | karvey-import cannot resume at the furthest phase the content supports | open | — | — |
+| BL-50 | 2026-09-24 | wave1-hardening / F-32 | spec-gap (deferred) | low | Per-period decision logs vs the single `docs/spec/decisions.md` path (L-30) | open | — | — |
 
 ## BL-01 — Run graphify over the repo at the end of all the changes
 - **Origin:** owner request (Mauricio Quezada Ibáñez), 2026-09-22, after publishing 3.8.0 / 3.9.0 and during the 3.9.1 docs sync.
@@ -257,4 +264,39 @@
 ## BL-43 — Notification deduplication: run id + timestamp in the payload; notify QA on first run and verdict changes
 - **Origin:** change `team-adapters`, finding F-48 (emergent; source N-13), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** Each micro-loop run and each deploy retry posts the full summary again; a noisy channel gets muted. Add `run`/`iteration` and `ts` to the payload; notify `qa` only on the first run and on verdict changes, or by option (`events: ["qa:verdict"]`).
+- **Status:** open
+
+## BL-44 — Cross-repo decision refs (`D-12@{ops-repo}`) rejected by spec.schema.json
+- **Origin:** change `wave1-hardening`, finding F-26 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** `spec.schema.json` accepts only `^[DC]-\d+$` in `decisions`, while `rules/multi-agent.md` §2 prescribes cross-repo references as `"D-12@{ops-repo}"`: a decision cited the way the rule says fails validation. The karvey-init example now uses `"D-NN"`; the schema pattern or the rule must change. Also cosmetic: `karvey-state.py next` prints the blocker line twice. (E1.F12.T3)
+- **Status:** open
+
+## BL-45 — Time-entry / worklog operation in management-adapters.md
+- **Origin:** change `wave1-hardening`, finding F-27 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** `rules/management-adapters.md` has no time-entry / worklog operation, so karvey-impl can only say "record the actual as a time entry where the tool has one, else the PLAN.md actual columns" — prose, not an adapter call (REQ-W1-042). The adapter should list a `log_time` operation per tool (ClickUp time entry, Jira worklog, …) with `none` for tools that have none. (E1.F12.T5)
+- **Status:** open
+
+## BL-46 — `approvals.deploy`: a write path or drop the key
+- **Origin:** change `wave1-hardening`, finding F-28 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** `approvals.deploy` has no write path: Wave 1 does not use it as a precondition (state-machine.json), so the rewritten karvey-deploy no longer records it. Architecture should say whether deploy ever runs `approve {id} deploy`, or drop the key. (E1.F12.T6)
+- **Status:** open
+
+## BL-47 — Where the prod OK D-NN is written during deploy (D-03 vs a commit on a branch)
+- **Origin:** change `wave1-hardening`, finding F-29 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** D-03 puts the prod OK "in the decision log", but writing `decisions.md` during deploy is a commit on some branch. The rewritten deploy keeps the D-NN text in the PR body and archive writes it into `decisions.md` on `chore/archive-{id}`; D-03 / `deploy-workflow.md` should state that order. (E1.F12.T6)
+- **Status:** open
+
+## BL-48 — Release ledger is clone-local: `advance deployed` / `--write-spec` need the same clone
+- **Origin:** change `wave1-hardening`, finding F-30 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** The release ledger lives under the local `<git-common-dir>/karvey/`, so `advance {id} deployed` and `approve {id} prod --write-spec` at archive work only in the clone where deploy recorded it. `approve --write-spec` can fall back to a D-NN / PR URL; `advance deployed` has no fallback and requires the ledger. Needs a decision (e.g. `advance deployed --ref D-NN --pipeline-run URL` accepted when the ledger is absent). (E1.F12.T6)
+- **Status:** open
+
+## BL-49 — karvey-import cannot resume at the furthest phase the content supports
+- **Origin:** change `wave1-hardening`, finding F-31 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** karvey-import can no longer resume "at the furthest phase the content supports": `karvey-state.py advance` refuses to pass an unapproved gate and imported gates are unapproved by design, so an import resumes at `requirements` and walks the gates in order. Either accept that (current text) or add an import path that records the imported artifacts as `generated` and asks the human per gate. (E1.F12.T7)
+- **Status:** open
+
+## BL-50 — Per-period decision logs vs the single `docs/spec/decisions.md` path (L-30)
+- **Origin:** change `wave1-hardening`, finding F-32 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** One decision-log path (L-30): karvey-decisions described one file per period under `{ops_repo}/decisions/`, multi-agent.md named `docs/decisiones.md`; both now say `{ops_repo}/docs/spec/decisions.md` (the shape this repo uses). A project keeping per-period files needs a migration note; architecture §8 does not say which shape wins. (E1.F12.T7)
 - **Status:** open
