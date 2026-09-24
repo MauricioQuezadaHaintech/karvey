@@ -1,6 +1,6 @@
 # Handoff — agente-karvey
 
-## 0. Verified state — 2026-09-24 11:18 -03
+## 0. Verified state — 2026-09-24 12:05 -03
 Captured with commands (see `state.json` beside this file, written by `karvey-handoff-capture.py` last). If it does not match on startup, this handoff has aged: believe the commands.
 
 | Repo | Branch | Uncommitted | Last commit | Published? |
@@ -17,16 +17,16 @@ E1.F15.T2 waits on **the owner**: the team-adapters prod phrase in a session tha
 `manifest.md` (referenced, not copied) + the owner's global CLAUDE.md + `plugins/karvey/skills/karvey/rules/`.
 
 ## 4. Board — open, in one place
-`board.md` (B-01..B-09).
+`board.md` (B-01..B-10).
 
 ## 5. Closing checklist
 `checklist.md`.
 
 ## 6. Standing decisions that affect me
-`docs/spec/decisions.md` D-01..D-17. Most load-bearing: D-01 (marker created by the prompt hook, never the agent), D-02 (prod-gate on), D-03 (prod approval never a commit on dev), D-10 (prod needs approval+production words), D-14 (team-adapters phrase; team-layer = warning), D-15 (integration ≠ prod).
+`docs/spec/decisions.md` D-01..D-18 (D-18: statusline lights by % of the window, 30 amber / 50 red). Most load-bearing: D-01 (marker created by the prompt hook, never the agent), D-02 (prod-gate on), D-03 (prod approval never a commit on dev), D-10 (prod needs approval+production words), D-14 (team-adapters phrase; team-layer = warning), D-15 (integration ≠ prod).
 
 ## 7. In flight, and what I am waiting for
-- Branch `feature/wave1-hardening` pushed; no PR yet (E1.F13.T2 opens a draft to observe CI).
+- Branch `feature/wave1-hardening` pushed; **draft PR #24** → `main` open to observe CI (E1.F13.T2); lint job red until E1.F15.T3.
 - Owner: E1.F15.T2 phrase. agente-kloketen: confirmation of 3.11.4 on a real new session. Matthew: told (via the owner) to update to 3.11.4.
 - ~15 update notices to local sessions were held for the owner's approval in each session.
 
@@ -38,9 +38,11 @@ E1.F15.T2 waits on **the owner**: the team-adapters prod phrase in a session tha
 - `/srv/capturas` is not readable by this user.
 - Parallel lanes in worktrees must not edit CHANGELOG.md / PLAN.md; the orchestrator adds their lines at integration.
 - The approval hook ignores prompt lines over 200 characters (F-11) — keep approval phrases short.
+- The owner's live statusline is `~/.claude/hooks/statusline-rotacion.sh` (Spanish copy), **not** the plugin's `karvey-statusline.sh`: a plugin change does not reach his screen; D-18 was applied to both.
 
 ## 9. Scheduled tasks — with their full prompt
 None.
 
 ## 10. Last updated
+2026-09-24 12:05 -03 · agente-karvey · restore + F-41/D-18 statusline, E1.F15.T1 done, draft PR #24.
 2026-09-24 11:18 -03 · agente-karvey · first handoff of this agent (profile bootstrapped in this save).
