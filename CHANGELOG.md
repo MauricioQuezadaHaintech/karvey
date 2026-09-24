@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 - E1.F2.T1 — `karvey_lib` package: exit codes, `--json` envelope and `defaults.json` (8 h rotation, 120 min marker, 7 days stalled, ±30 % over 3 changes). Why: one contract and one place for the D-06/D-07 values (REQ-W1-049).
 - E1.F2.T2 — `atomicio`: BOM-tolerant read, format-preserving atomic write, `O_EXCL` lock (stale after 30 s) and compare-and-swap (exit 3). Why: concurrent sessions must never half-write or silently overwrite a `spec.json`.
 - E1.F2.T3 — `schema_lite`: stdlib JSON-Schema subset validator with `x-karvey-severity: warning` and `x-karvey-format: datetime-tz`; unsupported keywords are an error. Why: validate `spec.json`/`project.json` without pip dependencies (REQ-W1-002).
+- E1.F2.T4 — `project` (root discovery bounded by the git top level, the active-change rule, the reviewed `origin/<production>` config read, state dir under `--git-common-dir`) and `audit` (JSONL, 0600, 1 MB rotation, no tokens). Why: hooks and tools must agree on which project and change they act on, and weakening settings must come from the reviewed line.
 
 ## [3.11.4] - 2026-09-23 — hotfix
 
