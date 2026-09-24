@@ -35,6 +35,10 @@ _spec.loader.exec_module(lp)
 # automated regression: an incident whose only checks are manual cannot be RESUELTO.
 INDEX = {
     "BUG-05": [  # impl resume on dead states (REQ-W1-085)
+        ("lint", "L-36"),
+        ("unit", "test_lint_plugin.py", "L36.test_completed_dependency_fails"),
+        ("unit", "test_lint_plugin.py", "L36.test_first_pending_task_fails"),
+        ("unit", "test_lint_plugin.py", "L36.test_dependency_at_done_only_fails"),
         ("manual", "impl-resume.md"),
     ],
     "BUG-06": [  # legacy management string breaks the != markdown guards

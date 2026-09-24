@@ -1791,6 +1791,38 @@ def l35_claude_md_compat_line(ctx):
                                 "destinations from CLAUDE.md tables (REQ-W1-099)" % version)
 
 
+# --------------------------------------------------------------------------- L-36
+IMPL_RULE_RE = re.compile(r"\bdepend|\bselect|\b(?:next|first)\b[^.]*\btask|\bresum", re.I)
+IMPL_DEAD_STATE_RE = re.compile(r"\b(pending|completed?|finished)\b", re.I)
+IMPL_DEP_RE = re.compile(r"\bdepend", re.I)
+
+
+@check("L-36", "karvey-impl selects and resumes in logical states: a dependency is satisfied at review or done, "
+               "never at a state no skill writes (BUG-05)", reqs=("085",))
+def l36_impl_logical_dependencies(ctx):
+    impl = ctx.skill("karvey-impl")
+    if impl is None:
+        return
+    stated = False
+    for n, line, lang in body_lines(ctx, impl):
+        if lang is not None or not IMPL_RULE_RE.search(line):
+            continue
+        m = IMPL_DEAD_STATE_RE.search(line)
+        if m:
+            yield (impl, n, "selection/dependency rule uses %r, a task state no skill writes; use the logical "
+                            "states (todo | in_progress | review | done | blocked; BUG-05)" % m.group(1))
+        if IMPL_DEP_RE.search(line):
+            has_review = re.search(r"`review`|\breview\b", line) is not None
+            has_done = re.search(r"`done`|\bdone\b", line) is not None
+            if has_review and has_done:
+                stated = True
+            elif has_done and not has_review and re.search(r"\b(until|only when|once)\b", line, re.I):
+                yield (impl, n, "a dependency waits for `done` only: impl leaves tasks at `review` and done comes "
+                                "at QA, so dependents never start (BUG-05 deadlock); accept `review` or `done`")
+    if not stated:
+        yield impl, 1, "karvey-impl does not state that a dependency is satisfied at `review` or `done` (REQ-W1-085)"
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""
@@ -1972,7 +2004,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser():
-    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-35).")
+    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-36).")
     p.add_argument("--root", help="repository root (default: git top level)")
     p.add_argument("--plugin", help="plugin directory (default: <root>/plugins/karvey)")
     p.add_argument("--only", help="comma list of check ids (L-NN)")

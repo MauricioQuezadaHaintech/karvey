@@ -998,13 +998,43 @@ class L35(LintCase):
         self.assertPasses("L-35")
 
 
+class L36(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-36")
+
+    def test_completed_dependency_fails(self):
+        # the pre-3.10 wording that caused the BUG-05 deadlock
+        self.t.append(IMPL, "\n- Do not execute [Backend] until its dependent [DB] is completed\n")
+        self.assertFails("L-36", "'completed'", file=IMPL)
+
+    def test_first_pending_task_fails(self):
+        self.t.append(IMPL, "\nIf nothing is specified: start from the first pending task.\n")
+        self.assertFails("L-36", "'pending'", file=IMPL)
+
+    def test_dependency_at_done_only_fails(self):
+        self.t.append(IMPL, "\nStart a [Frontend] task only when its [Backend] dependency is `done`.\n")
+        self.assertFails("L-36", "waits for `done` only", file=IMPL)
+
+    def test_rule_not_stated_fails(self):
+        self.t.replace(IMPL, "; a dependency is satisfied at `review` or `done`", "")
+        self.assertFails("L-36", "does not state", file=IMPL)
+
+    def test_completed_outside_the_selection_rule_passes(self):
+        self.t.append(IMPL, "\nComment the Feature as completed with the files touched.\n")
+        self.assertPasses("L-36")
+
+    def test_code_block_is_ignored(self):
+        self.t.append(IMPL, "\n```text\nnext pending task: none\n```\n")
+        self.assertPasses("L-36")
+
+
 class ListAll(unittest.TestCase):
-    def test_list_names_l01_to_l35(self):
+    def test_list_names_l01_to_l36(self):
         code, out, _ = run_cli("--root", str(_path.REPO_ROOT), "--list")
         self.assertEqual(code, 0, out)
-        for i in range(1, 36):
+        for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 36)])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)])
 
 
 if __name__ == "__main__":

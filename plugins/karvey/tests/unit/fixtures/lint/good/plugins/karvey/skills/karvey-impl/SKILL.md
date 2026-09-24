@@ -10,3 +10,5 @@ argument-hint: <change-id>
 Read `docs/spec/changes/{change-id}/tasks.md`.
 
 Per task: add its line under `## [Unreleased]` in `CHANGELOG.md`; the version is not changed.
+
+Select the first `todo` task; a dependency is satisfied at `review` or `done`.

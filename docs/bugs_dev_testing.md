@@ -139,7 +139,7 @@ Hotfix 3.11.2: `DBG="${TMPDIR:-/tmp}/.karvey-statusline-last.$(id -u).json"` wri
 - **Detected:** 2026-09-23 · **Component:** plugins/karvey/skills/karvey-impl/SKILL.md:31,35-37,137,143
 - **Change / origin:** team-adapters (F-07; source N-08)
 - **Tracker:** —
-- **Current state:** DETECTADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 Resume `karvey-impl` on a change whose [DB] tasks are done: they sit at `👀 review` (impl's new end state, and no skill moves them to `done`, F-06). The skill picks the "first pending task" and waits "until its dependent [DB] is completed".
@@ -149,15 +149,21 @@ Resume `karvey-impl` on a change whose [DB] tasks are done: they sit at `👀 re
 - Expected: logical states only (REQ-ADP-021): next = first `todo` or orphan `in_progress`; a dependency is satisfied at `review` or `done`; one declared source for resuming, drift reported.
 
 ### Root cause
-Not yet confirmed by execution (found by reading; a skill is agent instructions). Hypothesis: the 3.10 rewrite changed impl's end state to `review` but left the pre-3.10 words `pending`/`completed` in the selection and dependency rules.
+Confirmed by reading the text (a skill is agent instructions; there is no task-picker code to execute): the 3.10 rewrite changed impl's end state to `review` but left the pre-3.10 words `pending`/`completed` in the selection and dependency rules. The E1.F12 text work rewrote the selection rule (`karvey-impl/SKILL.md:39`, logical states, one declared source, drift reported) but left the two dependency bullets saying "until its dependent [DB] is completed" (F-39).
 
 ### Fix
-Planned in wave1-hardening, together with the F-06 spec revision (who moves leaves to `done`).
+On `feature/wave1-hardening` (F-39): the dependency bullets now read "Start a [Backend] task only when the [DB] tasks it depends on are at `review` or `done`" (same for [Frontend]); the Step 2 lead-in states the rule once (a dependency is satisfied at `review` or `done`, never only at `done`); Steps 5 and 7 no longer speak of "completed" tasks. New lint check **L-36** fails when karvey-impl's selection/dependency/resume text uses a state no skill writes (`pending`, `completed`, `finished`), waits for `done` only, or does not state the `review`-or-`done` rule.
+
+### Regression test
+L-36 (karvey-impl selects and resumes in logical states) in `plugins/karvey/scripts/lint-plugin.py`: red on `main` (5 errors: "first pending task", "next pending task", both "is completed" dependency bullets, rule not stated), green here. Unit: `plugins/karvey/tests/unit/test_lint_plugin.py` (`L36`: completed dependency, first pending task, done-only dependency, rule not stated fail; "completed" outside the rule and code blocks pass). Indexed in `plugins/karvey/tests/regression/test_incidents.py`; the agent-behaviour script `plugins/karvey/tests/manual/impl-resume.md` stays as QA evidence.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-23 17:34 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | retroactive QA D7 N-08; raised to high with C-02/I-12 |
+| 2026-09-24 08:20 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | residue at karvey-impl/SKILL.md:40-41 confirmed (F-39) |
+| 2026-09-24 08:20 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | dependency bullets rewritten to `review` or `done`; L-36 added |
+| 2026-09-24 08:25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | L-36 red on main (5), green here; test_lint_plugin.py L36 and test_incidents.py pass |
 
 ## BUG-06 — `project.json:management` as a legacy string breaks the `!= markdown` guards
 - **Priority:** high

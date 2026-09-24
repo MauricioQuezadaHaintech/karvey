@@ -1469,7 +1469,7 @@ it against `docs/bugs_dev_testing.md`. REQ-W1-107 requires each entry to name it
 
 | BUG | Check that proves the fix | Level |
 |---|---|---|
-| BUG-05 impl resume on dead states | L-28 (logical states in impl) + manual script `tests/manual/impl-resume.md` (REQ-W1-085) | lint + manual |
+| BUG-05 impl resume on dead states | L-36 (logical states in impl selection and dependencies; F-39) + manual script `tests/manual/impl-resume.md` (REQ-W1-085) | lint + manual |
 | BUG-06 legacy `management` string | `test_config_resolve` (string/object/none) + `test_state_fix` + L-28 (`!= markdown` text) | unit + lint |
 | BUG-07 README / plugin.json ClickUp | L-31 | lint |
 | BUG-08 invalid `KARVEY_TZ` | `statusline.json` TZ cases | table |

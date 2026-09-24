@@ -36,9 +36,9 @@ If nothing is specified: start from the next selectable task (Step 2).
 
 ### Step 2 — Select the task to execute
 
-Select from **one declared source** — the tracker when `karvey-config.py resolve management` reports `external: true`, else `PLAN.md` — and say which. A task is selectable when it is `todo`, or an orphan `in_progress` (a previous session died) whose dependencies are all `review` or `done`. When the other source disagrees (a task `done` in one, `todo` in the other), report the drift; do not reconcile it silently. Respect dependencies:
-- Do not execute [Backend] until its dependent [DB] is completed
-- Do not execute [Frontend] until its dependent [Backend] is completed
+Select from **one declared source** — the tracker when `karvey-config.py resolve management` reports `external: true`, else `PLAN.md` — and say which. A task is selectable when it is `todo`, or an orphan `in_progress` (a previous session died) whose dependencies are all `review` or `done`. When the other source disagrees (a task `done` in one, `todo` in the other), report the drift; do not reconcile it silently. Respect dependencies — a dependency is satisfied when it is at `review` or `done` (impl leaves its own tasks at `review`; `done` comes at QA approval), never only at `done`:
+- Start a [Backend] task only when the [DB] tasks it depends on are at `review` or `done`
+- Start a [Frontend] task only when the [Backend] tasks it depends on are at `review` or `done`
 - Tasks marked `(P)` can be executed in parallel with subagents
 - **`[human]` tasks are never executed by the agent** (see `../karvey/rules/multi-agent.md` §5). When one is next:
   1. Present its command, verification and rollback to the executor exactly as written in `tasks.md`.
@@ -75,7 +75,7 @@ Do the technical work: create/modify files per the File Structure Plan.
 
 ### Step 5 — Immediate test
 
-Run a verification before marking it as completed:
+Run a verification before setting the task to `review`:
 
 **For [DB] tasks:**
 - Run the query, SP, migration, or function with test data
@@ -101,7 +101,7 @@ A task is not done until its record is updated (`../karvey/rules/phase-close.md`
 
 ### Step 7 — Continue with the next task
 
-Repeat steps 2–6 until all tasks are completed.
+Repeat steps 2–6 until no task is selectable (all are `review` or `done`, or wait on an `awaiting-human` or `blocked` task).
 
 If there are `(P)` tasks: dispatch parallel subagents to execute them simultaneously.
 

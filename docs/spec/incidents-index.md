@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-24 (wave1-hardening E1.F14.T3: BUG-06..17 RESUELTO with their regression checks; BUG-05 still DETECTADO).
+Last updated: 2026-09-24 (wave1-hardening F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -12,7 +12,7 @@ Last updated: 2026-09-24 (wave1-hardening E1.F14.T3: BUG-06..17 RESUELTO with th
 | BUG-02 | karvey | medium | Session-hook settings nudge: wrong scope and project.json, fragile parsing, hang, imperative wording | team-adapters / F-02 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | hotfix 3.11.2 (done) |
 | BUG-03 | karvey | medium | An odd `resets_at` took the statusline down; time left truncated | team-adapters / F-03 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | hotfix 3.11.2 (done) |
 | BUG-04 | karvey | medium | Statusline debug copy at a fixed, shared, world-readable /tmp path | team-adapters / F-04 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh (case to tighten) | hotfix 3.11.2 (done) |
-| BUG-05 | karvey | high | impl decides dependencies and resume with non-logical states | team-adapters / F-07 | DETECTADO | — | wave1-hardening |
+| BUG-05 | karvey | high | impl decides dependencies and resume with non-logical states | team-adapters / F-07 | RESUELTO | L-36; plugins/karvey/tests/unit/test_lint_plugin.py (L36) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-06 | karvey | high | `project.json:management` legacy string breaks the `!= markdown` guards | team-adapters / F-08 | RESUELTO | L-28; plugins/karvey/tests/unit/test_config_resolve.py, test_state_fix.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-07 | karvey | medium | README and plugin.json still describe ClickUp as the tracker | team-adapters / F-09 | RESUELTO | L-31 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-08 | karvey | low | Invalid `KARVEY_TZ` silently falls back to the system zone | team-adapters / F-22 | RESUELTO | plugins/karvey/tests/hooks/tables/statusline.json (statusline-01..03) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
@@ -34,10 +34,10 @@ Last updated: 2026-09-24 (wave1-hardening E1.F14.T3: BUG-06..17 RESUELTO with th
 
 | State | Count | BUGs |
 |-------|-------|------|
-| DETECTADO | 1 | BUG-05 |
+| DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 20 | BUG-01 .. BUG-04, BUG-06 .. BUG-21 |
+| RESUELTO | 21 | BUG-01 .. BUG-21 |
 | REABIERTO | 0 | — |
 
 Next number: **BUG-22**.
