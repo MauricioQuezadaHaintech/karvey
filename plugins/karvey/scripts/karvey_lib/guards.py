@@ -813,18 +813,24 @@ def prod_candidates(ctx):
     return out
 
 
+ALWAYS_PRODUCTION = ("master", "main")
+
+
 def production_set(ctx, root, integ, prod):
-    """``branch_flow.production`` ∪ ``origin/HEAD`` ∪ {master, main on the remote}, minus the
-    integration branch when it differs from production (finding F-12)."""
+    """The branches a merge or push into needs the human prod approval (D-15, finding F-12):
+    ``branch_flow.production`` ∪ ``origin/HEAD`` ∪ {master, main on the remote}, minus the
+    integration branch when it differs from production. ``master``/``main`` are never removed, so a
+    renamed ``production`` or ``integration`` cannot hide them; ``origin/HEAD`` counts only when it is
+    not the integration branch (Azure Repos often defaults to ``dev``)."""
     out = {prod} if prod else set()
     rc, head = pj.git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], root)
     if rc == 0 and head.startswith("origin/"):
         out.add(head[len("origin/"):])
-    for b in ("master", "main"):
+    for b in ALWAYS_PRODUCTION:
         rc, _ = pj.git(["rev-parse", "--verify", "--quiet", "refs/remotes/origin/" + b], root)
         if rc == 0:
             out.add(b)
-    if integ and integ != prod:
+    if integ and integ != prod and integ not in ALWAYS_PRODUCTION:
         out.discard(integ)
     return out
 

@@ -1053,9 +1053,13 @@ A project overrides it in `project.json:enforcement.approval_vocabulary`, read f
 - `glab mr merge`
 - `git push` whose resolved destination ref is the production branch
 
-The **production set** is: `branch_flow.production` ∪ the remote default branch (`origin/HEAD`) ∪
-{`master`, `main`, if they exist on the remote}. A project cannot make the gate blind by renaming
-`production` (§3.5).
+The **production set** (D-15, F-12) is: `branch_flow.production` ∪ the remote default branch (`origin/HEAD`) ∪
+{`master`, `main`, if they exist on the remote}, **minus the integration branch** (`branch_flow.integration`)
+when it differs from `branch_flow.production`. The integration branch is not production: a PR or merge into
+`dev` with `integration: dev`, `production: master` is not gated, even when `origin/HEAD` is `dev` (the Azure
+Repos default). `master` and `main` are never removed, even when one of them is named as the integration
+branch, so a project cannot make the gate blind by renaming `production` or `integration` (§3.5); the remote
+default counts whenever it is not the integration branch. Table cases pg3-01..06, pg1-06, pg1-11.
 
 **The change being released**, resolved in this order, or else block:
 1. the PR head branch `feature_prefix + <id>` with `docs/spec/changes/<id>` present;
@@ -1106,7 +1110,7 @@ The agent can edit working-copy files, so settings that *weaken* a guard are rea
 |---|---|---|
 | `enforcement.prod_gate_hook` | working copy **and** `origin/{production}:docs/spec/project.json` (local ref) | Off only if `false` in both. A non-boolean counts as on. |
 | `approval_vocabulary`, `plan_marker_ttl_min` | `origin/{production}` if present, else the plugin defaults | Uncommitted edits are ignored. TTL clamped to 5..1440. |
-| `branch_flow.production` | working copy, but the production set always includes `origin/HEAD` and existing `master`/`main` | Renaming cannot hide the default branch. |
+| `branch_flow.production` | working copy, but the production set always includes existing `master`/`main` and `origin/HEAD` unless it is the integration branch (D-15) | Renaming cannot hide `main`/`master` or a non-integration default branch. |
 | `git_flow_hook`, `plan_gate_hook` | working copy **or** `origin/{production}` | On if on in either, so turning one off also requires a reviewed change. |
 
 This is what makes D-02's "switching it off is a committed `project.json` change, reviewed like any other"

@@ -59,9 +59,9 @@ The production approval is never delegated: it needs a prod-kind marker from the
 Merges and pushes into production need a human prod approval in the release ledger
 (`karvey-state.py approve {change-id} prod`, D-03).
 
-- Blocks `gh pr merge`, `az repos pr update --status completed`, `glab mr merge` and `git push` into production without it. <!-- guard-case: pg1-01-gh-merge-admin-no-approval, pg1-18-az-complete-no-approval, pg1-22-glab-merge-no-approval, pg1-25-git-push-main-no-approval -->
+- Blocks `gh pr merge`, `az repos pr update --status completed`, `glab mr merge` and `git push` into production without it. <!-- guard-case: pg1-01-gh-merge-admin-no-approval, pg1-18-az-complete-no-approval, pg1-22-glab-merge-no-approval, pg1-25-git-push-main-no-approval, pg3-03-pr-into-master-default-dev-gated, pg3-06-integration-named-main-still-gated -->
 - Allows the same command once the ledger holds the approval. <!-- guard-case: pg1-02-gh-merge-with-ledger, pg1-20-az-complete-with-ledger -->
-- A merge into the integration branch stays silent. <!-- guard-case: pg1-06-gh-merge-into-dev-silent -->
+- A merge into the integration branch stays silent, also when the remote default branch is the integration branch (D-15); `main` and `master` are always gated. <!-- guard-case: pg1-06-gh-merge-into-dev-silent, pg3-01-pr-into-dev-default-dev-not-gated, pg3-02-merge-into-dev-default-dev-not-gated -->
 - Blocks when the change cannot be determined, the CLI fails or times out, or the files are corrupt (fails closed). <!-- guard-case: pg1-08-change-cannot-be-determined, pg1-12-gh-timeout-fails-closed, pg2-05-corrupt-spec-json, pg2-08-corrupt-ledger -->
 - A hand-edited `approvals.prod` without the ledger still blocks. <!-- guard-case: pg2-07-hand-edited-approvals-prod-without-ledger -->
 
