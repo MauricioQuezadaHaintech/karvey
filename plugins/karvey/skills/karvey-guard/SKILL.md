@@ -16,23 +16,23 @@ Inspired by gstack's `/careful` + `/freeze` + `/guard`, absorbed as a single ski
 **Hard rules:**
 - It is a **cross-cutting** skill, not a phase: **it does NOT change `spec.json:phase`** or the change's state.
 - The hooks are **OPT-IN per project**, reversible. They are **never** imposed globally without the user deciding so.
-- Aligned with `karvey/rules/enforcement.md` (the canonical rule) and `karvey/rules/project-config.md`.
+- Aligned with `../karvey/rules/enforcement.md` (the canonical rule) and `../karvey/rules/project-config.md`.
 
-It manages the two hooks defined in `karvey/rules/enforcement.md`, whose templates live in `karvey/hooks/`:
+It manages the two hooks defined in `../karvey/rules/enforcement.md`, whose templates live in `../karvey/hooks/`:
 
 - **git-flow-guard** (`git-flow-guard.sh`) — `PreToolUse` over `Bash`. Blocks direct push to production, commits on `dev`/`master`, and manual deploy. Allowed flow: `feature/* → integration → PR → production`.
 - **plan-gate** (`plan-gate.sh`) — `PreToolUse` over `Edit`/`Write`/destructive `Bash`. Requires an approved plan (the `KARVEY_PLAN_FLAG` marker, default `/tmp/claude-plan-approved`) throughout the flow.
 
 ## Execution steps
 
-ALWAYS read `karvey/rules/enforcement.md` first to align before touching anything.
+ALWAYS read `../karvey/rules/enforcement.md` first to align before touching anything.
 
 Resolve the mode from `$ARGUMENTS`. If no argument is provided, show the current state (which hooks are registered in `settings.json`, whether a freeze is active, whether the approval marker exists) and offer the options.
 
 ### `--install` — Enable the enforcement hooks
 
-1. **Locate the project config.** Read `docs/spec/project.json` (schema in `karvey/rules/project-config.md`). If it doesn't exist, stop and indicate that `karvey-init` should be run first. Take `branch_flow` (`feature_prefix`, `integration`, `production`) to parameterize.
-2. **Copy the templates** from `karvey/hooks/` to the project's hooks location (e.g., `.claude/hooks/git-flow-guard.sh` and `.claude/hooks/plan-gate.sh`). Keep them executable (`chmod +x`).
+1. **Locate the project config.** Read `docs/spec/project.json` (schema in `../karvey/rules/project-config.md`). If it doesn't exist, stop and indicate that `karvey-init` should be run first. Take `branch_flow` (`feature_prefix`, `integration`, `production`) to parameterize.
+2. **Copy the templates** from `../karvey/hooks/` to the project's hooks location (e.g., `.claude/hooks/git-flow-guard.sh` and `.claude/hooks/plan-gate.sh`). Keep them executable (`chmod +x`).
 3. **Register them in the project's `settings.json`** (`.claude/settings.json`) as `PreToolUse` hooks:
    - `git-flow-guard` with a matcher over `Bash`.
    - `plan-gate` with a matcher over `Edit`, `Write`, `NotebookEdit`, and `Bash`.
@@ -63,7 +63,7 @@ For sensitive work or debugging: restrict `Edit`/`Write` to a single directory.
 
 ### `--verify` — Verification checklist before reporting "done"
 
-Read `karvey/rules/verification.md` and walk the deliverable (report, handoff, PR description, phase
+Read `../karvey/rules/verification.md` and walk the deliverable (report, handoff, PR description, phase
 close) against its failure modes. For every claim, ask what command proves it and whether that command
 was run **in this session**.
 
@@ -85,7 +85,7 @@ was run **in this session**.
 - `--verify` is read-only and always safe to run; the rest of this skill writes.
 - `--install`/`--freeze` edit `settings.json` and copy scripts: respect the approved-plan gate like any other change.
 - This skill **complements** the phase gates (`karvey-qa`, etc.) but does not replace them or approve them on its own.
-- After touching artifacts in `docs/spec/`, sync knowledge per `karvey/rules/knowledge-sync.md`.
+- After touching artifacts in `docs/spec/`, sync knowledge per `../karvey/rules/knowledge-sync.md`.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

@@ -82,12 +82,12 @@ Deliver a clear dashboard:
 
 ### 6. Method readiness checks (multi-agent / multi-repo)
 
-Reported in a separate **Method readiness** block; they do **not** change the 0–10 code score. See `karvey/rules/multi-agent.md` §3 and §9.
+Reported in a separate **Method readiness** block; they do **not** change the 0–10 code score. See `../karvey/rules/multi-agent.md` §3 and §9.
 
 **6a. Karvey skills installed in this agent's environment.** Each agent (lab server, laptop, CI runner, remote sandbox) must be able to load the method:
 - Look for the skills where the harness loads them — the plugin install (e.g. `~/.claude/plugins/marketplaces/*/plugins/karvey/`) or user/project skill folders (`~/.claude/skills/karvey*`, `.claude/skills/karvey*`) — and read the installed version from its `plugin.json`.
 - Compare with the version the project expects (`project.json:karvey_version`, if declared) and verify the skills the project's changes will need are present (at least `karvey`, the phase skills in use, and `karvey-iterate`).
-- Missing or outdated → **FAIL** with the install/update instructions **for this environment** (plugin marketplace install/update for Claude Code; copying the `skills/` folder for harnesses without plugins; re-starting the agent session so the skills load). Never report a phase as runnable in an environment where its skill is not installed.
+- Missing or outdated → **FAIL** with the install/update instructions **for this environment** (plugin marketplace install/update for Claude Code; copying the `${CLAUDE_PLUGIN_ROOT}/skills/` folder for harnesses without plugins; re-starting the agent session so the skills load). Never report a phase as runnable in an environment where its skill is not installed.
 
 **6b. Pinned inputs still exist and are current.** For every active change (`docs/spec/changes/*/spec.json`) and every `inputs.*` entry (`"{repo} {path} @{commit}"`), plus `links.parent`/`links.children` and `decisions`:
 - The repo is reachable, the commit exists (`git -C {repo} cat-file -e {commit}`) and the path exists at that commit (`git -C {repo} cat-file -e {commit}:{path}`). Missing → **FAIL** (the pin is broken; the change is reading something that cannot be reproduced).
@@ -113,4 +113,4 @@ Keep an independent history per repo (step 4) so the trends do not get mixed.
 - It is not a phase of the method; it is a support layer invocable at any time.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

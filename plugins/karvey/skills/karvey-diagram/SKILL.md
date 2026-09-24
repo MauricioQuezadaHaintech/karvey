@@ -52,4 +52,4 @@ When the user asks for a diagram: "flow diagram", "architecture diagram", "make 
 - **It does not advance the phase.** This skill never writes nor modifies `spec.json:phase` nor the state of the Karvey Method. It is pure visualization support.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

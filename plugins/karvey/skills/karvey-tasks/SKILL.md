@@ -9,7 +9,7 @@ argument-hint: <change-id> [-y] [--sequential]
 
 ## Purpose
 
-Generate the implementation task plan from the approved architecture. Record it in the team's tracker (Epic > Feature > Tasks with dependencies — `karvey/rules/management-adapters.md`) or in a PLAN.md checklist. Target size: 10–30 minutes per task (AI timings).
+Generate the implementation task plan from the approved architecture. Record it in the team's tracker (Epic > Feature > Tasks with dependencies — `../karvey/rules/management-adapters.md`) or in a PLAN.md checklist. Target size: 10–30 minutes per task (AI timings).
 
 ## Execution steps
 
@@ -20,8 +20,8 @@ Read:
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/architecture.md`
 - `docs/spec/changes/{change-id}/infra.md`
-- `docs/spec/project.json` → `management` (tool, location, statuses) and `karvey/rules/management-adapters.md`
-- `rules/clickup-protocol.md` (estimation rules for every tool; the ClickUp adapter when `management.tool = clickup`)
+- `docs/spec/project.json` → `management` (tool, location, statuses) and `../karvey/rules/management-adapters.md`
+- `../karvey/rules/clickup-protocol.md` (estimation rules for every tool; the ClickUp adapter when `management.tool = clickup`)
 
 Verify `approvals.infra.approved = true`. If not, stop.
 
@@ -46,7 +46,7 @@ Tasks of the same layer within a Feature can be marked `(P)` if they are indepen
 
 **Valid layer labels:** `[DB/Backend/Frontend/Infra/human]`. `Infra`-type tasks are allowed for IaC/pipeline adjustments that come up during implementation (the base infra is already defined in `infra.md`).
 
-**`[human]` tasks** (see `karvey/rules/multi-agent.md` §5): any step the agent must not or cannot execute — IAM grants, destructive deletions, console-only settings, registrar DNS without API, payments. The agent writes it so a person can run it without interpretation:
+**`[human]` tasks** (see `../karvey/rules/multi-agent.md` §5): any step the agent must not or cannot execute — IAM grants, destructive deletions, console-only settings, registrar DNS without API, payments. The agent writes it so a person can run it without interpretation:
 ```markdown
 ### F2.T3 [human] {Description} — _Depends: F2.T2_
 **Executor:** {name / role}
@@ -118,7 +118,7 @@ Update `spec.json`: `phase: "tasks-generated"`, `approvals.tasks.generated: true
 
 ### Step 4B — Update knowledge graph
 
-Sync the knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the created `tasks.md`.
+Sync the knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the created `tasks.md`.
 If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
 
 ### Step 5 — Present for approval
@@ -152,7 +152,7 @@ env vars or a vault — never in the repo.
 
 **ClickUp adapter example:**
 
-Read credentials from `.connections.json` (see `rules/clickup-protocol.md`). If it does not exist, create it and add it to `.gitignore` before continuing.
+Read credentials from `.connections.json` (see `../karvey/rules/clickup-protocol.md`). If it does not exist, create it and add it to `.gitignore` before continuing.
 
 For each task, create it in ClickUp:
 ```
@@ -272,4 +272,4 @@ When you finish this phase and have the corresponding approval, **actively ask t
 - If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

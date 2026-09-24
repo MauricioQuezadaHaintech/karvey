@@ -367,6 +367,15 @@ class L09(LintCase):
         self.t.append(RULES + "/phase-close.md", "\nSee [the rule](nope.md).\n")
         self.assertFails("L-09", "nope.md")
 
+    def test_project_paths_in_plugin_readmes_are_not_citations(self):
+        # hooks/README.md and plugins/karvey/README.md describe the user's project (F-24)
+        self.t.write("plugins/karvey/hooks/README.md", "# Hooks\n\nReads `docs/spec/project.json`.\n")
+        self.assertPasses("L-09")
+
+    def test_repo_readme_docs_paths_still_resolve(self):
+        self.t.append("README.md", "\nSee `docs/spec/missing.md`.\n")
+        self.assertFails("L-09", "docs/spec/missing.md", file="README.md")
+
     def test_placeholders_and_project_paths_are_not_citations(self):
         self.t.append(REQS, "\nRead `docs/spec/changes/{change-id}/prd.md` and `rules/{name}.md`.\n")
         self.assertPasses("L-09")

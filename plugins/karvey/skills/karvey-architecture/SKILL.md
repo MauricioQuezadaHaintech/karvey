@@ -20,8 +20,8 @@ Read in parallel:
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/design-spec.md`
 - `docs/spec/project.json` (cloud.provider, iac_tool, git_platform, **standards**)
-- `rules/security-tiers.md`
-- `rules/engineering-standards.md`
+- `../karvey/rules/security-tiers.md`
+- `../karvey/rules/engineering-standards.md`
 - **Engineering standards for the change's layers/targets**: resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and read the relevant `standards/{layer}.md`. These are a **hard constraint** on this design, not a suggestion. If no standard exists for a layer, announce it and treat every non-trivial pattern choice for that layer as a gray zone to ask (never silently pick one).
 - Project steering: `product.md`, `tech.md` or equivalents if they exist
 

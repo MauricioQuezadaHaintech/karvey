@@ -21,7 +21,7 @@ Read:
 - `docs/spec/changes/{change-id}/mockup.html` (to map E2E flows)
 - `docs/spec/changes/{change-id}/tasks.md`
 
-Also read `docs/spec/project.json` and obtain the `targets` field (see `karvey/rules/targets.md`). The actual runtime in which the E2E tests run depends on the declared target: browser (web), simulator/device (iOS/Android), terminal (CLI), HTTP client (API), hardware/emulator (embedded). **Do not assume "web" by default** — a project may have multiple targets.
+Also read `docs/spec/project.json` and obtain the `targets` field (see `../karvey/rules/targets.md`). The actual runtime in which the E2E tests run depends on the declared target: browser (web), simulator/device (iOS/Android), terminal (CLI), HTTP client (API), hardware/emulator (embedded). **Do not assume "web" by default** — a project may have multiple targets.
 
 Detect stack: `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `Gemfile`, `Cargo.toml`, or other project configuration files. Identify:
 - Backend language and framework
@@ -135,7 +135,7 @@ If there is no frontend test runner: manual verification documented as evidence.
 
 ### Step 4 — Run E2E tests in the target's actual runtime
 
-E2E tests run **in the target's actual runtime** declared in `docs/spec/project.json:targets` (see `karvey/rules/targets.md`), never against a stub or assuming "web":
+E2E tests run **in the target's actual runtime** declared in `docs/spec/project.json:targets` (see `../karvey/rules/targets.md`), never against a stub or assuming "web":
 - **web** → browser (headless or real). Framework: Playwright (`npx playwright test`), Cypress (`npx cypress run`), Selenium.
 - **iOS / Android** → simulator or physical device (via tunnel). Native framework or mobile E2E (XCUITest, Espresso, Detox, Maestro).
 - **CLI** → terminal: run the actual binary/command and verify the stdout/stderr transcript and exit code.
@@ -165,7 +165,7 @@ For each E2E flow step document:
 
 ### Step 4-bis — Infrastructure tests (IAM bindings and ops steps)
 
-If the change has `[human]` or `[Infra]` tasks that grant permissions, or is an `ops` change (`karvey/rules/multi-agent.md` §5–6), run the **read-only verification scripts** that `karvey-infra` produced (e.g. `infra/iam/{change-id}.verify.sh`) as infrastructure tests:
+If the change has `[human]` or `[Infra]` tasks that grant permissions, or is an `ops` change (`../karvey/rules/multi-agent.md` §5–6), run the **read-only verification scripts** that `karvey-infra` produced (e.g. `infra/iam/{change-id}.verify.sh`) as infrastructure tests:
 - Assert the **binding itself** (member · role · resource), not only its effect — an end-to-end success can hide an over-granted role.
 - Also assert that no broader role was granted to the same member than the one declared (least privilege).
 - Record each check in `docs/test_evidence.md` (Infrastructure section) with the command, output and PASS/FAIL. A FAIL is a `bug` finding; if the human step was not executed yet, the task stays `awaiting-human` and the test is reported as **pending**, not FAIL.
@@ -183,7 +183,7 @@ This measurement can be delegated to or related with the **`karvey-health`** ski
 
 ### Step 4C — Automatic regression tests + incident logging
 
-**Every time a test detects a bug**, log it in the incident tracker `docs/bugs_dev_testing.md` as a `BUG-NN` (continue the incremental counter — read the file first), opening its **State history** at `DETECTADO` (see `karvey/rules/incident-tracking.md`), and mirror it to `docs/spec/incidents-index.md`. The same bug is also recorded as a `bug`-type finding in `findings.md` (Step 5C).
+**Every time a test detects a bug**, log it in the incident tracker `docs/bugs_dev_testing.md` as a `BUG-NN` (continue the incremental counter — read the file first), opening its **State history** at `DETECTADO` (see `../karvey/rules/incident-tracking.md`), and mirror it to `docs/spec/incidents-index.md`. The same bug is also recorded as a `bug`-type finding in `findings.md` (Step 5C).
 
 **When it is fixed**, generate an automatic regression test that covers exactly that case, so it fails again if the bug reappears, and move the incident to `RESUELTO` (a regression test is required to reach `RESUELTO`). That is: for every fixed FAIL, a new test must remain in the suite.
 

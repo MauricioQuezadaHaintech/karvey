@@ -91,9 +91,9 @@ A Claude Code plugin cannot run anything at install time, so Karvey asks the tea
 
 | Setting | Options | Rule |
 |---|---|---|
-| **Notifications** (QA / deploy / incidents) | Google Chat · Slack · Microsoft Teams · e-mail · webhook · none | `rules/notifications.md` |
-| **Task management** | ClickUp · Jira · Linear · Azure Boards · GitHub Projects · spreadsheet (Excel/Sheets/CSV) · Markdown (`PLAN.md`) · other | `rules/management-adapters.md` |
-| **Status flow** | the team's real statuses mapped to 5 logical states: `todo` · `in_progress` · `review` · `done` · `blocked` | `rules/management-adapters.md` |
+| **Notifications** (QA / deploy / incidents) | Google Chat · Slack · Microsoft Teams · e-mail · webhook · none | `plugins/karvey/skills/karvey/rules/notifications.md` |
+| **Task management** | ClickUp · Jira · Linear · Azure Boards · GitHub Projects · spreadsheet (Excel/Sheets/CSV) · Markdown (`PLAN.md`) · other | `plugins/karvey/skills/karvey/rules/management-adapters.md` |
+| **Status flow** | the team's real statuses mapped to 5 logical states: `todo` · `in_progress` · `review` · `done` · `blocked` | `plugins/karvey/skills/karvey/rules/management-adapters.md` |
 
 Skills never assume a tool or a status name: they speak in logical states and the adapter resolves them. A project created before 3.10 with only `"management": "clickup"` keeps working — the statuses are read from the list and the mapping is confirmed once.
 
@@ -120,8 +120,8 @@ A self-contained page (no external requests), **in English by default with a swi
 - **Ordered deployment** `feature → dev → PR master`, pipeline-triggered, verifying the **PR gates** (CI + branch policies) before the prod OK, with **canary** post-deploy and **branch hygiene** (absorbed branches deleted, unreleased ones reported — nothing left in branches).
 - **Semver versioning + CHANGELOG** per component/repo, with human + AI-model traceability; every deploy bumps the version, and a front shows the **dev version in DEV** (`x.y.z-dev.N+sha`) and the **release version in PROD**, read from the version file and checked by the canary.
 - **Multi-agent & multi-repo work**: parent/child changes across repos, `D-NN` decisions and pinned inputs (`repo path @commit`) from design/copy/legal agents, approvals that record who and where, `[human]` tasks with verification and rollback, `ops` and `hotfix` change types, light CI for docs-only PRs.
-- **Optional team layer** (`rules/team.md`): roles, a **rotation handoff captured by commands** (not composed from memory), census, decision log with a cross-check that stops you re-asking what was already decided, and **cost measurement**. Opt-in, and the rule opens by telling you when *not* to use it: the measured run behind it cost ≈US$1,000 over 3 days with 6 agents and ended back on a single agent.
-- **Verification rules before reporting "done"** (`rules/verification.md`): the failure modes that make a green report false — a citation is not the thing cited, exit 0 is not success, a green test over uncalled code, a filename that does not identify a version.
+- **Optional team layer** (`plugins/karvey/skills/karvey/rules/team.md`): roles, a **rotation handoff captured by commands** (not composed from memory), census, decision log with a cross-check that stops you re-asking what was already decided, and **cost measurement**. Opt-in, and the rule opens by telling you when *not* to use it: the measured run behind it cost ≈US$1,000 over 3 days with 6 agents and ended back on a single agent.
+- **Verification rules before reporting "done"** (`plugins/karvey/skills/karvey/rules/verification.md`): the failure modes that make a green report false — a citation is not the thing cited, exit 0 is not success, a green test over uncalled code, a filename that does not identify a version.
 - **Optional hook-based enforcement** (git-flow + plan-gate) — opt-in per project.
 
 ## Install (as a Claude Code plugin)

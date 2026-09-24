@@ -9,7 +9,7 @@ argument-hint: <change-id> [--source <branch>] [--target <branch>]
 
 ## Purpose
 
-Code review across 9 dimensions, post-implementation. Generates a review document, creates subtasks in the team's tracker (`karvey/rules/management-adapters.md`) or PLAN.md, and notifies the team's configured channel (`karvey/rules/notifications.md`).
+Code review across 9 dimensions, post-implementation. Generates a review document, creates subtasks in the team's tracker (`../karvey/rules/management-adapters.md`) or PLAN.md, and notifies the team's configured channel (`../karvey/rules/notifications.md`).
 
 ## Execution steps
 
@@ -93,7 +93,7 @@ Dispatch parallel subagents for dimensions 1–4, run 5–6 and 9 in the main co
 - `CHANGELOG.md` with an entry for the current version
 - Consistency between the version file and the CHANGELOG
 
-Verify the CHANGELOG per the `karvey/rules/changelog-policy.md` rule, for each repo with changes:
+Verify the CHANGELOG per the `../karvey/rules/changelog-policy.md` rule, for each repo with changes:
 - `CHANGELOG.md` has an entry for the current version
 - The entry includes the **responsible human** (name + contact)
 - The entry indicates the **AI model** used
@@ -122,7 +122,7 @@ Audit the **already-built** UI in the target's actual runtime (not the mockup, n
 
 **Dimension 9: Standards conformance (golden path)**
 
-`karvey-impl` loads the engineering standards as a hard constraint and requires a Deviation Request before departing from them (`karvey/rules/engineering-standards.md`). This dimension **verifies that it actually happened**. Without it the method only trusts: an implementation that skipped the golden path without raising the Deviation Request reaches production with nothing having checked.
+`karvey-impl` loads the engineering standards as a hard constraint and requires a Deviation Request before departing from them (`../karvey/rules/engineering-standards.md`). This dimension **verifies that it actually happened**. Without it the method only trusts: an implementation that skipped the golden path without raising the Deviation Request reaches production with nothing having checked.
 
 Do not confuse it with Dimension 3: **Consistency** measures coherence *internal* to the module (patterns, naming, duplication); **conformance** measures agreement with the *documented standard*. A module can be impeccably consistent with itself and be entirely outside the golden path.
 
@@ -248,7 +248,7 @@ Add a "QA Review" section at the end of PLAN.md with the list of findings and pe
 
 ### Step 3C — Update knowledge graph
 
-Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the generated `REVISION_PR_{n}_{date}.md`.
+Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the generated `REVISION_PR_{n}_{date}.md`.
 If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
 
 ### Step 3D — Update status in spec.json
@@ -260,7 +260,7 @@ Update `docs/spec/changes/{change-id}/spec.json` per the QA result:
 
 ### Step 3E — Classify findings & route the iteration loop
 
-QA findings are not all the same kind. Append each to `docs/spec/changes/{change-id}/findings.md` classified by type (see `karvey/rules/iteration-loop.md`), because each goes to a different edge:
+QA findings are not all the same kind. Append each to `docs/spec/changes/{change-id}/findings.md` classified by type (see `../karvey/rules/iteration-loop.md`), because each goes to a different edge:
 - `bug` — code defect against a correct spec (most security/error/consistency findings). → incident tracker `BUG-NN` (`incident-tracking.md`) + the QA micro-loop `impl→test→qa`.
 - `spec-gap` — QA revealed the **spec was wrong/incomplete** (e.g. an impact finding that shows a requirement contradicts existing behavior, or a visual deviation because `design-spec` never specified that state). → re-open `requirements`.
 - `emergent` — a valid improvement that is **out of this change's scope**. → discovery backlog.
@@ -271,11 +271,11 @@ Then **route them** with `/karvey-iterate {change-id}` (the engine confirms type
 
 ### Step 3F — Phase-close
 
-Run the phase-close ritual (`karvey/rules/phase-close.md`): comment + status in the team's tracker (or `PLAN.md`), ensure findings/incidents/backlog are synced, update `spec.json` (`updated_at`).
+Run the phase-close ritual (`../karvey/rules/phase-close.md`): comment + status in the team's tracker (or `PLAN.md`), ensure findings/incidents/backlog are synced, update `spec.json` (`updated_at`).
 
 ### Step 4 — Notify the team (per `notifications.md`)
 
-Read `docs/spec/project.json:notifications` (`karvey/rules/notifications.md`):
+Read `docs/spec/project.json:notifications` (`../karvey/rules/notifications.md`):
 - `channel` unset → skip and say `Notification: not configured — run /karvey:karvey-init --settings`.
 - `channel: none`, or `qa` not in `events` → skip and say so.
 - Otherwise send the summary to `target` through `via` (MCP, CLI, webhook or API — whatever is actually available;
@@ -336,4 +336,4 @@ When finishing this phase, first check convergence: if `findings.md` has open `b
 - If you resume in another session, `/karvey {change-id}` indicates which phase you are in and which one follows.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

@@ -239,7 +239,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F10.T6 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; lane C |
 | E1.F11.T1 [Backend] | ✅ done | 25 | 2 | 0 | no human review yet; lane D; 8 statusline table cases |
 | E1.F11.T2 [Frontend] | ✅ done | 45 | 4 | 0 | no human review yet; lane D; 22 node tests + static page tests |
-| E1.F12.T1 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F12.T1 [Backend] | ✅ done | 20 | 5 | 0 | no human review yet; 9 identical copies deleted; 188 citations rewritten relative (L-09 README heuristic narrowed, F-24) |
 | E1.F12.T2 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F12.T3 [Backend] | ⬜ todo | 45 | — | — |  |
 | E1.F12.T4 [Backend] | ⬜ todo | 40 | — | — |  |

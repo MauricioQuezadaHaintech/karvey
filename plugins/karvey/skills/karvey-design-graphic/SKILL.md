@@ -24,7 +24,7 @@ Verify `approvals.mockup.approved = true`. If not, stop.
 
 Check whether a `PRODUCT.md` or `DESIGN.md` exists in the project to understand the existing brand.
 
-**Design produced by another agent or repo** (see `karvey/rules/multi-agent.md` §3): if `spec.json:inputs.design` or `inputs.design_system` is set, read them **at the pinned commit** (`git -C {repo} show {commit}:{path}`). The design system is a hard input: tokens, type and components come from it and are not re-invented here — this phase maps them onto the change and scores the result. If a designer agent delivers a new version, update the pin (`inputs.design = "{repo} {path} @{new-commit}"`) and record the re-pin in `revision_history`; `karvey-iterate` decides the ripple. When **this** phase is the one producing the design for other repos, finish by giving the consumers the reference to pin: `{repo} docs/spec/changes/{change-id}/design-spec.md @{commit}`.
+**Design produced by another agent or repo** (see `../karvey/rules/multi-agent.md` §3): if `spec.json:inputs.design` or `inputs.design_system` is set, read them **at the pinned commit** (`git -C {repo} show {commit}:{path}`). The design system is a hard input: tokens, type and components come from it and are not re-invented here — this phase maps them onto the change and scores the result. If a designer agent delivers a new version, update the pin (`inputs.design = "{repo} {path} @{new-commit}"`) and record the re-pin in `revision_history`; `karvey-iterate` decides the ripple. When **this** phase is the one producing the design for other repos, finish by giving the consumers the reference to pin: `{repo} docs/spec/changes/{change-id}/design-spec.md @{commit}`.
 
 ### Step 2 — Identify the design register
 
@@ -44,7 +44,7 @@ Determine the product type:
 
 Infer from `proposal.md` and `spec.json.capability`.
 
-**Target agnosticism (do NOT assume web).** The design guidance depends on the target declared in `docs/spec/project.json` (see `karvey/rules/targets.md`):
+**Target agnosticism (do NOT assume web).** The design guidance depends on the target declared in `docs/spec/project.json` (see `../karvey/rules/targets.md`):
 
 - **web** → **WCAG** (contrast, focus, semantics, keyboard navigation)
 - **iOS** → **Apple Human Interface Guidelines (HIG)** (Dynamic Type typography, safe areas, gestures, native controls)
@@ -276,7 +276,7 @@ The `design-spec.md` defines the system at the **token** level (palette, type, s
 - **`design-spec.md`** — palette (hex + OKLCH, light AND dark), typography, tokens, illustration register.
 - **`proposal.md` / requirements** — the character/brand, the domain, and what each surface is for.
 
-**Target agnosticism (do NOT assume web).** Adapt the components to the project's target(s) declared in `docs/spec/project.json` (see `karvey/rules/targets.md`). The component inventory changes with the target: mobile → screens, bottom sheets, bottom-nav, push notifications; web → pages, side-nav, toasts, tables; CLI → screens/prompts, states, ANSI treatment; etc. If the project has multiple targets, add a section per target (e.g. "App" + "WebApp"). No component is assumed just because the web default has it.
+**Target agnosticism (do NOT assume web).** Adapt the components to the project's target(s) declared in `docs/spec/project.json` (see `../karvey/rules/targets.md`). The component inventory changes with the target: mobile → screens, bottom sheets, bottom-nav, push notifications; web → pages, side-nav, toasts, tables; CLI → screens/prompts, states, ANSI treatment; etc. If the project has multiple targets, add a section per target (e.g. "App" + "WebApp"). No component is assumed just because the web default has it.
 
 Write to `docs/spec/changes/{change-id}/design-components.md` using this template:
 
@@ -347,7 +347,7 @@ Only include sections that the change actually has (drop E if there is no second
 
 ### Step 9C — Update knowledge graph
 
-Sync the knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect `design-spec.md`, `design-components.md`, and the updated `mockup.html`.
+Sync the knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect `design-spec.md`, `design-components.md`, and the updated `mockup.html`.
 If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
 
 ### Step 10 — Output
@@ -385,4 +385,4 @@ When you finish this phase and have the corresponding approval, **actively ask t
 - If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

@@ -66,4 +66,4 @@ This skill **can be hooked into the cycle closeout in karvey-archive (PHASE 12)*
 - Do not expose sensitive data beyond what's necessary for the team retrospective.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

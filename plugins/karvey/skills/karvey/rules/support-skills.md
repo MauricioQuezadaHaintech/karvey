@@ -20,7 +20,7 @@ In addition to the 13 pipeline phases (0–12) (linear, with gates), Karvey has 
 | `karvey-scrape` | Web extractor | Extract data from a website and encode the scrape as a reusable skill. | scrape, skillify |
 | `karvey-benchmark-models` | Model benchmark | Compare models (latency/tokens/cost/quality) for a skill or task. | benchmark-models |
 | `karvey-import` | Migration | Convert existing Kiro (`.kiro/specs/*`) or gstack specs into Karvey's `docs/spec/` structure. Non-destructive on the source. | — |
-| `karvey-team` | Team layer (**optional**) | Set up and run a team of agents (roles, manifests, boards, census, relay) and **measure what it costs**. Opt-in: Karvey is complete with one agent, and a team is expensive — read `rules/team.md` first. | — (Karvey) |
+| `karvey-team` | Team layer (**optional**) | Set up and run a team of agents (roles, manifests, boards, census, relay) and **measure what it costs**. Opt-in: Karvey is complete with one agent, and a team is expensive — read `team.md` first. | — (Karvey) |
 | `karvey-decisions` | Decision log | Single numbered registry (`D-NN` business, `C-NN` direction) that changes cite; **`cross` checks a question against the log before anything is declared blocked**. | — (Karvey) |
 | `karvey-context` | Dashboard (read-only) | Any time: project config, capabilities, active/archived changes, deploy queue / landing report, open backlog count and **live branches** (absorbed vs carrying unreleased work). Never writes. | — (Karvey) |
 | `karvey-standards` | Standards uplift | Distill the team's engineering golden paths (db/backend/frontend…) from the **real system** into the team's standards repo (`project.json:standards`), in the `engineering-standards.md` format. Re-runnable to refresh. Never writes into the public plugin. | — (Karvey) |
@@ -34,4 +34,4 @@ In addition to the 13 pipeline phases (0–12) (linear, with gates), Karvey has 
 
 ## Quick equivalences (if you come from gstack)
 
-What in gstack are standalone commands, in Karvey is **absorbed into a phase** or into this **support layer**. See the coverage table in `karvey/SKILL.md`.
+What in gstack are standalone commands, in Karvey is **absorbed into a phase** or into this **support layer**. See the coverage table in `../SKILL.md`.

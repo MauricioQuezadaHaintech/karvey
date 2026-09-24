@@ -9,7 +9,7 @@ argument-hint: <change-id> [F{n}.T{n}] [--from F{n}.T{n}]
 
 ## Purpose
 
-Execute the implementation tasks in DB→Backend→Frontend order. Per-task cycle: read → execute → test → validate. Update the team's tracker (`karvey/rules/management-adapters.md`) or `PLAN.md` in real time. States are logical (`todo | in_progress | review | done | blocked`), resolved through `project.json:management.statuses`.
+Execute the implementation tasks in DB→Backend→Frontend order. Per-task cycle: read → execute → test → validate. Update the team's tracker (`../karvey/rules/management-adapters.md`) or `PLAN.md` in real time. States are logical (`todo | in_progress | review | done | blocked`), resolved through `project.json:management.statuses`.
 
 ## Execution steps
 
@@ -21,8 +21,8 @@ Read:
 - `docs/spec/changes/{change-id}/architecture.md`
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/deviations.md` (if it exists — deviations already approved at design time)
-- Pinned inputs from other agents (`spec.json:inputs` — design, design system, copy, legal), read **at the pinned commit**. Copy and legal texts are implemented verbatim from that commit; if the source moved on, stop and route it through `/karvey-iterate` instead of silently taking the newer version (`karvey/rules/multi-agent.md` §3).
-- **Engineering standards** for the layers being implemented: resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and read the relevant `standards/{layer}.md` (see `karvey/rules/engineering-standards.md`). These are a **hard constraint** on the code you write.
+- Pinned inputs from other agents (`spec.json:inputs` — design, design system, copy, legal), read **at the pinned commit**. Copy and legal texts are implemented verbatim from that commit; if the source moved on, stop and route it through `/karvey-iterate` instead of silently taking the newer version (`../karvey/rules/multi-agent.md` §3).
+- **Engineering standards** for the layers being implemented: resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and read the relevant `standards/{layer}.md` (see `../karvey/rules/engineering-standards.md`). These are a **hard constraint** on the code you write.
 
 Verify `approvals.tasks.approved = true`. If not, stop.
 
@@ -36,7 +36,7 @@ Identify the next pending task while respecting dependencies:
 - Do not execute [Backend] until its dependent [DB] is completed
 - Do not execute [Frontend] until its dependent [Backend] is completed
 - Tasks marked `(P)` can be executed in parallel with subagents
-- **`[human]` tasks are never executed by the agent** (see `karvey/rules/multi-agent.md` §5). When one is next:
+- **`[human]` tasks are never executed by the agent** (see `../karvey/rules/multi-agent.md` §5). When one is next:
   1. Present its command, verification and rollback to the executor exactly as written in `tasks.md`.
   2. Set it to **`awaiting-human`** — tracker: `comment(task, "🙋 AWAITING HUMAN: {executor} · {command}")` + the tool's tag/label `awaiting-human` (the logical state stays `todo`, or `blocked` if the team maps it so); Markdown: `🙋 awaiting-human` in `PLAN.md`.
   3. Skip to the next task that does **not** depend on it. Dependents stay blocked.
@@ -66,7 +66,7 @@ Do the technical work: create/modify files per the File Structure Plan.
 - Do not hardcode secrets or credentials
 - Validate the user context/authentication on every endpoint and data access, per the project's pattern
 
-**Branching rules (see `karvey/rules/deploy-workflow.md`):**
+**Branching rules (see `../karvey/rules/deploy-workflow.md`):**
 - Before starting: do a `git pull` and work on the `feature/{change-id}` branch (use the `feature_prefix` from `docs/spec/project.json` if it differs). Create the branch if it does not exist.
 - NEVER commit directly to `dev` or `master`.
 - 1 commit per task on the feature branch, with a descriptive message following the project's git conventions.
@@ -81,7 +81,7 @@ Detect the versioning mechanism by reading `architecture.md` or exploring the pr
 - If there is a `CHANGELOG.md` or equivalent → add an entry with the version, date, and description
 - If the project has no versioning → skip this step
 
-IN ADDITION to the bump, record an entry in `CHANGELOG.md` following the `karvey/rules/changelog-policy.md` policy. The entry MUST include:
+IN ADDITION to the bump, record an entry in `CHANGELOG.md` following the `../karvey/rules/changelog-policy.md` policy. The entry MUST include:
 - **Responsible human**: taken from `git config user.name` / `git config user.email`. Never leave it empty nor replace it with the AI.
 - **AI model** used for the change.
 - **The why** of the change (motivation / objective, not just the what).
@@ -106,7 +106,7 @@ If the test fails: fix it within the same task before advancing.
 
 ### Step 6 — Complete the task in management
 
-This is the **per-task phase-close ritual** (`karvey/rules/phase-close.md`): comment + status + cascade, applied to every task. It is mandatory, not a "should" — a task is not done until its management record is updated.
+This is the **per-task phase-close ritual** (`../karvey/rules/phase-close.md`): comment + status + cascade, applied to every task. It is mandatory, not a "should" — a task is not done until its management record is updated.
 
 **In the team's tracker:** `comment(task, "✅ COMPLETED …")` + `set_status(task, review)` + record the actual time where the tool supports it.
 ClickUp adapter example:
@@ -202,4 +202,4 @@ When you finish this phase and have the corresponding approval, **actively ask t
 - If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

@@ -88,4 +88,4 @@ Deliver a clear report with:
 This skill **complements, does not replace** `karvey-qa`'s safety gate. A favorable second opinion does not authorize a release: the QA gate and human approval remain mandatory. And this skill **never advances the phase** of the Karvey Method.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

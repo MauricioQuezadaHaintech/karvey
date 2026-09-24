@@ -9,7 +9,7 @@ A skill is **guidance** that the model follows voluntarily — it guarantees not
 
 - `karvey-init` asks whether to activate enforcement. If yes, it writes the hooks into the project's `settings.json` (or the corresponding `.claude/settings.json`), parameterized with `project.json:branch_flow`.
 - `karvey-guard` manages them afterward: **install**, **disable**, or grant a temporary **override**.
-- The templates live in `karvey/hooks/` (`git-flow-guard.sh`, `plan-gate.sh`).
+- The templates live in `../hooks/` (`git-flow-guard.sh`, `plan-gate.sh`).
 
 ## Hook 1 — git-flow-guard (PreToolUse on Bash)
 

@@ -318,4 +318,4 @@ Support: iterate investigate second-opinion health browse checkpoint diagram
 - **Credits / inspiration:** Karvey synthesizes the **first-hand experience** of Mauricio Quezada Ibáñez (HainTech) with conceptual ideas from **Kiro** (spec-driven / cc-sdd) and **gstack** (Garry Tan). It is synthesis and conceptual inspiration; it **does not incorporate code** from those projects.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

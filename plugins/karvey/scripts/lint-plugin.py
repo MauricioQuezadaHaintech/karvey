@@ -586,9 +586,13 @@ def cited_paths(line, segments):
 
 def citing_files(ctx):
     files = [(p, PLUGIN_SEGMENTS) for p in ctx.text_files()]
-    for p in (ctx.plugin / "hooks" / "README.md", ctx.plugin / "README.md", ctx.root / "README.md"):
+    # The plugin's own READMEs describe the user's project: a `docs/spec/…` there is the project's
+    # file, not a path in this repository (as in SKILL.md). Only the repository README cites docs/.
+    for p in (ctx.plugin / "hooks" / "README.md", ctx.plugin / "README.md"):
         if p.is_file():
-            files.append((p, README_SEGMENTS))
+            files.append((p, PLUGIN_SEGMENTS))
+    if (ctx.root / "README.md").is_file():
+        files.append((ctx.root / "README.md", README_SEGMENTS))
     return files
 
 

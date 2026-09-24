@@ -94,4 +94,4 @@ Converts a markdown file into a PDF with professional presentation.
 - The **internal specs** (`docs/spec/`) are the responsibility of the phase skills, not this one.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

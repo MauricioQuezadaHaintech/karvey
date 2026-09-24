@@ -9,7 +9,7 @@ argument-hint: <change-id>
 
 ## Purpose
 
-Complete the change's lifecycle: merge spec-deltas into the living specs, archive the change directory, and close the Epic in the team's tracker (`karvey/rules/management-adapters.md`) or mark it done in PLAN.md.
+Complete the change's lifecycle: merge spec-deltas into the living specs, archive the change directory, and close the Epic in the team's tracker (`../karvey/rules/management-adapters.md`) or mark it done in PLAN.md.
 
 ## Execution steps
 
@@ -120,7 +120,7 @@ grep -n "### Requirement:" docs/spec/specs/{capability}/spec.md
 
 ### Step 7B — Update knowledge graph
 
-Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the spec-delta merge and the archiving.
+Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the spec-delta merge and the archiving.
 The `--update` also removes from the graph the nodes of documents that were deleted (REMOVED requirements).
 
 ### Step 7C — Cycle retrospective (optional, recommended)
@@ -156,7 +156,7 @@ It is not blocking: if the user skips it, continue anyway with the final output.
 
 ### Step 7E — Discovery backlog sweep (so nothing stays "in the air")
 
-A closing cycle almost always surfaced ideas and out-of-scope work. Before finishing, sweep the discovery backlog (`karvey/rules/backlog.md`) so those become real future work instead of evaporating.
+A closing cycle almost always surfaced ideas and out-of-scope work. Before finishing, sweep the discovery backlog (`../karvey/rules/backlog.md`) so those become real future work instead of evaporating.
 
 1. Read `docs/spec/backlog.md`. List the `open` items whose origin is this change (and any other `open` items, for visibility).
 2. For each, decide with the user: **promote** (create a future `change-id` now via `/karvey-grill` or `/karvey-init`, carrying the backlog context as PRD seed and recording `seed_backlog_id`), **keep** (leave `open` for later), or **discard** (with a reason).
@@ -168,7 +168,7 @@ This is the step that guarantees post-cycle discoveries don't get lost.
 ### Step 7F — Branch sweep (nothing left in branches)
 
 The change is not closed while one of its branches is still alive. In each repo of the change, apply
-`karvey/rules/deploy-workflow.md` → *Branch hygiene*: `git fetch --prune`, then every non-protected branch
+`../karvey/rules/deploy-workflow.md` → *Branch hygiene*: `git fetch --prune`, then every non-protected branch
 **absorbed** into `{production}` is deleted (remote + local, closing its PR if open); every branch **not
 absorbed** is listed with its unique commits and PR, and the human decides (rescue / keep / discard). If
 `karvey-deploy` 2.12 already cleaned, this confirms it. Report the counts — never sweep silently.
@@ -219,4 +219,4 @@ After archiving, **ask the user** whether they want to run the recommended optio
 With this, the change's cycle is closed. For a new change: `/karvey-grill` or `/karvey-init`.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

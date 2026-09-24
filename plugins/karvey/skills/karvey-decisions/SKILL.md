@@ -10,7 +10,7 @@ argument-hint: [log | cross | show <D-NN>] [--series D|C] [--repo <ops_repo>]
 A **cross-cutting** skill of the Karvey Method. **NOT a phase**; it never moves `spec.json:phase`.
 
 In Karvey, a change cites the decisions it comes from (`spec.json:decisions: ["D-NN@repo"]`, see
-`rules/multi-agent.md`). This skill owns the **other side**: the registry those references point at,
+`../karvey/rules/multi-agent.md`). This skill owns the **other side**: the registry those references point at,
 so a decision taken in one change is visible to the next one, and so nobody re-asks the human
 something they already answered.
 
@@ -47,7 +47,7 @@ it, never edited into something else.
      model is routinely read as deleting the concept.
 3. If it supersedes an earlier decision, cite it **in both directions**: the new one names the old,
    and the old one gets a superseded-by line. **Correct the body of anything the decision invalidates**
-   — a decision appended at the end leaves the body lying (`rules/verification.md`).
+   — a decision appended at the end leaves the body lying (`../karvey/rules/verification.md`).
 4. **Record it before announcing it.** Whoever takes a decision writes it down first, so the person
    who goes looking for it finds it.
 
@@ -76,9 +76,9 @@ and by `karvey-checkpoint restore` before repeating an open question.
 - Works **with or without** the team layer: a single agent benefits from the registry just as much,
   and `cross` is worth it from the first week.
 - `karvey-requirements` treats contradicting a linked decision as a blocking review-gate failure
-  (`rules/multi-agent.md`); this skill is where that link resolves.
+  (`../karvey/rules/multi-agent.md`); this skill is where that link resolves.
 - Never approves a gate on its own and never edits a change's phase.
 - Shared ops repo: commit by explicit path (`git commit -- <paths>`).
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

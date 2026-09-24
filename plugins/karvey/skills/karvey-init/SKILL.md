@@ -9,7 +9,7 @@ argument-hint: <change-id> [--capability <nombre>] | --settings
 
 ## Purpose
 
-Initialize the structure of a new specification and register the Epic in the team's management tool (`karvey/rules/management-adapters.md`). The first time Karvey is used in a project it also asks the **team settings** — notification channel, task-management tool and its status flow — because a plugin cannot run anything at install time (Step 3.2).
+Initialize the structure of a new specification and register the Epic in the team's management tool (`../karvey/rules/management-adapters.md`). The first time Karvey is used in a project it also asks the **team settings** — notification channel, task-management tool and its status flow — because a plugin cannot run anything at install time (Step 3.2).
 
 ## Execution steps
 
@@ -47,17 +47,17 @@ Check whether `docs/spec/project.json` exists.
 
 **If it ALREADY exists:** read it and reuse its values. Don't ask anything about this config again.
 
-**If it does NOT exist:** create it. Pre-populate from the `karvey-grill` synthesis if it's available in the conversation; ask for or infer the missing fields. The complete schema is in `karvey/rules/project-config.md` (cite that rule). Fields:
+**If it does NOT exist:** create it. Pre-populate from the `karvey-grill` synthesis if it's available in the conversation; ask for or infer the missing fields. The complete schema is in `../karvey/rules/project-config.md` (cite that rule). Fields:
 
 - **`git_platform`**: `github` | `azure_devops`.
 - **`cloud.provider`**: `azure` | `gcp` | `aws` | `mixed` | `none`.
 - **`iac_tool`**: `terraform` | `bicep` | `pulumi` | `none`.
-- **`knowledge_sync`**: decide based on `karvey/rules/knowledge-sync.md` — if an Obsidian MCP is available in the session → `"obsidian"`; if not → `"graphify"`.
+- **`knowledge_sync`**: decide based on `../karvey/rules/knowledge-sync.md` — if an Obsidian MCP is available in the session → `"obsidian"`; if not → `"graphify"`.
 - **`repos`**: array of the project's repos. MINIMUM 1 element, never empty.
 - **`spec_repo`**: if `repos` has 1 → that same one; if there are several → ask which is the main repo where `docs/spec/` lives.
 - **`branch_flow`**: by default `{ "feature_prefix": "feature/", "integration": "dev", "production": "master" }`.
 
-Write `docs/spec/project.json` with these values (see the schema in `karvey/rules/project-config.md`).
+Write `docs/spec/project.json` with these values (see the schema in `../karvey/rules/project-config.md`).
 
 ### Step 3.2 — Team settings (first use, or `--settings`)
 
@@ -68,12 +68,12 @@ step that runs). If both blocks exist and there is no `--settings`, skip it and 
 
 Ask with `AskUserQuestion`, one block at a time, showing examples — never assume the answer:
 
-1. **Notifications** (`karvey/rules/notifications.md`) — *Where does the team get QA and deploy notices?*
+1. **Notifications** (`../karvey/rules/notifications.md`) — *Where does the team get QA and deploy notices?*
    `Google Chat` · `Slack` · `Microsoft Teams` · `E-mail` · `Webhook` · `None`.
    Then: the **target** (space id, `#channel`, team/channel, list, or the *name* of the secret holding the
    webhook — never the URL itself), **how** this session reaches it (`mcp` · `cli` · `webhook` · `api`,
    checking what is actually available), and the **events** (default `qa`, `deploy`).
-2. **Task management** (`karvey/rules/management-adapters.md`) — *Where does the team track its work?*
+2. **Task management** (`../karvey/rules/management-adapters.md`) — *Where does the team track its work?*
    `ClickUp` · `Jira` · `Linear` · `Azure Boards` · `GitHub Projects` · `Spreadsheet (Excel/Sheets/CSV)` ·
    `Markdown (PLAN.md)` · `Other`. Then the **location** (list id, project key, team, file path) and **via**.
 3. **Status flow** — map the team's real statuses to the 5 logical states `todo · in_progress · review ·
@@ -87,7 +87,7 @@ vault — never into `project.json`. Report the result in one line, e.g.
 
 ### Step 3.5 — Enforcement opt-in (hooks)
 
-After creating `project.json`, ask the user whether they want to enable the Karvey method's **enforcement hooks**. See the detail in `karvey/rules/enforcement.md`.
+After creating `project.json`, ask the user whether they want to enable the Karvey method's **enforcement hooks**. See the detail in `../karvey/rules/enforcement.md`.
 
 ```
 Do you want to enable Karvey's enforcement hooks? (OPT-IN, you can enable them later)
@@ -122,9 +122,9 @@ Use the team's tool from `project.json:management` (Step 3.2) — do not ask "Cl
 `spec.json:management` to that tool name. Only ask if this change must be tracked somewhere else than the
 project default (rare: e.g. a client's board).
 
-- **ClickUp:** the Epic goes to `management.location` (the `backlog_list_id`); protocol in `rules/clickup-protocol.md`.
+- **ClickUp:** the Epic goes to `management.location` (the `backlog_list_id`); protocol in `../karvey/rules/clickup-protocol.md`.
 - **Jira / Linear / Azure Boards / GitHub Projects / Spreadsheet / Other:** the logical operations of
-  `karvey/rules/management-adapters.md`, resolved for that tool.
+  `../karvey/rules/management-adapters.md`, resolved for that tool.
 - **Markdown:** a `PLAN.md` is created in the change's directory; nothing else to configure.
 
 ### Step 5 — Collect metadata
@@ -132,12 +132,12 @@ project default (rare: e.g. a client's board).
 Ask (or infer from the pre-spec context):
 
 1. **Capability**: the functional domain it belongs to (e.g., `call-management`, `authentication`, `notifications`). If it doesn't exist in `docs/spec/specs/`, it will be created.
-2. **Security Tier**: 1-4. Read `rules/security-tiers.md` to guide the user.
+2. **Security Tier**: 1-4. Read `../karvey/rules/security-tiers.md` to guide the user.
 3. **Layers involved**: DB / Backend / Frontend / Infra (can be multiple)
 4. **Brief description**: 1-2 lines of the problem it solves
 5. **Goal (the change's north star)**: the concrete objective being pursued — what observable, verifiable result defines the success of this change. Ask: "What is this change's north star? What concrete result do we want to achieve?". Save it verbatim in `spec.json` (`goal`) and reflect it as a highlighted section in `prd.md`.
 
-6. **Change type**: `feature` (default) · `ops` (no application code: IAM, DNS, secrets, console config) · `hotfix` (urgent production fix). See `karvey/rules/multi-agent.md` §6–7.
+6. **Change type**: `feature` (default) · `ops` (no application code: IAM, DNS, secrets, console config) · `hotfix` (urgent production fix). See `../karvey/rules/multi-agent.md` §6–7.
 7. **Multi-repo / multi-agent links** (ask only if `project.json:repos` has more than one repo or an operations repo exists):
    - Does this change belong to a **parent change** in another repo? → `links.parent = "{change-id}@{repo}"`, and append this change as `"{change-id}@{this-repo}"` to the parent's `links.children` (if the parent repo is out of reach, say so and leave the instruction for its owner). If this change **is** the parent, fill `links.children` as the children are created.
    - Which **business decisions** (`D-NN`) is it based on? → `decisions: ["D-NN@{ops-repo}"]`.
@@ -203,7 +203,7 @@ Write `docs/spec/changes/{change-id}/spec.json` with:
 }
 ```
 
-Each approval, when granted, also records `by`, `role` (`human` | `ceo-delegate`), `date` and `ref` (`D-NN`) — see `karvey/rules/multi-agent.md` §4. Omit `links`/`decisions`/`inputs` values that don't apply (keep the keys empty), and the full schema is in `karvey/rules/living-specs.md`.
+Each approval, when granted, also records `by`, `role` (`human` | `ceo-delegate`), `date` and `ref` (`D-NN`) — see `../karvey/rules/multi-agent.md` §4. Omit `links`/`decisions`/`inputs` values that don't apply (keep the keys empty), and the full schema is in `../karvey/rules/living-specs.md`.
 
 ### Step 8 — Create prd.md
 
@@ -250,13 +250,13 @@ This goal is the north star that all Karvey phases pursue: each phase re-reads i
 
 ### Step 9A — Create the Epic in the team's tracker
 
-`create_epic(change)` in the tool of `project.json:management.tool` (`karvey/rules/management-adapters.md`),
+`create_epic(change)` in the tool of `project.json:management.tool` (`../karvey/rules/management-adapters.md`),
 at `management.location`. Credentials from `.connections.json` (git-ignored), env vars or a vault — never in the repo.
 The Epic description format below is the same for every tool.
 
-**ClickUp adapter example** (protocol in `rules/clickup-protocol.md`):
+**ClickUp adapter example** (protocol in `../karvey/rules/clickup-protocol.md`):
 
-Read credentials from `.connections.json` (see `rules/clickup-protocol.md`). If it doesn't exist, create it and add it to `.gitignore` before continuing.
+Read credentials from `.connections.json` (see `../karvey/rules/clickup-protocol.md`). If it doesn't exist, create it and add it to `.gitignore` before continuing.
 Determine the next Epic number by searching in ClickUp:
 ```
 clickup_search
@@ -358,7 +358,7 @@ Write `docs/spec/changes/{change-id}/PLAN.md`:
 
 ### Step 9C — Update the knowledge graph
 
-Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the documents created.
+Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the documents created.
 If `docs/spec/graphify-out/` doesn't exist (first time in the project), invoke `/graphify docs/spec/` without `--update`.
 
 ### Step 10 — Final output
@@ -399,4 +399,4 @@ When you finish this phase and have the corresponding approval, **actively ask t
 - If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

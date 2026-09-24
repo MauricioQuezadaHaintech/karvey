@@ -48,4 +48,4 @@ It is a **meta / diagnostic** skill: it observes and measures, but **it does not
 - It is invocable at any point in the Karvey cycle as support for decision-making.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

@@ -23,7 +23,7 @@ It is **idempotent and non-destructive**: it never deletes the source (`.kiro/`,
 
 ## Step 1 — Ensure project config
 
-Read `docs/spec/project.json` (see `karvey/rules/project-config.md`). If it does not exist, create it (or run `/karvey-init`'s project-config step): ask/infer `git_platform`, `cloud`, `iac_tool`, `knowledge_sync`, `targets`, `repos` (min 1), `spec_repo`, `branch_flow`. For Kiro, pre-fill `targets`/stack from `.kiro/steering/tech.md` if present.
+Read `docs/spec/project.json` (see `../karvey/rules/project-config.md`). If it does not exist, create it (or run `/karvey-init`'s project-config step): ask/infer `git_platform`, `cloud`, `iac_tool`, `knowledge_sync`, `targets`, `repos` (min 1), `spec_repo`, `branch_flow`. For Kiro, pre-fill `targets`/stack from `.kiro/steering/tech.md` if present.
 
 ---
 
@@ -85,7 +85,7 @@ gstack does **not** persist a fixed on-disk spec layout, so this mode is **heuri
 
 ## Step 3 — Knowledge sync
 
-After writing, run the sync step per `karvey/rules/knowledge-sync.md` (Obsidian if available; otherwise `/graphify docs/spec/ --update`).
+After writing, run the sync step per `../karvey/rules/knowledge-sync.md` (Obsidian if available; otherwise `/graphify docs/spec/ --update`).
 
 ## Step 4 — Output
 
@@ -107,4 +107,4 @@ Next step: /karvey {change-id}   → see status and continue the pipeline
 - Generated artifacts follow the project's language (`spec.json` `language`), never forced to English.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

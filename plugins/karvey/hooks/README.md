@@ -1,7 +1,7 @@
 # Karvey hooks
 
 Two pieces that keep a session from forgetting who it is and from running past the point where
-rotating is cheaper than continuing. **They work for a single agent**; a team (`karvey/rules/team.md`,
+rotating is cheaper than continuing. **They work for a single agent**; a team (`../skills/karvey/rules/team.md`,
 optional) only changes where the agent's profile lives.
 
 | File | What it is | How it is installed |

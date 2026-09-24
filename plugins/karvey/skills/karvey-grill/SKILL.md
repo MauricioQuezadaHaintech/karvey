@@ -91,7 +91,7 @@ Systematically walk through these branches, **one question at a time**:
 
     *My recommendation:* {look for `*.tf`, `*.bicep`, `Pulumi.yaml`; if there's none, assume manual infra and confirm it}
 
-> **Note:** the knowledge-sync decision (Obsidian vs graphify) is NOT asked here — karvey-init resolves it based on the availability of the Obsidian MCP (see `karvey/rules/knowledge-sync.md`).
+> **Note:** the knowledge-sync decision (Obsidian vs graphify) is NOT asked here — karvey-init resolves it based on the availability of the Obsidian MCP (see `../karvey/rules/knowledge-sync.md`).
 
 #### Branch D: Success criteria
 22. How will we know this works correctly?
@@ -200,4 +200,4 @@ When you finish this phase and have the corresponding approval, **actively ask t
 - If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

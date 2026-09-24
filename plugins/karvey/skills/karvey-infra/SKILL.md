@@ -21,7 +21,7 @@ Read in parallel:
 - `docs/spec/changes/{change-id}/spec.json` (especially `security_tier`, `layers`, `management`)
 - `docs/spec/changes/{change-id}/architecture.md` (especially the **"## Cloud Infrastructure"** section: which services from which cloud)
 - `docs/spec/project.json` (fields `git_platform`, `cloud.provider`, `iac_tool`, `repos`, `spec_repo`, `branch_flow`)
-- Shared rules: `rules/project-config.md`, `rules/deploy-workflow.md`, `rules/changelog-policy.md`, `rules/knowledge-sync.md`, `rules/security-tiers.md`
+- Shared rules: `../karvey/rules/project-config.md`, `../karvey/rules/deploy-workflow.md`, `../karvey/rules/changelog-policy.md`, `../karvey/rules/knowledge-sync.md`, `../karvey/rules/security-tiers.md`
 
 Entry checks:
 - If `docs/spec/project.json` **does not exist** → **stop** and indicate to run `karvey-init` first (see `project-config.md`).
@@ -165,7 +165,7 @@ Checklist format:
 
 ### Step 5-bis — Operations plan (`ops` changes) and human-executed IAM
 
-For changes **without application code** (IAM, DNS, secrets rotation, quotas, console configuration — `spec.json:type = "ops"`, see `karvey/rules/multi-agent.md` §6), this phase produces a **command plan** instead of (or besides) IaC. Its lifecycle is **plan → execution → verification → archive**:
+For changes **without application code** (IAM, DNS, secrets rotation, quotas, console configuration — `spec.json:type = "ops"`, see `../karvey/rules/multi-agent.md` §6), this phase produces a **command plan** instead of (or besides) IaC. Its lifecycle is **plan → execution → verification → archive**:
 
 1. **Plan** — in `infra.md`, an ordered table: step · exact command (or console path) · executor (agent / `[human]`) · read-only verification + expected output · rollback. Prefer IaC; when a step can only be done by a person (IAM grants on a production project, registrar DNS, destructive deletions), it becomes a `[human]` task in `karvey-tasks`.
 2. **Versioned script** — every IAM/permission change a human runs lives as a script in the repo (e.g. `infra/iam/{change-id}.sh`, idempotent, with its rollback counterpart). The human runs **that** script, not an ad-hoc command, so what was executed is reviewable in git.
@@ -189,7 +189,7 @@ Any IaC/pipeline generated or modified **must record an entry** in the `CHANGELO
 
 ### Step 8 — Management
 
-Record in the project's management, reading `management` from `spec.json` (settings in `project.json:management`, `karvey/rules/management-adapters.md`):
+Record in the project's management, reading `management` from `spec.json` (settings in `project.json:management`, `../karvey/rules/management-adapters.md`):
 - Team's tracker → `create_task` with the `[Infra]` prefix per relevant resource/pipeline (state `todo`).
 - Markdown (`PLAN.md`) → add entries in `PLAN.md` with the status of the infra and pipelines per repo/environment.
 
@@ -218,7 +218,7 @@ After presentation/approval (auto-approve if flag `-y`; if not, present a summar
 
 ### Step 10 — Knowledge sync
 
-At the end, run the sync step per `rules/knowledge-sync.md`:
+At the end, run the sync step per `../karvey/rules/knowledge-sync.md`:
 - If `knowledge_sync = "obsidian"` → sync `infra.md` to the vault via the Obsidian MCP (with a fallback to graphify if it fails).
 - If `knowledge_sync = "graphify"` → `/graphify docs/spec/ --update` (or `/graphify docs/spec/` if `graphify-out/` does not exist).
 - Multi-repo with infra code changes → graphify also in the affected repos.
@@ -254,4 +254,4 @@ When you finish this phase and have the corresponding approval, **actively ask t
 - If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

@@ -15,7 +15,7 @@ Generate a navigable HTML file with **3–4 levels of depth** before defining th
 
 ## Target agnosticism
 
-The mockup **adapts to the target declared** in `docs/spec/project.json` (the `targets` field) — see `karvey/rules/targets.md`. **Don't assume web by default:**
+The mockup **adapts to the target declared** in `docs/spec/project.json` (the `targets` field) — see `../karvey/rules/targets.md`. **Don't assume web by default:**
 
 - **web** → navigable HTML (App Shell + views + overlays, as described below)
 - **mobile (ios/android)** → screen flow (a sequence of screens with transitions, not a desktop sidebar)
@@ -156,7 +156,7 @@ Update `spec.json`:
 
 ### Step 4B — Update the knowledge graph
 
-Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the `mockup.html` created or modified.
+Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the `mockup.html` created or modified.
 If `docs/spec/graphify-out/` doesn't exist, invoke `/graphify docs/spec/` without `--update`.
 
 ### Step 4C — Spec↔mockup validation (catch spec-gaps early)
@@ -168,7 +168,7 @@ For each requirement, check:
 - Does the mockup imply a behavior/state/field that **no requirement covers**? (screen → no requirement = a likely **spec-gap**: the requirement is incomplete)
 - Are the Level-4 states (errors, confirmations, empty, multi-step) actually specified, or did the mockup just invent them?
 
-Record each mismatch. Then route per `karvey/rules/iteration-loop.md`:
+Record each mismatch. Then route per `../karvey/rules/iteration-loop.md`:
 - If `requirements` is **still in this change's scope and not yet locked downstream**, the cheapest path is to fix the requirement now: note it and update `requirements.md` + `spec-delta.md` directly (you're still pre-design), keeping PRD traceability.
 - If the gap is bigger or contested, append it to `docs/spec/changes/{change-id}/findings.md` as a `spec-gap` and run `/karvey-iterate {change-id}` to route it formally.
 
@@ -208,7 +208,7 @@ If the user gives feedback:
 2. Identify which screens/components to change
 3. Edit `mockup.html` applying the changes
 4. Increment the iteration number in the banner
-5. Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`)
+5. Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`)
 6. Return to Step 5
 
 If the user approves:
@@ -238,4 +238,4 @@ When you finish this phase and have the corresponding approval, **actively ask t
 - If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

@@ -9,7 +9,7 @@ argument-hint: <change-id> [-y]
 
 ## Purpose
 
-Generate requirements in EARS format for the change, produce the spec-delta with ADDED/MODIFIED/REMOVED operations, and register the Features in the team's tracker (`karvey/rules/management-adapters.md`) or PLAN.md.
+Generate requirements in EARS format for the change, produce the spec-delta with ADDED/MODIFIED/REMOVED operations, and register the Features in the team's tracker (`../karvey/rules/management-adapters.md`) or PLAN.md.
 
 ## Execution steps
 
@@ -20,13 +20,13 @@ Read:
 - `docs/spec/changes/{change-id}/prd.md` (PRD generated in karvey-init)
 - `docs/spec/changes/{change-id}/proposal.md`
 - `docs/spec/specs/{capability}/spec.md` (current living spec)
-- `rules/ears-format.md`
-- `rules/living-specs.md`
-- `rules/security-tiers.md`
+- `../karvey/rules/ears-format.md`
+- `../karvey/rules/living-specs.md`
+- `../karvey/rules/security-tiers.md`
 
 The requirements must derive from the PRD and cover its objectives and acceptance criteria.
 
-**Multi-agent / multi-repo context** (see `karvey/rules/multi-agent.md`):
+**Multi-agent / multi-repo context** (see `../karvey/rules/multi-agent.md`):
 - If `links.parent` is set, also read the **parent change's** `prd.md` and acceptance criteria in its repo: this child's requirements trace to the parent PRD.
 - For each `decisions` entry (`D-NN@{repo}`), read the decision in the operations repo's decision log.
 - For each `inputs.*` entry (`design`, `design_system`, `copy`, `legal`), read the file **at the pinned commit** (`git -C {repo} show {commit}:{path}`), not the working copy. If an input the requirements need is missing or unpinned, ask for it — never assume "the latest version".
@@ -145,7 +145,7 @@ Do you approve the requirements to continue?
 
 If the `-y` flag is present: auto-approve.
 
-If the user approves: update `spec.json` with `approvals.requirements.approved: true` plus `by`, `role` (`human` | `ceo-delegate`), `date` and `ref` (the `D-NN` where the approval is recorded) — see `karvey/rules/multi-agent.md` §4.
+If the user approves: update `spec.json` with `approvals.requirements.approved: true` plus `by`, `role` (`human` | `ceo-delegate`), `date` and `ref` (the `D-NN` where the approval is recorded) — see `../karvey/rules/multi-agent.md` §4.
 
 **`ops` changes** (`spec.json:type = "ops"`): requirements are **lite** — the verifiable goal, one EARS requirement per observable end state (e.g. "the deploy service account SHALL hold role X on project Y") and the rollback expectation. No mockup/design phases follow; the next step is `/karvey-infra`.
 
@@ -201,7 +201,7 @@ Add a Features section in `PLAN.md` with the list of features and their covered 
 
 ### Step 8C — Update the knowledge graph
 
-Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the documents created or modified.
+Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the documents created or modified.
 If `docs/spec/graphify-out/` doesn't exist, invoke `/graphify docs/spec/` without `--update`.
 
 ### Step 9 — Final output
@@ -229,4 +229,4 @@ When you finish this phase and have the corresponding approval, **actively ask t
 - If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

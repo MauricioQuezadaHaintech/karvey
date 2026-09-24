@@ -11,7 +11,7 @@ argument-hint: <change-id>
 
 PHASE 11 of the Karvey Method, between `karvey-qa` (PHASE 10) and `karvey-archive` (PHASE 12). It executes the **ordered deployment flow** (feature branch → `dev` → PR to `master`) honoring the team's hard rules to the letter: never commit directly to `dev`/`master`, never deploy manually (the deploy is triggered by the pipeline), `pull` before starting and before each merge/PR, and **prod never without explicit human OK**.
 
-It runs **only after** `karvey-qa` has passed with no open critical/high findings. The central rule is `karvey/rules/deploy-workflow.md`; follow it exactly.
+It runs **only after** `karvey-qa` has passed with no open critical/high findings. The central rule is `../karvey/rules/deploy-workflow.md`; follow it exactly.
 
 ## Execution steps
 
@@ -21,7 +21,7 @@ BEFORE touching git, read:
 - `docs/spec/changes/{change-id}/spec.json`
 - `docs/spec/project.json`
 
-If `project.json` does not exist, stop and indicate to run `karvey-init` first (see `karvey/rules/project-config.md`).
+If `project.json` does not exist, stop and indicate to run `karvey-init` first (see `../karvey/rules/project-config.md`).
 
 Verify the release gate. If **anything fails, STOP and report what is missing. Do not deploy.**
 
@@ -32,14 +32,14 @@ Verify the release gate. If **anything fails, STOP and report what is missing. D
 
 2. **Tests PASS.** Review `docs/test_evidence.md`: there must be entries for the `{change-id}` with PASS result for the change's tests.
 
-3. **CHANGELOG updated in each affected repo** (see `karvey/rules/changelog-policy.md`). For each repo in `project.json:repos` with changes, verify `CHANGELOG.md`:
+3. **CHANGELOG updated in each affected repo** (see `../karvey/rules/changelog-policy.md`). For each repo in `project.json:repos` with changes, verify `CHANGELOG.md`:
    - [ ] Entry for the current version.
    - [ ] **Responsible human** (name + contact) — never empty nor replaced by "AI".
    - [ ] **AI model** that assisted (e.g., `Claude Opus 4.8`).
    - [ ] The **why**, not just the what.
    - [ ] CHANGELOG version matches the project's version file.
 
-4. **Hotfix lane** (`spec.json:type = "hotfix"`, see `karvey/rules/multi-agent.md` §7): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three. The regression test is green in CI. The version is its own rev bump, and `revision_history` has the entry with `bug` + `release`. Missing any → stop.
+4. **Hotfix lane** (`spec.json:type = "hotfix"`, see `../karvey/rules/multi-agent.md` §7): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three. The regression test is green in CI. The version is its own rev bump, and `revision_history` has the entry with `bug` + `release`. Missing any → stop.
 
 5. **Parent/child** (`links`): if this change is a **child**, deploy only this repo and report the result to the parent change. If it is a **parent**, it has no deploy of its own — verify every child is deployed and then mark the parent `deployed`.
 
@@ -47,7 +47,7 @@ If any of these fail, report exactly what is missing and stop. **Do not deploy.*
 
 ### Step 0-bis — Documentation-only PRs
 
-If the diff of the PR touches only docs/specs (`docs/**`, `*.md`, `spec.json`) — check with `git diff --name-only {base}...HEAD` — it follows the **docs-only lane** (`karvey/rules/multi-agent.md` §8):
+If the diff of the PR touches only docs/specs (`docs/**`, `*.md`, `spec.json`) — check with `git diff --name-only {base}...HEAD` — it follows the **docs-only lane** (`../karvey/rules/multi-agent.md` §8):
 - It runs the **light CI** (spec lint: valid JSON in every `spec.json`, required fields, well-formed `links`/`decisions`/`inputs`, no broken markdown links). If the repo has no such job yet, propose adding one with a path filter so build/test/deploy jobs are skipped for docs-only paths.
 - It is merged by whoever `project.json:docs_pr.merged_by` declares (if not declared, ask once and record it). No version bump is needed unless the repo versions its docs.
 - It never triggers a deploy, never carries code, and does not need `approvals.prod`. If code sneaks in, it is not docs-only: go back to the normal flow.
@@ -81,7 +81,7 @@ Before deploying, confirm **how and where** each repo is released. If `project.j
 
 **Discover the production URL and health check:**
 - Look for the prod URL in `project.json:deploy`, pipeline variables, `README`/`docs/spec/`, or the platform config (e.g., `fly.toml`, `vercel.json`).
-- Determine the health endpoint: `/health`, `/healthz`, `/api/health`, the frontend's root page, or whatever `architecture.md` declares. For non-web targets (CLI/API/mobile), the "health check" is the equivalent in the target's **actual runtime** (see `karvey/rules/targets.md`).
+- Determine the health endpoint: `/health`, `/healthz`, `/api/health`, the frontend's root page, or whatever `architecture.md` declares. For non-web targets (CLI/API/mobile), the "health check" is the equivalent in the target's **actual runtime** (see `../karvey/rules/targets.md`).
 
 If the prod URL/health cannot be discovered, **do not invent it**: record it as pending and ask the user for the data before the prod canary. The hard rule stands: the deploy is triggered by the pipeline, this detection is **only** to know **where to monitor**, never to deploy manually.
 
@@ -93,7 +93,7 @@ The deploy platform and the **git host** are different things: a repo can deploy
 or the reverse. **The PR CLI is not interchangeable** — assuming `gh` against Azure Repos fails at the worst
 moment, with the branch already merged into `dev`.
 
-Read **`project.json:git_platform`** (see `karvey/rules/project-config.md`). If it is not declared, detect it
+Read **`project.json:git_platform`** (see `../karvey/rules/project-config.md`). If it is not declared, detect it
 from the remote and record it there:
 
 ```bash
@@ -112,7 +112,7 @@ config is stale. Used in 2.9, 2.9-bis and 2.10.
 
 ### Step 2 — Ordered deployment flow (FOR EACH repo)
 
-Apply following `karvey/rules/deploy-workflow.md` EXACTLY, in the dependency order from Step 1.
+Apply following `../karvey/rules/deploy-workflow.md` EXACTLY, in the dependency order from Step 1.
 
 **2.1 — `git pull` before starting:**
 ```bash
@@ -130,7 +130,7 @@ If the `feature/{change-id}` branch does not exist, **stop** — `karvey-impl` s
 git pull origin {integration}     # default: dev
 ```
 
-**2.4 — Version bump + CHANGELOG BEFORE the push (see `karvey/rules/versioning.md` and `karvey/rules/changelog-policy.md`).** This is part of the 6-step checklist (Step 3) and is mandatory: **NEVER deploy without bumping the version.**
+**2.4 — Version bump + CHANGELOG BEFORE the push (see `../karvey/rules/versioning.md` and `../karvey/rules/changelog-policy.md`).** This is part of the 6-step checklist (Step 3) and is mandatory: **NEVER deploy without bumping the version.**
 
 1. **Determine the semver segment to increment** (`major.minor.rev`) per the nature of the change:
    - **major** → breaking change (breaks API/contract/schema/behavior compatibility).
@@ -140,7 +140,7 @@ git pull origin {integration}     # default: dev
 3. **Document in `CHANGELOG.md` per component AND per repository** (`changelog-policy.md` format): an entry for the new version with the **responsible human** (name + contact, never empty nor "AI"), the **AI model** that assisted (e.g., `Claude Opus 4.8`), and the **why** of the change (not just the what). Indicate the incremented semver segment and why.
 4. **(If the repo has a frontend) recommend a version visible in the UI** — see Step 2.4-bis.
 
-**2.4-bis — Version visible in the front (recommendation).** If any `target` in `project.json` is `web`/mobile/desktop with a UI (check `project.json:targets`), **recommend to the user** exposing the version in the interface (footer, "About" screen), **differentiated by environment** (`karvey/rules/versioning.md`): **DEV shows the dev version** (`{version}-dev.{build}+{sha}` + a visible `DEV` mark) and **PROD shows the release version** (`{version}`). The version is read from the version file at build time — never from a pipeline variable, which goes stale silently; the pipeline stage only provides the environment, build number and commit. If the version is already visible, confirm it was updated with the bump and that it differs by environment.
+**2.4-bis — Version visible in the front (recommendation).** If any `target` in `project.json` is `web`/mobile/desktop with a UI (check `project.json:targets`), **recommend to the user** exposing the version in the interface (footer, "About" screen), **differentiated by environment** (`../karvey/rules/versioning.md`): **DEV shows the dev version** (`{version}-dev.{build}+{sha}` + a visible `DEV` mark) and **PROD shows the release version** (`{version}`). The version is read from the version file at build time — never from a pipeline variable, which goes stale silently; the pipeline stage only provides the environment, build number and commit. If the version is already visible, confirm it was updated with the bump and that it differs by environment.
 
 **2.5 — Merge feature → integration:**
 ```bash
@@ -203,7 +203,7 @@ unblock itself.
 **2.10 — Merge to `master` ONLY with explicit human OK ⇒ triggers PROD pipeline.**
 Use `AskUserQuestion` to request explicit prod approval. Without human OK, **do not merge**.
 
-**`approvals.prod` is mandatory before the merge** (`karvey/rules/multi-agent.md` §4): record in `spec.json` `approvals.prod = { "by": "{human name}", "date": "YYYY-MM-DD", "ref": "D-NN" }`, where `D-NN` is the entry in the decision log that holds the OK, and commit it on the branch that goes to `master`. This keeps the prod approval **in the repo history** even when the git platform cannot enforce required reviewers (e.g. no GitHub Enterprise / branch protection). The prod gate is never delegated to an agent (`role` is always `human`). Without a filled `approvals.prod`, **do not merge**. With OK and the record committed:
+**`approvals.prod` is mandatory before the merge** (`../karvey/rules/multi-agent.md` §4): record in `spec.json` `approvals.prod = { "by": "{human name}", "date": "YYYY-MM-DD", "ref": "D-NN" }`, where `D-NN` is the entry in the decision log that holds the OK, and commit it on the branch that goes to `master`. This keeps the prod approval **in the repo history** even when the git platform cannot enforce required reviewers (e.g. no GitHub Enterprise / branch protection). The prod gate is never delegated to an agent (`role` is always `human`). Without a filled `approvals.prod`, **do not merge**. With OK and the record committed:
 ```bash
 gh pr merge --merge                            # GitHub    ⇒ triggers PROD pipeline
 az repos pr update --id {pr} --status completed # Azure Repos ⇒ triggers PROD pipeline
@@ -211,7 +211,7 @@ az repos pr update --id {pr} --status completed # Azure Repos ⇒ triggers PROD 
 
 **2.11 — Post-deploy canary in PROD (see Step 2-bis):** after the merge to `master`, wait for the PROD pipeline and run the **canary loop** over the actual production runtime (`prod_url` / health from Step 1.5). It is the direct reinforcement of zero-downtime: if the canary detects a regression, **alert and recommend an immediate rollback**. **If there is a front, check the visible version:** PROD must show exactly the released `{version}`, with no `-dev` suffix and no DEV mark.
 
-**2.12 — Branch hygiene: delete what production absorbed (see `karvey/rules/deploy-workflow.md` → *Branch hygiene*).**
+**2.12 — Branch hygiene: delete what production absorbed (see `../karvey/rules/deploy-workflow.md` → *Branch hygiene*).**
 Once PROD is merged and the canary is OK, no branch of this change stays alive. For each repo:
 ```bash
 git fetch origin --prune
@@ -226,7 +226,7 @@ them with their unique commits and PR for the human to decide. Report deleted / 
 
 ### Step 2-bis — Post-deploy canary loop (zero-downtime reinforcement)
 
-Inspired by gstack's `/canary` and adapted to the target's actual runtime (see `karvey/rules/targets.md`). It runs **after each deploy** (in DEV after 2.7 and in PROD after 2.11), pointing at the just-deployed environment (`dev_url`/`prod_url` and health from Step 1.5). It watches that the deploy did not degrade the service.
+Inspired by gstack's `/canary` and adapted to the target's actual runtime (see `../karvey/rules/targets.md`). It runs **after each deploy** (in DEV after 2.7 and in PROD after 2.11), pointing at the just-deployed environment (`dev_url`/`prod_url` and health from Step 1.5). It watches that the deploy did not degrade the service.
 
 **What the loop watches (several iterations, not a single check):**
 1. **Console/log errors** — browser console (web, via `karvey-browse`), runtime/platform logs (Functions, container, etc.). Look for new errors that did not exist before the deploy.
@@ -243,7 +243,7 @@ Inspired by gstack's `/canary` and adapted to the target's actual runtime (see `
 
 ### Step 3 — 6-step checklist (before the push to dev)
 
-From `karvey/rules/deploy-workflow.md`. Show and verify before the push to `dev`:
+From `../karvey/rules/deploy-workflow.md`. Show and verify before the push to `dev`:
 
 1. Am I on a feature branch? (not `dev`/`master`)
 2. Did I bump the semver version (major/minor/rev) in each affected component/repo and update `CHANGELOG.md` per component and per repo? (see `versioning.md` and `changelog-policy.md`; if there is a frontend, did I recommend/update the version visible in the UI?) **NEVER deploy without bumping the version.**
@@ -273,7 +273,7 @@ Only after the 6 → the pipeline deploys dev. For prod, repeat the verification
 
 ### Step 5 — Record in management
 
-Read `management` from `spec.json` (the tool; its settings in `project.json:management` — `karvey/rules/management-adapters.md`).
+Read `management` from `spec.json` (the tool; its settings in `project.json:management` — `../karvey/rules/management-adapters.md`).
 
 **In the team's tracker:** `create_task("[Deploy] {change-id}")` with the 6-step checklist as subtasks, `set_status(…, in_progress)`
 while the deploy runs, `link(…, PR)`, and `set_status(…, done)` on prod confirmation (`blocked` if the release gate or the
@@ -307,14 +307,14 @@ spec.json:
 
 ### Step 7 — Knowledge sync
 
-Run the sync step of `karvey/rules/knowledge-sync.md` per `knowledge_sync` in `project.json`:
+Run the sync step of `../karvey/rules/knowledge-sync.md` per `knowledge_sync` in `project.json`:
 - `obsidian` → sync the modified documents to the vault via the Obsidian MCP (fallback to graphify if it fails).
 - `graphify` → `/graphify docs/spec/ --update` (if `docs/spec/graphify-out/` does not exist, without `--update`).
 - Multi-repo with code changes → graphify also in each affected repo.
 
 ### Step 8 — Notify the team + final output
 
-Send the `deploy` notification per `karvey/rules/notifications.md`: read `project.json:notifications`; if `channel` is
+Send the `deploy` notification per `../karvey/rules/notifications.md`: read `project.json:notifications`; if `channel` is
 unset, `none`, or `deploy` is not in `events` → skip and say so. Otherwise post to `target` via `via`, in the channel's own
 markup: repos + versions, DEV/PROD state, canary result, branches cleaned. Never read the destination from `CLAUDE.md`;
 a failed send is reported, not swallowed.
@@ -361,4 +361,4 @@ When finishing this phase and having the corresponding approval, **actively ask 
 - If you resume in another session, `/karvey {change-id}` indicates which phase you are in and which one follows.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
