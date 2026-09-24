@@ -1,7 +1,7 @@
 ---
 name: karvey-health
-description: Code quality dashboard for the Karvey method. Wraps type checker, linter, tests and dead-code detection into a weighted 0-10 score; tracks the trend over time. Also checks method readiness in multi-agent/multi-repo work — Karvey skills installed in the agent's environment and pinned cross-repo inputs (repo path @commit) still existing and up to date. Triggers include "karvey health", "salud del código", "calidad de código", "quality score", "health dashboard", "skills instalados", "skills installed", "inputs desactualizados", "input drift".
-allowed-tools: Read, Bash, Glob, Grep
+description: Karvey support — 0-10 code health score (types, lint, tests, dead code) plus method readiness (python3, skills, pinned inputs) — before a phase or periodically. Triggers include "karvey health", "salud del código karvey".
+allowed-tools: Read, Write, Bash, Glob, Grep
 argument-hint: [<repo or path>]
 ---
 
@@ -17,7 +17,7 @@ The goal is that anyone on the team can ask "how is the repo's health?" and get 
 
 ## When it is used
 
-- On demand, when the user asks for "karvey health", "salud del código", "calidad de código", "quality score" or "health dashboard".
+- On demand (`karvey health`).
 - As a support check before or after any phase (requirements, design, implementation, test, deploy), without altering the phase state.
 - In any repo, **stack-agnostic**.
 
@@ -84,12 +84,16 @@ Deliver a clear dashboard:
 
 Reported in a separate **Method readiness** block; they do **not** change the 0–10 code score. See `../karvey/rules/multi-agent.md` §3 and §9.
 
-**6a. Karvey skills installed in this agent's environment.** Each agent (lab server, laptop, CI runner, remote sandbox) must be able to load the method:
+**6a. The method's runtime.** `python3 --version` must report ≥ 3.9 (the state tool, the hooks'
+dispatcher and the linter need it). Missing or older → **FAIL**: without it the hooks run only their bash
+fail modes and no phase write can go through `karvey-state.py`.
+
+**6b. Karvey skills installed in this agent's environment.** Each agent (lab server, laptop, CI runner, remote sandbox) must be able to load the method:
 - Look for the skills where the harness loads them — the plugin install (e.g. `~/.claude/plugins/marketplaces/*/plugins/karvey/`) or user/project skill folders (`~/.claude/skills/karvey*`, `.claude/skills/karvey*`) — and read the installed version from its `plugin.json`.
 - Compare with the version the project expects (`project.json:karvey_version`, if declared) and verify the skills the project's changes will need are present (at least `karvey`, the phase skills in use, and `karvey-iterate`).
 - Missing or outdated → **FAIL** with the install/update instructions **for this environment** (plugin marketplace install/update for Claude Code; copying the `${CLAUDE_PLUGIN_ROOT}/skills/` folder for harnesses without plugins; re-starting the agent session so the skills load). Never report a phase as runnable in an environment where its skill is not installed.
 
-**6b. Pinned inputs still exist and are current.** For every active change (`docs/spec/changes/*/spec.json`) and every `inputs.*` entry (`"{repo} {path} @{commit}"`), plus `links.parent`/`links.children` and `decisions`:
+**6c. Pinned inputs still exist and are current.** For every active change (`docs/spec/changes/*/spec.json`) and every `inputs.*` entry (`"{repo} {path} @{commit}"`), plus `links.parent`/`links.children` and `decisions`:
 - The repo is reachable, the commit exists (`git -C {repo} cat-file -e {commit}`) and the path exists at that commit (`git -C {repo} cat-file -e {commit}:{path}`). Missing → **FAIL** (the pin is broken; the change is reading something that cannot be reproduced).
 - The source advanced: `git -C {repo} log --oneline {commit}..origin/{default-branch} -- {path}` not empty → **WARN · input drift**, listing the new commits. Recommend `/karvey-iterate {change-id}` (input-drift routing).
 - Linked parent/children changes and `D-NN` decisions exist in their repos → otherwise **WARN**.

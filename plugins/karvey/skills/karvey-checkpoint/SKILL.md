@@ -1,6 +1,6 @@
 ---
 name: karvey-checkpoint
-description: Save and restore work-in-progress state for the Karvey method. `save` captures the change's checkpoint AND the agent's handoff — identity, manifest, board, checklist, repo state, standing decisions and scheduled tasks — so a future session (or another person) resumes cleanly. Works with a single agent; a team only changes where the handoff lives. Triggers include "karvey checkpoint", "guardar contexto", "restaurar contexto", "guardar estado", "retomar trabajo", "handoff", "rotar sesión", "rotate session", "relevo", "quién soy".
+description: Karvey support — saves or restores a change checkpoint and the agent handoff (state.json by karvey-handoff-capture.py) — before rotating or resuming a session. Triggers include "karvey checkpoint", "karvey handoff", "relevo karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [save | restore] [<change-id>] [--handoff-only | --no-handoff]
 ---
@@ -13,7 +13,7 @@ Inspired by `gstack /context-save` + `/context-restore`, its only job is to ensu
 
 ## Goal
 
-That work in progress **is not lost between sessions / handoffs**. When a session ends half-finished, or when another person (or another agent, on another machine) must take over, the checkpoint writes down where everything stood: the git state, the decisions made, the pending work and the concrete next step.
+That work in progress **is not lost between sessions / handoffs**. When a session ends half-finished, or when another person (or another agent, on another machine) must take over, the checkpoint records where everything stood: the git state, the decisions made, the pending work and the concrete next step.
 
 This skill **complements, does not replace**, the living specs or `spec.json`. The specs remain the source of truth for the change; the checkpoint is just a snapshot of the work-in-progress to be able to resume cleanly.
 
@@ -88,35 +88,28 @@ The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`
 6. **Refresh the pieces before quoting them** — a handoff that cites a stale board is worse than one that cites nothing:
    - **Board:** move what this session actually did to its real state, and **write down every request that arrived and was not resolved**, before anything else.
    - **Manifest / checklist:** verify they still describe how this agent works; if a rule changed, **correct the body** and note the change. Record their commit (`git log -1 --pretty=%h -- <path>`) in the handoff, so `restore` can detect drift.
-7. **Capture the agent state** (Step 7-bis below), **write the handoff** using the "Handoff format" section, and write its machine-readable twin **`state.json`** beside it (schema below). The handoff is for whoever reads; `state.json` is what the session hook compares against the live repos to detect drift **before** anyone believes the prose.
-8. **Commit by explicit path**:
+7. **Write the handoff** using the "Handoff format" section. Put measured output into section 0, not
+   memory of it: for every claim of "done", run the check that measures it (the published version stamp,
+   the live resource, the API response) per `../karvey/rules/verification.md`, and list the scheduled
+   tasks of this session **with their full prompt**.
+8. **Commit the handoff by explicit path**, before the capture:
    ```bash
    git pull --rebase --autostash
-   git commit -- docs/spec/agent/handoff.md docs/spec/agent/state.json docs/spec/agent/board.md -m "handoff: <one line>"
+   git commit -- docs/spec/agent/handoff.md docs/spec/agent/board.md -m "handoff: <one line>"
    ```
    In a **shared** ops repo this is mandatory, not stylistic: agents sharing a working copy share one
    index, and a bare commit carries away whatever someone else left staged, possibly half-written.
-9. **Integrate with knowledge-sync** (`../karvey/rules/knowledge-sync.md`): the checkpoint is a natural point to trigger the sync.
-10. **Do NOT** modify `spec.json:phase`. Confirm the paths written and **whether the session is now ready to rotate**.
-
-#### Step 7-bis — capturing the agent state (not recalling it)
-
-Run these and put the **output**, not your memory of it, into the handoff. For each owned repo:
-
-```bash
-git rev-parse --abbrev-ref HEAD                 # branch
-git log -1 --pretty='%h %ad %s' --date=short    # last commit
-git status --porcelain | wc -l                  # uncommitted
-git log origin/{integration}..HEAD --oneline    # pushed but not merged
-git log HEAD..origin/{integration} --oneline    # behind
-```
-
-Then, and this is the part that catches stale handoffs: **for every claim of "done", run the check
-that measures it** — the published version stamp, the live resource, the API response — per
-`../karvey/rules/verification.md`. A handoff that says "deployed" without that check is the failure this step
-exists to prevent.
-
-Finally, list the **scheduled tasks** of this session **with their full prompt**.
+9. **Capture `state.json` last** — measured by the script, never written by hand:
+   ```bash
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-handoff-capture.py" --profile "{profile}" \
+     --scheduled-tasks N [--ready-to-rotate]
+   ```
+   `{profile}` is the directory resolved in step 5. It measures branch, last commit and uncommitted count of every owned repo (`measured: false` with the
+   reason when a repo cannot be measured). Run it after the commit so the recorded commit is the real one,
+   and leave `state.json` uncommitted; committing it afterwards is allowed and costs one "commit" drift
+   line on the next start.
+10. **Do NOT** modify `spec.json:phase`. Confirm the paths written and **whether the session is now ready
+    to rotate**.
 
 ### `restore` mode — restore state
 
@@ -198,7 +191,7 @@ The open items with their state, including every request that arrived and was no
 item that lives only in a session's context does not exist.
 
 ## 5. Closing checklist
-What must be true before I report anything as done (`rules/verification.md`), plus whatever this
+What must be true before I report anything as done (`verification.md`), plus whatever this
 project adds.
 
 ## 6. Standing decisions that affect me
@@ -230,33 +223,16 @@ They die with the context reset, silently.
 
 ## `state.json` — the handoff's machine-readable twin
 
-Written beside the handoff on every save. It exists so the session hook can tell, **with commands and
-before a single line of prose is believed**, whether the handoff still describes reality:
-
-```json
-{
-  "agent": "{agent name}",
-  "role": "{role}",
-  "saved_at": "{ISO timestamp}",
-  "handoff": "{path}",
-  "manifest_commit": "{short hash of the manifest at save time}",
-  "repos": [
-    { "path": "{repo path}", "branch": "{branch}", "commit": "{short hash}", "uncommitted": 0 }
-  ],
-  "active_change": "{change-id or empty}",
-  "scheduled_tasks": 0,
-  "ready_to_rotate": false
-}
-```
-
-Keep it small and factual: it is evidence, not a second handoff. If it and the prose disagree, **the
-prose is the one that aged**.
+Written by `karvey-handoff-capture.py` on every save (`saved_at`, `repos[]` with `path`, `branch`,
+`commit`, `uncommitted`, `measured`, plus `scheduled_tasks` and `ready_to_rotate`). The session hook
+compares it with the live repos **before a single line of prose is believed**. It is evidence, not a
+second handoff: if it and the prose disagree, **the prose is the one that aged**.
 
 ## Templates for a first save (single agent)
 
 `docs/spec/agent/manifest.md` — who I am, the repos I own, **what is not my call**, who approves what,
 and how I communicate. `docs/spec/agent/board.md` — a table of `id · priority · task · state · updated
-· note`. `docs/spec/agent/state.json` — written by the save, never by hand. `docs/spec/agent/checklist.md` — the closing checks, starting from `../karvey/rules/verification.md` and
+· note`. `docs/spec/agent/state.json` — written by the capture script, never by hand. `docs/spec/agent/checklist.md` — the closing checks, starting from `../karvey/rules/verification.md` and
 adding whatever this project has paid for once. `handoff.md` — the format above.
 
 With a team these same four files move to `{ops_repo}/agents/<role>/` and the board to
@@ -270,8 +246,7 @@ hook resolves the same two layouts; `karvey-team init` migrates them rather than
 - Use it freely when closing or opening a session, before a handoff, or when the context is about to be lost.
 - It does not replace the living specs nor `spec.json`; it only saves/restores the work-in-progress.
 - It never advances the change's phase.
-- **On session start** (startup, resume, compact, clear) the plugin's hook reinjects identity, manifest, board and handoff, compares `state.json` against the live repos, and **tells the session to run `/karvey-checkpoint restore` first** when there is an active change or the state has drifted. The hook reinjects and measures; the restore itself — crossing decisions, recreating scheduled tasks, proposing the next step — is this skill's job, because a hook cannot invoke a skill.
-- Rotation thresholds: `team.json:rotation` when there is a team, otherwise the defaults in `../karvey/rules/team.md` (150k of context, 24 h, or the close of a work block).
-
+- **On session start** the plugin's hook reinjects identity, the compact **or** the full manifest (never both), board and handoff, compares `state.json` against the live repos, and **tells the session to run `/karvey-checkpoint restore` first** when there is an active change or the state has drifted. The hook reinjects and measures; the restore itself — crossing decisions, recreating scheduled tasks, proposing the next step — is this skill's job, because a hook cannot invoke a skill.
+- Rotation thresholds: `team.json:rotation` when there is a team, otherwise `rotation_hours` and `context_tokens` in `${CLAUDE_PLUGIN_ROOT}/scripts/karvey_lib/defaults.json` (D-06), or the close of a work block.
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

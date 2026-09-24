@@ -1,7 +1,8 @@
 ---
 name: karvey-scrape
-description: Web data extractor for the Karvey method. Pulls data from a web page; first call prototypes the extraction, then codifies it into a reusable, tested script/skill for fast re-runs. Triggers include "karvey scrape", "scraping", "extraer datos web", "extract web data", "scrapear", "scrape", "codificar skill", "codify skill", "skillify".
+description: Karvey support — extracts data from a web page, then codifies the extraction as a tested script — when the same pull will be repeated. Triggers include "karvey scrape", "extraer datos web karvey", "karvey skillify".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+disable-model-invocation: true
 argument-hint: [url] [--codify]
 ---
 

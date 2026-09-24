@@ -1,7 +1,8 @@
 ---
 name: karvey-import
-description: Convert existing specs from Kiro (cc-sdd) or gstack into the Karvey method's `docs/spec/` structure. Maps requirements/design/tasks into Karvey's prd.md, requirements.md, architecture.md, tasks.md + spec.json/project.json. Cross-cutting support skill — does NOT advance any change's phase. Triggers include "karvey import", "import kiro", "kiro to karvey", "migrate kiro", "migrar kiro", "convertir kiro", "import gstack", "gstack to karvey", "migrate gstack", "convertir gstack", "convert specs", "importar specs".
+description: Karvey support — converts external specs into docs/spec/ (prd, requirements, architecture, tasks; state via karvey-state.py) — when adopting Karvey on existing specs. Triggers include "karvey import", "importar specs karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
+disable-model-invocation: true
 argument-hint: --from <kiro|gstack> [path] [--change-id <id>]
 ---
 
@@ -55,7 +56,14 @@ For **each** `.kiro/specs/{feature-name}/`:
    | `steering/tech.md` | feeds `project.json` (stack/targets) + architecture context | |
 
 4. **Generate `prd.md`** (Kiro has no formal PRD): synthesize from `steering/product.md` + the intent of `requirements.md` into Karvey's PRD structure (executive summary, problem & context, goals & success metrics, user stories, scope/out-of-scope, stakeholders, constraints, acceptance criteria). Mark inferred parts as `> inferred from Kiro — review`.
-5. **Generate `spec.json`**: `change_id`, `capability` (infer or ask), `goal` (from product/requirements; ask if unclear), `language`, `management` (from `project.json:management.tool`), `security_tier` (ask; default per project), `phase` and `approvals` set to the **furthest phase the imported content supports** (e.g. if requirements+design+tasks exist → `phase: "tasks"`, with `requirements/architecture/tasks` marked generated; approvals left `approved:false` so the user re-validates each gate). Map Kiro `approvals` where present.
+5. **Create the state with the state tool, then write the descriptive fields.** `karvey-state.py init {change-id}` creates `spec.json` in `init`; then add `capability` (infer or ask), `goal`, `language`, `management` (from `project.json:management.tool`) and `security_tier` (ask; default per project). Record what the import produced through the tool — never by writing `phase` or `approvals`:
+   ```bash
+   S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
+   python3 "$S" init "{change-id}"
+   python3 "$S" advance "{change-id}" requirements
+   python3 "$S" generated "{change-id}" requirements   # and architecture / tasks when imported
+   ```
+   Every gate stays unapproved, so the change resumes at `requirements` and the user re-validates each gate in order (`karvey-state.py next {change-id}` shows the way). Kiro approvals are reported, not copied.
 6. **spec-delta.md / living specs**: create a `spec-delta.md` stub for `karvey-archive` to merge later.
 7. Report per feature: what mapped cleanly vs. what needs review (the TODO placeholders).
 
@@ -78,22 +86,18 @@ gstack does **not** persist a fixed on-disk spec layout, so this mode is **heuri
    | eng-review plan / architecture notes | `architecture.md` (+ TODO placeholders for missing Karvey sections) |
    | task/backlog list | `tasks.md` |
    | design-system notes | `design-spec.md` |
-3. **Generate `prd.md`**, `spec.json` and (if missing) `project.json` as in the Kiro flow. Set `phase`/`approvals` to the furthest phase the mapped content supports; leave approvals `approved:false` for re-validation.
+3. **Generate `prd.md`**, the state (`karvey-state.py init`, `advance … requirements`, `generated`) and, if missing, `project.json`, as in the Kiro flow.
 4. Because mapping is heuristic, **always present the proposed file map to the user for confirmation before writing**.
 
 ---
 
-## Step 3 — Knowledge sync
-
-After writing, run the sync step per `../karvey/rules/knowledge-sync.md` (Obsidian if available; otherwise `/graphify docs/spec/ --update`).
-
-## Step 4 — Output
+## Step 3 — Output
 
 Report, per imported change:
-```
+```text
 ✅ Imported {change-id} from {kiro|gstack}
    Created: prd.md, requirements.md, architecture.md, tasks.md, spec.json
-   Resume phase: {phase}  (all gates require re-approval)
+   Resume phase: requirements  (generated: {phases}; every gate needs re-approval)
    ⚠️ Needs review: {list of TODO placeholders / non-EARS items}
 
 Next step: /karvey {change-id}   → see status and continue the pipeline

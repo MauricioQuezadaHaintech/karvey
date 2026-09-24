@@ -1,7 +1,7 @@
 ---
 name: karvey-browse
-description: Give the agent eyes in the target's real runtime for the Karvey method. Real browser (web), simulator/device (mobile), terminal (CLI) — click, screenshot, inspect. Imports session cookies for authenticated views. Triggers include "karvey browse", "dar ojos", "navegador real", "screenshot", "inspeccionar UI", "abrir la app".
-allowed-tools: Read, Bash, Glob, Grep
+description: Karvey support — eyes in the real runtime (browser, simulator, terminal): click, capture, inspect — when a check needs the running target. Triggers include "karvey browse", "dar ojos karvey", "navegador real karvey".
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [url or target] [--target web|ios|android|cli]
 ---
 

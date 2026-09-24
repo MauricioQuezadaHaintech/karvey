@@ -1,7 +1,8 @@
 ---
 name: karvey-retro
-description: Team-aware retrospective for the Karvey method. Per-person breakdowns, shipping streaks, test-health trends, and growth opportunities from commit history and work patterns. Triggers include "karvey retro", "retrospectiva", "retrospective", "retro semanal", "weekly retro", "velocity", "qué mejorar", "what to improve", "review de equipo", "team review".
+description: Karvey support — retrospective from commit history: per-person breakdown, streaks, test-health trend, what to improve — at the end of a cycle. Triggers include "karvey retro", "retrospectiva karvey".
 allowed-tools: Read, Bash, Glob, Grep, Agent
+disable-model-invocation: true
 argument-hint: [--since <date/range>] [<repo>]
 ---
 

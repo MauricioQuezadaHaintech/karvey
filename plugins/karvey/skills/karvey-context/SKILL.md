@@ -1,6 +1,6 @@
 ---
 name: karvey-context
-description: Read-only dashboard of the current project spec state: project config (project.json), capabilities, active/archived changes, sprint status, and a deploy-queue / landing report (which changes are in dev, in prod, ready to release, and versions per repo). Use at any point in the Karvey pipeline. Triggers include "karvey context", "estado del proyecto", "project status", "qué specs hay", "what specs exist", "cambios activos", "active changes", "cola de despliegue", "deploy queue", "landing report", "qué hay en dev", "what's in dev", "qué falta liberar", "what's left to release".
+description: Karvey support — read-only dashboard from karvey-context.py: changes, open work, approvals, deploy queue — whenever you ask where things stand. Triggers include "karvey context", "estado del proyecto karvey", "karvey status".
 allowed-tools: Read, Bash, Glob, Grep
 argument-hint: [--capability <name>] [--change <change-id>]
 ---
@@ -9,185 +9,57 @@ argument-hint: [--capability <name>] [--change <change-id>]
 
 ## Purpose
 
-Quick view of the project's complete state: project config (`project.json`), documented capabilities, in-progress changes, archived changes, current sprint, spec coverage, and the **deploy queue / landing report** (deploy status per change and versions per component/repo).
+Quick, read-only view of the project: changes and their phase, open work, approvals, enforcement state,
+calibration, and the deploy queue. The dashboard is a script; this skill runs it and relays the output.
 
-> **Read-only.** This dashboard NEVER writes, modifies, deploys, or runs git that alters state (no `commit`, `push`, `merge`, `fetch`, `pull`). It only reads repo files (`project.json`, `spec.json`, `CHANGELOG.md`) and, optionally, local `git log`. To deploy, use `karvey-deploy`.
+> **Read-only.** Nothing here writes, deploys or runs git that alters state (no `commit`, `push`, `merge`,
+> `fetch`, `pull`). To deploy, use `karvey-deploy`.
 
 ## Execution steps
 
-### If --capability is specified
-
-Show the capability detail:
-```bash
-cat docs/spec/specs/{capability}/spec.md
-grep -c "### Requirement:" docs/spec/specs/{capability}/spec.md
-grep -c "#### Scenario:" docs/spec/specs/{capability}/spec.md
-```
-
-### If --change is specified
-
-Show the change detail:
-```bash
-cat docs/spec/changes/{change-id}/spec.json
-cat docs/spec/changes/{change-id}/proposal.md
-# Approval status
-```
-
-### If nothing is specified — Full dashboard
-
-#### Project config (if `docs/spec/project.json` exists)
+### 1. Run the dashboard
 
 ```bash
-# Read project-level config
-cat docs/spec/project.json 2>/dev/null
+C="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-context.py"
+python3 "$C"                                   # overview, open-work, approvals, enforcement, close-report, calibration
+python3 "$C" --change "{change-id}"            # approvals and enforcement of one change
+python3 "$C" --section open-work               # one section (overview | open-work | approvals | enforcement |
+                                               #   close-report | calibration | convergence)
+python3 "$C" --json                            # one JSON envelope, for another tool
 ```
 
-If it exists, show a header with its content (see format below). If it does NOT exist, indicate "no project.json (run karvey-init)" and continue with the rest of the dashboard anyway. This view is **read-only**: never write or modify `project.json`.
+Relay the output as it is. Do not recompute phases, approvals or counts from `spec.json` by hand: when the
+script reports a file as `unreadable` or `invalid`, show that line and point at
+`karvey-state.py validate {file}`. Exit 4 means there is no `docs/spec/` (suggest `karvey-init`).
+
+### 2. `--capability <name>` (living spec detail)
 
 ```bash
-# Capabilities
-find docs/spec/specs -mindepth 1 -maxdepth 1 -type d 2>/dev/null
-
-# Requirements per capability
-for cap in docs/spec/specs/*/; do
-  name=$(basename "$cap")
-  reqs=$(grep -c "### Requirement:" "$cap/spec.md" 2>/dev/null || echo "0")
-  echo "$name: $reqs requirements"
-done
-
-# Active changes
-find docs/spec/changes -maxdepth 1 -type d -not -path "docs/spec/changes" -not -path "*/archive" 2>/dev/null
-
-# Archived changes
-ls docs/spec/changes/archive/ 2>/dev/null | wc -l
+cat "docs/spec/specs/{capability}/spec.md"
+grep -c "### Requirement:" "docs/spec/specs/{capability}/spec.md"
 ```
 
-#### Deploy queue / Landing report (read-only)
+### 3. Deploy queue (optional, read-only)
 
-Snapshot of the deploy status per change. **It does not run git, does not deploy, does not write anything** — it only reads the main repo and the `repos` from `project.json` to infer the status. It is the Karvey equivalent of the "landing report".
-
-For each active change, derive its deploy status from `spec.json` (`phase` and `approvals.deploy` fields):
+The phase of each change comes from the overview (`deploying`, `deployed`). For versions and unreleased
+commits per repo, read the top of each repo's `CHANGELOG.md` and, if local git is available, count what
+integration holds that production does not (no `fetch`):
 
 ```bash
-# Phase/deploy status per active change
-for ch in $(find docs/spec/changes -maxdepth 1 -mindepth 1 -type d -not -name archive 2>/dev/null); do
-  id=$(basename "$ch")
-  phase=$(grep -o '"phase"[^,]*' "$ch/spec.json" 2>/dev/null | head -1)
-  dep=$(grep -o '"deploy"[^}]*}' "$ch/spec.json" 2>/dev/null | head -1)
-  qa=$(grep -o '"qa"[^}]*}' "$ch/spec.json" 2>/dev/null | head -1)
-  echo "$id | $phase | qa=$qa | deploy=$dep"
-done
+CFG="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py"
+INTEGRATION="$(python3 "$CFG" get branch_flow.integration --shell)"
+PRODUCTION="$(python3 "$CFG" get branch_flow.production --shell)"
+git -C "$repo" log --oneline "$PRODUCTION..$INTEGRATION" 2>/dev/null | wc -l   # >0 ⇒ not yet released
 ```
 
-Status mapping (read-only, inferred — **it is not the cloud's truth, it is what the spec says**):
-- **Ready to release**: `approvals.qa.approved=true` and `approvals.deploy.approved=false` (QA OK, not yet deployed).
-- **In dev**: `phase` indicates an in-progress deploy to integration, or `approvals.deploy.generated=true` with the merge to `integration` done and the PR to `production` still open/unmerged.
-- **In prod**: `approvals.deploy.approved=true` (merge to `production` with human OK) or the change is already archived.
-- **Not ready**: any other state (QA pending or incomplete release gate).
+Live branches follow `../karvey/rules/deploy-workflow.md` → Branch hygiene: absorbed into production → report "should be
+deleted"; not absorbed → report, never delete.
 
-Deployed versions per component/repo — read the `CHANGELOG.md` of each repo in `project.json:repos` (the top version of the changelog is the last released for that component). **Read-only, no `git`:**
+### 4. Active sprint (if the tracker has sprints)
 
-```bash
-# Current version per repo (from its CHANGELOG.md)
-# REPOS comes from project.json:repos
-for repo in $REPOS; do
-  ver=$(grep -m1 -oE '\[?[0-9]+\.[0-9]+\.[0-9]+\]?' "$repo/CHANGELOG.md" 2>/dev/null)
-  echo "$repo: ${ver:-no CHANGELOG}"
-done
-```
-
-If `git` is available and you want to refine what is in dev vs prod per repo (optional, **read-only**, no `fetch`/`pull`):
-
-```bash
-# dev↔prod difference already known locally (does not fetch)
-# integration/production come from project.json:branch_flow
-git -C "$repo" log --oneline {production}..{integration} 2>/dev/null | wc -l
-# >0 ⇒ there are commits in integration not yet released to production
-```
-
-Show to the user:
-
-```
-📊 Karvey Context — {date}
-
-PROJECT  (docs/spec/project.json)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{project name}
-  Targets: {targets}            Cloud: {cloud.provider} / IaC: {iac_tool}
-  Git: {git_platform}           Knowledge sync: {knowledge_sync}
-  Repos ({N}): {repo1, repo2, …}  (main: {spec_repo})
-  Branch flow: {feature_prefix} → {integration} → {production}
-  Enforcement: git_flow_hook={on|off}  plan_gate_hook={on|off}
-  Team settings: notifications={channel → target | none | not configured}
-                 management={tool} @ {location}  statuses={mapped (5/5) | partial ({N}/5) | not mapped}
-                 (missing → "run /karvey:karvey-init --settings"; see management-adapters.md / notifications.md)
-  (if no project.json → "no project.json — run karvey-init")
-
-CAPABILITIES ({N} total)
-━━━━━━━━━━━━━━━━━━━━━━━━
-{capability-1}: {N} requirements, {N} scenarios
-{capability-2}: {N} requirements, {N} scenarios
-
-ACTIVE CHANGES ({N})
-━━━━━━━━━━━━━━━━━━━━
-{change-id-1}
-  Phase: {phase}
-  Capability: {capability}
-  Security Tier: {N}
-  Management: {{tool} Epic E{n} | Markdown (PLAN.md)}
-  Approvals: requirements={✅|⬜} mockup={✅|⬜} design={✅|⬜} arch={✅|⬜} tasks={✅|⬜}
-
-{change-id-2}
-  ...
-
-ARCHIVED CHANGES: {N}
-Last archived: {date-change-id}
-
-DEPLOY QUEUE / LANDING REPORT  (read-only)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Deploy status per change (inferred from spec.json — it is not the cloud's truth):
-
-  🟢 READY TO RELEASE ({N})
-    {change-id}  — QA OK, deploy pending  (capability: {capability})
-
-  🟡 IN DEV ({N})
-    {change-id}  — deployed to {integration}, PR to {production} pending
-
-  🔵 IN PROD ({N})
-    {change-id}  — released to {production}  ({date})
-
-  ⬜ NOT READY ({N})
-    {change-id}  — {QA pending | incomplete release gate}
-
-Deployed versions per component/repo (top of CHANGELOG.md):
-    {repo1}: {x.y.z}   {repo2}: {x.y.z}   {repo3}: {no CHANGELOG}
-    (if local git is available: "{repo}: {N} commits in {integration} not released to {production}")
-
-LIVE BRANCHES  (read-only — see deploy-workflow.md → Branch hygiene)
-    {repo}: {branch}  — ABSORBED into {production} → should be deleted (karvey-deploy 2.12)
-    {repo}: {branch}  — {N} unreleased commits · PR #{n} · last commit {date}
-
-ACTIVE SPRINT
-━━━━━━━━━━━━
-{read from the team's tracker (read-only) or indicate "not applicable (markdown)"}
-```
-
-### For the active sprint (if the tracker has sprints/iterations)
-
-Read-only query in `project.json:management.tool` (Jira sprint, Linear cycle, ADO iteration, GitHub Projects iteration field…). ClickUp adapter example:
-
-```
-clickup_get_workspace_hierarchy
-  max_depth: 2
-```
-
-Look for the team's sprints folder (e.g. "Dev Sprints") and the active sprint.
-
-Show:
-```
-Active sprint: Sprint {N} (until {date})
-Sprint tasks: {total} | in_progress: {N} | review: {N} | blocked: {N}   (logical states via management.statuses)
-```
+Resolve the tracker with `karvey-config.py resolve management`. When it is external and `sprints` is set,
+read the active sprint (read-only) and show its task counts by logical state; otherwise say "not
+applicable".
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

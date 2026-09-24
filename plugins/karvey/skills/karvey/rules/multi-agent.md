@@ -21,7 +21,7 @@ When one business change spans several repos (e.g. web + app + DNS + cloud IAM),
 
 ## 2. Business decisions (`D-NN`)
 
-Business decisions live in a decision log in the operations repo (e.g. `docs/decisiones.md`, `D-NN` numbering). A change links the decisions it depends on:
+Business decisions live in the decision log of the operations repo, `{ops_repo}/docs/spec/decisions.md` (`D-NN` numbering, owned by `karvey-decisions`). A change links the decisions it depends on:
 
 ```json
 "decisions": ["D-12@{ops-repo}", "D-31@{ops-repo}"]

@@ -1,7 +1,8 @@
 ---
 name: karvey-team
-description: OPTIONAL team layer of the Karvey method — set up and run a team of agents (roles, manifests, boards, census, relay) and measure what it costs. Karvey works fully with one agent; this is opt-in and not the default. Triggers include "karvey team", "equipo de agentes", "agent team", "multi-agente", "censo de agentes", "relevo", "relay agents", "cuánto cuesta el equipo", "agent cost".
+description: Karvey support — optional team layer: roles, manifests, boards, census, relay and cost of a team of agents — only when one agent is not enough. Triggers include "karvey team", "equipo de agentes karvey", "karvey census".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+disable-model-invocation: true
 argument-hint: [init | census | relay | cost] [--role <role>] [--dry-run]
 ---
 
@@ -34,8 +35,8 @@ last cost report) and offer the options.
    most expensive decision in this layer.
 2. **Ask the minimum** — business `code`, `ops_repo`, and which role lives in which working directory.
    Nothing else; the rest has defaults.
-3. **Write `docs/spec/team.json`** (schema in `../karvey/rules/team.md`), including `rotation` thresholds
-   (defaults 150000 / 24h) and `cost_report`.
+3. **Write `docs/spec/team.json`** (schema in `../karvey/rules/team.md`), with `cost_report` and, only if
+   the team wants other values, `rotation` (otherwise `karvey_lib/defaults.json` applies, D-06).
 4. **Create the ops structure**: `agents/<role>/manifest.md`, `agents/<role>/handoff.md`,
    `agents/<role>/checklist.md`, `board/<role>.md`, `agents/census.md`, and the **compact manifest**
    (`agents/manifest-compact.md`) — the 15–20 line version that a session reload can reinject whole.
@@ -43,8 +44,8 @@ last cost report) and offer the options.
    keeping history) instead of creating an empty one beside it: that agent already has a manifest, a
    board, a checklist and a handoff worth keeping, and two profiles for the same agent is how one of
    them starts lying.
-5. **Offer the session hook** (`${CLAUDE_PLUGIN_ROOT}/hooks/`) so each session re-reads its identity, compact
-   manifest and handoff on startup, resume, compact and clear. Explain that a plugin **cannot** declare
+5. **The session hook** (`${CLAUDE_PLUGIN_ROOT}/hooks/`, shipped with the plugin) re-reads each session's
+   identity, compact **or** full manifest and handoff on startup, resume, compact and clear. Explain that a plugin **cannot** declare
    a statusline (only `agent` and `subagentStatusLine` are accepted), so the rotation statusline is
    three lines the user pastes once into their own settings — the script ships here, the install does
    not happen behind their back.
