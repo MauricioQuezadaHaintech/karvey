@@ -552,10 +552,27 @@ precondition. Making it one would turn today's optional step into a new gate.
 
 `schema_lite.py` implements, and L-17 restricts the schemas to, this subset: `type`, `enum`, `const`,
 `required`, `properties`, `additionalProperties`, `propertyNames`, `items`, `minItems`, `minLength`,
-`pattern`, `oneOf`, `anyOf`, `if/then/else`, `$ref` to local `$defs`, `minimum`, `maximum`, plus two
-extensions:
-- `x-karvey-severity: warning` marks a rule that warns instead of failing, in advisory mode.
+`maxLength`, `pattern`, `oneOf`, `anyOf`, `if/then/else`, `$ref` to local `$defs` or cross-file
+`karvey:<file>#/$defs/…`, `minimum`, `maximum`, plus two extensions:
+- `x-karvey-severity: warning` marks a rule that warns instead of failing, in advisory mode (strict mode
+  promotes every such warning to an error).
 - `x-karvey-format: datetime-tz` means ISO 8601 with time and offset.
+
+**Annotations** (accepted, ignored by validation): `$schema`, `$id`, `$comment`, `$defs`, `title`,
+`description`, `x-karvey-note`, `x-karvey-default`, `x-karvey-safe` and `x-karvey-schema-version`. Any other
+keyword is an error of the schema itself, which is what L-17 relies on.
+
+**Legacy shapes that validate** (`schema.legacy`, F-05). A node with `x-karvey-severity: warning` **and** an
+`x-karvey-note` that is *matched* — as a property value, an `additionalProperties` value or a
+`oneOf`/`anyOf` branch — reports the match itself as one warning with code `schema.legacy` and the note as
+the message. That is how a shape that is valid but legacy (`gates_skipped`, an unknown approval key, a
+string `management`, a top-level `clickup` block) is reported without failing. A `schema.legacy` warning
+never makes a branch invalid, so it does not change which `oneOf` alternative matches.
+
+**Legacy approval dates** (F-06, REQ-W1-003). `$defs/approval.date` carries `x-karvey-severity: warning`, so
+the date-only values every existing `spec.json` holds (`"date": "2026-09-22"`) are warnings in advisory
+mode, exit 0 (§2.7). The state tool always writes a `datetime-tz`, and `--fix` never invents a time.
+`$defs/prodApproval.date` has no such marker and stays an error.
 
 ```json
 {
@@ -642,7 +659,7 @@ extensions:
         "generated": {"type": "boolean"},
         "approved": {"type": ["boolean", "null"]},
         "by": {"type": "string"}, "role": {"$ref": "#/$defs/role"},
-        "date": {"type": "string", "x-karvey-format": "datetime-tz"},
+        "date": {"type": "string", "x-karvey-format": "datetime-tz", "x-karvey-severity": "warning"},
         "ref": {"type": "string"}, "evidence": {"$ref": "#/$defs/evidence"}
       },
       "if": {"properties": {"approved": {"const": true}}, "required": ["approved"]},

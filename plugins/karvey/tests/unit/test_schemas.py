@@ -217,6 +217,21 @@ class SpecSchema(unittest.TestCase):
         out = SPEC.validate(spec(created_at="2026-09-23"))
         self.assertEqual([(i["severity"], i["path"]) for i in out], [("warning", "$.created_at")])
 
+    def test_legacy_date_only_approval_is_a_warning(self):
+        # F-06 / REQ-W1-003: every spec.json of this repo carries "date": "2026-09-22"-style approvals.
+        s = spec(approvals={"tasks": {"approved": True, "by": "X", "role": "human", "date": "2026-09-24",
+                                      "ref": "D-13"}})
+        out = SPEC.validate(s)
+        self.assertEqual(errs(out), [])
+        self.assertEqual([(i["severity"], i["code"], i["path"]) for i in out],
+                         [("warning", "schema.format", "$.approvals.tasks.date")])
+        self.assertEqual(paths(SPEC.validate(s, strict=True)), ["$.approvals.tasks.date"])
+
+    def test_prod_date_only_stays_an_error(self):
+        # F-06: prodApproval is the non-delegable record and keeps a strict datetime-tz, even in advisory mode.
+        s = spec(approvals={"prod": {"by": "X", "role": "human", "date": "2026-09-24", "ref": "D-08"}})
+        self.assertEqual(paths(SPEC.validate(s)), ["$.approvals.prod.date"])
+
     def test_evidence_excerpt_bounded(self):
         s = spec(approvals={"tasks": {"approved": True, "by": "X", "role": "human",
                                       "date": "2026-09-23T12:00:00-03:00", "ref": "D-13",

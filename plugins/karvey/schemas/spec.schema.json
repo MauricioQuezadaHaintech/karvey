@@ -293,7 +293,9 @@
         },
         "date": {
           "type": "string",
-          "x-karvey-format": "datetime-tz"
+          "x-karvey-format": "datetime-tz",
+          "x-karvey-severity": "warning",
+          "$comment": "F-06 / REQ-W1-003: a legacy date-only value (\"2026-09-22\") is a warning in advisory mode; the state tool always writes a datetime-tz. prodApproval.date stays strict."
         },
         "ref": {
           "type": "string"

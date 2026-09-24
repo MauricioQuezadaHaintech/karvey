@@ -13,6 +13,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 - E1.F2.T5 — `schemas/spec.schema.json` and `schemas/project.schema.json` (architecture §2.2/§2.6). Why: one machine-readable contract for both files, so validation, migration and the linter read the same rules (REQ-W1-002).
 - E1.F2.T6 — `schemas/state-machine.json` (the phase graph as data) and `schemas/legacy-phase-map.json` (exact / proposed / unmappable tiers). Why: the tool, the rule text and the linter read one graph instead of 14 hand-kept phase lists (REQ-W1-005, REQ-W1-009).
 
+### Fixed
+- F-06/F-05 — a legacy date-only `approvals.*.date` is a warning in advisory mode (error in strict); `approvals.prod.date` stays strict; architecture §2.2 documents `maxLength`, the annotations and `schema.legacy`. Why: REQ-W1-003 says legacy shapes warn, and every existing `spec.json` holds date-only approvals.
+
 ## [3.11.4] - 2026-09-23 — hotfix
 
 ### Fixed
