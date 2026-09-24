@@ -1,0 +1,405 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "karvey:spec.schema.json",
+  "$comment": "Architecture §2.2 (wave1-hardening). The supported subset is validated by karvey_lib/schema_lite.py.",
+  "x-karvey-schema-version": 1,
+  "type": "object",
+  "required": [
+    "change_id",
+    "phase"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "change_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
+    },
+    "phase": {
+      "$ref": "#/$defs/phase"
+    },
+    "phase_history": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/historyEntry"
+      }
+    },
+    "skipped": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "mockup",
+          "design_graphic",
+          "infra"
+        ]
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "lane": {
+      "type": "string",
+      "x-karvey-note": "data only in Wave 1 (R-09)"
+    },
+    "approvals": {
+      "type": "object",
+      "properties": {
+        "requirements": {
+          "$ref": "#/$defs/approval"
+        },
+        "mockup": {
+          "$ref": "#/$defs/approval"
+        },
+        "design_graphic": {
+          "$ref": "#/$defs/approval"
+        },
+        "architecture": {
+          "$ref": "#/$defs/approval"
+        },
+        "infra": {
+          "$ref": "#/$defs/approval"
+        },
+        "tasks": {
+          "$ref": "#/$defs/approval"
+        },
+        "qa": {
+          "$ref": "#/$defs/approval"
+        },
+        "deploy": {
+          "$ref": "#/$defs/approval"
+        },
+        "prod": {
+          "$ref": "#/$defs/prodApproval"
+        }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "x-karvey-severity": "warning",
+        "x-karvey-note": "unknown approval key (legacy: impl, test, deploy_dev, deploy_prod, design…)"
+      }
+    },
+    "management": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/toolName"
+        },
+        {
+          "$ref": "#/$defs/managementOverride"
+        }
+      ]
+    },
+    "seed_backlog_id": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "security_tier": {
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$"
+    },
+    "type": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "x-karvey-format": "datetime-tz",
+      "x-karvey-severity": "warning"
+    },
+    "updated_at": {
+      "type": "string",
+      "x-karvey-format": "datetime-tz",
+      "x-karvey-severity": "warning"
+    },
+    "decisions": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[DC]-\\d+$"
+          }
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "links": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array"
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "iteration_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "revision_history": {
+      "type": "array"
+    },
+    "clickup": {
+      "type": "object",
+      "properties": {
+        "epic_id": {
+          "type": "string"
+        },
+        "feature_ids": {
+          "type": "array"
+        },
+        "task_ids": {
+          "type": "object"
+        },
+        "backlog_list_id": {
+          "type": "string"
+        },
+        "client_tag": {
+          "type": "string"
+        }
+      }
+    },
+    "gates_skipped": {
+      "type": "object",
+      "x-karvey-severity": "warning",
+      "x-karvey-note": "legacy → skipped (--fix)"
+    }
+  },
+  "$defs": {
+    "phase": {
+      "enum": [
+        "init",
+        "requirements",
+        "mockup",
+        "design_graphic",
+        "architecture",
+        "infra",
+        "tasks",
+        "impl",
+        "test",
+        "qa",
+        "deploying",
+        "deployed",
+        "archived"
+      ]
+    },
+    "historyEntry": {
+      "type": "object",
+      "required": [
+        "phase",
+        "entered_at"
+      ],
+      "properties": {
+        "phase": {
+          "$ref": "#/$defs/phase"
+        },
+        "entered_at": {
+          "type": "string",
+          "x-karvey-format": "datetime-tz"
+        },
+        "exited_at": {
+          "type": "string",
+          "x-karvey-format": "datetime-tz"
+        },
+        "by": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "object"
+        }
+      }
+    },
+    "role": {
+      "enum": [
+        "human",
+        "ceo-delegate"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "marker": {
+          "type": "string"
+        },
+        "marker_created_at": {
+          "type": "string"
+        },
+        "prompt_excerpt": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "session": {
+          "type": "string"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "properties": {
+        "generated": {
+          "type": "boolean"
+        },
+        "approved": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "by": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/role"
+        },
+        "date": {
+          "type": "string",
+          "x-karvey-format": "datetime-tz"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      },
+      "if": {
+        "properties": {
+          "approved": {
+            "const": true
+          }
+        },
+        "required": [
+          "approved"
+        ]
+      },
+      "then": {
+        "required": [
+          "by",
+          "role",
+          "date",
+          "ref"
+        ],
+        "x-karvey-severity": "warning",
+        "x-karvey-note": "error for writes by the state tool; warning for legacy files in advisory mode"
+      }
+    },
+    "prodApproval": {
+      "type": "object",
+      "properties": {
+        "by": {
+          "type": "string"
+        },
+        "role": {
+          "const": "human"
+        },
+        "date": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      },
+      "if": {
+        "properties": {
+          "by": {
+            "minLength": 1
+          }
+        },
+        "required": [
+          "by"
+        ]
+      },
+      "then": {
+        "required": [
+          "role",
+          "date",
+          "ref"
+        ],
+        "properties": {
+          "ref": {
+            "minLength": 1,
+            "pattern": "^(D-\\d+|https://\\S+)$"
+          },
+          "date": {
+            "minLength": 1,
+            "x-karvey-format": "datetime-tz"
+          }
+        }
+      }
+    },
+    "toolName": {
+      "enum": [
+        "clickup",
+        "jira",
+        "linear",
+        "azure-boards",
+        "github-projects",
+        "spreadsheet",
+        "markdown",
+        "other",
+        "none"
+      ],
+      "x-karvey-note": "none = legacy alias of markdown (warning)"
+    },
+    "managementOverride": {
+      "type": "object",
+      "properties": {
+        "tool": {
+          "$ref": "#/$defs/toolName"
+        },
+        "location": {
+          "type": "string"
+        },
+        "statuses": {
+          "$ref": "karvey:project.schema.json#/$defs/statuses"
+        },
+        "sprints": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

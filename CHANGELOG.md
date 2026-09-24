@@ -10,6 +10,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 - E1.F2.T2 — `atomicio`: BOM-tolerant read, format-preserving atomic write, `O_EXCL` lock (stale after 30 s) and compare-and-swap (exit 3). Why: concurrent sessions must never half-write or silently overwrite a `spec.json`.
 - E1.F2.T3 — `schema_lite`: stdlib JSON-Schema subset validator with `x-karvey-severity: warning` and `x-karvey-format: datetime-tz`; unsupported keywords are an error. Why: validate `spec.json`/`project.json` without pip dependencies (REQ-W1-002).
 - E1.F2.T4 — `project` (root discovery bounded by the git top level, the active-change rule, the reviewed `origin/<production>` config read, state dir under `--git-common-dir`) and `audit` (JSONL, 0600, 1 MB rotation, no tokens). Why: hooks and tools must agree on which project and change they act on, and weakening settings must come from the reviewed line.
+- E1.F2.T5 — `schemas/spec.schema.json` and `schemas/project.schema.json` (architecture §2.2/§2.6). Why: one machine-readable contract for both files, so validation, migration and the linter read the same rules (REQ-W1-002).
 
 ## [3.11.4] - 2026-09-23 — hotfix
 
