@@ -44,6 +44,7 @@ while [ "$DIR" != "/" ] && [ -n "$DIR" ]; do
 done
 # Team settings nudge (REQ-ADP-003): only inside a Karvey project (has docs/spec/), never elsewhere.
 settings_nudge() {
+  [ "$MODE" = "startup" ] || return 0   # REQ-W1-050: on session start only
   # Only a Karvey project: docs/spec/project.json or docs/spec/changes/ (a bare docs/spec/ can be an
   # OpenAPI folder, RFCs, a study). The root found above wins over walking up from the cwd.
   local d="${ROOT:-$START}" kp=""
@@ -61,7 +62,7 @@ try: d=json.load(open(sys.argv[1],encoding='utf-8-sig'))
 except Exception: print('project.json unreadable'); sys.exit()
 if not isinstance(d,dict): print('project.json is not an object'); sys.exit()
 print(' + '.join(k for k in ('notifications','management') if not isinstance(d.get(k),dict) or not d.get(k)))" "$pj")
-  else missing="unknown: python3 not available to check"
+  else missing="settings could not be read: python3 not available"
   fi
   [ -n "$missing" ] && printf 'Karvey (info): team settings not set (%s). To set them, the user can run `/karvey:karvey-init --settings` — settings only, it creates no change and nothing in any tracker.\n' "$missing"
 }

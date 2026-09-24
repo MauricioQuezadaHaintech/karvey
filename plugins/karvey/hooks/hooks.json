@@ -2,11 +2,21 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|compact|clear",
+        "matcher": "startup",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh\" startup",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "resume|compact|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh\" resume",
             "timeout": 10
           }
         ]

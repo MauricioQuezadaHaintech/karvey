@@ -494,26 +494,66 @@ def live_state(state_path, root):
     return out, drift
 
 
+def _settings_gaps(data):
+    """``(missing, legacy)`` of a project.json object: ``notifications`` / ``management`` that are
+    absent or empty (``{}`` counts as missing), and the legacy shapes that count as present."""
+    missing, legacy = [], []
+    for k in ("notifications", "management"):
+        v = data.get(k)
+        if k == "management" and isinstance(v, str) and v.strip():
+            legacy.append('management: "%s"' % v)
+        elif not isinstance(v, dict) or not v:
+            missing.append(k)
+    return missing, legacy
+
+
 def settings_notice(start, team_root, mode, env):
-    """The team-settings line (REQ-ADP-003 as amended by REQ-W1-050/083), or None."""
+    """The team-settings line (REQ-ADP-003 as amended by REQ-W1-050 and REQ-W1-083), or None.
+
+    Only on ``startup``; only in a Karvey project found by walking up no further than the git
+    top level; the settings count as present when the working copy **or** ``project.json`` on
+    ``origin/{integration}`` (local ref, no fetch) has them."""
+    if mode != "startup":
+        return None
     kp = pj.find_root(start=start)  # REQ-W1-050: walk up no further than the git top level
     if kp is None and team_root and pj.is_karvey_project(team_root):
         kp = team_root
     if kp is None:
         return None
     data, err = pj.load_project_json(kp)
+    legacy = []
     if err == "missing":
-        missing = "no project.json"
+        missing = ["no project.json"]
     elif data is None:
-        missing = "project.json unreadable" if "not an object" not in (err or "") else "project.json is not an object"
+        missing = ["project.json is not an object" if "not an object" in (err or "") else "project.json unreadable"]
     else:
-        missing = " + ".join(k for k in ("notifications", "management")
-                             if not isinstance(data.get(k), dict) or not data.get(k))
-    if not missing:
-        return None
-    return ("Karvey (info): team settings not set (%s). To set them, the user can run "
-            "`/karvey:karvey-init --settings` \u2014 settings only, it creates no change and nothing in any "
-            "tracker." % missing)
+        missing, legacy = _settings_gaps(data)
+    if missing:
+        _, integ, _ = pj.branch_flow(data or {})
+        for ref in [x for x in (integ, _origin_head(kp)) if x]:
+            rdata, status = pj.read_reviewed_project_json(kp, production=ref)
+            if status == "ok":
+                rmissing, rlegacy = _settings_gaps(rdata)
+                if not rmissing:
+                    return None if not rlegacy else _legacy_line(rlegacy, " on origin/%s" % ref)
+                break
+    if missing:
+        return ("Karvey (info): team settings not set (%s). To set them, the user can run "
+                "`/karvey:karvey-init --settings` \u2014 settings only, it creates no change and nothing in any "
+                "tracker." % " + ".join(missing + legacy))
+    if legacy:
+        return _legacy_line(legacy, "")
+    return None
+
+
+def _legacy_line(legacy, where):
+    return ("Karvey (info): team settings in a legacy shape (%s)%s \u2014 run `karvey-state.py validate --fix` "
+            "to migrate them." % (", ".join(legacy), where))
+
+
+def _origin_head(root):
+    rc, out = pj.git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], root)
+    return out[len("origin/"):] if rc == 0 and out.startswith("origin/") else None
 
 
 def session_text(mode, env):
