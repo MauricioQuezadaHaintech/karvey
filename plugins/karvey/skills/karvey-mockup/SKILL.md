@@ -1,6 +1,6 @@
 ---
 name: karvey-mockup
-description: Generate a navigable HTML mockup with 3–4 levels of depth from approved requirements, then validate it against the requirements to catch spec-gaps early. Iterate with the user until approved, then advance to graphic design. Triggers include "karvey mockup", "generar mockup", "generate mockup", "crear prototipo", "create prototype", "wireframe".
+description: Karvey phase 3 — a navigable 3–4 level mockup, validated against the requirements — after requirements approval, for changes with a UI. Triggers include "karvey mockup", "generar mockup karvey", "karvey prototype", "prototipo karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 argument-hint: <change-id> [--iteration N] [--shotgun | --variants N]
 ---
@@ -22,7 +22,7 @@ The mockup **adapts to the target declared** in `docs/spec/project.json` (the `t
 - **cli** → command transcript (example terminal input/output)
 - **api/backend** → request/response examples (sample payloads per endpoint)
 
-The levels, rules, and HTML structure in the following sections apply to the **web** target. For other targets, generate the target's equivalent artifact and likewise save it under `docs/spec/changes/{change-id}/` (adjusting the extension where appropriate, e.g. `mockup.md` for a CLI transcript or API examples). The rest of the flow (iteration, approval, knowledge sync) is identical.
+The levels, rules, and HTML structure in the following sections apply to the **web** target. For other targets, generate the target's equivalent artifact and likewise save it under `docs/spec/changes/{change-id}/` (adjusting the extension where appropriate, e.g. `mockup.md` for a CLI transcript or API examples). The rest of the flow (iteration, approval) is identical.
 
 ## Generation modes
 
@@ -45,11 +45,21 @@ If the user doesn't pass a flag, always use normal mode.
 Read:
 - `docs/spec/changes/{change-id}/spec.json`
 - `docs/spec/changes/{change-id}/requirements.md`
-- `docs/spec/changes/{change-id}/proposal.md`
+- `docs/spec/changes/{change-id}/prd.md`
 
-Verify that `approvals.requirements.approved = true`. If not, stop and ask to approve requirements first.
+Check the precondition with the state tool (`../karvey/rules/state-machine.md`):
 
-**Check whether a UI applies:** Read `spec.json` → the `layers` field. If it only includes `[DB]` and/or `[Backend]` without `[Frontend]`, ask the user: "This change doesn't seem to have a user interface. Does it need a visual mockup or do we go straight to architecture?" If it doesn't need one, skip to karvey-architecture.
+```bash
+S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
+python3 "$S" next "{change-id}" --json    # requirements must be approved; stop and relay the blockers if not
+```
+
+**Check whether a UI applies:** if `spec.json` `layers` has no `Frontend`, ask the user: "This change doesn't seem to have a user interface. Does it need a visual mockup or do we go straight to architecture?" If not, record the skip and go to karvey-architecture (design_graphic is skipped with it):
+
+```bash
+python3 "$S" skip "{change-id}" mockup --reason "no UI"
+python3 "$S" skip "{change-id}" design_graphic --reason "no UI"
+```
 
 Detect iteration: if `docs/spec/changes/{change-id}/mockup.html` exists, increment the iteration number.
 
@@ -137,7 +147,7 @@ Replaces Step 3/4 when shotgun mode is active. Instead of a single mockup, gener
    ```
    Each variant's banner includes its approach: `🔧 MOCKUP — {change-id} — Variant {k}/{N}: {approach} — {date}`.
 3. **Generate a comparison board** `docs/spec/changes/{change-id}/mockup-board.html`: a self-contained page that shows the N variants side by side in `<iframe>`s (or cards with a screenshot/link to each file), each with its approach name and a 1-line summary of how it differs. The board lets you open each variant full size.
-4. Update `spec.json` (see Step 4) with `approvals.mockup.variants: N` in addition to the normal fields.
+4. Record the files as in Step 4; the board names the N variants.
 
 **Choice and taste:** offer the user to open the board (`open docs/spec/changes/{change-id}/mockup-board.html`) and ask them to choose a variant or indicate what to combine ("the navigation from #1 with the tables from #3"). On receiving the choice:
 - Consolidate the chosen variant (or the combination) as `mockup.html`, which becomes the working mockup for the normal iteration cycle (Step 6).
@@ -149,15 +159,7 @@ Replaces Step 3/4 when shotgun mode is active. Instead of a single mockup, gener
 docs/spec/changes/{change-id}/mockup.html
 ```
 
-Update `spec.json`:
-- `phase: "mockup-generated"`
-- `approvals.mockup.generated: true`
-- `updated_at: {timestamp}`
-
-### Step 4B — Update the knowledge graph
-
-Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the `mockup.html` created or modified.
-If `docs/spec/graphify-out/` doesn't exist, invoke `/graphify docs/spec/` without `--update`.
+Record it: `python3 "$S" advance "{change-id}" mockup` (first iteration only), then `python3 "$S" generated "{change-id}" mockup`.
 
 ### Step 4C — Spec↔mockup validation (catch spec-gaps early)
 
@@ -208,11 +210,10 @@ If the user gives feedback:
 2. Identify which screens/components to change
 3. Edit `mockup.html` applying the changes
 4. Increment the iteration number in the banner
-5. Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`)
-6. Return to Step 5
+5. Return to Step 5
 
-If the user approves:
-- Update `spec.json`: `approvals.mockup.approved: true`
+If the user approves (their own words):
+- Record it: `python3 "$S" approve "{change-id}" mockup --by "{name}" --role human --ref D-NN`
 - Output:
 ```
 ✅ Mockup approved — Iteration {N}

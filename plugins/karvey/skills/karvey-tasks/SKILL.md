@@ -1,6 +1,6 @@
 ---
 name: karvey-tasks
-description: Generate implementation tasks from approved architecture. Creates Tasks (E{n}.F{n}.T{n}) with dependencies in the team's tracker, or updates PLAN.md checklist. Triggers include "karvey tasks", "generar tareas", "generate tasks", "planificar implementación", "plan implementation".
+description: Karvey phase 7 — tasks.md (E{n}.F{n}.T{n}, 10–30 min, with dependencies) in the team's tracker or PLAN.md — after architecture/infra approval. Triggers include "karvey tasks", "tareas karvey", "karvey plan tasks".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: <change-id> [-y] [--sequential]
 ---
@@ -19,11 +19,19 @@ Read:
 - `docs/spec/changes/{change-id}/spec.json`
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/architecture.md`
-- `docs/spec/changes/{change-id}/infra.md`
-- `docs/spec/project.json` → `management` (tool, location, statuses) and `../karvey/rules/management-adapters.md`
-- `../karvey/rules/clickup-protocol.md` (estimation rules for every tool; the ClickUp adapter when `management.tool = clickup`)
+- `docs/spec/changes/{change-id}/infra.md` (absent when infra was skipped)
+- `../karvey/rules/management-adapters.md` and `../karvey/rules/clickup-protocol.md` (estimation rules for every tool; the ClickUp adapter)
 
-Verify `approvals.infra.approved = true`. If not, stop.
+Preconditions (the tasks gate):
+
+```bash
+S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
+C="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py"
+python3 "$S" next "{change-id}" --json                    # architecture and infra approved or skipped; else relay the blockers and stop
+python3 "$C" resolve management --change "{change-id}" --json   # tool, location, status map; `external` says whether a tracker exists
+```
+
+If `resolve` reports the status map missing, apply the missing-map clause of `management-adapters.md` before any status is written; do not restate or improvise it. Then `python3 "$S" advance "{change-id}" tasks`.
 
 Determine sequential mode: if `--sequential`, do not use parallelism markers.
 
@@ -114,16 +122,11 @@ If there are gaps: fix and re-verify. Maximum 2 iterations.
 docs/spec/changes/{change-id}/tasks.md
 ```
 
-Update `spec.json`: `phase: "tasks-generated"`, `approvals.tasks.generated: true`.
-
-### Step 4B — Update knowledge graph
-
-Sync the knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the created `tasks.md`.
-If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
+Record it: `python3 "$S" generated "{change-id}" tasks`.
 
 ### Step 5 — Present for approval
 
-If flag `-y`: auto-approve.
+`-y` only skips the question when the human's own invocation already approved the tasks.
 
 Show a summary:
 ```
@@ -141,20 +144,19 @@ Coverage:
 Do you approve the tasks to continue?
 ```
 
-### Step 6A — Create Tasks in the team's tracker (`management-adapters.md`)
+### Step 6A — Create Tasks in the team's tracker (only when `resolve` says `external`)
 
-Read `spec.json` for the tracker ids (`clickup.epic_id`, `clickup.feature_ids`, `clickup.backlog_list_id` — historical key, used for every tool).
-
-For each task: `create_task(feature, E{n}.F{n}.T{n}, estimate_min)` in `project.json:management.tool`, initial state `todo`,
-then the dependencies below with the tool's own mechanism (Jira issue links, Linear relations, ADO predecessor/successor
-links, GitHub sub-issues/"blocked by", spreadsheet `depends_on` column). Credentials from `.connections.json` (git-ignored),
-env vars or a vault — never in the repo.
+The tracker ids come from `resolve management` (the spec override, then the project). **Find or create by natural key:**
+the key of a task is its id `E{n}.F{n}.T{n}`; search the Feature for it first and reuse the item when it exists, so a re-run
+never duplicates. For each missing task: `create_task(feature, E{n}.F{n}.T{n}, estimate_min)`, initial state `todo`, then the
+dependencies below with the tool's own mechanism (Jira issue links, Linear relations, ADO predecessor/successor links, GitHub
+"blocked by", spreadsheet `depends_on` column). A failed call goes to the outbox (`python3 "$C" outbox add "{change-id}" --op
+create_task --key E{n}.F{n}.T{n} …`) and is retried, never dropped. Credentials from `.connections.json` (git-ignored), env
+vars or a vault — never in the repo.
 
 **ClickUp adapter example:**
 
-Read credentials from `.connections.json` (see `../karvey/rules/clickup-protocol.md`). If it does not exist, create it and add it to `.gitignore` before continuing.
-
-For each task, create it in ClickUp:
+Credentials per `clickup-protocol.md`. For each task:
 ```
 clickup_create_task
   name: "E{n}.F{n}.T{n} [Layer] {Description}"
@@ -198,7 +200,7 @@ Immediately after creating each task:
 clickup_add_tag_to_task(task_id, "{client_tag}")
 ```
 
-Update `time_estimate` via the REST API (the MCP does not save it):
+Set the estimate via the REST API (the MCP does not save it); it is written once and never overwritten with an actual:
 ```bash
 curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
   -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
@@ -225,11 +227,11 @@ curl -s -X POST "https://api.clickup.com/api/v2/list/{SPRINT_LIST_ID}/task/{TASK
   -H "Authorization: $API_KEY" -H "Content-Type: application/json"
 ```
 
-Update `spec.json` with the IDs of the created tasks.
+Record the created ids in `spec.json` under `clickup.task_ids` (keyed by the natural key); these are tracker ids, not state fields.
 
 ### Step 6B — Update PLAN.md (Markdown)
 
-Replace the "Tasks" and "Task status" sections with the full checklist:
+Replace the "Tasks" and "Task status" sections (find the row by its task id; never add a second row for it):
 
 ```markdown
 ## Tasks
@@ -241,18 +243,20 @@ Replace the "Tasks" and "Task status" sections with the full checklist:
 - [ ] F1.T3 [Frontend] {description} — est: 25min (depends F1.T2)
 
 ## Task status
-> Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked`
+> Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked · 🙋 awaiting-human (blocked on a person)`
 
-| Task | Status | Estimate | Actual | Notes |
-|------|--------|----------|------|-------|
-| F1.T1 [DB] | ⬜ todo | 15min | — | |
-| F1.T2 [Backend] | ⬜ todo | 20min | — | |
-| F1.T3 [Frontend] | ⬜ todo | 25min | — | |
+| Task | Status | estimate_min | actual_ai_min | actual_review_min | Notes |
+|------|--------|--------------|---------------|-------------------|-------|
+| F1.T1 [DB] | ⬜ todo | 15 | — | — | |
+| F1.T2 [Backend] | ⬜ todo | 20 | — | — | |
+| F1.T3 [Frontend] | ⬜ todo | 25 | — | — | |
+
+`estimate_min` is written here once; impl fills the two actual columns and never edits the estimate.
 ```
 
 ### Step 7 — Final output
 
-On approval: `approvals.tasks.approved: true`, `phase: "tasks-approved"`.
+On the human's OK: `python3 "$S" approve "{change-id}" tasks --by "{name}" --role human --ref D-NN`.
 
 ```
 ✅ Tasks approved
