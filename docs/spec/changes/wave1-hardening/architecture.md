@@ -499,10 +499,17 @@ jobs:
     defaults: { run: { shell: bash } }
     steps:
       - uses: actions/checkout@<sha>
+        with: { fetch-depth: 0 }
       - uses: actions/setup-python@<sha>
         with: { python-version: '3.12' }
-      - run: python3 plugins/karvey/tests/hooks/run_tables.py --tag windows
+      - run: cd plugins/karvey/tests/unit && python -m unittest -v test_paths test_hookio test_atomicio
+      - run: python plugins/karvey/tests/hooks/run_tables.py --tag windows -v
 ```
+
+The `windows` tag (F-36) marks the smoke cases that exercise the dispatcher through Git Bash (allow, block, an
+Edit path, a prompt marker, the post-edit validator); path translation, BOM and CRLF are covered at unit level
+(`test_paths.py`, `test_hookio.py`, `test_atomicio.py`). `test_ci_workflow.py` fails if a `--tag` selection in
+the job selects no case, so the advisory job never goes red merely for having nothing to run.
 
 A PR is blocked only if `main` requires these checks. That is a repository setting, a `[human]` task for
 the owner (Q-A8), not a file this change can write. The job's run duration is kept in the summary: jobs of a
