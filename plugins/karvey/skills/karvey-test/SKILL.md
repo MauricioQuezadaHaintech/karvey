@@ -1,6 +1,6 @@
 ---
 name: karvey-test
-description: Execute unit tests and E2E tests after implementation. Generates test_plan.md and test_evidence.md with request/response/PASS/FAIL evidence. Triggers include "karvey test", "ejecutar tests", "run tests", "pruebas", "tests", "testing", "evidencias", "evidence".
+description: Karvey phase 9 — runs unit, E2E and regression tests in the target's real runtime and records test_plan.md and test_evidence.md — after impl. Triggers include "karvey test", "karvey pruebas", "ejecutar tests karvey", "karvey evidence".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 argument-hint: <change-id> [--e2e-only] [--unit-only]
 ---
@@ -9,16 +9,18 @@ argument-hint: <change-id> [--e2e-only] [--unit-only]
 
 ## Purpose
 
-Run the full post-implementation test plan: unit tests per layer and E2E tests of the complete flow. Document evidence in `docs/test_evidence.md`.
+Run the full post-implementation test plan: unit tests per layer and E2E tests of the complete flow. **The contract is §6 (test coverage plan) of `architecture.md`**: every case it lists is run or reported as not run, with the reason. Document evidence in `docs/test_evidence.md`.
 
 ## Execution steps
 
 ### Step 1 — Load context
 
+Enter the phase: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" advance "{change-id}" test` (refused while an earlier gate is open; on a resumed run `next` shows it is already in `test`).
+
 Read:
+- `docs/spec/changes/{change-id}/architecture.md` — §6 is the test contract
 - `docs/spec/changes/{change-id}/requirements.md`
-- `docs/spec/changes/{change-id}/architecture.md`
-- `docs/spec/changes/{change-id}/mockup.html` (to map E2E flows)
+- `docs/spec/changes/{change-id}/mockup/` if the change has one (to map E2E flows)
 - `docs/spec/changes/{change-id}/tasks.md`
 
 Also read `docs/spec/project.json` and obtain the `targets` field (see `../karvey/rules/targets.md`). The actual runtime in which the E2E tests run depends on the declared target: browser (web), simulator/device (iOS/Android), terminal (CLI), HTTP client (API), hardware/emulator (embedded). **Do not assume "web" by default** — a project may have multiple targets.
@@ -157,12 +159,6 @@ For each E2E flow step, regardless of method, document:
 - Observed response/behavior
 - PASS / FAIL
 
-For each E2E flow step document:
-- URL visited
-- Action performed
-- Observed response/behavior
-- PASS / FAIL
-
 ### Step 4-bis — Infrastructure tests (IAM bindings and ops steps)
 
 If the change has `[human]` or `[Infra]` tasks that grant permissions, or is an `ops` change (`../karvey/rules/multi-agent.md` §5–6), run the **read-only verification scripts** that `karvey-infra` produced (e.g. `infra/iam/{change-id}.verify.sh`) as infrastructure tests:
@@ -183,7 +179,7 @@ This measurement can be delegated to or related with the **`karvey-health`** ski
 
 ### Step 4C — Automatic regression tests + incident logging
 
-**Every time a test detects a bug**, log it in the incident tracker `docs/bugs_dev_testing.md` as a `BUG-NN` (continue the incremental counter — read the file first), opening its **State history** at `DETECTADO` (see `../karvey/rules/incident-tracking.md`), and mirror it to `docs/spec/incidents-index.md`. The same bug is also recorded as a `bug`-type finding in `findings.md` (Step 5C).
+**Every time a test detects a bug**, log it in the incident tracker `docs/bugs_dev_testing.md` as a `BUG-NN` (continue the incremental counter — read the file first), opening its **State history** at `DETECTADO` (see `../karvey/rules/incident-tracking.md`), and mirror it to `docs/spec/incidents-index.md`. The same bug is also recorded as a `bug`-type finding in `findings.md` (Step 5B).
 
 **When it is fixed**, generate an automatic regression test that covers exactly that case, so it fails again if the bug reappears, and move the incident to `RESUELTO` (a regression test is required to reach `RESUELTO`). That is: for every fixed FAIL, a new test must remain in the suite.
 
@@ -197,7 +193,7 @@ This measurement can be delegated to or related with the **`karvey-health`** ski
 
 Write or update `docs/test_evidence.md`:
 
-```markdown
+````markdown
 # Test Evidence: {change-id}
 
 **Date:** {YYYY-MM-DD HH:MM}
@@ -296,25 +292,20 @@ Notes: {detected degradations relative to the baseline, if applicable}
 | E2E | {N} | {N} | {N} |
 | Regression | {N} | {N} | {N} |
 | **Total** | **{N}** | **{N}** | **{N}** |
-```
+````
 
 ### Step 5B — Classify findings (feed the iteration loop)
 
-Append every observation from this run to `docs/spec/changes/{change-id}/findings.md`, classified by type (see `karvey/rules/iteration-loop.md`):
+Append every observation from this run to `docs/spec/changes/{change-id}/findings.md`, classified by type (see `../karvey/rules/iteration-loop.md`):
 - `bug` — a FAIL where the code doesn't do what the (correct) spec says → already logged as `BUG-NN` in Step 4C.
 - `spec-gap` — while testing you realized the **spec itself** is wrong/incomplete (e.g. the requirement never defined this case). Don't silently "fix" it in code — record it so it can re-open requirements.
 - `emergent` — a valid new idea/scope that surfaced but is **out of this change's scope**.
 
 You only **classify and append** here; routing is `karvey-iterate`'s job. If `findings.md` ends with any open `bug`/`spec-gap`, the next step is `/karvey-iterate {change-id}`, not `/karvey-qa`.
 
-### Step 5C — Update knowledge graph
+### Step 5C — Phase-close
 
-Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect `test_plan.md`, `test_evidence.md` and `findings.md`.
-If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
-
-### Step 5D — Phase-close
-
-Run the phase-close ritual (`karvey/rules/phase-close.md`): comment + status in the team's tracker (`management-adapters.md`) or `PLAN.md`, ensure findings/incidents are recorded, update `spec.json` (`phase: "test"`, `updated_at`).
+Run the phase-close ritual (`../karvey/rules/phase-close.md`): status in the team's tracker (`../karvey/rules/management-adapters.md`) or `PLAN.md`, findings and incidents recorded. The state was advanced in Step 1; nothing in `spec.json` is edited by hand.
 
 ### Step 6 — Report to the user
 
@@ -357,10 +348,7 @@ Next step:
 
 ## Advance to the next phase
 
-When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items, the next step is `/karvey-iterate {change-id}` (route them), not QA. Once routed/clear, **actively ask the user**: "Shall we advance to the QA phase now?"
-- If they confirm → run `/karvey-qa {change-id}`.
-- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
-- If you resume in another session, `/karvey {change-id}` indicates which phase you are in and which one follows.
+When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items, the next step is `/karvey-iterate {change-id}` (route them), not QA. Once routed or clear, **ask the user**: "Shall we advance to the QA phase now?" On their OK, run `/karvey-qa {change-id}`; otherwise wait. In a new session, `karvey-state.py next "{change-id}"` says where the change is.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `../karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

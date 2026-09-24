@@ -1,7 +1,7 @@
 ---
 name: karvey-qa
-description: QA code review in 9 dimensions (Security with OWASP Top 10 + STRIDE, Errors, Consistency, Impact, Env vars, Versioning, Second opinion cross-model, Visual audit vs design-spec, Standards conformance). Creates REVISION_PR document, tasks in the team's tracker or PLAN.md entries. Notifies the team's configured channel. Triggers include "karvey qa", "code review", "revisión de código", "QA".
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+description: Karvey phase 10 — 9-dimension review with a blocking security gate, written to changes/{id}/qa/; observes only, defects go to findings.md — after test. Triggers include "karvey qa", "revisión karvey", "karvey review", "revisar cambio karvey".
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: <change-id> [--source <branch>] [--target <branch>]
 ---
 
@@ -9,24 +9,25 @@ argument-hint: <change-id> [--source <branch>] [--target <branch>]
 
 ## Purpose
 
-Code review across 9 dimensions, post-implementation. Generates a review document, creates subtasks in the team's tracker (`../karvey/rules/management-adapters.md`) or PLAN.md, and notifies the team's configured channel (`../karvey/rules/notifications.md`).
+Code review across 9 dimensions, post-implementation. **QA observes; it never changes the code under review and never commits a fix.** Every defect becomes a finding in the change's `findings.md`, fixed later through `/karvey-iterate` → impl → test → qa. QA writes the review document, creates items in the team's tracker (`../karvey/rules/management-adapters.md`) or PLAN.md, and notifies the team's configured channel (`../karvey/rules/notifications.md`).
 
 ## Execution steps
 
 ### Step 0 — Identify branches and stack
 
-Read `docs/spec/changes/{change-id}/spec.json`.
+Enter the phase: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" advance "{change-id}" qa` (refused while an earlier gate is open).
 
-If the user did not specify branches, ask: "Which branches should be compared? (source → target)"
-Default convention: `feature/{change-id}` → `dev`
+If the user did not specify branches, ask: "Which branches should be compared? (source → target)". Default: `feature/{change-id}` → the integration branch.
 
 Detect the repo stack (see `package.json`, `requirements.txt`, `pyproject.toml`).
 
 Get the diff:
 ```bash
-git diff {target}...{source} --stat
-git diff {target}...{source}
-git log {target}...{source} --oneline
+TARGET="$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get branch_flow.integration --shell)"
+SOURCE="feature/{change-id}"
+git diff "$TARGET...$SOURCE" --stat
+git diff "$TARGET...$SOURCE"
+git log "$TARGET...$SOURCE" --oneline
 ```
 
 ### Step 1 — Analysis across 9 dimensions
@@ -35,9 +36,9 @@ Dispatch parallel subagents for dimensions 1–4, run 5–6 and 9 in the main co
 
 **Dimension 1: Security**
 - Hardcoded credentials (tokens, API keys, passwords)
-- XSS: unsanitized `v-html`, `dangerouslySetInnerHTML`
+- XSS: raw HTML injection of unsanitized input
 - Auth only in the frontend with no backend enforcement
-- Real personal data in code (RUTs, emails, phone numbers)
+- Real personal data in code (national ids, emails, phone numbers)
 - Missing user-context validations in data operations or endpoints
 - Unsanitized dynamic SQL
 - Stack traces exposed to the client
@@ -75,11 +76,11 @@ Dispatch parallel subagents for dimensions 1–4, run 5–6 and 9 in the main co
 - Typos in naming
 - Mixing of patterns within the same module
 - Duplicated code (3+ repetitions that should be a helper)
-- Direct Axios bypassing the apiService interceptors
+- Bypassing the project's shared clients or wrappers (the team's standards name them; Dimension 9 cites the rule)
 - Tabs vs spaces
 
 **Dimension 4: Impact on existing modules**
-- Changes in shared files (router, root store, apiService, global components)
+- Changes in shared files (router, root store, shared clients, global components)
 - Public interfaces modified without updating consumers
 - Implicit behavior changes (timeouts, guards, interceptors)
 
@@ -88,18 +89,13 @@ Dispatch parallel subagents for dimensions 1–4, run 5–6 and 9 in the main co
 - Variables with no fallback in some environment
 - Variables in `.env.example` but not used
 
-**Dimension 6: Versioning**
-- Project version file updated (`package.json`, `pyproject.toml`, `VERSION`, etc.)
-- `CHANGELOG.md` with an entry for the current version
-- Consistency between the version file and the CHANGELOG
+**Dimension 6: Versioning** (`../karvey/rules/versioning.md`, `../karvey/rules/changelog-policy.md`), for each repo with changes:
+- `unreleased-section`: `CHANGELOG.md` has a `## [Unreleased]` section with one line per commit of the change.
+- `one-bump-per-release`: the diff does not bump the version; the bump happens once, at the release step of `/karvey-deploy`.
+- `versions-agree`: the version files that exist (`package.json`, `pyproject.toml`, `VERSION`, manifests) agree with each other and with the top released CHANGELOG entry.
+- `changelog-why`: each line names the **responsible human**, the **AI model** and the **why**, not just the what.
 
-Verify the CHANGELOG per the `../karvey/rules/changelog-policy.md` rule, for each repo with changes:
-- `CHANGELOG.md` has an entry for the current version
-- The entry includes the **responsible human** (name + contact)
-- The entry indicates the **AI model** used
-- The entry explains the **why** of the change (not just the what)
-
-If any of these fields is missing, it is a versioning finding and blocks advancement to deploy.
+A missing item is a versioning finding and blocks deploy.
 
 **Dimension 7: Second opinion cross-model (adversarial review)**
 
@@ -118,7 +114,7 @@ Audit the **already-built** UI in the target's actual runtime (not the mockup, n
 - With `karvey-browse`, navigate the implemented flow in the target's actual runtime and capture evidence (screenshots/state) of each relevant screen/state.
 - Compare implemented vs design-spec: layout, spacing, typography, colors/tokens, states (empty, loading, error, hover/focus), responsiveness, copy, and visual hierarchy.
 - Record each deviation as a visual finding with severity and evidence.
-- For visual fixes: apply **atomic commits** (one fix per commit) documenting **before/after** (capture before and after). Deviations that break accessibility or security inherit the blocking gate of their corresponding dimension.
+- Each deviation is a finding with its before evidence and the expected after (from design-spec); the fix is not QA's. Deviations that break accessibility or security inherit the blocking gate of their corresponding dimension.
 
 **Dimension 9: Standards conformance (golden path)**
 
@@ -136,7 +132,7 @@ Do not confuse it with Dimension 3: **Consistency** measures coherence *internal
 
 ### Step 2 — Generate review document
 
-File name: `REVISION_PR_{number}_{YYYYMMDD}.md` at the repo root.
+Write `docs/spec/changes/{change-id}/qa/REVISION_PR_{number}_{YYYYMMDD}.md` — inside the change, never at the repo root. `/karvey-deploy` reads it from there.
 
 Structure:
 ```markdown
@@ -210,31 +206,7 @@ Structure:
 
 Create a parent item `QA Review {change-id} ({source} → {target})` (priority high) and one child per critical/high
 finding (`create_task`, state `todo`, estimate per the table below, assignee = the file's author per git log), in
-`project.json:management.tool` — in the active sprint/iteration if the team uses one. `link(parent, REVISION_PR)`.
-
-**ClickUp adapter example:**
-
-Get the active sprint: `clickup_get_list` with name "Sprint XX".
-
-Create parent task:
-```
-clickup_create_task
-  name: "QA Review {change-id} ({source} → {target})"
-  list_id: "{sprint_list_id}"
-  priority: "high"
-  tags: ["{client_tag}"]
-```
-
-For each critical and high finding, create a subtask:
-```
-clickup_create_task
-  name: "#{N} [{SEVERITY}] {file}: {short description}"
-  parent: {parent_task_id}
-  priority: {urgent|high|normal|low}
-  assignees: [{author per the file's git log}]
-  time_estimate: {5-60 min in ms}
-  markdown_description: (see format in QA_CODE_REVIEW_STANDARD)
-```
+the tool `karvey-config.py resolve management` returns (only when `external: true`) — in the active sprint/iteration if the team uses one. `link(parent, REVISION_PR)`. Tool-specific calls live in the adapter (`../karvey/rules/clickup-protocol.md` for ClickUp).
 
 Fix estimation:
 - Simple fix (null check, typo): 5-10min
@@ -246,19 +218,16 @@ Fix estimation:
 
 Add a "QA Review" section at the end of PLAN.md with the list of findings and pending actions.
 
-### Step 3C — Update knowledge graph
+### Step 3C — Record the result through the state tool
 
-Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the generated `REVISION_PR_{n}_{date}.md`.
-If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
+- **Blocking findings** (critical/high, the security gate of Dimension 1, a valid critical/high from the second model, a visual deviation that breaks accessibility/security, or a standards departure with no approved entry in `deviations.md`) → QA is not approved; route the findings (Step 3D).
+- **None** → `karvey-state.py generated "{change-id}" qa`, then ask the human for the QA approval. On their OK:
+  ```bash
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" approve "{change-id}" qa --by "{human}" --role human --ref "{D-NN or PR URL}"
+  ```
+  and set to `done` every Task and Feature of the change that is in `review` (`set_status`, or `👀` → `✅` in `PLAN.md`).
 
-### Step 3D — Update status in spec.json
-
-Update `docs/spec/changes/{change-id}/spec.json` per the QA result:
-
-- If there are NO critical or high findings (including the SECURITY GATE of Dimension 1 with OWASP Top 10 + STRIDE, the valid findings of the second opinion cross-model, the blocking visual deviations, and any unregistered departure from the golden path in Dimension 9) → set `approvals.qa.approved: true` and `phase: "qa"`.
-- If there are blocking findings (critical/high, unresolved security gate, valid critical/high finding from the second model, a visual deviation that breaks accessibility/security, or a standards departure with no approved entry in `deviations.md`) → set `approvals.qa.approved: false`.
-
-### Step 3E — Classify findings & route the iteration loop
+### Step 3D — Classify findings & route the iteration loop
 
 QA findings are not all the same kind. Append each to `docs/spec/changes/{change-id}/findings.md` classified by type (see `../karvey/rules/iteration-loop.md`), because each goes to a different edge:
 - `bug` — code defect against a correct spec (most security/error/consistency findings). → incident tracker `BUG-NN` (`incident-tracking.md`) + the QA micro-loop `impl→test→qa`.
@@ -269,22 +238,18 @@ Then **route them** with `/karvey-iterate {change-id}` (the engine confirms type
 
 **Convergence:** the change may advance to deploy only when there are no open `bug`/`spec-gap` findings (and the security gate passes) and all `emergent` are captured. Otherwise the next step is `/karvey-iterate`, not `/karvey-deploy`.
 
-### Step 3F — Phase-close
+### Step 3E — Phase-close
 
-Run the phase-close ritual (`../karvey/rules/phase-close.md`): comment + status in the team's tracker (or `PLAN.md`), ensure findings/incidents/backlog are synced, update `spec.json` (`updated_at`).
+Run the phase-close ritual (`../karvey/rules/phase-close.md`): status in the team's tracker (or `PLAN.md`), findings, incidents and backlog recorded. Nothing in `spec.json` is edited by hand.
 
 ### Step 4 — Notify the team (per `notifications.md`)
 
-Read `docs/spec/project.json:notifications` (`../karvey/rules/notifications.md`):
+Resolve the destination with `karvey-config.py resolve notifications`; never look it up in `CLAUDE.md` or any other file.
 - `channel` unset → skip and say `Notification: not configured — run /karvey:karvey-init --settings`.
 - `channel: none`, or `qa` not in `events` → skip and say so.
-- Otherwise send the summary to `target` through `via` (MCP, CLI, webhook or API — whatever is actually available;
-  if it is not, say so). Webhook URLs/tokens come from the secret `target` references, never from the repo.
-  A failed send is reported, not swallowed; the phase still closes.
+- Otherwise run `karvey-config.py notify-check` first: exit 10 means the destination changed since the last confirmed send — show it and ask the human before sending (`notify-check --confirm` after their OK). Then send through `via`. A failed send is reported, not swallowed; the phase still closes.
 
-Never look the destination up in `CLAUDE.md` or any other file.
-
-Content (event `qa`): change-id, source → target, findings by severity, manual-testing areas, review document.
+Content (event `qa`): change-id, source → target, **counts** by severity and the review path (`detail: counts`, the default); finding titles and manual-testing areas only with `detail: full`.
 Write it in the **channel's own markup** (`notifications.md` → Message format per channel). Google Chat / Slack example:
 ```
 *QA Review — {change-id}*
@@ -297,11 +262,7 @@ Write it in the **channel's own markup** (`notifications.md` → Message format 
 - 🟡 Medium: {N}
 - ⚪ Low: {N}
 
-*Manual testing areas:*
-- {area 1}
-- {area 2}
-
-Full document: `REVISION_PR_{n}_{date}.md`
+Full document: `docs/spec/changes/{change-id}/qa/REVISION_PR_{n}_{date}.md`
 ```
 
 ### Step 5 — Final output
@@ -310,7 +271,7 @@ Full document: `REVISION_PR_{n}_{date}.md`
 ✅ QA Review complete
 
 Findings: {N} total ({critical}, {high}, {medium}, {low})
-Document: REVISION_PR_{n}_{date}.md
+Document: docs/spec/changes/{change-id}/qa/REVISION_PR_{n}_{date}.md
 
 Management: {N subtasks created in {tool} | PLAN.md updated}
 Notification: {channel → target | skipped (none) | not configured}
@@ -330,10 +291,7 @@ Next step (if converged — no open bug/spec-gap, security gate passed):
 
 ## Advance to the next phase
 
-When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items (or the security gate is unresolved), the next step is `/karvey-iterate {change-id}`, not Deploy. Once converged and with the corresponding approval, **actively ask the user**: "Shall we advance to the Deploy phase now?"
-- If they confirm → run `/karvey-deploy {change-id}`.
-- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
-- If you resume in another session, `/karvey {change-id}` indicates which phase you are in and which one follows.
+When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items (or the security gate is unresolved), the next step is `/karvey-iterate {change-id}`, not Deploy. Once converged and approved, **ask the user**: "Shall we advance to the Deploy phase now?" On their OK, run `/karvey-deploy {change-id}`; otherwise wait. In a new session, `karvey-state.py next "{change-id}"` says where the change is.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `../karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
