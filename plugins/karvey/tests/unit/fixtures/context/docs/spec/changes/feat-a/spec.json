@@ -1,0 +1,57 @@
+{
+  "change_id": "feat-a",
+  "capability": "demo",
+  "phase": "qa",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-01T10:00:00+00:00",
+      "exited_at": "2026-09-01T10:00:00+00:00"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-01T10:00:00+00:00",
+      "exited_at": "2026-09-02T10:00:00+00:00"
+    },
+    {
+      "phase": "qa",
+      "entered_at": "2026-09-15T10:00:00+00:00"
+    }
+  ],
+  "skipped": {
+    "mockup": "no UI",
+    "design_graphic": "no UI",
+    "infra": "no cloud"
+  },
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true,
+      "by": "Owner",
+      "role": "human",
+      "date": "2026-09-02T10:00:00+00:00",
+      "ref": "D-01"
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true,
+      "by": "Owner",
+      "role": "human",
+      "date": "2026-09-03T10:00:00+00:00",
+      "ref": "D-02"
+    },
+    "qa": {
+      "generated": true,
+      "approved": false
+    },
+    "prod": {
+      "by": "",
+      "date": "",
+      "ref": ""
+    }
+  }
+}
