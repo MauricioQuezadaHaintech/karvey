@@ -251,7 +251,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F12.T10 [Backend] | ✅ done | 50 | 5 | 0 | no human review yet; 9 rules + support-skills.md, 935 → 1034 lines (the one cascade, missing-map clause, outbox, natural keys and schema fields now live here, cited by the skills); L-24 comma heuristic narrowed (F-34) |
 | E1.F12.T11 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; hooks/README 'What ships' table anchored to table cases; clickup-sync-guard/standards-guard named only as not shipped; plugin.json/marketplace.json descriptions (versions untouched) |
 | E1.F12.T12 [Backend] | ✅ done | 10 | 3 | 0 | no human review yet; git mv; 11 references updated (CHANGELOG, backlog, decisions, team-adapters spec.json/findings, prd); graphify-out left for the archive sync; the qa/deploy L-25 hits close in T5/T6 |
-| E1.F12.T13 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F12.T13 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; text residue fixed (init CLAUDE.md migration aid, karvey-test AskUserQuestion); whole-repo lint 539 → 7 errors, all L-18 spec.json data owned by E1.F15 (F-35); 0 errors in plugins/** |
 | E1.F13.T1 [Infra] | ⬜ todo | 25 | — | — |  |
 | E1.F13.T2 [Infra] | ⬜ todo | 15 | — | — |  |
 | E1.F14.T1 [Test] | ⬜ todo | 40 | — | — |  |

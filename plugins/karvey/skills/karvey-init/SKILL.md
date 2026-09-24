@@ -56,6 +56,8 @@ Ask with `AskUserQuestion`, one block at a time, with examples — never assume 
    of the secret holding a webhook — never a URL), **via** (`mcp` · `cli` · `webhook` · `api`, checking what
    is available) and **events** (default `qa`, `deploy`). **Not now** → write `notifications.deferred: true`
    and say how to set it later (`/karvey-init --settings`); the question is not asked again.
+   If the project's `CLAUDE.md` holds a destination table (pre-3.10 setups), offer those values as the
+   pre-filled answer for the human to confirm; nothing is read from `CLAUDE.md` after that.
 2. **Task management** (`../karvey/rules/management-adapters.md`): `ClickUp` · `Jira` · `Linear` ·
    `Azure Boards` · `GitHub Projects` · `Spreadsheet` · `Markdown (PLAN.md)` · `Other`, then **location** and **via**.
 3. **Status flow**: map the team's real statuses to `todo · in_progress · review · done · blocked`. For a

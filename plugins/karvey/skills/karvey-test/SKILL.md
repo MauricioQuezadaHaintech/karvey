@@ -1,7 +1,7 @@
 ---
 name: karvey-test
 description: Karvey phase 9 — runs unit, E2E and regression tests in the target's real runtime and records test_plan.md and test_evidence.md — after impl. Triggers include "karvey test", "karvey pruebas", "ejecutar tests karvey", "karvey evidence".
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: <change-id> [--e2e-only] [--unit-only]
 ---
 
