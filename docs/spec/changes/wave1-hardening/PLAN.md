@@ -79,7 +79,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F2.T3 [Backend] `schema_lite.py`: the JSON-Schema subset validator with the two `x-karvey-*` extensions — est: 25min (depends E1.F2.T1) (P)
 - [x] E1.F2.T4 [Backend] `project.py` (root discovery, active change, reviewed-config read, state dir) and `audit.py` — est: 30min (depends E1.F2.T1) (P)
 - [x] E1.F2.T5 [Backend] `schemas/spec.schema.json` and `schemas/project.schema.json` — est: 30min (depends E1.F2.T3)
-- [ ] E1.F2.T6 [Backend] `schemas/state-machine.json` and `schemas/legacy-phase-map.json` — est: 15min (depends E1.F2.T5)
+- [x] E1.F2.T6 [Backend] `schemas/state-machine.json` and `schemas/legacy-phase-map.json` — est: 15min (depends E1.F2.T5)
 
 ### Feature E1.F3: State tool `karvey-state.py`
 
@@ -202,7 +202,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F2.T3 [Backend] | ✅ done | 25 | 3 | 0 | no human review yet; F-05 logged |
 | E1.F2.T4 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet |
 | E1.F2.T5 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; F-06 logged |
-| E1.F2.T6 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F2.T6 [Backend] | ✅ done | 15 | 1 | 0 | no human review yet |
 | E1.F3.T1 [Backend] | ⬜ todo | 30 | — | — |  |
 | E1.F3.T2 [Backend] | ⬜ todo | 45 | — | — |  |
 | E1.F3.T3 [Backend] | ⬜ todo | 20 | — | — |  |
@@ -278,3 +278,4 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-23 | init | Knowledge sync (init Step 9C, `/graphify docs/spec/ --update`) **not run**, deliberately: this change moves the sync to archive only (REQ-W1-062). To run at archive. |
 | 2026-09-23 | requirements | 109 EARS requirements (REQ-W1-001..109) in 16 areas; spec-delta ADDED 109 + 12 carried REQ-ADP, MODIFIED 4 REQ-TEAM, REMOVED 0. `approvals.requirements.generated = true`; awaiting the owner's approval. Open question Q-01 (rotation threshold). |
 | 2026-09-23 | tasks | 73 tasks in 16 Features (`tasks.md`): 68 agent tasks, 2150 min total, critical path 550 min; 5 `[human]` (1 conditional). REQ-W1-001..109 all covered. `approvals.tasks.generated = true`; awaiting the owner's approval. Open point OP-1: `infra` neither approved nor skipped (recommended: skip, no cloud). Knowledge sync not run (REQ-W1-062). |
+| 2026-09-24 | impl | Batch 1 done: E1.F1.T1 (T-0 payload capture, headless; F-02 closed, F-04 opened; E1.F1.T2 [human] not needed) and E1.F2.T1..T6 (`karvey_lib` skeleton, `atomicio`, `schema_lite`, `project`, `audit`, the four schemas). 106 unit tests green; test-hooks.sh 32/32. New findings F-04, F-05, F-06 (F-06 must be decided before E1.F3.T1/E1.F15.T3). |

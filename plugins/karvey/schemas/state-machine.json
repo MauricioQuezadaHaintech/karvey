@@ -1,0 +1,160 @@
+{
+  "$comment": "The phase graph as data (architecture §2.1, wave1-hardening). rules/state-machine.md renders it between generated markers; karvey-state.py reads it.",
+  "version": 1,
+  "phases": [
+    {
+      "id": "init",
+      "approval": null,
+      "skippable": false,
+      "skill": "karvey-init",
+      "produces": [
+        "prd.md",
+        "spec.json",
+        "findings.md",
+        "PLAN.md"
+      ]
+    },
+    {
+      "id": "requirements",
+      "approval": "requirements",
+      "skippable": false,
+      "skill": "karvey-requirements",
+      "produces": [
+        "requirements.md",
+        "spec-delta.md"
+      ],
+      "reads": [
+        "prd.md"
+      ]
+    },
+    {
+      "id": "mockup",
+      "approval": "mockup",
+      "skippable": true,
+      "skill": "karvey-mockup",
+      "produces": [
+        "mockup/"
+      ],
+      "reads": [
+        "requirements.md",
+        "prd.md"
+      ]
+    },
+    {
+      "id": "design_graphic",
+      "approval": "design_graphic",
+      "skippable": true,
+      "skill": "karvey-design-graphic",
+      "produces": [
+        "design-spec.md"
+      ],
+      "reads": [
+        "mockup/",
+        "requirements.md"
+      ]
+    },
+    {
+      "id": "architecture",
+      "approval": "architecture",
+      "skippable": false,
+      "skill": "karvey-architecture",
+      "produces": [
+        "architecture.md"
+      ],
+      "reads": [
+        "requirements.md",
+        "design-spec.md?"
+      ]
+    },
+    {
+      "id": "infra",
+      "approval": "infra",
+      "skippable": true,
+      "skill": "karvey-infra",
+      "produces": [
+        "infra.md"
+      ],
+      "reads": [
+        "architecture.md"
+      ]
+    },
+    {
+      "id": "tasks",
+      "approval": "tasks",
+      "skippable": false,
+      "skill": "karvey-tasks",
+      "produces": [
+        "tasks.md"
+      ],
+      "reads": [
+        "architecture.md",
+        "requirements.md"
+      ]
+    },
+    {
+      "id": "impl",
+      "approval": null,
+      "skippable": false,
+      "skill": "karvey-impl",
+      "reads": [
+        "tasks.md",
+        "architecture.md"
+      ]
+    },
+    {
+      "id": "test",
+      "approval": null,
+      "skippable": false,
+      "skill": "karvey-test",
+      "reads": [
+        "architecture.md",
+        "requirements.md"
+      ]
+    },
+    {
+      "id": "qa",
+      "approval": "qa",
+      "skippable": false,
+      "skill": "karvey-qa",
+      "produces": [
+        "qa/REVISION_PR_*.md"
+      ]
+    },
+    {
+      "id": "deploying",
+      "approval": "deploy",
+      "skippable": false,
+      "skill": "karvey-deploy",
+      "reads": [
+        "qa/REVISION_PR_*.md"
+      ]
+    },
+    {
+      "id": "deployed",
+      "approval": "prod",
+      "skippable": false,
+      "skill": "karvey-deploy"
+    },
+    {
+      "id": "archived",
+      "approval": null,
+      "skippable": false,
+      "skill": "karvey-archive",
+      "reads": [
+        "spec-delta.md"
+      ]
+    }
+  ],
+  "edges": "forward: phases[i] -> phases[i+1]; a skipped phase is passed through",
+  "reopen_targets": [
+    "requirements",
+    "architecture",
+    "tasks",
+    "impl"
+  ],
+  "preconditions": {
+    "enter(P)": "every phase before P with a non-null approval is approved or skipped; approvals.deploy is not a precondition in Wave 1",
+    "enter(deployed)": "release ledger holds a human prod approval + pipeline run + post-deploy check",
+    "enter(archived)": "phase = deployed AND spec.json approvals.prod.by set, role human, ref non-empty"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "$comment": "Legacy phase values → the enum (architecture §2.5, D-09). exact: applied by `karvey-state.py validate --fix` and mapped in memory by transitions. proposed: applied only with `--fix --accept-proposed`. unmappable: reported, nothing written; the owner picks the phase.",
+  "version": 1,
+  "tiers": {
+    "exact": {
+      "requirements-generated": "requirements",
+      "mockup-generated": "mockup",
+      "design-graphic-approved": "design_graphic",
+      "architecture-generated": "architecture",
+      "architecture-approved": "architecture",
+      "infra-generated": "infra",
+      "infra-approved": "infra",
+      "tasks-generated": "tasks",
+      "tasks-approved": "tasks",
+      "deploy": "deploying"
+    },
+    "proposed": {
+      "mockup-approved": "mockup",
+      "architecture-draft": "architecture",
+      "mockup-rejected": "mockup",
+      "implementing": "impl",
+      "impl-in-progress": "impl",
+      "impl-done": "impl",
+      "implemented": "impl",
+      "implemented-pending-test": "test",
+      "deployed-dev": "deploying",
+      "deploy_dev": "deploying",
+      "deploy-paso3-activo": "deploying",
+      "deploy_prod": "deploying",
+      "deployed-lab-pending-vtr": "deploying",
+      "deployed-prod": "deployed"
+    }
+  },
+  "applied_by": {
+    "exact": "--fix",
+    "proposed": "--fix --accept-proposed"
+  },
+  "unmappable": {
+    "values": [
+      "iterate"
+    ],
+    "missing_or_null": true,
+    "note": "`iterate` is an activity, not a phase; a missing or null phase has no evidence to map from."
+  },
+  "notes": {
+    "deploy": "conservative: `deployed` needs pipeline evidence in the release ledger (REQ-W1-011)."
+  }
+}
