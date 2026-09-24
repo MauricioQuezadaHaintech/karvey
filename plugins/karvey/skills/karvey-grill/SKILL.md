@@ -1,7 +1,7 @@
 ---
 name: karvey-grill
-description: Pre-spec interrogation. Interviews the engineer relentlessly about their problem before writing any spec. Use at the start of every new feature or initiative — before karvey-init. Triggers include "grill me", "entrevístame", "interview me", "quiero especificar algo", "I want to spec something", "tengo una idea", "I have an idea", "necesito una feature", "I need a feature", "spec-driven", "SDD", "kiro", "gstack", "Garry Tan", "office hours", "producto 10 estrellas", "10-star product", "reframe", "PRD", "método de desarrollo", "development method".
-allowed-tools: Read, Bash, Glob, Grep
+description: Karvey phase 0 — a pre-spec interview (problem, 10-star reframe, platform) before karvey-init. Triggers include "karvey grill", "grill me", "entrevístame", "tengo una idea", "I have an idea", "quiero especificar algo".
+allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
 argument-hint: [descripción breve del problema o idea]
 ---
 

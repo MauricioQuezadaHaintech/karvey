@@ -1,6 +1,6 @@
 ---
 name: karvey-devex
-description: Developer-experience reviewer for the Karvey method. Walks the actual onboarding flow, measures time-to-hello-world, finds friction points and "docs lies". Plan-stage and live modes. Triggers include "karvey devex", "developer experience", "onboarding", "time to hello world", "fricción", "friction", "DX review".
+description: Karvey support — a DX report: walks the real onboarding, times hello-world, lists friction and docs lies. Plan or live mode. Triggers include "karvey devex", "karvey dx", "fricción de onboarding", "time to hello world".
 allowed-tools: Read, Bash, Glob, Grep, Agent
 argument-hint: [--mode plan|live]
 ---

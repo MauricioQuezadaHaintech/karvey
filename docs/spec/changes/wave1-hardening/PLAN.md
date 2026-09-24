@@ -246,7 +246,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F12.T5 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; 910 → 798 lines; nested-fence linter weakness reported (fixed in T13) |
 | E1.F12.T6 [Backend] | ✅ done | 45 | 5 | 0 | no human review yet; 717 → 447 lines; 41 → 0 errors; findings F-28..F-30 |
 | E1.F12.T7 [Backend] | ✅ done | 45 | 7 | 0 | no human review yet; 11 skills + multi-agent.md, 1312 → 1159 lines; 59 → 0 errors; findings F-31, F-32 |
-| E1.F12.T8 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F12.T8 [Backend] | ✅ done | 20 | 3 | 0 | no human review yet; 7 descriptions 200–223 chars; L-01..L-04 green on all 32 skills |
 | E1.F12.T9 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; enforcement 40 → 99 lines (one anchored line per promise); L-23 residue in project-config/support-skills handled in T10 |
 | E1.F12.T10 [Backend] | ⬜ todo | 50 | — | — |  |
 | E1.F12.T11 [Backend] | ⬜ todo | 30 | — | — |  |

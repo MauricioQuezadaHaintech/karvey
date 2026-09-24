@@ -1,6 +1,6 @@
 ---
 name: karvey-second-opinion
-description: Independent cross-model code review for the Karvey method. Get an adversarial second opinion from a different AI model (e.g. Claude vs GPT/Codex/Gemini). Three modes: Review (PASS/FAIL), Challenge (adversarial), Consult. Triggers include "karvey second opinion", "segunda opinión", "cross-model review", "revisión independiente", "codex", "otro modelo".
+description: Karvey support — an independent review by another AI model: review (PASS/FAIL), challenge or consult. Triggers include "karvey second opinion", "segunda opinión", "cross-model review", "revisión independiente".
 allowed-tools: Read, Bash, Glob, Grep, Agent
 argument-hint: [--mode review|challenge|consult] [<file or diff>]
 ---

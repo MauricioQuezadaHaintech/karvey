@@ -1,6 +1,6 @@
 ---
 name: karvey-investigate
-description: Systematic root-cause debugging for the Karvey method. Iron Law — no fixes without investigation first. Dates the symptom, asks what changed before what is wrong, traces data flow across repo boundaries, forms and tests hypotheses, separates root cause from latent fragility, stops after repeated failures. Triggers include "karvey investigate", "investigar bug", "root cause", "depurar", "por qué falla", "debugging".
+description: Karvey support — a root-cause report: no fix without investigation (dates the symptom, what changed, data flow, hypotheses). Triggers include "karvey investigate", "investigar bug", "por qué falla", "why does it fail".
 allowed-tools: Read, Bash, Glob, Grep, Agent
 argument-hint: [symptom description]
 ---

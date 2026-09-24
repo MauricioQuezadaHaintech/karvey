@@ -1,6 +1,6 @@
 ---
 name: karvey-standards
-description: Uplift engineering standards (golden paths) from the team's ACTUAL system into the standards repo, following the engineering-standards template. Discovers real patterns per layer, drafts db/backend/frontend standards, and is re-runnable to refresh them. Triggers include "karvey standards", "levantamiento de estándares", "engineering standards", "golden path", "extraer estándares", "standards uplift", "definir cómo se hace un SP/servicio/componente", "actualizar estándares".
+description: Karvey support — golden-path standards per layer drawn from the team's real system into the standards repo; re-runnable. Triggers include "karvey standards", "levantamiento de estándares", "golden path", "standards uplift".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: [<layer>] [--bootstrap | --refresh] [--repo <git-url>] [-y]
 ---

@@ -1,6 +1,6 @@
 ---
 name: karvey-diagram
-description: Diagram maker for the Karvey method. Natural language in, diagram out — mermaid source + editable .excalidraw + rendered SVG/PNG. Offline-friendly. Triggers include "karvey diagram", "diagrama", "mermaid", "excalidraw", "diagrama de flujo", "diagrama de arquitectura".
+description: Karvey support — a diagram from plain words: source, editable file and rendered SVG/PNG, offline. Triggers include "karvey diagram", "karvey diagrama", "diagrama de flujo", "diagrama de arquitectura".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [diagram description] [--type flow|sequence|architecture|er]
 ---

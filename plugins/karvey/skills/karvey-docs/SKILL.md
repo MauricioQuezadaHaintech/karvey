@@ -1,6 +1,6 @@
 ---
 name: karvey-docs
-description: Documentation engineer for the Karvey method. Generates Diataxis docs (tutorial/how-to/reference/explanation) from code, updates stale project docs to match what shipped, and exports markdown to publication-quality PDF. Triggers include "karvey docs", "documentación", "documentation", "diataxis", "actualizar docs", "update docs", "generar documentación", "generate documentation", "exportar PDF", "export PDF", "README".
+description: Karvey support — Diataxis docs from code, stale docs updated to what shipped, PDF export. Use after a release or on demand. Triggers include "karvey docs", "actualizar docs", "update docs", "generar documentación".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [generate | release | pdf] [<feature or file>]
 ---
