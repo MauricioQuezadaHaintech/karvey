@@ -10,8 +10,11 @@ Shared CLI contract (§1.1): ``--root DIR`` (else walk up from the cwd to the gi
 
 Commands:
   validate [PATH…|--all] [--strict]     schema + semantic checks (§2.2, §2.3)
+           [--fix [--dry-run] [--accept-proposed]]   legacy migration (§2.5)
 """
 import argparse
+import copy
+import difflib
 import json
 import os
 import sys
@@ -381,6 +384,184 @@ def load(path):
         raise NotFound(str(exc))
 
 
+# --------------------------------------------------------------------------- migration (§2.5)
+class Unmigratable(Exception):
+    """A value --fix cannot interpret: the file is not written (exit 3)."""
+
+
+SKIP_REASON_NONE = "(legacy: no reason recorded)"
+
+
+def _norm_phase_name(value):
+    return value.replace("-", "_") if isinstance(value, str) else value
+
+
+def with_exited(entry, at):
+    """Copy of a history entry with ``exited_at`` placed right after ``entered_at``."""
+    out = {}
+    for k, v in entry.items():
+        if k == "exited_at":
+            continue
+        out[k] = v
+        if k == "entered_at":
+            out["exited_at"] = at
+    if "exited_at" not in out:
+        out["exited_at"] = at
+    return out
+
+
+def _fix_history(hist, accept_proposed, notes):
+    """Normalise hand-written ``{from, to, at, by, ref}`` transitions and legacy phase values."""
+    if not isinstance(hist, list):
+        return hist
+    out = []
+    for e in hist:
+        if _is_legacy_transition(e):
+            frm, _ = map_phase(e.get("from"))
+            to, tier = map_phase(e.get("to"))
+            if to is None or (tier == "proposed" and not accept_proposed):
+                notes.append("phase_history: transition to %r left as is (unmappable)" % e.get("to"))
+                out.append(e)
+                continue
+            at = e.get("at")
+            for pos in range(len(out) - 1, -1, -1):
+                prev = out[pos]
+                if isinstance(prev, dict) and prev.get("phase") == frm:
+                    if "exited_at" not in prev and at:
+                        out[pos] = with_exited(prev, at)
+                    break
+            else:
+                notes.append("phase_history: no open %r entry for the transition to %r" % (e.get("from"), to))
+            new = {"phase": to, "entered_at": at}
+            for k in ("by", "ref", "evidence"):
+                if k in e:
+                    new[k] = e[k]
+            out.append(new)
+            notes.append("phase_history: {from: %r, to: %r} → {phase: %r, entered_at}" % (e.get("from"),
+                                                                                         e.get("to"), to))
+            continue
+        if isinstance(e, dict) and "phase" in e:
+            mapped, tier = map_phase(e["phase"])
+            if tier == "exact" or (tier == "proposed" and accept_proposed):
+                e = dict(e)
+                notes.append("phase_history: %r → %r" % (e["phase"], mapped))
+                e["phase"] = mapped
+        out.append(e)
+    return out
+
+
+def fix_spec(data, accept_proposed=False):
+    """``(new_data, notes)`` for a spec.json. Raises :class:`Unmigratable`. Never creates or flips an
+    approval: only ``phase``, ``phase_history``, ``skipped``, ``approvals: null`` and
+    ``management: "none"`` change."""
+    new = copy.deepcopy(data)
+    notes = []
+    phase = new.get("phase")
+    mapped, tier = map_phase(phase)
+    if tier == "unmappable":
+        raise Unmigratable("phase %r is unmappable: the owner picks the phase (nothing written)" % (phase,))
+    if tier == "exact" or (tier == "proposed" and accept_proposed):
+        new["phase"] = mapped
+        notes.append("phase: %r → %r (%s tier)" % (phase, mapped, tier))
+    elif tier == "proposed":
+        notes.append("phase: %r → %r not applied: proposed tier, re-run with --accept-proposed" % (phase, mapped))
+
+    if "approvals" in new and new["approvals"] is None:
+        new["approvals"] = {}
+        notes.append("approvals: null → {}")
+
+    mgmt = new.get("management", None)
+    if "management" in new:
+        if mgmt == "none":
+            new["management"] = "markdown"
+            notes.append("management: 'none' → 'markdown'")
+        elif not isinstance(mgmt, (str, dict)):
+            raise Unmigratable("management %r is not migratable (expected a tool name or an object)" % (mgmt,))
+
+    if "phase_history" in new:
+        new["phase_history"] = _fix_history(new["phase_history"], accept_proposed, notes)
+
+    skippable = {p["id"] for p in machine()["phases"] if p["skippable"]}
+    skipped = new.get("skipped") if isinstance(new.get("skipped"), dict) else None
+    additions = {}
+    gs = new.get("gates_skipped")
+    if isinstance(gs, dict):
+        phases = gs.get("phases") if isinstance(gs.get("phases"), list) else []
+        reason = gs.get("reason") if isinstance(gs.get("reason"), str) and gs["reason"].strip() else SKIP_REASON_NONE
+        rest = []
+        for ph in phases:
+            name = _norm_phase_name(ph)
+            if name in skippable:
+                additions.setdefault(name, reason)
+            else:
+                rest.append(ph)
+        if rest:
+            notes.append("gates_skipped: %s not skippable, kept for the owner" % ", ".join(map(str, rest)))
+        elif phases:
+            del new["gates_skipped"]
+            notes.append("gates_skipped removed (every phase moved to skipped)")
+    approvals = new.get("approvals") if isinstance(new.get("approvals"), dict) else {}
+    for key, ap in approvals.items():
+        reason = embedded_skip(ap)
+        if reason is not None and key in skippable:
+            additions.setdefault(key, reason)
+    if additions:
+        if skipped is None:
+            skipped = {}
+            new["skipped"] = skipped
+        for ph, reason in additions.items():
+            if ph not in skipped:
+                skipped[ph] = reason
+                notes.append("skipped.%s = %r" % (ph, reason))
+    return new, notes
+
+
+def fix_project(data):
+    """``(new_data, notes)`` for a project.json (REQ-W1-010). Raises :class:`Unmigratable`."""
+    new = copy.deepcopy(data)
+    notes = []
+    if "management" in new:
+        m = new["management"]
+        if isinstance(m, str):
+            tool = "markdown" if m == "none" else m
+            new["management"] = {"tool": tool}
+            notes.append("management: %r → {\"tool\": %r}" % (m, tool))
+        elif not isinstance(m, dict):
+            raise Unmigratable("management %r is not migratable (expected a tool name or an object)" % (m,))
+        mg = new["management"]
+        cu = new.get("clickup")
+        blid = None
+        if isinstance(cu, dict) and isinstance(cu.get("backlog_list_id"), (str, int)) and cu["backlog_list_id"] != "":
+            blid, src = str(cu["backlog_list_id"]), "clickup"
+        elif isinstance(new.get("backlog_list_id"), (str, int)) and new["backlog_list_id"] != "":
+            blid, src = str(new["backlog_list_id"]), "top"
+        if blid is not None:
+            if "location" not in mg:
+                mg["location"] = blid
+                if src == "clickup":
+                    del cu["backlog_list_id"]
+                    if not cu:
+                        del new["clickup"]
+                    notes.append("clickup.backlog_list_id → management.location")
+                else:
+                    del new["backlog_list_id"]
+                    notes.append("backlog_list_id → management.location")
+            elif mg["location"] != blid:
+                notes.append("backlog_list_id %r kept: management.location is already %r" % (blid, mg["location"]))
+    return new, notes
+
+
+def fix_file(path, loaded, accept_proposed):
+    if kind_of(path) == "project":
+        return fix_project(loaded.data)
+    return fix_spec(loaded.data, accept_proposed)
+
+
+def unified(before, after, name):
+    return "".join(difflib.unified_diff(before.splitlines(True), after.splitlines(True),
+                                        fromfile="a/" + name, tofile="b/" + name))
+
+
 # --------------------------------------------------------------------------- commands
 def cmd_validate(args, root):
     strict_mode = schema_mode(root, args.strict)
@@ -391,8 +572,11 @@ def cmd_validate(args, root):
         files = [Path(p) if os.path.isabs(p) else Path(os.getcwd()) / p for p in args.paths]
     else:
         raise Usage("validate needs PATH… or --all")
+    if (args.dry_run or args.accept_proposed) and not args.fix:
+        raise Usage("--dry-run and --accept-proposed need --fix")
     errors, warnings, report = [], [], []
     worst = kl.EXIT_OK
+    refused = False
     for f in files:
         name = rel(root, f)
         entry = {"file": name, "kind": kind_of(f), "errors": 0, "warnings": 0}
@@ -405,7 +589,36 @@ def cmd_validate(args, root):
             report.append(entry)
             worst = kl.EXIT_NOT_FOUND
             continue
-        issues = validate_data(loaded.data, kind_of(f), strict, file=name)
+        data = loaded.data
+        if args.fix:
+            if not isinstance(data, dict):
+                errors.append(kl.issue("state.unmigratable", "not a JSON object", file=name))
+                entry["refused"] = "not a JSON object"
+                report.append(entry)
+                refused = True
+                continue
+            try:
+                new, notes = fix_file(f, loaded, args.accept_proposed)
+            except Unmigratable as exc:
+                errors.append(kl.issue("state.unmigratable", str(exc), file=name))
+                entry["refused"] = str(exc)
+                report.append(entry)
+                refused = True
+                continue
+            entry["notes"] = notes
+            entry["changed"] = new != data
+            entry["written"] = False
+            if entry["changed"]:
+                before = Path(f).read_bytes().decode("utf-8")
+                after = atomicio.dumps(new, **loaded.fmt)
+                entry["diff"] = unified(before, after, name)
+                if not args.json:
+                    sys.stdout.write(entry["diff"])  # the diff always comes first (§2.5)
+                if not args.dry_run:
+                    atomicio.write_json(f, new, loaded=loaded)
+                    entry["written"] = True
+            data = new
+        issues = validate_data(data, kind_of(f), strict, file=name)
         e = [i for i in issues if i["severity"] == "error"]
         w = [i for i in issues if i["severity"] == "warning"]
         entry["errors"], entry["warnings"] = len(e), len(w)
@@ -414,11 +627,25 @@ def cmd_validate(args, root):
         report.append(entry)
         if e and worst == kl.EXIT_OK:
             worst = kl.EXIT_FINDINGS
+    if refused:
+        worst = kl.EXIT_REFUSED
     result = {"mode": strict_mode, "files": report}
+    if args.fix:
+        result["fix"] = {"dry_run": bool(args.dry_run), "accept_proposed": bool(args.accept_proposed)}
     lines = []
     for r in report:
-        state = "unreadable" if r.get("unreadable") else ("OK" if not r["errors"] else "INVALID")
-        lines.append("%-10s %s (%d errors, %d warnings)" % (state, r["file"], r["errors"], r["warnings"]))
+        if r.get("refused"):
+            state = "REFUSED"
+        elif r.get("unreadable"):
+            state = "unreadable"
+        else:
+            state = "OK" if not r["errors"] else "INVALID"
+        extra = ""
+        if args.fix and not r.get("refused") and not r.get("unreadable"):
+            extra = " · " + ("fixed" if r.get("written") else ("would fix" if r.get("changed") else "nothing to fix"))
+        lines.append("%-10s %s (%d errors, %d warnings)%s" % (state, r["file"], r["errors"], r["warnings"], extra))
+        for n in r.get("notes", []):
+            lines.append("           - " + n)
     lines.append("mode: %s · %d files · %d errors · %d warnings" % (strict_mode, len(report), len(errors),
                                                                    len(warnings)))
     return worst, result, errors, warnings, "\n".join(lines)
@@ -442,6 +669,9 @@ def build_parser():
     v.add_argument("paths", nargs="*", metavar="PATH")
     v.add_argument("--all", action="store_true", help="every spec.json and project.json under docs/spec")
     v.add_argument("--strict", action="store_true", help="strict mode (overrides project.json:schema_mode)")
+    v.add_argument("--fix", action="store_true", help="migrate legacy shapes (§2.5); the diff is printed first")
+    v.add_argument("--dry-run", action="store_true", help="with --fix: show the diff, write nothing")
+    v.add_argument("--accept-proposed", action="store_true", help="with --fix: also apply the proposed tier (D-09)")
     return p
 
 
