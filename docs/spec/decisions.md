@@ -158,3 +158,24 @@ corrected, not annotated at the end.
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Question:** «¿Apruebas las tareas de wave1-hardening (73 tareas) para pasar a implementación?» **Answer, verbatim:** «Apruebo»
 - **What it does NOT say:** it does not approve QA or prod; the five `[human]` tasks stay his.
 
+## D-14 — Pre-3.12 approvals: team-adapters gets a real prod phrase; team-layer stays recorded history
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Question:** «Aprobaciones anteriores a 3.12.0 (team-layer archivado y team-adapters) … ¿Cómo las tratamos? (F-35)» **Answer, verbatim:** «Escribo la frase de prod ahora»
+- **What:** E1.F15.T2 runs: the owner types a prod-approval phrase (approval word + production word, D-10) for `team-adapters` in a session that loads the 3.12 plugin, and the approval hook records it. `team-layer` (archived, merged without a human prod record) is reported as a **warning** with its reason — never back-filled.
+- **What it does NOT say:** it does not make pre-3.12 data errors silent in general; only archived changes whose approvals predate 3.12.0 are downgraded to warnings.
+
+## D-15 — The integration branch is not "production" when it differs from it (F-12)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Answer, verbatim:** «Sí, excluir integración (Recomendado)»
+- **What:** prod-gate removes `branch_flow.integration` from the production set when it differs from `branch_flow.production`; `main`/`master` and the remote default (when it is not the integration branch) stay protected even if renamed.
+
+## D-16 — Close the notification-confirmation gap in Wave 1 (F-15)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Answer, verbatim:** «Cerrarlo ahora (Recomendado)»
+- **What:** `karvey-config.py notify-check --confirm` counts only when backed by a human-written confirmation captured by the UserPromptSubmit hook, like the approval markers; the agent cannot confirm a changed destination by itself.
+
+## D-17 — Minor implementation decisions accepted
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-24. **Answer, verbatim:** «Sí, todas (Recomendado)»
+- **What:** protect-paths blocks editing the plugin from a session that loads it from the same working copy (F-09; dogfood with another copy); a prompt line over 200 characters records no approval (F-11); the diagnostic `selftest` guard stays (F-08); low findings F-26..F-33 go to the Wave 2 backlog.
+
