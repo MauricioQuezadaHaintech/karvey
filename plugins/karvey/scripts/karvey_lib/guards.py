@@ -8,6 +8,8 @@ subprocess call is an argv list (§3.1 rule 1). Critical output is ASCII (``[kar
                     wherever they live); fail closed.
     approval        UserPromptSubmit: records the human's approval marker (D-01, D-10, D-11);
                     fail open (no marker is the safe side).
+    plan-gate       opt-in (``enforcement.plan_gate_hook``): Edit/Write and the write /
+                    destructive command classes of §3.4 need a live marker; fail closed.
 
 Configuration that can weaken a guard is read from the reviewed line (§3.5) through the small
 local helpers below (``project_wc`` / ``project_reviewed`` / ``enforcement``). They are the
@@ -278,6 +280,169 @@ def protect_paths(ctx):
     return None
 
 
+# --------------------------------------------------------------------------- plan-gate (§3.4)
+PLAN_MSG = ("[karvey] BLOCK plan-gate: %s. Present the plan and wait for the human's approval; "
+            "the approval hook records it.")
+NULL_TARGETS = frozenset({"/dev/null", "/dev/stdout", "/dev/stderr", "/dev/tty", "-"})
+WRITE_OPS = frozenset({">", ">>", ">|", "&>", "&>>", "<>"})
+SQL_CLIENTS = frozenset({"psql", "mysql", "mariadb", "sqlcmd", "sqlite3", "sqlplus", "bq", "clickhouse-client",
+                         "cockroach", "duckdb", "osql", "isql", "snowsql", "trino", "presto"})
+_SQL_DROP = re.compile(r"\bdrop\s+(table|database|schema)\b", re.I)
+_SQL_TRUNC = re.compile(r"\btruncate\s+(table\s+)?[\w.\[\]\"`]+", re.I)
+_SQL_DELETE = re.compile(r"\bdelete\s+from\s+[\w.\[\]\"`]+(?P<rest>[^;]*)", re.I)
+_RAW_WRITE = re.compile(r"(^|[^0-9&>])>>?\|?\s*(?!&|/dev/null|/dev/std(out|err))[^\s&|;]")
+_RAW_DESTRUCTIVE = re.compile(
+    r"\brm\s+-[a-zA-Z]*[rR]|\brm\s+--recursive|\bgit\s+(clean|reset\s+--hard|push\s+.*(--force|-f\b))|"
+    r"\bsed\s+(-[a-zA-Z]*i|--in-place)|\bperl\s+-[a-zA-Z]*i|\btruncate\b|\bfind\b.*\s-(delete|exec)|"
+    r"\bdrop\s+(table|database)\b|\bdelete\s+from\b|\bterraform\s+(destroy|apply\s.*-destroy)|"
+    r"\b(az|gcloud|kubectl)\b.*\sdelete\b|\baws\b.*\s(delete-|rm\b|rb\b)", re.I)
+
+
+def _is_write_redirect(r):
+    if r.op in WRITE_OPS:
+        return bool(r.target) and r.target not in NULL_TARGETS and not r.target.startswith("/dev/fd/")
+    if r.op == ">&":  # N>&M and >&2 duplicate a descriptor; `>& file` writes a file
+        t = r.target or ""
+        return bool(t) and not t.isdigit() and t != "-" and t not in NULL_TARGETS
+    return False
+
+
+def _sql_text(seg):
+    parts = list(seg.argv[1:])
+    parts += [r.body for r in seg.redirects if getattr(r, "body", None)]
+    parts += [r.target for r in seg.redirects if r.op == "<<<" and r.target]
+    return "\n".join(p for p in parts if isinstance(p, str))
+
+
+def _sql_class(text):
+    if _SQL_DROP.search(text):
+        return "SQL DROP"
+    if _SQL_TRUNC.search(text):
+        return "SQL TRUNCATE"
+    for m in _SQL_DELETE.finditer(text):
+        if not re.search(r"\bwhere\b", m.group("rest"), re.I):
+            return "SQL DELETE without WHERE"
+    return None
+
+
+def _flag(args, short, long=()):
+    """``short`` appears as a flag (alone or combined: ``-rf``) or one of ``long``."""
+    for a in args:
+        if a in long or any(a.startswith(x + "=") for x in long):
+            return True
+        if a.startswith("-") and not a.startswith("--") and short in a[1:]:
+            return True
+    return False
+
+
+def destructive_class(seg):
+    """The §3.4 destructive class of one segment, or None."""
+    n, args = seg.argv0, seg.argv[1:]
+    if n == "rm" and (_flag(args, "r", ("--recursive",)) or _flag(args, "R")):
+        return "recursive rm"
+    if n == "git" and seg.git:
+        sub, ga = seg.git.get("sub"), seg.git.get("args") or []
+        if sub == "clean":
+            return "git clean"
+        if sub == "reset" and "--hard" in ga:
+            return "git reset --hard"
+        if sub == "checkout" and "--" in ga:
+            return "git checkout --"
+        if sub == "restore" and ("--staged" not in ga and "-S" not in ga or "--worktree" in ga or "-W" in ga):
+            return "git restore"
+        if sub == "push" and (any(a in ("-f", "--force", "--mirror") or a.startswith("--force") for a in ga)
+                              or any(a.startswith("+") for a in ga if not a.startswith("-"))):
+            return "git push --force"
+    if n == "sed" and any(a == "-i" or a.startswith("-i") or a == "--in-place" or a.startswith("--in-place=")
+                          or (a.startswith("-") and not a.startswith("--") and "i" in a[1:] and len(a) <= 4)
+                          for a in args):
+        return "sed -i"
+    if n == "perl" and _flag(args, "i"):
+        return "perl -i"
+    if n == "truncate":
+        return "truncate"
+    if n == "find" and ("-delete" in args or any(a in ("-exec", "-execdir", "-ok", "-okdir") and i + 1 < len(args)
+                                                  and posixpath.basename(args[i + 1]) in ("rm", "rmdir", "unlink",
+                                                                                          "shred")
+                                                  for i, a in enumerate(args))):
+        return "find -delete"
+    if n in SQL_CLIENTS:
+        c = _sql_class(_sql_text(seg))
+        if c:
+            return c
+    if n in ("terraform", "tofu") and args:
+        if args[0] == "destroy" or (args[0] == "apply" and "-destroy" in args):
+            return "terraform destroy"
+    if n in ("az", "gcloud") and "delete" in args:
+        return "%s delete" % n
+    if n == "aws" and any(a.startswith("delete-") or a in ("rm", "rb") for a in args[:3]):
+        return "aws delete"
+    if n == "kubectl" and "delete" in args[:2]:
+        return "kubectl delete"
+    return None
+
+
+def write_class(seg):
+    for r in seg.redirects:
+        if _is_write_redirect(r):
+            return "write to %s" % r.target
+    if seg.argv0 == "tee":
+        files = [a for a in seg.argv[1:] if not a.startswith("-") and a not in NULL_TARGETS]
+        if files:
+            return "write to %s" % files[0]
+    return None
+
+
+def plan_classes(ctx):
+    """The gated classes of this tool call (empty = not gated)."""
+    if ctx.event == "pre-edit":
+        return ["file edit (%s)" % (ctx.payload.tool_name or "Edit")]
+    cmd = ctx.payload.command or ""
+    if not cmd.strip():
+        return []
+    parsed = ctx.parsed
+    if parsed.unparsed:  # conservative regex over the raw string (§3.2)
+        if _RAW_DESTRUCTIVE.search(cmd) or _RAW_WRITE.search(cmd):
+            return ["unparsable command that may write or destroy"]
+        return []
+    out = []
+    for seg in parsed.segments:
+        c = destructive_class(seg) or write_class(seg)
+        if c:
+            out.append(c)
+    return out
+
+
+def _gate_root(ctx):
+    """The project whose marker counts: the edited file's project, else the session's."""
+    if ctx.event == "pre-edit" and ctx.payload.file_path:
+        r = _memo(ctx, ("root-of", ctx.payload.file_path),
+                  lambda: pj.find_root(start=posixpath.dirname(ctx.payload.file_path)))
+        if r is not None:
+            return r
+    return ctx.root
+
+
+def plan_gate_enabled(ctx):
+    return opt_in_enabled(ctx, "plan_gate_hook", _gate_root(ctx))
+
+
+def plan_gate(ctx):
+    classes = plan_classes(ctx)
+    if not classes:
+        return None
+    root = _gate_root(ctx)
+    base = root or ctx.payload.cwd
+    change = active_change(ctx, root)["change"] if root else None
+    marker, scope, reasons = approval.find_valid(base, change=change, ttl_min=ttl_min(ctx, root) if root else None)
+    if marker is not None:
+        approval.cross_check(base, marker, ctx.payload.transcript_path)
+        return None
+    why = "; ".join("%s: %s" % (k, v) for k, v in reasons.items())
+    return Decision.block(PLAN_MSG % classes[0] + " (marker %s)" % why,
+                          record={"reason": classes[0], "change": change, "marker": why})
+
+
 # --------------------------------------------------------------------------- approval hook
 def _audit(root, record):
     try:
@@ -314,4 +479,4 @@ def approval_hook(ctx):
         return None
 
 
-__all__ = ["Decision", "protect_paths", "approval_hook", "EDIT_TOOLS", "hookio"]
+__all__ = ["Decision", "protect_paths", "approval_hook", "plan_gate", "plan_gate_enabled", "EDIT_TOOLS", "hookio"]

@@ -118,7 +118,8 @@ REGISTRY = [
           run=guards.protect_paths),                                    # E1.F5.T1
     Guard("prod-gate", ("pre-bash",), "closed", True),                   # E1.F5.T5, E1.F5.T6
     Guard("git-flow", ("pre-bash",), "closed", False),                   # E1.F5.T4
-    Guard("plan-gate", ("pre-bash", "pre-edit"), "closed", False),       # E1.F5.T3
+    Guard("plan-gate", ("pre-bash", "pre-edit"), "closed", False, wired=True, run=guards.plan_gate,
+          enabled=guards.plan_gate_enabled),                            # E1.F5.T3
     Guard("spec-write", ("post-edit",), "open", True),                   # E1.F5.T7
     Guard("pending-sync", ("post-edit",), "open", True),                 # E1.F5.T7
     Guard("approval", ("prompt",), "open", True, wired=True, run=guards.approval_hook),  # E1.F5.T2

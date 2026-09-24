@@ -35,7 +35,7 @@ class Registry(unittest.TestCase):
         self.assertFalse(default["plan-gate"])       # opt-in
 
     def test_wired_guards(self):
-        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths", "approval"])
+        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths", "plan-gate", "approval"])
 
     def test_only_filter(self):
         self.assertEqual([g.name for g in kh.guards_for("pre-bash", ["git-flow"])], ["git-flow"])

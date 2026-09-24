@@ -96,11 +96,59 @@ nopy_protect_paths() {
   return 0
 }
 
+# The Karvey project root of the payload cwd (walk up no further than the git top level), or "".
+karvey_root() {
+  local d top
+  d="$(json_field cwd)"; [ -z "$d" ] && d="${CLAUDE_PROJECT_DIR:-$PWD}"
+  d="$(cd "$d" 2>/dev/null && pwd -P)" || return 0
+  top="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || true)"
+  while [ -n "$d" ]; do
+    if [ -f "$d/docs/spec/project.json" ] || [ -d "$d/docs/spec/changes" ]; then printf '%s' "$d"; return 0; fi
+    { [ -z "$top" ] || [ "$d" = "$top" ] || [ "$d" = "/" ]; } && return 0
+    d="$(dirname "$d")"
+  done
+}
+
+# enforcement.<key> is true in the working copy or on origin/<production> (grep, no JSON parser)
+flag_on() {
+  local root="$1" key="$2" prod
+  grep -Eq '"'"$key"'"[[:space:]]*:[[:space:]]*true' "$root/docs/spec/project.json" 2>/dev/null && return 0
+  prod="$(sed -nE 's/.*"production"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "$root/docs/spec/project.json" 2>/dev/null | head -1)"
+  [ -n "$prod" ] && git -C "$root" show "refs/remotes/origin/$prod:docs/spec/project.json" 2>/dev/null |
+    grep -Eq '"'"$key"'"[[:space:]]*:[[:space:]]*true'
+}
+
+# plan-gate without python (§3.2): when enabled, block Edit/Write and the conservative regex over
+# the raw command; the marker cannot be verified without python, so it does not count.
+nopy_plan_gate() {
+  local root cmd
+  root="$(karvey_root)"
+  if [ "$FORCE" != "1" ]; then [ -z "$root" ] && return 0; flag_on "$root" plan_gate_hook || return 0; fi
+  if [ "$EVENT" = "pre-edit" ]; then
+    echo "[karvey] BLOCK plan-gate: file edit, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
+    return 2
+  fi
+  cmd="$(json_field command)"
+  if printf '%s' "$cmd" | grep -Eiq '(^|[^0-9&>])>>?\|?[[:space:]]*([^&[:space:]/]|/([^d]|d[^e]|de[^v]))|\brm[[:space:]]+-[a-zA-Z]*[rR]|\bgit[[:space:]]+(clean|reset[[:space:]]+--hard|push[[:space:]].*(--force|-f\b))|\bsed[[:space:]]+-[a-zA-Z]*i|\btruncate\b|\bfind\b.*-(delete|exec)|\bdrop[[:space:]]+(table|database)|\bterraform[[:space:]]+destroy|\b(az|gcloud|kubectl)\b.*[[:space:]]delete\b'; then
+    echo "[karvey] BLOCK plan-gate: command may write or destroy, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
+    return 2
+  fi
+  return 0
+}
+
+FORCE=0
+for a in "$@"; do [ "$a" = "--force-enabled" ] && FORCE=1; done
+ONLY=""
+prev=""
+for a in "$@"; do [ "$prev" = "--only" ] && ONLY="$ONLY,$a"; prev="$a"; done
+
 GUARDS="$(guards_for "$EVENT")" || { echo "[karvey] unknown hook event '$EVENT' (not blocking)" >&2; exit 0; }
 for g in $GUARDS; do
+  if [ -n "$ONLY" ]; then case ",$ONLY," in *",$g,"*) ;; *) continue ;; esac; fi
   case "$g" in
     selftest) nopy_selftest; rc=$? ;;
     protect-paths) nopy_protect_paths; rc=$? ;;
+    plan-gate) nopy_plan_gate; rc=$? ;;
     *)        nopy_stub "$g"; rc=$? ;;
   esac
   if [ "$rc" -eq 2 ]; then exit 2; fi
