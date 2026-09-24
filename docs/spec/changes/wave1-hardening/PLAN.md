@@ -244,7 +244,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F12.T3 [Backend] | ✅ done | 45 | 6 | 0 | no human review yet; state init command added (F-25); 955 → 795 lines; 68 → 0 errors on the three files |
 | E1.F12.T4 [Backend] | ✅ done | 40 | 3 | 0 | no human review yet; 48 → 0 errors on the five files; 1478 → 1461 lines; advance into mockup/infra verified in a scratch repo |
 | E1.F12.T5 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; 910 → 798 lines; nested-fence linter weakness reported (fixed in T13) |
-| E1.F12.T6 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F12.T6 [Backend] | ✅ done | 45 | 5 | 0 | no human review yet; 717 → 447 lines; 41 → 0 errors; findings F-28..F-30 |
 | E1.F12.T7 [Backend] | ⬜ todo | 45 | — | — |  |
 | E1.F12.T8 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F12.T9 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; enforcement 40 → 99 lines (one anchored line per promise); L-23 residue in project-config/support-skills handled in T10 |

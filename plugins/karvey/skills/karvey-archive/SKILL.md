@@ -1,7 +1,7 @@
 ---
 name: karvey-archive
-description: Archive a completed change: merge spec-deltas into living specs, move to archive, close the Epic in the team's tracker (or PLAN.md). Triggers include "karvey archive", "archivar", "archive", "cerrar epic", "close epic", "merge specs".
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+description: Karvey phase 12 — on chore/archive-{id}: records the release, merges the spec-delta, archives the change, closes the Epic, knowledge sync. After karvey-deploy. Triggers include "karvey archive", "archivar con karvey", "cerrar epic karvey".
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 argument-hint: <change-id>
 ---
 
@@ -9,214 +9,106 @@ argument-hint: <change-id>
 
 ## Purpose
 
-Complete the change's lifecycle: merge spec-deltas into the living specs, archive the change directory, and close the Epic in the team's tracker (`../karvey/rules/management-adapters.md`) or mark it done in PLAN.md.
+PHASE 12, the last: after `/karvey-deploy`, close the change's lifecycle on its own docs branch — record the release in `spec.json`, merge the spec-delta into the living specs, archive the change directory, close the Epic in the team's tracker (`../karvey/rules/management-adapters.md`) or in `PLAN.md`, and run the knowledge sync. Nothing is committed on the integration or production branch (`../karvey/rules/state-machine.md`, D-03).
+
+```bash
+S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
+C="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py"
+P="$(python3 "$C" get branch_flow.production --shell)"
+```
 
 ## Execution steps
 
+### Step 0 — Archive branch first
+
+Before any edit or commit:
+```bash
+git fetch origin
+git checkout -b "chore/archive-{change-id}" "origin/$P"
+```
+
 ### Step 1 — Verify completeness
 
-**When:** the change has already been deployed with `/karvey-deploy` (phase: deployed). Archive is PHASE 12 (the last) of the Karvey Method and runs AFTER the deployment.
+`python3 "$S" next "{change-id}" --json` must show the change in `deploying` with every gate before it approved or skipped (`invalid` → show the errors and stop). Also verify:
+- [ ] Tests executed: `docs/test_evidence.md` has entries for the change.
+- [ ] QA review in `docs/spec/changes/{change-id}/qa/`, no pending critical or high finding.
+- [ ] `findings.md` converged: no `open`/`routed` `bug` or `spec-gap` (`../karvey/rules/iteration-loop.md`).
+- [ ] No Task or Feature of the change left in `review` in the tracker; list any that remain and stop until QA moves them.
 
-Read `docs/spec/changes/{change-id}/spec.json`.
+Blockers → report and stop.
 
-Verify:
-- [ ] `phase = "deployed"` or `approvals.deploy.approved = true` — if not met, warn that the change still needs to be deployed with `/karvey-deploy` and stop.
-- [ ] `approvals.tasks.approved = true`
-- [ ] Tests executed (`docs/test_evidence.md` exists with entries for the change-id)
-- [ ] QA review completed (`REVISION_PR_*_{date}.md` exists)
-- [ ] No pending critical or high findings
+### Step 2 — Record the release in spec.json
 
-If there are blockers: report and stop.
+1. **Deployed**, with the evidence of the green production run and the canary from `karvey-deploy` (or the CI):
+   ```bash
+   python3 "$S" advance "{change-id}" deployed --pipeline-run "{run-url}" --post-deploy-check pass
+   ```
+   It is refused without a human prod approval in the release ledger.
+2. **Prod approval copied into spec.json** from the ledger (or from the `D-NN` / PR URL that holds the human's OK):
+   ```bash
+   python3 "$S" approve "{change-id}" prod --write-spec
+   ```
+   Neither ledger nor D-NN / PR URL → **stop**: there is no recorded human prod OK to copy. If the `D-NN` is not yet in `docs/spec/decisions.md`, write it now from the PR text (who, when, the words verbatim).
+3. Create the production marker `docs/spec/changes/{change-id}/IMPLEMENTED`.
 
-Since the deployment already happened (`/karvey-deploy`), create the production marker `docs/spec/changes/{change-id}/IMPLEMENTED` if it does not already exist. If for some reason the deploy did not complete, warn that it will be archived without the production marker.
+### Step 3 — Merge the spec-delta into the living specs
 
-### Step 2 — Read spec-deltas
-
-Read all files `docs/spec/changes/{change-id}/specs/**/*.md`.
-
-For each spec-delta, identify the operations:
-- `## ADDED Requirements` → append to the living spec
-- `## MODIFIED Requirements` → replace the block in the living spec
-- `## REMOVED Requirements` → remove the block + leave a deprecation comment
-
-### Step 3 — Merge deltas into living specs
-
-For each affected capability, edit `docs/spec/specs/{capability}/spec.md`:
-
-**ADDED:** Add to the end of the file:
+Deterministic, never by hand. Review the diff first, then apply:
 ```bash
-cat >> docs/spec/specs/{capability}/spec.md << 'EOF'
-
-{full block of the new requirement}
-EOF
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-spec-merge.py" "{change-id}" --dry-run
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-spec-merge.py" "{change-id}"
+git add docs/spec/specs/ docs/spec/changes/ docs/spec/decisions.md
+git commit -m "spec: record release and merge deltas from {change-id}"
 ```
+The capability comes from `spec.json:capability` (`--capability` overrides). ADDED is appended, MODIFIED replaces the block, REMOVED leaves a deprecation comment (`../karvey/rules/living-specs.md`).
 
-**MODIFIED:** Locate the requirement by name and replace the full block.
-Search: `grep -n "### Requirement: {name}" docs/spec/specs/{capability}/spec.md`
-Replace from that line to the next `### Requirement:` or end of file.
-
-**REMOVED:** Locate the block and delete it, leaving a comment:
-```markdown
-<!-- Removed {date}: {reason from the spec-delta} -->
-```
-
-### Step 4 — Commit the spec merge
+### Step 4 — Archive the change directory
 
 ```bash
-git add docs/spec/specs/
-git commit -m "spec: merge deltas from {change-id}
-
-- {capability}: ADDED {N} requirements, MODIFIED {N}, REMOVED {N}"
-```
-
-### Step 5 — Archive the change directory
-
-```bash
+python3 "$S" advance "{change-id}" archived
 TIMESTAMP=$(date +%Y-%m-%d)
 mkdir -p docs/spec/changes/archive
-mv docs/spec/changes/{change-id} docs/spec/changes/archive/${TIMESTAMP}-{change-id}
+git mv "docs/spec/changes/{change-id}" "docs/spec/changes/archive/${TIMESTAMP}-{change-id}"
+git commit -m "chore: archive {change-id}"
 ```
 
-Verify:
-```bash
-ls -la docs/spec/changes/archive/${TIMESTAMP}-{change-id}
-# change-id must no longer exist in docs/spec/changes/
-```
+### Step 5 — Close the Epic and calibrate
 
-```bash
-git add docs/spec/changes/
-git commit -m "chore: archive {change-id}
+- Resolve the tracker: `python3 "$C" resolve management --change "{change-id}" --json` (missing status map → the one clause of `management-adapters.md`). `external` → `comment(epic, "✅ Archived: specs merged into docs/spec/specs/{capability}/spec.md, change in docs/spec/changes/archive/{date}-{change-id}")` and `set_status(epic, done)`: the Epic reaches `done` here, at archive. A failed call goes to the outbox (`karvey-config.py outbox add`); pending outbox entries are retried now. Otherwise update the archived `PLAN.md`: status `✅ Completed and archived` and a history row `| {date} | archive | Spec merged and archived |`.
+- Calibration: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-context.py" --change "{change-id}" --section calibration` — relay the actual/estimate ratio per work type and any recalibration it proposes.
 
-Spec deltas merged into living specs. Change archived."
-```
+### Step 6 — Knowledge sync (here only)
 
-### Step 6A — Close the Epic in the team's tracker (`management-adapters.md`)
+The knowledge sync runs at archive and on demand, never per phase (`../karvey/rules/knowledge-sync.md`). With `knowledge_sync: none`, skip and say so. Otherwise sync the union of the paths queued in `.graph-pending` and `git diff --name-only "origin/$P"...HEAD` — e.g. `/graphify docs/spec/ --update` (without `--update` when there is no graph yet); `--update` also drops the nodes of deleted documents. Clear `.graph-pending` after a successful sync.
 
-```
-comment(epic,
-  "✅ Epic completed and archived.\n\nSpec deltas merged into: docs/spec/specs/{capability}/spec.md\nArchived in: docs/spec/changes/archive/{date}-{change-id}\n\nDone with the Karvey Method")
-set_status(epic, done)
-```
-ClickUp adapter example: `clickup_create_task_comment(epic_id, …)` + `clickup_update_task(epic_id, status="{status:done}")`. Missing status map → read the tool's statuses, confirm once, persist (`management-adapters.md`).
+### Step 7 — Close the loop (sweeps and optional steps)
 
-### Step 6B — Close PLAN.md (Markdown)
+1. **Discovery backlog** (`../karvey/rules/backlog.md`): list the `open` items from this change; for each, with the user, **promote** (new change via `/karvey-grill` or `/karvey-init`, recording `seed_backlog_id`), **keep** or **discard** (with a reason); mirror the status to the tracker's backlog if there is one. Report the counts — never sweep silently.
+2. **Branch sweep** (`../karvey/rules/deploy-workflow.md` → *Branch hygiene*): absorbed non-protected branches are deleted; not absorbed ones are listed for the human. Report the counts.
+3. **Optional, recommended:** `/karvey-retro {change-id}` (velocity, test health, opportunities) and `/karvey-docs {change-id}` (user/project documentation — not the living specs, already merged). Ask with `AskUserQuestion`; not blocking.
 
-Update `docs/spec/changes/archive/{date}-{change-id}/PLAN.md`:
-- General status: `✅ Completed and archived`
-- Add a history entry: `| {date} | archive | Spec merged and archived |`
+### Step 8 — Docs-only PR
 
-### Step 6C — Update spec.json
+Push `chore/archive-{change-id}` and open one PR through the docs-only lane (`../karvey/rules/multi-agent.md` §8): light CI, no version bump, no deploy.
 
-Update `docs/spec/changes/archive/{date}-{change-id}/spec.json`:
-- Set `phase: "archived"` (transition from `deployed`).
-
-### Step 7 — Validate living specs
-
-```bash
-grep -n "### Requirement:" docs/spec/specs/{capability}/spec.md
-# Verify that the ADDED requirements appear
-# Verify that the REMOVED ones are no longer there
-```
-
-### Step 7B — Update knowledge graph
-
-Sync knowledge per `../karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the spec-delta merge and the archiving.
-The `--update` also removes from the graph the nodes of documents that were deleted (REMOVED requirements).
-
-### Step 7C — Cycle retrospective (optional, recommended)
-
-Once the specs are merged and the change archived, offer to close the cycle with a retrospective. It is **optional but recommended**, especially on large Epics or cycles that took several days.
-
-Recommend running the cross-cutting skill `karvey-retro` to extract learnings from the cycle:
-- **Velocity:** how long each phase took vs. the estimate, where the time went.
-- **Test health:** coverage, flaky tests, recurring QA findings.
-- **Opportunities:** detected technical debt, process improvements, risks for the next cycle.
-
-```
-Do you want to run the cycle retrospective with /karvey-retro {change-id}?
-(optional — recommended to capture learnings on velocity, test health, and opportunities)
-```
-
-It is not blocking: if the user skips it, continue anyway with the final output.
-
-### Step 7D — Post-release documentation (optional, recommended)
-
-The internal living specs (`docs/spec/specs/`) were already merged in Step 3 — that is **not** touched here. This step is for the **user / project** documentation (READMEs, guides, Diataxis docs), which is distinct from the internal specs.
-
-Recommend running the cross-cutting skill `karvey-docs` to, after the release:
-- **Update stale docs:** detect and refresh project/user documentation that became outdated by what was shipped in this change.
-- **Generate Diataxis docs:** create new documentation (tutorial / how-to / reference / explanation) for the delivered features, when applicable.
-
-```
-Do you want to update/generate the user documentation with /karvey-docs {change-id}?
-(optional — recommended; it distinguishes user/project docs from the internal living specs that archive already merged)
-```
-
-It is not blocking: if the user skips it, continue anyway with the final output.
-
-### Step 7E — Discovery backlog sweep (so nothing stays "in the air")
-
-A closing cycle almost always surfaced ideas and out-of-scope work. Before finishing, sweep the discovery backlog (`../karvey/rules/backlog.md`) so those become real future work instead of evaporating.
-
-1. Read `docs/spec/backlog.md`. List the `open` items whose origin is this change (and any other `open` items, for visibility).
-2. For each, decide with the user: **promote** (create a future `change-id` now via `/karvey-grill` or `/karvey-init`, carrying the backlog context as PRD seed and recording `seed_backlog_id`), **keep** (leave `open` for later), or **discard** (with a reason).
-3. Update each item's `status` (`promoted` + `Promoted to change-id`, or `discarded` + reason). If the team uses a tracker, mirror the status to its backlog (`mirror_backlog`).
-4. **Report the counts explicitly** — promoted / kept / discarded. Never sweep silently: a silent sweep reads as "all captured" when it isn't.
-
-This is the step that guarantees post-cycle discoveries don't get lost.
-
-### Step 7F — Branch sweep (nothing left in branches)
-
-The change is not closed while one of its branches is still alive. In each repo of the change, apply
-`../karvey/rules/deploy-workflow.md` → *Branch hygiene*: `git fetch --prune`, then every non-protected branch
-**absorbed** into `{production}` is deleted (remote + local, closing its PR if open); every branch **not
-absorbed** is listed with its unique commits and PR, and the human decides (rescue / keep / discard). If
-`karvey-deploy` 2.12 already cleaned, this confirms it. Report the counts — never sweep silently.
-
-### Step 8 — Final output
+### Step 9 — Final output
 
 ```
 ✅ Change archived: {change-id}
 
-Spec deltas merged:
-  - docs/spec/specs/{capability}/spec.md
-    - ADDED: {N} requirements
-    - MODIFIED: {N} requirements
-    - REMOVED: {N} requirements
+Release recorded: deployed (run {url}) · approvals.prod ← {ledger | D-NN}
+Spec deltas merged: docs/spec/specs/{capability}/spec.md — ADDED {N} · MODIFIED {N} · REMOVED {N}
+Archived in: docs/spec/changes/archive/{date}-{change-id} · IMPLEMENTED: yes
+Management: {Epic → done in {tool} | PLAN.md marked done} · outbox: {N} retried
+Calibration: {ratio per work type | no proposal}
+Knowledge sync: {graphify/obsidian updated ({N} paths) | none}
+Branches swept: deleted {N} · kept {N} ({branch} — {reason})
+Backlog swept: promoted {N} ({list}) · kept {N} · discarded {N}
+PR: chore/archive-{change-id} → #{n} (docs-only)
 
-Archived in: docs/spec/changes/archive/{date}-{change-id}
-IMPLEMENTED: {yes / no — not marked}
-
-Management: {Epic E{n} → done in {tool} | PLAN.md marked done}
-
-Commits:
-  - "spec: merge deltas from {change-id}"
-  - "chore: archive {change-id}"
-
-Branches swept:
-  - Deleted: {N} ({list})
-  - Kept (not absorbed): {N} ({branch} — {reason})
-
-Discovery backlog swept:
-  - Promoted to new change-ids: {N} ({list})
-  - Kept open: {N}
-  - Discarded: {N}
-
-Optional final steps (recommended):
-  - 🔁 Cycle retrospective:           /karvey-retro {change-id}
-  - 📚 Post-release documentation:    /karvey-docs {change-id}
-
-🏁 Full Karvey Method cycle finished for {change-id}
+Optional: 🔁 /karvey-retro {change-id} · 📚 /karvey-docs {change-id}
+🏁 Karvey cycle finished for {change-id}. New change: /karvey-grill or /karvey-init.
 ```
-
-
-## Cycle closure
-
-After archiving, **ask the user** whether they want to run the recommended optional final steps:
-- `/karvey-retro {change-id}` — cycle retrospective.
-- `/karvey-docs {change-id}` — post-release documentation (Diataxis / update docs).
-
-With this, the change's cycle is closed. For a new change: `/karvey-grill` or `/karvey-init`.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
