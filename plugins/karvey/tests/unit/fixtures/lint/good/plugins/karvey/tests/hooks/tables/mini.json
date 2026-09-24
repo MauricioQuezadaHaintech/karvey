@@ -1,0 +1,41 @@
+{
+  "table": "mini",
+  "cases": [
+    {
+      "id": "pg-01",
+      "guard": "plan-gate",
+      "input": {},
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "plan not approved"
+      }
+    },
+    {
+      "id": "pg-02",
+      "guard": "plan-gate",
+      "input": {},
+      "expect": {
+        "decision": "allow",
+        "stdout_empty": true
+      }
+    },
+    {
+      "id": "prod-01",
+      "guard": "prod-gate",
+      "input": {},
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK"
+      }
+    },
+    {
+      "id": "prod-02",
+      "guard": "prod-gate",
+      "input": {},
+      "expect": {
+        "decision": "allow",
+        "stdout_contains": "ALLOW"
+      }
+    }
+  ]
+}

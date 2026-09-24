@@ -1,3 +1,3 @@
 # Rule: phase close
 
-The close ritual of a phase.
+Status changes per task; the close comment and the cascade run per Feature.

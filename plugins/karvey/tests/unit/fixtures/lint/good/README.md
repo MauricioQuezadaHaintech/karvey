@@ -1,3 +1,3 @@
 # Mini Karvey
 
-A 2-phase pipeline with 1 support skills and 3 rules.
+A 7-phase pipeline with 2 support skills and 6 rules.

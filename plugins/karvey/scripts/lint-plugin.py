@@ -1034,6 +1034,341 @@ def l18_spec_validate(ctx):
                    % (warnings, "strict" if strict else "advisory", name), "warning")
 
 
+# --------------------------------------------------------------------------- guard tables (T4)
+def table_cases(ctx):
+    """``{case_id: (case, table_file)}`` of every guard-table case."""
+    out = {}
+    d = ctx.plugin / "tests" / "hooks" / "tables"
+    for f in sorted(d.glob("*.json")) if d.is_dir() else []:
+        data = ctx.json(f)
+        cases = data.get("cases", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        for c in cases:
+            if isinstance(c, dict) and c.get("id"):
+                out[c["id"]] = (c, f)
+    return out
+
+
+def norm_hook(name):
+    n = name[:-3] if name.endswith(".sh") else name
+    for suffix in ("-guard", "-hook"):
+        if n.endswith(suffix) and n != suffix.lstrip("-"):
+            n = n[: -len(suffix)]
+    return n
+
+
+def shipped_hooks(ctx):
+    """Normalised names of the hooks the plugin ships: the dispatcher's guard registry, the
+    scripts under ``hooks/`` and the legacy template shims under ``skills/*/hooks/``."""
+    names = set()
+    reg = ctx.read(ctx.plugin / "scripts" / "karvey_lib" / "karvey_hooks.py") or ""
+    names.update(norm_hook(m) for m in re.findall(r"Guard\(\s*[\"']([\w-]+)[\"']", reg))
+    for d in [ctx.plugin / "hooks"] + sorted(ctx.skills_dir.glob("*/hooks")):
+        if d.is_dir():
+            names.update(norm_hook(p.name) for p in d.glob("*.sh"))
+    hj = ctx.json(ctx.plugin / "hooks" / "hooks.json")
+    if isinstance(hj, dict):
+        for m in re.findall(r"hooks/([\w-]+)\.sh", json.dumps(hj)):
+            names.add(norm_hook(m))
+    return names
+
+
+# --------------------------------------------------------------------------- L-15
+HOOK_NAME_RE = re.compile(r"(?<![\w/-])([a-z][a-z0-9]*(?:-[a-z0-9]+)*-(?:guard|gate))(\.sh)?\b")
+
+
+@check("L-15", "Every hook named in skills or rules exists in hooks.json or the dispatcher and has "
+               "guard-table cases (clickup-sync-guard, standards-guard fail)", reqs=("029",))
+def l15_hooks_exist(ctx):
+    shipped = shipped_hooks(ctx)
+    tabled = {norm_hook(c.get("guard", "")) for c, _ in table_cases(ctx).values()}
+    for path in ctx.text_files():
+        seen = set()
+        for n, line, _ in iter_lines(ctx.lines(path)):
+            for m in HOOK_NAME_RE.finditer(line):
+                name, sh = m.group(1), m.group(2)
+                if name.startswith("karvey-"):
+                    continue  # a skill name (karvey-guard), not a hook
+                if not sh and not re.search(r"\bhooks?\b", line, re.I):
+                    continue
+                key = norm_hook(name)
+                if key in seen:
+                    continue
+                seen.add(key)
+                if key not in shipped:
+                    yield path, n, "hook %s is cited but the plugin does not ship it" % name
+                elif key not in tabled:
+                    yield path, n, "hook %s has no guard-table cases (tests/hooks/tables/*.json)" % name
+
+
+# --------------------------------------------------------------------------- L-16
+PROMISE_RE = re.compile(r"\b(blocks?|blocked|allows?|allowed|lets? (?:it|them|things|the command) through|"
+                        r"prints?|printed|silent(?:ly)?|nothing|exits?)\b", re.I)
+ANCHOR_RE = re.compile(r"<!--\s*guard-case:\s*([\w.,\s-]+?)\s*-->")
+PROMISE_FILES = ("rules/enforcement.md", "hooks/README.md")
+
+
+def _verb_classes(line):
+    classes = set()
+    line = re.sub(r"\b(prints?|outputs?|says?|emits?)\s+nothing\b", "silent", line, flags=re.I)
+    for m in PROMISE_RE.finditer(line):
+        v = m.group(1).lower()
+        if v.startswith("block") or v.startswith("exit"):
+            classes.add("block")
+        elif v.startswith("allow") or v.startswith("let"):
+            classes.add("allow")
+        elif v.startswith("silent") or v == "nothing":
+            classes.add("silent")
+        else:
+            classes.add("prints")
+    return classes
+
+
+def _case_fits(case, classes):
+    exp = case.get("expect", {}) if isinstance(case.get("expect"), dict) else {}
+    decision = exp.get("decision")
+    prints = bool(exp.get("stdout_contains") or exp.get("stderr_contains"))
+    silent = decision == "allow" and not prints
+    for c in classes:
+        if c == "block" and decision == "block":
+            return True
+        if c == "allow" and decision == "allow":
+            return True
+        if c == "silent" and silent:
+            return True
+        if c == "prints" and prints:
+            return True
+    return False
+
+
+@check("L-16", "In rules/enforcement.md and hooks/README.md every behaviour promise carries "
+               "<!-- guard-case: ID --> whose table case matches the verb", reqs=("022", "051"))
+def l16_guard_case_anchors(ctx):
+    cases = table_cases(ctx)
+    files = [ctx.rules_dir / "enforcement.md", ctx.plugin / "hooks" / "README.md"]
+    for path in files:
+        if not path.is_file():
+            continue
+        for n, line, lang in iter_lines(ctx.lines(path)):
+            if lang is not None or line.lstrip().startswith("#") or re.match(r"^\s*\|[\s:|-]+\|\s*$", line):
+                continue
+            prose = ANCHOR_RE.sub("", line)
+            classes = _verb_classes(prose)
+            if not classes:
+                continue
+            ids = [i.strip() for m in ANCHOR_RE.finditer(line) for i in m.group(1).split(",") if i.strip()]
+            if not ids:
+                yield (path, n, "behaviour promise (%s) without a <!-- guard-case: ID --> anchor"
+                       % "/".join(sorted(classes)))
+                continue
+            for cid in ids:
+                if cid not in cases:
+                    yield path, n, "guard-case %s is not a case of tests/hooks/tables/*.json" % cid
+                elif not _case_fits(cases[cid][0], classes):
+                    exp = cases[cid][0].get("expect", {})
+                    yield (path, n, "guard-case %s expects %s, which contradicts the promise (%s)"
+                           % (cid, exp.get("decision"), "/".join(sorted(classes))))
+
+
+# --------------------------------------------------------------------------- L-19
+BUMP_PER_COMMIT_RES = (
+    re.compile(r"\b(bump\w*|increment\w*)\b[^.;\n]{0,60}\b(per|each|every)\s+(commit|task)\b", re.I),
+    re.compile(r"\b(per|each|every)\s+(commit|task)\b[^.;\n]{0,40}\b(bump\w*|increments? the version)\b", re.I),
+)
+
+
+@check("L-19", "Versioning: no bump per commit or task; impl writes [Unreleased]; QA D6 and the deploy "
+               "pre-check read [Unreleased]; the versioning rule says per release", reqs=("036", "038", "039"))
+def l19_versioning(ctx):
+    impl = ctx.skill("karvey-impl")
+    for path in ctx.text_files():
+        for n, line, _ in iter_lines(ctx.lines(path)):
+            for rx in BUMP_PER_COMMIT_RES:
+                m = rx.search(line)
+                if m and not NEGATION_RE.search(line[max(0, m.start() - 25):m.end()]):
+                    yield (path, n, "describes a version bump per commit/task; impl adds to [Unreleased], "
+                                    "one bump per release")
+                    break
+            else:
+                if path == impl:
+                    m = re.search(r"\bbump\w*\b|\bincrement(s|ing)? the version\b", line, re.I)
+                    if m and not NEGATION_RE.search(line[max(0, m.start() - 25):m.end() + 25]):
+                        yield path, n, "karvey-impl bumps the version; impl only adds to [Unreleased] (REQ-W1-036)"
+    for name, what in (("karvey-impl", "impl must add its line under ## [Unreleased]"),
+                       ("karvey-qa", "QA D6 must verify the [Unreleased] section"),
+                       ("karvey-deploy", "the deploy pre-check must read [Unreleased]")):
+        path = ctx.skill(name)
+        if path is not None and "[Unreleased]" not in (ctx.read(path) or ""):
+            yield path, 1, "%s never mentions [Unreleased]: %s" % (name, what)
+    rule = ctx.rule("versioning.md")
+    if rule is not None and not re.search(r"\b(each|every|per|one)\s+(bump per\s+)?release\b", ctx.read(rule) or "",
+                                          re.I):
+        yield rule, 1, "versioning.md does not say that each release increments the version"
+
+
+# --------------------------------------------------------------------------- L-20
+QA_ITEM_RE = re.compile(r"<!--\s*qa-item:\s*([^>]+?)\s*-->")
+
+
+def qa_items(ctx, rule):
+    """``[(line, key)]``: ``<!-- qa-item: key -->`` anchors, else the bullets of a section whose
+    heading names QA / Dimension 6."""
+    lines = ctx.lines(rule)
+    items = [(n, m.group(1)) for n, line in enumerate(lines, 1) for m in QA_ITEM_RE.finditer(line)]
+    if items:
+        return items
+    in_qa = False
+    for n, line in enumerate(lines, 1):
+        h = re.match(r"^(#+)\s+(.*)", line)
+        if h:
+            in_qa = bool(re.search(r"\bQA\b|karvey-qa|Dimension 6|D6", h.group(2)))
+            continue
+        if in_qa:
+            b = re.match(r"^\s*[-*]\s+(.*)", line)
+            if b:
+                t = b.group(1)
+                key = re.search(r"`([^`]+)`", t) or re.search(r"\*\*([^*]+)\*\*", t)
+                items.append((n, key.group(1) if key else t.strip()))
+    return items
+
+
+def d6_text(ctx, qa):
+    lines = ctx.lines(qa)
+    out, on = [], False
+    for line in lines:
+        if re.search(r"Dimension 6\b|^#+\s*6\.\s", line):
+            on = True
+        elif on and re.search(r"Dimension 7\b|^#+\s*7\.\s", line):
+            on = False
+        if on:
+            out.append(line)
+    return "\n".join(out)
+
+
+@check("L-20", "Every QA item assigned in rules/versioning.md appears in karvey-qa Dimension 6", reqs=("040",))
+def l20_versioning_qa_items(ctx):
+    rule, qa = ctx.rule("versioning.md"), ctx.skill("karvey-qa")
+    if rule is None or qa is None:
+        return
+    items = qa_items(ctx, rule)
+    text = ctx.read(rule) or ""
+    if not items:
+        if re.search(r"karvey-qa|Dimension 6|\bQA\b", text):
+            yield (rule, 1, "versioning.md assigns verification to QA but lists no QA items "
+                            "(a QA section or <!-- qa-item: key --> anchors)")
+        return
+    d6 = d6_text(ctx, qa).lower()
+    if not d6:
+        yield qa, 1, "karvey-qa has no Dimension 6 section"
+        return
+    for n, key in items:
+        if key.lower() not in d6:
+            yield rule, n, "QA item %r of versioning.md is absent from karvey-qa Dimension 6" % key
+
+
+# --------------------------------------------------------------------------- L-21
+ESTIMATE_WRITE_RES = (
+    re.compile(r"time_estimate[^\n]{0,80}\bactual", re.I),
+    re.compile(r"\bestimate\w*\b\s*[`\"']?\s*[:=]\s*[{`\"']?\s*\$?\{?\s*actual", re.I),
+)
+
+
+@check("L-21", "No write of an actual time into an estimate field", reqs=("042",))
+def l21_estimate_not_overwritten(ctx):
+    for path in ctx.text_files():
+        for n, line, _ in iter_lines(ctx.lines(path)):
+            if NEGATION_RE.search(line):
+                continue
+            if any(rx.search(line) for rx in ESTIMATE_WRITE_RES):
+                yield path, n, "writes the actual time into the estimate field; record it as a time entry / actual"
+
+
+# --------------------------------------------------------------------------- L-22
+ROTATION_RE = re.compile(r"rotat|rotar|rotaci|relevo|ROTATE", re.I)
+HOURS_RE = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)\s?(?:h|hours?|horas)\b(?!\s*\d+\s*%)(?!\d)")
+SHELL_ROTATE_RE = re.compile(r"ROTATE_HOURS\D{0,40}?(\d+(?:\.\d+)?)")
+
+
+def rotation_files(ctx):
+    files = list(ctx.text_files())
+    for p in (ctx.plugin / "hooks" / "README.md", ctx.plugin / "README.md", ctx.root / "README.md"):
+        if p.is_file():
+            files.append(p)
+    d = ctx.plugin / "hooks"
+    if d.is_dir():
+        files += sorted(d.glob("*.sh"))
+    return files
+
+
+@check("L-22", "Rotation threshold: no literal other than one that cites karvey_lib/defaults.json",
+       reqs=("049",))
+def l22_rotation_threshold(ctx):
+    for path in rotation_files(ctx):
+        lines = ctx.lines(path)
+        code = path.suffix in (".sh", ".py")
+        for n, line in enumerate(lines, 1):
+            if "defaults.json" in line:
+                continue
+            if code:
+                m = SHELL_ROTATE_RE.search(line)
+                if m:
+                    yield (path, n, "rotation threshold literal %s; read it from karvey_lib/defaults.json"
+                           % m.group(1))
+                continue
+            context = line if n == 1 else lines[n - 2] + " " + line
+            if not ROTATION_RE.search(context):
+                continue
+            for m in HOURS_RE.finditer(line):
+                if re.match(r"\d+h\d+m", line[m.start():]):
+                    continue
+                yield (path, n, "rotation threshold literal %s; cite karvey_lib/defaults.json instead"
+                       % m.group(0).strip())
+
+
+# --------------------------------------------------------------------------- L-23
+SYNC_INVOKE_RES = (
+    re.compile(r"/graphify\b"),
+    re.compile(r"\b(sync|syncs|syncing)\b(?: the)? knowledge\b", re.I),
+    re.compile(r"\brun the sync step\b|\btrigger the sync\b", re.I),
+    re.compile(r"^#+\s.*\bknowledge sync\b", re.I),
+)
+ON_DEMAND_RE = re.compile(r"on[- ]demand|when the user asks|if the user asks|a pedido|only (?:at|in) archive|"
+                          r"archive only|at archive", re.I)
+
+
+@check("L-23", "graphify / knowledge sync is invoked only by karvey-archive and the explicit on-demand path",
+       reqs=("062",))
+def l23_sync_only_at_archive(ctx):
+    for path in ctx.text_files():
+        if path.parent.name == "karvey-archive" or path.name == "knowledge-sync.md":
+            continue
+        for n, line, _ in iter_lines(ctx.lines(path)):
+            if ON_DEMAND_RE.search(line) or NEGATION_RE.search(line):
+                continue
+            if any(rx.search(line) for rx in SYNC_INVOKE_RES):
+                yield path, n, "invokes the knowledge sync outside archive; it runs at archive and on demand only"
+
+
+# --------------------------------------------------------------------------- L-24
+PER_TASK_RITUAL_RE = re.compile(r"\b(comment|cascade)\w*\b[^.;\n]{0,80}\b(per[- ]task|(?:each|every)\s+(?:impl\s+)?task)\b"
+                                r"|\b(per[- ]task|(?:each|every)\s+(?:impl\s+)?task)\b[^.;\n]{0,40}\b(comment|cascade)",
+                                re.I)
+
+
+@check("L-24", "Tracker ritual: status per task; comment and cascade per Feature (phase-close.md)",
+       reqs=("064",))
+def l24_tracker_ritual(ctx):
+    files = ctx.rules() + [p for p in (ctx.skill("karvey-impl"),) if p]
+    for path in files:
+        for n, line, _ in iter_lines(ctx.lines(path)):
+            if NEGATION_RE.search(line):
+                continue
+            if PER_TASK_RITUAL_RE.search(line):
+                yield path, n, "requires a close comment or cascade per task; they run per Feature (status per task)"
+    rule = ctx.rule("phase-close.md")
+    if rule is not None and not re.search(r"per\s+Feature", ctx.read(rule) or "", re.I):
+        yield rule, 1, "phase-close.md does not state the close comment and cascade per Feature"
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""

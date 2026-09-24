@@ -7,6 +7,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -68,6 +69,13 @@ class Tree:
         if old not in s:
             raise AssertionError("%r not in %s" % (old, rel))
         self.write(rel, s.replace(old, new))
+
+    def sub(self, rel, pattern, repl):
+        s = self.read(rel)
+        new, n = re.subn(pattern, repl, s)
+        if not n:
+            raise AssertionError("%r not in %s" % (pattern, rel))
+        self.write(rel, new)
 
     def remove(self, rel):
         p = self.path(rel)
@@ -421,11 +429,11 @@ class L11(LintCase):
         self.assertPasses("L-11")
 
     def test_readme_support_count(self):
-        self.t.replace("README.md", "1 support skills", "18 support skills")
+        self.t.sub("README.md", r"\d+ support skills", "18 support skills")
         self.assertFails("L-11", "says 18 support skills", file="README.md")
 
     def test_plugin_json_phase_count(self):
-        self.t.replace(PLUGIN_JSON, "a 2-phase pipeline", "a 13-phase pipeline")
+        self.t.sub(PLUGIN_JSON, r"a \d+-phase pipeline", "a 13-phase pipeline")
         self.assertFails("L-11", "phases", file=PLUGIN_JSON)
 
     def test_new_skill_changes_the_truth(self):
@@ -435,7 +443,7 @@ class L11(LintCase):
         self.assertEqual({f["file"] for f in fs}, {"README.md", "plugins/karvey/README.md", PLUGIN_JSON, MARKET})
 
     def test_rule_count(self):
-        self.t.replace("README.md", "3 rules", "4 rules")
+        self.t.sub("README.md", r"\d+ rules", "99 rules")
         self.assertFails("L-11", "rules")
 
 
@@ -530,6 +538,175 @@ class L18(LintCase):
         fs = lint(self.t.root, ["L-18"])
         self.assertTrue(fs)
         self.assertEqual({f["severity"] for f in fs}, {"warning"})
+
+
+# --------------------------------------------------------------------------- L-15, L-16, L-19 .. L-24
+IMPL = SKILLS + "/karvey-impl/SKILL.md"
+QA = SKILLS + "/karvey-qa/SKILL.md"
+DEPLOY = SKILLS + "/karvey-deploy/SKILL.md"
+ARCHIVE = SKILLS + "/karvey-archive/SKILL.md"
+ENF = RULES + "/enforcement.md"
+HOOKS_README = "plugins/karvey/hooks/README.md"
+TABLE = "plugins/karvey/tests/hooks/tables/mini.json"
+
+
+class L15(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-15")
+
+    def test_phantom_clickup_sync_guard(self):
+        self.t.append(RULES + "/phase-close.md", "\n`karvey-guard` can install a `clickup-sync-guard` hook.\n")
+        self.assertFails("L-15", "clickup-sync-guard is cited but the plugin does not ship it")
+
+    def test_phantom_standards_guard(self):
+        self.t.append(INIT, "\nThe standards-guard hook warns on impl.\n")
+        self.assertFails("L-15", "standards-guard", file=INIT)
+
+    def test_shipped_hook_without_table_cases(self):
+        table = json.loads(self.t.read(TABLE))
+        table["cases"] = [c for c in table["cases"] if c["guard"] != "plan-gate"]
+        self.t.write(TABLE, table)
+        self.t.replace(ENF, " <!-- guard-case: pg-01 -->", "")
+        self.assertFails("L-15", "plan-gate has no guard-table cases")
+
+    def test_skill_names_are_not_hooks(self):
+        self.t.append(INIT, "\nRun `/karvey-guard` to set the hooks.\n")
+        self.assertPasses("L-15")
+
+
+class L16(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-16")
+
+    def test_unanchored_promise(self):
+        self.t.append(ENF, "\nThe git-flow guard blocks a push to main.\n")
+        self.assertFails("L-16", "without a <!-- guard-case", file=ENF)
+
+    def test_anchor_to_a_missing_case(self):
+        self.t.append(HOOKS_README, "- A PR into dev passes silently. <!-- guard-case: prod-99 -->\n")
+        self.assertFails("L-16", "prod-99 is not a case", file=HOOKS_README)
+
+    def test_verb_contradicts_the_case(self):
+        self.t.replace(ENF, "blocks an edit without an approved plan. <!-- guard-case: pg-01 -->",
+                       "blocks an edit without an approved plan. <!-- guard-case: pg-02 -->")
+        self.assertFails("L-16", "pg-02 expects allow")
+
+    def test_readme_says_nothing_while_the_case_prints(self):
+        self.t.append(HOOKS_README, "- A Karvey project without settings prints nothing. <!-- guard-case: prod-02 -->\n")
+        self.assertFails("L-16", "contradicts")
+
+
+class L19(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-19")
+
+    def test_bump_per_commit(self):
+        self.t.append(ORCH, "\nExecutes tasks on `feature/{id}` (never dev/master). Version bump + CHANGELOG per commit.\n")
+        self.assertFails("L-19", "per commit", file=ORCH)
+
+    def test_unreleased_per_commit_one_bump_per_release_passes(self):
+        self.t.append(ORCH, "\nCHANGELOG `[Unreleased]` per commit; one bump per release.\n")
+        self.assertPasses("L-19")
+
+    def test_impl_bumps(self):
+        self.t.append(IMPL, "\n**Version bump:** increment `rev` in `package.json`.\n")
+        self.assertFails("L-19", "karvey-impl bumps", file=IMPL)
+
+    def test_qa_without_unreleased(self):
+        self.t.write(QA, self.t.read(QA).replace("[Unreleased]", "CHANGELOG"))
+        self.assertFails("L-19", "karvey-qa never mentions [Unreleased]", file=QA)
+
+    def test_deploy_without_unreleased(self):
+        self.t.write(DEPLOY, self.t.read(DEPLOY).replace("[Unreleased]", "the new entry"))
+        self.assertFails("L-19", "karvey-deploy", file=DEPLOY)
+
+    def test_versioning_rule_without_per_release(self):
+        self.t.replace(RULES + "/versioning.md", "Each release increments the version once",
+                       "Each commit increments the version")
+        self.assertFails("L-19", file=RULES + "/versioning.md")
+
+
+class L20(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-20")
+
+    def test_rule_item_absent_from_d6(self):
+        self.t.append(RULES + "/versioning.md", "- DEV shows the `-dev` pre-release format.\n")
+        self.assertFails("L-20", "-dev")
+
+    def test_anchored_items(self):
+        self.t.append(RULES + "/versioning.md", "\n<!-- qa-item: visible version -->\n")
+        self.assertFails("L-20", "visible version")
+
+    def test_rule_assigns_qa_without_items(self):
+        self.t.write(RULES + "/versioning.md", "# Rule\n\nEach release increments it. Verified by karvey-qa.\n")
+        self.assertFails("L-20", "lists no QA items")
+
+
+class L21(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-21")
+
+    def test_actual_into_estimate(self):
+        self.t.append(IMPL, '\n```bash\ncurl -X PUT "$URL" -d \'{"time_estimate": {actual_time_ms}}\'\n```\n')
+        self.assertFails("L-21", "estimate field", file=IMPL)
+
+    def test_estimate_assigned_actual(self):
+        self.t.append(RULES + "/phase-close.md", "\nSet `estimate = actual` when the task closes.\n")
+        self.assertFails("L-21")
+
+
+class L22(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-22")
+
+    def test_second_literal_in_text(self):
+        self.t.append(RULES + "/phase-close.md", "\nRotation thresholds: 150k of context, 24 h, or a work block.\n")
+        self.assertFails("L-22", "24 h")
+
+    def test_literal_in_a_hook_script(self):
+        self.t.write("plugins/karvey/hooks/karvey-statusline.sh",
+                     "HOURS = float(os.environ.get('KARVEY_ROTATE_HOURS', 8))\n")
+        self.assertFails("L-22", "literal 8")
+
+    def test_citing_defaults_passes(self):
+        self.t.append(RULES + "/phase-close.md",
+                      "\nRotation threshold: 8 h, read from `karvey_lib/defaults.json` (`rotation_hours`).\n")
+        self.assertPasses("L-22")
+
+    def test_rate_limit_windows_are_not_thresholds(self):
+        self.t.append(HOOKS_README, "\nRotation statusline: `5h 29% ↻18:05 (1h31m)`.\n")
+        self.assertPasses("L-22")
+
+
+class L23(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-23")
+
+    def test_sync_in_a_phase_skill(self):
+        self.t.append(QA, "\nSync knowledge per `../karvey/rules/knowledge-sync.md` (`/graphify docs/spec/ --update`).\n")
+        self.assertFails("L-23", "outside archive", file=QA)
+
+    def test_sync_in_a_rule(self):
+        self.t.append(RULES + "/phase-close.md", "\n4. Sync knowledge per `knowledge-sync.md`.\n")
+        self.assertFails("L-23", file=RULES + "/phase-close.md")
+
+    def test_on_demand_path_passes(self):
+        self.t.append(QA, "\nThe user may run `/graphify docs/spec/` on demand.\n")
+        self.assertPasses("L-23")
+
+
+class L24(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-24")
+
+    def test_comment_per_task(self):
+        self.t.append(IMPL, "\nThis is the per-task close ritual: comment + status + cascade, applied to every task.\n")
+        self.assertFails("L-24", "per task", file=IMPL)
+
+    def test_phase_close_without_per_feature(self):
+        self.t.write(RULES + "/phase-close.md", "# Rule: phase close\n\nComment and set the status.\n")
+        self.assertFails("L-24", "per Feature")
 
 
 if __name__ == "__main__":

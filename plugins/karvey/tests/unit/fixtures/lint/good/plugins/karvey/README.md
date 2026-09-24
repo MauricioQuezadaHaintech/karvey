@@ -1,3 +1,3 @@
 # Mini Karvey plugin
 
-2 phases, 1 support skills.
+7 phases, 2 support skills.
