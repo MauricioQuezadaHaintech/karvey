@@ -112,7 +112,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 - [x] E1.F6.T1 [Backend] `karvey_hooks.py session`: active change, manifest xor, bounded board/handoff, structured output (port of the 3.11.4 logic) — est: 45min (depends E1.F4.T3, E1.F2.T4, E1.F5.T7)
 - [x] E1.F6.T2 [Backend] Settings notice on `startup` only, `origin/{integration}` check, legacy-shape message; SessionStart split by matcher — est: 30min (depends E1.F6.T1)
-- [ ] E1.F6.T3 [Backend] `karvey-handoff-capture.py` writes `state.json` in the shape the 3.11.4 resolver reads — est: 25min (depends E1.F2.T2, E1.F2.T4) (P)
+- [x] E1.F6.T3 [Backend] `karvey-handoff-capture.py` writes `state.json` in the shape the 3.11.4 resolver reads — est: 25min (depends E1.F2.T2, E1.F2.T4) (P)
 - [ ] E1.F6.T4 [Test] `session.json` table; `test-hooks.sh` becomes the entry point that also runs the tables — est: 30min (depends E1.F6.T2, E1.F6.T3, E1.F4.T4)
 
 ### Feature E1.F7: Settings resolver `karvey-config.py` and safe values
@@ -223,7 +223,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F5.T8 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F6.T1 [Backend] | ✅ done | 45 | 6 | 0 | no human review yet; port of the 3.11.4 logic; live-state resolver in new karvey_lib/livestate.py (shared with F6.T3); one legacy assertion changed for REQ-W1-046 → F-13 |
 | E1.F6.T2 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; hooks.json SessionStart split (startup | resume|compact|clear), both double-quoted; test-hooks 57/57 |
-| E1.F6.T3 [Backend] | ⬜ todo | 25 | — | — |  |
+| E1.F6.T3 [Backend] | ✅ done | 25 | 5 | 0 | no human review yet; 8 unit tests; re-measures after writing when state.json is inside the measured repo; save-order note → F-14 |
 | E1.F6.T4 [Test] | ⬜ todo | 30 | — | — |  |
 | E1.F7.T1 [Backend] | ⬜ todo | 25 | — | — |  |
 | E1.F7.T2 [Backend] | ⬜ todo | 30 | — | — |  |

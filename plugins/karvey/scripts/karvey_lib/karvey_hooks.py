@@ -387,21 +387,6 @@ def bound_text(text, path, max_bytes):
         cut, len(cut.encode("utf-8")) / 1024.0, len(data) / 1024.0, path)
 
 
-def _find_team_root(start):
-    d = start
-    while True:
-        if os.path.isfile(os.path.join(d, "docs", "spec", "team.json")):
-            return d, os.path.join(d, "docs", "spec", "team.json"), "team"
-        if os.path.isfile(os.path.join(d, ".ceo-agentes")):
-            return d, os.path.join(d, ".ceo-agentes"), "legacy"
-        if os.path.isdir(os.path.join(d, "docs", "spec", "agent")):
-            return d, os.path.join(d, "docs", "spec", "agent"), "solo"
-        parent = os.path.dirname(d)
-        if parent == d:
-            return None, None, None
-        d = parent
-
-
 def _legacy_kv(cfg):
     kv = {}
     for ln in (_read(cfg) or "").splitlines():
@@ -567,7 +552,7 @@ def session_text(mode, env):
         return ""
     cfg_d = defaults().get("session", {})
     max_rows, max_bytes = int(cfg_d.get("board_rows_max", 40)), int(cfg_d.get("handoff_bytes_max", 6144))
-    root, cfg, kind = _find_team_root(start)
+    root, cfg, kind = livestate.find_team_root(start)
     out = []
     if root is None:
         n = settings_notice(start, None, mode, env)

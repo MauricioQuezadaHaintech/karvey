@@ -18,6 +18,23 @@ import subprocess
 GIT_TIMEOUT_S = 10
 
 
+def find_team_root(start):
+    """``(root, cfg, kind)`` walking up from ``start``: ``docs/spec/team.json`` (team),
+    ``.ceo-agentes`` (legacy) or ``docs/spec/agent/`` (solo); ``(None, None, None)`` if none."""
+    d = os.path.realpath(str(start))
+    while True:
+        if os.path.isfile(os.path.join(d, "docs", "spec", "team.json")):
+            return d, os.path.join(d, "docs", "spec", "team.json"), "team"
+        if os.path.isfile(os.path.join(d, ".ceo-agentes")):
+            return d, os.path.join(d, ".ceo-agentes"), "legacy"
+        if os.path.isdir(os.path.join(d, "docs", "spec", "agent")):
+            return d, os.path.join(d, "docs", "spec", "agent"), "solo"
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None, None, None
+        d = parent
+
+
 def git(repo, *args, timeout=GIT_TIMEOUT_S):
     """``(returncode, stdout)`` of ``git -C <repo> <args>``; never raises."""
     try:
