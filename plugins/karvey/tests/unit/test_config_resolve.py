@@ -419,12 +419,19 @@ EXPECTED_MANAGEMENT = {  # fixture → (tool, location, external, missing, warni
     "management-clickup.json": ("clickup", None, True, ["location", "statuses"], "config.legacy_management"),
     "management-absent.json": ("markdown", None, False, [], "config.no_management"),
     "management-object.json": ("clickup", "9013", True, ["statuses"], None),
+    "management-status-flow-google_chat.json": ("clickup", "9015", True, ["statuses"], None),
+    "management-status-flow-custom.json": ("clickup", "9016", True, ["statuses"], None),
     "clickup-backlog-list.json": ("clickup", "9014", True, ["statuses"], "config.legacy_backlog_list_id"),
     "notifications-absent.json": ("markdown", None, False, [], "config.no_management"),
     "notifications-google_chat.json": ("markdown", None, False, [], "config.no_management"),
     "notifications-none.json": ("markdown", None, False, [], "config.no_management"),
     "trunk.json": ("markdown", None, False, [], "config.no_management"),
 }
+
+# F-38: a legacy management.status_flow keyed by the logical states is proposed as statuses
+FLOW = {"todo": "open", "in_progress": "doing", "review": "review", "done": "complete", "blocked": None}
+PROPOSED_STATUSES = {"management-object.json": FLOW, "management-status-flow-google_chat.json": FLOW}
+LEGACY_CHANNEL_FIXTURES = {"notifications-google_chat.json", "management-status-flow-google_chat.json"}
 
 
 class LegacyProjectFixtures(Base):
@@ -472,10 +479,27 @@ class LegacyProjectFixtures(Base):
                 self.assertEqual(C.tree_digest(self.root), before)
                 snip = env["result"]["snippet"]["management"]
                 self.assertEqual(snip["tool"], tool)
-                self.assertNotIn("statuses", snip)
+                if name in PROPOSED_STATUSES:
+                    self.assertEqual(snip["statuses"], PROPOSED_STATUSES[name])
+                    self.assertNotIn("status_flow", snip)
+                    self.assertTrue(any("status_flow → statuses" in n for n in env["result"]["notes"]))
+                else:
+                    self.assertNotIn("statuses", snip)
                 if location:
                     self.assertEqual(snip["location"], location)
-                self.assertIn("channel", env["result"]["snippet"]["notifications"])
+                nt = env["result"]["snippet"]["notifications"]
+                self.assertIn("channel", nt)
+                self.assertNotEqual(nt["channel"], "google_chat")
+                if name in LEGACY_CHANNEL_FIXTURES:
+                    self.assertEqual(nt["channel"], "google-chat")
+
+    def test_custom_status_flow_is_not_proposed(self):
+        self.load("management-status-flow-custom.json")
+        env = C.run_json("propose-settings", "--from-legacy", "--root", self.root)[1]
+        snip = env["result"]["snippet"]["management"]
+        self.assertNotIn("statuses", snip)
+        self.assertEqual(snip["status_flow"], {"todo": "open", "impl": "doing", "done": "closed"})
+        self.assertTrue(any("not the logical states" in n for n in env["result"]["notes"]))
 
     def test_validate_fix_string_to_object_idempotent(self):
         from _state import run_json as state_json
@@ -498,9 +522,45 @@ class LegacyProjectFixtures(Base):
                 if location and name == "clickup-backlog-list.json":
                     self.assertEqual(after["management"]["location"], location)
                     self.assertNotIn("backlog_list_id", after.get("clickup", {}))
-                for k in set(before) - {"management", "clickup"}:
-                    self.assertEqual(after[k], before[k], "only management/clickup are migrated (%s)" % k)
+                if name in LEGACY_CHANNEL_FIXTURES:
+                    self.assertEqual(after["notifications"],
+                                     dict(before["notifications"], channel="google-chat"))
+                for k in set(before) - {"management", "clickup", "notifications"}:
+                    self.assertEqual(after[k], before[k], "only management/clickup/notifications are migrated (%s)" % k)
+                if "status_flow" in (before.get("management") or {}):  # proposed tier: kept without the flag
+                    self.assertEqual(after["management"]["status_flow"], before["management"]["status_flow"])
                 self.assertEqual(self.resolve()[1]["result"]["tool"], tool)
+
+    def test_validate_fix_accept_proposed_status_flow_to_statuses(self):
+        from _state import run_json as state_json
+        for name in sorted(EXPECTED_MANAGEMENT):
+            with self.subTest(fixture=name):
+                f = self.load(name)
+                before = json.loads(f.read_text(encoding="utf-8"))
+                code, env = state_json("validate", str(f), "--root", str(self.root), "--fix", "--accept-proposed")
+                self.assertEqual(code, 0, env["errors"])
+                once = f.read_bytes()
+                state_json("validate", str(f), "--root", str(self.root), "--fix", "--accept-proposed")
+                self.assertEqual(f.read_bytes(), once, "idempotent")
+                after = json.loads(once)
+                mg = after.get("management")
+                if name in PROPOSED_STATUSES:
+                    self.assertEqual(mg["statuses"], PROPOSED_STATUSES[name])
+                    self.assertNotIn("status_flow", mg)
+                    r = self.resolve()[1]["result"]
+                    self.assertEqual(r["missing"], [], "the owner is not asked again for the map")
+                elif isinstance(mg, dict):
+                    self.assertNotIn("statuses", mg, "statuses are never invented (REQ-W1-080)")
+                    if "status_flow" in (before.get("management") or {}):
+                        self.assertEqual(mg["status_flow"], before["management"]["status_flow"])
+
+    def test_validate_fix_dry_run_names_the_proposal(self):
+        from _state import run as state_run
+        f = self.load("management-object.json")
+        before = f.read_bytes()
+        code, out, _ = state_run("validate", str(f), "--root", str(self.root), "--fix", "--dry-run")
+        self.assertEqual(f.read_bytes(), before)
+        self.assertIn("--accept-proposed", out)
 
     def test_trunk_branch_flow_read(self):
         self.load("trunk.json")

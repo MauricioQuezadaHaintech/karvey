@@ -406,7 +406,7 @@ failure the goal forbids. It is also the code-level control for F-02/S-01.
 | `get <dotted.key> --shell` | Prints the validated value for the key's kind (§3.1), or exits 3 naming the key and the rule it broke. The skill uses `VALUE=$(python3 … get management.location --shell) \|\| stop` and then passes `"$VALUE"`. |
 | `notify-check [--confirm]` | Hashes the resolved notifications block and compares it with `<git-common-dir>/karvey/notify-last.json`. Unchanged: exit 0. Changed: exit 10, printing the new destination for the human to confirm (REQ-W1-097). `--confirm` records the new hash only against a live human confirmation (D-16, F-15): the human types `confirmo notificacion <code>` (or `confirm notification <code>`; `<code>` = first 8 hex of the destination hash), the approval hook records it under `approvals/notify/` scoped to the clone, the project and that destination, with the `plan_marker_ttl_min` TTL; without it (the agent alone, another destination or project, expired) `--confirm` records nothing and exits 10 with the phrase to type. The confirmation is single-use. A `target` containing `://` is refused with exit 3. |
 | `outbox add\|list\|done <change>` | `changes/<id>/tracker-outbox.jsonl`: `{id, op, args, parent_key, created_at, attempts, last_error}` (REQ-W1-090). `list` feeds the phase-close retry and the dashboard. Adding a child whose parent is itself pending is recorded as `blocked_by` the parent, never sent. |
-| `propose-settings [--from-legacy]` | Prints a `notifications` / `management` snippet built from the legacy string and a top-level `clickup.backlog_list_id`, with placeholders for the rest. It never writes (§7.2). |
+| `propose-settings [--from-legacy]` | Prints a `notifications` / `management` snippet built from the legacy string and a top-level `clickup.backlog_list_id`, with placeholders for the rest. A legacy `management.status_flow` whose keys are all logical states is proposed as `statuses` (F-38), and `google_chat` as `google-chat`. It never writes (§7.2). |
 
 Exit codes follow the shared contract, plus `10` = "confirmation required" for `notify-check`.
 
@@ -896,7 +896,12 @@ Other `--fix` rules, each shown in the diff and none of them creating or flippin
 }
 ```
 
-`google_chat` (found once in the scan) is accepted as a legacy alias with a warning. `null` in `statuses` is
+`google_chat` (found once in the scan) is accepted as a legacy alias with a warning; `validate --fix` rewrites it
+to `google-chat` (exact tier). A legacy `management.status_flow` keyed only by the logical states (a flat map of
+tracker status names or `null`) is the status map the owner already wrote: `propose-settings --from-legacy`
+proposes it as `statuses`, and `validate --fix --accept-proposed` moves it there (proposed tier; plain `--fix`
+names it and keeps it); a `status_flow` with other keys is kept as is. Until then `resolve management` keeps
+reporting `statuses` missing (F-38, REQ-W1-080). `null` in `statuses` is
 REQ-W1-082's "unsupported state". `by_level` / `by_list` are its per-level maps.
 
 ### 2.7 Versioning and compatibility policy
@@ -1474,6 +1479,7 @@ Only this catalogue is (counts from 2026-09-23):
 | `spec/team-adapters-like.json` | `phase: deploy`, qa not approved, prod ref prose (H-22) | 1 |
 | `spec/bom.json` | UTF-8 BOM | (BUG-02 case) |
 | `project/management-{markdown,clickup,absent,object}.json` | project-level management incl. `status_flow` and `location_name` extras | 38 / 1 / 23 / 4 |
+| `project/management-status-flow-{google_chat,custom}.json` | logical `status_flow` + `google_chat` (proposed as `statuses` / `google-chat`); a `status_flow` with non-logical keys (kept) (F-38) | — |
 | `project/notifications-{absent,google_chat,none}.json` | notifications variants | 62 / 1 / 1 |
 | `project/clickup-backlog-list.json` | top-level `clickup.backlog_list_id` / `backlog_list_id` | 2 |
 | `project/trunk.json` | `main`/`main` | 1 |

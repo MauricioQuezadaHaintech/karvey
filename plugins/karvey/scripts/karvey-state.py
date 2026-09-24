@@ -565,10 +565,18 @@ def fix_spec(data, accept_proposed=False):
     return new, notes
 
 
-def fix_project(data):
-    """``(new_data, notes)`` for a project.json (REQ-W1-010). Raises :class:`Unmigratable`."""
+def fix_project(data, accept_proposed=False):
+    """``(new_data, notes)`` for a project.json (REQ-W1-010). Raises :class:`Unmigratable`.
+
+    Exact: a ``management`` string → object, ``clickup.backlog_list_id`` → ``management.location``,
+    ``notifications.channel: google_chat`` → ``google-chat``. Proposed (``--accept-proposed``, F-38): a
+    legacy ``management.status_flow`` keyed by the logical states → ``management.statuses``."""
     new = copy.deepcopy(data)
     notes = []
+    nt = new.get("notifications")
+    if isinstance(nt, dict) and nt.get("channel") in pj.LEGACY_CHANNELS:
+        notes.append("notifications.channel %r → %r" % (nt["channel"], pj.LEGACY_CHANNELS[nt["channel"]]))
+        nt["channel"] = pj.LEGACY_CHANNELS[nt["channel"]]
     if "management" in new:
         m = new["management"]
         if isinstance(m, str):
@@ -597,12 +605,20 @@ def fix_project(data):
                     notes.append("backlog_list_id → management.location")
             elif mg["location"] != blid:
                 notes.append("backlog_list_id %r kept: management.location is already %r" % (blid, mg["location"]))
+        proposed = pj.legacy_status_flow(mg)
+        if proposed is not None and accept_proposed:
+            mg["statuses"] = proposed
+            del mg["status_flow"]
+            notes.append("management.status_flow → statuses (proposed, accepted)")
+        elif proposed is not None:
+            notes.append("management.status_flow can become statuses (proposed tier): run validate --fix "
+                         "--accept-proposed")
     return new, notes
 
 
 def fix_file(path, loaded, accept_proposed):
     if kind_of(path) == "project":
-        return fix_project(loaded.data)
+        return fix_project(loaded.data, accept_proposed)
     return fix_spec(loaded.data, accept_proposed)
 
 

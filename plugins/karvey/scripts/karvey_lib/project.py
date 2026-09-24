@@ -21,6 +21,7 @@ import subprocess
 from pathlib import Path
 
 from .atomicio import ReadError, read_json
+from .safe_values import LOGICAL_STATES
 
 SPEC_DIR = Path("docs") / "spec"
 PROJECT_JSON = SPEC_DIR / "project.json"
@@ -275,3 +276,24 @@ def state_dir(root, create=True):
         except OSError:
             pass  # native Windows: the profile ACL applies
     return d
+
+
+# --------------------------------------------------------------------------- legacy settings (F-38)
+LEGACY_CHANNELS = {"google_chat": "google-chat"}
+
+
+def legacy_status_flow(mg):
+    """The legacy ``management.status_flow`` as a ``statuses`` proposal, or None.
+
+    Proposed only when ``statuses`` is absent and ``status_flow`` is a flat map whose keys are all
+    logical states and whose values are tracker status names (strings) or ``null`` (the tracker cannot
+    represent that state, REQ-W1-082) — the shape the owner already wrote, never an invented map."""
+    if not isinstance(mg, dict) or "statuses" in mg:
+        return None
+    sf = mg.get("status_flow")
+    if not isinstance(sf, dict) or not sf or not set(sf) <= set(LOGICAL_STATES):
+        return None
+    if not all(v is None or (isinstance(v, str) and v.strip()) for v in sf.values()):
+        return None
+    return dict(sf)
+

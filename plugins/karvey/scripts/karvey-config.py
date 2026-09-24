@@ -54,7 +54,7 @@ TOOLS = ("clickup", "jira", "linear", "azure-boards", "github-projects", "spread
 LEGACY_TOOLS = {"none": "markdown"}
 NO_TRACKER = frozenset({"markdown", "none"})
 CHANNELS = ("google-chat", "slack", "teams", "email", "webhook", "none")
-LEGACY_CHANNELS = {"google_chat": "google-chat"}
+LEGACY_CHANNELS = pj.LEGACY_CHANNELS
 VIAS = ("mcp", "cli", "webhook", "api", "")
 MGMT_VIAS = ("mcp", "cli", "api", "file")
 EVENTS = ("qa", "deploy", "incident")
@@ -392,6 +392,15 @@ def propose_settings(settings, from_legacy=False):
         else:
             mg["location"] = "<%s location>" % tool
             notes.append("management.location: placeholder, ask the human")
+    proposed = pj.legacy_status_flow(mg)
+    if proposed is not None:
+        mg["statuses"] = proposed
+        del mg["status_flow"]
+        notes.append("management.status_flow → statuses (the map already in project.json; the human confirms "
+                     "it by merging the snippet, F-38)")
+    elif isinstance(mg.get("status_flow"), dict) and "statuses" not in mg:
+        notes.append("management.status_flow kept as is: its keys are not the logical states "
+                     "(todo | in_progress | review | done | blocked)")
     if tool not in NO_TRACKER and "statuses" not in mg:
         notes.append("statuses left absent: the missing-map clause resolves them with the human (REQ-W1-080)")
     nraw, _ = settings.block("notifications")
@@ -401,6 +410,7 @@ def propose_settings(settings, from_legacy=False):
         nt = {"channel": "none", "target": "", "via": "", "events": []}
         notes.append("notifications: absent → channel none (set it with /karvey:karvey-init --settings)")
     if nt.get("channel") in LEGACY_CHANNELS:
+        notes.append("notifications.channel %r → %r" % (nt["channel"], LEGACY_CHANNELS[nt["channel"]]))
         nt["channel"] = LEGACY_CHANNELS[nt["channel"]]
     snippet = {"management": mg, "notifications": nt}
     return {"snippet": snippet, "notes": notes, "from_legacy": bool(from_legacy), "written": False}

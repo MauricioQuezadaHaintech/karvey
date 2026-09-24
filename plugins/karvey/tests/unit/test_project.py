@@ -258,5 +258,28 @@ class EnforcementRules(unittest.TestCase):
         self.assertIs(guards.enforcement, pj.enforcement_of)
 
 
+class LegacyStatusFlow(unittest.TestCase):
+    """F-38: which legacy management.status_flow maps are proposed as statuses."""
+
+    FLOW = {"todo": "open", "in_progress": "doing", "review": "review", "done": "complete", "blocked": None}
+
+    def test_logical_keys_are_proposed(self):
+        self.assertEqual(pj.legacy_status_flow({"tool": "clickup", "status_flow": self.FLOW}), self.FLOW)
+        self.assertEqual(pj.legacy_status_flow({"status_flow": {"todo": "open", "done": "closed"}}),
+                         {"todo": "open", "done": "closed"})
+
+    def test_not_proposed(self):
+        for mg in ({"status_flow": self.FLOW, "statuses": {"todo": "x"}},  # statuses already there
+                   {"status_flow": {}}, {"status_flow": "open>doing>done"}, {"tool": "clickup"},
+                   {"status_flow": {"todo": "open", "impl": "doing"}},  # a non-logical key
+                   {"status_flow": {"todo": 3}}, {"status_flow": {"todo": " "}},
+                   {"status_flow": {"by_level": {"task": {"todo": "open"}}}}, None, "clickup"):
+            with self.subTest(mg=mg):
+                self.assertIsNone(pj.legacy_status_flow(mg))
+
+    def test_legacy_channel_alias(self):
+        self.assertEqual(pj.LEGACY_CHANNELS, {"google_chat": "google-chat"})
+
+
 if __name__ == "__main__":
     unittest.main()
