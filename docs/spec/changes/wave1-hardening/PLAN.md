@@ -174,7 +174,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F15: Dogfood migration of this repo
 
-- [ ] E1.F15.T1 [Backend] This repo through `validate --fix`: dry-run diff shown, then applied to `wave1-hardening` and `team-adapters` — est: 20min (depends E1.F3.T2, E1.F14.T1)
+- [x] E1.F15.T1 [Backend] This repo through `validate --fix`: dry-run diff shown, then applied to `wave1-hardening` and `team-adapters` — est: 20min (depends E1.F3.T2, E1.F14.T1)
 - [ ] E1.F15.T2 [human] Owner's prod-kind approval phrase for the retroactive team-adapters record (D-08) — executor: owner (depends E1.F15.T1, E1.F5.T2, E1.F3.T6)
 - [ ] E1.F15.T3 [Backend] Record the retro prod approval (`--write-spec`, D-08); this repo validates with 0 errors — est: 15min (depends E1.F15.T2)
 
@@ -253,12 +253,12 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F12.T12 [Backend] | ✅ done | 10 | 3 | 0 | no human review yet; git mv; 11 references updated (CHANGELOG, backlog, decisions, team-adapters spec.json/findings, prd); graphify-out left for the archive sync; the qa/deploy L-25 hits close in T5/T6 |
 | E1.F12.T13 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; text residue fixed (init CLAUDE.md migration aid, karvey-test AskUserQuestion); whole-repo lint 539 → 7 errors, all L-18 spec.json data owned by E1.F15 (F-35); 0 errors in plugins/** |
 | E1.F13.T1 [Infra] | ✅ done | 25 | 9 | 0 | no human review yet; 4 jobs, actions pinned by commit SHA (checkout v7.0.1, setup-python v7.0.0, setup-node v7.0.0); every run: step executed locally, the unit suite, tables and test-hooks also under Python 3.9.25; lint and validate --all red until F-35 / E1.F15 (not hidden); act not installed; F-36, F-37 |
-| E1.F13.T2 [Infra] | ⬜ todo | 15 | — | — |  |
+| E1.F13.T2 [Infra] | 🔄 in_progress | 15 | — | — | draft PR opened early to observe CI; lint job expected red until E1.F15.T3; closes when CI is green after T3 |
 | E1.F14.T1 [Test] | ✅ done | 40 | 5 | 0 | no human review yet; 57 hand-written synthetic fixtures: 35 phase shapes (8 enum incl. requirements, found in the 2026-09-24 re-scan, 10 exact, 14 proposed, iterate, null, missing ⊇ the 31 of §2.5), 6 embedded skips, approvals null / unknown keys, 4 management, 6 multi-type, gates-skipped, team-adapters-like, bom, unknown top-level keys; --fix idempotent and approval-neutral on all of them, with and without --accept-proposed |
 | E1.F14.T2 [Test] | ✅ done | 20 | 8 | 0 | no human review yet; 9 synthetic project.json fixtures (management markdown/clickup/absent/object, notifications absent/google_chat/none, clickup-backlog-list, trunk); resolve, propose-settings --from-legacy (never writes) and validate --fix (string → object, idempotent) over each; F-38 (status_flow not proposed as statuses) |
 | E1.F14.T3 [Test] | ✅ done | 25 | 5 | 0 | no human review yet; test_incidents.py 10 tests: BUG-05..21 each name their check (lint id, table case, unit/node test, test-hooks section, manual script), named lint checks run live, tracker/index agreement; CI regression step added; BUG-06..17 RESUELTO (each check verified red on main or 3.11.1, green here), BUG-05 stays DETECTADO (F-39); index regression column filled for BUG-18..21, summary and next number corrected |
 | E1.F14.T4 [Test] | ✅ done | 30 | 4 | 0 | no human review yet; 10 scripts (setup, exact prompt, Expected:, evidence), none run yet — they are evidence for karvey-test / QA; the common setup is inlined in each file so the done-criterion counts exactly 10 |
-| E1.F15.T1 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F15.T1 [Backend] | ✅ done | 20 | 4 | 0 | `--fix` dry-run: only wave1-hardening changes (3 legacy `{from,to,at}` history rows → `{phase, entered_at, exited_at}`); team-adapters and team-layer nothing to fix (team-layer kept as history, D-14); applied to wave1-hardening; second `--fix --dry-run` empty; `validate --all`: 3 errors, all `team-adapters approvals.prod` (F15.T3) |
 | E1.F15.T2 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F15.T3 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F16.T1 [Backend] | ⬜ todo | 30 | — | — |  |
@@ -291,3 +291,4 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-24 | impl | F-36 done: `windows` tag on smoke-01/02/03/05/07/08, windows-advisory runs `test_paths`/`test_hookio`/`test_atomicio` then `run_tables.py --tag windows -v` (python, fetch-depth 0), `test_ci_workflow.py` (3 tests) guards the selection; architecture §1.11 updated. Estimate 20 min vs actual 12 min (AI), 0 review; the Windows runner itself is observed in E1.F13.T2. |
 | 2026-09-24 | impl | F-37 done: `KARVEY_SKIP_TABLES: '1'` on the test-hooks.sh step of the tests job; `test_ci_workflow.py` `TablesRunOnce` (2 tests, red on the previous workflow); architecture §1.11 updated. Estimate 10 min vs actual 5 min (AI), 0 review. |
 | 2026-09-24 | impl | F-38 done: `pj.legacy_status_flow` + `pj.LEGACY_CHANNELS` shared by karvey-config and karvey-state; propose-settings proposes `statuses`, `fix_project(accept_proposed)` moves it, `google_chat` → `google-chat`; 2 new fixtures (catalogue 11), 4 new/updated tests in test_config_resolve.py, 3 in test_project.py; architecture §1.8/§2.6/§6.3. Estimate 30 min vs actual 18 min (AI), 0 review. |
+| 2026-09-24 | impl | F-41 / D-18: statusline context lights by percent (30 % amber, 50 % red), `defaults.json:context_pct`, table cases statusline-09..14. E1.F15.T1 done (`--fix` on wave1-hardening; second dry-run empty). E1.F13.T2 started: draft PR to observe CI. |
