@@ -8,7 +8,11 @@ H="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
 ok()   { PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 bad()  { FAIL=$((FAIL+1)); printf '  FAIL %s\n       got: %s\n' "$1" "$2"; }
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+# Physical path: on macOS mktemp lives under /var, a symlink to /private/var, and the hook reports the
+# resolved path (F-44).
+T=$(cd "$(mktemp -d)" && pwd -P); trap 'rm -rf "$T"' EXIT
+# Portable timeout: macOS has no timeout(1); perl's alarm is there on every runner (F-44).
+to() { local s="$1"; shift; if command -v timeout >/dev/null 2>&1; then timeout "$s" "$@"; else perl -e 'alarm shift; exec @ARGV' "$s" "$@"; fi; }
 ctx() { CLAUDE_PROJECT_DIR="$1" bash "$H/karvey-session-context.sh" 2>&1; }
 
 echo "session-context: settings nudge (BUG-02)"
@@ -25,7 +29,7 @@ printf '\xef\xbb\xbf{"management":{"tool":"markdown"},"notifications":{"channel"
 out=$(ctx "$T/k2");                                               [ -z "$out" ] && ok "BOM + complete settings → silent" || bad "BOM complete" "$out"
 echo '[1]' > "$T/k2/docs/spec/project.json"; out=$(ctx "$T/k2"); [[ "$out" == *"not an object"* ]] && ok "non-object JSON → notice" || bad "non-object" "$out"
 [[ "$(ctx "$T/k1")" == *"creates no change"* ]] && ok "notice says settings-only (BUG-01 guard)" || bad "notice wording" "$(ctx "$T/k1")"
-( cd "$T" && out=$(CLAUDE_PROJECT_DIR=plain timeout 5 bash "$H/karvey-session-context.sh"; echo "rc=$?"); [[ "$out" == *"rc=0"* ]] && echo ok ) >/dev/null && ok "relative CLAUDE_PROJECT_DIR does not hang" || bad "relative dir" "timeout"
+( cd "$T" && out=$(CLAUDE_PROJECT_DIR=plain to 5 bash "$H/karvey-session-context.sh"; echo "rc=$?"); [[ "$out" == *"rc=0"* ]] && echo ok ) >/dev/null && ok "relative CLAUDE_PROJECT_DIR does not hang" || bad "relative dir" "timeout"
 
 echo "hooks.json: every declared command runs as written (BUG-18, generalised)"
 FIX="$(dirname "$H")/tests/fixtures/payloads"

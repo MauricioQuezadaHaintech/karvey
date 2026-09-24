@@ -59,6 +59,9 @@ DISPATCHER = PLUGIN_ROOT / "hooks" / "karvey-hook.sh"
 STATUSLINE = PLUGIN_ROOT / "hooks" / "karvey-statusline.sh"
 TABLES = HERE / "tables"
 STUBS = HERE / "stubs"
+# The bash on PATH, resolved once: on Windows CreateProcess searches System32 before PATH, so a bare
+# "bash" runs WSL's bash.exe instead of Git Bash (F-43).
+BASH = shutil.which("bash") or "bash"
 sys.path.insert(0, str(PLUGIN_ROOT / "scripts"))
 from karvey_lib import approval  # noqa: E402
 
@@ -417,7 +420,7 @@ def run_case(case, nopy=False, keep=False):
         event = event_of(case)
         inp = t.deep(case.get("input") or {})
         for cmd in _as_list(given.get("setup")):
-            sp = subprocess.run(["bash", "-c", t.s(cmd)], cwd=str(root), env=env, stdout=subprocess.PIPE,
+            sp = subprocess.run([BASH, "-c", t.s(cmd)], cwd=str(root), env=env, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, timeout=60)
             if sp.returncode != 0:
                 raise CaseError("setup %r failed: %s" % (cmd, sp.stderr.decode("utf-8", "replace").strip()))
@@ -433,19 +436,19 @@ def run_case(case, nopy=False, keep=False):
         started = time.monotonic()
         # ``command``: run this instead of the dispatcher (a legacy settings.json entry, a shim)
         if case.get("command"):
-            argv = ["bash", "-c", t.s(case["command"])]
+            argv = [BASH, "-c", t.s(case["command"])]
         elif event == "session":  # hooks.json passes the matcher's source as the argument
-            argv = ["bash", str(SESSION_HOOK), "startup" if inp.get("source", "startup") == "startup" else "resume"]
+            argv = [BASH, str(SESSION_HOOK), "startup" if inp.get("source", "startup") == "startup" else "resume"]
         elif event == "statusline":  # the statusline script, stdin = input.stdin
             script = STATUSLINE
             if given.get("script_copy"):
                 script = tmp / "copied" / STATUSLINE.name
                 script.parent.mkdir()
                 shutil.copy(str(STATUSLINE), str(script))
-            argv = ["bash", str(script)]
+            argv = [BASH, str(script)]
             payload = inp.get("stdin") or {}
         else:
-            argv = ["bash", str(DISPATCHER), event]
+            argv = [BASH, str(DISPATCHER), event]
         cp = subprocess.run(argv, input=json.dumps(payload).encode("utf-8"),
                             cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
         duration = time.monotonic() - started
@@ -482,11 +485,11 @@ def check_stubs():
         for name in ("gh", "az", "glab"):
             (tmp / (name + ".stdout")).write_text('{"stub":"%s"}' % name)
             (tmp / (name + ".rc")).write_text("3")
-            # through bash, as every other script here: Windows cannot exec a shebang (F-43)
+            # through BASH, as every other script here: Windows cannot exec a shebang (F-43)
             env = {"KARVEY_STUB_DATA": str(tmp), "PATH": os.environ.get("PATH", "")}
             if os.environ.get("SYSTEMROOT"):
                 env["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
-            cp = subprocess.run(["bash", str(STUBS / name), "pr", "view"], env=env,
+            cp = subprocess.run([BASH, str(STUBS / name), "pr", "view"], env=env,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
             if cp.returncode != 3 or json.loads(cp.stdout.decode() or "{}").get("stub") != name:
                 problems.append("stub %s: rc=%d out=%r" % (name, cp.returncode, cp.stdout))
