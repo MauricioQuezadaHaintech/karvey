@@ -74,7 +74,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F2: Shared library and schemas
 
-- [ ] E1.F2.T1 [Backend] `karvey_lib` package skeleton, exit codes, JSON envelope and `defaults.json` — est: 15min (P)
+- [x] E1.F2.T1 [Backend] `karvey_lib` package skeleton, exit codes, JSON envelope and `defaults.json` — est: 15min (P)
 - [ ] E1.F2.T2 [Backend] `atomicio.py`: BOM-tolerant read, format-preserving atomic write, lock and compare-and-swap — est: 20min (depends E1.F2.T1) (P)
 - [ ] E1.F2.T3 [Backend] `schema_lite.py`: the JSON-Schema subset validator with the two `x-karvey-*` extensions — est: 25min (depends E1.F2.T1) (P)
 - [ ] E1.F2.T4 [Backend] `project.py` (root discovery, active change, reviewed-config read, state dir) and `audit.py` — est: 30min (depends E1.F2.T1) (P)
@@ -197,7 +197,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 |------|--------|--------------|---------------|-------------------|-------|
 | E1.F1.T1 [Test] | ✅ done | 30 | 3 | 0 | captured headless (CLI 2.1.281); A-1..A-7 confirmed, A-8 nuance → F-04; no human review yet |
 | E1.F1.T2 [human] | ➖ not needed | — | — | — | conditional: F1.T1 captured headless, no human step required |
-| E1.F2.T1 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F2.T1 [Backend] | ✅ done | 15 | 1 | 0 | no human review yet |
 | E1.F2.T2 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F2.T3 [Backend] | ⬜ todo | 25 | — | — |  |
 | E1.F2.T4 [Backend] | ⬜ todo | 30 | — | — |  |
