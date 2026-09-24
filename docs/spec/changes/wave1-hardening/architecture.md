@@ -201,22 +201,22 @@ same project lookup and the same shell segmentation.
   "hooks": {
     "SessionStart": [
       { "matcher": "startup",
-        "hooks": [{ "type": "command", "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh' startup", "timeout": 10 }] },
+        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh\" startup", "timeout": 10 }] },
       { "matcher": "resume|compact|clear",
-        "hooks": [{ "type": "command", "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh' resume", "timeout": 10 }] }
+        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-session-context.sh\" resume", "timeout": 10 }] }
     ],
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh' prompt", "timeout": 5 }] }
+      { "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" prompt", "timeout": 5 }] }
     ],
     "PreToolUse": [
       { "matcher": "Bash",
-        "hooks": [{ "type": "command", "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh' pre-bash", "timeout": 15 }] },
+        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-bash", "timeout": 15 }] },
       { "matcher": "Edit|Write|MultiEdit|NotebookEdit",
-        "hooks": [{ "type": "command", "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh' pre-edit", "timeout": 5 }] }
+        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-edit", "timeout": 5 }] }
     ],
     "PostToolUse": [
       { "matcher": "Edit|Write|MultiEdit|NotebookEdit",
-        "hooks": [{ "type": "command", "command": "bash '${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh' post-edit", "timeout": 10 }] }
+        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" post-edit", "timeout": 10 }] }
     ]
   }
 }

@@ -15,4 +15,4 @@ REQ-W1-080..106 (traceability in `requirements.md`; convergence rule REQ-W1-107,
 |---|------|--------------|------|----------|-------|--------|-----------|
 | F-01 | 2026-09-23 | architecture | bug | medium | Session hook checks for a `.git` *directory*, so every git worktree is reported as "NOT FOUND" (worktrees have a `.git` file). Fixed by design with `git rev-parse --git-dir`. | routed → BUG-21, RESUELTO in hotfix 3.11.4 |
 | F-02 | 2026-09-23 | architecture | spec-gap | medium | Hook payload field names are unconfirmed (installed CLI 2.1.281 vs local docs: `prompt` vs `user_prompt`, …). Tolerant parser designed (assumptions A-1..A-10); first test task captures one real payload per event. | open |
-
+| F-03 | 2026-09-24 | tasks | spec-gap | low | The architecture's `hooks.json` example single-quoted `${CLAUDE_PLUGIN_ROOT}` — the exact BUG-18 defect. Corrected in architecture.md to double quotes; tasks widen the regression test to run every declared hook command. | resolved in architecture.md |

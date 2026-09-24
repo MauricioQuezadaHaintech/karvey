@@ -32,7 +32,9 @@ failure mode that let two changes ship without QA.
 | prod-gate default | D-02 — ON by default, switchable off per project |
 | Where prod approval lives | D-03 — D-NN + PR + `spec.json` at archive; never a commit on dev/integration |
 | Dogfooding | D-04 — built with Karvey on itself; team-adapters converges here |
-| (pending — karvey-architecture) | |
+| Architecture | D-09 — approved with the architect's recommended defaults |
+| Prod approval words | D-10 — approval word AND production word in the human's own prompt |
+| Owner's plan hooks | D-11 — `KARVEY_COMPAT_MARKER` |
 
 ---
 
@@ -60,16 +62,212 @@ failure mode that let two changes ship without QA.
 ---
 
 ## Tasks
-(pending — karvey-tasks)
+
+Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](tasks.md).
+
+> The task Features `E1.F1..E1.F16` group work by **architecture component**. The *Features* table above groups the **requirements by area**; its F-numbers are independent. The REQ → task matrix is at the end of `tasks.md`.
+
+### Feature E1.F1: Hook contract capture (T-0)
+
+- [ ] E1.F1.T1 [Test] Capture one real hook payload per event in a throw-away plugin (T-0) — est: 30min
+- [ ] E1.F1.T2 [human] (Conditional) capture the payloads interactively if F1.T1 could not — executor: owner (depends E1.F1.T1)
+
+### Feature E1.F2: Shared library and schemas
+
+- [ ] E1.F2.T1 [Backend] `karvey_lib` package skeleton, exit codes, JSON envelope and `defaults.json` — est: 15min (P)
+- [ ] E1.F2.T2 [Backend] `atomicio.py`: BOM-tolerant read, format-preserving atomic write, lock and compare-and-swap — est: 20min (depends E1.F2.T1) (P)
+- [ ] E1.F2.T3 [Backend] `schema_lite.py`: the JSON-Schema subset validator with the two `x-karvey-*` extensions — est: 25min (depends E1.F2.T1) (P)
+- [ ] E1.F2.T4 [Backend] `project.py` (root discovery, active change, reviewed-config read, state dir) and `audit.py` — est: 30min (depends E1.F2.T1) (P)
+- [ ] E1.F2.T5 [Backend] `schemas/spec.schema.json` and `schemas/project.schema.json` — est: 30min (depends E1.F2.T3)
+- [ ] E1.F2.T6 [Backend] `schemas/state-machine.json` and `schemas/legacy-phase-map.json` — est: 15min (depends E1.F2.T5)
+
+### Feature E1.F3: State tool `karvey-state.py`
+
+- [ ] E1.F3.T1 [Backend] `karvey-state.py` CLI and `validate` (schema + semantic checks, advisory/strict) — est: 30min (depends E1.F2.T2, E1.F2.T4, E1.F2.T5, E1.F2.T6)
+- [ ] E1.F3.T2 [Backend] `validate --fix` migration (exact tier, `--accept-proposed`, `--dry-run`, idempotent) — est: 45min (depends E1.F3.T1)
+- [ ] E1.F3.T3 [Backend] `next` and `active` commands — est: 20min (depends E1.F3.T2)
+- [ ] E1.F3.T4 [Backend] `advance`, `generated`, `skip`, `reopen` with history, lock and legacy in-memory mapping — est: 40min (depends E1.F3.T3)
+- [ ] E1.F3.T5 [Backend] Marker store and release ledger in `approval.py` — est: 30min (depends E1.F2.T2, E1.F2.T4) (P)
+- [ ] E1.F3.T6 [Backend] `approve` (prod → ledger, `--write-spec`), `check-prod`, marker consumption on `advance` — est: 30min (depends E1.F3.T4, E1.F3.T5)
+
+### Feature E1.F4: Hook runtime: parser, shell segmentation, dispatcher, table runner
+
+- [ ] E1.F4.T1 [Backend] `hookio.py`: tolerant payload parser and path normalisation — est: 20min (depends E1.F1.T1, E1.F2.T1) (P)
+- [ ] E1.F4.T2 [Backend] `shellparse.py`: segmentation, wrappers, recursion, `cd` and git global options — est: 40min (depends E1.F2.T1) (P)
+- [ ] E1.F4.T3 [Backend] Dispatcher `karvey-hook.sh`, `karvey_hooks.py` entry points with the guard registry, new `hooks.json` events — est: 35min (depends E1.F4.T1, E1.F4.T2, E1.F2.T4)
+- [ ] E1.F4.T4 [Test] Table runner `run_tables.py` (throw-away repos, bare origin, CLI stubs, `nopy` pass) — est: 35min (depends E1.F4.T3)
+
+### Feature E1.F5: Guards and the approval hook
+
+- [ ] E1.F5.T1 [Backend] protect-paths guard and its table — est: 20min (depends E1.F4.T4, E1.F3.T5)
+- [ ] E1.F5.T2 [Backend] Approval hook: vocabulary, quote stripping, prod kind (D-10), scope, compat marker (D-11) — est: 45min (depends E1.F3.T5, E1.F4.T4) (P)
+- [ ] E1.F5.T3 [Backend] plan-gate classifier and its table — est: 45min (depends E1.F5.T1, E1.F5.T2)
+- [ ] E1.F5.T4 [Backend] git-flow guard (target repo per segment, aliases, whole-name match, trunk) and its table — est: 50min (depends E1.F5.T3)
+- [ ] E1.F5.T5 [Backend] prod-gate: candidates, production set, base and change resolution, `check-prod` — est: 45min (depends E1.F5.T4, E1.F3.T6)
+- [ ] E1.F5.T6 [Backend] prod-gate: reviewed-line switch-off, fail-closed reasons, audit lines, `nopy` classifier — est: 30min (depends E1.F5.T5)
+- [ ] E1.F5.T7 [Backend] post-edit: spec-write validator and pending-sync recorder — est: 25min (depends E1.F3.T1, E1.F4.T4) (P)
+- [ ] E1.F5.T8 [Backend] Legacy template shims (`--only <guard> --force-enabled`) — est: 15min (depends E1.F5.T4, E1.F6.T2)
+
+### Feature E1.F6: Session hook and handoff capture (on the 3.11.4 code)
+
+- [ ] E1.F6.T1 [Backend] `karvey_hooks.py session`: active change, manifest xor, bounded board/handoff, structured output (port of the 3.11.4 logic) — est: 45min (depends E1.F4.T3, E1.F2.T4, E1.F5.T7)
+- [ ] E1.F6.T2 [Backend] Settings notice on `startup` only, `origin/{integration}` check, legacy-shape message; SessionStart split by matcher — est: 30min (depends E1.F6.T1)
+- [ ] E1.F6.T3 [Backend] `karvey-handoff-capture.py` writes `state.json` in the shape the 3.11.4 resolver reads — est: 25min (depends E1.F2.T2, E1.F2.T4) (P)
+- [ ] E1.F6.T4 [Test] `session.json` table; `test-hooks.sh` becomes the entry point that also runs the tables — est: 30min (depends E1.F6.T2, E1.F6.T3, E1.F4.T4)
+
+### Feature E1.F7: Settings resolver `karvey-config.py` and safe values
+
+- [ ] E1.F7.T1 [Backend] `safe_values.py` patterns and the no-shell rule — est: 25min (depends E1.F2.T1) (P)
+- [ ] E1.F7.T2 [Backend] `karvey-config.py resolve | get --shell | propose-settings` — est: 30min (depends E1.F7.T1, E1.F2.T4, E1.F2.T5)
+- [ ] E1.F7.T3 [Backend] `karvey-config.py notify-check [--confirm]` and `outbox add|list|done` — est: 30min (depends E1.F7.T2)
+
+### Feature E1.F8: Dashboard `karvey-context.py`
+
+- [ ] E1.F8.T1 [Backend] `karvey-context.py`: overview, open work, approvals, WIP, enforcement (read-only) — est: 45min (depends E1.F3.T3, E1.F7.T3, E1.F2.T4)
+- [ ] E1.F8.T2 [Backend] `karvey-context.py`: calibration, close report, convergence, audit block counts — est: 35min (depends E1.F8.T1)
+
+### Feature E1.F9: Spec-delta merge `karvey-spec-merge.py`
+
+- [ ] E1.F9.T1 [Backend] `karvey-spec-merge.py` (ADDED / MODIFIED / REMOVED, `--dry-run`) — est: 40min (depends E1.F2.T1, E1.F2.T2) (P)
+
+### Feature E1.F10: Plugin linter `lint-plugin.py`
+
+- [ ] E1.F10.T1 [Backend] Linter framework (registry, `--list`, `--only`, `--paths`, formats) and L-01..L-04 — est: 45min (depends E1.F2.T1) (P)
+- [ ] E1.F10.T2 [Backend] Linter L-05..L-10 and L-14 (phase literals, no hand phase edits, `next`, produces/reads, paths, rule copies, allowed-tools) — est: 50min (depends E1.F10.T1, E1.F2.T6)
+- [ ] E1.F10.T3 [Backend] Linter L-11..L-13, L-17, L-18 (counts, versions, release docs, rule JSON vs schema, docs/spec validate) — est: 40min (depends E1.F10.T2, E1.F3.T1, E1.F2.T5)
+- [ ] E1.F10.T4 [Backend] Linter L-15, L-16 (hooks exist; guard-case anchors match the tables) and L-19..L-24 — est: 50min (depends E1.F10.T3)
+- [ ] E1.F10.T5 [Backend] Linter L-25..L-30 (QA, stack rules, deploy/archive, management, shell interpolation, H-33) — est: 45min (depends E1.F10.T4)
+- [ ] E1.F10.T6 [Backend] Linter L-31..L-35 (public tracker text, RESUELTO needs a regression, duplicate ids, subagent project.json writes, CHANGELOG compat line) — est: 30min (depends E1.F10.T5)
+
+### Feature E1.F11: Statusline and method page
+
+- [ ] E1.F11.T1 [Backend] Statusline: visible invalid TZ, clean separators, rotation default from `defaults.json` — est: 25min (depends E1.F2.T1, E1.F4.T4) (P)
+- [ ] E1.F11.T2 [Frontend] Method page `docs/karvey.html`: pure functions + `init(window)`; BUG-10..14 fixed; node and static tests — est: 45min (P)
+
+### Feature E1.F12: Skill and rule text changes
+
+- [ ] E1.F12.T1 [Backend] Delete the 9 rule copies; rewrite references to `../karvey/rules/x.md` — est: 20min (depends E1.F10.T2)
+- [ ] E1.F12.T2 [Backend] New rule `rules/state-machine.md` (generated block) and its agreement test — est: 20min (depends E1.F2.T6) (P)
+- [ ] E1.F12.T3 [Backend] Text: orchestrator `karvey/SKILL.md`, `karvey-init`, `karvey-requirements` — est: 45min (depends E1.F12.T1, E1.F3.T6, E1.F7.T2) (P)
+- [ ] E1.F12.T4 [Backend] Text: `karvey-mockup`, `karvey-design-graphic`, `karvey-architecture`, `karvey-infra`, `karvey-tasks` — est: 40min (depends E1.F12.T1, E1.F3.T6) (P)
+- [ ] E1.F12.T5 [Backend] Text: `karvey-impl`, `karvey-test`, `karvey-qa` — est: 45min (depends E1.F12.T1, E1.F3.T6, E1.F7.T3) (P)
+- [ ] E1.F12.T6 [Backend] Text: `karvey-deploy`, `karvey-archive`, `karvey-iterate` — est: 45min (depends E1.F12.T1, E1.F3.T6, E1.F9.T1, E1.F8.T2) (P)
+- [ ] E1.F12.T7 [Backend] Text: context, checkpoint, guard, team, benchmark-models, scrape, import, retro, browse, health, decisions + `rules/multi-agent.md` — est: 45min (depends E1.F12.T1, E1.F6.T3, E1.F8.T1) (P)
+- [ ] E1.F12.T8 [Backend] Text: frontmatter of the remaining 7 skills (devex, diagram, docs, grill, investigate, second-opinion, standards) — est: 20min (depends E1.F12.T1) (P)
+- [ ] E1.F12.T9 [Backend] Rules A: `enforcement.md` (guard-case anchors), `deploy-workflow.md`, `versioning.md`, `knowledge-sync.md`, `engineering-standards.md` — est: 45min (depends E1.F12.T1, E1.F5.T6, E1.F5.T8) (P)
+- [ ] E1.F12.T10 [Backend] Rules B: phase-close, management-adapters, notifications, project-config, living-specs, team, clickup-protocol, backlog, incident-tracking — est: 50min (depends E1.F12.T1, E1.F7.T3) (P)
+- [ ] E1.F12.T11 [Backend] `hooks/README.md`, `README.md`, `plugins/karvey/README.md`, descriptions in `plugin.json` / `marketplace.json` — est: 30min (depends E1.F12.T1, E1.F6.T4, E1.F5.T6) (P)
+- [ ] E1.F12.T12 [Backend] Move `REVISION_PR_17-19_20260923.md` into `docs/spec/changes/team-adapters/qa/` and update references — est: 10min (P)
+- [ ] E1.F12.T13 [Backend] Text gate: the whole-repo lint is green — est: 30min (depends E1.F12.T2, E1.F12.T3, E1.F12.T4, E1.F12.T5, E1.F12.T6, E1.F12.T7, E1.F12.T8, E1.F12.T9, E1.F12.T10, E1.F12.T11, E1.F12.T12, E1.F10.T6, E1.F11.T1)
+
+### Feature E1.F13: CI workflow
+
+- [ ] E1.F13.T1 [Infra] `.github/workflows/lint.yml` (4 jobs, pinned SHAs, read-only) and `.gitattributes` — est: 25min (depends E1.F12.T13, E1.F4.T4, E1.F6.T4, E1.F11.T2)
+- [ ] E1.F13.T2 [Infra] CI observed on a draft PR `feature/wave1-hardening → main` — est: 15min (depends E1.F13.T1, E1.F14.T3, E1.F15.T3)
+
+### Feature E1.F14: Migration fixtures and regression suite
+
+- [ ] E1.F14.T1 [Test] Legacy `spec.json` fixtures (anonymised) and the tests that iterate them — est: 40min (depends E1.F3.T2) (P)
+- [ ] E1.F14.T2 [Test] Legacy `project.json` fixtures and config resolution over them — est: 20min (depends E1.F7.T2) (P)
+- [ ] E1.F14.T3 [Test] Regression index BUG-05..17 (`tests/regression/test_incidents.py`) and its CI step — est: 25min (depends E1.F10.T6, E1.F11.T1, E1.F11.T2, E1.F13.T1, E1.F6.T4)
+- [ ] E1.F14.T4 [Test] Agent-behaviour manual scripts under `tests/manual/` — est: 30min (depends E1.F12.T3, E1.F12.T5, E1.F12.T6, E1.F12.T10) (P)
+
+### Feature E1.F15: Dogfood migration of this repo
+
+- [ ] E1.F15.T1 [Backend] This repo through `validate --fix`: dry-run diff shown, then applied to `wave1-hardening` and `team-adapters` — est: 20min (depends E1.F3.T2, E1.F14.T1)
+- [ ] E1.F15.T2 [human] Owner's prod-kind approval phrase for the retroactive team-adapters record (D-08) — executor: owner (depends E1.F15.T1, E1.F5.T2, E1.F3.T6)
+- [ ] E1.F15.T3 [Backend] Record the retro prod approval (`--write-spec`, D-08); this repo validates with 0 errors — est: 15min (depends E1.F15.T2)
+
+### Feature E1.F16: Release 3.12.0 (one versioning moment) and deploy-phase human steps
+
+- [ ] E1.F16.T1 [Backend] Release docs and the single version bump to 3.12.0 — est: 30min (depends E1.F13.T2, E1.F14.T2, E1.F14.T4)
+- [ ] E1.F16.T2 [Backend] Prepare, never apply, the owner's global-config diffs (D-01, D-11) — est: 15min (depends E1.F5.T2) (P)
+- [ ] E1.F16.T3 [human] Branch protection on `main`: require the CI checks (Q-A8, D-09) — executor: owner (depends E1.F13.T2)
+- [ ] E1.F16.T4 [Backend] Release PR ready; `advance deploying` on the feature branch; the unapproved merge is blocked (E2E evidence) — est: 20min (depends E1.F16.T1, E1.F16.T3)
+- [ ] E1.F16.T5 [human] The prod OK for 3.12.0 (D-10) and the D-NN answer — executor: owner (depends E1.F16.T4)
+- [ ] E1.F16.T6 [Backend] `approve prod` (ledger), merge through the prod-gate, release facts in the ledger — est: 20min (depends E1.F16.T5)
+- [ ] E1.F16.T7 [human] Apply the diffs to `~/.claude/CLAUDE.md` and `~/.claude/settings.json` after seeing them (D-01, D-11) — executor: owner (depends E1.F16.T6, E1.F16.T2)
 
 ---
 
 ## Task status
-> Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked`
+> Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked` · 🙋 `awaiting-human` (qualifier of `blocked`)
 
-| Task | Status | Estimated time | Actual time |
-|------|--------|----------------|-------------|
-| (pending) | | | |
+| Task | Status | estimate_min | actual_ai_min | actual_review_min | Notes |
+|------|--------|--------------|---------------|-------------------|-------|
+| E1.F1.T1 [Test] | ⬜ todo | 30 | — | — |  |
+| E1.F1.T2 [human] | ⬜ todo | — | — | — | conditional: only if F1.T1 cannot capture headless |
+| E1.F2.T1 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F2.T2 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F2.T3 [Backend] | ⬜ todo | 25 | — | — |  |
+| E1.F2.T4 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F2.T5 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F2.T6 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F3.T1 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F3.T2 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F3.T3 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F3.T4 [Backend] | ⬜ todo | 40 | — | — |  |
+| E1.F3.T5 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F3.T6 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F4.T1 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F4.T2 [Backend] | ⬜ todo | 40 | — | — |  |
+| E1.F4.T3 [Backend] | ⬜ todo | 35 | — | — |  |
+| E1.F4.T4 [Test] | ⬜ todo | 35 | — | — |  |
+| E1.F5.T1 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F5.T2 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F5.T3 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F5.T4 [Backend] | ⬜ todo | 50 | — | — |  |
+| E1.F5.T5 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F5.T6 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F5.T7 [Backend] | ⬜ todo | 25 | — | — |  |
+| E1.F5.T8 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F6.T1 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F6.T2 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F6.T3 [Backend] | ⬜ todo | 25 | — | — |  |
+| E1.F6.T4 [Test] | ⬜ todo | 30 | — | — |  |
+| E1.F7.T1 [Backend] | ⬜ todo | 25 | — | — |  |
+| E1.F7.T2 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F7.T3 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F8.T1 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F8.T2 [Backend] | ⬜ todo | 35 | — | — |  |
+| E1.F9.T1 [Backend] | ⬜ todo | 40 | — | — |  |
+| E1.F10.T1 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F10.T2 [Backend] | ⬜ todo | 50 | — | — |  |
+| E1.F10.T3 [Backend] | ⬜ todo | 40 | — | — |  |
+| E1.F10.T4 [Backend] | ⬜ todo | 50 | — | — |  |
+| E1.F10.T5 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F10.T6 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F11.T1 [Backend] | ⬜ todo | 25 | — | — |  |
+| E1.F11.T2 [Frontend] | ⬜ todo | 45 | — | — |  |
+| E1.F12.T1 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F12.T2 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F12.T3 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F12.T4 [Backend] | ⬜ todo | 40 | — | — |  |
+| E1.F12.T5 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F12.T6 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F12.T7 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F12.T8 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F12.T9 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F12.T10 [Backend] | ⬜ todo | 50 | — | — |  |
+| E1.F12.T11 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F12.T12 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F12.T13 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F13.T1 [Infra] | ⬜ todo | 25 | — | — |  |
+| E1.F13.T2 [Infra] | ⬜ todo | 15 | — | — |  |
+| E1.F14.T1 [Test] | ⬜ todo | 40 | — | — |  |
+| E1.F14.T2 [Test] | ⬜ todo | 20 | — | — |  |
+| E1.F14.T3 [Test] | ⬜ todo | 25 | — | — |  |
+| E1.F14.T4 [Test] | ⬜ todo | 30 | — | — |  |
+| E1.F15.T1 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F15.T2 [human] | ⬜ todo | — | — | — | [human] |
+| E1.F15.T3 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F16.T1 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F16.T2 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F16.T3 [human] | ⬜ todo | — | — | — | [human] |
+| E1.F16.T4 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F16.T5 [human] | ⬜ todo | — | — | — | [human] |
+| E1.F16.T6 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F16.T7 [human] | ⬜ todo | — | — | — | [human] |
 
 ---
 
@@ -79,3 +277,4 @@ failure mode that let two changes ship without QA.
 | 2026-09-23 | init | Spec initialized on `feature/wave1-hardening` (Markdown tracker; no external tracker item). Decisions D-01..D-04 recorded in `docs/spec/decisions.md`. mockup and design_graphic recorded as skipped (no UI). |
 | 2026-09-23 | init | Knowledge sync (init Step 9C, `/graphify docs/spec/ --update`) **not run**, deliberately: this change moves the sync to archive only (REQ-W1-062). To run at archive. |
 | 2026-09-23 | requirements | 109 EARS requirements (REQ-W1-001..109) in 16 areas; spec-delta ADDED 109 + 12 carried REQ-ADP, MODIFIED 4 REQ-TEAM, REMOVED 0. `approvals.requirements.generated = true`; awaiting the owner's approval. Open question Q-01 (rotation threshold). |
+| 2026-09-23 | tasks | 73 tasks in 16 Features (`tasks.md`): 68 agent tasks, 2150 min total, critical path 550 min; 5 `[human]` (1 conditional). REQ-W1-001..109 all covered. `approvals.tasks.generated = true`; awaiting the owner's approval. Open point OP-1: `infra` neither approved nor skipped (recommended: skip, no cloud). Knowledge sync not run (REQ-W1-062). |
