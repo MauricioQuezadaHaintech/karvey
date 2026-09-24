@@ -37,10 +37,10 @@ import time
 
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from karvey_lib import HOOK_ALLOW, HOOK_BLOCK, audit, guards, hookio, shellparse  # noqa: E402
+    from karvey_lib import HOOK_ALLOW, HOOK_BLOCK, atomicio, audit, guards, hookio, shellparse  # noqa: E402
     from karvey_lib import project as pj  # noqa: E402
 else:
-    from . import HOOK_ALLOW, HOOK_BLOCK, audit, guards, hookio, shellparse
+    from . import HOOK_ALLOW, HOOK_BLOCK, atomicio, audit, guards, hookio, shellparse
     from . import project as pj
 
 EVENTS = ("prompt", "pre-bash", "pre-edit", "post-edit", "session")
@@ -110,6 +110,80 @@ def _selftest_run(ctx):
     return Decision.allow()
 
 
+# --------------------------------------------------------------------------- post-edit (E1.F5.T7)
+PENDING_NAME = ".graph-pending"
+
+
+def _edited(ctx):
+    """``(root, path, rel)`` for a PostToolUse on a file inside ``<root>/docs/spec/``, else None."""
+    path = ctx.payload.file_path
+    if not path:
+        return None
+    parent = os.path.dirname(path)
+    root = pj.find_root(start=parent if os.path.isdir(parent) else ctx.payload.cwd)
+    if root is None:
+        return None
+    spec_dir = os.path.join(os.path.realpath(str(root)), str(pj.SPEC_DIR))
+    real = os.path.realpath(path)
+    if not (real + "/").startswith(spec_dir.rstrip("/") + "/"):
+        return None
+    return root, real, os.path.relpath(real, os.path.realpath(str(root))).replace(os.sep, "/")
+
+
+def spec_write(ctx):
+    """Validate a written ``docs/spec/**/spec.json`` or ``docs/spec/project.json`` (REQ-W1-028).
+    Violations: exit 2 with the list on stderr (A-4: PostToolUse feeds it back to the session)."""
+    hit = _edited(ctx)
+    if hit is None:
+        return None
+    root, path, rel = hit
+    name = os.path.basename(path)
+    if not (name == "spec.json" or rel == str(pj.PROJECT_JSON).replace(os.sep, "/")):
+        return None
+    tool = guards.state_tool()
+    try:
+        loaded = tool.load(path)
+        tool.check_schema_version(loaded.data, rel)
+        strict = tool.schema_mode(root) == "strict"
+        issues = tool.validate_data(loaded.data, tool.kind_of(path), strict, file=rel)
+    except tool.NotFound as exc:
+        issues = [{"severity": "error", "path": "$", "message": str(exc)}]
+    errors = [i for i in issues if i.get("severity") == "error"]
+    if not errors:
+        return None
+    lines = ["[karvey] spec-write: %s has %d violation(s); the write already happened, fix the file "
+             "(or use karvey-state.py):" % (rel, len(errors))]
+    for i in errors[:20]:
+        lines.append("  - %s: %s" % (i.get("path") or "$", i.get("message")))
+    if len(errors) > 20:
+        lines.append("  … %d more (karvey-state.py validate %s)" % (len(errors) - 20, rel))
+    return Decision.block("\n".join(lines), record={"reason": "spec.json invalid", "file": rel})
+
+
+def pending_sync(ctx):
+    """Append the written ``docs/spec/**`` path to ``docs/spec/.graph-pending`` (sorted, deduped,
+    LF), never the pending file itself nor ``graphify-out/**`` (REQ-W1-063). Silent."""
+    hit = _edited(ctx)
+    if hit is None:
+        return None
+    root, path, rel = hit
+    parts = rel.split("/")
+    if parts[-1] == PENDING_NAME or "graphify-out" in parts:
+        return None
+    pending = os.path.join(str(root), str(pj.SPEC_DIR), PENDING_NAME)
+    try:
+        with open(pending, encoding="utf-8-sig") as fh:
+            current = fh.read()
+    except FileNotFoundError:
+        current = None
+    lines = sorted({ln.strip() for ln in (current or "").splitlines() if ln.strip()} | {rel})
+    text = "\n".join(lines) + "\n"
+    if text != current:
+        expected = atomicio.file_sha256(pending) if current is not None else None
+        atomicio.write_text_atomic(pending, text, expected_sha256=expected)
+    return None
+
+
 # --------------------------------------------------------------------------- registry
 REGISTRY = [
     Guard("selftest", ("pre-bash", "pre-edit"), "closed", False, wired=True, run=_selftest_run,
@@ -122,8 +196,8 @@ REGISTRY = [
           enabled=guards.git_flow_enabled),                             # E1.F5.T4
     Guard("plan-gate", ("pre-bash", "pre-edit"), "closed", False, wired=True, run=guards.plan_gate,
           enabled=guards.plan_gate_enabled),                            # E1.F5.T3
-    Guard("spec-write", ("post-edit",), "open", True),                   # E1.F5.T7
-    Guard("pending-sync", ("post-edit",), "open", True),                 # E1.F5.T7
+    Guard("spec-write", ("post-edit",), "open", True, wired=True, run=spec_write),      # E1.F5.T7
+    Guard("pending-sync", ("post-edit",), "open", True, wired=True, run=pending_sync),  # E1.F5.T7
     Guard("approval", ("prompt",), "open", True, wired=True, run=guards.approval_hook),  # E1.F5.T2
 ]
 
@@ -196,6 +270,7 @@ def dispatch(event, stdin_text, env=None, only=None, force_enabled=False, out=No
     env = os.environ if env is None else env
     payload = hookio.parse(stdin_text, env=env)
     ctx = Context(event, payload, env, only=only, force_enabled=force_enabled)
+    deferred = HOOK_ALLOW
     for g in guards_for(event, only):
         if not g.wired:
             continue  # allow-stub: implemented and wired in batch 3
@@ -221,7 +296,10 @@ def dispatch(event, stdin_text, env=None, only=None, force_enabled=False, out=No
                 err.write(msg + "\n")
                 _audit_block(ctx, g.name, msg)
                 return HOOK_BLOCK
-            err.write("[karvey] %s not evaluated: %s\n" % (g.name, exc))
+            if g.name == "spec-write":
+                err.write("[karvey] spec.json not validated: %s: %s\n" % (type(exc).__name__, exc))
+            elif g.name != "pending-sync":  # pending-sync is silent (§3.2); archive recomputes from git
+                err.write("[karvey] %s not evaluated: %s\n" % (g.name, exc))
             continue
         if d is None:
             continue
@@ -234,8 +312,11 @@ def dispatch(event, stdin_text, env=None, only=None, force_enabled=False, out=No
             rec = dict(d.record)
             rec["duration_ms"] = int((time.monotonic() - started) * 1000)
             _audit_block(ctx, g.name, d.message, rec)
+            if event == "post-edit":  # the write already happened: the other recorders still run
+                deferred = HOOK_BLOCK
+                continue
             return HOOK_BLOCK
-    return HOOK_ALLOW
+    return deferred
 
 
 def main(argv=None):

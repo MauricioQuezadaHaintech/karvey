@@ -1,0 +1,722 @@
+{
+ "table": "spec-write",
+ "description": "E1.F5.T7 / REQ-W1-028, 063: PostToolUse on Edit/Write. A written docs/spec/**/spec.json or docs/spec/project.json is validated in-process (exit 2 with the violations on stderr, A-4); every docs/spec/** write is appended to docs/spec/.graph-pending (sorted, deduped, LF), never the pending file itself or graphify-out/**.",
+ "cases": [
+  {
+   "id": "sw-01-valid-spec-silent",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/changes/feat-a/spec.json": {
+       "change_id": "feat-a",
+       "phase": "tasks"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/changes/feat-a/spec.json",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true,
+    "stdout_empty": true,
+    "file_contains": {
+     "{{root}}/docs/spec/.graph-pending": "docs/spec/changes/feat-a/spec.json"
+    }
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-028",
+    "REQ-W1-063"
+   ]
+  },
+  {
+   "id": "sw-02-valid-project-json-silent",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/project.json": {
+       "git_platform": "github",
+       "repos": [
+        "repo"
+       ],
+       "spec_repo": "repo",
+       "branch_flow": {
+        "feature_prefix": "feature/",
+        "integration": "main",
+        "production": "main"
+       },
+       "enforcement": {
+        "plan_gate_hook": true
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/project.json",
+     "old_string": "a",
+     "new_string": "b"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true,
+    "stdout_empty": true
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-028"
+   ]
+  },
+  {
+   "id": "sw-03-enum-violation-qa-approved",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/changes/feat-a/spec.json": {
+       "change_id": "feat-a",
+       "phase": "qa-approved"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/changes/feat-a/spec.json",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] spec-write: docs/spec/changes/feat-a/spec.json has",
+     "$.phase",
+     "qa-approved"
+    ],
+    "file_contains": {
+     "{{root}}/docs/spec/.graph-pending": "docs/spec/changes/feat-a/spec.json"
+    }
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-028",
+    "REQ-W1-063"
+   ]
+  },
+  {
+   "id": "sw-04-enum-violation-management-tool",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/project.json": {
+       "git_platform": "github",
+       "repos": [
+        "repo"
+       ],
+       "spec_repo": "repo",
+       "branch_flow": {
+        "feature_prefix": "feature/",
+        "integration": "main",
+        "production": "main"
+       },
+       "management": {
+        "tool": "trello"
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/project.json",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "spec-write: docs/spec/project.json has",
+     "$.management"
+    ]
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-028"
+   ]
+  },
+  {
+   "id": "sw-05-prod-ref-missing",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/changes/feat-a/spec.json": {
+       "change_id": "feat-a",
+       "phase": "deploying",
+       "approvals": {
+        "prod": {
+         "approved": true,
+         "by": "Owner",
+         "role": "human",
+         "date": "2026-09-24T05:00:00-03:00"
+        }
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/changes/feat-a/spec.json",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] spec-write: docs/spec/changes/feat-a/spec.json has",
+     "$.approvals.prod.ref",
+     "ref"
+    ]
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-028"
+   ]
+  },
+  {
+   "id": "sw-06-non-spec-file-in-docs-spec",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/changes/feat-a/requirements.md": "# R\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/changes/feat-a/requirements.md",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true,
+    "stdout_empty": true,
+    "file_contains": {
+     "{{root}}/docs/spec/.graph-pending": "docs/spec/changes/feat-a/requirements.md"
+    }
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-063"
+   ]
+  },
+  {
+   "id": "sw-07-non-spec-file-outside-docs-spec",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "src/app.py": "x = 1\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/app.py",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true,
+    "stdout_empty": true,
+    "files_absent": "{{root}}/docs/spec/.graph-pending"
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-028"
+   ]
+  },
+  {
+   "id": "sw-08-spec-json-outside-docs-spec",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "fixtures/spec.json": {
+       "phase": "qa-approved"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/fixtures/spec.json",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true,
+    "stdout_empty": true,
+    "files_absent": "{{root}}/docs/spec/.graph-pending"
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-028"
+   ]
+  },
+  {
+   "id": "sw-09-invalid-json",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/changes/feat-a/spec.json": "{\"change_id\": \"feat-a\","
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/changes/feat-a/spec.json",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] spec-write: docs/spec/changes/feat-a/spec.json has",
+     "invalid JSON"
+    ]
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-028"
+   ]
+  },
+  {
+   "id": "sw-10-nopy-open-one-line",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/changes/feat-a/spec.json": {
+       "change_id": "feat-a",
+       "phase": "qa-approved"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/changes/feat-a/spec.json",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] spec-write: docs/spec/changes/feat-a/spec.json has",
+     "qa-approved"
+    ]
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-028",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "allow",
+    "stdout_contains": "[karvey] spec.json not validated: python3 not available"
+   }
+  },
+  {
+   "id": "sw-11-non-karvey-repo-silent",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "files": {
+      "docs/spec/openapi.yaml": "openapi: 3.1.0\n"
+     },
+     "wc_files": {
+      "docs/spec/spec.json": {
+       "phase": "nope"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/spec.json",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true,
+    "stdout_empty": true,
+    "files_absent": "{{root}}/docs/spec/.graph-pending"
+   },
+   "tags": [
+    "spec-write",
+    "non-karvey"
+   ]
+  },
+  {
+   "id": "sw-12-pending-sorted-dedup-lf",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/changes/feat-a/tasks.md": "t\n",
+      "docs/spec/.graph-pending": "docs/spec/z.md\r\ndocs/spec/a.md\ndocs/spec/changes/feat-a/tasks.md\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/changes/feat-a/tasks.md",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true,
+    "stdout_empty": true,
+    "file_contains": {
+     "{{root}}/docs/spec/.graph-pending": "docs/spec/a.md\ndocs/spec/changes/feat-a/tasks.md\ndocs/spec/z.md\n"
+    }
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-063"
+   ]
+  },
+  {
+   "id": "sw-13-pending-never-records-itself",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/.graph-pending",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true,
+    "stdout_empty": true,
+    "files_absent": "{{root}}/docs/spec/.graph-pending"
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-063"
+   ]
+  },
+  {
+   "id": "sw-14-pending-never-records-graphify-out",
+   "guard": "spec-write",
+   "event": "post-edit",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/graphify-out/graph.json": "{}"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/graphify-out/graph.json",
+     "content": "…"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true,
+    "stdout_empty": true,
+    "files_absent": "{{root}}/docs/spec/.graph-pending"
+   },
+   "tags": [
+    "spec-write",
+    "REQ-W1-063"
+   ]
+  }
+ ]
+}

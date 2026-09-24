@@ -189,6 +189,16 @@ nopy_prod_gate() {
   return 0
 }
 
+# spec-write without python (§3.2): open, one line
+nopy_spec_write() {
+  local f; f="$(json_field file_path)"
+  case "$f" in
+    */docs/spec/*spec.json|*/docs/spec/project.json|docs/spec/*spec.json|docs/spec/project.json)
+      echo "[karvey] spec.json not validated: python3 not available ($f)" ;;
+  esac
+  return 0
+}
+
 FORCE=0
 for a in "$@"; do [ "$a" = "--force-enabled" ] && FORCE=1; done
 ONLY=""
@@ -204,6 +214,7 @@ for g in $GUARDS; do
     prod-gate) nopy_prod_gate; rc=$? ;;
     plan-gate) nopy_plan_gate; rc=$? ;;
     git-flow)  nopy_git_flow; rc=$? ;;
+    spec-write) nopy_spec_write; rc=$? ;;
     *)        nopy_stub "$g"; rc=$? ;;
   esac
   if [ "$rc" -eq 2 ]; then exit 2; fi
