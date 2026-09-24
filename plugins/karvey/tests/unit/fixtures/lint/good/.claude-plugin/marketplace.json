@@ -1,0 +1,11 @@
+{
+  "name": "mini",
+  "plugins": [
+    {
+      "name": "karvey",
+      "source": "./plugins/karvey",
+      "description": "Mini Karvey: 7 phases and 2 support skills.",
+      "version": "1.0.0"
+    }
+  ]
+}
