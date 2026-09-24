@@ -1,0 +1,42 @@
+{
+  "change_id": "fixture-55",
+  "phase": "deploy",
+  "management": "markdown",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-20T10:00:00-03:00",
+      "exited_at": "2026-09-20T10:00:00-03:00"
+    },
+    {
+      "from": "init",
+      "to": "requirements",
+      "at": "2026-09-20T11:00:00-03:00",
+      "by": "…",
+      "ref": "D-01"
+    }
+  ],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    },
+    "qa": {
+      "generated": true,
+      "approved": false
+    },
+    "prod": {
+      "by": "…",
+      "date": "2026-09-22",
+      "ref": "…"
+    }
+  }
+}

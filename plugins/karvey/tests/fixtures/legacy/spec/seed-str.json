@@ -1,0 +1,20 @@
+{
+  "change_id": "fixture-48",
+  "phase": "impl",
+  "management": "markdown",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "seed_backlog_id": "BL-07"
+}

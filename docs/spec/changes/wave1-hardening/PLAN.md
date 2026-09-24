@@ -167,7 +167,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F14: Migration fixtures and regression suite
 
-- [ ] E1.F14.T1 [Test] Legacy `spec.json` fixtures (anonymised) and the tests that iterate them — est: 40min (depends E1.F3.T2) (P)
+- [x] E1.F14.T1 [Test] Legacy `spec.json` fixtures (anonymised) and the tests that iterate them — est: 40min (depends E1.F3.T2) (P)
 - [ ] E1.F14.T2 [Test] Legacy `project.json` fixtures and config resolution over them — est: 20min (depends E1.F7.T2) (P)
 - [ ] E1.F14.T3 [Test] Regression index BUG-05..17 (`tests/regression/test_incidents.py`) and its CI step — est: 25min (depends E1.F10.T6, E1.F11.T1, E1.F11.T2, E1.F13.T1, E1.F6.T4)
 - [ ] E1.F14.T4 [Test] Agent-behaviour manual scripts under `tests/manual/` — est: 30min (depends E1.F12.T3, E1.F12.T5, E1.F12.T6, E1.F12.T10) (P)
@@ -254,7 +254,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F12.T13 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; text residue fixed (init CLAUDE.md migration aid, karvey-test AskUserQuestion); whole-repo lint 539 → 7 errors, all L-18 spec.json data owned by E1.F15 (F-35); 0 errors in plugins/** |
 | E1.F13.T1 [Infra] | ✅ done | 25 | 9 | 0 | no human review yet; 4 jobs, actions pinned by commit SHA (checkout v7.0.1, setup-python v7.0.0, setup-node v7.0.0); every run: step executed locally, the unit suite, tables and test-hooks also under Python 3.9.25; lint and validate --all red until F-35 / E1.F15 (not hidden); act not installed; F-36, F-37 |
 | E1.F13.T2 [Infra] | ⬜ todo | 15 | — | — |  |
-| E1.F14.T1 [Test] | ⬜ todo | 40 | — | — |  |
+| E1.F14.T1 [Test] | ✅ done | 40 | 5 | 0 | no human review yet; 57 hand-written synthetic fixtures: 35 phase shapes (8 enum incl. requirements, found in the 2026-09-24 re-scan, 10 exact, 14 proposed, iterate, null, missing ⊇ the 31 of §2.5), 6 embedded skips, approvals null / unknown keys, 4 management, 6 multi-type, gates-skipped, team-adapters-like, bom, unknown top-level keys; --fix idempotent and approval-neutral on all of them, with and without --accept-proposed |
 | E1.F14.T2 [Test] | ⬜ todo | 20 | — | — |  |
 | E1.F14.T3 [Test] | ⬜ todo | 25 | — | — |  |
 | E1.F14.T4 [Test] | ⬜ todo | 30 | — | — |  |

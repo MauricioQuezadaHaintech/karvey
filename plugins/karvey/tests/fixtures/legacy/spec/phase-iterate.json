@@ -1,0 +1,16 @@
+{
+  "change_id": "fixture-33",
+  "phase": "iterate",
+  "management": "markdown",
+  "goal": "…",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": false
+    }
+  }
+}

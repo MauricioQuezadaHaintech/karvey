@@ -1,7 +1,10 @@
 """validate --fix (architecture §2.5, REQ-W1-009, REQ-W1-010). Inline mini files; the full legacy
 catalogue arrives in E1.F14.T1."""
 import json
+import shutil
 import unittest
+
+import _path
 
 import _gitrepo as g
 from _state import make_project, run, run_json
@@ -207,6 +210,127 @@ class Invariants(Base):
         code, env = run_json("validate", str(f), "--root", str(self.root), "--dry-run")
         self.assertEqual(code, 2)
 
+
+
+# --------------------------------------------------------------------------- E1.F14.T1: the legacy catalogue
+LEGACY_DIR = _path.FIXTURES_DIR / "legacy" / "spec"
+PHASE_MAP = json.loads((_path.SCHEMAS_DIR / "legacy-phase-map.json").read_text(encoding="utf-8"))
+EXACT = PHASE_MAP["tiers"]["exact"]
+PROPOSED = PHASE_MAP["tiers"]["proposed"]
+UNMAPPABLE = set(PHASE_MAP["unmappable"]["values"])
+
+
+def legacy_fixtures():
+    return sorted(LEGACY_DIR.glob("*.json"))
+
+
+def load(path):
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+class LegacyCatalogue(Base):
+    """Every anonymised legacy shape (architecture §6.3) through ``validate --fix``."""
+
+    def copy_in(self, fixture):
+        dst = self.root / "docs/spec/changes" / fixture.stem / "spec.json"
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(str(fixture), str(dst))
+        return dst
+
+    def test_catalogue_is_complete(self):
+        names = {f.name for f in legacy_fixtures()}
+        for value in list(EXACT) + list(PROPOSED) + sorted(UNMAPPABLE):
+            self.assertIn("phase-%s.json" % value, names, value)
+        for extra in ("phase-null.json", "phase-missing.json", "approvals-null.json", "approvals-unknown-keys.json",
+                      "gates-skipped.json", "team-adapters-like.json", "bom.json"):
+            self.assertIn(extra, names)
+        self.assertEqual(len([n for n in names if n.startswith("approvals-embedded-skip-")]), 6)
+        self.assertEqual({n for n in names if n.startswith("management-")},
+                         {"management-%s.json" % m for m in ("markdown", "clickup", "none", "absent")})
+        phase_values = {load(f).get("phase", "<missing>") for f in legacy_fixtures() if f.name.startswith("phase-")}
+        self.assertGreaterEqual(len(phase_values), 31)
+
+    def test_fix_is_idempotent_and_never_touches_an_approval(self):
+        for fixture in legacy_fixtures():
+            for extra in ((), ("--accept-proposed",)):
+                with self.subTest(fixture=fixture.name, flags=extra):
+                    f = self.copy_in(fixture)
+                    before = load(f)
+                    code, env = self.fix(f, *extra)
+                    self.assertIn(code, (0, 1, 3), env)
+                    once = f.read_bytes()
+                    code2, env2 = self.fix(f, *extra)
+                    self.assertEqual(f.read_bytes(), once, "second --fix changed the file")
+                    self.assertEqual(code2, code)
+                    self.assertFalse(env2["result"]["files"][0].get("changed", False))
+                    after = load(f)
+                    self.assertEqual(after.get("approvals"), before.get("approvals") or ({} if "approvals" in before
+                                                                                       else None))
+                    self.assertEqual(approved_values(after), approved_values(before))
+
+    def test_phase_value_per_tier(self):
+        for fixture in legacy_fixtures():
+            if not fixture.name.startswith("phase-"):
+                continue
+            value = load(fixture).get("phase", "<missing>")
+            with self.subTest(value=value):
+                f = self.copy_in(fixture)
+                before = f.read_bytes()
+                code, env = self.fix(f)
+                if value in EXACT:
+                    self.assertEqual(code, 0, env["errors"])
+                    self.assertEqual(load(f)["phase"], EXACT[value])
+                elif value in PROPOSED:
+                    self.assertEqual(load(f)["phase"], value)
+                    code, env = self.fix(f, "--accept-proposed")
+                    self.assertEqual(code, 0, env["errors"])
+                    self.assertEqual(load(f)["phase"], PROPOSED[value])
+                elif value in UNMAPPABLE or value in (None, "<missing>"):
+                    self.assertEqual(code, 3, value)
+                    self.assertEqual(f.read_bytes(), before)
+                    self.assertTrue(env["errors"])
+                else:  # already an enum value (archived without prod stays an error: exit 1, nothing written)
+                    self.assertIn(code, (0, 1), env["errors"])
+                    self.assertEqual(f.read_bytes(), before, "an enum value must not be rewritten")
+
+    def test_after_fix_no_legacy_phase_warning(self):
+        for fixture in legacy_fixtures():
+            value = load(fixture).get("phase", "<missing>")
+            if value in UNMAPPABLE or value in (None, "<missing>"):
+                continue
+            with self.subTest(fixture=fixture.name):
+                f = self.copy_in(fixture)
+                self.fix(f, "--accept-proposed")
+                code, env = run_json("validate", str(f), "--root", str(self.root))
+                self.assertNotIn("state.legacy_phase", [w["code"] for w in env["warnings"]])
+
+    def test_named_shapes(self):
+        f = self.copy_in(LEGACY_DIR / "gates-skipped.json")
+        self.fix(f)
+        self.assertIn("gates_skipped", load(f))  # architecture, tasks, qa are not skippable: kept for the owner
+        f = self.copy_in(LEGACY_DIR / "approvals-null.json")
+        self.fix(f)
+        self.assertEqual(load(f)["approvals"], {})
+        f = self.copy_in(LEGACY_DIR / "management-none.json")
+        self.fix(f)
+        self.assertEqual(load(f)["management"], "markdown")
+        f = self.copy_in(LEGACY_DIR / "approvals-embedded-skip-skip-reason.json")
+        self.fix(f)
+        self.assertEqual(load(f)["skipped"], {"mockup": "…"})
+        f = self.copy_in(LEGACY_DIR / "bom.json")
+        self.fix(f)
+        self.assertTrue(f.read_bytes().startswith(b"\xef\xbb\xbf"), "the BOM is preserved")
+        self.assertEqual((load(f)["phase"], load(f)["management"]), ("tasks", "markdown"))
+        f = self.copy_in(LEGACY_DIR / "team-adapters-like.json")
+        code, env = self.fix(f)
+        d = load(f)
+        self.assertEqual(d["phase"], "deploying")
+        self.assertEqual(code, 1, "the prose prod ref stays an error: --fix never writes an approval")
+        self.assertIn("$.approvals.prod.ref", [e["path"] for e in env["errors"]])
+        f = self.copy_in(LEGACY_DIR / "unknown-top-level-keys.json")
+        before = load(f)
+        self.fix(f)
+        self.assertEqual(load(f), before)
 
 if __name__ == "__main__":
     unittest.main()

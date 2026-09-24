@@ -1,4 +1,5 @@
 import copy
+import shutil
 import unittest
 
 import _path
@@ -219,6 +220,39 @@ class ThisRepo(unittest.TestCase):
         for i in env["errors"] + env["warnings"]:
             self.assertEqual(tuple(i), ("code", "severity", "file", "path", "expected", "got", "message"))
 
+
+
+class LegacyFixtures(unittest.TestCase):
+    """E1.F14.T1: validate never crashes on any legacy shape (architecture §6.3), in either mode."""
+
+    def test_every_fixture_validates_without_crashing(self):
+        fixtures = sorted((_path.FIXTURES_DIR / "legacy" / "spec").glob("*.json"))
+        self.assertGreaterEqual(len(fixtures), 50)
+        t = g.TempDir()
+        try:
+            changes = t.path / "docs/spec/changes"
+            for fx in fixtures:
+                (changes / fx.stem).mkdir(parents=True)
+                shutil.copyfile(str(fx), str(changes / fx.stem / "spec.json"))
+            for mode in ((), ("--strict",)):
+                with self.subTest(mode=mode):
+                    code, env = run_json("validate", "--all", "--root", str(t.path), *mode)
+                    self.assertIn(code, (0, 1), env)
+                    self.assertEqual(len(env["result"]["files"]), len(fixtures))
+                    for i in env["errors"] + env["warnings"]:
+                        self.assertEqual(tuple(i), ("code", "severity", "file", "path", "expected", "got", "message"))
+                        self.assertNotIn("Traceback", i["message"])
+                    for fx in fixtures:
+                        code, out, err = run("validate", str(changes / fx.stem / "spec.json"), "--root",
+                                             str(t.path), *mode)
+                        self.assertIn(code, (0, 1), (fx.name, err))
+                        self.assertNotIn("Traceback", err)
+            # the four unmappable/erroring shapes are errors, not crashes
+            code, env = run_json("validate", "--all", "--root", str(t.path))
+            bad = {i["file"].split("/")[3] for i in env["errors"]}
+            self.assertTrue({"phase-iterate", "phase-null", "phase-missing", "team-adapters-like"} <= bad, bad)
+        finally:
+            t.cleanup()
 
 if __name__ == "__main__":
     unittest.main()

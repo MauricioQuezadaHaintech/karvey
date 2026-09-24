@@ -1,0 +1,19 @@
+{
+  "change_id": "fixture-46",
+  "phase": "impl",
+  "management": "none",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  }
+}

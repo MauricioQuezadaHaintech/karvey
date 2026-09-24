@@ -1,0 +1,19 @@
+{
+  "change_id": "fixture-54",
+  "phase": "archived",
+  "management": "markdown",
+  "gates_skipped": {
+    "phases": [
+      "architecture",
+      "tasks",
+      "qa"
+    ],
+    "reason": "…"
+  },
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    }
+  }
+}
