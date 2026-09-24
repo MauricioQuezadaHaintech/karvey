@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Regression tests for the plugin hooks (BUG-01..04 in 3.11.2, BUG-18..19 in 3.11.3, BUG-20..21 in 3.11.4) and the
 # wave1 dispatcher (E1.F4.T3: every hooks.json command run as written, no-python fail modes). Needs bash + python3.
-# Run: bash plugins/karvey/hooks/tests/test-hooks.sh   → exit 0 if all pass.
+# Run: bash plugins/karvey/hooks/tests/test-hooks.sh   → exit 0 if all pass. It is the entry point: it also runs
+# every guard table (plugins/karvey/tests/hooks/run_tables.py) at the end.
 set -u
 H="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
@@ -130,6 +131,13 @@ out=$(sl "{$base,\"rate_limits\":{\"five_hour\":{\"used_percentage\":10,\"resets
 [[ "$out" == *"(1h30m)"* ]] && ok "rounds the time left (1h30m)" || bad "rounding" "$out"
 f="${TMPDIR:-/tmp}/.karvey-statusline-last.$(id -u).json"
 [ -f "$f" ] && [ "$(stat -c %a "$f" 2>/dev/null || stat -f %Lp "$f")" = "600" ] && ok "debug copy is per user and mode 600" || bad "debug copy perms" "$(ls -l "$f" 2>&1)"
+
+echo "guard tables: every tests/hooks/tables/*.json case (E1.F6.T4; set KARVEY_SKIP_TABLES=1 to skip)"
+if [ "${KARVEY_SKIP_TABLES:-}" != "1" ]; then
+  RT="$(dirname "$H")/tests/hooks/run_tables.py"
+  if python3 "$RT" > "$T/tables.out" 2>&1; then ok "$(tail -1 "$T/tables.out")"
+  else bad "guard tables (python3 $RT -v for details)" "$(grep -E 'FAIL|guard tables' "$T/tables.out" | head -20)"; fi
+fi
 
 echo "result: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]

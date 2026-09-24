@@ -58,14 +58,16 @@ from karvey_lib import approval  # noqa: E402
 
 CASE_KEYS = {"id", "guard", "given", "input", "event", "expect", "expect_nopy", "tags", "limitation", "note",
              "command"}
-GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir", "outer_files", "no_python"}
+GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir", "outer_files", "no_python", "setup"}
 REPO_KEYS = {"branch", "remote_branches", "project_json", "spec", "ledger", "marker", "files", "default_branch",
              "wc_files", "origin_files", "git_config", "at", "worktree", "no_origin", "commit_files"}
 EXPECT_KEYS = {"decision", "stdout_contains", "stderr_contains", "stdout_not_contains", "stderr_not_contains",
                "stdout_empty", "stderr_empty", "marker_created", "max_s", "marker", "files_exist",
-               "files_absent", "file_contains"}
+               "files_absent", "file_contains", "context_contains", "context_not_contains", "context_max_bytes",
+               "structured"}
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 SESSION = "00000000-0000-0000-0000-000000000000"
+SESSION_HOOK = PLUGIN_ROOT / "hooks" / "karvey-session-context.sh"
 _PY = re.compile(r"^(python|py)(\d[\d.]*)?(-config)?(\.exe)?$")
 
 
@@ -98,6 +100,7 @@ class Templ:
         self.root, self.repo, self.home = root, repo, home
         self.plugin = PLUGIN_ROOT
         self.tmp = None
+        self.python = sys.executable  # for setup commands, also in the nopy pass
         self.now = datetime.now().astimezone()
 
     def s(self, text):
@@ -110,7 +113,7 @@ class Templ:
             return (self.now + delta if sign == "+" else self.now - delta).isoformat(timespec="seconds")
         text = re.sub(r"\{\{now([+-])(\d+)([mh])\}\}", now, text)
         text = text.replace("{{now}}", self.now.isoformat(timespec="seconds"))
-        for k in ("root", "repo", "home", "plugin", "tmp"):
+        for k in ("root", "repo", "home", "plugin", "tmp", "python"):
             v = getattr(self, k)
             if v is not None:
                 text = text.replace("{{%s}}" % k, str(v))
@@ -139,6 +142,7 @@ def build_repo(spec, tmp, env):
     git(["init", "-q", "-b", default], root, env)
     git(["config", "commit.gpgsign", "false"], root, env)
     t = Templ(root=root, home=env["HOME"])
+    t.tmp = tmp
     if "project_json" in spec and spec["project_json"] is not None:
         write_file(root / "docs/spec/project.json", t.deep(spec["project_json"]))
     for cid, data in (spec.get("spec") or {}).items():
@@ -257,6 +261,8 @@ def check_keys(case):
 def event_of(case):
     if case.get("event"):
         return case["event"]
+    if "source" in (case.get("input") or {}):
+        return "session"
     inp = case.get("input") or {}
     if "prompt" in inp:
         return "prompt"
@@ -308,8 +314,36 @@ def assert_files(expect, t, common):
     return problems
 
 
-def assert_expect(expect, rc, out, err, created, duration, tags):
+def assert_context(expect, out):
+    """SessionStart: ``structured`` (one hookSpecificOutput JSON object) and the context text."""
+    keys = ("context_contains", "context_not_contains", "context_max_bytes", "structured")
+    if not any(k in expect for k in keys):
+        return []
     problems = []
+    ctx_text = None
+    try:
+        obj = json.loads(out) if out.strip() else None
+        hso = obj.get("hookSpecificOutput") if isinstance(obj, dict) else None
+        if isinstance(hso, dict) and hso.get("hookEventName") == "SessionStart":
+            ctx_text = hso.get("additionalContext")
+    except ValueError:
+        obj = None
+    if expect.get("structured") and not isinstance(ctx_text, str):
+        problems.append("stdout is not one hookSpecificOutput SessionStart object")
+    text = ctx_text if isinstance(ctx_text, str) else out
+    for x in _as_list(expect.get("context_contains")):
+        if x not in text:
+            problems.append("context lacks %r" % x)
+    for x in _as_list(expect.get("context_not_contains")):
+        if x in text:
+            problems.append("context has %r" % x)
+    if "context_max_bytes" in expect and len(text.encode("utf-8")) > expect["context_max_bytes"]:
+        problems.append("context is %d bytes (max %d)" % (len(text.encode("utf-8")), expect["context_max_bytes"]))
+    return problems
+
+
+def assert_expect(expect, rc, out, err, created, duration, tags):
+    problems = assert_context(expect, out)
     want = expect["decision"]
     got = {0: "allow", 2: "block"}.get(rc, "rc=%d" % rc)
     if got != want:
@@ -376,8 +410,15 @@ def run_case(case, nopy=False, keep=False):
                 env[k] = t.s(v)
         event = event_of(case)
         inp = t.deep(case.get("input") or {})
+        for cmd in _as_list(given.get("setup")):
+            sp = subprocess.run(["bash", "-c", t.s(cmd)], cwd=str(root), env=env, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, timeout=60)
+            if sp.returncode != 0:
+                raise CaseError("setup %r failed: %s" % (cmd, sp.stderr.decode("utf-8", "replace").strip()))
         payload = {"session_id": SESSION, "transcript_path": "", "cwd": str(cwd)}
-        if event == "prompt":
+        if event == "session":
+            payload.update(hook_event_name="SessionStart", source=inp.get("source", "startup"))
+        elif event == "prompt":
             payload.update(hook_event_name="UserPromptSubmit", prompt=inp.get("prompt", ""))
         else:
             payload.update(hook_event_name="PostToolUse" if event == "post-edit" else "PreToolUse",
@@ -385,7 +426,12 @@ def run_case(case, nopy=False, keep=False):
         before = approvals_snapshot(common)
         started = time.monotonic()
         # ``command``: run this instead of the dispatcher (a legacy settings.json entry, a shim)
-        argv = ["bash", "-c", t.s(case["command"])] if case.get("command") else ["bash", str(DISPATCHER), event]
+        if case.get("command"):
+            argv = ["bash", "-c", t.s(case["command"])]
+        elif event == "session":  # hooks.json passes the matcher's source as the argument
+            argv = ["bash", str(SESSION_HOOK), "startup" if inp.get("source", "startup") == "startup" else "resume"]
+        else:
+            argv = ["bash", str(DISPATCHER), event]
         cp = subprocess.run(argv, input=json.dumps(payload).encode("utf-8"),
                             cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
         duration = time.monotonic() - started
