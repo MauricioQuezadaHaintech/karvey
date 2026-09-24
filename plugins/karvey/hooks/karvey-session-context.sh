@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Karvey session context — SessionStart hook (startup | resume | compact | clear).
 #
+#   karvey-session-context.sh [startup|resume]    (hooks.json passes the matcher's source)
+#
+# With python 3 it delegates to `karvey_hooks.py session <mode>` (wave1-hardening E1.F6.T1: active
+# change without archive/ or IMPLEMENTED, compact XOR full manifest, bounded board and handoff,
+# hookSpecificOutput.additionalContext). Without python the bash code below is the degraded path.
+#
 # Brings a blank session back to being THIS agent:
 #   1. identity, rules, board, checklist and handoff, reinjected;
 #   2. the live repo state MEASURED and compared against what the handoff claims (state.json);
@@ -14,6 +20,17 @@
 # or docs/spec/changes/), a one-line notice when the team settings are missing — and exits 0.
 set -u
 exec 2>/dev/null
+MODE="${1:-startup}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+for c in python3 python; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c 'import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1; then
+    exec "$c" "$HERE/../scripts/karvey_lib/karvey_hooks.py" session "$MODE" </dev/null
+  fi
+done
+if command -v py >/dev/null 2>&1 && py -3 -c 'import sys' >/dev/null 2>&1; then
+  exec py -3 "$HERE/../scripts/karvey_lib/karvey_hooks.py" session "$MODE" </dev/null
+fi
+# ---------------------------------------------------------------- no python: degraded bash path
 
 START="${CLAUDE_PROJECT_DIR:-$PWD}"
 # absolute path: a relative CLAUDE_PROJECT_DIR made the dirname loops below spin forever on "."
@@ -153,7 +170,15 @@ elif [ -f "$HANDOFF" ]; then
   DRIFT=1
 fi
 
-ACTIVE=$(ls -1dt "$ROOT"/docs/spec/changes/*/ 2>/dev/null | head -1)
+# the only change that is not archived and has no IMPLEMENTED marker (H-08; phases need python)
+ACTIVE=""; NACT=0
+for c in "$ROOT"/docs/spec/changes/*/; do
+  [ -d "$c" ] || continue
+  case "$(basename "$c")" in archive|.*) continue ;; esac
+  [ -e "$c/IMPLEMENTED" ] && continue
+  ACTIVE="$c"; NACT=$((NACT+1))
+done
+[ "$NACT" -ne 1 ] && ACTIVE=""
 settings_nudge
 printf '\n=== First action ===\n'
 if [ -n "$ACTIVE" ] || [ "$DRIFT" -eq 1 ] || [ ! -f "$HANDOFF" ]; then

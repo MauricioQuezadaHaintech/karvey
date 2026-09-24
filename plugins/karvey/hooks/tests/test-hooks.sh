@@ -89,7 +89,7 @@ echo "MANIFEST-X" > "$R/docs/spec/agents/ceo/manifest.md"; echo "COMPACT-X" > "$
 echo "HANDOFF-X" > "$R/docs/spec/agents/ceo/handoff.md"; echo "BOARD-X" > "$R/docs/spec/board/ceo.md"
 out=$(ctx "$R")
 [[ "$out" == *"Profile: $R/docs/spec/agents/ceo"* ]] && ok "profile resolves to docs/spec/agents/<role>" || bad "in-repo profile" "$out"
-[[ "$out" == *"COMPACT-X"* && "$out" == *"MANIFEST-X"* && "$out" == *"HANDOFF-X"* ]] && ok "manifest-compact, manifest and handoff reinjected" || bad "in-repo reinjection" "$out"
+[[ "$out" == *"COMPACT-X"* && "$out" != *"MANIFEST-X"* && "$out" == *"HANDOFF-X"* ]] && ok "manifest-compact XOR manifest (REQ-W1-046), and handoff reinjected" || bad "in-repo reinjection" "$out"
 [[ "$out" == *"agente-x"* ]] && ok "role from the root's own name when the session starts at the root" || bad "role at root" "$out"
 rm "$R/docs/spec/agents/ceo/handoff.md"; out=$(ctx "$R")
 [[ "$out" == *"no handoff at"* ]] && ok "missing handoff is said, not silent" || bad "missing handoff" "$out"

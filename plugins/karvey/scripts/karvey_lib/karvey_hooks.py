@@ -30,17 +30,20 @@ runs out, the guard being evaluated decides by its fail mode (closed → block),
 reached before the harness would cancel the hook (a cancelled hook does not block).
 """
 import argparse
+import json
 import os
+import re
 import sys
 import threading
 import time
 
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from karvey_lib import HOOK_ALLOW, HOOK_BLOCK, atomicio, audit, guards, hookio, shellparse  # noqa: E402
+    from karvey_lib import HOOK_ALLOW, HOOK_BLOCK, atomicio, audit, defaults, guards, hookio, livestate  # noqa: E402
+    from karvey_lib import shellparse  # noqa: E402
     from karvey_lib import project as pj  # noqa: E402
 else:
-    from . import HOOK_ALLOW, HOOK_BLOCK, atomicio, audit, guards, hookio, shellparse
+    from . import HOOK_ALLOW, HOOK_BLOCK, atomicio, audit, defaults, guards, hookio, livestate, shellparse
     from . import project as pj
 
 EVENTS = ("prompt", "pre-bash", "pre-edit", "post-edit", "session")
@@ -319,6 +322,296 @@ def dispatch(event, stdin_text, env=None, only=None, force_enabled=False, out=No
     return deferred
 
 
+# --------------------------------------------------------------------------- session (E1.F6.T1)
+# Port of the 3.11.4 karvey-session-context.sh (BUG-18..21 fixes kept): identity, rules, board,
+# checklist and handoff reinjected; live repo state measured against state.json; the instruction
+# to run /karvey-checkpoint restore. Changes (REQ-W1-045..047): the active change comes from
+# project.active_change (archive/ and IMPLEMENTED excluded, H-08); compact manifest XOR full
+# (H-09); open board rows <= 40 and handoff <= 6 KB, each with a truncation notice; the text is
+# emitted as hookSpecificOutput.additionalContext (A-6).
+_SEPARATOR = re.compile(r"^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$")
+_DONE_CELL = re.compile(r"\|\s*done\s*\|", re.I)
+_ITEM = re.compile(r"^\s*([-*+]|\d+[.)])\s+")
+
+
+def _read(path, limit=None):
+    try:
+        with open(path, "rb") as fh:
+            data = fh.read() if limit is None else fh.read(limit)
+    except OSError:
+        return None
+    return data.decode("utf-8", "replace")
+
+
+def _is_done(line):
+    return "\u2705" in line or bool(_DONE_CELL.search(line)) or bool(re.match(r"^\s*[-*+]\s+\[[xX]\]", line))
+
+
+def bound_board(text, path, max_rows):
+    """Only the open rows (table rows and list items not marked ✅ / done / [x]), at most
+    ``max_rows``; headings, table headers and separators kept; then ``… N more open rows``."""
+    lines = text.splitlines()
+    out, kept, more, done = [], 0, 0, 0
+    for i, ln in enumerate(lines):
+        st = ln.strip()
+        is_row = st.startswith("|")
+        header = is_row and i + 1 < len(lines) and _SEPARATOR.match(lines[i + 1].strip() or "x")
+        if is_row and (_SEPARATOR.match(st) or header):
+            out.append(ln)
+            continue
+        if is_row or _ITEM.match(ln):
+            if _is_done(ln):
+                done += 1
+                continue
+            if kept >= max_rows:
+                more += 1
+                continue
+            kept += 1
+        out.append(ln)
+    if more:
+        out.append("\u2026 %d more open rows in %s" % (more, path))
+    if done:
+        out.append("(%d done rows not shown)" % done)
+    return "\n".join(out)
+
+
+def bound_text(text, path, max_bytes):
+    """At most ``max_bytes`` of ``text``, cut at a line boundary, with the truncation notice."""
+    data = text.encode("utf-8")
+    if len(data) <= max_bytes:
+        return text
+    cut = data[:max_bytes].decode("utf-8", "ignore")
+    if "\n" in cut:
+        cut = cut[:cut.rfind("\n")]
+    return "%s\n\u2026 truncated (%.1f KB of %.1f KB) \u2014 full file: %s" % (
+        cut, len(cut.encode("utf-8")) / 1024.0, len(data) / 1024.0, path)
+
+
+def _find_team_root(start):
+    d = start
+    while True:
+        if os.path.isfile(os.path.join(d, "docs", "spec", "team.json")):
+            return d, os.path.join(d, "docs", "spec", "team.json"), "team"
+        if os.path.isfile(os.path.join(d, ".ceo-agentes")):
+            return d, os.path.join(d, ".ceo-agentes"), "legacy"
+        if os.path.isdir(os.path.join(d, "docs", "spec", "agent")):
+            return d, os.path.join(d, "docs", "spec", "agent"), "solo"
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None, None, None
+        d = parent
+
+
+def _legacy_kv(cfg):
+    kv = {}
+    for ln in (_read(cfg) or "").splitlines():
+        if "=" in ln and not ln.lstrip().startswith("#"):
+            k, _, v = ln.partition("=")
+            kv.setdefault(k.strip(), v.strip())
+    return kv
+
+
+def resolve_profile(root, cfg, kind, top):
+    """``(name, role, profile, board)`` — the 3.11.4 resolution (BUG-19 layouts)."""
+    name, role = "", "solo"
+    profile = os.path.join(root, "docs", "spec", "agent")
+    board = os.path.join(profile, "board.md")
+    if kind == "team":
+        try:
+            d = json.loads(_read(cfg) or "")
+        except ValueError:
+            d = None
+        if isinstance(d, dict):
+            roles = d.get("roles") if isinstance(d.get("roles"), dict) else {}
+            role = roles.get(top) or (roles.get(os.path.basename(root)) if not top else None) or "ceo"
+            names = d.get("display_names") if isinstance(d.get("display_names"), dict) else {}
+            name = names.get(role) or "agent-%s-%s" % (d.get("code", ""), role)
+            ops = str(d.get("ops_repo", "") or "")
+        else:
+            role, ops = "ceo", ""
+        if ops and ops != os.path.basename(root) and os.path.isdir(os.path.join(root, ops)):
+            opsdir = os.path.join(root, ops)
+        else:
+            opsdir = os.path.dirname(cfg)
+        profile = os.path.join(opsdir, "agents", role)
+        board = os.path.join(opsdir, "board", role + ".md")
+    elif kind == "legacy":
+        kv = _legacy_kv(cfg)
+        code = kv.get("CODIGO") or kv.get("CODE") or ""
+        ops = kv.get("OPS", "")
+        role = kv.get("AGENTE_%s" % top) or kv.get("AGENT_%s" % top) or "ceo"
+        name = kv.get("NOMBRE_%s" % role) or kv.get("NAME_%s" % role) or "agent-%s-%s" % (code, role)
+        profile = os.path.join(root, ops, "agents", role)
+        board = os.path.join(root, ops, "board", role + ".md")
+    return name or os.path.basename(root), role, profile, board
+
+
+def live_state(state_path, root):
+    """``(lines, drift)`` comparing state.json with the measured repositories."""
+    try:
+        d = json.loads(_read(state_path) or "")
+    except ValueError:
+        return ["state.json unreadable \u2014 treat the handoff as unverified."], True
+    if not isinstance(d, dict):
+        return ["state.json unreadable \u2014 treat the handoff as unverified."], True
+    out, drift = [], False
+    for r in d.get("repos") or []:
+        if not isinstance(r, dict):
+            continue
+        p = r.get("path", "")
+        if r.get("measured") is False:
+            out.append("  %s: not measured at save (%s) \u2014 verify it by hand." % (p, r.get("reason", "no reason")))
+            drift = True
+            continue
+        rp = livestate.resolve(root, p)
+        if not livestate.is_repo(rp):
+            out.append("  %s: NOT FOUND at %s \u2014 the handoff describes a tree that is not here." % (p, rp))
+            drift = True
+            continue
+        m, why = livestate.measure(rp)
+        if m is None:
+            out.append("  %s: cannot measure (%s)." % (p, why))
+            drift = True
+            continue
+        marks = []
+        if m["branch"] != r.get("branch"):
+            marks.append("branch %s -> %s" % (r.get("branch"), m["branch"]))
+        if m["commit"] != r.get("commit"):
+            marks.append("commit %s -> %s" % (r.get("commit"), m["commit"]))
+        if m["uncommitted"] != r.get("uncommitted"):
+            marks.append("uncommitted %s -> %s" % (r.get("uncommitted"), m["uncommitted"]))
+        if marks:
+            out.append("  %s: DRIFT \u2014 %s" % (p, " \u00b7 ".join(marks)))
+            drift = True
+        else:
+            out.append("  %s: matches (%s @%s)" % (p, m["branch"], m["commit"]))
+    if d.get("saved_at"):
+        out.append("  saved_at: %s" % d["saved_at"])
+    if d.get("scheduled_tasks"):
+        out.append("  scheduled tasks to recreate: %s (they died with the reset)" % d["scheduled_tasks"])
+    if d.get("ready_to_rotate"):
+        out.append("  this agent had already declared itself ready to rotate.")
+    return out, drift
+
+
+def settings_notice(start, team_root, mode, env):
+    """The team-settings line (REQ-ADP-003 as amended by REQ-W1-050/083), or None."""
+    kp = pj.find_root(start=start)  # REQ-W1-050: walk up no further than the git top level
+    if kp is None and team_root and pj.is_karvey_project(team_root):
+        kp = team_root
+    if kp is None:
+        return None
+    data, err = pj.load_project_json(kp)
+    if err == "missing":
+        missing = "no project.json"
+    elif data is None:
+        missing = "project.json unreadable" if "not an object" not in (err or "") else "project.json is not an object"
+    else:
+        missing = " + ".join(k for k in ("notifications", "management")
+                             if not isinstance(data.get(k), dict) or not data.get(k))
+    if not missing:
+        return None
+    return ("Karvey (info): team settings not set (%s). To set them, the user can run "
+            "`/karvey:karvey-init --settings` \u2014 settings only, it creates no change and nothing in any "
+            "tracker." % missing)
+
+
+def session_text(mode, env):
+    """The SessionStart context as text ('' when there is nothing to say)."""
+    start = env.get("CLAUDE_PROJECT_DIR") or env.get("PWD") or os.getcwd()
+    try:
+        start = os.path.realpath(os.path.abspath(start))
+    except (OSError, ValueError):
+        return ""
+    if not os.path.isdir(start):
+        return ""
+    cfg_d = defaults().get("session", {})
+    max_rows, max_bytes = int(cfg_d.get("board_rows_max", 40)), int(cfg_d.get("handoff_bytes_max", 6144))
+    root, cfg, kind = _find_team_root(start)
+    out = []
+    if root is None:
+        n = settings_notice(start, None, mode, env)
+        return n or ""
+    rel = os.path.relpath(start, root) if start != root else ""
+    top = rel.split(os.sep, 1)[0] if rel and not rel.startswith("..") else ""
+    name, role, profile, board = resolve_profile(root, cfg, kind, top)
+    handoff, state = os.path.join(profile, "handoff.md"), os.path.join(profile, "state.json")
+    out.append("=== Karvey \u2014 session context (%s) ===" % kind)
+    out.append("You are `%s`%s. Profile: %s" % (name, " (role: %s)" % role if role != "solo" else "", profile))
+
+    def emit(path, title, body=None):
+        text = body if body is not None else _read(path)
+        if text is None:
+            return
+        out.append("")
+        out.append("=== %s ===" % title)
+        out.append(text.rstrip("\n"))
+
+    compact = next((c for c in (os.path.join(profile, "manifest-compact.md"),
+                                os.path.join(os.path.dirname(profile), "manifest-compact.md")) if os.path.isfile(c)), None)
+    if not os.path.isdir(profile):
+        out.append("")
+        out.append("(profile directory not found: %s \u2014 nothing to reinject; run `/karvey-checkpoint save` to "
+                   "create it)" % profile)
+    elif not os.path.isfile(handoff):
+        out.append("")
+        out.append("(no handoff at %s \u2014 the previous session did not save one)" % handoff)
+    if compact:
+        emit(compact, "Compact manifest")     # compact XOR full (H-09, REQ-W1-046)
+    else:
+        emit(os.path.join(profile, "manifest.md"), "Manifest (%s)" % name)
+    emit(os.path.join(profile, "checklist.md"), "Closing checklist")
+    btext = _read(board)
+    if btext is not None:
+        emit(board, "Board", bound_board(btext, board, max_rows))
+    htext = _read(handoff)
+    if htext is not None:
+        emit(handoff, "Handoff", bound_text(htext, handoff, max_bytes))
+    drift = False
+    if os.path.isfile(state):
+        out.append("")
+        out.append("=== Live state vs. what the handoff claims ===")
+        lines, drift = live_state(state, root)
+        out.extend(lines)
+    elif os.path.isfile(handoff):
+        out.append("")
+        out.append("(no state.json beside the handoff: nothing was measured, so treat every claim in it as unverified)")
+        drift = True
+    kroot = root if pj.is_karvey_project(root) else pj.find_root(start=start)
+    act = pj.active_change(kroot) if kroot else {"change": None, "reason": "none", "candidates": []}
+    n = settings_notice(start, root, mode, env)
+    if n:
+        out.append(n)
+    out.append("")
+    out.append("=== First action ===")
+    if act["change"] or drift or not os.path.isfile(handoff):
+        line = "Run `/karvey-checkpoint restore` BEFORE anything else"
+        if act["change"]:
+            line += " (active change: %s)" % act["change"]
+        out.append(line + ".")
+        out.append("It contrasts the rest, crosses open questions against the decision log, recreates the")
+        out.append("scheduled tasks and proposes the next step. A hook cannot do any of that.")
+    else:
+        out.append("Nothing pending to restore. Re-read the board before starting.")
+    if act["reason"] == "several":
+        out.append("(several active changes: %s \u2014 none selected)" % ", ".join(act["candidates"]))
+    return "\n".join(out)
+
+
+def session_main(mode, env=None, out=None):
+    """SessionStart entry point: always exit 0 (it informs, never gates)."""
+    env = os.environ if env is None else env
+    out = out or sys.stdout
+    try:
+        text = session_text(mode, env)
+    except Exception as exc:  # open: a broken session hook must not break the session
+        text = "[karvey] session context unavailable: %s: %s" % (type(exc).__name__, exc)
+    if text:
+        out.write(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text}},
+                             ensure_ascii=False) + "\n")
+    return HOOK_ALLOW
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="karvey_hooks.py", add_help=True)
     ap.add_argument("event")
@@ -335,7 +628,8 @@ def main(argv=None):
         return HOOK_ALLOW
     only = [x for item in args.only for x in item.split(",") if x] or None
     if args.event == "session":
-        return HOOK_ALLOW  # the session entry point is ported in E1.F6.T1
+        mode = args.rest[0] if args.rest else "startup"
+        return session_main(mode if mode in ("startup", "resume") else "startup")
     closed = [g for g in guards_for(args.event, only) if g.wired and g.fail == "closed" and g.default_on]
     watchdog = _Watchdog(BUDGET_S[args.event], sys.stdout, sys.stderr, default=closed[0] if closed else None)
     watchdog.start()
