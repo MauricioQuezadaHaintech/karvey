@@ -7,7 +7,7 @@ Defines the ordered deployment flow the method uses. It is applied by `karvey-im
 1. **Never commit directly to `dev` or `master`.** Always a feature branch.
 2. **Never deploy manually.** The deploy is triggered by the pipeline: push to `dev` → deploy dev; merge to `master` → deploy prod. Manual `func azure functionapp publish` or equivalents are forbidden.
 3. **`pull` before starting and `pull` before each merge/PR.** Avoid working on a stale base.
-4. **Prod requires explicit human OK.** The PR to `master` is not merged without approval, recorded in the repo as `spec.json:approvals.prod = { by, date, ref: D-NN }` (see `multi-agent.md` §4).
+4. **Prod requires explicit human OK, recorded without a commit (D-03).** The human's OK becomes a `D-NN` in the decision log, goes in the PR body, and is written to the release ledger with `karvey-state.py approve {change-id} prod --by … --role human --ref D-NN`; prod-gate reads that ledger before the merge (`enforcement.md`). It is copied into `spec.json:approvals.prod` only at archive (`--write-spec`, on `chore/archive-{change-id}`). The approval is never a commit on the integration or production branch.
 5. **The PR's gates are verified before requesting that OK.** CI and branch policies (build validation,
    required reviewers, status checks) are not the same as the release gate: they run on this PR, over the
    merge commit, and catch what the local pre-check could not see. Never ask a human to approve over a red
@@ -18,33 +18,46 @@ Defines the ordered deployment flow the method uses. It is applied by `karvey-im
 
 ## Step-by-step flow
 
-For each affected repo (`project.json:repos`):
+For each affected repo (`project.json:repos`). Branch names come from `project.json:branch_flow`, validated
+for the shell:
 
-```
-0. git pull                              # before starting
-1. git checkout -b feature/{change-id}   # or the feature_prefix from project.json
-   (development + commits per task — see karvey-impl)
-2. git pull origin {integration}         # before merge (default: dev)
-3. merge feature/{change-id} → dev
-4. git push origin dev                   # ⇒ triggers DEV pipeline
-5. Verify DEV deploy (smoke/healthcheck)
-6. git pull origin {production}          # before the PR (default: master)
-7. PR dev → master                       # gh pr / az repos pr / glab mr, per git_platform
-8. Verify the PR's gates (CI + branch policies) and wait for them to settle
-9. Merge to master ONLY with human OK     # ⇒ triggers PROD pipeline
-10. Delete the absorbed branches (remote + local) and prune   # see Branch hygiene
+```bash
+C="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py"
+I="$(python3 "$C" get branch_flow.integration --shell)"
+P="$(python3 "$C" get branch_flow.production --shell)"
 ```
 
-## 6-step checklist (before any deploy)
+**6-step checklist — before the first push:**
 
-1. Am I on a feature branch? (not dev/master)
-2. Did I update `CHANGELOG.md`? (see `changelog-policy.md`)
-3. Did I commit everything pending?
-4. Did I push the branch?
-5. Did I merge to `dev`?
-6. Did I push `dev`?
+1. Am I on a feature branch (not `$I`/`$P`)?
+2. Does `CHANGELOG.md` carry this change's lines under `## [Unreleased]`? (`changelog-policy.md`)
+3. Is everything committed?
+4. Is the branch pushed?
+5. Is it merged into `$I`?
+6. Is `$I` pushed?
 
-Only after all 6 → the pipeline deploys dev. For prod, repeat the verification and PR to master with approval.
+Only after all six does the integration pipeline deploy. Then:
+
+```bash
+git pull                                   # 0. before starting
+git checkout -b "feature/{change-id}"      # 1. or project.json:branch_flow.feature_prefix
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" advance "{change-id}" deploying   # on the feature branch
+git pull origin "$I"                       # 2. before the merge
+git checkout "$I" && git merge --no-ff "feature/{change-id}"   # 3.
+git push origin "$I"                       # 4. ⇒ integration pipeline
+#                                            5. verify the integration deploy (smoke / healthcheck)
+git pull origin "$P"                       # 6. before the PR
+#                                            7. PR "$I" → "$P" (gh pr / az repos pr / glab mr, per git_platform)
+#                                            8. wait for the PR's gates (CI + branch policies) to settle
+#                                            9. human OK → D-NN + PR + ledger (principle 4); merge ⇒ prod pipeline
+#                                           10. delete the absorbed branches (Branch hygiene)
+```
+
+The release step (one per release, `versioning.md`) turns `[Unreleased]` into `[x.y.z]` and bumps the version
+once, on the feature branch, before step 3.
+
+**Trunk flow** (`integration == production`): one PR from the feature branch into `$P`; steps 3–5 disappear,
+the checklist ends at "branch pushed", and the PR carries the D-NN.
 
 ## Branch hygiene
 
@@ -59,10 +72,11 @@ in `project.json:branch_flow.protected_branches`) are never candidates.
 
 ```bash
 git fetch origin --prune
-git branch -r --merged origin/{production}          # merged by merge commit / fast-forward
-git cherry origin/{production} origin/{branch}      # all lines '-' ⇒ absorbed by cherry-pick / rebase
+B="{branch}"                                          # the candidate branch
+git branch -r --merged "origin/$P"                   # merged by merge commit / fast-forward
+git cherry "origin/$P" "origin/$B"                   # all lines '-' ⇒ absorbed by cherry-pick / rebase
 # squash merges hide from both: the tree test catches them (git ≥ 2.38)
-[ "$(git merge-tree --write-tree origin/{production} origin/{branch})" = "$(git rev-parse origin/{production}^{tree})" ] && echo absorbed
+[ "$(git merge-tree --write-tree "origin/$P" "origin/$B")" = "$(git rev-parse "origin/$P^{tree}")" ] && echo absorbed
 ```
 
 | Branch state | Action |

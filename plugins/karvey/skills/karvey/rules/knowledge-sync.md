@@ -1,35 +1,39 @@
-# Rule: Knowledge synchronization across iterations
+# Rule: Knowledge synchronization
 
-So that the method's iterations stay consistent (each phase knows the dependencies and decisions of the previous ones), Karvey maintains a knowledge graph. The mechanism depends on `knowledge_sync` in `docs/spec/project.json`.
+Karvey can keep a knowledge graph of `docs/spec/` (and of the code) so later changes see earlier decisions and
+dependencies. The mechanism is `knowledge_sync` in `docs/spec/project.json`, chosen once by `karvey-init`.
 
 ## Choosing the mechanism
 
-It is decided **once** in `karvey-init` and stored in `project.json`:
+| Value | When | Default |
+|---|---|---|
+| `obsidian` | an Obsidian MCP is available in the session (tools whose name contains `obsidian`) | — |
+| `graphify` | graphify is installed | — |
+| `none` | neither is available, or the team does not want a graph | yes, when graphify is not detected |
 
-1. **Does the user have Obsidian with MCP integrated available in the session?**
-   - Detect whether there are Obsidian MCP tools available (e.g. tools whose name contains `obsidian`).
-   - If **yes** → `knowledge_sync = "obsidian"`.
-   - If **no** → `knowledge_sync = "graphify"` (minimum, always).
+`karvey-init` says once which value it chose and why; `none` is a valid choice, not an error.
 
-> Golden rule: **never go without synchronization**. If Obsidian is not available, graphify is used as the minimum floor so dependency knowledge is not lost.
+## When the sync runs: at archive and on demand only
 
-## Sync step (invoked at the end of each phase)
+The sync is **not** a step of each phase. Phases only accumulate what changed: the PostToolUse hook appends
+every written path under `docs/spec/` to `docs/spec/.graph-pending` (sorted, deduplicated; it never records
+itself or `graphify-out/`).
 
-Every skill that produces or modifies documents in `docs/spec/` runs this step when it finishes:
+It runs:
 
-### If `knowledge_sync = "obsidian"`
-- Sync the created/modified documents to the vault via the Obsidian MCP (create/update the corresponding notes and their dependency links).
-- If the Obsidian MCP fails or does not respond, **degrade to graphify** automatically so the update is not lost.
+1. **At archive** (`karvey-archive`), over `.graph-pending` ∪ the change's git diff, then `.graph-pending`
+   is cleared.
+2. **On demand**, when the user asks for it.
 
-### If `knowledge_sync = "graphify"`
-- Invoke `/graphify docs/spec/ --update` to reflect the created or modified documents.
-- If `docs/spec/graphify-out/` does not exist (first time in the project), invoke `/graphify docs/spec/` without `--update`.
-- In **multi-repo** projects: in addition to `docs/spec/`, run graphify in each repo of `project.json:repos` that had code changes in the current phase, to keep the code's dependency graph aligned with the spec.
+### `knowledge_sync = "obsidian"`
+- Sync the created/modified documents to the vault via the Obsidian MCP (notes and their dependency links).
+- If the Obsidian MCP fails, fall back to graphify when it is installed; otherwise report it and keep
+  `.graph-pending` for the next run.
 
-## Summary
+### `knowledge_sync = "graphify"`
+- Run `/graphify docs/spec/ --update` over the pending set; the first time (no `graphify-out/`), without
+  `--update`.
+- Multi-repo: also in each repo of `project.json:repos` whose code the change touched.
 
-| Condition | Action |
-|-----------|--------|
-| Obsidian MCP available | Sync via Obsidian (fallback to graphify if it fails) |
-| No Obsidian | `/graphify docs/spec/ --update` (guaranteed minimum) |
-| Multi-repo with code changes | graphify also in the affected repos |
+### `knowledge_sync = "none"`
+- Nothing runs; `.graph-pending` is still kept, so enabling a mechanism later can catch up.

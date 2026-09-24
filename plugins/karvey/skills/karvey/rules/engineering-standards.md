@@ -176,12 +176,12 @@ they can also be authored manually. If no standard exists for a layer, `architec
 **must announce** it and treat every non-trivial pattern choice as a gray zone (ask), rather than silently
 picking one.
 
-## Optional enforcement
+## Enforcement
 
-`karvey-guard` can install a `standards-guard` hook that warns/blocks when `impl` touches a pattern marked
-`MUST NOT` (or a `deprecated` pattern under `migrating`) without a matching approved entry in
-`deviations.md` for the current change. Opt-in, like the other enforcement hooks (`enforcement.md`).
-A skill never forces this on its own — only the hook blocks.
+No hook enforces the standards in this release: conformance is checked by `karvey-architecture` (Step 4B)
+and by `karvey-qa` (Dimension 9), which report every `MUST NOT` pattern, or `deprecated` pattern under
+`migrating`, touched without a matching approved entry in `deviations.md`. A standards check at edit time is
+not shipped (see `enforcement.md` for what is).
 
 ## project.json reference
 
