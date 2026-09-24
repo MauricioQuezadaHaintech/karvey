@@ -1,0 +1,13 @@
+{
+  "change_id": "feat-b",
+  "phase": "tasks-approved",
+  "approvals": {
+    "requirements": {
+      "approved": true,
+      "by": "Owner",
+      "role": "human",
+      "date": "2026-09-01",
+      "ref": "D-03"
+    }
+  }
+}

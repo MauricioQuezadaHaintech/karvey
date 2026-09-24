@@ -1,0 +1,11 @@
+{
+  "project": "Fixture",
+  "spec_repo": "fixture",
+  "branch_flow": {
+    "feature_prefix": "feature/",
+    "integration": "dev",
+    "production": "main"
+  },
+  "wip_limit": 3,
+  "stall_days": 7
+}

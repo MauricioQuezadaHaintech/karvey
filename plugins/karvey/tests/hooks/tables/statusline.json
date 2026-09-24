@@ -1,0 +1,87 @@
+{
+  "table": "statusline",
+  "description": "Statusline (E1.F11.T1): visible invalid zone (BUG-08, REQ-W1-100), windows joined with ' · ' (BUG-09, REQ-W1-101), rotation default read from defaults.json and 'rot?' when it cannot be found (REQ-W1-049, D-06). The script always exits 0, so every decision is allow.",
+  "cases": [
+    {
+      "id": "statusline-01-valid-tz-no-marker",
+      "guard": "statusline",
+      "event": "statusline",
+      "given": {"env": {"KARVEY_TZ": "America/Santiago"}},
+      "input": {"stdin": {"rate_limits": {"five_hour": {"used_percentage": 10, "resets_at": "{{now+90m}}"}}}},
+      "expect": {"decision": "allow", "stdout_contains": ["limit 5h 10% ↻", "(1h30m)"],
+                 "stdout_not_contains": ["(TZ?)", "statusline down"]},
+      "tags": ["statusline", "BUG-08", "REQ-W1-100"]
+    },
+    {
+      "id": "statusline-02-invalid-tz-marked",
+      "guard": "statusline",
+      "event": "statusline",
+      "given": {"env": {"KARVEY_TZ": "Mars/Olympus"}},
+      "input": {"stdin": {"rate_limits": {"five_hour": {"used_percentage": 10, "resets_at": "{{now+90m}}"},
+                                          "seven_day": {"used_percentage": 29, "resets_at": "{{now+26h}}"}}}},
+      "expect": {"decision": "allow", "stdout_contains": ["(TZ?) (1h30m)", "(TZ?) (1d2h)"],
+                 "stdout_not_contains": "statusline down"},
+      "tags": ["statusline", "BUG-08", "REQ-W1-100"]
+    },
+    {
+      "id": "statusline-03-no-tz-no-marker",
+      "guard": "statusline",
+      "event": "statusline",
+      "given": {},
+      "input": {"stdin": {"rate_limits": {"five_hour": {"used_percentage": 10, "resets_at": "{{now+90m}}"}}}},
+      "expect": {"decision": "allow", "stdout_contains": "limit 5h 10% ↻", "stdout_not_contains": "(TZ?)"},
+      "tags": ["statusline", "BUG-08", "REQ-W1-100"]
+    },
+    {
+      "id": "statusline-04-only-7d-no-leading-separator",
+      "guard": "statusline",
+      "event": "statusline",
+      "given": {},
+      "input": {"stdin": {"rate_limits": {"seven_day": {"used_percentage": 29}}}},
+      "expect": {"decision": "allow", "stdout_contains": "limit 7d 29%", "stdout_not_contains": "limit ·"},
+      "tags": ["statusline", "BUG-09", "REQ-W1-101"]
+    },
+    {
+      "id": "statusline-05-both-windows-one-separator",
+      "guard": "statusline",
+      "event": "statusline",
+      "given": {},
+      "input": {"stdin": {"rate_limits": {"five_hour": {"used_percentage": 10},
+                                          "seven_day": {"used_percentage": 29}}}},
+      "expect": {"decision": "allow", "stdout_contains": "limit 5h 10% · 7d 29%",
+                 "stdout_not_contains": ["limit ·", "· ·"]},
+      "tags": ["statusline", "BUG-09", "REQ-W1-101"]
+    },
+    {
+      "id": "statusline-06-only-5h",
+      "guard": "statusline",
+      "event": "statusline",
+      "given": {},
+      "input": {"stdin": {"rate_limits": {"five_hour": {"used_percentage": 10}}}},
+      "expect": {"decision": "allow", "stdout_contains": "limit 5h 10%", "stdout_not_contains": ["7d", "limit ·"]},
+      "tags": ["statusline", "BUG-09", "REQ-W1-101"]
+    },
+    {
+      "id": "statusline-07-rotation-default-from-defaults-json",
+      "guard": "statusline",
+      "event": "statusline",
+      "note": "9 h > defaults.json:rotation_hours (8, D-06) with KARVEY_ROTATE_HOURS unset: the hours rule fires.",
+      "given": {},
+      "input": {"stdin": {"cost": {"total_duration_ms": 32400000}}},
+      "expect": {"decision": "allow", "stdout_contains": ["9.0h", "TIME TO ROTATE (hours)"],
+                 "stdout_not_contains": "rot?"},
+      "tags": ["statusline", "REQ-W1-049", "D-06"]
+    },
+    {
+      "id": "statusline-08-rotation-unknown-when-defaults-missing",
+      "guard": "statusline",
+      "event": "statusline",
+      "note": "A copy of the script outside the plugin cannot find defaults.json: it shows rot? instead of a second literal.",
+      "given": {"script_copy": true},
+      "input": {"stdin": {"cost": {"total_duration_ms": 32400000}}},
+      "expect": {"decision": "allow", "stdout_contains": "9.0h rot?",
+                 "stdout_not_contains": ["TIME TO ROTATE", "statusline down"]},
+      "tags": ["statusline", "REQ-W1-049", "D-06"]
+    }
+  ]
+}
