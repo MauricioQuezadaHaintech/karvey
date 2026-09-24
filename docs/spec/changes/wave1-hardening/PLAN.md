@@ -241,7 +241,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F11.T2 [Frontend] | ✅ done | 45 | 4 | 0 | no human review yet; lane D; 22 node tests + static page tests |
 | E1.F12.T1 [Backend] | ✅ done | 20 | 5 | 0 | no human review yet; 9 identical copies deleted; 188 citations rewritten relative (L-09 README heuristic narrowed, F-24) |
 | E1.F12.T2 [Backend] | ✅ done | 20 | 1 | 0 | no human review yet; 3 agreement tests; block regenerated with --write |
-| E1.F12.T3 [Backend] | ⬜ todo | 45 | — | — |  |
+| E1.F12.T3 [Backend] | ✅ done | 45 | 6 | 0 | no human review yet; state init command added (F-25); 955 → 795 lines; 68 → 0 errors on the three files |
 | E1.F12.T4 [Backend] | ⬜ todo | 40 | — | — |  |
 | E1.F12.T5 [Backend] | ⬜ todo | 45 | — | — |  |
 | E1.F12.T6 [Backend] | ⬜ todo | 45 | — | — |  |

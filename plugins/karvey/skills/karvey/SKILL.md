@@ -1,7 +1,7 @@
 ---
 name: karvey
-description: Orchestrator of the Karvey Method — the complete spec-driven development (SDD) pipeline, stack-agnostic. Shows the pipeline state, guides which skill to run at each phase, and is the method's entry point. A synthesis of first-hand experience + Kiro + gstack. Triggers include "karvey", "método karvey", "karvey method", "pipeline karvey", "qué sigue en karvey", "what's next in karvey", "iniciar proyecto", "start project", "spec-driven", "spec driven development", "SDD", "specification-driven", "kiro", "cc-sdd", "openspec", "gstack", "g-stack", "Garry Tan", "spec kit", "PRD", "requirements engineering", "living specs", "método de desarrollo", "development method", "development pipeline", "SDLC", "desarrollo con IA", "AI-assisted development", "agentic development", "equipo virtual de ingeniería", "virtual engineering team", "vibe coding".
-allowed-tools: Read, Bash, Glob, Grep
+description: Karvey support — method entry point: shows the pipeline, a change's state and the next skill to run. Triggers include "karvey", "método karvey", "karvey method", "pipeline karvey", "qué sigue en karvey", "what's next in karvey".
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 argument-hint: [<change-id>] [--phase <fase>] [--autoplan]
 ---
 
@@ -33,13 +33,13 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **Persistent goal**: a north star that every phase re-reads so it never stops until the result is achieved, while respecting the gates
 - **Spiral, not a line — iteration loop**: testing/QA/real-runtime surface defects and new ideas; the **iteration engine** (`karvey-iterate`) routes each finding back to its edge (`bug` → incident tracker + QA micro-loop · `spec-gap` → re-open requirements · `emergent` → discovery backlog) so **nothing is dropped**. See `rules/iteration-loop.md`.
 - **Incident tracker** (`BUG-NN` with state history) + **discovery backlog** (Markdown + the team's tracker) so bugs and post-cycle ideas stay traceable (`rules/incident-tracking.md`, `rules/backlog.md`)
-- **Phase-close ritual**: every phase/task closes with a mandatory management update (tracker comment + logical status + cascade) so tasks never go stale — see `rules/phase-close.md`
+- **Phase-close ritual**: logical status per task; tracker comment + cascade per Feature, so tasks never go stale — see `rules/phase-close.md`
 - **Multi-agent and multi-repo work**: parent/child changes across repos, business decisions (`D-NN`) and pinned inputs from design/copy/legal agents (`repo path @commit`) in `spec.json`, approvals that cite who approved and where, `[human]` tasks for steps only a person may run, `ops` and `hotfix` change types, light CI for docs-only PRs — see `rules/multi-agent.md`
 - **Cross-cutting layer of support skills** (investigate, second-opinion, health, browse, etc.) callable at any time
 - **Agent handoff on every rotation** (`karvey-checkpoint`): identity, standing rules, board, closing checklist, **measured** repo state and scheduled tasks — for a single agent as much as for a team, and reinjected by the plugin's session hook, which also contrasts it against the live repos
 - **Optional team layer** (`rules/team.md`): roles, census, decision log and **cost measurement** for work split across several agent sessions. **Opt-in and not the default** — Karvey is complete with one agent, and the measured run behind this layer cost ≈US$1,000 in 3 days before going back to one.
 - **Verification rules before reporting "done"** (`rules/verification.md`): the failure modes that make a green report false
-- **Optional enforcement via hooks** (git-flow + plan-gate) and **archive** with spec merge
+- **Enforcement by hooks**: prod-gate on by default, git-flow and plan-gate opt-in (`rules/enforcement.md`); the phase graph is data (`rules/state-machine.md`) and **archive** merges the spec-delta with a script
 
 ## Complete pipeline
 
@@ -106,38 +106,16 @@ Show the pipeline above, then run the steps of `/karvey-context` (capabilities, 
 
 ### With `<change-id>` — Show the change's current phase
 
+Ask the state tool (`karvey-state.py next`); never infer the phase from `spec.json` by hand (`rules/state-machine.md`):
+
 ```bash
-cat docs/spec/changes/{change-id}/spec.json 2>/dev/null || echo "Not found"
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" next "{change-id}" --json
 ```
 
-Read `spec.json` and determine the current phase based on `phase` and `approvals`:
-
-| `phase` | `approvals` | Next skill |
-|---------|-------------|-----------------|
-| `init` | requirements.generated=false | `/karvey-requirements {change-id}` |
-| `requirements` | requirements.approved=false | Approve requirements with the user |
-| `requirements` | mockup.generated=false | `/karvey-mockup {change-id}` |
-| `mockup` | mockup.approved=false | Iterate the mockup with the user |
-| `mockup` | design_graphic.generated=false | `/karvey-design-graphic {change-id}` |
-| `design_graphic` | design_graphic.approved=false | Review the design with the user |
-| `design_graphic` | architecture.generated=false | `/karvey-architecture {change-id}` |
-| `architecture` | architecture.approved=false | Review the architecture with the user |
-| `architecture` | infra.generated=false | `/karvey-infra {change-id}` |
-| `infra` | infra.approved=false | Review infra/pipelines with the user |
-| `infra` | tasks.generated=false | `/karvey-tasks {change-id}` |
-| `tasks` | tasks.approved=false | Review tasks with the user |
-| `tasks` | tasks.approved=true | `/karvey-impl {change-id}` |
-| `impl` | — | `/karvey-test {change-id}` |
-| `test` | findings.md has open items | `/karvey-iterate {change-id}` (route them first) |
-| `test` | no open findings | `/karvey-qa {change-id}` |
-| `qa` | findings.md has open `bug`/`spec-gap` | `/karvey-iterate {change-id}` (route them) |
-| `qa` | open `spec-gap` routed → requirements re-opened | `/karvey-requirements {change-id}` (revision mode, ripple affected phases) |
-| `qa` | qa.approved=false (open criticals/highs, bug edge) | Fix → re-impl → re-test → re-qa |
-| `qa` | qa.approved=true + converged (no open bug/spec-gap, emergent captured) | `/karvey-deploy {change-id}` |
-| `deployed` | — | `/karvey-archive {change-id}` (+ sweep backlog into new change-ids) |
+Relay `status` (`in-progress | awaiting-approval | ready | invalid`), the next `skill` and its `blockers`. On `invalid`, show the validation errors and offer `karvey-state.py validate --fix --dry-run`; do not guess a next step. Before running the suggested skill, apply the gates below.
 
 **Change type (`spec.json:type`, see `rules/multi-agent.md`):**
-- `ops` → short pipeline: `init → requirements (lite) → infra (command plan) → tasks ([human]/[Infra]) → execution + verification → archive`. Rows for mockup, design-graphic and architecture are skipped (architecture only if trust boundaries change).
+- `ops` → short pipeline: `init → requirements (lite) → infra (command plan) → tasks ([human]/[Infra]) → execution + verification → archive`. mockup and design-graphic are recorded as skipped (`karvey-state.py skip`); architecture runs only if trust boundaries change.
 - `hotfix` → `iterate` (BUG-NN) → `impl` → `test` (regression) → `deploy`, with fix + BUG-NN + regression test in the **same PR**. Requirements re-open only if the defect is a `spec-gap`.
 - A **parent** change (`links.children` not empty) has no code of its own: show each child's phase (`{change-id}@{repo}`) and advance the parent to `deployed` only when every child is deployed or descoped by a decision.
 - Any task in `awaiting-human` blocks only its dependents: show it first, with its executor and verification command.
@@ -188,7 +166,7 @@ IaC (Terraform/Bicep/Pulumi) + CI/CD pipelines (GitHub Actions/Azure Pipelines),
 **Rules:** `management-adapters.md`, `clickup-protocol.md`
 
 ### PHASE 8: /karvey-impl
-Executes tasks on `feature/{change-id}` (never dev/master). Version bump + CHANGELOG per commit (human + AI model + why).
+Executes tasks on `feature/{change-id}` (never dev/master). One CHANGELOG `[Unreleased]` line per commit (human + AI model + why); the version is bumped once, at the release.
 **Rules:** `deploy-workflow.md`, `changelog-policy.md`, `versioning.md`
 
 ### PHASE 9: /karvey-test
@@ -244,13 +222,14 @@ The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incid
 |---------|-----------|
 | `rules/project-config.md` | init, architecture, infra, deploy, context |
 | `rules/engineering-standards.md` | init, architecture, impl, qa, archive, guard |
+| `rules/state-machine.md` | every phase skill (via `karvey-state.py`), orchestrator |
 | `rules/management-adapters.md` | init, requirements, tasks, impl, qa, deploy, archive, iterate, context, phase-close |
 | `rules/notifications.md` | init, qa, deploy, iterate |
 | `rules/clickup-protocol.md` | init, tasks, impl, qa, deploy, archive (ClickUp adapter + estimation) |
 | `rules/ears-format.md` | requirements |
 | `rules/security-tiers.md` | requirements, architecture, infra, qa |
 | `rules/living-specs.md` | init, requirements, archive |
-| `rules/knowledge-sync.md` | all phases (at close) |
+| `rules/knowledge-sync.md` | archive (and on demand) |
 | `rules/targets.md` | mockup, design-graphic, architecture, test, qa, deploy |
 | `rules/deploy-workflow.md` | infra, impl, deploy, archive (branch sweep), context (live branches) |
 | `rules/changelog-policy.md` | impl, infra, deploy, qa |
@@ -260,7 +239,7 @@ The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incid
 | `rules/iteration-loop.md` | test, qa, browse, iterate |
 | `rules/incident-tracking.md` | test, qa, iterate, investigate |
 | `rules/backlog.md` | iterate, archive, context |
-| `rules/phase-close.md` | all phases (at close), impl, iterate |
+| `rules/phase-close.md` | impl, test, qa, iterate |
 | `rules/multi-agent.md` | init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health — and every approval gate |
 | `rules/team.md` | **optional** team layer: checkpoint (handoff), team, decisions, context |
 | `rules/verification.md` | all phases (before reporting "done"), guard, qa, health |

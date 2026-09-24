@@ -979,6 +979,48 @@ def cmd_advance(args, root):
     return kl.EXIT_OK, res, [], [], "%s: %s → %s" % (args.change, res["from"], res["to"])
 
 
+def cmd_init(args, root):
+    """Create the state of a new change: ``phase: init`` with its ``phase_history`` entry (REQ-W1-013).
+
+    A missing ``spec.json`` is created; an existing one without ``phase`` (the skill wrote its descriptive
+    fields first) gets the state fields added and keeps every other key. A file that already has a phase is
+    refused: use ``advance``, ``reopen`` or ``validate --fix``."""
+    change = args.change
+    if not isinstance(change, str) or not re.match(r"^[a-z0-9][a-z0-9._-]*$", change):
+        raise Usage("invalid change id %r (lowercase letters, digits, . _ -)" % (change,))
+    now = now_iso()
+    entry = {"phase": "init", "entered_at": now}
+    if args.by:
+        entry["by"] = args.by
+    state_fields = {"schema_version": SCHEMA_VERSION, "change_id": change, "phase": "init",
+                    "phase_history": [entry], "approvals": {}}
+    path = Path(root) / pj.CHANGES_DIR / change / "spec.json"
+    if not path.is_file():
+        data = dict(state_fields, created_at=now, updated_at=now)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        atomicio.write_text_atomic(str(path), atomicio.dumps(data))
+        return kl.EXIT_OK, {"change": change, "created": True, "file": rel(root, path)}, [], [], \
+            "%s: created in init" % change
+
+    def mutate(data):
+        if data.get("phase") is not None:
+            raise Refused("%s already has phase %r: use advance, reopen or validate --fix" % (change, data["phase"]),
+                          code="state.exists")
+        if data.get("change_id") not in (None, change):
+            raise Refused("%s holds change_id %r" % (rel(root, path), data["change_id"]), code="state.exists")
+        for k, v in state_fields.items():
+            if k == "approvals" and isinstance(data.get("approvals"), dict):
+                continue
+            data[k] = v
+        data.setdefault("created_at", now)
+        data["updated_at"] = now
+        return {"change": change, "created": False}
+
+    path, res, _ = transact(root, change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], [], "%s: state initialised in init" % change
+
+
 def cmd_generated(args, root):
     key = _key_of(args.phase)
     if key is None or key == "prod":
@@ -1244,7 +1286,7 @@ def cmd_approve(args, root):
         args.change, key, by, args.role, ref)
 
 
-COMMANDS = {"validate": cmd_validate, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
+COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
             "check-prod": cmd_check_prod}
 
@@ -1267,6 +1309,9 @@ def build_parser():
     v.add_argument("--fix", action="store_true", help="migrate legacy shapes (§2.5); the diff is printed first")
     v.add_argument("--dry-run", action="store_true", help="with --fix: show the diff, write nothing")
     v.add_argument("--accept-proposed", action="store_true", help="with --fix: also apply the proposed tier (D-09)")
+    it = sub.add_parser("init", parents=[common], help="create a change's state: phase init + phase_history")
+    it.add_argument("change")
+    it.add_argument("--by", help="who opens the change (recorded in phase_history)")
     n = sub.add_parser("next", parents=[common], help="the computed next phase of a change")
     n.add_argument("change")
     sub.add_parser("active", parents=[common], help="the active change (§5)")
