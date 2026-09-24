@@ -89,6 +89,7 @@ class Atomic(Base):
         self.assertEqual(self.f.read_text(), '{"a": 1}\n')
         self.assertEqual(sorted(p.name for p in self.d.iterdir()), ["spec.json"])
 
+    @unittest.skipIf(os.name == "nt", "POSIX permission bits: Windows chmod only toggles read-only (F-42)")
     def test_mode_preserved(self):
         self.f.write_text('{"a": 1}\n')
         os.chmod(self.f, 0o640)
