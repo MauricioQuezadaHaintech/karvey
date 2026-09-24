@@ -88,7 +88,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F3.T3 [Backend] `next` and `active` commands — est: 20min (depends E1.F3.T2)
 - [x] E1.F3.T4 [Backend] `advance`, `generated`, `skip`, `reopen` with history, lock and legacy in-memory mapping — est: 40min (depends E1.F3.T3)
 - [x] E1.F3.T5 [Backend] Marker store and release ledger in `approval.py` — est: 30min (depends E1.F2.T2, E1.F2.T4) (P)
-- [ ] E1.F3.T6 [Backend] `approve` (prod → ledger, `--write-spec`), `check-prod`, marker consumption on `advance` — est: 30min (depends E1.F3.T4, E1.F3.T5)
+- [x] E1.F3.T6 [Backend] `approve` (prod → ledger, `--write-spec`), `check-prod`, marker consumption on `advance` — est: 30min (depends E1.F3.T4, E1.F3.T5)
 
 ### Feature E1.F4: Hook runtime: parser, shell segmentation, dispatcher, table runner
 
@@ -208,7 +208,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F3.T3 [Backend] | ✅ done | 20 | 2 | 0 | no human review yet |
 | E1.F3.T4 [Backend] | ✅ done | 40 | 3 | 0 | no human review yet |
 | E1.F3.T5 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; done before T4 (T4's deployed precondition reads the ledger); F-04 applied |
-| E1.F3.T6 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F3.T6 [Backend] | ✅ done | 30 | 3 | 0 | no human review yet |
 | E1.F4.T1 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F4.T2 [Backend] | ⬜ todo | 40 | — | — |  |
 | E1.F4.T3 [Backend] | ⬜ todo | 35 | — | — |  |

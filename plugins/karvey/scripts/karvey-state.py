@@ -17,9 +17,14 @@ Commands:
   generated <change> <phase>            approvals.<phase>.generated = true
   skip <change> <phase> --reason R      skipped[phase] = R (skippable phases only)
   reopen <change> <phase> --reason R [--ref]   backward edge for karvey-iterate (spec-gap)
+  approve <change> <phase> --by --role human|ceo-delegate --ref [--date] [--write-spec]
+                                        prod → the release ledger (D-03), never spec.json
+                                        unless --write-spec (archive branch, REQ-W1-032)
+  check-prod <change>                   the prod-gate's question (REQ-W1-023)
 """
 import argparse
 import copy
+import re
 import difflib
 import json
 import os
@@ -885,8 +890,33 @@ def transact(root, change, mutate):
 
 
 def consume_on_close(root, change, data, closing):
-    """Consume the markers of the phase that closed (REQ-W1-016); filled in by E1.F3.T6."""
-    return []
+    """Consume the markers of the phase that closed (REQ-W1-016, §3.3 control 7): the marker its
+    approval recorded as evidence, and the change's marker created while that phase was current."""
+    consumed = []
+    try:
+        pdef = phase_def(closing)
+        key = pdef["approval"] if pdef else None
+        aps = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
+        ev = (aps.get(key) or {}).get("evidence") if key and isinstance(aps.get(key), dict) else None
+        if isinstance(ev, dict) and isinstance(ev.get("marker"), str) and ev["marker"].startswith("approvals/"):
+            scope = ev["marker"][len("approvals/"):-len(".json")] if ev["marker"].endswith(".json") else ""
+            if approval.valid_scope(scope) and approval.consume(root, scope, created_at=ev.get("marker_created_at")):
+                consumed.append(scope)
+        entered = None
+        for e in reversed(data.get("phase_history") or []):
+            if isinstance(e, dict) and e.get("phase") == closing:
+                entered = parse_dt(e.get("entered_at"))
+                break
+        m, status = approval.read_marker(root, change)
+        if change not in consumed and status == "ok" and m.get("consumed_at") is None:
+            created = parse_dt(m.get("created_at"))
+            if created is not None and (entered is None or created >= entered):
+                if approval.consume(root, change):
+                    consumed.append(change)
+        approval.gc(root)
+    except (approval.ApprovalError, atomicio.AtomicIOError, OSError):
+        pass
+    return consumed
 
 
 def cmd_advance(args, root):
@@ -1041,8 +1071,182 @@ def cmd_reopen(args, root):
         args.change, res["to"], res["from"], ", ".join(res["superseded"]) or "none")
 
 
+# --------------------------------------------------------------------------- approvals (§1.2, D-03, D-10)
+PROD_REF = re.compile(r"^(D-\d+|https://\S+)$")
+ROLES = ("human", "ceo-delegate")
+
+
+def reviewed_ttl(root):
+    """``plan_marker_ttl_min`` from the reviewed line (``origin/{production}``), else the default (§3.5)."""
+    data, status = pj.read_reviewed_project_json(root)
+    enf = data.get("enforcement") if status == "ok" and isinstance(data.get("enforcement"), dict) else {}
+    return approval.clamp_ttl(enf.get("plan_marker_ttl_min"))
+
+
+def _date_arg(value):
+    if value is None:
+        return now_iso()
+    if not sl.is_datetime_tz(value):
+        raise Refused("--date must be ISO 8601 with time and zone (got %r)" % value, code="state.date")
+    return value
+
+
+def decision_exists(root, ref):
+    """A ``D-NN`` recorded in ``docs/spec/decisions.md`` (heading or table row)."""
+    p = Path(root) / pj.SPEC_DIR / "decisions.md"
+    try:
+        text = p.read_text(encoding="utf-8-sig")
+    except OSError:
+        return False
+    pat = re.compile(r"^(#+\s*%s\b|\|\s*%s\s*\|)" % (re.escape(ref), re.escape(ref)), re.M)
+    return bool(pat.search(text))
+
+
+def _require(args, fields):
+    missing = ["--" + f for f in fields if not (getattr(args, f, None) or "").strip()]
+    if missing:
+        raise Refused("an approval needs %s (missing: %s)" % (", ".join("--" + f for f in fields),
+                                                              ", ".join(missing)), code="state.fields")
+
+
+def check_prod(root, change):
+    """The prod-gate's question, in-process (§1.2 check-prod). Raises :class:`NotFound`."""
+    path, loaded = load_change(root, change)
+    name = rel(root, path)
+    res = {"ok": False, "change": change, "by": None, "role": None, "ref": None, "date": None,
+           "source": None, "missing": []}
+    errs = [i for i in validate_data(loaded.data, "spec", False, name) if i["severity"] == "error"]
+    if errs:
+        res["missing"].append("valid spec.json")
+        res["reason"] = "cannot verify the production approval: %s fails validation (%s %s)" % (
+            name, errs[0]["path"], errs[0]["message"])
+        return res
+    ledger, status = approval.read_ledger(root, change)
+    prod = ledger.get("prod") if ledger and isinstance(ledger.get("prod"), dict) else None
+    if status == "corrupt":
+        res["missing"].append("ledger")
+        res["reason"] = "cannot verify the production approval: the release ledger is corrupt"
+        return res
+    if prod:
+        res.update({"by": prod.get("by"), "role": prod.get("role"), "ref": prod.get("ref"),
+                    "date": prod.get("date"), "source": "ledger"})
+        if not (isinstance(prod.get("by"), str) and prod["by"].strip()):
+            res["missing"].append("by")
+        if prod.get("role") != "human":
+            res["missing"].append("role")
+        if not (isinstance(prod.get("ref"), str) and PROD_REF.match(prod["ref"])):
+            res["missing"].append("ref")
+        ev = prod.get("evidence") if isinstance(prod.get("evidence"), dict) else {}
+        if not (isinstance(ev.get("marker"), str) and ev["marker"].startswith("approvals/")):
+            res["missing"].append("evidence")
+        res["ok"] = not res["missing"]
+        if not res["ok"]:
+            res["reason"] = "release ledger prod approval incomplete"
+        return res
+    sp = (loaded.data.get("approvals") or {}).get("prod") if isinstance(loaded.data.get("approvals"), dict) else None
+    if isinstance(sp, dict) and isinstance(sp.get("by"), str) and sp["by"].strip():
+        res.update({"by": sp.get("by"), "role": sp.get("role"), "ref": sp.get("ref"), "date": sp.get("date"),
+                    "source": "spec", "missing": ["ledger"],
+                    "reason": "approval not recorded through the state tool"})
+        return res
+    res["missing"] = ["by", "role", "ref"]
+    res["reason"] = "no production approval recorded"
+    return res
+
+
+def cmd_check_prod(args, root):
+    res = check_prod(root, args.change)
+    human = ("prod approval OK: %s by %s ref %s (%s)" % (args.change, res["by"], res["ref"], res["source"])
+             if res["ok"] else "prod approval MISSING for %s: %s (%s)" % (
+                 args.change, ", ".join(res["missing"]), res.get("reason", "")))
+    return (kl.EXIT_OK if res["ok"] else kl.EXIT_FINDINGS), res, [], [], human
+
+
+def _approve_prod_write_spec(args, root):
+    ledger, status = approval.read_ledger(root, args.change)
+    prod = ledger.get("prod") if ledger and isinstance(ledger.get("prod"), dict) else None
+    if prod:
+        rec = {k: prod[k] for k in ("by", "role", "date", "ref", "evidence") if k in prod}
+        source = "ledger"
+    else:
+        _require(args, ("by", "role", "ref"))
+        if args.role != "human":
+            raise Refused("production approval is never delegated", code="state.delegated")
+        ref = args.ref.strip()
+        if not PROD_REF.match(ref) or (ref.startswith("D-") and not decision_exists(root, ref)):
+            raise Refused("the production approval is not recorded: no release-ledger entry, and %r is not a "
+                          "D-NN in docs/spec/decisions.md nor a PR approval URL" % ref, code="state.prod_unrecorded")
+        rec = {"by": args.by.strip(), "role": "human", "date": _date_arg(args.date), "ref": ref}
+        source = "decision"
+    if rec.get("role") != "human":
+        raise Refused("production approval is never delegated", code="state.delegated")
+
+    def mutate(data):
+        _approvals(data)["prod"] = rec
+        data["updated_at"] = now_iso()
+        return {"change": args.change, "phase": "prod", "source": source, "written": "spec.json", "prod": rec}
+
+    path, res, _ = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], [], "%s: approvals.prod written to spec.json from the %s (ref %s)" % (
+        args.change, source, rec.get("ref"))
+
+
+def cmd_approve(args, root):
+    key = "prod" if args.phase in ("prod", "deployed") else _key_of(args.phase)
+    if key is None:
+        raise Refused("unknown phase %r" % args.phase, code="state.unknown_phase")
+    if args.write_spec and key != "prod":
+        raise Usage("--write-spec is only for prod")
+    change_spec_path(root, args.change)  # exit 4 if the change does not exist
+    if key == "prod" and args.write_spec:
+        return _approve_prod_write_spec(args, root)
+    _require(args, ("by", "role", "ref"))
+    if args.role not in ROLES:
+        raise Refused("--role must be human or ceo-delegate", code="state.role")
+    date = _date_arg(args.date)
+    by, ref = args.by.strip(), args.ref.strip()
+    if key == "prod":
+        if args.role != "human":
+            raise Refused("production approval is never delegated", code="state.delegated")
+        if not PROD_REF.match(ref):
+            raise Refused("prod --ref must be a D-NN or a PR approval URL (got %r)" % ref, code="state.ref")
+        marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root))
+        if marker is None:
+            raise Refused("production approval needs a prod-kind approval marker: the human's own message must "
+                          "contain an approval word and a production word (D-10); none is valid for %s (%s)"
+                          % (args.change, ", ".join("%s: %s" % kv for kv in sorted(reasons.items()))),
+                          code="state.no_prod_marker")
+        rec = {"by": by, "role": "human", "date": date, "ref": ref, "evidence": approval.evidence(marker, scope)}
+        approval.record_prod(root, args.change, rec)
+        res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
+        return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s); spec.json " \
+                                        "untouched (D-03)" % (args.change, ref)
+    marker, scope, _ = approval.find_valid(root, args.change, kinds=("plan", "prod"), ttl_min=reviewed_ttl(root))
+    warnings = []
+    if marker is None:
+        warnings.append(kl.issue("state.no_marker", "no valid approval marker for %s: recorded with "
+                                 "evidence.marker = none (a warning in 3.12.0)" % args.change,
+                                 severity="warning", path="$.approvals.%s.evidence" % key))
+    ev = approval.evidence(marker, scope)
+
+    def mutate(data):
+        aps = _approvals(data)
+        old = aps.get(key) if isinstance(aps.get(key), dict) else {}
+        aps[key] = {"generated": old.get("generated", True) if isinstance(old.get("generated"), bool) else True,
+                    "approved": True, "by": by, "role": args.role, "date": date, "ref": ref, "evidence": ev}
+        data["updated_at"] = now_iso()
+        return {"change": args.change, "phase": key, "written": "spec.json", "approval": aps[key]}
+
+    path, res, _ = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], warnings, "%s: approvals.%s approved by %s (%s, ref %s)" % (
+        args.change, key, by, args.role, ref)
+
+
 COMMANDS = {"validate": cmd_validate, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
-            "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen}
+            "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
+            "check-prod": cmd_check_prod}
 
 
 def build_parser():
@@ -1084,6 +1288,16 @@ def build_parser():
     ro.add_argument("phase")
     ro.add_argument("--reason")
     ro.add_argument("--ref")
+    apv = sub.add_parser("approve", parents=[common], help="record an approval (prod → the release ledger)")
+    apv.add_argument("change")
+    apv.add_argument("phase")
+    apv.add_argument("--by")
+    apv.add_argument("--role")
+    apv.add_argument("--ref")
+    apv.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
+    apv.add_argument("--write-spec", action="store_true", help="prod only: copy the ledger/D-NN approval into spec.json")
+    cp = sub.add_parser("check-prod", parents=[common], help="is a human prod approval recorded? (prod-gate)")
+    cp.add_argument("change")
     return p
 
 
