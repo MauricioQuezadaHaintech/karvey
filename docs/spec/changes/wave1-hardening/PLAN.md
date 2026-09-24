@@ -106,7 +106,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F5.T5 [Backend] prod-gate: candidates, production set, base and change resolution, `check-prod` — est: 45min (depends E1.F5.T4, E1.F3.T6)
 - [x] E1.F5.T6 [Backend] prod-gate: reviewed-line switch-off, fail-closed reasons, audit lines, `nopy` classifier — est: 30min (depends E1.F5.T5)
 - [x] E1.F5.T7 [Backend] post-edit: spec-write validator and pending-sync recorder — est: 25min (depends E1.F3.T1, E1.F4.T4) (P)
-- [ ] E1.F5.T8 [Backend] Legacy template shims (`--only <guard> --force-enabled`) — est: 15min (depends E1.F5.T4, E1.F6.T2)
+- [x] E1.F5.T8 [Backend] Legacy template shims (`--only <guard> --force-enabled`) — est: 15min (depends E1.F5.T4, E1.F6.T2)
 
 ### Feature E1.F6: Session hook and handoff capture (on the 3.11.4 code)
 
@@ -220,7 +220,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F5.T5 [Backend] | ✅ done | 45 | 8 | 0 | no human review yet; 35 table cases (part 1); production set minus integration → F-12; git-flow push cases now run with prod-gate off (first block wins) |
 | E1.F5.T6 [Backend] | ✅ done | 30 | 6 | 0 | no human review yet; 53 prod-gate cases (13 nopy); without python every PR merge blocks (base unresolvable) |
 | E1.F5.T7 [Backend] | ✅ done | 25 | 5 | 0 | no human review yet; 14 table cases; post-edit keeps running the recorders after a validator block |
-| E1.F5.T8 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F5.T8 [Backend] | ✅ done | 15 | 3 | 0 | no human review yet; 4 table cases; runner gained a command key and env unset; a missing plugin makes the shim warn and not block |
 | E1.F6.T1 [Backend] | ✅ done | 45 | 6 | 0 | no human review yet; port of the 3.11.4 logic; live-state resolver in new karvey_lib/livestate.py (shared with F6.T3); one legacy assertion changed for REQ-W1-046 → F-13 |
 | E1.F6.T2 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; hooks.json SessionStart split (startup | resume|compact|clear), both double-quoted; test-hooks 57/57 |
 | E1.F6.T3 [Backend] | ✅ done | 25 | 5 | 0 | no human review yet; 8 unit tests; re-measures after writing when state.json is inside the measured repo; save-order note → F-14 |

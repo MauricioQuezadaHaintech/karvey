@@ -56,7 +56,8 @@ STUBS = HERE / "stubs"
 sys.path.insert(0, str(PLUGIN_ROOT / "scripts"))
 from karvey_lib import approval  # noqa: E402
 
-CASE_KEYS = {"id", "guard", "given", "input", "event", "expect", "expect_nopy", "tags", "limitation", "note"}
+CASE_KEYS = {"id", "guard", "given", "input", "event", "expect", "expect_nopy", "tags", "limitation", "note",
+             "command"}
 GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir", "outer_files", "no_python"}
 REPO_KEYS = {"branch", "remote_branches", "project_json", "spec", "ledger", "marker", "files", "default_branch",
              "wc_files", "origin_files", "git_config", "at", "worktree", "no_origin", "commit_files"}
@@ -369,7 +370,10 @@ def run_case(case, nopy=False, keep=False):
         env.update({"CLAUDE_PLUGIN_ROOT": str(PLUGIN_ROOT), "CLAUDE_PROJECT_DIR": str(cwd),
                     "KARVEY_STUB_DATA": str(stub_data)})
         for k, v in (given.get("env") or {}).items():
-            env[k] = t.s(v)
+            if v is None:
+                env.pop(k, None)  # e.g. a settings.json hook runs without CLAUDE_PLUGIN_ROOT
+            else:
+                env[k] = t.s(v)
         event = event_of(case)
         inp = t.deep(case.get("input") or {})
         payload = {"session_id": SESSION, "transcript_path": "", "cwd": str(cwd)}
@@ -380,7 +384,9 @@ def run_case(case, nopy=False, keep=False):
                            tool_name=inp.get("tool_name"), tool_input=inp.get("tool_input") or {})
         before = approvals_snapshot(common)
         started = time.monotonic()
-        cp = subprocess.run(["bash", str(DISPATCHER), event], input=json.dumps(payload).encode("utf-8"),
+        # ``command``: run this instead of the dispatcher (a legacy settings.json entry, a shim)
+        argv = ["bash", "-c", t.s(case["command"])] if case.get("command") else ["bash", str(DISPATCHER), event]
+        cp = subprocess.run(argv, input=json.dumps(payload).encode("utf-8"),
                             cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
         duration = time.monotonic() - started
         after = approvals_snapshot(common)
