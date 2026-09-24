@@ -95,7 +95,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F4.T1 [Backend] `hookio.py`: tolerant payload parser and path normalisation — est: 20min (depends E1.F1.T1, E1.F2.T1) (P)
 - [x] E1.F4.T2 [Backend] `shellparse.py`: segmentation, wrappers, recursion, `cd` and git global options — est: 40min (depends E1.F2.T1) (P)
 - [x] E1.F4.T3 [Backend] Dispatcher `karvey-hook.sh`, `karvey_hooks.py` entry points with the guard registry, new `hooks.json` events — est: 35min (depends E1.F4.T1, E1.F4.T2, E1.F2.T4)
-- [ ] E1.F4.T4 [Test] Table runner `run_tables.py` (throw-away repos, bare origin, CLI stubs, `nopy` pass) — est: 35min (depends E1.F4.T3)
+- [x] E1.F4.T4 [Test] Table runner `run_tables.py` (throw-away repos, bare origin, CLI stubs, `nopy` pass) — est: 35min (depends E1.F4.T3)
 
 ### Feature E1.F5: Guards and the approval hook
 
@@ -212,7 +212,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F4.T1 [Backend] | ✅ done | 20 | 2 | 0 | no human review yet; field order per F-02 (no correction to A-2/A-3) |
 | E1.F4.T2 [Backend] | ✅ done | 40 | 3 | 0 | no human review yet; hand-written lexer instead of shlex (fd redirections, $( ) positions) |
 | E1.F4.T3 [Backend] | ✅ done | 35 | 4 | 0 | no human review yet; guards registered as allow-stubs (wired in batch 3); diagnostic block-only selftest guard (F-08) |
-| E1.F4.T4 [Test] | ⬜ todo | 35 | — | — |  |
+| E1.F4.T4 [Test] | ✅ done | 35 | 3 | 0 | no human review yet; smoke block case uses the selftest guard (F-08) |
 | E1.F5.T1 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F5.T2 [Backend] | ⬜ todo | 45 | — | — |  |
 | E1.F5.T3 [Backend] | ⬜ todo | 45 | — | — |  |
