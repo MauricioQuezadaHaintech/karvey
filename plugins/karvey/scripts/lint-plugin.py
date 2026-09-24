@@ -1608,6 +1608,180 @@ def l30_minor_consistency(ctx):
                     m.group(1), m.group(1))
 
 
+# --------------------------------------------------------------------------- L-31 (T6)
+OTHER_TRACKERS_RE = re.compile(r"\b(Jira|Linear|Azure Boards|GitHub Projects|spreadsheet|team's (?:configured )?"
+                               r"(?:tracker|task tool)|configured tracker|any tracker)\b", re.I)
+CLICKUP_PAIR_RE = re.compile(r"(Markdown|PLAN\.md)`?\s*\+\s*ClickUp|ClickUp\s*\+\s*`?(Markdown|PLAN\.md)")
+SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?;])\s+")
+
+
+def public_text(ctx):
+    """``[(path, line, text)]`` of the README files and the plugin.json description."""
+    out = []
+    for p in (ctx.root / "README.md", ctx.plugin / "README.md"):
+        for n, line in enumerate(ctx.lines(p), 1):
+            out.append((p, n, line))
+    pj = ctx.json(plugin_json_path(ctx))
+    if isinstance(pj, dict) and isinstance(pj.get("description"), str):
+        out.append((plugin_json_path(ctx), line_of(ctx, plugin_json_path(ctx), '"description"'), pj["description"]))
+    return out
+
+
+@check("L-31", "README and plugin.json present the tracker as the team's configured one; ClickUp only as "
+               "one option", reqs=("060",))
+def l31_tracker_is_configurable(ctx):
+    for path, n, text in public_text(ctx):
+        if "ClickUp" not in text:
+            continue
+        for sentence in SENTENCE_SPLIT_RE.split(text):
+            if "ClickUp" not in sentence:
+                continue
+            if CLICKUP_PAIR_RE.search(sentence):
+                yield path, n, "presents ClickUp as the tracker (%r); name the team's configured tracker" % (
+                    CLICKUP_PAIR_RE.search(sentence).group(0))
+            elif not OTHER_TRACKERS_RE.search(sentence):
+                yield (path, n, "mentions ClickUp as if it were the tracker; present the team's configured "
+                                "tracker (ClickUp is one option)")
+
+
+# --------------------------------------------------------------------------- L-32
+BUG_HEADING_RE = re.compile(r"^##\s+(BUG-\d+)\b")
+REF_PATH_RE = re.compile(r"`([\w./-]+\.(?:py|sh|mjs|js|json))(?:[:#][^`]*)?`")
+LINT_ID_RE = re.compile(r"\bL-\d\d\b")
+
+
+@check("L-32", "Every RESUELTO incident in docs/bugs_dev_testing.md names a regression test or lint id "
+               "that exists", reqs=("107",))
+def l32_resuelto_has_regression(ctx):
+    path = ctx.root / "docs" / "bugs_dev_testing.md"
+    lines = ctx.lines(path)
+    if not lines:
+        return
+    known = {c.id for c in REGISTRY}
+    sections, cur = [], None
+    for n, line in enumerate(lines, 1):
+        m = BUG_HEADING_RE.match(line)
+        if m:
+            cur = {"id": m.group(1), "line": n, "body": []}
+            sections.append(cur)
+        elif line.startswith("## "):
+            cur = None
+        elif cur is not None:
+            cur["body"].append((n, line))
+    for s in sections:
+        state = None
+        for _, line in s["body"]:
+            m = re.search(r"\*\*Current state:\*\*\s*([A-Z ]+)", line)
+            if m:
+                state = m.group(1).strip()
+                break
+        if state != "RESUELTO":
+            continue
+        reg, on = [], False
+        for n, line in s["body"]:
+            if re.match(r"^###\s+Regression", line, re.I):
+                on = True
+                continue
+            if on and line.startswith("### "):
+                break
+            if on:
+                reg.append((n, line))
+        text = "\n".join(line for _, line in reg)
+        paths = REF_PATH_RE.findall(text)
+        ids = LINT_ID_RE.findall(text)
+        if not paths and not ids:
+            yield path, s["line"], "%s is RESUELTO but names no regression test or lint id" % s["id"]
+            continue
+        for p in paths:
+            if "/" in p and not (ctx.root / p).exists():
+                yield path, s["line"], "%s names regression %s, which does not exist" % (s["id"], p)
+        for i in ids:
+            if i not in known:
+                yield path, s["line"], "%s names lint check %s, which does not exist" % (s["id"], i)
+
+
+# --------------------------------------------------------------------------- L-33
+ID_HEADING_RE = re.compile(r"^#{1,6}\s+((?:D|C|BUG|BL)-\d+)\b")
+ID_ROW_RE = re.compile(r"^\|\s*((?:D|C|BUG|BL)-\d+)\s*\|")
+
+
+@check("L-33", "Duplicate D-NN, BUG-NN or BL-NN headings (advisory; §5 edge case)", reqs=(), severity="warning")
+def l33_duplicate_ids(ctx):
+    for rel in ("docs/spec/decisions.md", "docs/bugs_dev_testing.md", "docs/spec/backlog.md",
+                "docs/spec/incidents-index.md"):
+        path = ctx.root / rel
+        for kind, rx in (("heading", ID_HEADING_RE), ("table row", ID_ROW_RE)):
+            seen = {}
+            for n, line in enumerate(ctx.lines(path), 1):
+                m = rx.match(line)
+                if not m:
+                    continue
+                if m.group(1) in seen:
+                    yield (path, n, "duplicate %s %s (first at line %d): two branches allocated the same number?"
+                           % (kind, m.group(1), seen[m.group(1)]))
+                else:
+                    seen[m.group(1)] = n
+
+
+# --------------------------------------------------------------------------- L-34
+SUBAGENT_RE = re.compile(r"sub-?agents?|\bAgent\(|\bTask\(|subagent_type|\bprompt\s*=", re.I)
+PJ_WRITE_RE = re.compile(r"\b(write|writes|writing|update|updates|edit|edits|persist|persists|modify|modifies|"
+                         r"save|saves|set|sets|create|creates)\b[^.;\n]{0,60}project\.json|"
+                         r"project\.json[^.;\n]{0,40}\b(written|updated|edited|persisted|modified|saved)\b", re.I)
+
+
+def blocks_of(ctx, path):
+    """Paragraphs of a SKILL.md body (a fenced block is one paragraph): ``[(first_line, [(n, line)])]``."""
+    out, cur = [], []
+    for n, line, lang in body_lines(ctx, path):
+        if not line.strip() and lang is None:
+            if cur:
+                out.append(cur)
+            cur = []
+            continue
+        cur.append((n, line))
+    if cur:
+        out.append(cur)
+    return out
+
+
+@check("L-34", "No subagent prompt in any skill allows writing project.json", reqs=("081",))
+def l34_subagents_do_not_write_project_json(ctx):
+    for name, path in ctx.skills().items():
+        for block in blocks_of(ctx, path):
+            text = " ".join(line for _, line in block)
+            if not SUBAGENT_RE.search(text):
+                continue
+            for n, line in block:
+                m = PJ_WRITE_RE.search(line)
+                if m and not near_negation(line, m.start(), before=40, after=len(m.group(0))):
+                    yield (path, n, "%s: a subagent prompt allows writing project.json; subagents never write it "
+                                    "(settings travel as a reviewed change)" % name)
+
+
+# --------------------------------------------------------------------------- L-35
+COMPAT_FROM = (3, 12, 0)
+
+
+def _vtuple(v):
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except (AttributeError, ValueError):
+        return (0,)
+
+
+@check("L-35", "From 3.12.0 on, the top CHANGELOG release carries the CLAUDE.md-destinations compatibility line",
+       reqs=("099",))
+def l35_claude_md_compat_line(ctx):
+    changelog = ctx.root / "CHANGELOG.md"
+    version, line, block = top_release(ctx)
+    if version is None or _vtuple(version) < COMPAT_FROM:
+        return
+    if not any("CLAUDE.md" in b and re.search(r"compatib|destination|notification", b, re.I) for b in block):
+        yield (changelog, line, "release %s lacks the compatibility line for projects that took notification "
+                                "destinations from CLAUDE.md tables (REQ-W1-099)" % version)
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""

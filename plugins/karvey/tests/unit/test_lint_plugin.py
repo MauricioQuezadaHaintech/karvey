@@ -868,5 +868,110 @@ class L30(LintCase):
         self.assertPasses("L-30")
 
 
+# --------------------------------------------------------------------------- L-31 .. L-35
+BUGS = "docs/bugs_dev_testing.md"
+
+
+class L31(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-31")
+
+    def test_markdown_plus_clickup_in_plugin_json(self):
+        self.t.replace(PLUGIN_JSON, "Mini Karvey: a", "Mini Karvey with a discovery backlog (Markdown + ClickUp): a")
+        self.assertFails("L-31", "Markdown + ClickUp", file=PLUGIN_JSON)
+
+    def test_readme_presents_clickup_as_the_tracker(self):
+        self.t.append("README.md", "\n- Incident tracker per repo, complementary to ClickUp.\n")
+        self.assertFails("L-31", "as if it were the tracker", file="README.md")
+
+    def test_plugin_readme(self):
+        self.t.append("plugins/karvey/README.md", "\nEvery phase posts a ClickUp comment.\n")
+        self.assertFails("L-31", file="plugins/karvey/README.md")
+
+
+class L32(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-32")
+
+    def test_resuelto_without_regression(self):
+        self.t.replace(BUGS, "`plugins/karvey/hooks/karvey-hook.sh` case \"smoke\", and lint check L-12.",
+                       "Checked by hand.")
+        self.assertFails("L-32", "names no regression", file=BUGS)
+
+    def test_regression_file_missing(self):
+        self.t.replace(BUGS, "plugins/karvey/hooks/karvey-hook.sh", "plugins/karvey/tests/unit/test_gone.py")
+        self.assertFails("L-32", "test_gone.py, which does not exist")
+
+    def test_lint_id_missing(self):
+        self.t.replace(BUGS, "lint check L-12", "lint check L-99")
+        self.assertFails("L-32", "L-99")
+
+    def test_open_incident_needs_nothing(self):
+        self.t.append(BUGS, "\n## BUG-03 — Another\n- **Current state:** EN FIX\n")
+        self.assertPasses("L-32")
+
+
+class L33(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-33")
+
+    def test_duplicate_decision_heading_is_a_warning(self):
+        self.t.append("docs/spec/decisions.md", "\n## D-02 — Allocated twice\n")
+        fs = self.assertFails("L-33", "duplicate heading D-02")
+        self.assertEqual({f["severity"] for f in fs}, {"warning"})
+        code, _, _ = run_cli("--root", str(self.t.root), "--only", "L-33")
+        self.assertEqual(code, 0)
+
+    def test_duplicate_backlog_row(self):
+        self.t.append("docs/spec/backlog.md", "| BL-02 | Again | open |\n")
+        self.assertFails("L-33", "table row BL-02")
+
+
+class L34(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-34")
+
+    def test_subagent_prompt_writes_project_json(self):
+        self.t.append(IMPL, "\nLaunch a subagent with this prompt: \"resolve the status map and write it to "
+                            "docs/spec/project.json\".\n")
+        self.assertFails("L-34", "subagent prompt allows writing project.json", file=IMPL)
+
+    def test_subagent_forbidden_passes(self):
+        self.t.append(IMPL, "\nSubagents read the settings; they never write project.json.\n")
+        self.assertPasses("L-34")
+
+    def test_project_json_write_outside_a_subagent_prompt_passes(self):
+        self.t.append(INIT, "\nWrite the answers to `docs/spec/project.json` on a docs branch.\n")
+        self.assertPasses("L-34")
+
+
+class L35(LintCase):
+    def test_pass_before_3_12(self):
+        self.assertPasses("L-35")
+
+    def release_3_12(self, extra=""):
+        for rel in (PLUGIN_JSON, MARKET):
+            self.t.replace(rel, '"version": "1.0.0"', '"version": "3.12.0"')
+        self.t.replace("CHANGELOG.md", "## [1.0.0] - 2026-09-24\n", "## [3.12.0] - 2026-10-01\n" + extra)
+
+    def test_3_12_without_the_line(self):
+        self.release_3_12()
+        self.assertFails("L-35", "compatibility line", file="CHANGELOG.md")
+
+    def test_3_12_with_the_line(self):
+        self.release_3_12("\n### Compatibility\n- Notification destinations are read only from project.json; "
+                          "projects that relied on CLAUDE.md tables run `/karvey:karvey-init --settings`.\n")
+        self.assertPasses("L-35")
+
+
+class ListAll(unittest.TestCase):
+    def test_list_names_l01_to_l35(self):
+        code, out, _ = run_cli("--root", str(_path.REPO_ROOT), "--list")
+        self.assertEqual(code, 0, out)
+        for i in range(1, 36):
+            self.assertIn("L-%02d " % i, out)
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 36)])
+
+
 if __name__ == "__main__":
     unittest.main()
