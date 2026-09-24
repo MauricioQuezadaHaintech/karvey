@@ -7,4 +7,4 @@ argument-hint: <change-id>
 
 # karvey-decisions
 
-The log lives in `docs/spec/decisions.md`.
+The log lives in `docs/spec/decisions.md` (see `../karvey/rules/multi-agent.md`).

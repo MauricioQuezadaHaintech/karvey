@@ -7,6 +7,12 @@ argument-hint: <change-id>
 
 # karvey-archive
 
+Start with `git checkout -b chore/archive-{change-id} origin/main`.
+
 Read `docs/spec/changes/{change-id}/spec-delta.md`.
+
+```bash
+git commit -m "chore: archive"
+```
 
 Sync the knowledge: `/graphify docs/spec/ --update`.

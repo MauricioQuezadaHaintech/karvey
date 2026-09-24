@@ -1369,6 +1369,245 @@ def l24_tracker_ritual(ctx):
         yield rule, 1, "phase-close.md does not state the close comment and cascade per Feature"
 
 
+# --------------------------------------------------------------------------- L-25 (T5)
+def near_negation(line, pos, before=30, after=0):
+    return NEGATION_RE.search(line[max(0, pos - before):pos + after]) is not None
+
+
+QA_COMMIT_RE = re.compile(r"\b(apply|make|create|do|push)\b[^.\n]{0,30}\bcommits?\b|\bgit commit\b|"
+                          r"\bcommit (?:the|it|them|your|a|each|every|fixes)\b", re.I)
+QA_DIR_RE = re.compile(r"changes/(?:\{[^}]+\}|<[^>]+>|[\w-]+)/qa/")
+
+
+@check("L-25", "QA has no commit instruction; the review is written to changes/{id}/qa/, deploy reads it "
+               "from there; no REVISION_PR_*.md at the repo root", reqs=("073", "074", "075"))
+def l25_qa_observes(ctx):
+    qa = ctx.skill("karvey-qa")
+    if qa is not None:
+        for n, line, _ in body_lines(ctx, qa):
+            m = QA_COMMIT_RE.search(line)
+            if m and not near_negation(line, m.start()):
+                yield qa, n, "QA instructs a commit; QA observes only: every defect goes to findings.md"
+        if not QA_DIR_RE.search(ctx.read(qa) or ""):
+            yield qa, 1, "karvey-qa does not write its review to docs/spec/changes/{change-id}/qa/"
+    deploy = ctx.skill("karvey-deploy")
+    if deploy is not None:
+        text = ctx.read(deploy) or ""
+        for n, line, _ in body_lines(ctx, deploy):
+            if re.search(r"\bls\s+-\w*t\w*\b[^\n]*REVISION_PR", line):
+                yield deploy, n, "deploy picks the newest REVISION_PR at the root; read changes/{id}/qa/ instead"
+        if not QA_DIR_RE.search(text):
+            yield deploy, 1, "karvey-deploy does not read the review from docs/spec/changes/{change-id}/qa/"
+    for f in sorted(ctx.root.glob("REVISION_PR_*.md")):
+        yield f, 1, "review %s sits at the repo root; move it into docs/spec/changes/{change-id}/qa/" % f.name
+
+
+# --------------------------------------------------------------------------- L-26
+STACK_RULE_RE = re.compile(r"\b(Axios|axios|apiService|v-html|RUT)\b")
+
+
+@check("L-26", "QA text has no stack-specific rules (Axios/apiService, v-html, RUT)", reqs=("076",))
+def l26_no_stack_rules_in_qa(ctx):
+    qa = ctx.skill("karvey-qa")
+    if qa is None:
+        return
+    for n, line, _ in body_lines(ctx, qa):
+        m = STACK_RULE_RE.search(line)
+        if m:
+            yield qa, n, "stack-specific rule (%s) in QA; it belongs to the team's standards (D9)" % m.group(1)
+
+
+# --------------------------------------------------------------------------- L-27
+GIT_PUSH_RE = re.compile(r"\bgit\s+push\b")
+CHECKLIST_HEADING_RE = re.compile(r"^#+\s.*\b(6-step|six-step|pre-deploy)\b.*checklist|^#+\s.*checklist\b", re.I)
+
+
+@check("L-27", "Deploy never commits the prod approval on integration; the 6-step checklist precedes the "
+               "first git push; archive branches chore/archive-{id} before its first commit",
+       reqs=("031", "033", "034"))
+def l27_deploy_archive_flow(ctx):
+    deploy = ctx.skill("karvey-deploy")
+    if deploy is not None:
+        checklist = first_push = None
+        for n, line, lang in body_lines(ctx, deploy):
+            if lang is None:
+                for m in re.finditer(r"\bcommit\b", line, re.I):
+                    if re.search(r"approv", line, re.I) and not near_negation(line, m.start()):
+                        yield (deploy, n, "deploy records the prod approval with a commit; record it as a D-NN, "
+                                          "in the PR and in the ledger (never a commit on integration)")
+                        break
+                if checklist is None and CHECKLIST_HEADING_RE.search(line):
+                    checklist = n
+            if first_push is None and GIT_PUSH_RE.search(line):
+                first_push = n
+        if checklist is None:
+            yield deploy, 1, "karvey-deploy has no pre-deploy checklist step"
+        elif first_push is not None and first_push < checklist:
+            yield (deploy, first_push, "first git push (line %d) comes before the 6-step checklist (line %d)"
+                   % (first_push, checklist))
+    archive = ctx.skill("karvey-archive")
+    if archive is not None:
+        branch = commit = None
+        for n, line, _ in body_lines(ctx, archive):
+            if branch is None and "chore/archive-" in line:
+                branch = n
+            if commit is None and re.search(r"\bgit\s+commit\b", line):
+                commit = n
+        if branch is None:
+            yield archive, 1, "karvey-archive never creates chore/archive-{change-id}"
+        elif commit is not None and commit < branch:
+            yield archive, commit, "archive commits (line %d) before creating chore/archive-{id} (line %d)" % (
+                commit, branch)
+
+
+# --------------------------------------------------------------------------- L-28
+NOT_MARKDOWN_RE = re.compile(r"(!=|≠|is not|isn't)\s*[`\"']?markdown\b", re.I)
+BACKLOG_DIRECT_RE = re.compile(r"project\.json:clickup\b|project\.json[^\n]{0,60}\bbacklog_list_id\b")
+CASCADE_RESTATE_RE = re.compile(r"\b(?i:when)\s+(?:ALL|all|every)\b[^.\n]{0,60}\b(?:tasks?|Features?|features?|children)\b"
+                                r"[^.\n]{0,60}\b(?:review|done)\b")
+EPIC_DONE_RE = re.compile(r"(?:\bEpic\b[^.\n]{0,40}\bdone\b[^.\n]{0,40}\b(?:all|ALL|every)\s+[Ff]eatures?)|"
+                          r"(?:\b(?:all|ALL|every)\s+[Ff]eatures?\b[^.\n]{0,50}\bdone\b[^.\n]{0,30}"
+                          r"(?:→|->|move|moves)\s*(?:the\s+)?Epic)")
+MARKERS = ("⬜", "🔄", "👀", "✅", "⛔")
+INIT_STATE_RE = re.compile(r"\b(todo|in_progress|in progress)\b|⬜|🔄", re.I)
+
+
+@check("L-28", "Management: no '!= markdown' test, no direct clickup.backlog_list_id read, one cascade "
+               "(management-adapters.md) cited not restated, 🙋 in every marker legend, phase-close scope "
+               "matches its citations, one initial Epic state in init",
+       reqs=("084", "086", "087", "091", "092", "094", "095"))
+def l28_management(ctx):
+    adapters = ctx.rule("management-adapters.md")
+    for path in ctx.text_files():
+        is_adapters = path == adapters
+        for n, line, _ in iter_lines(ctx.lines(path)):
+            if NOT_MARKDOWN_RE.search(line):
+                yield (path, n, "tests the tracker with '!= markdown'; use the resolved tool "
+                                "(karvey-config.py resolve management: external)")
+            if not is_adapters and BACKLOG_DIRECT_RE.search(line):
+                yield path, n, "reads project.json:clickup.backlog_list_id directly; resolve management.location"
+            if EPIC_DONE_RE.search(line):
+                yield path, n, "Epic → done when all Features are: the Epic reaches done only at archive"
+            elif not is_adapters and CASCADE_RESTATE_RE.search(line):
+                yield path, n, "restates the cascade; cite management-adapters.md (the one cascade) instead"
+            if sum(1 for mk in MARKERS if mk in line) >= 4 and "🙋" not in line:
+                yield path, n, "marker legend without 🙋 awaiting-human (qualifier of blocked)"
+    if adapters is not None and "cascade" not in (ctx.read(adapters) or "").lower():
+        yield adapters, 1, "management-adapters.md does not define the cascade"
+    rule = ctx.rule("phase-close.md")
+    if rule is not None:
+        phases = set(phase_skills(ctx))
+        named = set(re.findall(r"\b(karvey-[\w-]+)", ctx.read(rule) or "")) & phases
+        citers = {s for s in phases if ctx.skill(s) and "phase-close.md" in (ctx.read(ctx.skill(s)) or "")}
+        for s in sorted(named - citers):
+            yield ctx.skill(s), 1, "phase-close.md names %s, which does not cite phase-close.md at its close" % s
+        for s in sorted(citers - named):
+            yield rule, 1, "%s cites phase-close.md but the rule does not name it" % s
+    init = ctx.skill("karvey-init")
+    if init is not None:
+        states = {}
+        for n, line, _ in body_lines(ctx, init):
+            if not re.search(r"\bepic\b", line, re.I):
+                continue
+            for m in INIT_STATE_RE.finditer(line):
+                v = m.group(0).lower()
+                v = {"⬜": "todo", "🔄": "in_progress", "in progress": "in_progress"}.get(v, v)
+                states.setdefault(v, n)
+        if len(states) > 1:
+            n = max(states.values())
+            yield init, n, "init creates the Epic in more than one initial state (%s); use one" % ", ".join(
+                sorted(states))
+
+
+# --------------------------------------------------------------------------- L-29
+PJ_PLACEHOLDER_RE = re.compile(r"\{(?:project\.json:)?(?:(?:notifications|management|branch_flow|clickup)\.[\w.]+|"
+                               r"integration|production|feature_prefix|location|backlog_list_id|space_id)\}")
+PJ_READ_RE = re.compile(r"\b(jq|python3?|grep|sed|awk|cat|node)\b[^\n]*project\.json")
+CONFIG_GET_RE = re.compile(r"karvey-config(?:\.py)?[\"']?\s+get\b")
+ASSIGN_RE = re.compile(r"^\s*(?:export\s+|local\s+)?([A-Za-z_]\w*)=\"?\$\(")
+
+
+def _unquoted_uses(line, var):
+    out = []
+    for m in re.finditer(r"\$(?:\{%s\}|%s\b)" % (var, var), line):
+        quotes = len(re.findall(r'(?<!\\)"', line[:m.start()]))
+        if quotes % 2 == 0:
+            out.append(m.start())
+    return out
+
+
+@check("L-29", "In command examples a project.json value is interpolated only through "
+               "`karvey-config.py get --shell` and double-quoted", reqs=("093",))
+def l29_shell_interpolation(ctx):
+    for path in ctx.text_files():
+        tracked = {}
+        for n, line, lang in iter_lines(ctx.lines(path)):
+            if lang not in SHELL_FENCES:
+                if lang is None:
+                    tracked = {}
+                continue
+            code = line.split(" #", 1)[0] if not line.lstrip().startswith("#") else ""
+            if not code.strip():
+                continue
+            m = ASSIGN_RE.match(code)
+            if CONFIG_GET_RE.search(code):
+                if m:
+                    tracked[m.group(1)] = n
+                if "--shell" not in code:
+                    yield path, n, "karvey-config.py get without --shell: the value is not validated for a shell"
+                continue
+            for pm in PJ_PLACEHOLDER_RE.finditer(code):
+                yield (path, n, "command interpolates project.json value %s; fetch it with `karvey-config.py get "
+                                "<key> --shell` and pass it double-quoted" % pm.group(0))
+            if PJ_READ_RE.search(code):
+                yield (path, n, "command reads project.json directly; use `karvey-config.py get <key> --shell` "
+                                "(validated) instead")
+                if m:
+                    tracked[m.group(1)] = n
+            for var in list(tracked):
+                if m and m.group(1) == var:
+                    continue
+                if _unquoted_uses(code, var):
+                    yield path, n, "$%s (a project.json value) is used unquoted; write \"$%s\"" % (var, var)
+
+
+# --------------------------------------------------------------------------- L-30
+DECISION_PATH_RE = re.compile(r"`([^`\s]*decisi[\w]*(?:\.md|/)[^`\s]*)`")
+
+
+@check("L-30", "H-33: one decision-log path (multi-agent.md = karvey-decisions); no E{1..99} in karvey-init; "
+               "one 'For each E2E flow step' block in karvey-test; README names skills /karvey:karvey-<name>",
+       reqs=("059",))
+def l30_minor_consistency(ctx):
+    rule, dec = ctx.rule("multi-agent.md"), ctx.skill("karvey-decisions")
+    if rule is not None and dec is not None:
+        paths = {}
+        for f in (rule, dec):
+            for n, line in enumerate(ctx.lines(f), 1):
+                for m in DECISION_PATH_RE.finditer(line):
+                    p = re.sub(r"^(\{[^}]+\}|<[^>]+>)/", "", m.group(1))
+                    paths.setdefault(p, (f, n))
+        if len(paths) > 1:
+            for p, (f, n) in sorted(paths.items()):
+                yield (f, n, "decision-log path %s; multi-agent.md and karvey-decisions must cite one path (%s)"
+                       % (p, ", ".join(sorted(paths))))
+    init = ctx.skill("karvey-init")
+    if init is not None:
+        for n, line in enumerate(ctx.lines(init), 1):
+            if "E{1..99}" in line:
+                yield init, n, "karvey-init holds the literal E{1..99}"
+    test = ctx.skill("karvey-test")
+    if test is not None:
+        hits = [n for n, line in enumerate(ctx.lines(test), 1) if "For each E2E flow step" in line]
+        for n in hits[1:]:
+            yield test, n, "duplicate 'For each E2E flow step' block (first at line %d)" % hits[0]
+    for p in (ctx.root / "README.md", ctx.plugin / "README.md"):
+        for n, line in enumerate(ctx.lines(p), 1):
+            for m in re.finditer(r"/karvey:(?!karvey\b|karvey-)([\w-]+)", line):
+                yield p, n, "skill named /karvey:%s; the plugin namespace form is /karvey:karvey-%s" % (
+                    m.group(1), m.group(1))
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""

@@ -709,5 +709,164 @@ class L24(LintCase):
         self.assertFails("L-24", "per Feature")
 
 
+# --------------------------------------------------------------------------- L-25 .. L-30
+ADAPTERS = RULES + "/management-adapters.md"
+
+
+class L25(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-25")
+
+    def test_qa_commits(self):
+        self.t.append(QA, "\n- For visual fixes: apply **atomic commits** (one fix per commit).\n")
+        self.assertFails("L-25", "QA instructs a commit", file=QA)
+
+    def test_qa_never_commits_passes(self):
+        self.t.append(QA, "\nQA never commits: it does not apply atomic commits.\n")
+        self.assertPasses("L-25")
+
+    def test_review_outside_the_change(self):
+        self.t.replace(QA, "`docs/spec/changes/{change-id}/qa/REVISION_PR_{n}_{date}.md`", "`REVISION_PR_{n}.md`")
+        self.assertFails("L-25", "does not write its review", file=QA)
+
+    def test_deploy_reads_newest_at_root(self):
+        self.t.append(DEPLOY, "\nLocate the review: `ls -t REVISION_PR_*.md | head -1`.\n")
+        self.assertFails("L-25", "newest REVISION_PR", file=DEPLOY)
+
+    def test_review_at_repo_root(self):
+        self.t.write("REVISION_PR_17-19_20260923.md", "# review\n")
+        self.assertFails("L-25", "sits at the repo root", file="REVISION_PR_17-19_20260923.md")
+
+
+class L26(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-26")
+
+    def test_axios_rule(self):
+        self.t.append(QA, "\n- Every HTTP call goes through `apiService` (Axios), never `fetch`.\n")
+        self.assertFails("L-26", "apiService", file=QA)
+
+    def test_v_html_and_rut(self):
+        self.t.append(QA, "\n- No `v-html` with user data.\n- Validate the RUT.\n")
+        fs = self.assertFails("L-26")
+        self.assertEqual(len(fs), 2)
+
+
+class L27(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-27")
+
+    def test_prod_approval_committed(self):
+        self.t.append(DEPLOY, "\nRecord `approvals.prod` in spec.json and commit it on the branch that goes to "
+                              "`master`. The prod gate is never delegated.\n")
+        self.assertFails("L-27", "prod approval with a commit", file=DEPLOY)
+
+    def test_push_before_checklist(self):
+        self.t.replace(DEPLOY, "Pre-check:", "```bash\ngit push origin feature/x\n```\n\nPre-check:")
+        self.assertFails("L-27", "comes before the 6-step checklist", file=DEPLOY)
+
+    def test_no_checklist(self):
+        self.t.replace(DEPLOY, "### Step 1 — 6-step checklist (before the first push)", "### Step 1 — Prepare")
+        self.assertFails("L-27", "no pre-deploy checklist")
+
+    def test_archive_without_its_branch(self):
+        self.t.replace(ARCHIVE, "Start with `git checkout -b chore/archive-{change-id} origin/main`.\n\n", "")
+        self.assertFails("L-27", "never creates chore/archive", file=ARCHIVE)
+
+    def test_archive_commits_before_branching(self):
+        self.t.replace(ARCHIVE, "Start with `git checkout -b chore/archive-{change-id} origin/main`.\n\n",
+                       "```bash\ngit commit -m spec\n```\n\nThen `git checkout -b chore/archive-{change-id}`.\n\n")
+        self.assertFails("L-27", "before creating chore/archive")
+
+
+class L28(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-28")
+
+    def test_not_markdown_test(self):
+        self.t.append(SKILLS + "/karvey-archive/SKILL.md", "\nIf `management.tool` != markdown, close the Epic.\n")
+        self.assertFails("L-28", "!= markdown")
+
+    def test_direct_backlog_list_id(self):
+        self.t.append(REQS, "\nRead `project.json:clickup.backlog_list_id` for the list.\n")
+        self.assertFails("L-28", "directly", file=REQS)
+
+    def test_cascade_restated(self):
+        self.t.append(IMPL, "\nWhen ALL tasks of a Feature are in `review`, move the Feature to `review`.\n")
+        self.assertFails("L-28", "restates the cascade", file=IMPL)
+
+    def test_epic_done_when_all_features(self):
+        self.t.append(ADAPTERS, "\nThe Epic moves to done when all Features are done.\n")
+        self.assertFails("L-28", "only at archive", file=ADAPTERS)
+
+    def test_legend_without_awaiting_human(self):
+        self.t.append(IMPL, "\n> Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked`\n")
+        self.assertFails("L-28", "🙋", file=IMPL)
+
+    def test_phase_close_names_a_skill_that_does_not_cite_it(self):
+        self.t.append(RULES + "/phase-close.md", "\nAlso run by `karvey-impl`.\n")
+        self.assertFails("L-28", "names karvey-impl", file=IMPL)
+
+    def test_skill_cites_phase_close_without_being_named(self):
+        self.t.append(QA, "\nClose per `../karvey/rules/phase-close.md`.\n")
+        self.assertFails("L-28", "karvey-qa cites phase-close.md", file=RULES + "/phase-close.md")
+
+    def test_init_two_initial_epic_states(self):
+        self.t.append(INIT, "\n- **Spreadsheet:** append an `epic` row with `status=todo`.\n"
+                            "- **Markdown:** the Epic row starts 🔄 in_progress.\n")
+        self.assertFails("L-28", "more than one initial state", file=INIT)
+
+
+class L29(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-29")
+
+    def test_placeholder_in_a_command(self):
+        self.t.append(DEPLOY, "\n```bash\ngit push origin {integration}\n```\n")
+        self.assertFails("L-29", "{integration}", file=DEPLOY)
+
+    def test_notification_target_placeholder(self):
+        self.t.append(QA, '\n```bash\ngam create chatmessage space {notifications.target} text "done"\n```\n')
+        self.assertFails("L-29", "{notifications.target}", file=QA)
+
+    def test_direct_project_json_read(self):
+        self.t.append(DEPLOY, "\n```bash\nLOC=$(jq -r .management.location docs/spec/project.json)\n```\n")
+        self.assertFails("L-29", "reads project.json directly", file=DEPLOY)
+
+    def test_unquoted_validated_value(self):
+        self.t.replace(DEPLOY, 'git push origin "$INTEGRATION"', "git push origin $INTEGRATION")
+        self.assertFails("L-29", "unquoted", file=DEPLOY)
+
+    def test_get_without_shell(self):
+        self.t.replace(DEPLOY, "get branch_flow.integration --shell)", "get branch_flow.integration)")
+        self.assertFails("L-29", "without --shell")
+
+
+class L30(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-30")
+
+    def test_two_decision_log_paths(self):
+        self.t.replace(RULES + "/multi-agent.md", "`docs/spec/decisions.md`", "`docs/decisiones.md`")
+        fs = self.assertFails("L-30", "decision-log path")
+        self.assertEqual({f["file"] for f in fs}, {RULES + "/multi-agent.md", SKILLS + "/karvey-decisions/SKILL.md"})
+
+    def test_e_1_99_in_init(self):
+        self.t.append(INIT, '\n  keywords: "E{1..99}"\n')
+        self.assertFails("L-30", "E{1..99}", file=INIT)
+
+    def test_duplicate_e2e_block(self):
+        self.t.append(SKILLS + "/karvey-test/SKILL.md", "\nFor each E2E flow step, document:\n\nFor each E2E flow step document:\n")
+        self.assertFails("L-30", "duplicate")
+
+    def test_readme_short_skill_name(self):
+        self.t.append("README.md", "\nStart with `/karvey:grill`.\n")
+        self.assertFails("L-30", "/karvey:karvey-grill", file="README.md")
+
+    def test_readme_full_names_pass(self):
+        self.t.append("README.md", "\nStart with `/karvey:karvey-grill`, or `/karvey:karvey`.\n")
+        self.assertPasses("L-30")
+
+
 if __name__ == "__main__":
     unittest.main()
