@@ -942,6 +942,7 @@ def _evaluate_candidate(ctx, c, deadline):
                          % err)
     prefix, integ, prod = pj.branch_flow(wc or {})
     prods = production_set(ctx, root, integ, prod)
+    note = " (project.json missing)" if wc is None else ""
     if c.fail:
         return _pg_block(None, "base", "cannot verify the production approval: " + c.fail)
     if c.kind == "git-push":
@@ -979,7 +980,7 @@ def _evaluate_candidate(ctx, c, deadline):
     if cid is None:
         return _pg_block(None, "change", "cannot verify the production approval: cannot determine the change being "
                                          "released into %s (head %s; name the branch %s<id> or title the PR "
-                                         "'[Deploy] <id>')" % (base, head or "?", prefix))
+                                         "'[Deploy] <id>')%s" % (base, head or "?", prefix, note))
     try:
         res = state_tool().check_prod(root, cid)
     except Exception as exc:
@@ -998,7 +999,7 @@ def _evaluate_candidate(ctx, c, deadline):
             warn.append("[karvey] prod-gate WARNING: other changes are deploying without a prod approval: %s"
                         % ", ".join(pending))
     if not res.get("ok"):
-        d = _pg_block(cid, ",".join(res.get("missing") or ["?"]), res.get("reason") or "no production approval")
+        d = _pg_block(cid, ",".join(res.get("missing") or ["?"]), (res.get("reason") or "no production approval") + note)
         d.stdout = warn
         return d
     rec = {"change": cid, "approver": res.get("by"), "ref": res.get("ref"), "branch": base, "reason": "approved"}

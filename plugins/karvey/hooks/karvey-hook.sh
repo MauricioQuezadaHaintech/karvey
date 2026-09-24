@@ -154,6 +154,41 @@ nopy_git_flow() {
   return 0
 }
 
+# prod-gate without python (§3.2): fail closed. Any PR/MR merge is blocked (its base cannot be
+# resolved); a git push is blocked when it names master/main/the production branch or has no
+# refspec. Off only if prod_gate_hook is false in the working copy AND on origin/<production>.
+nopy_prod_gate() {
+  local root cmd pj prod kind rest n w
+  root="$(karvey_root)"; [ -z "$root" ] && return 0
+  cmd="$(json_field command)"
+  if printf '%s' "$cmd" | grep -Eq 'gh +pr +merge|az +repos +pr +update.*(completed|auto-complete)|glab +mr +merge|gh +api.*(pulls/[0-9]+/merge|mergePullRequest|enablePullRequestAutoMerge)'; then kind=pr
+  elif printf '%s' "$cmd" | grep -Eq '(^|[^[:alnum:]_-])git[^;&|]*[[:space:]]push([[:space:]]|$)'; then kind=push
+  else return 0; fi
+  pj="$root/docs/spec/project.json"
+  prod="$(sed -nE 's/.*"production"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "$pj" 2>/dev/null | head -1)"
+  if grep -Eq '"prod_gate_hook"[[:space:]]*:[[:space:]]*false' "$pj" 2>/dev/null && [ -n "$prod" ] &&
+     git -C "$root" show "refs/remotes/origin/$prod:docs/spec/project.json" 2>/dev/null |
+       grep -Eq '"prod_gate_hook"[[:space:]]*:[[:space:]]*false'; then
+    echo "[karvey] prod-gate DISABLED for this project (project.json)"
+    return 0
+  fi
+  if [ "$kind" = "pr" ]; then
+    echo "[karvey] prod-gate BLOCK change=? missing=python reason=cannot verify the production approval: python3 not available" >&2
+    return 2
+  fi
+  if printf '%s' "$cmd" | grep -Eq "(^|[[:space:]:/+])(master|main${prod:+|$prod})([[:space:]]|\$|;|&|\|)"; then
+    echo "[karvey] prod-gate BLOCK change=? missing=python reason=cannot verify the production approval: python3 not available (push to a production branch)" >&2
+    return 2
+  fi
+  rest="${cmd#*push}"; rest="${rest%%[;&|]*}"; n=0
+  for w in $rest; do case "$w" in -*) ;; *) n=$((n+1)) ;; esac; done
+  if [ "$n" -lt 2 ]; then
+    echo "[karvey] prod-gate BLOCK change=? missing=python reason=cannot verify the production approval: python3 not available (push without a refspec)" >&2
+    return 2
+  fi
+  return 0
+}
+
 FORCE=0
 for a in "$@"; do [ "$a" = "--force-enabled" ] && FORCE=1; done
 ONLY=""
@@ -166,6 +201,7 @@ for g in $GUARDS; do
   case "$g" in
     selftest) nopy_selftest; rc=$? ;;
     protect-paths) nopy_protect_paths; rc=$? ;;
+    prod-gate) nopy_prod_gate; rc=$? ;;
     plan-gate) nopy_plan_gate; rc=$? ;;
     git-flow)  nopy_git_flow; rc=$? ;;
     *)        nopy_stub "$g"; rc=$? ;;

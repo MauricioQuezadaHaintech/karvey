@@ -104,7 +104,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F5.T3 [Backend] plan-gate classifier and its table — est: 45min (depends E1.F5.T1, E1.F5.T2)
 - [x] E1.F5.T4 [Backend] git-flow guard (target repo per segment, aliases, whole-name match, trunk) and its table — est: 50min (depends E1.F5.T3)
 - [x] E1.F5.T5 [Backend] prod-gate: candidates, production set, base and change resolution, `check-prod` — est: 45min (depends E1.F5.T4, E1.F3.T6)
-- [ ] E1.F5.T6 [Backend] prod-gate: reviewed-line switch-off, fail-closed reasons, audit lines, `nopy` classifier — est: 30min (depends E1.F5.T5)
+- [x] E1.F5.T6 [Backend] prod-gate: reviewed-line switch-off, fail-closed reasons, audit lines, `nopy` classifier — est: 30min (depends E1.F5.T5)
 - [ ] E1.F5.T7 [Backend] post-edit: spec-write validator and pending-sync recorder — est: 25min (depends E1.F3.T1, E1.F4.T4) (P)
 - [ ] E1.F5.T8 [Backend] Legacy template shims (`--only <guard> --force-enabled`) — est: 15min (depends E1.F5.T4, E1.F6.T2)
 
@@ -218,7 +218,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F5.T3 [Backend] | ✅ done | 45 | 7 | 0 | no human review yet; 63 table cases (13 nopy); marker cannot be verified without python, so nopy blocks when enabled |
 | E1.F5.T4 [Backend] | ✅ done | 50 | 8 | 0 | no human review yet; 59 table cases (10 nopy); branch switch inside the same command not followed (limitation case) |
 | E1.F5.T5 [Backend] | ✅ done | 45 | 8 | 0 | no human review yet; 35 table cases (part 1); production set minus integration → F-12; git-flow push cases now run with prod-gate off (first block wins) |
-| E1.F5.T6 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F5.T6 [Backend] | ✅ done | 30 | 6 | 0 | no human review yet; 53 prod-gate cases (13 nopy); without python every PR merge blocks (base unresolvable) |
 | E1.F5.T7 [Backend] | ⬜ todo | 25 | — | — |  |
 | E1.F5.T8 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F6.T1 [Backend] | ⬜ todo | 45 | — | — |  |
