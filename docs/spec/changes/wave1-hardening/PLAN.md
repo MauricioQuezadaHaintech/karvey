@@ -162,7 +162,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F13: CI workflow
 
-- [ ] E1.F13.T1 [Infra] `.github/workflows/lint.yml` (4 jobs, pinned SHAs, read-only) and `.gitattributes` — est: 25min (depends E1.F12.T13, E1.F4.T4, E1.F6.T4, E1.F11.T2)
+- [x] E1.F13.T1 [Infra] `.github/workflows/lint.yml` (4 jobs, pinned SHAs, read-only) and `.gitattributes` — est: 25min (depends E1.F12.T13, E1.F4.T4, E1.F6.T4, E1.F11.T2)
 - [ ] E1.F13.T2 [Infra] CI observed on a draft PR `feature/wave1-hardening → main` — est: 15min (depends E1.F13.T1, E1.F14.T3, E1.F15.T3)
 
 ### Feature E1.F14: Migration fixtures and regression suite
@@ -252,7 +252,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F12.T11 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; hooks/README 'What ships' table anchored to table cases; clickup-sync-guard/standards-guard named only as not shipped; plugin.json/marketplace.json descriptions (versions untouched) |
 | E1.F12.T12 [Backend] | ✅ done | 10 | 3 | 0 | no human review yet; git mv; 11 references updated (CHANGELOG, backlog, decisions, team-adapters spec.json/findings, prd); graphify-out left for the archive sync; the qa/deploy L-25 hits close in T5/T6 |
 | E1.F12.T13 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; text residue fixed (init CLAUDE.md migration aid, karvey-test AskUserQuestion); whole-repo lint 539 → 7 errors, all L-18 spec.json data owned by E1.F15 (F-35); 0 errors in plugins/** |
-| E1.F13.T1 [Infra] | ⬜ todo | 25 | — | — |  |
+| E1.F13.T1 [Infra] | ✅ done | 25 | 9 | 0 | no human review yet; 4 jobs, actions pinned by commit SHA (checkout v7.0.1, setup-python v7.0.0, setup-node v7.0.0); every run: step executed locally, the unit suite, tables and test-hooks also under Python 3.9.25; lint and validate --all red until F-35 / E1.F15 (not hidden); act not installed; F-36, F-37 |
 | E1.F13.T2 [Infra] | ⬜ todo | 15 | — | — |  |
 | E1.F14.T1 [Test] | ⬜ todo | 40 | — | — |  |
 | E1.F14.T2 [Test] | ⬜ todo | 20 | — | — |  |
