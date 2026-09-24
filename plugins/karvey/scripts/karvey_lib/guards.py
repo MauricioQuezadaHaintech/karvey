@@ -12,18 +12,24 @@ subprocess call is an argv list (§3.1 rule 1). Critical output is ASCII (``[kar
                     destructive command classes of §3.4 need a live marker; fail closed.
     git-flow        opt-in (``enforcement.git_flow_hook``): the §3.4 rule table on the target
                     repository of each segment; fail closed when enabled.
+    prod-gate       ON by default (D-02): a merge into the production set needs the human prod
+                    approval of the change being released (``check-prod``); fail closed.
 
 Configuration that can weaken a guard is read from the reviewed line (§3.5) through the small
 local helpers below (``project_wc`` / ``project_reviewed`` / ``enforcement``). They are the
 minimal subset of the settings resolver that ``karvey-config.py`` (lane B, E1.F7) owns; the
 orchestrator reconciles them at merge (finding F-10).
 """
+import importlib.util
+import json
 import os
 import posixpath
 import re
 import shlex
+import subprocess
+import time
 
-from . import PLUGIN_ROOT, approval, audit, hookio
+from . import PLUGIN_ROOT, SCRIPTS_DIR, approval, audit, hookio
 from . import project as pj
 
 
@@ -728,6 +734,303 @@ def git_flow(ctx):
     return None
 
 
+# --------------------------------------------------------------------------- prod-gate (§3.4, §3.2)
+NET_BUDGET_S = 6.0          # within the 15 s pre-bash timeout (A-7)
+_DEPLOY_TITLE = re.compile(r"^\[Deploy\] ([a-z0-9][a-z0-9-]{1,62})\b")
+_PULL_MERGE = re.compile(r"(?:^|[\s/])repos/([^/\s]+/[^/\s]+)/pulls/(\d+)/merge\b")
+_GRAPHQL_MERGE = re.compile(r"mergePullRequest|enablePullRequestAutoMerge", re.I)
+_RAW_MERGE = re.compile(r"\bgh\b.*\bpr\b.*\bmerge\b|\baz\b.*\brepos\b.*\bpr\b.*\bupdate\b|\bglab\b.*\bmr\b.*"
+                        r"\bmerge\b|\bgh\b.*\bapi\b.*(pulls/\d+/merge|mergePullRequest)|\bgit\b.*\bpush\b", re.I)
+_STATE_MOD = None
+
+
+class Candidate:
+    """A production-merge candidate: the command, the repo it acts on and how to find its base."""
+
+    __slots__ = ("kind", "seg", "dir", "selector", "repo_arg", "dst", "src", "target", "fail")
+
+    def __init__(self, kind, seg, **kw):
+        self.kind, self.seg = kind, seg
+        for k in ("dir", "selector", "repo_arg", "dst", "src", "target", "fail"):
+            setattr(self, k, kw.get(k))
+
+
+def _positional(args, with_arg):
+    pos, i = [], 0
+    while i < len(args):
+        a = args[i]
+        if a in with_arg:
+            i += 2
+            continue
+        if not a.startswith("-"):
+            pos.append(a)
+        i += 1
+    return pos
+
+
+def _opt(args, *names):
+    for i, a in enumerate(args):
+        for n in names:
+            if a == n and i + 1 < len(args):
+                return args[i + 1]
+            if a.startswith(n + "="):
+                return a[len(n) + 1:]
+    return None
+
+
+def prod_candidates(ctx):
+    """Every production-merge candidate segment of the command (§3.4)."""
+    out = []
+    for seg in ctx.parsed.segments:
+        a = seg.argv[1:]
+        if seg.argv0 == "gh" and a[:2] == ["pr", "merge"]:
+            rest = a[2:]
+            pos = _positional(rest, {"-R", "--repo", "-t", "--subject", "-b", "--body", "-F", "--body-file",
+                                     "--match-head-commit", "-A", "--author-email"})
+            out.append(Candidate("gh", seg, dir=seg.cwd, selector=pos[0] if pos else None,
+                                 repo_arg=_opt(rest, "-R", "--repo")))
+        elif seg.argv0 == "gh" and a[:1] == ["api"]:
+            joined = " ".join(a[1:])
+            m = _PULL_MERGE.search(joined)
+            if m:
+                out.append(Candidate("gh", seg, dir=seg.cwd, selector=m.group(2), repo_arg=m.group(1)))
+            elif _GRAPHQL_MERGE.search(joined) or ("graphql" in a[1:2] and "@" in joined):
+                out.append(Candidate("gh", seg, dir=seg.cwd, fail="a GraphQL merge mutation cannot be resolved "
+                                                                  "to a PR base; merge through gh pr merge"))
+        elif seg.argv0 == "az" and a[:3] == ["repos", "pr", "update"]:
+            status, auto = _opt(a, "--status"), _opt(a, "--auto-complete")
+            if (status or "").lower() == "completed" or (auto or "").lower() in ("true", "yes", "1"):
+                out.append(Candidate("az", seg, dir=seg.cwd, selector=_opt(a, "--id")))
+        elif seg.argv0 == "glab" and a[:2] == ["mr", "merge"]:
+            pos = _positional(a[2:], {"-m", "--message", "--sha", "-R", "--repo"})
+            out.append(Candidate("glab", seg, dir=seg.cwd, selector=pos[0] if pos else None,
+                                 repo_arg=_opt(a[2:], "-R", "--repo")))
+        elif seg.argv0 == "git" and seg.git and seg.git.get("sub") == "push":
+            out.append(Candidate("git-push", seg, target=GitTarget(seg)))
+    return out
+
+
+def production_set(ctx, root, integ, prod):
+    """``branch_flow.production`` ∪ ``origin/HEAD`` ∪ {master, main on the remote}, minus the
+    integration branch when it differs from production (finding F-12)."""
+    out = {prod} if prod else set()
+    rc, head = pj.git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], root)
+    if rc == 0 and head.startswith("origin/"):
+        out.add(head[len("origin/"):])
+    for b in ("master", "main"):
+        rc, _ = pj.git(["rev-parse", "--verify", "--quiet", "refs/remotes/origin/" + b], root)
+        if rc == 0:
+            out.add(b)
+    if integ and integ != prod:
+        out.discard(integ)
+    return out
+
+
+def _run_cli(argv, cwd, budget):
+    try:
+        cp = subprocess.run(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=budget)
+    except FileNotFoundError:
+        return None, "%s is not installed" % argv[0]
+    except subprocess.TimeoutExpired:
+        return None, "%s did not answer within %.0f s" % (argv[0], budget)
+    except OSError as exc:
+        return None, "%s failed: %s" % (argv[0], exc)
+    if cp.returncode != 0:
+        msg = cp.stderr.decode("utf-8", "replace").strip().splitlines()
+        return None, "%s exited %d%s" % (argv[0], cp.returncode, (": " + msg[0][:120]) if msg else "")
+    try:
+        data = json.loads(cp.stdout.decode("utf-8", "replace") or "null")
+    except ValueError:
+        return None, "%s printed no JSON" % argv[0]
+    if not isinstance(data, dict):
+        return None, "%s printed no JSON object" % argv[0]
+    return data, None
+
+
+def pr_info(c, cwd, budget):
+    """``({base, head, title}, error)`` of the PR/MR a candidate merges."""
+    if c.kind == "gh":
+        argv = ["gh", "pr", "view"] + ([c.selector] if c.selector else []) + \
+               (["-R", c.repo_arg] if c.repo_arg else []) + ["--json", "baseRefName,headRefName,title,number"]
+        data, err = _run_cli(argv, cwd, budget)
+        keys = ("baseRefName", "headRefName", "title")
+    elif c.kind == "az":
+        if not c.selector:
+            return None, "az repos pr update without --id"
+        data, err = _run_cli(["az", "repos", "pr", "show", "--id", c.selector, "--output", "json"], cwd, budget)
+        keys = ("targetRefName", "sourceRefName", "title")
+    else:
+        argv = ["glab", "mr", "view"] + ([c.selector] if c.selector else []) + \
+               (["-R", c.repo_arg] if c.repo_arg else []) + ["--output", "json"]
+        data, err = _run_cli(argv, cwd, budget)
+        keys = ("target_branch", "source_branch", "title")
+    if err:
+        return None, err
+    base, head, title = (data.get(k) for k in keys)
+    if not isinstance(base, str) or not base:
+        return None, "the %s answer has no %s" % (c.kind, keys[0])
+    return {"base": _strip_heads(base.replace("refs/heads/", "")),
+            "head": _strip_heads(head.replace("refs/heads/", "")) if isinstance(head, str) else None,
+            "title": title if isinstance(title, str) else ""}, None
+
+
+def state_tool():
+    """``karvey-state.py`` loaded in-process (its ``check_prod``), once per process."""
+    global _STATE_MOD
+    if _STATE_MOD is None:
+        spec = importlib.util.spec_from_file_location("karvey_state_tool", str(SCRIPTS_DIR / "karvey-state.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _STATE_MOD = mod
+    return _STATE_MOD
+
+
+def released_change(root, head, title, prefix):
+    """The change being released (§3.4): head branch → ``[Deploy] <id>`` title → the only
+    change in ``deploying``. Returns ``(change, others_deploying)``."""
+    changes = pj.list_changes(root)
+    ids = {c["id"] for c in changes}
+    deploying = [c["id"] for c in changes if c["phase"] == "deploying"]
+    cid = None
+    if head and prefix and head.startswith(prefix) and head[len(prefix):] in ids:
+        cid = head[len(prefix):]
+    if cid is None and title:
+        m = _DEPLOY_TITLE.match(title)
+        if m and m.group(1) in ids:
+            cid = m.group(1)
+    if cid is None and len(deploying) == 1:
+        cid = deploying[0]
+    return cid, [d for d in deploying if d != cid]
+
+
+def _pg_block(change, missing, reason):
+    return Decision.block("[karvey] prod-gate BLOCK change=%s missing=%s reason=%s" % (change or "?", missing, reason),
+                          record={"reason": reason, "change": change, "missing": missing})
+
+
+def prod_gate_setting(ctx, root):
+    """``(on, why)``: off only if ``false`` in the working copy AND on ``origin/{production}``
+    (§3.5, REQ-W1-027); a missing key or a non-boolean counts as on (REQ-W1-026)."""
+    wc, _ = project_wc(ctx, root)
+    if enforcement(wc).get("prod_gate_hook") is not False:
+        return True, "on (default)" if "prod_gate_hook" not in enforcement(wc) else "on"
+    if reviewed_setting(ctx, "prod_gate_hook", root) is False:
+        return False, "off (project.json, reviewed)"
+    return True, "on (false only in the working copy; not on origin/{production})"
+
+
+def _evaluate_candidate(ctx, c, deadline):
+    root = None
+    if c.kind == "git-push":
+        t = c.target
+        if t.unresolved:
+            return _pg_block(None, "target", "cannot verify the production approval: the push target cannot be "
+                                             "resolved; rewrite without variables")
+        root = _memo(ctx, ("root-of", t.config_dir()), lambda: pj.find_root(start=t.config_dir()))
+    elif c.dir:
+        root = _memo(ctx, ("root-of", c.dir), lambda: pj.find_root(start=c.dir)) if os.path.isdir(c.dir) else None
+    root = root or (ctx.root if c.kind != "git-push" else None)
+    if root is None:
+        return None  # not a Karvey project: inert and silent
+    on, why = prod_gate_setting(ctx, root)
+    if not on:
+        return Decision.allow(stdout=["[karvey] prod-gate DISABLED for this project (project.json)"],
+                              record={"decision_detail": "disabled", "reason": why}, audit=True)
+    wc, err = project_wc(ctx, root)
+    if wc is None and err != "missing":
+        return _pg_block(None, "project.json", "cannot verify the production approval: project.json unreadable (%s)"
+                         % err)
+    prefix, integ, prod = pj.branch_flow(wc or {})
+    prods = production_set(ctx, root, integ, prod)
+    if c.fail:
+        return _pg_block(None, "base", "cannot verify the production approval: " + c.fail)
+    if c.kind == "git-push":
+        t = c.target
+        head_branch = t.branch(ctx)
+        dests, flags = push_destinations(t.args, head_branch)
+        if "--dry-run" in flags or "-n" in flags:
+            return None
+        hit = None
+        if "--all" in flags or "--mirror" in flags:
+            hit = (head_branch, sorted(prods)[0] if prods else "?")
+        elif not dests:
+            if head_branch in prods:
+                hit = (head_branch, head_branch)
+        for src, dst, _f, _d in dests:
+            if "$" in dst or "`" in dst:
+                return _pg_block(None, "target", "cannot verify the production approval: the push destination "
+                                                 "cannot be resolved; rewrite without variables")
+            if dst in prods:
+                hit = (head_branch if src in ("HEAD", "") else src, dst)
+                break
+        if hit is None:
+            return None
+        head, base, title = hit[0], hit[1], ""
+    else:
+        budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
+        info, err = pr_info(c, str(root), budget)
+        if err:
+            return _pg_block(None, "base", "cannot verify the production approval: cannot resolve the PR base (%s)"
+                             % err)
+        if info["base"] not in prods:
+            return None  # e.g. a PR into the integration branch: allow, silent
+        head, base, title = info["head"], info["base"], info["title"]
+    cid, others = released_change(root, head, title, prefix)
+    if cid is None:
+        return _pg_block(None, "change", "cannot verify the production approval: cannot determine the change being "
+                                         "released into %s (head %s; name the branch %s<id> or title the PR "
+                                         "'[Deploy] <id>')" % (base, head or "?", prefix))
+    try:
+        res = state_tool().check_prod(root, cid)
+    except Exception as exc:
+        return _pg_block(cid, "valid spec.json", "cannot verify the production approval: %s" % exc)
+    warn = []
+    if others:
+        tool = state_tool()
+        pending = []
+        for o in others:
+            try:
+                if not tool.check_prod(root, o)["ok"]:
+                    pending.append(o)
+            except Exception:
+                pending.append(o)
+        if pending:
+            warn.append("[karvey] prod-gate WARNING: other changes are deploying without a prod approval: %s"
+                        % ", ".join(pending))
+    if not res.get("ok"):
+        d = _pg_block(cid, ",".join(res.get("missing") or ["?"]), res.get("reason") or "no production approval")
+        d.stdout = warn
+        return d
+    rec = {"change": cid, "approver": res.get("by"), "ref": res.get("ref"), "branch": base, "reason": "approved"}
+    return Decision.allow(stdout=warn + ["[karvey] prod-gate ALLOW change=%s by=%s ref=%s"
+                                         % (cid, res.get("by"), res.get("ref"))], record=rec, audit=True)
+
+
+def prod_gate_enabled(ctx):
+    """Runs on any command that could be a production merge (cheap test); the per-project
+    switch (§3.5) is decided per candidate, so a disabled gate still prints its notice."""
+    return bool(_RAW_MERGE.search(ctx.payload.command or ""))
+
+
+def prod_gate(ctx):
+    cmd = ctx.payload.command or ""
+    deadline = time.monotonic() + NET_BUDGET_S
+    if ctx.parsed.unparsed:
+        if ctx.root is not None and _RAW_MERGE.search(cmd):
+            return _pg_block(None, "command", "cannot verify the production approval: unparsable command with a "
+                                              "merge verb")
+        return None
+    allow = None
+    for c in prod_candidates(ctx):
+        d = _evaluate_candidate(ctx, c, deadline)
+        if d is None:
+            continue
+        if d.decision == "block":
+            return d
+        allow = allow or d
+    return allow
+
+
 # --------------------------------------------------------------------------- approval hook
 def _audit(root, record):
     try:
@@ -765,4 +1068,4 @@ def approval_hook(ctx):
 
 
 __all__ = ["Decision", "protect_paths", "approval_hook", "plan_gate", "plan_gate_enabled", "git_flow",
-           "git_flow_enabled", "EDIT_TOOLS", "hookio"]
+           "git_flow_enabled", "prod_gate", "prod_gate_enabled", "prod_gate_setting", "EDIT_TOOLS", "hookio"]

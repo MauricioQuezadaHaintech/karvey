@@ -390,7 +390,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -418,7 +419,8 @@
     "git-flow",
     "REQ-W1-021",
     "H-12"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-10-bare-push-on-dev-allowed",
@@ -523,7 +525,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -555,7 +558,8 @@
    "expect_nopy": {
     "decision": "block",
     "stderr_contains": "BLOCK git-flow"
-   }
+   },
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-13-push-head-to-master",
@@ -574,7 +578,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -600,7 +605,8 @@
    "tags": [
     "git-flow",
     "REQ-W1-021"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-14-push-refs-heads-master",
@@ -619,7 +625,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -645,7 +652,8 @@
    "tags": [
     "git-flow",
     "REQ-W1-021"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-15-push-delete-master",
@@ -664,7 +672,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -690,7 +699,8 @@
    "tags": [
     "git-flow",
     "REQ-W1-021"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-16-push-plus-refspec-to-master",
@@ -709,7 +719,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -735,7 +746,8 @@
    "tags": [
     "git-flow",
     "REQ-W1-021"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-17-push-all",
@@ -754,7 +766,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -781,7 +794,8 @@
    "tags": [
     "git-flow",
     "REQ-W1-021"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-18-push-mirror",
@@ -800,7 +814,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -826,7 +841,8 @@
    "tags": [
     "git-flow",
     "REQ-W1-021"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-19-push-master-notes-whole-name",
@@ -1123,7 +1139,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -1150,7 +1167,8 @@
    "tags": [
     "git-flow",
     "§3.2"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-26-push-set-upstream-feature",
@@ -2371,7 +2389,8 @@
        "production": "main"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -2398,7 +2417,8 @@
    "tags": [
     "git-flow",
     "REQ-W1-035"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-53-trunk-push-feature",
@@ -2456,7 +2476,8 @@
        "production": "main"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -2482,7 +2503,8 @@
    "tags": [
     "git-flow",
     "REQ-W1-035"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
   },
   {
    "id": "gf-55-trunk-commit-on-feature",

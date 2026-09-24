@@ -116,7 +116,8 @@ REGISTRY = [
           enabled=_selftest_enabled),
     Guard("protect-paths", ("pre-bash", "pre-edit"), "closed", True, wired=True,
           run=guards.protect_paths),                                    # E1.F5.T1
-    Guard("prod-gate", ("pre-bash",), "closed", True),                   # E1.F5.T5, E1.F5.T6
+    Guard("prod-gate", ("pre-bash",), "closed", True, wired=True, run=guards.prod_gate,
+          enabled=guards.prod_gate_enabled),                            # E1.F5.T5, E1.F5.T6
     Guard("git-flow", ("pre-bash",), "closed", False, wired=True, run=guards.git_flow,
           enabled=guards.git_flow_enabled),                             # E1.F5.T4
     Guard("plan-gate", ("pre-bash", "pre-edit"), "closed", False, wired=True, run=guards.plan_gate,
