@@ -411,5 +411,126 @@ class L14(LintCase):
         self.assertPasses("L-14")
 
 
+# --------------------------------------------------------------------------- L-11 .. L-13, L-17, L-18
+PLUGIN_JSON = "plugins/karvey/.claude-plugin/plugin.json"
+MARKET = ".claude-plugin/marketplace.json"
+
+
+class L11(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-11")
+
+    def test_readme_support_count(self):
+        self.t.replace("README.md", "1 support skills", "18 support skills")
+        self.assertFails("L-11", "says 18 support skills", file="README.md")
+
+    def test_plugin_json_phase_count(self):
+        self.t.replace(PLUGIN_JSON, "a 2-phase pipeline", "a 13-phase pipeline")
+        self.assertFails("L-11", "phases", file=PLUGIN_JSON)
+
+    def test_new_skill_changes_the_truth(self):
+        self.t.write(SKILLS + "/karvey-docs/SKILL.md", self.t.read(SKILLS + "/karvey-guard/SKILL.md")
+                     .replace("karvey-guard", "karvey-docs").replace('"karvey guard"', '"karvey docs"'))
+        fs = self.assertFails("L-11", "support skills")
+        self.assertEqual({f["file"] for f in fs}, {"README.md", "plugins/karvey/README.md", PLUGIN_JSON, MARKET})
+
+    def test_rule_count(self):
+        self.t.replace("README.md", "3 rules", "4 rules")
+        self.assertFails("L-11", "rules")
+
+
+class L12(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-12")
+
+    def test_marketplace_disagrees(self):
+        self.t.replace(MARKET, '"version": "1.0.0"', '"version": "0.9.0"')
+        self.assertFails("L-12", "marketplace.json says 0.9.0", file=MARKET)
+
+    def test_project_json_disagrees(self):
+        self.t.replace("docs/spec/project.json", '"karvey_version": "1.0.0"', '"karvey_version": "0.9.0"')
+        self.assertFails("L-12", "karvey_version", file="docs/spec/project.json")
+
+    def test_changelog_top_release_disagrees(self):
+        self.t.replace(PLUGIN_JSON, '"version": "1.0.0"', '"version": "1.1.0"')
+        self.assertFails("L-12", "top CHANGELOG release is 1.0.0", file="CHANGELOG.md")
+
+    def test_unreleased_is_not_a_release(self):
+        s = self.t.read("CHANGELOG.md")
+        self.t.write("CHANGELOG.md", s.split("## [1.0.0]")[0])
+        self.assertFails("L-12", "no numbered release")
+
+
+class L13(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-13")
+
+    def test_top_release_without_why(self):
+        self.t.replace("CHANGELOG.md", "### Why\nA fixture for the linter.\n", "")
+        self.assertFails("L-13", "Why", file="CHANGELOG.md")
+
+    def test_page_history_behind(self):
+        self.t.replace("docs/karvey.html",
+                       '<li class="now"><span class="ver">1.0.0</span><span class="date">24-09-2026',
+                       '<li class="now"><span class="ver">0.9.0</span><span class="date">01-09-2026')
+        self.assertFails("L-13", "'es' marks 0.9.0", file="docs/karvey.html")
+
+    def test_block_without_current(self):
+        self.t.replace("docs/karvey.html",
+                       '<li class="now"><span class="ver">1.0.0</span><span class="date">2026-09-24',
+                       '<li><span class="ver">1.0.0</span><span class="date">2026-09-24')
+        self.assertFails("L-13", "'en' has no version marked current")
+
+
+class L17(LintCase):
+    def test_pass(self):
+        self.assertPasses("L-17")
+
+    def test_undocumented_project_field(self):
+        self.t.replace(RULES + "/project-config.md", '"project": "Name",', '"project": "Name",\n  "shiny_flag": true,')
+        self.assertFails("L-17", "shiny_flag", file=RULES + "/project-config.md")
+
+    def test_undocumented_nested_spec_field(self):
+        self.t.replace(RULES + "/living-specs.md", '"approved": false}', '"approved": false, "stamp": 1}')
+        self.assertFails("L-17", "approvals.requirements.stamp")
+
+    def test_map_values_are_not_fields(self):
+        self.t.replace(RULES + "/living-specs.md", '{"mockup": "no UI"}', '{"mockup": "no UI", "infra": "no cloud"}')
+        self.assertPasses("L-17")
+
+    def test_unsupported_schema_keyword(self):
+        for name in ("spec.schema.json", "state-machine.json"):
+            self.t.write("plugins/karvey/schemas/" + name, (_path.SCHEMAS_DIR / name).read_text(encoding="utf-8"))
+        schema = json.loads((_path.SCHEMAS_DIR / "project.schema.json").read_text(encoding="utf-8"))
+        schema["patternProperties"] = {"^x-": {}}
+        self.t.write("plugins/karvey/schemas/project.schema.json", schema)
+        self.assertFails("L-17", "unsupported keyword 'patternProperties'")
+
+
+class L18(LintCase):
+    SPEC = "docs/spec/changes/feat-a/spec.json"
+
+    def test_pass(self):
+        self.assertPasses("L-18")
+
+    def test_enum_violation(self):
+        self.t.replace(self.SPEC, '"phase": "requirements",\n', '"phase": "qa-approved",\n')
+        self.assertFails("L-18", "phase", file=self.SPEC)
+
+    def test_prod_ref_missing(self):
+        spec = json.loads(self.t.read(self.SPEC))
+        spec["approvals"]["prod"] = {"approved": True, "by": "X", "role": "human",
+                                     "date": "2026-09-24T10:00:00-03:00", "ref": ""}
+        self.t.write(self.SPEC, spec)
+        self.assertFails("L-18", "prod.ref")
+
+    def test_legacy_shape_is_a_warning_in_advisory_mode(self):
+        self.t.replace("docs/spec/project.json",
+                       '{"tool": "markdown", "location": "docs/spec/changes/{change-id}/PLAN.md"}', '"none"')
+        fs = lint(self.t.root, ["L-18"])
+        self.assertTrue(fs)
+        self.assertEqual({f["severity"] for f in fs}, {"warning"})
+
+
 if __name__ == "__main__":
     unittest.main()

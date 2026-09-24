@@ -7,4 +7,9 @@ argument-hint: [<change-id>]
 
 # Karvey
 
+```
+PHASE 1 ── /karvey-init          → prd.md, spec.json
+PHASE 2 ── /karvey-requirements  → requirements.md, spec-delta.md
+```
+
 Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" next {change-id} --json` and relay `skill`.

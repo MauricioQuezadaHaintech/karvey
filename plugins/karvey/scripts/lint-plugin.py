@@ -687,6 +687,353 @@ def l14_allowed_tools(ctx):
                        % (name, tool, tool))
 
 
+# --------------------------------------------------------------------------- manifests and release (T3)
+RELEASE_RE = re.compile(r"^## \[(\d+\.\d+\.\d+)\]")
+
+
+def plugin_json_path(ctx):
+    return ctx.plugin / ".claude-plugin" / "plugin.json"
+
+
+def marketplace_path(ctx):
+    return ctx.root / ".claude-plugin" / "marketplace.json"
+
+
+def line_of(ctx, path, needle, default=1):
+    for n, line in enumerate(ctx.lines(path), 1):
+        if needle in line:
+            return n
+    return default
+
+
+def top_release(ctx):
+    """``(version, heading_line, block_lines)`` of the first numbered CHANGELOG release."""
+    path = ctx.root / "CHANGELOG.md"
+    lines = ctx.lines(path)
+    start = None
+    for i, line in enumerate(lines):
+        m = RELEASE_RE.match(line)
+        if m and start is None:
+            start, version = i, m.group(1)
+            continue
+        if start is not None and line.startswith("## ["):
+            return version, start + 1, lines[start:i]
+    if start is not None:
+        return version, start + 1, lines[start:]
+    return None, 0, []
+
+
+def marketplace_entry(ctx):
+    data = ctx.json(marketplace_path(ctx))
+    pj = ctx.json(plugin_json_path(ctx)) or {}
+    if not isinstance(data, dict):
+        return None
+    for p in data.get("plugins", []) or []:
+        if isinstance(p, dict) and p.get("name") == pj.get("name", "karvey"):
+            return p
+    return None
+
+
+# --------------------------------------------------------------------------- L-11
+def phase_skills(ctx):
+    """The pipeline's phase skills: the orchestrator's ``PHASE N ── /karvey-x`` lines, else the
+    state machine's skills."""
+    names = []
+    orch = ctx.skill("karvey")
+    if orch:
+        for line in ctx.lines(orch):
+            m = re.match(r"^\s*PHASE\s+\d+\s*[─—-]+\s*/(karvey-[\w-]+)", line)
+            if m and m.group(1) not in names:
+                names.append(m.group(1))
+    if not names:
+        names = sorted({p["skill"] for p in ctx.machine().get("phases", []) if p.get("skill")})
+    return [n for n in names if n in ctx.skills()] or names
+
+
+COUNT_RES = (
+    ("phase", re.compile(r"\b(\d+)[ -]phases?\b")),
+    ("support", re.compile(r"\b(\d+) support skills\b")),
+    ("skills", re.compile(r"(?<!support )\b(\d+) skills\b")),
+    ("rules", re.compile(r"\b(\d+) (?:shared )?rules\b")),
+)
+
+
+@check("L-11", "Skill and rule counts in README.md, plugins/karvey/README.md, plugin.json and "
+               "marketplace.json match the files", reqs=("055",))
+def l11_counts(ctx):
+    skills = ctx.skills()
+    phases = phase_skills(ctx)
+    truth = {
+        "phase": len(phases),
+        "skills": len(skills),
+        "support": len(skills) - len(phases) - (1 if "karvey" in skills else 0),
+        "rules": len(ctx.rules()),
+    }
+    sources = []
+    for p in (ctx.root / "README.md", ctx.plugin / "README.md"):
+        if p.is_file():
+            sources.append((p, ctx.lines(p)))
+    pj = ctx.json(plugin_json_path(ctx))
+    if isinstance(pj, dict) and pj.get("description"):
+        n = line_of(ctx, plugin_json_path(ctx), '"description"')
+        sources.append((plugin_json_path(ctx), [""] * (n - 1) + [pj["description"]]))
+    mk = marketplace_entry(ctx)
+    if mk and mk.get("description"):
+        n = line_of(ctx, marketplace_path(ctx), mk["description"][:40])
+        sources.append((marketplace_path(ctx), [""] * (n - 1) + [mk["description"]]))
+    for path, lines in sources:
+        for n, line in enumerate(lines, 1):
+            for kind, rx in COUNT_RES:
+                for m in rx.finditer(line):
+                    got = int(m.group(1))
+                    if got != truth[kind]:
+                        yield (path, n, "says %d %s but the plugin has %d (%s)"
+                               % (got, {"phase": "phases", "support": "support skills", "skills": "skills",
+                                        "rules": "rules"}[kind], truth[kind], m.group(0)))
+
+
+# --------------------------------------------------------------------------- L-12
+@check("L-12", "plugin.json, marketplace.json, project.json:karvey_version and the top CHANGELOG release agree",
+       reqs=("055",))
+def l12_versions(ctx):
+    pj = ctx.json(plugin_json_path(ctx))
+    if not isinstance(pj, dict) or not pj.get("version"):
+        yield plugin_json_path(ctx), 1, "plugin.json has no version"
+        return
+    want = str(pj["version"])
+    mk = marketplace_entry(ctx)
+    if mk is not None and str(mk.get("version")) != want:
+        yield (marketplace_path(ctx), line_of(ctx, marketplace_path(ctx), '"version"'),
+               "marketplace.json says %s, plugin.json says %s" % (mk.get("version"), want))
+    proj_path = ctx.root / "docs" / "spec" / "project.json"
+    proj = ctx.json(proj_path)
+    if isinstance(proj, dict) and "karvey_version" in proj and str(proj["karvey_version"]) != want:
+        yield (proj_path, line_of(ctx, proj_path, '"karvey_version"'),
+               "project.json:karvey_version says %s, plugin.json says %s" % (proj["karvey_version"], want))
+    if (ctx.root / "CHANGELOG.md").is_file():
+        version, line, _ = top_release(ctx)
+        if version is None:
+            yield ctx.root / "CHANGELOG.md", 1, "CHANGELOG.md has no numbered release ([Unreleased] is not one)"
+        elif version != want:
+            yield (ctx.root / "CHANGELOG.md", line,
+                   "top CHANGELOG release is %s, plugin.json says %s" % (version, want))
+
+
+# --------------------------------------------------------------------------- L-13
+LANG_BLOCK_RE = re.compile(r"<div class=\"lang-block\" data-lang=\"([\w-]+)\"")
+NOW_VER_RE = re.compile(r"<li class=\"now\">\s*<span class=\"ver\">([^<]+)</span>")
+
+
+@check("L-13", "The top CHANGELOG release has a 'Why' section; docs/karvey.html lists that version as "
+               "current in every language block", reqs=("058",))
+def l13_release_docs(ctx):
+    changelog = ctx.root / "CHANGELOG.md"
+    if not changelog.is_file():
+        return
+    version, line, block = top_release(ctx)
+    if version is None:
+        return
+    if not any(re.match(r"^###\s+Why\b", b) for b in block):
+        yield changelog, line, "release %s has no '### Why' section (changelog-policy.md)" % version
+    page = ctx.root / "docs" / "karvey.html"
+    text = ctx.read(page)
+    if text is None:
+        return
+    starts = [(m.start(), m.group(1)) for m in LANG_BLOCK_RE.finditer(text)]
+    if not starts:
+        yield page, 1, "docs/karvey.html has no language blocks"
+        return
+    for i, (pos, lang) in enumerate(starts):
+        end = starts[i + 1][0] if i + 1 < len(starts) else len(text)
+        m = NOW_VER_RE.search(text, pos, end)
+        n = text.count("\n", 0, pos) + 1
+        if not m:
+            yield page, n, "language block %r has no version marked current" % lang
+        elif m.group(1).strip() != version:
+            yield (page, text.count("\n", 0, m.start()) + 1,
+                   "language block %r marks %s as current; the top release is %s" % (lang, m.group(1).strip(),
+                                                                                     version))
+
+
+# --------------------------------------------------------------------------- L-17
+def _schema_registry(ctx):
+    from karvey_lib import schema_lite
+    return schema_lite, schema_lite.load_registry(ctx.schemas_dir())
+
+
+def _resolve(ref, root_schema, reg):
+    if ref.startswith("#"):
+        doc, frag = root_schema, ref[1:]
+    else:
+        sid, _, frag = ref.partition("#")
+        doc = reg.get(sid)
+        if doc is None:
+            return None, None
+    node = doc
+    for part in [p for p in frag.split("/") if p]:
+        if not isinstance(node, dict) or part not in node:
+            return None, None
+        node = node[part]
+    return node, doc
+
+
+def _expand(node, root_schema, reg, depth=0):
+    """``[(node, its root schema)]``: the node, its $ref target and every combinator branch."""
+    if depth > 12 or not isinstance(node, dict):
+        return []
+    out = [(node, root_schema)]
+    if "$ref" in node:
+        target, doc = _resolve(node["$ref"], root_schema, reg)
+        if target is not None:
+            out += _expand(target, doc, reg, depth + 1)
+    for key in ("oneOf", "anyOf", "allOf"):
+        for sub in node.get(key, []) or []:
+            out += _expand(sub, root_schema, reg, depth + 1)
+    for key in ("then", "else"):
+        if isinstance(node.get(key), dict):
+            out += _expand(node[key], root_schema, reg, depth + 1)
+    return out
+
+
+def schema_misses(value, nodes, reg, path="$"):
+    """Dotted paths of object keys in ``value`` that no schema node declares."""
+    misses = []
+    expanded = []
+    for node, doc in nodes:
+        expanded += _expand(node, doc, reg)
+    if isinstance(value, dict):
+        props, maps, typed = {}, [], False
+        for node, doc in expanded:
+            if isinstance(node.get("properties"), dict):
+                typed = True
+                for k, sub in node["properties"].items():
+                    props.setdefault(k, []).append((sub, doc))
+            ap = node.get("additionalProperties")
+            if isinstance(ap, dict):
+                maps.append((ap, doc))  # a map: its keys are data, not fields
+            # additionalProperties: true keeps a schema open for forward compatibility; it does
+            # not document a field, so it is not a map here.
+        if not typed and not maps:
+            return misses  # a free-form object: nothing to compare
+        for k, v in value.items():
+            if k in props:
+                misses += schema_misses(v, props[k], reg, "%s.%s" % (path, k))
+            elif maps:
+                misses += schema_misses(v, maps, reg, "%s.%s" % (path, k))
+            else:
+                misses.append("%s.%s" % (path, k))
+    elif isinstance(value, list):
+        items = [(n["items"], doc) for n, doc in expanded if isinstance(n.get("items"), dict)]
+        if items:
+            for i, v in enumerate(value):
+                misses += schema_misses(v, items, reg, "%s[%d]" % (path, i))
+    return misses
+
+
+JSON_FENCES = ("json", "jsonc", "json5")
+SCHEMA_RULES = ("project-config.md", "living-specs.md")
+
+
+def json_blocks(ctx, path):
+    """``[(first_line, text)]`` of every fenced json block."""
+    out, cur, start = [], None, 0
+    for n, line, lang in iter_lines(ctx.lines(path)):
+        if lang in JSON_FENCES:
+            if cur is None:
+                cur, start = [], n
+            cur.append(line)
+        elif cur is not None:
+            out.append((start, "\n".join(cur)))
+            cur = None
+    if cur is not None:
+        out.append((start, "\n".join(cur)))
+    return out
+
+
+@check("L-17", "Every field in the JSON blocks of rules/project-config.md and rules/living-specs.md is "
+               "in a schema; the schemas use only the supported subset", reqs=("002",))
+def l17_rule_json_vs_schema(ctx):
+    sl, reg = _schema_registry(ctx)
+    for sid, schema in sorted(reg.items()):
+        spath = ctx.schemas_dir() / sid.split(":", 1)[-1]
+        for pointer, problem in sl.check_schema(schema):
+            yield spath, 1, "%s: %s (schema_lite subset)" % (pointer, problem)
+    roots = [(sid, reg[sid]) for sid in ("karvey:spec.schema.json", "karvey:project.schema.json") if sid in reg]
+    if not roots:
+        return
+    for name in SCHEMA_RULES:
+        path = ctx.rule(name)
+        if path is None:
+            continue
+        lines = ctx.lines(path)
+        for start, text in json_blocks(ctx, path):
+            try:
+                data = json.loads(text)
+            except ValueError as exc:
+                yield path, start, "JSON block does not parse: %s" % exc
+                continue
+            if not isinstance(data, dict):
+                continue
+            best = None
+            for sid, schema in roots:
+                misses = schema_misses(data, [(schema, schema)], reg)
+                if best is None or len(misses) < len(best[1]):
+                    best = (sid, misses)
+            sid, misses = best
+            for miss in misses:
+                key = miss.rsplit(".", 1)[-1]
+                n = start
+                for i in range(start - 1, min(len(lines), start + text.count("\n") + 1)):
+                    if '"%s"' % key in lines[i]:
+                        n = i + 1
+                        break
+                yield (path, n, "field %s documented in %s is absent from %s"
+                       % (miss.replace("$.", "", 1), name, sid.split(":", 1)[-1]))
+
+
+# --------------------------------------------------------------------------- L-18
+_STATE = None
+
+
+def state_tool():
+    """karvey-state.py loaded in-process (the validator is shared, not re-implemented)."""
+    global _STATE
+    if _STATE is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("karvey_state", str(SCRIPTS_DIR / "karvey-state.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _STATE = mod
+    return _STATE
+
+
+@check("L-18", "docs/spec/**/*.json validate (karvey-state.py validator, in process)", reqs=("055", "109"))
+def l18_spec_validate(ctx):
+    base = ctx.root / "docs" / "spec"
+    if not base.is_dir():
+        return
+    st = state_tool()
+    strict = st.schema_mode(str(ctx.root)) == "strict"
+    for f in st.all_files(str(ctx.root)):
+        name = ctx.rel(f)
+        try:
+            loaded = st.load(f)
+            st.check_schema_version(loaded.data, name)
+        except st.NotFound as exc:
+            yield f, 0, "cannot validate: %s" % exc
+            continue
+        issues = st.validate_data(loaded.data, st.kind_of(f), strict, file=name)
+        warnings = 0
+        for i in issues:
+            if i["severity"] == "error":
+                yield f, 0, "%s: %s" % (i.get("path") or "$", i["message"])
+            else:
+                warnings += 1
+        if warnings:
+            yield (f, 0, "%d validation warning(s) in %s mode (run karvey-state.py validate %s)"
+                   % (warnings, "strict" if strict else "advisory", name), "warning")
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""
