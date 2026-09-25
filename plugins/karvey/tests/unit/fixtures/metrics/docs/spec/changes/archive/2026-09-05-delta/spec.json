@@ -1,0 +1,19 @@
+{
+  "change_id": "delta",
+  "phase": "archived",
+  "created_at": "2026-09-01",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true,
+      "by": "owner",
+      "date": "2026-09-02"
+    },
+    "prod": {
+      "by": "owner",
+      "role": "human",
+      "date": "2026-09-05",
+      "ref": "D-4"
+    }
+  }
+}

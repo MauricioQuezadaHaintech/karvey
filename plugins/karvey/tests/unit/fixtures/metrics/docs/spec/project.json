@@ -1,0 +1,12 @@
+{
+  "git_platform": "github",
+  "repos": [
+    "r"
+  ],
+  "spec_repo": "r",
+  "branch_flow": {
+    "feature_prefix": "feature/",
+    "integration": "main",
+    "production": "main"
+  }
+}
