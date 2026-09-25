@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "change_id": "wave2-structural",
+  "capability": "method",
+  "description": "Wave 2 of the 2026-09-23 expert panel (3.13.0 advisory/opt-in, 4.0.0 when the defaults turn blocking, D-24): flow metrics and a data-driven retro, lanes including an official patch lane, advisory judges at requirements/architecture/qa, three merged human gates, release per change with a Karvey-Change trailer and a release manifest, test-first traceability, deterministic security tools, release-gate/id/health/evidence scripts, post-deploy verification with thresholds, and the spec-delta merged before prod — plus the Wave 2 backlog items BL-44..BL-50.",
+  "goal": "The cost of the process scales with the size and risk of the change, and every gate, lane and judge the method adds is measured from the change's own artifacts — so that turning the 3.13 advisory defaults into 4.0 blocking ones is decided on data from 4–6 measured changes, not on opinion.",
+  "layers": [
+    "Backend",
+    "Infra"
+  ],
+  "created_at": "2026-09-25T12:27:48+00:00",
+  "updated_at": "2026-09-25T12:36:05+00:00",
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 2,
+  "security_tier_reason": "extends the guards that gate the merge to production (release manifest, per-change approvals, trailer check) and adds scripts that run external security tools and read project.json values into shell commands; judges run subagents that read the change's artifacts",
+  "phase": "requirements",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-25T12:27:48+00:00",
+      "exited_at": "2026-09-25T12:30:10+00:00",
+      "by": "Mauricio Quezada Ibáñez"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-25T12:30:10+00:00"
+    }
+  ],
+  "type": "feature",
+  "lane": "standard",
+  "links": {
+    "parent": "",
+    "children": []
+  },
+  "decisions": [
+    "D-22",
+    "D-23",
+    "D-24",
+    "D-25",
+    "D-26",
+    "D-27",
+    "D-29",
+    "D-30"
+  ],
+  "inputs": {
+    "panel_review": "karvey docs/spec/reviews/2026-09-23-panel-review.md @62ffc6d",
+    "judge_dev_methods": "karvey docs/spec/reviews/2026-09-23-judge-dev-methods.md @62ffc6d",
+    "judge_project_mgmt": "karvey docs/spec/reviews/2026-09-23-judge-project-mgmt.md @62ffc6d",
+    "judge_agents": "karvey docs/spec/reviews/2026-09-23-judge-agents.md @62ffc6d",
+    "decisions": "karvey docs/spec/decisions.md @62ffc6d",
+    "backlog": "karvey docs/spec/backlog.md @62ffc6d",
+    "board": "karvey docs/spec/agent/board.md @62ffc6d",
+    "wave1_spec_delta": "karvey docs/spec/changes/wave1-hardening/spec-delta.md @62ffc6d"
+  },
+  "iteration_count": 0,
+  "revision_history": [],
+  "seed_backlog_id": [
+    "BL-11",
+    "BL-12",
+    "BL-13",
+    "BL-14",
+    "BL-15",
+    "BL-16",
+    "BL-17",
+    "BL-23",
+    "BL-26",
+    "BL-44",
+    "BL-45",
+    "BL-46",
+    "BL-47",
+    "BL-48",
+    "BL-49",
+    "BL-50"
+  ],
+  "clickup": {
+    "epic_id": "",
+    "feature_ids": [],
+    "backlog_list_id": "",
+    "client_tag": ""
+  },
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": false
+    }
+  }
+}
