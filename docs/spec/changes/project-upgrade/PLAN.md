@@ -42,3 +42,4 @@ computed from the project's state, previewed, and only the picked steps are appl
 |---|---|---|
 | 2026-09-25 | init | spec.json, prd.md, checkpoint with the plan checklist (D-20). |
 | 2026-09-25 | requirements | 32 EARS requirements in 6 areas (REQ-UP-001..032), spec-delta ADDED 32; D-20 and BL-51 recorded. Awaiting the owner's approval. REQ-UP-005 (no offer when nothing applies) is an interpretation of D-20 to confirm at this gate. |
+| 2026-09-25 | architecture | `architecture.md`: hook offer with an in-hook short-circuit probe (1.5 s budget), seen record resolved only by `karvey-upgrade.py seen` / the skill, engine as the single writer (pure step functions → edits, confinement, CAS, preview digest), 8 initial steps, skill flow to one PR, L-37 (release-surface fingerprint) + L-38 (catalogue) + L-39 (docs); 32/32 REQ-UP covered; architect decisions A-01..A-14 under D-21. Infra skipped (no cloud). Awaiting approval. |
