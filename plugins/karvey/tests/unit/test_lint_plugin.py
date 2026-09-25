@@ -1038,13 +1038,52 @@ class L36(LintCase):
         self.assertPasses("L-36")
 
 
+class L48(LintCase):
+    """@req REQ-W2-006 REQ-W2-088 — the baseline precedes any Wave 2 default."""
+    PJ = "docs/spec/project.json"
+
+    def set_gates(self):
+        pj = json.loads(self.t.read(self.PJ))
+        pj["gates"] = "merged"
+        self.t.write(self.PJ, pj)
+
+    def test_pass_without_wave2_defaults(self):
+        self.assertPasses("L-48")
+
+    def test_gates_merged_without_baseline_fails(self):
+        self.set_gates()
+        self.assertFails("L-48", "no metrics baseline", file=self.PJ)
+
+    def test_gates_merged_with_baseline_passes(self):
+        self.set_gates()
+        self.t.write("docs/spec/retros/baseline-2026-09-25.json", {"result": {}})
+        self.assertPasses("L-48")
+
+    def test_baseline_after_the_setting_commit_fails(self):
+        import os
+        env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.test", GIT_COMMITTER_NAME="t",
+                   GIT_COMMITTER_EMAIL="t@example.test", GIT_COMMITTER_DATE="2026-09-20T10:00:00+00:00",
+                   GIT_AUTHOR_DATE="2026-09-20T10:00:00+00:00", GIT_CONFIG_GLOBAL="/dev/null",
+                   GIT_CONFIG_NOSYSTEM="1")
+        self.set_gates()
+        for cmd in (["init", "-q"], ["add", "-A"], ["commit", "-q", "-m", "gates"]):
+            subprocess.run(["git"] + cmd, cwd=str(self.t.root), env=env, check=True, capture_output=True)
+        self.t.write("docs/spec/retros/baseline-2026-09-25.json", {"result": {}})
+        self.assertFails("L-48", "dated after the first commit", file="docs/spec/retros/baseline-2026-09-25.json")
+        self.t.write("docs/spec/retros/baseline-2026-09-19.json", {"result": {}})
+        self.assertPasses("L-48")
+
+
 class ListAll(unittest.TestCase):
     def test_list_names_l01_to_l36(self):
         code, out, _ = run_cli("--root", str(_path.REPO_ROOT), "--list")
         self.assertEqual(code, 0, out)
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)])
+        ids = [c.id for c in lp.registry()]
+        self.assertEqual(ids[:36], ["L-%02d" % i for i in range(1, 37)])
+        # wave2-structural checks start at L-40 (L-37..L-39 are reserved by project-upgrade)
+        self.assertTrue(all(40 <= int(i[2:]) <= 54 for i in ids[36:]), ids[36:])
 
 
 if __name__ == "__main__":

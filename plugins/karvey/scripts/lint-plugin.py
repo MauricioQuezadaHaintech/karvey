@@ -1834,6 +1834,59 @@ def l36_impl_logical_dependencies(ctx):
         yield impl, 1, "karvey-impl does not state that a dependency is satisfied at `review` or `done` (REQ-W1-085)"
 
 
+# --------------------------------------------------------------------------- L-48 (wave2-structural)
+W2_DEFAULT_KEYS = ("gates", "judges", "checks", "lanes")
+BASELINE_RE = re.compile(r"^baseline-(\d{4}-\d{2}-\d{2})\.json$")
+
+
+def _w2_keys(project):
+    return [k for k in W2_DEFAULT_KEYS if isinstance(project, dict) and k in project]
+
+
+def _first_commit_setting(root, keys):
+    """Date (YYYY-MM-DD) of the first commit whose docs/spec/project.json holds a Wave 2 key, or None."""
+    try:
+        log = subprocess.run(["git", "log", "--reverse", "--format=%H %cs", "--", "docs/spec/project.json"],
+                             cwd=str(root), capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if log.returncode != 0:
+        return None
+    for line in log.stdout.splitlines():
+        sha, _, day = line.partition(" ")
+        try:
+            show = subprocess.run(["git", "show", "%s:docs/spec/project.json" % sha], cwd=str(root),
+                                  capture_output=True, text=True, timeout=10)
+            data = json.loads(show.stdout) if show.returncode == 0 else None
+        except (OSError, subprocess.SubprocessError, ValueError):
+            data = None
+        if _w2_keys(data):
+            return day
+    return None
+
+
+@check("L-48", "A metrics baseline (docs/spec/retros/baseline-{date}.json) exists before this repo sets any Wave 2 "
+               "default in project.json (REQ-W2-006)", reqs=("W2-006", "W2-088"))
+def l48_baseline_before_defaults(ctx):
+    pjson = ctx.root / "docs" / "spec" / "project.json"
+    keys = _w2_keys(ctx.json(pjson) if pjson.is_file() else None)
+    if not keys:
+        return
+    rdir = ctx.root / "docs" / "spec" / "retros"
+    dates = sorted(m.group(1) for m in (BASELINE_RE.match(p.name) for p in (rdir.iterdir() if rdir.is_dir() else []))
+                   if m)
+    if not dates:
+        yield (pjson, 1, "project.json sets %s but there is no metrics baseline: run karvey-context.py --metrics "
+                         "--from … --to {date} --as-of {date} --json > docs/spec/retros/baseline-{date}.json first"
+                         % ", ".join(keys))
+        return
+    first = _first_commit_setting(ctx.root, keys)
+    if first and dates[0] > first:
+        yield (rdir / ("baseline-%s.json" % dates[0]), 1,
+               "baseline %s is dated after the first commit that set %s (%s): the baseline must precede the "
+               "defaults" % (dates[0], ", ".join(keys), first))
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""
@@ -1923,7 +1976,13 @@ def requirement_ids(ctx, files=None):
     for p in paths:
         text = ctx.read(p) or ""
         ids.update(re.findall(r"REQ-W1-(\d{3})", text))
+        ids.update("W2-" + n for n in re.findall(r"REQ-W2-(\d{3})", text))
     return ids, paths
+
+
+def req_label(r):
+    """``REQ-W1-NNN`` for a bare number, ``REQ-W2-NNN`` for a ``W2-NNN`` entry."""
+    return "REQ-" + r if r.startswith("W") else "REQ-W1-" + r
 
 
 def cmd_list(ctx, args):
@@ -1936,11 +1995,11 @@ def cmd_list(ctx, args):
         for r in c.reqs:
             if r not in ids:
                 missing.append((c.id, r))
-    errors = [kl.issue("lint.req_missing", "%s claims REQ-W1-%s, absent from the requirements" % (cid, r),
+    errors = [kl.issue("lint.req_missing", "%s claims %s, absent from the requirements" % (cid, req_label(r)),
                        file=None, path=cid) for cid, r in missing]
     code = kl.EXIT_FINDINGS if missing else kl.EXIT_OK
     result = {"checks": [{"id": c.id, "title": c.title, "severity": c.severity,
-                          "reqs": ["REQ-W1-" + r for r in c.reqs]} for c in registry()],
+                          "reqs": [req_label(r) for r in c.reqs]} for c in registry()],
               "requirements": [ctx.rel(p) for p in paths]}
     if args.format == "json":
         sys.stdout.write(json.dumps(kl.envelope(TOOL, code, result, errors), ensure_ascii=False) + "\n")
@@ -1948,7 +2007,7 @@ def cmd_list(ctx, args):
         sys.stdout.write("\n".join(rows) + "\n")
         sys.stdout.write("%d checks\n" % len(rows))
         for cid, r in missing:
-            msg = "%s claims REQ-W1-%s, absent from the requirements" % (cid, r)
+            msg = "%s claims %s, absent from the requirements" % (cid, req_label(r))
             if args.format == "github":
                 sys.stdout.write("::error title=%s::%s\n" % (cid, msg))
             else:
