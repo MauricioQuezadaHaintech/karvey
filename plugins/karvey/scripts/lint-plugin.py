@@ -1863,6 +1863,46 @@ def l40_lanes_table(ctx):
                "regenerate it (do not edit the table by hand)")
 
 
+# --------------------------------------------------------------------------- L-51 (wave2-structural)
+JUDGE_TOOLS = ("Read", "Grep", "Glob")
+
+
+@check("L-51", "Every judged phase has rules/judges/{phase}.md with one section per default lens; the judge prompt "
+               "template forbids edits and allows only Read, Grep and Glob (REQ-W2-023, 024)",
+       reqs=("W2-023", "W2-024"))
+def l51_judge_rubrics(ctx):
+    rule = ctx.rule("judges.md")
+    if rule is None:
+        return  # a plugin tree without judges (the lint fixtures)
+    dpath = ctx.plugin / "scripts" / "karvey_lib" / "defaults.json"
+    d = ctx.json(dpath) if dpath.is_file() else kl.defaults()
+    lenses = ((d or {}).get("judges") or {}).get("lenses") or {}
+    if not lenses:
+        yield dpath, 1, "defaults.json has no judges.lenses (the default lenses per judged phase)"
+    for phase, names in sorted(lenses.items()):
+        rp = ctx.rules_dir / "judges" / ("%s.md" % phase)
+        text = ctx.read(rp)
+        if text is None:
+            yield rule, 1, "judged phase %s has no rubric rules/judges/%s.md" % (phase, phase)
+            continue
+        have = set(re.findall(r"^## Lens: ([a-z0-9-]+)\s*$", text, re.M))
+        for lens in names:
+            if lens not in have:
+                yield rp, 1, "rubric %s.md has no '## Lens: %s' section (a default lens)" % (phase, lens)
+    text = ctx.read(rule) or ""
+    m = re.search(r"<!-- judge-template -->(.*?)<!-- /judge-template -->", text, re.S)
+    if not m:
+        yield rule, 1, "rules/judges.md has no <!-- judge-template --> block"
+        return
+    block, line = m.group(1), line_of(ctx, rule, "<!-- judge-template -->")
+    tools = re.search(r"^Allowed tools:\s*(.+)$", block, re.M)
+    got = tuple(x.strip() for x in tools.group(1).split(",")) if tools else ()
+    if got != JUDGE_TOOLS:
+        yield rule, line, "the judge template must allow exactly Read, Grep, Glob (got %s)" % (", ".join(got) or "none")
+    if not re.search(r"\bdo not edit any file\b", block, re.I):
+        yield rule, line, "the judge template does not say 'Do not edit any file'"
+
+
 # --------------------------------------------------------------------------- L-48 (wave2-structural)
 W2_DEFAULT_KEYS = ("gates", "judges", "checks", "lanes")
 BASELINE_RE = re.compile(r"^baseline-(\d{4}-\d{2}-\d{2})\.json$")

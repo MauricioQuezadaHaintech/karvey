@@ -1069,6 +1069,37 @@ class L40(LintCase):
         self.assertFails("L-40", "rules/lanes.md is missing")
 
 
+class L51(LintCase):
+    """@req REQ-W2-023 REQ-W2-024 — rubrics per lens and a read-only judge template."""
+    RULE = RULES + "/judges.md"
+
+    def setUp(self):
+        super().setUp()
+        real = _path.PLUGIN_ROOT / "skills/karvey/rules"
+        self.t.write(self.RULE, (real / "judges.md").read_text(encoding="utf-8"))
+        for ph in ("requirements", "architecture", "qa"):
+            self.t.write(RULES + "/judges/%s.md" % ph, (real / "judges" / ("%s.md" % ph)).read_text(encoding="utf-8"))
+
+    def test_pass(self):
+        self.assertPasses("L-51")
+
+    def test_rubric_missing_a_default_lens_fails(self):
+        self.t.replace(RULES + "/judges/architecture.md", "## Lens: agents-cost", "## Cost")
+        self.assertFails("L-51", "no '## Lens: agents-cost' section", file=RULES + "/judges/architecture.md")
+
+    def test_template_allowing_edit_fails(self):
+        self.t.replace(self.RULE, "Allowed tools: Read, Grep, Glob", "Allowed tools: Read, Grep, Glob, Edit")
+        self.assertFails("L-51", "exactly Read, Grep, Glob", file=self.RULE)
+
+    def test_template_without_no_edit_fails(self):
+        self.t.replace(self.RULE, "Do not edit any file. ", "")
+        self.assertFails("L-51", "Do not edit any file", file=self.RULE)
+
+    def test_missing_rubric_fails(self):
+        self.t.remove(RULES + "/judges/qa.md")
+        self.assertFails("L-51", "no rubric rules/judges/qa.md")
+
+
 class L48(LintCase):
     """@req REQ-W2-006 REQ-W2-088 — the baseline precedes any Wave 2 default."""
     PJ = "docs/spec/project.json"
