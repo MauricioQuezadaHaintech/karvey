@@ -17,7 +17,8 @@ Commands:
   generated <change> <phase>            approvals.<phase>.generated = true
   skip <change> <phase> --reason R      skipped[phase] = R (skippable phases only)
   reopen <change> <phase> --reason R [--ref]   backward edge for karvey-iterate (spec-gap)
-  approve <change> <phase> --by --role human|ceo-delegate --ref [--date] [--write-spec]
+  outcome <change> <phase|gate> changes_requested --by --role --ref [--reason] [--kind plan-exception]
+  approve <change> <phase> --by --role human|ceo-delegate|auto --ref [--date] [--write-spec]
                                         prod → the release ledger (D-03), never spec.json
                                         unless --write-spec (archive branch, REQ-W1-032)
   check-prod <change>                   the prod-gate's question (REQ-W1-023)
@@ -1103,9 +1104,12 @@ def cmd_generated(args, root):
         cur = dict(cur)
         cur["generated"] = True
         cur.setdefault("approved", False)
+        now = now_iso()
+        if not cur.get("generated_at"):
+            cur["generated_at"] = now  # first time only: the approval wait starts here (REQ-W2-001)
         ap[key] = cur
-        data["updated_at"] = now_iso()
-        return {"change": args.change, "approval": key, "generated": True}
+        data["updated_at"] = now
+        return {"change": args.change, "approval": key, "generated": True, "generated_at": cur["generated_at"]}
 
     path, res, changed = transact(root, args.change, mutate)
     res["file"] = rel(root, path)
@@ -1186,7 +1190,10 @@ def cmd_reopen(args, root):
 
 # --------------------------------------------------------------------------- approvals (§1.2, D-03, D-10)
 PROD_REF = re.compile(r"^(D-\d+|https://\S+)$")
-ROLES = ("human", "ceo-delegate")
+ROLES = ("human", "ceo-delegate", "auto")
+OUTCOMES = ("changes_requested",)
+GATES = ("what", "how", "release")
+NO_REASON = "no reason given"
 
 
 def reviewed_ttl(root):
@@ -1316,10 +1323,12 @@ def cmd_approve(args, root):
         return _approve_prod_write_spec(args, root)
     _require(args, ("by", "role", "ref"))
     if args.role not in ROLES:
-        raise Refused("--role must be human or ceo-delegate", code="state.role")
+        raise Refused("--role must be human, ceo-delegate or auto", code="state.role")
     date = _date_arg(args.date)
     by, ref = args.by.strip(), args.ref.strip()
     if key == "prod":
+        if args.role == "auto":
+            raise Refused("production approval is never automatic", code="state.auto_prod")
         if args.role != "human":
             raise Refused("production approval is never delegated", code="state.delegated")
         if not PROD_REF.match(ref):
@@ -1346,8 +1355,14 @@ def cmd_approve(args, root):
     def mutate(data):
         aps = _approvals(data)
         old = aps.get(key) if isinstance(aps.get(key), dict) else {}
-        aps[key] = {"generated": old.get("generated", True) if isinstance(old.get("generated"), bool) else True,
-                    "approved": True, "by": by, "role": args.role, "date": date, "ref": ref, "evidence": ev}
+        rec = {"generated": old.get("generated", True) if isinstance(old.get("generated"), bool) else True,
+               "approved": True, "by": by, "role": args.role, "date": date, "ref": ref, "evidence": ev}
+        for k in ("generated_at", "imported"):
+            if k in old:
+                rec[k] = old[k]
+        aps[key] = rec
+        append_outcome(data, {"outcome": "approved", "kind": "gate", "gate": "phase", "phases": [key],
+                              "by": by, "role": args.role, "ref": ref, "at": date})
         data["updated_at"] = now_iso()
         return {"change": args.change, "phase": key, "written": "spec.json", "approval": aps[key]}
 
@@ -1357,9 +1372,56 @@ def cmd_approve(args, root):
         args.change, key, by, args.role, ref)
 
 
+def append_outcome(data, entry):
+    """Append one ``gate_outcomes`` entry; earlier entries are never rewritten (REQ-W2-001)."""
+    log = data.get("gate_outcomes")
+    if not isinstance(log, list):
+        log = []
+        data["gate_outcomes"] = log
+    log.append(entry)
+    return entry
+
+
+def gate_phases(gate):
+    """The phases a merged gate covers, from ``state-machine.json`` (``gate`` per phase)."""
+    return [p["id"] for p in machine()["phases"] if p.get("gate") == gate]
+
+
+def cmd_outcome(args, root):
+    """``outcome <change> <phase|gate> changes_requested``: the human asked for changes (REQ-W2-001, 042)
+    or answered a plan-rule question (``--kind plan-exception``, REQ-W2-038). The phase is not changed."""
+    if args.outcome not in OUTCOMES:
+        raise Usage("outcome must be one of %s (an approval is recorded by approve)" % ", ".join(OUTCOMES))
+    _require(args, ("by", "role", "ref"))
+    if args.role not in ROLES:
+        raise Refused("--role must be human, ceo-delegate or auto", code="state.role")
+    if args.target in GATES:
+        gate, phases = args.target, gate_phases(args.target)
+    else:
+        key = _key_of(args.target)
+        if key is None:
+            raise Refused("unknown phase or gate %r (gates: %s)" % (args.target, ", ".join(GATES)),
+                          code="state.unknown_phase")
+        gate, phases = "phase", [key]
+    change_spec_path(root, args.change)
+    reason = (args.reason or "").strip() or NO_REASON
+    entry = {"outcome": args.outcome, "kind": args.kind, "gate": gate, "phases": phases, "by": args.by.strip(),
+             "role": args.role, "ref": args.ref.strip(), "at": _date_arg(args.date), "reason": reason}
+
+    def mutate(data):
+        append_outcome(data, entry)
+        data["updated_at"] = now_iso()
+        return {"change": args.change, "outcome": entry}
+
+    path, res, _ = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], [], "%s: %s recorded for %s (%s; reason: %s)" % (
+        args.change, args.outcome, args.target, args.kind, reason)
+
+
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
-            "check-prod": cmd_check_prod}
+            "check-prod": cmd_check_prod, "outcome": cmd_outcome}
 
 
 def build_parser():
@@ -1412,6 +1474,16 @@ def build_parser():
     apv.add_argument("--ref")
     apv.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
     apv.add_argument("--write-spec", action="store_true", help="prod only: copy the ledger/D-NN approval into spec.json")
+    oc = sub.add_parser("outcome", parents=[common], help="record changes_requested at a gate (the phase stays)")
+    oc.add_argument("change")
+    oc.add_argument("target", metavar="PHASE|GATE")
+    oc.add_argument("outcome", metavar="changes_requested")
+    oc.add_argument("--by")
+    oc.add_argument("--role")
+    oc.add_argument("--ref")
+    oc.add_argument("--reason")
+    oc.add_argument("--kind", choices=["gate", "plan-exception"], default="gate")
+    oc.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
     cp = sub.add_parser("check-prod", parents=[common], help="is a human prod approval recorded? (prod-gate)")
     cp.add_argument("change")
     return p

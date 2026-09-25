@@ -200,7 +200,9 @@ class Generated(Base):
         self.put(base_spec())
         code, env = self.st("generated", "feat-a", "requirements")
         self.assertEqual(code, 0)
-        self.assertEqual(self.read()["approvals"]["requirements"], {"generated": True, "approved": False})
+        rec = self.read()["approvals"]["requirements"]
+        self.assertTrue(rec.pop("generated_at"))  # wave2 REQ-W2-001: the first generation time
+        self.assertEqual(rec, {"generated": True, "approved": False})
         self.assert_refused_unchanged(("generated", "feat-a", "prod"), "non-generable")
         self.assert_refused_unchanged(("generated", "feat-a", "nope"), "unknown")
 
