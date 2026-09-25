@@ -1,15 +1,38 @@
 {
   "schema_version": 1,
   "change_id": "project-upgrade",
-  "phase": "init",
+  "capability": "method",
+  "description": "Every time someone updates Karvey, the first session in a Karvey project asks once (per clone) whether they want a project upgrade plan; a deterministic plan computed from the project's state is shown dry-run first and only the steps the person picks are applied, on a branch, through one PR.",
+  "goal": "No project stays silently behind the installed method: every update ends in an offer, and every accepted step is applied reproducibly and reviewably.",
+  "layers": [
+    "Backend"
+  ],
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 2,
+  "security_tier_reason": "a session hook writes clone-local state and a script rewrites project files (spec.json, project.json, hook copies); values read from the project reach shell commands",
+  "decisions": [
+    "D-20"
+  ],
+  "phase": "requirements",
   "phase_history": [
     {
       "phase": "init",
       "entered_at": "2026-09-25T11:58:16+00:00",
+      "exited_at": "2026-09-25T12:02:14+00:00",
       "by": "Mauricio Quezada Ibáñez"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-25T12:02:14+00:00"
     }
   ],
-  "approvals": {},
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": false
+    }
+  },
   "created_at": "2026-09-25T11:58:16+00:00",
-  "updated_at": "2026-09-25T11:58:16+00:00"
+  "updated_at": "2026-09-25T12:06:49+00:00"
 }
