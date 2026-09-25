@@ -236,9 +236,9 @@ corrected, not annotated at the end.
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Opcional, knowledge_sync: none (Recomendado)»
 - **What:** graphify stays an integration; by default no project is required to keep `graphify-out/`; repos that use it declare it in `project.json`.
 
-## D-28 — Manual scripts of wave1 (E1.F17.T3) run against a throw-away ClickUp sandbox list
+## D-28 — Manual scripts of wave1 (E1.F17.T3) run against a throw-away tracker sandbox
 
-- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Crea lista sandbox en ClickUp (Recomendado)» — option text: create a throw-away `karvey-sandbox` list in HainTech's ClickUp, run the scripts headless (`claude -p`), delete it at the end; `visible-version` read-only against Paáutin DEV through the playwright agent.
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Crea lista sandbox en ClickUp (Recomendado)» — option text: create a throw-away sandbox list in the owner's tracker, run the scripts headless (`claude -p`), delete it at the end; `visible-version` read-only against a DEV front.
 - **What:** the agent runs the 10 manual scripts itself under D-19's headless clause; the sandbox list is deleted after the run.
 
 ## D-29 — Objective criterion of the `patch` lane (Wave 2)
@@ -256,7 +256,7 @@ corrected, not annotated at the end.
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «HTML por change al sponsor (Recomendado)»
 - **What:** one page per change (scope, state, cost, risks), published when each gate closes, addressed to the stakeholder declared in `project.json`.
 
-## D-32 — Wave 3 portfolio: all of HainTech; Claude Code only (R-28 / R-30)
+## D-32 — Wave 3 portfolio: the whole organisation; Claude Code only (R-28 / R-30)
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «HainTech completo, solo Claude Code (Recomendado)»
-- **What:** one portfolio over every Karvey repo of HainTech; R-30 stays a portability guide without official support for other runtimes.
+- **What:** one portfolio over every Karvey repo of the organisation; R-30 stays a portability guide without official support for other runtimes.
