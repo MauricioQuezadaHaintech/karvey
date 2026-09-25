@@ -1,6 +1,6 @@
 {
  "table": "session",
- "description": "E1.F6.T4 / REQ-W1-045..048, 050, 051, 083: the SessionStart hook (karvey-session-context.sh <startup|resume>) selects the active change without archive/ or IMPLEMENTED, injects the compact manifest XOR the full one, at most 40 open board rows and 6 KB of handoff with truncation notices, as hookSpecificOutput.additionalContext; the settings notice appears only on startup, only in a Karvey project, and not when origin/{integration} has the settings.",
+ "description": "E1.F6.T4 / REQ-W1-045..048, 050, 051, 083: the SessionStart hook (karvey-session-context.sh <startup|resume>) selects the active change without archive/ or IMPLEMENTED, injects the compact manifest XOR the full one, at most 40 open board rows and 6 KB of handoff with truncation notices, as hookSpecificOutput.additionalContext; the settings notice appears only on startup, only in a Karvey project, and not when origin/{integration} has the settings. project-upgrade (ss-24..ss-35, REQ-UP-001..006): the once-per-version upgrade offer on startup in a Karvey project, silent when resolved, empty plans recorded as seen, one line when unavailable.",
  "cases": [
   {
    "id": "ss-01-archive-newer-not-active",
@@ -1110,6 +1110,607 @@
     "REQ-W1-048",
     "BUG-21"
    ]
+  },
+  {
+   "id": "ss-24-offer-on-version-change",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "seen_version": "3.0.0"
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "structured": true,
+    "context_contains": [
+     "Karvey (upgrade): installed ",
+     "last resolved in this clone 3.0.0",
+     "\"Karvey 3.0.0 → ",
+     "do you want a plan to upgrade this project?",
+     "/karvey:karvey-upgrade",
+     "Not for this version",
+     "seen --decline"
+    ]
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-002"
+   ]
+  },
+  {
+   "id": "ss-25-offer-absent-record",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "seen_version": null
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "no upgrade resolved yet in this clone",
+     "\"Karvey → ",
+     "do you want a plan to upgrade this project?"
+    ],
+    "files_absent": "{{repo}}/karvey/seen-version"
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-002",
+    "REQ-UP-001"
+   ]
+  },
+  {
+   "id": "ss-26-no-offer-on-resume",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "seen_version": null
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_not_contains": [
+     "Karvey (upgrade)",
+     "upgrade offer unavailable"
+    ],
+    "files_absent": "{{repo}}/karvey/seen-version"
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-002"
+   ]
+  },
+  {
+   "id": "ss-27-silent-outside-karvey",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "files": {
+      "README.md": "x\n"
+     }
+    },
+    "seen_version": null
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "stderr_empty": true,
+    "files_absent": "{{repo}}/karvey/seen-version"
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-003",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-28-bare-docs-spec-silent",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "files": {
+      "docs/spec/openapi.yaml": "openapi: 3.1.0\n"
+     }
+    },
+    "seen_version": null
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "files_absent": "{{repo}}/karvey/seen-version"
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-003",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-29-declined-no-offer",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "seen_version": {
+     "version": "@installed",
+     "resolution": "declined"
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_not_contains": [
+     "Karvey (upgrade)",
+     "upgrade offer unavailable"
+    ],
+    "file_contains": {
+     "{{repo}}/karvey/seen-version": "\"declined\""
+    }
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-004"
+   ]
+  },
+  {
+   "id": "ss-30-empty-plan-records-seen",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "prod_gate_hook": true,
+       "plan_marker_ttl_min": 120
+      },
+      "notifications": {
+       "channel": "none",
+       "target": "",
+       "via": "",
+       "events": []
+      },
+      "management": {
+       "tool": "markdown",
+       "location": "docs/spec/changes/{change-id}/PLAN.md"
+      },
+      "standards": {}
+     }
+    },
+    "outer_files": {
+     "home/.claude/settings.json": {
+      "statusLine": {
+       "type": "command",
+       "padding": 0,
+       "command": "bash -c 'f=$(ls -1dt \"$HOME\"/.claude/plugins/cache/*/karvey/*/hooks/karvey-statusline.sh 2>/dev/null | head -1); [ -n \"$f\" ] && exec bash \"$f\"'"
+      }
+     }
+    },
+    "seen_version": null
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "files_exist": "{{repo}}/karvey/seen-version",
+    "file_contains": {
+     "{{repo}}/karvey/seen-version": [
+      "\"empty\"",
+      "\"{{installed}}\""
+     ]
+    }
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-005"
+   ],
+   "note": "nothing applies: the hook records the version as seen and says nothing"
+  },
+  {
+   "id": "ss-31-budget-exceeded-offers",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "prod_gate_hook": true,
+       "plan_marker_ttl_min": 120
+      },
+      "notifications": {
+       "channel": "none",
+       "target": "",
+       "via": "",
+       "events": []
+      },
+      "management": {
+       "tool": "markdown",
+       "location": "docs/spec/changes/{change-id}/PLAN.md"
+      },
+      "standards": {}
+     }
+    },
+    "outer_files": {
+     "home/.claude/settings.json": {
+      "statusLine": {
+       "type": "command",
+       "padding": 0,
+       "command": "bash -c 'f=$(ls -1dt \"$HOME\"/.claude/plugins/cache/*/karvey/*/hooks/karvey-statusline.sh 2>/dev/null | head -1); [ -n \"$f\" ] && exec bash \"$f\"'"
+      }
+     }
+    },
+    "seen_version": null,
+    "env": {
+     "KARVEY_TEST_UPGRADE_PROBE_MS": "0"
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "Karvey (upgrade): installed ",
+     "do you want a plan to upgrade this project?"
+    ],
+    "files_absent": "{{repo}}/karvey/seen-version"
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-005"
+   ],
+   "note": "the same clean project as ss-30, with the probe budget forced to 0: the offer is shown, nothing recorded"
+  },
+  {
+   "id": "ss-32-bad-catalogue-one-line",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "seen_version": null,
+    "plugin_copy": {
+     "scripts/karvey_lib/upgrade-steps.json": "{not json\n"
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "[karvey] upgrade offer unavailable: step catalogue unreadable",
+    "context_not_contains": "Karvey (upgrade): installed ",
+    "files_absent": "{{repo}}/karvey/seen-version"
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-006"
+   ]
+  },
+  {
+   "id": "ss-33-bounds-with-offer",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/board.md": "| Task | Status |\n|---|---|\n| t1 | todo |\n| t2 | todo |\n| t3 | todo |\n| t4 | todo |\n| t5 | todo |\n| t6 | todo |\n| t7 | todo |\n| t8 | todo |\n| t9 | todo |\n| t10 | todo |\n| t11 | todo |\n| t12 | todo |\n| t13 | todo |\n| t14 | todo |\n| t15 | todo |\n| t16 | todo |\n| t17 | todo |\n| t18 | todo |\n| t19 | todo |\n| t20 | todo |\n| t21 | todo |\n| t22 | todo |\n| t23 | todo |\n| t24 | todo |\n| t25 | todo |\n| t26 | todo |\n| t27 | todo |\n| t28 | todo |\n| t29 | todo |\n| t30 | todo |\n| t31 | todo |\n| t32 | todo |\n| t33 | todo |\n| t34 | todo |\n| t35 | todo |\n| t36 | todo |\n| t37 | todo |\n| t38 | todo |\n| t39 | todo |\n| t40 | todo |\n| t41 | todo |\n| t42 | todo |\n| t43 | todo |\n| t44 | todo |\n| t45 | todo |\n| t46 | todo |\n| t47 | todo |\n| t48 | todo |\n| t49 | todo |\n| t50 | todo |\n| t51 | todo |\n| t52 | todo |\n| t53 | todo |\n| t54 | todo |\n| t55 | todo |\n| t56 | todo |\n| t57 | todo |\n| t58 | todo |\n| t59 | todo |\n| t60 | todo |\n",
+      "docs/spec/agent/handoff.md": "line of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \n"
+     }
+    },
+    "seen_version": null
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "Karvey (upgrade): installed ",
+     "do you want a plan to upgrade this project?",
+     "| t40 | todo |",
+     "… 20 more open rows in ",
+     "… truncated (",
+     "— full file: "
+    ],
+    "context_not_contains": "| t41 | todo |"
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-006"
+   ],
+   "note": "the offer lines are separate and capped; the 40-row board and the 6 KB handoff are bounded exactly as without it"
+  },
+  {
+   "id": "ss-34-worktree-shares-record",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "worktree": "wt"
+    },
+    "cwd": "{{tmp}}/wt"
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_not_contains": [
+     "Karvey (upgrade)",
+     "upgrade offer unavailable"
+    ],
+    "files_exist": "{{repo}}/karvey/seen-version",
+    "files_absent": "{{tmp}}/wt/karvey"
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-001"
+   ],
+   "note": "resolved in the main copy (the default seeded record): no offer in the worktree"
+  },
+  {
+   "id": "ss-35-degraded-no-python",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "seen_version": null
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "Karvey (upgrade): installed "
+   },
+   "tags": [
+    "session",
+    "project-upgrade",
+    "REQ-UP-006",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "allow",
+    "stdout_contains": "[karvey] upgrade offer unavailable: python 3 not found"
+   }
   }
  ]
 }

@@ -34,6 +34,13 @@ Statusline cases (``"event": "statusline"``) run ``hooks/karvey-statusline.sh`` 
 ``given.script_copy: true`` runs a copy of the script from the case's temp dir, where
 ``defaults.json`` cannot be found (the ``rot?`` case, REQ-W1-049).
 
+Session cases and the project-upgrade offer: every repository gets a seen-version record equal to the
+installed version (so the once-per-version offer stays silent, as before the offer existed) unless the
+case sets ``given.seen_version``: ``null`` = no record, a version string = resolved ``accepted`` for it,
+or ``{"version", "resolution"}`` (``"@installed"`` = the plugin version). ``{{installed}}`` expands to
+the plugin version. ``given.plugin_copy: {path: text}`` runs the session hook from a copy of the plugin
+with those files replaced (e.g. a broken step catalogue).
+
 Assertions: the decision (exit 0 allow, 2 block), the stdout/stderr substrings, ``marker_created``
 and a duration below 1 s per case unless tagged ``network`` or given ``max_s``. Cases tagged
 ``nopy`` run a second time with ``PATH`` stripped of every python interpreter, which exercises the
@@ -69,10 +76,12 @@ except ValueError:
     TIME_FACTOR = 1.0
 sys.path.insert(0, str(PLUGIN_ROOT / "scripts"))
 from karvey_lib import approval  # noqa: E402
+from karvey_lib import __version__ as INSTALLED  # noqa: E402
 
 CASE_KEYS = {"id", "guard", "given", "input", "event", "expect", "expect_nopy", "tags", "limitation", "note",
              "command"}
-GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir", "outer_files", "no_python", "setup", "script_copy"}
+GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir", "outer_files", "no_python", "setup", "script_copy", "seen_version",
+              "plugin_copy"}
 REPO_KEYS = {"branch", "remote_branches", "project_json", "spec", "ledger", "marker", "files", "default_branch",
              "wc_files", "origin_files", "git_config", "at", "worktree", "no_origin", "commit_files"}
 EXPECT_KEYS = {"decision", "stdout_contains", "stderr_contains", "stdout_not_contains", "stderr_not_contains",
@@ -127,6 +136,7 @@ class Templ:
             return (self.now + delta if sign == "+" else self.now - delta).isoformat(timespec="seconds")
         text = re.sub(r"\{\{now([+-])(\d+)([mh])\}\}", now, text)
         text = text.replace("{{now}}", self.now.isoformat(timespec="seconds"))
+        text = text.replace("{{installed}}", INSTALLED)
         for k in ("root", "repo", "home", "plugin", "tmp", "python"):
             v = getattr(self, k)
             if v is not None:
@@ -220,6 +230,39 @@ def _finish_repo(spec, root, tmp, env, t, default):
         wt = tmp / spec["worktree"]
         git(["worktree", "add", "-q", "-b", "wt-" + spec["worktree"], str(wt)], root, env)
     return root, common, t
+
+
+def seed_seen(given, root, common, env):
+    """The seen-version record of the project-upgrade offer (see the module docstring)."""
+    if "seen_version" in given:
+        sv = given["seen_version"]
+        if sv is None:
+            return
+        rec = dict(sv) if isinstance(sv, dict) else {"version": sv, "resolution": "accepted"}
+    else:
+        rec = {"version": "@installed", "resolution": "accepted"}
+    if rec.get("version") == "@installed":
+        rec["version"] = INSTALLED
+    data = {"v": 1, "version": rec["version"], "resolution": rec.get("resolution", "accepted"),
+            "at": datetime.now().astimezone().isoformat(timespec="seconds"), "by": None, "from": None}
+    if common is not None:
+        d = common / "karvey"
+    else:  # outside git: the XDG fallback of project.state_dir
+        key = hashlib.sha256(os.path.realpath(str(root)).encode("utf-8")).hexdigest()[:16]
+        d = Path(env["XDG_STATE_HOME"]) / "karvey" / key
+    d.mkdir(parents=True, exist_ok=True, mode=0o700)
+    write_file(d / "seen-version", data)
+
+
+def plugin_copy(files, tmp, t):
+    """A copy of the plugin (hooks, scripts, schemas, manifest) with ``files`` replaced."""
+    dst = tmp / "plugin-copy"
+    for part in ("hooks", "scripts", "schemas", ".claude-plugin"):
+        shutil.copytree(str(PLUGIN_ROOT / part), str(dst / part),
+                        ignore=shutil.ignore_patterns("__pycache__", "tests"))
+    for rel, content in (files or {}).items():
+        write_file(dst / rel, t.deep(content))
+    return dst
 
 
 def approvals_snapshot(common):
@@ -427,6 +470,10 @@ def run_case(case, nopy=False, keep=False):
                     (stub_data / ("%s.%s" % (name, k))).write_text(
                         t.s(v) if isinstance(v, str) else (json.dumps(v) if k in ("stdout", "stderr") else str(v)),
                         encoding="utf-8")
+        seed_seen(given, root, common, env)
+        session_hook = SESSION_HOOK
+        if given.get("plugin_copy"):
+            session_hook = plugin_copy(given["plugin_copy"], tmp, t) / "hooks" / SESSION_HOOK.name
         env["PATH"] = nopy_path(tmp, STUBS) if nopy else os.pathsep.join((str(STUBS), env["PATH"]))
         env.update({"CLAUDE_PLUGIN_ROOT": str(PLUGIN_ROOT), "CLAUDE_PROJECT_DIR": str(cwd),
                     "KARVEY_STUB_DATA": str(stub_data)})
@@ -456,7 +503,7 @@ def run_case(case, nopy=False, keep=False):
         if case.get("command"):
             argv = [BASH, "-c", t.s(case["command"])]
         elif event == "session":  # hooks.json passes the matcher's source as the argument
-            argv = [BASH, str(SESSION_HOOK), "startup" if inp.get("source", "startup") == "startup" else "resume"]
+            argv = [BASH, str(session_hook), "startup" if inp.get("source", "startup") == "startup" else "resume"]
         elif event == "statusline":  # the statusline script, stdin = input.stdin
             script = STATUSLINE
             if given.get("script_copy"):

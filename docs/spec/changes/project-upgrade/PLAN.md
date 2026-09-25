@@ -65,7 +65,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 ### Feature E1.F5: The once-per-version offer (session hook)
 
 - [x] E1.F5.T1 [Backend] `upgrade_offer()` in `session_text()`, `defaults.json` keys, bash degraded line — est: 15min (depends E1.F1.T5) (P)
-- [ ] E1.F5.T2 [Test] Session table ss-24..ss-35, runner `given.seen_version` — est: 15min (depends E1.F5.T1, E1.F3.T5, E1.F4.T1)
+- [x] E1.F5.T2 [Test] Session table ss-24..ss-35, runner `given.seen_version` — est: 15min (depends E1.F5.T1, E1.F3.T5, E1.F4.T1)
 
 ### Feature E1.F6: The upgrade skill
 
@@ -107,7 +107,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F3.T5 [Backend] | ✅ done | 8 | 5 | 0 |  |
 | E1.F4.T1 [Backend] | ✅ done | 15 | 8 | 0 |  |
 | E1.F5.T1 [Backend] | ✅ done | 15 | 9 | 0 |  |
-| E1.F5.T2 [Test] | ⬜ todo | 15 | — | — | |
+| E1.F5.T2 [Test] | ✅ done | 15 | 10 | 0 | done-when path: `plugins/karvey/hooks/tests/test-hooks.sh` (tasks.md names `tests/test-hooks.sh`) |
 | E1.F6.T1 [Backend] | ⬜ todo | 10 | — | — | |
 | E1.F6.T2 [Test] | ⬜ todo | 8 | — | — | |
 | E1.F7.T1 [Backend] | ⬜ todo | 12 | — | — | |
