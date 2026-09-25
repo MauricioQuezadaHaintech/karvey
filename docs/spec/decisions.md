@@ -203,3 +203,40 @@ corrected, not annotated at the end.
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «si, tu /goal es terminar todas las olas sin parar, a menos que tengas un bloqueante» — to the question «¿Apruebas los requisitos, incluida la regla de REQ-UP-005?».
 - **What:** (1) `project-upgrade` requirements REQ-UP-001..032 approved as written, **including REQ-UP-005** (no offer when the plan is empty). (2) Standing instruction: the agent advances every wave's non-production gates without stopping, recording each approval with `ref: D-21` and this verbatim text, and stops only on a blocker.
 - **What it does NOT say:** it is not a production approval — every merge to `main` still needs the owner's own approval word **and** production word (D-10, D-03), which is a blocker by definition. It does not decide the open Wave 2 owner questions (panel §6): an open owner decision is a blocker. It does not authorize writing under `~/.claude/` (D-01, D-11) nor editing another session's change while that session is active.
+
+## D-22 — Wave 2: three merged human gates per feature (panel §6.1)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «3 fusionados (Recomendado)» — to «Ola 2 (panel §6.1): ¿cuántos gates humanos por feature?»
+- **What:** three human gates per feature — (1) requirements + mockup + design, (2) architecture + infra + tasks, (3) qa + prod — with `--granular-gates` keeping the seven for whoever wants them.
+- **What it does NOT say:** the production approval still needs D-10's words; merging gates does not merge their artifacts.
+
+## D-23 — Wave 2: judges advisory, intra-model accepted (panel §6.2, JU-01 / R-11)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Advisory, intra-modelo ok (Recomendado)»
+- **What:** judges start advisory until 4–6 measured changes; they run at requirements, architecture and qa; a declared intra-model judge is accepted; a token / US$ cap per change lives in `project.json`.
+- **What it does NOT say:** it does not use client projects' API keys (manifest); moving to blocking is a later decision.
+
+## D-24 — Wave 2 versioning: 3.13 opt-in, 4.0 when defaults turn blocking (panel §6.3)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «3.13 opt-in → 4.0 bloqueante (Recomendado)»
+- **What:** Wave 2 ships as 3.13.0 in advisory / opt-in mode; 4.0.0 is the release where the defaults become blocking (mandatory spec schema, merged gates, blocking manifest).
+
+## D-25 — `patch` lane is the official path for a small bug (panel §6.4)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Sí, patch oficial (Recomendado)»
+- **What:** a `patch` lane — BUG-NN + finding + fix + regression test, without requirements/architecture — is the method's official path for a small bug. The agent prepares the diff to the owner's global `CLAUDE.md`; the owner applies it (D-01, D-11).
+
+## D-26 — Release per change: `Karvey-Change` trailer required, trunk recommended (panel §6.7)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Trailer + trunk recomendado (Recomendado)»
+- **What:** every commit of a change carries `Karvey-Change: <change-id>`; where a `dev` integration branch exists, integration is by PR; trunk (feature → PR → main) is the mode the method recommends.
+
+## D-27 — Graphify optional, `knowledge_sync: none` by default (panel §6.8)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Opcional, knowledge_sync: none (Recomendado)»
+- **What:** graphify stays an integration; by default no project is required to keep `graphify-out/`; repos that use it declare it in `project.json`.
+
+## D-28 — Manual scripts of wave1 (E1.F17.T3) run against a throw-away ClickUp sandbox list
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Crea lista sandbox en ClickUp (Recomendado)» — option text: create a throw-away `karvey-sandbox` list in HainTech's ClickUp, run the scripts headless (`claude -p`), delete it at the end; `visible-version` read-only against Paáutin DEV through the playwright agent.
+- **What:** the agent runs the 10 manual scripts itself under D-19's headless clause; the sandbox list is deleted after the run.
