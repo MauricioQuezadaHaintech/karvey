@@ -91,5 +91,48 @@ class SeenRecord(unittest.TestCase):
         self.assertEqual(p.from_version, "3.0.0")
 
 
+class SeenCli(unittest.TestCase):
+    def setUp(self):
+        g.isolate_git()
+        self.t = g.TempDir()
+        self.root = g.init(self.t.path / "proj")
+        g.write(self.root, "docs/spec/project.json", {"a": 1})
+        g.commit_all(self.root)
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def seen(self, flag):
+        from test_upgrade_cli import run_tool
+        code, out, err = run_tool("seen", flag, "--json", cwd=self.root)
+        return code, json.loads(out)
+
+    def test_decline_accept_empty_show(self):
+        code, env = self.seen("--show")
+        self.assertEqual((code, env["result"]["record"]), (0, None))
+        for flag, res in (("--decline", "declined"), ("--accept", "accepted"), ("--empty", "empty")):
+            with self.subTest(flag=flag):
+                code, env = self.seen(flag)
+                self.assertEqual(code, 0, env)
+                self.assertEqual(env["result"]["record"]["resolution"], res)
+                self.assertEqual(env["result"]["record"]["version"], upgrade.INSTALLED)
+                self.assertEqual(upgrade.read_seen(self.root)["resolution"], res)
+        code, env = self.seen("--show")
+        self.assertEqual(env["result"]["record"]["resolution"], "empty")
+
+    def test_decline_suppresses_this_version_only(self):
+        self.seen("--decline")
+        self.assertTrue(upgrade.is_resolved(self.root, upgrade.INSTALLED))
+        self.assertFalse(upgrade.is_resolved(self.root, "99.0.0"), "the next version is offered again")
+
+    def test_unanswered_means_offered_again(self):
+        self.assertFalse(upgrade.is_resolved(self.root, upgrade.INSTALLED))
+
+    def test_one_flag_required(self):
+        from test_upgrade_cli import run_tool
+        self.assertEqual(run_tool("seen", cwd=self.root)[0], 2)
+        self.assertEqual(run_tool("seen", "--decline", "--accept", cwd=self.root)[0], 2)
+
+
 if __name__ == "__main__":
     unittest.main()

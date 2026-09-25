@@ -60,7 +60,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F4: The upgrade tool
 
-- [ ] E1.F4.T1 [Backend] CLI `plan | branch | apply | commit | seen` — est: 15min (depends E1.F2.T3, E1.F1.T5)
+- [x] E1.F4.T1 [Backend] CLI `plan | branch | apply | commit | seen` — est: 15min (depends E1.F2.T3, E1.F1.T5)
 
 ### Feature E1.F5: The once-per-version offer (session hook)
 
@@ -105,7 +105,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F3.T3 [Backend] | ✅ done | 10 | 7 | 0 |  |
 | E1.F3.T4 [Backend] | ✅ done | 10 | 7 | 0 |  |
 | E1.F3.T5 [Backend] | ✅ done | 8 | 5 | 0 |  |
-| E1.F4.T1 [Backend] | ⬜ todo | 15 | — | — | |
+| E1.F4.T1 [Backend] | ✅ done | 15 | 8 | 0 |  |
 | E1.F5.T1 [Backend] | ⬜ todo | 15 | — | — | |
 | E1.F5.T2 [Test] | ⬜ todo | 15 | — | — | |
 | E1.F6.T1 [Backend] | ⬜ todo | 10 | — | — | |

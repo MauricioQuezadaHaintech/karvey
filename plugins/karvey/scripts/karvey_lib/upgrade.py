@@ -586,6 +586,12 @@ def read_seen(root):
     return data
 
 
+def is_resolved(root, installed=None):
+    """True when this clone already resolved the offer for ``installed`` (accepted, declined or empty)."""
+    rec = read_seen(root)
+    return rec is not None and rec["version"] == (installed or INSTALLED)
+
+
 def _git_user(root):
     rc, out = _git(["config", "--get", "user.name"], root)
     name = out.strip() if rc == 0 else ""
