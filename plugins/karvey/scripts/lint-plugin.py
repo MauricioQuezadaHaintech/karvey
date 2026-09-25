@@ -1834,6 +1834,35 @@ def l36_impl_logical_dependencies(ctx):
         yield impl, 1, "karvey-impl does not state that a dependency is satisfied at `review` or `done` (REQ-W1-085)"
 
 
+# --------------------------------------------------------------------------- L-40 (wave2-structural)
+@check("L-40", "rules/lanes.md renders schemas/lanes.json between its generated markers, and the lane table lists "
+               "every phase for every lane (REQ-W2-011, 021)", reqs=("W2-011", "W2-021"))
+def l40_lanes_table(ctx):
+    from karvey_lib import lanes as ln
+    src = ctx.plugin / "schemas" / "lanes.json"
+    rule = ctx.rule("lanes.md")
+    if not src.is_file():
+        return  # a plugin tree without its own lane table (the lint fixtures)
+    table = ctx.json(src) if src.is_file() else None
+    if not isinstance(table, dict):
+        yield src, 1, "schemas/lanes.json is missing or not JSON"
+        return
+    bad = ln.problems(table)
+    for msg in bad:
+        yield src, 1, "lane table: %s" % msg
+    if rule is None:
+        yield src, 1, "rules/lanes.md is missing (it renders schemas/lanes.json)"
+        return
+    if bad:
+        return
+    block = ln.block_of(ctx.read(rule) or "")
+    if block is None:
+        yield rule, 1, "rules/lanes.md has no %s … %s block" % (ln.BEGIN, ln.END)
+    elif block != ln.render(table):
+        yield (rule, line_of(ctx, rule, ln.BEGIN), "the lanes block differs from render(schemas/lanes.json): "
+               "regenerate it (do not edit the table by hand)")
+
+
 # --------------------------------------------------------------------------- L-48 (wave2-structural)
 W2_DEFAULT_KEYS = ("gates", "judges", "checks", "lanes")
 BASELINE_RE = re.compile(r"^baseline-(\d{4}-\d{2}-\d{2})\.json$")

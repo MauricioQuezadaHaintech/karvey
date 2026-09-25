@@ -1038,6 +1038,37 @@ class L36(LintCase):
         self.assertPasses("L-36")
 
 
+class L40(LintCase):
+    """@req REQ-W2-011 REQ-W2-021 — the lanes rule renders the lane table."""
+    SRC = "plugins/karvey/schemas/lanes.json"
+    RULE = RULES + "/lanes.md"
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(self.SRC, (_path.SCHEMAS_DIR / "lanes.json").read_text(encoding="utf-8"))
+        self.t.write(self.RULE, (_path.PLUGIN_ROOT / "skills/karvey/rules/lanes.md").read_text(encoding="utf-8"))
+        # the state machine the lane table is checked against
+        self.t.write("plugins/karvey/schemas/state-machine.json",
+                     (_path.SCHEMAS_DIR / "state-machine.json").read_text(encoding="utf-8"))
+
+    def test_pass(self):
+        self.assertPasses("L-40")
+
+    def test_hand_edited_table_fails(self):
+        self.t.replace(self.RULE, "| `standard` | m | s | s | m | o |", "| `standard` | m | s | s | m | s |")
+        self.assertFails("L-40", "differs from render", file=self.RULE)
+
+    def test_lane_missing_a_phase_fails(self):
+        data = json.loads(self.t.read(self.SRC))
+        del data["lanes"]["docs"]["phases"]["qa"]
+        self.t.write(self.SRC, data)
+        self.assertFails("L-40", "docs does not list qa", file=self.SRC)
+
+    def test_missing_rule_fails(self):
+        self.t.remove(self.RULE)
+        self.assertFails("L-40", "rules/lanes.md is missing")
+
+
 class L48(LintCase):
     """@req REQ-W2-006 REQ-W2-088 — the baseline precedes any Wave 2 default."""
     PJ = "docs/spec/project.json"

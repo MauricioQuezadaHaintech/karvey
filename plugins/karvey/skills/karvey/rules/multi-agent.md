@@ -83,22 +83,16 @@ A step the agent must not or cannot execute (IAM grants, destructive deletions, 
 
 ## 6. Change type `ops`
 
-Some changes have no application code: IAM, DNS, secrets rotation, quota, cloud console configuration. They use:
-
-```json
-"type": "ops"   // default: "feature"; also "hotfix"
-```
-
-An `ops` change runs a short pipeline: `init → requirements (lite: the verifiable goal) → infra (command plan) → tasks ([human]/[Infra]) → execution → verification → archive`. It skips mockup, design-graphic and architecture unless the plan touches trust boundaries (then architecture's security section applies). Its "test" is the read-only verification of each step, recorded in `test_evidence.md`.
+An `ops` change (IAM, DNS, secrets rotation, quota, console configuration: no application code) is the `ops`
+**lane**: its phases, gates and evidence are rows of the lane table, stated once in `lanes.md`. A `spec.json` with
+`"type": "ops"` and no `lane` is read as that lane; `lane set ops` records it.
 
 ## 7. Hotfix lane
 
-A production defect that must be fixed now (including one discovered during an E2E run in production) uses `"type": "hotfix"`. The lane is fast, **not** unrecorded:
-
-- **Same PR contains all three:** the fix + the `BUG-NN` entry (tracker + `findings.md`) + the regression test that fails without the fix.
-- Root cause is still investigated (`karvey-investigate` Iron Law), but may be recorded right after the fix if the incident is live; the incident reaches `RESUELTO` only with the regression test.
-- Chained hotfixes on the same day are each a separate version (rev bump + CHANGELOG), and each one is appended to `revision_history` with its release version: `{ "date", "finding": "F-NN", "bug": "BUG-NN", "release": "x.y.z", "reason" }`.
-- The prod gate (`approvals.prod`) still applies.
+A production defect that must be fixed now (including one found during an E2E run in production) is the
+`hotfix` **lane** (`lanes.md`): fast, **not** unrecorded — the same PR carries the fix, the `BUG-NN` and the
+regression test, impl starts without a tasks approval only once `lane-evidence` records them, and the prod gate
+(`approvals.prod`) still applies. A small bug that is not urgent takes the `patch` lane instead.
 
 ## 8. Documentation-only PRs
 

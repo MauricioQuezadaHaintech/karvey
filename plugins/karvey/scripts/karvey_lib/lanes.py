@@ -228,3 +228,46 @@ def measure_diff(root, base, head="HEAD", lane="patch", project=None, files=None
         if hit:
             out.append("lane exceeded: %s (%s)" % (_FORBID_TEXT[f], ", ".join(hit[:3])))
     return out
+
+
+# --------------------------------------------------------------------------- rules/lanes.md block
+BEGIN, END = "<!-- generated:lanes -->", "<!-- /generated:lanes -->"
+_SHOWN = ("requirements", "mockup", "design_graphic", "architecture", "infra", "tasks", "impl", "test", "qa",
+          "deploying")
+
+
+def render(table):
+    """The Markdown block of ``rules/lanes.md`` for a parsed lane table (L-40 compares it)."""
+    head = ["lane"] + list(_SHOWN) + ["human gates (merged)", "judges per judged phase"]
+    out = ["| " + " | ".join("`%s`" % h if h in _SHOWN else h for h in head) + " |",
+           "|" + "---|" * len(head)]
+    for name, lane in table["lanes"].items():
+        cells = ["`%s`" % name]
+        for p in _SHOWN:
+            r = lane["phases"].get(p, "m")
+            note = (lane.get("notes") or {}).get(p)
+            cells.append("%s (%s)" % (r, note) if note else r)
+        cells.append("%d (%s)" % (len(lane["gates"]), ", ".join(lane["gates"])))
+        cells.append(str(lane["judges"]))
+        out.append("| " + " | ".join(cells) + " |")
+    out.append("")
+    out.append("- `m` mandatory · `o` optional (runs when the change needs it; a skip with a reason is accepted) · "
+               "`s` skipped by the lane (recorded as `skipped[phase] = \"lane:{lane}\"`). `init`, `deployed` and "
+               "`archived` are `m` in every lane.")
+    for name, lane in table["lanes"].items():
+        if lane.get("requires"):
+            out.append("- `%s` requires %s." % (name, ", ".join("`%s`" % r for r in lane["requires"])))
+        c = lane.get("criteria")
+        if c:
+            out.append("- `%s` admission: at most %d code files; no %s; Security Tier at most %d." % (
+                name, c.get("max_code_files", 0), ", no ".join(x.replace("_", " ") for x in c.get("forbid", [])),
+                c.get("max_tier", 4)))
+    out.append("- A change without `lane` is `legacy`: %s." % table.get("legacy", "the 3.12 pipeline"))
+    return "\n".join(out)
+
+
+def block_of(text):
+    """The text between the generated markers of ``rules/lanes.md``, or None."""
+    if BEGIN not in text or END not in text:
+        return None
+    return text.split(BEGIN, 1)[1].split(END, 1)[0].strip("\n")

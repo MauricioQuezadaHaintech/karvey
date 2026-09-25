@@ -227,5 +227,5 @@
       "**/*acl*"
     ]
   },
-  "legacy": "a change without lane (and without type ops|hotfix) keeps the 3.12 pipeline: every phase mandatory unless recorded as skipped"
+  "legacy": "the 3.12 pipeline, every phase mandatory unless recorded as skipped (a `type: ops|hotfix` without `lane` is shown as that lane, and `lane set` records it)"
 }

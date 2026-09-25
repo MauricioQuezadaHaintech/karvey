@@ -87,7 +87,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F2.T2 [Backend] `karvey_lib/gitlog.py` (argv allow-list) + `lanes.admit_patch` (D-29 answers) + `lanes.measure_diff` — est: 12min (depends E1.F2.T1)
 - [x] E1.F2.T3 [Backend] State tool: lane-aware `next`/`advance` (lane-`s` passed through and written `skipped: lane:{lane}`; manual `skip` unchanged) — est: 12min (depends E1.F2.T1, E1.F1.T5)
 - [x] E1.F2.T4 [Backend] State tool: `lane set|raise|lower`, `lane_history`, `lane-evidence`, hotfix preconditions — est: 15min (depends E1.F2.T3, E1.F2.T2)
-- [ ] E1.F2.T5 [Backend] `rules/lanes.md` (generated table between markers) + `rules/multi-agent.md` §6–§7 pointer + L-40 — est: 10min (depends E1.F2.T1) (P)
+- [x] E1.F2.T5 [Backend] `rules/lanes.md` (generated table between markers) + `rules/multi-agent.md` §6–§7 pointer + L-40 — est: 10min (depends E1.F2.T1) (P)
 - [ ] E1.F2.T6 [Backend] Init lane questions → `lane set`; QA / QA-lite lane check (`measure_diff` + finding + `lane.diff` hit) — est: 10min (depends E1.F2.T4, E1.F1.T2)
 - [ ] E1.F2.T7 [Backend] Dashboard: `lane` column, `skipped (lane)`, `auto` approvals apart — est: 8min (depends E1.F2.T3, E1.F1.T7)
 - [ ] E1.F2.T8 [Backend] `global-instructions.diff` for the `patch` lane (one bullet, neutral header, A-11) — est: 5min (P)
@@ -197,7 +197,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F2.T2 [Backend] | ✅ done | 12 | 7 | 0 |  |
 | E1.F2.T3 [Backend] | ✅ done | 12 | 7 | 0 |  |
 | E1.F2.T4 [Backend] | ✅ done | 15 | 10 | 0 |  |
-| E1.F2.T5 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F2.T5 [Backend] | ✅ done | 10 | 7 | 0 |  |
 | E1.F2.T6 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F2.T7 [Backend] | ⬜ todo | 8 | — | — |  |
 | E1.F2.T8 [Backend] | ⬜ todo | 5 | — | — |  |
