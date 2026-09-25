@@ -94,6 +94,15 @@ When a pinned input (`spec.json:inputs.design|design_system|copy|legal`, format 
 
 For each routed finding, set `status: routed` and fill `routed to` (BUG-NN / spec-delta req / BL-NN) in `findings.md`. A finding becomes `closed` only when its destination resolves it (incident `RESUELTO`, requirement re-approved, or backlog item acknowledged).
 
+**Judge rows** (origin `judge:{lens}`, `../karvey/rules/judges.md`) record the decision in `routed to` in one of two
+forms, so the acceptance rate per lens is computable (`karvey-context.py --metrics`, `judge_acceptance`):
+
+- `accepted:{bug|spec-gap|emergent} {ref}` — routed like any finding (e.g. `accepted:spec-gap REQ-W2-014`);
+- `rejected: {reason}` — the finding does not hold (status `closed`), with the reason in the human's words.
+
+A `closed` judge row with neither form is listed by `karvey-context.py --section convergence` as
+`unresolved (no routing or reason)` and keeps the change from converging.
+
 ### Step 5 — Phase-close
 
 Run the phase-close ritual (`phase-close.md`): comment + status in the team's tracker (or `PLAN.md`), findings and backlog in step. The knowledge sync waits for archive.

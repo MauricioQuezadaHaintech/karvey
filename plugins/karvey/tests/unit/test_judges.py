@@ -1,6 +1,6 @@
 """Judges: closed inputs (architecture §1.7 of wave2-structural).
 
-@req REQ-W2-022 REQ-W2-023 REQ-W2-025 REQ-W2-026 REQ-W2-029 REQ-W2-030 REQ-W2-031 REQ-W2-032
+@req REQ-W2-022 REQ-W2-023 REQ-W2-025 REQ-W2-033 REQ-W2-026 REQ-W2-029 REQ-W2-030 REQ-W2-031 REQ-W2-032
 """
 import json
 import unittest
@@ -190,6 +190,52 @@ class Collect(unittest.TestCase):
         self.result("methods.json", {"lens": "methods", "verdict": "pass", "findings": []})
         code, r = self.collect()
         self.assertEqual((r["runs"][0]["model"], r["runs"][0]["intra_model"]), ("model-a", True))
+
+
+class Acceptance(unittest.TestCase):
+    """@req REQ-W2-033 — accepted / rejected judge rows."""
+    ROWS = ("| F-01 | d | architecture | judge:security | bug | High | a (x:1) | routed | accepted:bug BUG-3 |\n"
+            "| F-02 | d | architecture | judge:security | spec-gap | High | b (x:1) | routed | accepted:spec-gap REQ-W2-1 |\n"
+            "| F-03 | d | architecture | judge:security | emergent | Low | c (x:1) | closed | rejected: not in scope |\n")
+
+    def setUp(self):
+        self.t = g.TempDir()
+        self.root = self.t.path
+        f = make_project(self.root, spec=spec())
+        self.findings = f.parent / "findings.md"
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def ctx(self, *argv):
+        import contextlib, io, importlib.util
+        s = importlib.util.spec_from_file_location("kc_acc", str(_path.SCRIPTS_DIR / "karvey-context.py"))
+        m = importlib.util.module_from_spec(s)
+        s.loader.exec_module(m)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = m.main(list(argv) + ["--root", str(self.root), "--json"])
+        return code, json.loads(out.getvalue())["result"]
+
+    def test_REQ_W2_033_closed_judge_row_without_form_is_unresolved(self):
+        self.findings.write_text("# F\n\n" + HEAD + self.ROWS.replace("rejected: not in scope", "—"))
+        code, r = self.ctx("--section", "convergence", "--change", "feat-a")
+        self.assertEqual(code, 1)
+        offs = r["convergence"]["feat-a"]["offenders"]
+        self.assertIn("unresolved (no routing or reason)", [o["reason"] for o in offs])
+
+    def test_REQ_W2_033_two_accepted_one_rejected_is_2_of_3(self):
+        from karvey_lib import metrics as M
+        rows = jd.read_rows_text(HEAD + self.ROWS)
+        recs = [{"id": "feat-a", "spec": spec(), "findings": [
+            {"id": r["id"], "type": r["type"], "origin": r["origin"], "status": r["status"],
+             "routed_to": r["routed to"]} for r in rows], "plan_rows": None, "archived_on": "2026-09-20"}]
+        v, _ = M.judge_acceptance(recs)
+        self.assertEqual(v, {"security": 0.67})
+
+
+HEAD = ("| ID | Date | Phase | Origin | Type | Severity | Finding | Status | Routed to |\n"
+        "|----|------|-------|--------|------|----------|---------|--------|-----------|\n")
 
 
 if __name__ == "__main__":

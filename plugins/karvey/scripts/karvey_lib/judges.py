@@ -292,6 +292,10 @@ def read_rows(path):
         text = Path(path).read_text(encoding="utf-8-sig")
     except OSError:
         return []
+    return read_rows_text(text)
+
+
+def read_rows_text(text):
     head, rows = None, []
     for ln in text.splitlines():
         if not ln.startswith("|"):

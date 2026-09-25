@@ -279,11 +279,11 @@ def judge_acceptance(changes):
         for f in rows:
             lens = f["origin"].split(":", 1)[1] or "unknown"
             a = acc.setdefault(lens, [0, 0])
-            st = f.get("status")
-            if st in ("routed", "closed", "accepted"):
+            st, to = f.get("status"), (f.get("routed_to") or "").strip()
+            if to.startswith("accepted:") or (not to.startswith("rejected:") and st in ("routed", "accepted")):
                 a[0] += 1
                 a[1] += 1
-            elif st == "rejected":
+            elif to.startswith("rejected:") or st == "rejected":
                 a[1] += 1
     acc = {k: v for k, v in acc.items() if v[1]}
     if not acc:

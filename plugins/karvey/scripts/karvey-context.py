@@ -761,6 +761,10 @@ def convergence(rd, ctx):
                 if f["type"] in ("bug", "spec-gap") and f["status"] in ("open", "routed"):
                     offenders.append({"kind": "finding", "change": cid, "id": f["id"], "type": f["type"],
                                       "reason": "%s %s" % (f["type"], f["status"])})
+                elif (f.get("origin") or "").startswith("judge:") and f["status"] == "closed" and \
+                        not re.match(r"^(accepted:(bug|spec-gap|emergent)\b|rejected:\s*\S)", f.get("routed_to") or ""):
+                    offenders.append({"kind": "finding", "change": cid, "id": f["id"], "type": f["type"],
+                                      "reason": "unresolved (no routing or reason)"})
             for bid in routed_bugs(cid, bugs, findings):
                 b = bugs.get(bid)
                 if b is None:
