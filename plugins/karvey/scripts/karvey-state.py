@@ -23,6 +23,7 @@ Commands:
                                         unless --write-spec (archive branch, REQ-W1-032)
   check-prod <change>                   the prod-gate's question (REQ-W1-023)
   lane <change> set|raise|lower <lane> [--answers F] [--reason R] [--by --role human --ref]   (lower: the human)
+  lane-check <change> --base REF [--head REF] [--finding F-NN]   (lane.diff hits → changes/{id}/checks.jsonl)
   lane-evidence <change> --bug BUG-NN --finding F-NN --regression-test PATH::NAME   (patch / hotfix)
   deploy-record <change> --env --version --verification pass|regression|not-evaluated [--rollback] [--evidence]
   advance <change> deployed --attested --ref D-NN --pipeline-run URL   (a clone without the ledger)
@@ -40,7 +41,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import approval, atomicio, lanes as ln, project as pj, schema_lite as sl  # noqa: E402
+from karvey_lib import approval, atomicio, gitlog, lanes as ln, modes, project as pj, schema_lite as sl  # noqa: E402
 
 TOOL = "karvey-state"
 SCHEMA_VERSION = 1
@@ -1630,6 +1631,33 @@ def cmd_lane_evidence(args, root):
     return kl.EXIT_OK, res, [], [], "%s: lane evidence %s" % (args.change, json.dumps(res["lane_evidence"]))
 
 
+def cmd_lane_check(args, root):
+    """``lane-check <change> --base REF [--head REF] [--finding F-NN]``: the diff against the lane's criteria
+    (REQ-W2-017). Each exceeded criterion is one ``lane.diff`` hit in ``changes/{id}/checks.jsonl``; the check's mode
+    (``check-modes.json``) decides the exit: warn → 0, blocking → 1. spec.json is never written."""
+    path, loaded = load_change(root, args.change)
+    lane = loaded.data.get("lane")
+    if not isinstance(lane, str) or lane not in ln.names():
+        res = {"change": args.change, "lane": lane, "exceeded": [], "text": "no lane: nothing to check"}
+        return kl.EXIT_OK, res, [], [], "%s: no lane recorded — lane check not evaluated" % args.change
+    mode = modes.resolve(root, "lane.diff")
+    try:
+        exceeded = ln.measure_diff(root, args.base, args.head, lane=lane, project=pj.load_project_json(root)[0])
+    except gitlog.GitLogError as exc:
+        raise Refused("cannot measure the diff: %s" % exc, code="state.git")
+    for e in exceeded:
+        modes.record_hit(root, args.change, "lane.diff", e, finding=args.finding, mode=mode["mode"])
+    raise_to = "standard" if exceeded and lane in ("patch", "hotfix", "docs") else None
+    res = {"change": args.change, "lane": lane, "mode": mode["mode"], "exceeded": exceeded, "propose": raise_to}
+    warns = [kl.issue("modes.lax", mode["warning"], severity="warning")] if mode.get("warning") else []
+    if not exceeded:
+        return kl.EXIT_OK, res, [], warns, "%s: lane check passed (%s)" % (args.change, lane)
+    human = "%s: lane check (%s, %s):\n%s\n  propose: lane raise %s" % (
+        args.change, lane, mode["mode"], "\n".join("  " + e for e in exceeded), raise_to or "(a larger lane)")
+    code = kl.EXIT_FINDINGS if modes.would_refuse(mode["mode"]) else kl.EXIT_OK
+    return code, res, [], warns, human
+
+
 VERIFICATIONS = ("pass", "regression", "not-evaluated")
 _ENV = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$")
 
@@ -1706,7 +1734,8 @@ def cmd_outcome(args, root):
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
             "check-prod": cmd_check_prod, "outcome": cmd_outcome,
-            "deploy-record": cmd_deploy_record, "lane": cmd_lane, "lane-evidence": cmd_lane_evidence}
+            "deploy-record": cmd_deploy_record, "lane": cmd_lane, "lane-evidence": cmd_lane_evidence,
+            "lane-check": cmd_lane_check}
 
 
 def build_parser():
@@ -1786,6 +1815,11 @@ def build_parser():
     lev.add_argument("--bug")
     lev.add_argument("--finding")
     lev.add_argument("--regression-test", dest="regression_test")
+    lck = sub.add_parser("lane-check", parents=[common], help="measure the diff against the lane (QA / QA-lite)")
+    lck.add_argument("change")
+    lck.add_argument("--base", required=True, help="the integration ref the change branches from")
+    lck.add_argument("--head", default="HEAD")
+    lck.add_argument("--finding", help="the F-NN QA opened for the exceeded criteria")
     dr = sub.add_parser("deploy-record", parents=[common], help="append a deploys[] entry (env, version, verification)")
     dr.add_argument("change")
     dr.add_argument("--env")

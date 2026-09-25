@@ -116,7 +116,13 @@ Ask (or infer from the pre-spec context):
 3. **Layers**: DB / Backend / Frontend / Infra (can be multiple).
 4. **Brief description**: 1-2 lines of the problem it solves.
 5. **Goal (north star)**: the observable, verifiable result that defines success. Save it verbatim in `spec.json:goal` and as a highlighted section of `prd.md`. Every phase re-reads it on start.
-6. **Change type**: `feature` (default) · `ops` · `hotfix` (`../karvey/rules/multi-agent.md` §6–7).
+6. **Lane** (`../karvey/rules/lanes.md`), decided from objective answers, never from a feeling of size: does it
+   touch UI? change a data schema? an API contract? permissions or a trust boundary? which Security Tier (item 2)?
+   how many code files? Write the answers to a temporary JSON file (`touches_ui`, `schema`, `api_contract`,
+   `permissions_or_trust` as true/false, `tier` and `code_files` as numbers; an answer nobody can give is `null`).
+   UI → `feature-ui`; no UI → `standard`; a small bug that meets the D-29 criterion → `patch`; no application
+   code → `ops`; a production defect that cannot wait → `hotfix`; documentation only → `docs`. An unknown answer
+   proposes `standard` and says which answer was unknown. The lane is recorded in Step 7, after `init`.
 7. **Multi-repo links** (only if `project.json:repos` has several repos): `links.parent` / `links.children`
    as `{change-id}@{repo}`, business `decisions`, and pinned `inputs` (`"{repo} {path} @{commit}"`), per `../karvey/rules/multi-agent.md`.
 
@@ -140,7 +146,6 @@ Write the descriptive fields to `docs/spec/changes/{change-id}/spec.json` (schem
   "layers": ["{DB|Backend|Frontend|Infra}"],
   "language": "es",
   "security_tier": 2,
-  "type": "{feature|ops|hotfix}",
   "links": { "parent": "", "children": [] },
   "decisions": ["D-NN"],
   "inputs": {},
@@ -154,6 +159,15 @@ Then let the state tool add the state (phase `init`, `phase_history`, `approvals
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" init "{change-id}" --by "{name}"
 ```
+
+Record the lane of Step 5 through the tool (`set patch` checks the answers and refuses with the failing
+criterion, e.g. `patch: schema change — use standard`; then propose that lane):
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" lane "{change-id}" set "{lane}" --answers "{answers.json}"
+```
+
+A lane is raised later with `lane raise` (freely, with a reason) and lowered only by the human (`lane lower`).
 
 Approvals are recorded later by each phase with `karvey-state.py approve … --by --role --ref` (`../karvey/rules/state-machine.md`).
 

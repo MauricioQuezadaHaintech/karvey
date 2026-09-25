@@ -30,6 +30,22 @@ git diff "$TARGET...$SOURCE"
 git log "$TARGET...$SOURCE" --oneline
 ```
 
+### Step 0B — Lane check (QA and QA-lite)
+
+The lane check measures the diff against the change's lane (`../karvey/rules/lanes.md`) before the review:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" lane-check "{change-id}" --base "$TARGET" --head "$SOURCE" --finding "{F-NN}"
+```
+
+Every exceeded criterion (`lane exceeded: 5 > 3 code files`, a schema or contract file in a `patch`) becomes one
+`findings.md` row (type `spec-gap`, origin `qa`, phase `qa`) with the proposal `lane raise {lane}`, and the tool
+records one `lane.diff` hit in `docs/spec/changes/{change-id}/checks.jsonl`. In 3.13 the check warns
+(`check-modes.json`); the prod gate shows its result. A `patch` or `hotfix` change also shows its `lane_evidence`
+(BUG-NN, finding, regression test): a missing regression test is reported as `patch without regression test`, and
+the incident cannot reach `RESUELTO`. QA-lite (the `patch`, `hotfix` and `docs` lanes) runs this step, Dimension
+1 (security) and Dimension 6 (versioning) only.
+
 ### Step 1 — Analysis across 9 dimensions
 
 Dispatch parallel subagents for dimensions 1–4, run 5–6 and 9 in the main context. Dimensions 7 (second opinion cross-model) and 8 (visual audit) run at the end, once the preliminary findings are consolidated:

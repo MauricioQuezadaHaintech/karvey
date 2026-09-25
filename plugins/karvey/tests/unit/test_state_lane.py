@@ -277,5 +277,34 @@ class Hotfix(GitBase):
         self.refused(("skip", "feat-a", "qa", "--reason", "x"), "not skippable")
 
 
+class LaneCheck(GitBase):
+    """@req REQ-W2-017 — the QA lane check records lane.diff hits."""
+
+    def test_REQ_W2_017_five_files_exceed_and_hit_recorded(self):
+        self.put(patch_at_impl())
+        g.commit_all(self.root, "base")
+        g.run(["checkout", "-q", "-b", "feature/feat-a"], self.root)
+        for i in range(5):
+            g.write(self.root, "src/m%d.py" % i, "x = %d\n" % i)
+        g.commit_all(self.root, "fix")
+        code, env = self.st("lane-check", "feat-a", "--base", "main", "--finding", "F-4")
+        self.assertEqual(code, 0, env)  # warn in 3.13
+        self.assertEqual(env["result"]["exceeded"], ["lane exceeded: 5 > 3 code files"])
+        self.assertEqual(env["result"]["propose"], "standard")
+        hits = (self.root / "docs/spec/changes/feat-a/checks.jsonl").read_text().splitlines()
+        self.assertEqual(json.loads(hits[0])["check"], "lane.diff")
+        self.assertEqual(json.loads(hits[0])["finding"], "F-4")
+
+    def test_two_files_pass(self):
+        self.put(patch_at_impl())
+        g.commit_all(self.root, "base")
+        g.run(["checkout", "-q", "-b", "feature/feat-a"], self.root)
+        g.write(self.root, "src/a.py", "a\n")
+        g.commit_all(self.root, "fix")
+        code, env = self.st("lane-check", "feat-a", "--base", "main")
+        self.assertEqual((code, env["result"]["exceeded"]), (0, []))
+        self.assertFalse((self.root / "docs/spec/changes/feat-a/checks.jsonl").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
