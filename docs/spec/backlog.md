@@ -52,6 +52,7 @@
 | BL-48 | 2026-09-24 | wave1-hardening / F-30 | spec-gap (deferred) | low | Release ledger is clone-local: `advance deployed` / `--write-spec` need the same clone | open | — | — |
 | BL-49 | 2026-09-24 | wave1-hardening / F-31 | spec-gap (deferred) | low | karvey-import cannot resume at the furthest phase the content supports | open | — | — |
 | BL-50 | 2026-09-24 | wave1-hardening / F-32 | spec-gap (deferred) | low | Per-period decision logs vs the single `docs/spec/decisions.md` path (L-30) | open | — | — |
+| BL-51 | 2026-09-25 | project-upgrade / F-51 | emergent | med | Project upgrade plan after each plugin update; statusline stable launcher (F-51) folds in | in change `project-upgrade` | D-20 | — |
 
 ## BL-01 — Run graphify over the repo at the end of all the changes
 - **Origin:** owner request (Mauricio Quezada Ibáñez), 2026-09-22, after publishing 3.8.0 / 3.9.0 and during the 3.9.1 docs sync.
@@ -300,3 +301,8 @@
 - **Origin:** change `wave1-hardening`, finding F-32 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
 - **Why:** One decision-log path (L-30): karvey-decisions described one file per period under `{ops_repo}/decisions/`, multi-agent.md named `docs/decisiones.md`; both now say `{ops_repo}/docs/spec/decisions.md` (the shape this repo uses). A project keeping per-period files needs a migration note; architecture §8 does not say which shape wins. (E1.F12.T7)
 - **Status:** open
+
+## BL-51 — Project upgrade plan after each plugin update (D-20)
+- **Origin:** owner request 2026-09-25 (D-20); statusline finding F-51 (README suggests a versioned plugin path for the statusline, which goes stale on the next update) folds in.
+- **Why:** updating the plugin never brings an existing project up to the new method (legacy shapes, copied hook shims, versioned statusline path, new standards). Routed to change `project-upgrade` (REQ-UP-001..032).
+- **Status:** in change `project-upgrade`
