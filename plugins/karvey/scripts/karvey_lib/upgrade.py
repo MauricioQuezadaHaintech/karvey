@@ -17,6 +17,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -24,7 +25,8 @@ from pathlib import Path
 
 from . import LIB_DIR, PLUGIN_ROOT, SCHEMAS_DIR, SCRIPTS_DIR
 from . import __version__ as INSTALLED
-from . import atomicio
+from . import atomicio, audit
+from . import project as pj
 from . import schema_lite as sl
 
 CATALOGUE_PATH = LIB_DIR / "upgrade-steps.json"
@@ -508,7 +510,7 @@ def plan(root, steps=None, registry=None, home=None, seen_version=_UNSET, instal
         if res.status == "applies" and res.edits:
             overlay_apply(overlay, res.edits)
     if seen_version is _UNSET:
-        rec = read_seen(root) if "read_seen" in globals() else None
+        rec = read_seen(root)
         seen_version = rec["version"] if rec else None
     failed = any(r["status"] == "check-failed" for r in rows)
     return Plan(seen_version, probe.installed, current_branch(root), rows, results, 1 if failed else 0)
@@ -535,3 +537,64 @@ def any_applicable(root, deadline, steps=None, registry=None, home=None):
         if res.status != "nothing":
             return "found"
     return "none"
+
+
+# --------------------------------------------------------------------------- the seen record (§1.3)
+VERSION_RE = re.compile(r"^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[0-9A-Za-z.]{1,20})?\Z")
+SEEN_NAME = "seen-version"
+SEEN_V = 1
+RESOLUTIONS = ("accepted", "declined", "empty")
+
+
+class SeenWriteError(Exception):
+    """The answer could not be recorded (read-only git dir, …): the offer repeats next session."""
+
+
+def seen_path(root, create=False):
+    return pj.state_dir(root, create=create) / SEEN_NAME
+
+
+def read_seen(root):
+    """The seen record of this clone, or None (absent, malformed or an unknown ``v`` count as absent)."""
+    try:
+        p = seen_path(root)
+        with open(p, encoding="utf-8-sig") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("v") != SEEN_V:
+        return None
+    if not isinstance(data.get("version"), str) or not VERSION_RE.match(data["version"]):
+        return None
+    if data.get("resolution") not in RESOLUTIONS:
+        return None
+    return data
+
+
+def _git_user(root):
+    rc, out = _git(["config", "--get", "user.name"], root)
+    name = out.strip() if rc == 0 else ""
+    return name[:100] or None
+
+
+def write_seen(root, version, resolution, from_version=_UNSET):
+    """Record ``resolution`` for ``version`` (0600 file in a 0700 dir, atomic, audited)."""
+    if not isinstance(version, str) or not VERSION_RE.match(version):
+        raise SeenWriteError("installed version %r is not a release number" % (version,))
+    if resolution not in RESOLUTIONS:
+        raise ValueError("resolution must be one of %s" % "|".join(RESOLUTIONS))
+    if from_version is _UNSET:
+        prev = read_seen(root)
+        from_version = prev["version"] if prev else None
+    rec = {"v": SEEN_V, "version": version, "resolution": resolution, "at": audit.now_iso(),
+           "by": _git_user(root), "from": from_version}
+    try:
+        d = pj.state_dir(root, create=True)
+        p = d / SEEN_NAME
+        atomicio.write_text_atomic(p, json.dumps(rec, ensure_ascii=False, indent=2) + "\n", expected_sha256="*",
+                                   mode=0o600)
+    except (OSError, atomicio.AtomicIOError) as exc:
+        raise SeenWriteError("[karvey] could not record the upgrade answer (%s); the offer will repeat next "
+                             "session" % (getattr(exc, "strerror", None) or exc))
+    audit.append(d, {"event": "upgrade.seen", "resolution": resolution, "version": version})
+    return rec

@@ -42,7 +42,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F1.T2 [Backend] Read-only `Probe`, `StepResult`, `Edit`, overlay — est: 12min (depends E1.F1.T1)
 - [x] E1.F1.T3 [Test] Fixtures `legacy-project` and `fake-home` (anonymised) — est: 8min (P)
 - [x] E1.F1.T4 [Backend] `plan(root)` and `any_applicable(root, deadline)` — est: 12min (depends E1.F1.T2, E1.F1.T3)
-- [ ] E1.F1.T5 [Backend] Seen record: `read_seen`, `write_seen`, `VERSION_RE`, audit line — est: 8min (depends E1.F1.T4)
+- [x] E1.F1.T5 [Backend] Seen record: `read_seen`, `write_seen`, `VERSION_RE`, audit line — est: 8min (depends E1.F1.T4)
 
 ### Feature E1.F2: Apply engine
 
@@ -96,7 +96,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F1.T2 [Backend] | ✅ done | 12 | 5 | 0 |  |
 | E1.F1.T3 [Test] | ✅ done | 8 | 5 | 0 |  |
 | E1.F1.T4 [Backend] | ✅ done | 12 | 5 | 0 |  |
-| E1.F1.T5 [Backend] | ⬜ todo | 8 | — | — | |
+| E1.F1.T5 [Backend] | ✅ done | 8 | 4 | 0 |  |
 | E1.F2.T1 [Backend] | ⬜ todo | 15 | — | — | |
 | E1.F2.T2 [Backend] | ⬜ todo | 12 | — | — | |
 | E1.F2.T3 [Backend] | ⬜ todo | 12 | — | — | |
