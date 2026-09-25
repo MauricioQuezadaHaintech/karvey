@@ -30,9 +30,16 @@
   "approvals": {
     "requirements": {
       "generated": true,
-      "approved": false
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-25T12:15:01+00:00",
+      "ref": "D-21",
+      "evidence": {
+        "marker": "none"
+      }
     }
   },
   "created_at": "2026-09-25T11:58:16+00:00",
-  "updated_at": "2026-09-25T12:06:49+00:00"
+  "updated_at": "2026-09-25T12:15:01+00:00"
 }
