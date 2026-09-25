@@ -1057,8 +1057,9 @@ CAT = LIB + "/upgrade-steps.json"
 STEPS = LIB + "/upgrade_steps.py"
 
 
-class L38(LintCase):
-    """The shipped catalogue, its schema and the step functions copied into the mini plugin, then mutated."""
+class UpgradeMiniPlugin(LintCase):
+    """The shipped catalogue, its schema and the step functions copied into the mini plugin (no tests here:
+    L38 and L39 both build on it, so the L-38 tests are not run twice — F-10)."""
 
     def setUp(self):
         super().setUp()
@@ -1082,6 +1083,10 @@ class L38(LintCase):
                     else:
                         st[k] = v
         self.t.write(CAT, cat)
+
+
+class L38(UpgradeMiniPlugin):
+    """The mini plugin's catalogue and step functions, mutated."""
 
     def test_the_shipped_catalogue_passes(self):
         self.assertPasses("L-38")
@@ -1248,8 +1253,8 @@ The first startup asks once; "Not for this version" declines; run `/karvey:karve
 """
 
 
-class L39(L38):
-    """The mini plugin with the upgrade tool (from L38's setUp) and its docs, then mutated."""
+class L39(UpgradeMiniPlugin):
+    """The mini plugin with the upgrade tool (from UpgradeMiniPlugin's setUp) and its docs, then mutated."""
 
     def setUp(self):
         super().setUp()

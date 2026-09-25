@@ -59,6 +59,8 @@ One multi-select question (AskUserQuestion, the person's language). Every listed
   ```bash
   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" seen --decline
   ```
+  Tell them the offer comes back with the **next Karvey version** (not the next session), and that
+  `/karvey:karvey-upgrade` runs the plan at any time.
 - The person picks **one or more** →
   ```bash
   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" seen --accept
@@ -85,7 +87,7 @@ git remote get-url origin >/dev/null 2>&1 && git fetch origin "$INTEG"
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" branch --json
 ```
 
-A dirty tree or an undeclared integration branch is refused by the tool with the paths / the key to set: relay it and stop.
+Keep the `branch` it returns (`chore/karvey-upgrade-<version>`): steps 9–10 write it **literally**. A dirty tree or an undeclared integration branch is refused by the tool with the paths / the key to set: relay it and stop.
 
 ### 7. Dry-run: show every diff
 
@@ -93,7 +95,7 @@ A dirty tree or an undeclared integration branch is refused by the tool with the
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" apply --steps "a,b" --dry-run --json
 ```
 
-Show each step's unified diff and the human and report output as returned. A step with `dry_run: false` has no preview: it gets **its own confirmation question**. Then **one** confirmation question: "Apply these changes?". No → stop (the branch stays, without commits). Keep the returned `preview` id.
+Show each step's unified diff **verbatim** (one diff block per step, not a summary of it) and the human and report output as returned. A step with `dry_run: false` has no preview: it gets **its own confirmation question**. Then **one** confirmation question: "Apply these changes?". No → stop (the branch stays, without commits). Keep the returned `preview` id.
 
 ### 8. Apply exactly what was previewed
 
@@ -115,11 +117,13 @@ The tool stages exactly the files it wrote and writes the message (`chore(karvey
 ### 10. Push and open one PR — never merge
 
 ```bash
-UB=$(git symbolic-ref --short HEAD)
-git push -u origin "$UB"
+git push -u origin chore/karvey-upgrade-<version>
 ```
 
-Open **one** PR from the upgrade branch to the integration branch with `pr_title` / `pr_body`, using the repository's host (`project.json:git_platform`, or the `origin` URL): `gh pr create --base "$INTEG" --head "$UB" --title … --body …` · `az repos pr create --target-branch "$INTEG" --source-branch "$UB" …` · `glab mr create --target-branch "$INTEG" --source-branch "$UB" …`. No PR tooling or no remote → print the exact commands for the person. A rejected push → report it with the retry command; the commit stays local. **Never merge**: the PR goes through the project's normal review.
+Write the branch returned by step 6 literally (above, `<version>` is the installed version): Karvey's own
+prod-gate refuses a push whose destination is a shell variable ("the push destination cannot be resolved").
+
+Open **one** PR from the upgrade branch to the integration branch with `pr_title` / `pr_body`, using the repository's host (`project.json:git_platform`, or the `origin` URL): `gh pr create --base <integration> --head chore/karvey-upgrade-<version> --title … --body …` · `az repos pr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> …` · `glab mr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> …`. No PR tooling or no remote → print the exact commands for the person. A rejected push → report it with the retry command; the commit stays local. **Never merge**: the PR goes through the project's normal review.
 
 ## What this skill never does
 

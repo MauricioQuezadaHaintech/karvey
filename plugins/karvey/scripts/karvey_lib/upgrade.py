@@ -525,8 +525,7 @@ def plan(root, steps=None, registry=None, home=None, seen_version=_UNSET, instal
         if res.status == "applies" and res.edits:
             overlay_apply(overlay, res.edits)
     if seen_version is _UNSET:
-        rec = read_seen(root)
-        seen_version = rec["version"] if rec else None
+        seen_version = upgraded_from(read_seen(root), probe.installed)
     failed = any(r["status"] == "check-failed" for r in rows)
     return Plan(seen_version, probe.installed, current_branch(root), rows, results, 1 if failed else 0)
 
@@ -586,6 +585,18 @@ def read_seen(root):
     return data
 
 
+def upgraded_from(rec, installed):
+    """The version this clone upgrades *from*: the record's own version, or — once the record already resolves
+    ``installed`` (the skill runs ``seen --accept`` before ``apply``/``commit``) — the version it resolved before
+    (its ``from``). Regression F-05: the journal, the commit title and the PR read ``<v> → <v>``."""
+    if rec is None:
+        return None
+    if rec["version"] == installed:
+        frm = rec.get("from")
+        return frm if isinstance(frm, str) and VERSION_RE.match(frm) and frm != installed else None
+    return rec["version"]
+
+
 def is_resolved(root, installed=None):
     """True when this clone already resolved the offer for ``installed`` (accepted, declined or empty)."""
     rec = read_seen(root)
@@ -605,8 +616,7 @@ def write_seen(root, version, resolution, from_version=_UNSET):
     if resolution not in RESOLUTIONS:
         raise ValueError("resolution must be one of %s" % "|".join(RESOLUTIONS))
     if from_version is _UNSET:
-        prev = read_seen(root)
-        from_version = prev["version"] if prev else None
+        from_version = upgraded_from(read_seen(root), version)
     rec = {"v": SEEN_V, "version": version, "resolution": resolution, "at": audit.now_iso(),
            "by": _git_user(root), "from": from_version}
     try:
@@ -1099,7 +1109,7 @@ def _write(root, rep, evals, top, common, installed):
     seen = read_seen(root)
     journal = read_journal(root)
     if not journal or journal.get("branch") != branch:
-        journal = {"v": JOURNAL_V, "branch": branch, "from": seen["version"] if seen else None, "to": installed,
+        journal = {"v": JOURNAL_V, "branch": branch, "from": upgraded_from(seen, installed), "to": installed,
                    "applied": [], "failed": {}, "not_run": [], "files": [], "preview": None}
     journal.update({"to": installed, "failed": {}, "not_run": [], "preview": rep.preview})
     todo = [(st, planned) for st, _, planned in evals if planned]

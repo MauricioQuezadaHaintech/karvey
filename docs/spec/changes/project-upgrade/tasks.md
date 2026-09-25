@@ -273,7 +273,7 @@ Total estimated time: 16 min (2 agent tasks + 2 `[human]`)
 **Verification:** `gh pr list --state open --json headRefName --jq '.[].headRefName'` in the throw-away repo → `chore/karvey-upgrade-<v>`; `git log -1 --format=%B origin/chore/karvey-upgrade-<v>` shows `Steps:`, `Picked-by:`, `Picked-at:`; a second session in the same clone shows no offer; each manual case marked PASS in the script.  
 **Rollback:** delete the throw-away repository and `rm -rf "$SCR"`; nothing in this repo or the user's home changed.  
 **Requirements:** REQ-UP-002, REQ-UP-018, REQ-UP-027, REQ-UP-028, REQ-UP-029  
-**Executed:** (filled when done: name · YYYY-MM-DD HH:MM · evidence)
+**Executed:** maintainer agent, headless under D-21 · 2026-09-25 13:28–13:43 UTC · evidence `qa/manual/e2e-2026-09-25.md` and `qa/manual/upgrade-skill-2026-09-25.md` — PASS after F-05/F-06/F-07 were fixed; the origin was a bare local repository, so the PR was offered as the exact `gh pr create` command (no PR host), and the `gh pr list` check does not apply
 
 ### E1.F8.T3 [Backend] Release docs: the `[Unreleased]` block declares the project upgrade — _Depends: E1.F8.T2_
 

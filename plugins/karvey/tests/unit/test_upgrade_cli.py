@@ -92,6 +92,106 @@ class CommitLibrary(unittest.TestCase):
         self.assertIn("nothing to commit", str(cm.exception))
 
 
+class RegressionProjectUpgradeFromVersion(unittest.TestCase):
+    """regression_project-upgrade_from_after_accept (F-05, E2E 2026-09-25): the skill runs `seen --accept` for
+    the installed version *before* `apply`/`commit`, so the journal, the commit title and the PR read
+    `<installed> → <installed>` instead of the version the clone upgrades from."""
+
+    def setUp(self):
+        g.isolate_git()
+        self.t = g.TempDir()
+        self.root = g.init(self.t.path / "proj")
+        g.write(self.root, "docs/spec/project.json", {"branch_flow": {"integration": "main", "production": "main"}})
+        g.write(self.root, "notes.txt", "hello\n")
+        g.commit_all(self.root)
+        self.steps = [appender("a", "A")]
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def _accept_apply_commit(self):
+        rec = upgrade.write_seen(self.root, INSTALLED, "accepted")          # the skill's `seen --accept`
+        rep = upgrade.apply(self.root, ["a"], steps=self.steps, registry=REG, installed=INSTALLED, dry_run=True)
+        upgrade.apply(self.root, ["a"], steps=self.steps, registry=REG, installed=INSTALLED, preview=rep.preview)
+        return rec, upgrade.commit(self.root, "The Owner", installed=INSTALLED)
+
+    def test_skill_order_keeps_the_previous_version(self):
+        upgrade.write_seen(self.root, "3.12.0", "declined")
+        rec, res = self._accept_apply_commit()
+        self.assertEqual(rec["from"], "3.12.0")
+        self.assertEqual(res["pr_title"], "chore(karvey): project upgrade 3.12.0 → %s" % INSTALLED)
+        self.assertIn("Project upgrade 3.12.0 → %s" % INSTALLED, res["pr_body"])
+        p = upgrade.plan(self.root, steps=self.steps, registry=REG, installed=INSTALLED)
+        self.assertEqual(p.from_version, "3.12.0")
+
+    def test_first_upgrade_in_a_clone_says_none(self):
+        rec, res = self._accept_apply_commit()
+        self.assertIsNone(rec["from"])
+        self.assertEqual(res["pr_title"], "chore(karvey): project upgrade none → %s" % INSTALLED)
+
+    def test_accepting_twice_keeps_the_original_from(self):
+        upgrade.write_seen(self.root, "3.12.0", "declined")
+        upgrade.write_seen(self.root, INSTALLED, "accepted")
+        self.assertEqual(upgrade.write_seen(self.root, INSTALLED, "accepted")["from"], "3.12.0")
+
+
+class RegressionProjectUpgradeSkillPush(unittest.TestCase):
+    """regression_project-upgrade_skill_push_literal (F-06, E2E 2026-09-25): the skill's step 10 pushed with
+    `git push -u origin "$UB"`, which Karvey's own prod-gate blocks ("the push destination cannot be resolved").
+    Every `git push` the skill prints must name the branch literally and pass the prod-gate on the upgrade branch."""
+    SKILL = _path.PLUGIN_ROOT / "skills" / "karvey-upgrade" / "SKILL.md"
+
+    def _pushes(self):
+        import re
+        text = self.SKILL.read_text(encoding="utf-8")
+        blocks = re.findall(r"```bash\n(.*?)```", text, re.S)
+        return [ln.strip() for b in blocks for ln in b.splitlines() if ln.strip().startswith("git push")]
+
+    def _gate(self, command):
+        from karvey_lib import karvey_hooks as kh
+        import io
+        t = g.TempDir()
+        self.addCleanup(t.cleanup)
+        g.isolate_git()
+        root = g.init(t.path / "proj", branch="dev")
+        g.write(root, "docs/spec/project.json", {"branch_flow": {"feature_prefix": "feature/", "integration": "dev",
+                                                                 "production": "main"}})
+        g.commit_all(root)
+        g.with_origin(root, branch="dev")
+        g.run(["checkout", "-q", "-b", "chore/karvey-upgrade-" + INSTALLED], root)
+        out, err = io.StringIO(), io.StringIO()
+        payload = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(root)}
+        code = kh.dispatch("pre-bash", json.dumps(payload), env=dict(os.environ, CLAUDE_PROJECT_DIR=str(root)),
+                           out=out, err=err)
+        return code, out.getvalue() + err.getvalue()
+
+    def test_skill_pushes_name_the_branch_literally(self):
+        pushes = self._pushes()
+        self.assertTrue(pushes, "the skill prints no git push")
+        for cmd in pushes:
+            self.assertNotIn("$", cmd, cmd)
+            code, text = self._gate(cmd.replace("<version>", INSTALLED))
+            self.assertEqual(code, 0, text)
+            self.assertNotIn("BLOCK", text)
+
+    def test_the_old_variable_push_is_blocked(self):
+        code, text = self._gate('UB=$(git symbolic-ref --short HEAD)\ngit push -u origin "$UB"')
+        self.assertIn("BLOCK", text)
+
+
+class RegressionProjectUpgradeSkillWording(unittest.TestCase):
+    """regression_project-upgrade_skill_wording (F-07, E2E 2026-09-25): after a decline the agent said the offer
+    "comes back next session" (it comes back with the next version), and it summarised the dry-run diffs
+    instead of showing them."""
+
+    def test_decline_and_dry_run_wording(self):
+        text = RegressionProjectUpgradeSkillPush.SKILL.read_text(encoding="utf-8")
+        decline = text.split("The person picks **none**", 1)[1].split("- The person picks **one or more**", 1)[0]
+        self.assertIn("next Karvey version", decline)
+        self.assertIn("not the next session", decline)
+        self.assertIn("unified diff **verbatim**", text)
+
+
 def run_tool(*args, cwd=None, home=None):
     env = dict(os.environ, **g.ISOLATED_ENV)
     if home:
