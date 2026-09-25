@@ -59,10 +59,14 @@
       "evidence": {
         "marker": "none"
       }
+    },
+    "tasks": {
+      "generated": true,
+      "approved": false
     }
   },
   "created_at": "2026-09-25T11:58:16+00:00",
-  "updated_at": "2026-09-25T12:28:14+00:00",
+  "updated_at": "2026-09-25T12:34:40+00:00",
   "skipped": {
     "mockup": "no UI",
     "design_graphic": "no UI",
