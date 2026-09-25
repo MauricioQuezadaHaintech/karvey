@@ -1,7 +1,7 @@
 # Plan: project-upgrade
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend
-**Created:** 2026-09-25 | **Status:** 👀 Test done (32/32 REQ-UP PASS) — in QA; E1.F8.T4 (prod OK) is `[human]`
+**Created:** 2026-09-25 | **Status:** 👀 QA review written (security gate PASS; not approved: spec-gaps open for karvey-iterate) — E1.F8.T4 (prod OK) is `[human]`
 **Skipped (planned):** mockup, design_graphic (no UI), infra (no cloud)
 **Release target:** the release right after 3.12.0 · **Flow:** trunk (`feature/project-upgrade` → PR → `main`) · **Decisions:** D-20
 
@@ -130,3 +130,20 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | 2026-09-25 | tasks | `tasks.md`: 25 tasks in 8 features (20 Backend, 3 Test, 2 `[human]`: the E2E offer → PR on a throw-away repo, and the prod OK), 262 min calibrated to realistic AI + review (the default scale ran ~10× high), critical path 144 min along `karvey_lib/upgrade.py`; 32/32 REQ-UP traced. Awaiting approval. |
 | 2026-09-25 | impl | 23 agent tasks done (E1.F1.T1 … E1.F8.T3), one commit each with its `[Unreleased]` line; whole-repo gate green (unit 860, regression 10, test-hooks 66, guard tables 325 cases / 396 runs, page 22, lint 0 errors, validate 0 errors). Findings F-01..F-04: L-38 treats a `since` newer than `plugin.json` as a warning while `[Unreleased]` holds entries (F-01, deviation from §1.8); `Probe.plugin_read` / `plugin_json` added for the shipped shims and schema (F-02); the test-hooks path and its isolated HOME (F-03); re-record the fingerprint if 3.12.0 ships first (F-04). E1.F8.T3 done before the `[human]` E1.F8.T2 on the owner's instruction (release text only). E1.F8.T2 and E1.F8.T4 await the owner. |
 | 2026-09-25 | test | Whole-repo gate green (unit 857, regression 10, test-hooks 66, guard tables 396 runs, page 22, lint 0 errors, validate 0 errors); E1.F8.T2 run headless under D-21 in a throw-away repo with a bare origin: offer → accept → PR offered, second session silent, decline until the version changes, manual script 6/6. F-05, F-06, F-07, F-10 bugs fixed with regression tests; F-08 spec-gap and F-09 emergent open for karvey-iterate. 32/32 REQ-UP PASS. Benchmark: startup hook median 114 ms with the offer, 113 ms without. `test_plan.md`, `test_evidence.md`. |
+| 2026-09-25 | qa | 9-dimension review `qa/REVISION_PR_feature-project-upgrade_20260925.md`: 20 findings (0 critical, 3 high, 8 medium, 9 low); security gate PASS; second opinion intra-model (FAIL on the reviewed code). Bugs F-11..F-20, F-30 fixed in the iterate micro-loop with regression tests (unit 870, all gates green). Open: spec-gaps F-08, F-21..F-27; emergent F-09, F-28, F-29. QA not approved (owner). |
+
+## QA Review
+
+Document: `qa/REVISION_PR_feature-project-upgrade_20260925.md` (2026-09-25). Security gate: PASS. Verdict: not approved: convergence needs the spec-gaps routed.
+
+| Finding | Severity | Type | Pending action |
+|---|---|---|---|
+| F-08 | low | spec-gap | `branch` when `origin/chore/karvey-upgrade-<v>` already exists (two clones) → `/karvey-iterate` |
+| F-21 | medium | spec-gap | REQ-UP-005 vs REQ-UP-023: no statusline must not keep the offer alive → `/karvey-iterate` |
+| F-22 | medium | spec-gap | archived `spec.json` migrated vs E-22 / D-14 → `/karvey-iterate` |
+| F-23 | medium | spec-gap | karvey-init does not write `plan_marker_ttl_min` → first-session offer → `/karvey-iterate` |
+| F-24 | low | spec-gap | dry-run base vs upgrade-branch base → `/karvey-iterate` |
+| F-25 | low | spec-gap | probe size cap / deadline-bound glob / hook watchdog → `/karvey-iterate` |
+| F-26 | low | spec-gap | L-38 scan gaps → `/karvey-iterate` |
+| F-27 | low | spec-gap | XDG state under `$HOME` outside git vs REQ-UP-016 → `/karvey-iterate` |
+| F-09, F-28, F-29 | low | emergent | backlog via `/karvey-iterate` |
