@@ -12,10 +12,19 @@ shims, add team settings, adopt new defaults. The steps are **data plus pure fun
 
 Python >= 3.9, standard library only. Every subprocess is an argv list.
 """
+import fnmatch
+import hashlib
+import importlib.util
 import json
+import os
+import subprocess
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import LIB_DIR, SCHEMAS_DIR
+from . import LIB_DIR, PLUGIN_ROOT, SCHEMAS_DIR, SCRIPTS_DIR
+from . import __version__ as INSTALLED
+from . import atomicio
 from . import schema_lite as sl
 
 CATALOGUE_PATH = LIB_DIR / "upgrade-steps.json"
@@ -109,3 +118,270 @@ def load_catalogue(path=None, registry=None):
             raise CatalogueError("step %s: writes outside %s" % (sid, "|".join(WRITE_SCOPES)))
         out.append(full)
     return out
+
+
+# --------------------------------------------------------------------------- results and edits (§1.4)
+STATUSES = ("nothing", "applies", "human", "report", "needs-input", "check-failed")
+EDIT_OPS = ("write", "delete")
+
+
+@dataclass
+class Edit:
+    """One planned file change. ``path`` is relative POSIX (to the project root for scope ``project``,
+    to the git common dir for scope ``git_dir``); ``before_sha256`` None = the file is created."""
+    op: str
+    path: str
+    scope: str = "project"
+    before_sha256: object = None
+    text: object = None
+
+    def __post_init__(self):
+        if self.op not in EDIT_OPS:
+            raise ValueError("edit op must be one of %s" % "|".join(EDIT_OPS))
+        if self.scope not in WRITE_SCOPES:
+            raise ValueError("edit scope must be one of %s" % "|".join(WRITE_SCOPES))
+        if self.op == "write" and not isinstance(self.text, str):
+            raise ValueError("a write edit carries text")
+
+
+@dataclass
+class StepResult:
+    status: str
+    summary: str = ""
+    edits: list = field(default_factory=list)
+    diff: str = ""
+    instructions: str = ""
+    warnings: list = field(default_factory=list)
+    inputs_needed: list = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.status not in STATUSES:
+            raise ValueError("status must be one of %s" % "|".join(STATUSES))
+
+
+class CheckFailed(Exception):
+    """Raised by a check that cannot decide (unreadable input): the row becomes ``check-failed``."""
+
+
+class NeedsInput(Exception):
+    """Raised by a fix whose values are missing or invalid: ``apply`` refuses naming them."""
+
+
+class ProbeError(Exception):
+    """A read the Probe does not allow (outside the root, a git sub-command off the list, …)."""
+
+
+class DeadlineExceeded(Exception):
+    """The probe's deadline passed (the hook's budget, REQ-UP-005)."""
+
+
+# --------------------------------------------------------------------------- the read-only Probe
+GIT_READ_ALLOW = (("rev-parse",), ("symbolic-ref",), ("show",), ("status", "--porcelain"), ("ls-files",),
+                  ("config", "--get"))
+HOME_FILES = (".claude/settings.json", ".claude/settings.local.json", ".claude/CLAUDE.md")
+HOME_READ_MAX = 1024 * 1024
+_MODULES = {}
+
+
+def _load_script(name, filename):
+    """``karvey-state.py`` / ``karvey-config.py`` loaded once with importlib (as karvey-context.py does)."""
+    if name not in _MODULES:
+        spec = importlib.util.spec_from_file_location(name, str(SCRIPTS_DIR / filename))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _MODULES[name] = mod
+    return _MODULES[name]
+
+
+def state_module():
+    return _load_script("karvey_state", "karvey-state.py")
+
+
+def config_module():
+    return _load_script("karvey_config", "karvey-config.py")
+
+
+def _sha_text(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+class JsonDoc:
+    """A JSON file as a step sees it: data, the format to write it back with, and its content hash."""
+    __slots__ = ("path", "data", "fmt", "sha256", "text")
+
+    def __init__(self, path, data, fmt, sha256, text):
+        self.path, self.data, self.fmt, self.sha256, self.text = path, data, fmt, sha256, text
+
+    def dumps(self, data):
+        return atomicio.dumps(data, **self.fmt)
+
+
+class Probe:
+    """The read-only view a step sees (§1.4). ``overlay`` maps a relative POSIX path to the pending
+    text (``None`` = pending deletion), so a later step reads what an earlier one will write."""
+
+    def __init__(self, root, overlay=None, home=None, installed=None, deadline=None):
+        self.root = Path(os.path.realpath(str(root)))
+        self.overlay = overlay if overlay is not None else {}
+        self._home = home
+        self.installed = installed or INSTALLED
+        self.deadline = deadline
+
+    # -- deadline (the hook's budget)
+    def check_deadline(self):
+        if self.deadline is not None and time.monotonic() > self.deadline:
+            raise DeadlineExceeded("probe deadline passed")
+
+    # -- the project tree
+    def _norm(self, rel):
+        if not isinstance(rel, str) or not rel:
+            raise ProbeError("empty path")
+        rel = rel.replace("\\", "/")
+        if rel.startswith("/") or (len(rel) > 1 and rel[1] == ":"):
+            raise ProbeError("absolute path refused: %s" % rel)
+        parts = [p for p in rel.split("/") if p not in ("", ".")]
+        if ".." in parts:
+            raise ProbeError("'..' refused: %s" % rel)
+        return "/".join(parts)
+
+    def _abs(self, rel):
+        rel = self._norm(rel)
+        p = self.root / rel
+        real = Path(os.path.realpath(str(p)))
+        if real != self.root and self.root not in real.parents:
+            raise ProbeError("outside the project root: %s" % rel)
+        return rel, p
+
+    def exists(self, rel):
+        rel, p = self._abs(rel)
+        if rel in self.overlay:
+            return self.overlay[rel] is not None
+        return p.is_file()
+
+    def read_text(self, rel):
+        """The file's text (overlay first), or None when absent."""
+        rel, p = self._abs(rel)
+        if rel in self.overlay:
+            return self.overlay[rel]
+        try:
+            return p.read_bytes().decode("utf-8")
+        except (FileNotFoundError, IsADirectoryError, NotADirectoryError):
+            return None
+        except UnicodeDecodeError as exc:
+            raise CheckFailed("not UTF-8: %s (%s)" % (rel, exc))
+        except OSError as exc:
+            raise CheckFailed("unreadable: %s (%s)" % (rel, exc))
+
+    def sha256(self, rel):
+        """Content hash of the current (overlay) text, or None when absent."""
+        text = self.read_text(rel)
+        return None if text is None else _sha_text(text)
+
+    def read_json(self, rel):
+        """A :class:`JsonDoc`, or None when absent. Invalid JSON raises :class:`CheckFailed`."""
+        text = self.read_text(rel)
+        if text is None:
+            return None
+        return _parse_json(text, rel)
+
+    def glob(self, pattern):
+        """Relative POSIX paths of files matching ``pattern`` under the root (overlay applied; ``.git`` and
+        ``node_modules`` never listed)."""
+        pattern = self._norm(pattern)
+        out = set()
+        for p in self.root.glob(pattern):
+            rel = p.relative_to(self.root).as_posix()
+            if ".git" in rel.split("/") or "node_modules" in rel.split("/") or not p.is_file():
+                continue
+            out.add(rel)
+        for rel, text in self.overlay.items():
+            if text is None:
+                out.discard(rel)
+            elif fnmatch.fnmatchcase(rel, pattern) or Path(rel).match(pattern):
+                out.add(rel)
+        return sorted(out)
+
+    # -- git (read-only sub-commands, argv only)
+    def git_read(self, *args):
+        """``(returncode, stdout)`` of an allowed read-only git sub-command."""
+        args = [str(a) for a in args]
+        if not any(tuple(args[:len(a)]) == a for a in GIT_READ_ALLOW):
+            raise ProbeError("git sub-command not allowed for a step: %s" % " ".join(args[:2]))
+        try:
+            cp = subprocess.run(["git", "--no-optional-locks"] + args, cwd=str(self.root), stdout=subprocess.PIPE,
+                                stderr=subprocess.DEVNULL, timeout=5, check=False)
+        except FileNotFoundError:
+            return 127, ""
+        except subprocess.TimeoutExpired:
+            return 124, ""
+        return cp.returncode, cp.stdout.decode("utf-8", "replace")
+
+    # -- the user's home (three fixed files, read only)
+    @property
+    def home(self):
+        return Path(self._home) if self._home else Path(os.path.expanduser("~"))
+
+    def home_read(self, rel):
+        """The text of one of the three allowed home files, or None when absent."""
+        if rel not in HOME_FILES:
+            raise ProbeError("home file not allowed: %s" % rel)
+        p = self.home / rel
+        try:
+            size = p.stat().st_size
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            raise CheckFailed("unreadable: ~/%s (%s)" % (rel, exc))
+        if size > HOME_READ_MAX:
+            raise CheckFailed("unreadable: ~/%s is larger than %d bytes" % (rel, HOME_READ_MAX))
+        try:
+            return p.read_bytes().decode("utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            raise CheckFailed("unreadable: ~/%s (%s)" % (rel, exc))
+
+    def home_json(self, rel):
+        text = self.home_read(rel)
+        if text is None:
+            return None
+        return _parse_json(text, "~/" + rel)
+
+    # -- the installed plugin's own files (shipped shims, schemas)
+    def plugin_read(self, rel):
+        rel = self._norm(rel)
+        p = PLUGIN_ROOT / rel
+        try:
+            return p.read_bytes().decode("utf-8")
+        except FileNotFoundError:
+            return None
+        except (OSError, UnicodeDecodeError) as exc:
+            raise CheckFailed("unreadable plugin file %s (%s)" % (rel, exc))
+
+    def plugin_json(self, rel):
+        text = self.plugin_read(rel)
+        return None if text is None else _parse_json(text, rel)
+
+    # -- the state and config tools, in process
+    @property
+    def state(self):
+        return state_module()
+
+    @property
+    def config(self):
+        return config_module()
+
+
+def _parse_json(text, where):
+    fmt = atomicio.detect_format(text)
+    body = text[1:] if fmt["bom"] else text
+    try:
+        data = json.loads(body)
+    except ValueError as exc:
+        raise CheckFailed("invalid JSON: %s (%s)" % (where, exc))
+    return JsonDoc(where, data, fmt, _sha_text(text), text)
+
+
+def overlay_apply(overlay, edits):
+    """Record ``edits`` (scope ``project``) in ``overlay`` so later reads see them."""
+    for e in edits:
+        if e.scope == "project":
+            overlay[e.path] = e.text if e.op == "write" else None
