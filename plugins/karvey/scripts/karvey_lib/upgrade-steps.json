@@ -7,6 +7,16 @@
      "cost": "scan"},
     {"id": "schema-migrate-proposed", "since": "3.13.0", "title": "Migrate legacy shapes of the proposed tier",
      "check": "schema_migrate_proposed_check", "fix": "schema_migrate_proposed_fix", "dry_run": true, "human": false,
-     "risk": "medium", "cost": "scan"}
+     "risk": "medium", "cost": "scan"},
+    {"id": "legacy-shims", "since": "3.13.0", "title": "Replace copied plan-gate / git-flow shims by enforcement flags",
+     "check": "legacy_shims_check", "fix": "legacy_shims_fix", "dry_run": true, "human": false, "risk": "medium",
+     "cost": "low",
+     "params": {"known_sha256": {
+       "plan-gate.sh": ["70a1ad41ac2fad0b30bc1f21e74d28cc1aa46c5238a2a548249b3eacfea33a2a",
+                        "61ff14dda983cba519dd85eee366245fc8c4c038819e4cc763305975a80ef473",
+                        "fb0dcc5cc5753de69d8ebd3b38fb94c0b4cde7dcabe975e11fec32984fcdc03c"],
+       "git-flow-guard.sh": ["701bde10ddc10ffa9708b393c6e4238dfad817c78700d86ee461209af2016da2",
+                             "d69c6e13d41ea05ddf290ec522697758d3ec9f4ee9eda175f2dc8f13b74a0b13",
+                             "bb50edcd7da58bf3d779f59a5cf875f4d492fe08f6cf42f1cacdf81244f385a6"]}}}
   ]
 }

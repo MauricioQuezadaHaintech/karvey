@@ -8,6 +8,9 @@ the user's home.
 
 Signatures: ``check(probe, params) -> StepResult`` · ``fix(probe, params, values) -> StepResult``.
 """
+import difflib
+import json
+
 from .upgrade import CheckFailed, Edit, StepResult
 
 PROJECT_JSON = "docs/spec/project.json"
@@ -94,9 +97,112 @@ def schema_migrate_proposed_fix(probe, params, values):
     return schema_migrate_proposed_check(probe, params)
 
 
+
+# --------------------------------------------------------------------------- 3 legacy-shims
+SHIMS = {"plan-gate.sh": "plan_gate_hook", "git-flow-guard.sh": "git_flow_hook"}
+SHIPPED_SHIMS = "skills/karvey/hooks/"
+SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json")
+
+
+def _strip_hook_entries(data, names):
+    """``(new_data, removed)``: ``data["hooks"]`` without the command entries that name one of ``names``;
+    empty groups, events and an empty ``hooks`` object are dropped."""
+    if not isinstance(data, dict) or not isinstance(data.get("hooks"), dict):
+        return data, 0
+    new = json.loads(json.dumps(data))
+    removed = 0
+    for event in list(new["hooks"]):
+        groups = new["hooks"][event]
+        if not isinstance(groups, list):
+            continue
+        keep_groups = []
+        for grp in groups:
+            if isinstance(grp, dict) and isinstance(grp.get("hooks"), list):
+                kept = [h for h in grp["hooks"] if not (isinstance(h, dict) and isinstance(h.get("command"), str)
+                                                        and any(n in h["command"] for n in names))]
+                removed += len(grp["hooks"]) - len(kept)
+                if not kept:
+                    continue
+                grp = dict(grp, hooks=kept)
+            keep_groups.append(grp)
+        if keep_groups:
+            new["hooks"][event] = keep_groups
+        else:
+            del new["hooks"][event]
+    if not new["hooks"]:
+        del new["hooks"]
+    return new, removed
+
+
+def legacy_shims_check(probe, params):
+    known = params.get("known_sha256") or {}
+    copies, edited = [], []
+    for name in SHIMS:
+        for rel in probe.glob(".claude/**/" + name):
+            if probe.sha256(rel) in (known.get(name) or []):
+                copies.append((name, rel))
+            else:
+                edited.append((name, rel))
+    diffs = []
+    for name, rel in edited:
+        shipped = probe.plugin_read(SHIPPED_SHIMS + name) or ""
+        diffs.append("".join(difflib.unified_diff(shipped.splitlines(True), (probe.read_text(rel) or "").splitlines(True),
+                                                  fromfile="shipped/" + name, tofile=rel)))
+    doc = probe.read_json(PROJECT_JSON) if copies else None
+    if copies and (doc is None or not isinstance(doc.data, dict)):
+        edited += copies
+        copies = []
+        diffs.append("(no readable docs/spec/project.json to carry enforcement.* — run /karvey:karvey-init "
+                     "--settings first)\n")
+    if not copies:
+        if not edited:
+            return StepResult("nothing")
+        return StepResult("human", summary="%d locally edited shim cop%s: review by hand" % (
+            len(edited), "y" if len(edited) == 1 else "ies"), diff="".join(diffs),
+            instructions="These copies differ from every shipped version; nothing is deleted. Keep your change "
+                         "or remove the copy and set project.json:enforcement.* yourself.")
+    edits = [Edit("delete", rel, before_sha256=probe.sha256(rel)) for _, rel in copies]
+    names = sorted({name for name, _ in copies})
+    removed_entries = 0
+    for sf in SETTINGS_FILES:
+        sdoc = probe.read_json(sf)
+        if sdoc is None:
+            continue
+        new, n = _strip_hook_entries(sdoc.data, names)
+        if n:
+            removed_entries += n
+            edits.append(Edit("write", sf, before_sha256=sdoc.sha256, text=sdoc.dumps(new)))
+    pdata = json.loads(json.dumps(doc.data))
+    enf = pdata.get("enforcement") if isinstance(pdata.get("enforcement"), dict) else {}
+    flags = []
+    for name in names:
+        key = SHIMS[name]
+        if enf.get(key) is not True:
+            enf[key] = True
+            flags.append("enforcement.%s = true" % key)
+    if flags:
+        pdata["enforcement"] = enf
+        edits.append(Edit("write", PROJECT_JSON, before_sha256=doc.sha256, text=doc.dumps(pdata)))
+    summary = "remove %s%s%s" % (", ".join(rel for _, rel in copies),
+                                  " + %d settings entr%s" % (removed_entries, "y" if removed_entries == 1 else "ies")
+                                  if removed_entries else "",
+                                  "; " + ", ".join(flags) if flags else "")
+    res = StepResult("applies", summary=summary, edits=edits, diff="".join(diffs))
+    if edited:
+        res.warnings.append("%d locally edited cop%s left for a human" % (len(edited), "y" if len(edited) == 1
+                                                                          else "ies"))
+    return res
+
+
+def legacy_shims_fix(probe, params, values):
+    return legacy_shims_check(probe, params)
+
+
 REGISTRY = {
     "schema_migrate_check": schema_migrate_check,
     "schema_migrate_fix": schema_migrate_fix,
     "schema_migrate_proposed_check": schema_migrate_proposed_check,
     "schema_migrate_proposed_fix": schema_migrate_proposed_fix,
+    "legacy_shims_check": legacy_shims_check,
+    "legacy_shims_fix": legacy_shims_fix,
 }
