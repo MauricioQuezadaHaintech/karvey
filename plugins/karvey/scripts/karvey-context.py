@@ -4,6 +4,7 @@
     karvey-context.py [--root DIR] [--change ID]
                       [--section overview|open-work|approvals|enforcement|calibration|convergence|close-report]
                       [--json]
+    karvey-context.py --metrics [--from YYYY-MM-DD --to YYYY-MM-DD] [--as-of YYYY-MM-DD] [--lane L] [--json]
 
 - Opens every file read-only and never writes, also under ``--json`` (REQ-W1-072). JSON is parsed as
   JSON; Markdown tables are parsed by header name (``Type``, ``Status``, …), never by position.
@@ -45,7 +46,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import outbox as obx  # noqa: E402
-from karvey_lib import approval, audit, project as pj  # noqa: E402
+from karvey_lib import approval, audit, metrics as mx, project as pj  # noqa: E402
 
 TOOL = "karvey-context"
 SECTIONS = ("overview", "open-work", "approvals", "enforcement", "close-report", "calibration", "convergence")
@@ -316,7 +317,7 @@ def read_findings(rd, cdir):
             continue
         items.append({"id": fid, "type": first_word(col(r, "type")), "status": first_word(col(r, "status")),
                       "status_text": col(r, "status"), "title": col(r, "title"),
-                      "routed_to": col(r, "routed to")})
+                      "routed_to": col(r, "routed to"), "origin": col(r, "origin"), "phase": col(r, "phase")})
     return items
 
 
@@ -861,6 +862,84 @@ def render(result, ctx):
     return "\n".join(L)
 
 
+# --------------------------------------------------------------------------- metrics (wave2 §1.6)
+_ISO_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _day(value, flag):
+    if value is None:
+        return None
+    if not _ISO_DAY.match(value):
+        raise ValueError("%s must be YYYY-MM-DD (got %r)" % (flag, value))
+    datetime.strptime(value, "%Y-%m-%d")
+    return value
+
+
+def metric_period(args):
+    """``(from, to, as_of)``: explicit inputs; without them the 28 days before ``--as-of`` (default today)."""
+    as_of = _day(args.as_of, "--as-of") or datetime.now().astimezone().date().isoformat()
+    to = _day(args.to, "--to") or as_of
+    frm = _day(args.frm, "--from") or (datetime.strptime(to, "%Y-%m-%d") - timedelta(days=28)).date().isoformat()
+    if frm > to:
+        raise ValueError("--from %s is after --to %s" % (frm, to))
+    return frm, to, as_of
+
+
+def metric_records(rd, frm, to):
+    """Change records (``karvey_lib.metrics``) of every change archived in ``[frm, to]``."""
+    arch = rd.root / pj.CHANGES_DIR / pj.ARCHIVE_NAME
+    out = []
+    if not arch.is_dir():
+        return out
+    for d in sorted((x for x in arch.iterdir() if x.is_dir()), key=lambda x: x.name):
+        on = d.name[:10] if _ISO_DAY.match(d.name[:10]) else None
+        if not on or on < frm or on > to:
+            continue
+        spec = rd.json(d / "spec.json", required=True)
+        if not isinstance(spec, dict):
+            continue
+        rows, _ = read_plan_rows(rd, d)
+        out.append({"id": spec.get("change_id") if isinstance(spec.get("change_id"), str) else d.name,
+                    "spec": spec, "findings": read_findings(rd, d), "plan_rows": rows, "archived_on": on})
+    return out
+
+
+def metrics_view(args, rd):
+    frm, to, as_of = metric_period(args)
+    recs = metric_records(rd, frm, to)
+    res = mx.compute_all(recs, frm, to, lane=args.lane)
+    res["period"] = {"from": frm, "to": to, "as_of": as_of}
+    if args.lane:
+        res["lane"] = args.lane
+    res["unreadable"] = list(rd.unreadable)
+    return res
+
+
+def _fmt_value(v):
+    if v is None:
+        return "n/a"
+    if isinstance(v, dict):
+        return ", ".join("%s %s" % (k, _fmt_value(x)) for k, x in sorted(v.items()))
+    return str(v)
+
+
+def render_metrics(res):
+    p = res["period"]
+    L = ["== METRICS %s .. %s (as of %s)%s ==" % (p["from"], p["to"], p["as_of"],
+                                                   " lane " + res["lane"] if res.get("lane") else ""),
+         "changes: %s" % (", ".join(res["changes"]) or "none")]
+    for m in mx.METRICS:
+        tot = res["total"][m]
+        L.append("%-26s %s" % (m, _fmt_value(tot["value"])))
+        for lane, vals in sorted(res["lanes"].items()):
+            L.append("  %-24s %s" % ("lane " + lane, _fmt_value(vals[m]["value"])))
+        for r in tot["reasons"]:
+            L.append("  %s" % r)
+    for u in res.get("unreadable", []):
+        L.append("unreadable: %s (%s)" % (u["path"], u["reason"]))
+    return "\n".join(L)
+
+
 # --------------------------------------------------------------------------- CLI
 def build_context(args, rd):
     project = rd.json(rd.root / pj.PROJECT_JSON)
@@ -885,6 +964,9 @@ def run(args):
     if root is None or not (Path(root) / pj.SPEC_DIR).is_dir():
         raise NotFound("no docs/spec here (not a Karvey project): %s" % (args.root or os.getcwd()))
     rd = Reader(root)
+    if args.metrics:
+        res = metrics_view(args, rd)
+        return kl.EXIT_OK, res, list(rd.warnings), render_metrics(res)
     ctx = build_context(args, rd)
     sections = [args.section] if args.section else list(DEFAULT_SECTIONS)
     result = {"root": str(root), "sections": sections}
@@ -905,6 +987,11 @@ def build_parser():
     p.add_argument("--change", help="limit approvals/enforcement to this change")
     p.add_argument("--section", choices=sorted(BUILDERS), help="print only this section")
     p.add_argument("--now", help=argparse.SUPPRESS)  # tests: a fixed 'now'
+    p.add_argument("--metrics", action="store_true", help="flow metrics over archived changes (read-only, reproducible)")
+    p.add_argument("--from", dest="frm", metavar="YYYY-MM-DD", help="--metrics: first day of the period")
+    p.add_argument("--to", metavar="YYYY-MM-DD", help="--metrics: last day of the period")
+    p.add_argument("--as-of", dest="as_of", metavar="YYYY-MM-DD", help="--metrics: the reference day (default today)")
+    p.add_argument("--lane", help="--metrics: only this lane")
     p.add_argument("--json", action="store_true", help="print one JSON envelope")
     return p
 
@@ -930,7 +1017,11 @@ def main(argv=None):
     except Exception as exc:  # pragma: no cover - last resort, exit 5
         return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL,
                                    errors=[kl.issue("internal", "%s: %s" % (type(exc).__name__, exc))]), args.json)
-    return kl.emit(kl.envelope(TOOL, code, result=result, warnings=warnings), args.json, human=human)
+    env = kl.envelope(TOOL, code, result=result, warnings=warnings)
+    if args.json and args.metrics:  # byte-identical output: sorted keys, no wall clock, no absolute path
+        sys.stdout.write(json.dumps(env, ensure_ascii=False, sort_keys=True) + "\n")
+        return code
+    return kl.emit(env, args.json, human=human)
 
 
 if __name__ == "__main__":

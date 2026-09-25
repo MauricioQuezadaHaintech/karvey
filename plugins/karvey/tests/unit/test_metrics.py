@@ -2,11 +2,29 @@
 
 @req REQ-W2-003 REQ-W2-004
 """
+import contextlib
+import importlib.util
+import io
 import json
+import shutil
+import subprocess
 import unittest
 
 import _path
+import _gitrepo as g
 from karvey_lib import metrics as M
+
+g.isolate_git()
+_SPEC = importlib.util.spec_from_file_location("karvey_context_m", str(_path.SCRIPTS_DIR / "karvey-context.py"))
+ctxmod = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(ctxmod)
+
+
+def run_ctx(*argv):
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+        code = ctxmod.main(list(argv))
+    return code, out.getvalue()
 
 FIX = _path.UNIT_DIR / "fixtures" / "metrics"
 ARCH = FIX / "docs/spec/changes/archive"
@@ -97,6 +115,61 @@ class Metrics(unittest.TestCase):
     def test_lane_filter(self):
         out = M.compute_all(self.recs, FRM, TO, lane="patch")
         self.assertEqual(out["changes"], ["beta"])
+
+
+class Cli(unittest.TestCase):
+    """@req REQ-W2-003 REQ-W2-005 — ``karvey-context.py --metrics``."""
+
+    def setUp(self):
+        self.t = g.TempDir()
+        self.root = g.init(self.t.path / "repo")
+        shutil.copytree(str(FIX / "docs"), str(self.root / "docs"))
+        g.run(["add", "-A"], self.root)
+        g.run(["commit", "-q", "-m", "fixtures"], self.root)
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def metrics(self, *extra):
+        return run_ctx("--root", str(self.root), "--metrics", "--from", FRM, "--to", TO, "--as-of", TO, "--json",
+                       *extra)
+
+    def test_REQ_W2_005_byte_identical_and_read_only(self):
+        c1, a = self.metrics()
+        c2, b = self.metrics()
+        self.assertEqual((c1, c2), (0, 0))
+        self.assertEqual(a, b)
+        st = subprocess.run(["git", "status", "--porcelain"], cwd=str(self.root), capture_output=True, text=True)
+        self.assertEqual(st.stdout, "")
+
+    def test_REQ_W2_005_sorted_keys_no_absolute_path(self):
+        _, out = self.metrics()
+        self.assertNotIn(str(self.root), out)
+        self.assertNotIn(str(self.t.path), out)
+        env = json.loads(out)
+        self.assertEqual(out.strip(), json.dumps(env, ensure_ascii=False, sort_keys=True))
+        self.assertEqual(env["result"]["total"]["lead_time_days"]["value"], 1.25)
+        self.assertEqual(env["result"]["period"], {"from": FRM, "to": TO, "as_of": TO})
+
+    def test_REQ_W2_004_empty_period(self):
+        _, out = run_ctx("--root", str(self.root), "--metrics", "--from", "2025-01-01", "--to", "2025-01-28",
+                         "--as-of", "2025-01-28", "--json")
+        tot = json.loads(out)["result"]["total"]
+        for m, r in tot.items():
+            self.assertIsNone(r["value"], m)
+            self.assertEqual(r["reasons"], ["n/a — no archived change in period"])
+
+    def test_lane_and_human_table(self):
+        _, out = self.metrics("--lane", "patch")
+        self.assertEqual(json.loads(out)["result"]["changes"], ["beta"])
+        code, human = run_ctx("--root", str(self.root), "--metrics", "--from", FRM, "--to", TO, "--as-of", TO)
+        self.assertEqual(code, 0)
+        self.assertIn("lead_time_days", human)
+        self.assertIn("n/a — approvals without time (delta)", human)
+
+    def test_bad_date_is_usage(self):
+        code, _ = run_ctx("--root", str(self.root), "--metrics", "--from", "09/01", "--json")
+        self.assertEqual(code, 2)
 
 
 if __name__ == "__main__":
