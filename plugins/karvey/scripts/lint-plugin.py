@@ -2105,6 +2105,107 @@ def _unreleased_has_entries(ctx):
     return False
 
 
+# --------------------------------------------------------------------------- L-39
+UPDATE_HEADING = "## Update to the latest version"
+
+
+def _section(lines, start_re, stop_re):
+    """``(line_no, lines)`` of the section whose heading matches ``start_re`` (up to ``stop_re``), or ``(0, [])``."""
+    for i, line in enumerate(lines):
+        if re.match(start_re, line):
+            out = []
+            for nxt in lines[i + 1:]:
+                if re.match(stop_re, nxt):
+                    break
+                out.append(nxt)
+            return i + 1, out
+    return 0, []
+
+
+def stable_statusline(ctx):
+    """``STABLE_STATUSLINE`` of the plugin's ``upgrade_steps.py`` (a string literal), or None."""
+    _, steps_py, _ = upgrade_paths(ctx)
+    try:
+        tree = ast.parse(ctx.read(steps_py) or "")
+    except SyntaxError:
+        return None
+    for n in tree.body:
+        if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "STABLE_STATUSLINE"
+                                             for t in n.targets):
+            try:
+                v = ast.literal_eval(n.value)
+            except ValueError:
+                return None
+            return v if isinstance(v, str) else None
+    return None
+
+
+def _statusline_commands(ctx, path):
+    out = []
+    for n, block in json_blocks(ctx, path):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        sl = data.get("statusLine") if isinstance(data, dict) else None
+        if isinstance(sl, dict) and isinstance(sl.get("command"), str):
+            out.append((n, sl["command"]))
+    return out
+
+
+@check("L-39", "The project upgrade is documented: the README upgrade section, the hooks README offer section with "
+               "its table anchors, the stable statusline command, and the release entry that ships it",
+       reqs=("UP-032", "UP-023"))
+def l39_upgrade_documented(ctx):
+    cat_path, steps_py, _ = upgrade_paths(ctx)
+    if not cat_path.is_file() or not steps_py.is_file():
+        return  # a plugin without the upgrade tool
+    readme = ctx.root / "README.md"
+    lines = ctx.lines(readme)
+    at, update = _section(lines, re.escape(UPDATE_HEADING) + r"\s*$", r"^## ")
+    if not at:
+        yield readme, 1, "README.md has no '%s' section" % UPDATE_HEADING
+    else:
+        sub_at, sub = _section(lines[at - 1:], r"^### .*[Uu]pgrad", r"^##+ ")
+        text = "\n".join(sub)
+        if not sub_at:
+            yield readme, at, "'%s' has no project-upgrade subsection (### Upgrading your project)" % UPDATE_HEADING
+        else:
+            for need, what in (("/karvey:karvey-upgrade", "the skill"), ("Not for this version", "how to decline"),
+                               ("plan", "the read-only plan")):
+                if need not in text:
+                    yield readme, at + sub_at - 1, "the upgrade subsection does not mention %s (%s)" % (need, what)
+    hooks_readme = ctx.plugin / "hooks" / "README.md"
+    hl = ctx.lines(hooks_readme)
+    off_at, offer = _section(hl, r"^## The upgrade offer\s*$", r"^## ")
+    if not off_at:
+        yield hooks_readme, 1, "hooks/README.md has no '## The upgrade offer' section"
+    elif not any(re.search(r"<!--\s*guard-case:[^>]*\bss-24", x) for x in offer):
+        yield hooks_readme, off_at, "'## The upgrade offer' carries no <!-- guard-case: ss-24… --> anchor"
+    want = stable_statusline(ctx)
+    cmds = _statusline_commands(ctx, hooks_readme)
+    if want is None:
+        yield steps_py, 1, "upgrade_steps.py defines no STABLE_STATUSLINE string"
+    elif not cmds:
+        yield hooks_readme, 1, "hooks/README.md shows no statusLine command"
+    else:
+        for n, cmd in cmds:
+            if cmd != want:
+                yield hooks_readme, n, "the statusLine command differs from upgrade_steps.STABLE_STATUSLINE (stable launcher)"
+    cat = ctx.json(cat_path) or {}
+    steps = [s_ for s_ in cat.get("steps") or [] if isinstance(s_, dict)]
+    sinces = [s_.get("since") for s_ in steps if isinstance(s_.get("since"), str)]
+    version, line, block = top_release(ctx)
+    if version and sinces and _vtuple(version) >= min(_vtuple(x) for x in sinces):
+        text = "\n".join(block)
+        ids = [s_.get("id") for s_ in steps if isinstance(s_.get("id"), str)]
+        if not (re.search(r"project upgrade", text, re.I) or any(NO_UPGRADE_RE.match(b) for b in block) or
+                any(i in text for i in ids)):
+            yield (ctx.root / "CHANGELOG.md", line, "release %s ships the project upgrade but its entry does not "
+                                                    "mention it (the upgrade steps or 'No project upgrade needed:')"
+                   % version)
+
+
 def path_filter(globs):
     if not globs:
         return None

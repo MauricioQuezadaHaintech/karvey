@@ -1044,7 +1044,7 @@ class ListAll(unittest.TestCase):
         self.assertEqual(code, 0, out)
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 39)])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)])
 
 
 if __name__ == "__main__":
@@ -1231,3 +1231,61 @@ class L37(LintCase):
         text = self.t.read(HOOK_SH)
         self.t.path(HOOK_SH).write_bytes(b"\xef\xbb\xbf" + text.replace("\n", "\r\n").encode("utf-8"))
         self.assertPasses("L-37")
+
+
+# --------------------------------------------------------------------------- L-39 (project-upgrade)
+README_UPGRADE = """
+## Update to the latest version
+
+Update the plugin.
+
+### Upgrading your project
+
+The first startup asks once; "Not for this version" declines; run `/karvey:karvey-upgrade` or
+`karvey-upgrade.py plan` by hand.
+
+## Next section
+"""
+
+
+class L39(L38):
+    """The mini plugin with the upgrade tool (from L38's setUp) and its docs, then mutated."""
+
+    def setUp(self):
+        super().setUp()
+        self.t.append("README.md", README_UPGRADE)
+        self.t.replace("CHANGELOG.md", "- The mini plugin.\n", "- The mini plugin and its project upgrade.\n")
+        from karvey_lib import upgrade_steps
+        block = json.dumps({"statusLine": upgrade_steps.STATUSLINE_BLOCK}, indent=2)
+        self.t.append("plugins/karvey/hooks/README.md",
+                      "\n## The upgrade offer\n\nIt prints two lines. <!-- guard-case: ss-24-offer -->\n\n"
+                      "## The statusline\n\n```json\n%s\n```\n" % block)
+
+    def test_documented_passes(self):
+        self.assertPasses("L-39")
+
+    def test_readme_section_removed(self):
+        self.t.replace("README.md", "### Upgrading your project\n", "")
+        self.assertFails("L-39", "no project-upgrade subsection")
+
+    def test_readme_section_without_the_decline(self):
+        self.t.replace("README.md", '"Not for this version" declines; ', "")
+        self.assertFails("L-39", "does not mention Not for this version")
+
+    def test_hooks_readme_section_removed(self):
+        self.t.replace("plugins/karvey/hooks/README.md", "## The upgrade offer\n", "## Something else\n")
+        self.assertFails("L-39", "no '## The upgrade offer' section")
+
+    def test_hooks_readme_section_without_anchor(self):
+        self.t.replace("plugins/karvey/hooks/README.md", " <!-- guard-case: ss-24-offer -->", "")
+        self.assertFails("L-39", "no <!-- guard-case: ss-24")
+
+    def test_stable_command_drifted(self):
+        self.t.replace("plugins/karvey/hooks/README.md", "head -1", "head -2")
+        self.assertFails("L-39", "differs from upgrade_steps.STABLE_STATUSLINE")
+
+    def test_the_release_that_ships_it_mentions_it(self):
+        self.t.replace("CHANGELOG.md", "- The mini plugin and its project upgrade.\n", "- Something else.\n")
+        self.assertFails("L-39", "release 1.0.0 ships the project upgrade but its entry does not mention it")
+        self.t.replace("CHANGELOG.md", "- Something else.\n", "- Something else; step legacy-shims.\n")
+        self.assertPasses("L-39")

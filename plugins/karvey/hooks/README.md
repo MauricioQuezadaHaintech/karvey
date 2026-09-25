@@ -46,17 +46,34 @@ first. Commits since the save that touch only the profile's own files (`state.js
 and read `matches (…; profile-only commits since the save)` (BUG-22). **A hook cannot invoke a skill**: crossing open questions against the decision log and proposing
 the next step stay the skill's job.
 
+## The upgrade offer
+
+After a plugin update, the first `startup` session in a Karvey project compares the installed version with the
+clone's seen-version record (`<git-common-dir>/karvey/seen-version`: shared by worktrees, never committed).
+When they differ and a step of the upgrade catalogue applies, it prints two lines (each at most `session.offer_line_max` characters) asking the session to put one question to the person. <!-- guard-case: ss-24-offer-on-version-change, ss-25-offer-absent-record -->
+On resume it prints nothing, and it stays silent outside a Karvey project or for a bare `docs/spec/`. <!-- guard-case: ss-26-no-offer-on-resume, ss-27-silent-outside-karvey, ss-28-bare-docs-spec-silent -->
+Once the person has answered ("Not for this version" runs `karvey-upgrade.py seen --decline`; the upgrade skill records the rest), that version stays silent in the clone and its worktrees. <!-- guard-case: ss-29-declined-no-offer, ss-34-worktree-shares-record -->
+When no step applies it records the version as seen (`empty`) and prints nothing. <!-- guard-case: ss-30-empty-plan-records-seen -->
+The probe has a budget (`session.upgrade_probe_ms` in `../scripts/karvey_lib/defaults.json`); past it the hook prints the offer anyway and records nothing. <!-- guard-case: ss-31-budget-exceeded-offers -->
+A broken step catalogue, a version that is not a release number or any error prints one line `[karvey] upgrade offer unavailable: <reason>` (without python: `python 3 not found`) and the session starts as usual. <!-- guard-case: ss-32-bad-catalogue-one-line, ss-35-degraded-no-python -->
+The offer lines are separate from the board and the handoff, whose bounds do not change. <!-- guard-case: ss-33-bounds-with-offer -->
+An unanswered offer is not recorded, so it comes back next session. The hook never fetches and never writes a
+project file; the plan and every write belong to `../scripts/karvey-upgrade.py` and the `/karvey:karvey-upgrade`
+skill.
+
 ## The statusline is installed by the user, once
 
 **A plugin cannot declare a statusline.** The script ships here and the user adds to
-`~/.claude/settings.json`:
+`~/.claude/settings.json` this **stable** command, which runs the newest installed Karvey, so a plugin update
+never breaks it (a path with a version in it goes stale at the next update; the upgrade step
+`statusline-launcher` detects it):
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "bash ~/.claude/plugins/<marketplace>/karvey/<version>/hooks/karvey-statusline.sh",
-    "padding": 0
+    "padding": 0,
+    "command": "bash -c 'f=$(ls -1dt \"$HOME\"/.claude/plugins/cache/*/karvey/*/hooks/karvey-statusline.sh 2>/dev/null | head -1); [ -n \"$f\" ] && exec bash \"$f\"'"
   }
 }
 ```

@@ -154,6 +154,26 @@ Then invoke the namespaced skills, for example:
 
 The skills' bodies are in English (what Claude reads), but **artifacts are generated in the project's language** (`spec.json` `language` field) and Claude replies in your language. Triggers are bilingual (English + Spanish).
 
+### Upgrading your project
+
+Updating the plugin never changes your project by itself. **When you are asked:** the first session that starts
+in a Karvey project after an update (once per clone, worktrees included) asks one question — *"Karvey
+3.12.0 → 3.13.0: do you want a plan to upgrade this project?"* — but only when some upgrade step applies;
+otherwise it records the version as seen and says nothing.
+
+- **Yes** runs `/karvey:karvey-upgrade`: a plan computed from the project's state (legacy file shapes, copied
+  hook shims, missing team settings, new enforcement defaults, the statusline and global-config diffs, changes
+  in flight), your pick, the exact diff, and only the picked steps applied on `chore/karvey-upgrade-<version>`
+  as one commit and one PR to review. Nothing is merged, and nothing under `~/.claude/` is written: the human
+  steps print what to change there.
+- **"Not for this version"** declines until the next version (`karvey-upgrade.py seen --decline`). An
+  unanswered question asks again next session.
+- **By hand, any time:** `/karvey:karvey-upgrade`, or read the plan without changing anything:
+
+```
+python3 plugins/karvey/scripts/karvey-upgrade.py plan
+```
+
 ## Knowledge graph (`graphify-out/`)
 
 The repo ships a [graphify](https://github.com/safishamsi/graphify) knowledge graph of the method itself (`project.json:knowledge_sync = "graphify"`): skills, shared rules, releases and the concepts that connect them.

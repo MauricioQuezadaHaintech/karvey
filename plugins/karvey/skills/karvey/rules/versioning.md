@@ -49,6 +49,7 @@ At the release step, before the first push (part of the 6-step checklist of `dep
 2. Bump the version once in each affected component/repo.
 3. Rename `## [Unreleased]` to `## [x.y.z] - date`, with its **Why** (`changelog-policy.md`).
 4. (If there is a front) verify/recommend a visible version in the UI — dev version in DEV, release version in PROD — and check it in the canary.
+5. (A release of the Karvey plugin itself) if its upgrade surface changed — lint check L-37 warns during `[Unreleased]` — add a project-upgrade step whose `since` is this release **or** a `- No project upgrade needed: <reason>` line in the release entry, then refresh the fingerprint with `karvey-upgrade.py surface --write`.
 
 ## QA items (`karvey-qa` Dimension 6)
 
