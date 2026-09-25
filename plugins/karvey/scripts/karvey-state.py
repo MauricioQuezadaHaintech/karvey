@@ -23,6 +23,7 @@ Commands:
                                         unless --write-spec (archive branch, REQ-W1-032)
   check-prod <change>                   the prod-gate's question (REQ-W1-023)
   lane <change> set|raise|lower <lane> [--answers F] [--reason R] [--by --role human --ref]   (lower: the human)
+  judge-run <change> <phase> --from FILE    judge_runs[] (model and intra_model required)
   lane-check <change> --base REF [--head REF] [--finding F-NN]   (lane.diff hits → changes/{id}/checks.jsonl)
   lane-evidence <change> --bug BUG-NN --finding F-NN --regression-test PATH::NAME   (patch / hotfix)
   deploy-record <change> --env --version --verification pass|regression|not-evaluated [--rollback] [--evidence]
@@ -41,7 +42,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import approval, atomicio, gitlog, lanes as ln, modes, project as pj, schema_lite as sl  # noqa: E402
+from karvey_lib import approval, atomicio, gitlog, judges as jd, lanes as ln, modes, project as pj  # noqa: E402
+from karvey_lib import schema_lite as sl  # noqa: E402
 
 TOOL = "karvey-state"
 SCHEMA_VERSION = 1
@@ -1463,6 +1465,14 @@ def cmd_approve(args, root):
         res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
         return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s); spec.json " \
                                         "untouched (D-03)" % (args.change, ref)
+    jmode = modes.resolve(root, "judges.mode")["mode"]
+    if jmode == "blocking":
+        fpath = change_spec_path(root, args.change).parent / "findings.md"
+        blocking = jd.open_blocking(fpath, key)
+        if blocking:
+            raise Refused("judges are blocking in this project: %s has open Critical/High judge finding(s) %s; "
+                          "route them with karvey-iterate first" % (key, ", ".join(blocking)),
+                          code="state.judge_blocking", result={"findings": blocking})
     marker, scope, _ = approval.find_valid(root, args.change, kinds=("plan", "prod"), ttl_min=reviewed_ttl(root))
     warnings = []
     if marker is None:
@@ -1631,6 +1641,59 @@ def cmd_lane_evidence(args, root):
     return kl.EXIT_OK, res, [], [], "%s: lane evidence %s" % (args.change, json.dumps(res["lane_evidence"]))
 
 
+JUDGE_REQUIRED = ("lens", "model", "intra_model", "verdict")
+
+
+def cmd_judge_run(args, root):
+    """``judge-run <change> <phase> --from FILE``: append the run records of ``karvey-judges.py collect`` to
+    ``judge_runs[]`` (REQ-W2-029, 030) — the only spec.json write of the judge flow."""
+    try:
+        with open(args.source, encoding="utf-8-sig") as fh:
+            recs = json.load(fh)
+    except (OSError, ValueError) as exc:
+        raise NotFound("--from %s is unreadable: %s" % (args.source, exc))
+    if isinstance(recs, dict):
+        recs = [recs]
+    if not isinstance(recs, list) or not recs:
+        raise Refused("--from must hold a non-empty list of judge run records", code="state.judge_run")
+    now = now_iso()
+    out = []
+    for i, r in enumerate(recs):
+        if not isinstance(r, dict):
+            raise Refused("record %d is not an object" % i, code="state.judge_run")
+        missing = [k for k in JUDGE_REQUIRED if k not in r or r[k] in (None, "")]
+        if not isinstance(r.get("intra_model"), bool) and "intra_model" not in missing:
+            missing.append("intra_model (boolean)")
+        if missing:
+            raise Refused("judge run record %d (%s) lacks %s: the model used and whether it was intra-model are "
+                          "always recorded" % (i, r.get("lens"), ", ".join(missing)), code="state.judge_run")
+        for k in ("usd", "tokens_in", "tokens_out"):
+            if k in r and (not isinstance(r[k], (int, float)) or isinstance(r[k], bool) or r[k] < 0):
+                raise Refused("judge run record %d: %s must be a non-negative number (got %r)" % (i, k, r[k]),
+                              code="state.judge_run")
+        rec = {k: v for k, v in r.items() if k in ("lens", "model", "intra_model", "verdict", "findings", "discarded",
+                                                   "tokens_in", "tokens_out", "usd", "estimated", "at")}
+        rec["phase"] = args.phase
+        rec.setdefault("at", now)
+        if not rec["at"]:
+            rec["at"] = now
+        out.append(rec)
+
+    def mutate(data):
+        log = data.get("judge_runs") if isinstance(data.get("judge_runs"), list) else []
+        log.extend(out)
+        data["judge_runs"] = log
+        data["updated_at"] = now
+        total = round(sum(j.get("usd", 0) for j in log if isinstance(j.get("usd"), (int, float))), 6)
+        return {"change": args.change, "phase": args.phase, "appended": len(out), "change_usd": total,
+                "estimated": any(j.get("estimated") for j in log)}
+
+    path, res, _ = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], [], "%s: %d judge run(s) recorded for %s · change total US$ %s%s" % (
+        args.change, res["appended"], args.phase, res["change_usd"], " (estimated)" if res["estimated"] else "")
+
+
 def cmd_lane_check(args, root):
     """``lane-check <change> --base REF [--head REF] [--finding F-NN]``: the diff against the lane's criteria
     (REQ-W2-017). Each exceeded criterion is one ``lane.diff`` hit in ``changes/{id}/checks.jsonl``; the check's mode
@@ -1735,7 +1798,7 @@ COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "activ
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
             "check-prod": cmd_check_prod, "outcome": cmd_outcome,
             "deploy-record": cmd_deploy_record, "lane": cmd_lane, "lane-evidence": cmd_lane_evidence,
-            "lane-check": cmd_lane_check}
+            "lane-check": cmd_lane_check, "judge-run": cmd_judge_run}
 
 
 def build_parser():
@@ -1820,6 +1883,10 @@ def build_parser():
     lck.add_argument("--base", required=True, help="the integration ref the change branches from")
     lck.add_argument("--head", default="HEAD")
     lck.add_argument("--finding", help="the F-NN QA opened for the exceeded criteria")
+    jr = sub.add_parser("judge-run", parents=[common], help="append judge run records (karvey-judges.py collect)")
+    jr.add_argument("change")
+    jr.add_argument("phase")
+    jr.add_argument("--from", dest="source", required=True, help="the run records file written by collect")
     dr = sub.add_parser("deploy-record", parents=[common], help="append a deploys[] entry (env, version, verification)")
     dr.add_argument("change")
     dr.add_argument("--env")

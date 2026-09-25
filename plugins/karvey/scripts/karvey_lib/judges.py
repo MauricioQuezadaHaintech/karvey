@@ -284,3 +284,34 @@ def append_findings(path, phase, kept, day):
         lines[last + 1:last + 1] = rows
         atomicio.write_text_atomic(str(path), "\n".join(lines) + "\n", expected_sha256=expected)
     return ids
+
+
+def read_rows(path):
+    """The rows of the findings table (by header name, lower-case keys), or []."""
+    try:
+        text = Path(path).read_text(encoding="utf-8-sig")
+    except OSError:
+        return []
+    head, rows = None, []
+    for ln in text.splitlines():
+        if not ln.startswith("|"):
+            head = None if rows or head is None else head
+            continue
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", ln.strip())[1:-1]]
+        if head is None:
+            head = [c.lower() for c in cells]
+            continue
+        if all(set(c) <= set("-: ") for c in cells):
+            continue
+        rows.append(dict(zip(head, cells)))
+    return rows
+
+
+def open_blocking(path, phase):
+    """Ids of ``open`` Critical/High judge findings of ``phase`` (REQ-W2-028)."""
+    out = []
+    for r in read_rows(path):
+        if (r.get("origin") or "").startswith("judge:") and r.get("phase") == phase \
+                and r.get("severity") in ("Critical", "High") and (r.get("status") or "").split(" ")[0] == "open":
+            out.append(r.get("id") or r.get("#") or "?")
+    return out
