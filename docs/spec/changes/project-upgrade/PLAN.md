@@ -1,7 +1,7 @@
 # Plan: project-upgrade
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend
-**Created:** 2026-09-25 | **Status:** 🔄 in_progress
+**Created:** 2026-09-25 | **Status:** 👀 Implementation complete — ready for test; E1.F8.T2 (owner's E2E) and E1.F8.T4 (prod OK) are `[human]`
 **Skipped (planned):** mockup, design_graphic (no UI), infra (no cloud)
 **Release target:** the release right after 3.12.0 · **Flow:** trunk (`feature/project-upgrade` → PR → `main`) · **Decisions:** D-20
 
@@ -25,12 +25,12 @@ computed from the project's state, previewed, and only the picked steps are appl
 
 | Feature | Area | Requirements | State |
 |---|---|---|---|
-| F1 | The once-per-version offer (session hook) | REQ-UP-001..006 | ⬜ |
-| F2 | The plan (upgrade tool `plan`) | REQ-UP-007..010 | ⬜ |
-| F3 | Applying the plan (upgrade tool `apply`) | REQ-UP-011..019 | ⬜ |
-| F4 | Initial step catalogue | REQ-UP-020..026 | ⬜ |
-| F5 | The upgrade skill `/karvey-upgrade` | REQ-UP-027..029 | ⬜ |
-| F6 | Every release declares its upgrade (L-37, docs) | REQ-UP-030..032 | ⬜ |
+| F1 | The once-per-version offer (session hook) | REQ-UP-001..006 | ✅ impl |
+| F2 | The plan (upgrade tool `plan`) | REQ-UP-007..010 | ✅ impl |
+| F3 | Applying the plan (upgrade tool `apply`) | REQ-UP-011..019 | ✅ impl |
+| F4 | Initial step catalogue | REQ-UP-020..026 | ✅ impl |
+| F5 | The upgrade skill `/karvey-upgrade` | REQ-UP-027..029 | ✅ impl |
+| F6 | Every release declares its upgrade (L-37, docs) | REQ-UP-030..032 | ✅ impl |
 
 ## Tasks
 
@@ -82,7 +82,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 - [x] E1.F8.T1 [Backend] Whole-repo gate and read-only dogfood plan — est: 8min (depends E1.F7.T3, E1.F6.T2, E1.F5.T2)
 - [ ] E1.F8.T2 [human] E2E offer → accept → PR on a throw-away repo + manual skill script — executor: owner (depends E1.F8.T1)
-- [ ] E1.F8.T3 [Backend] Release docs: `[Unreleased]` declares the project upgrade — est: 8min (depends E1.F8.T2)
+- [x] E1.F8.T3 [Backend] Release docs: `[Unreleased]` declares the project upgrade — est: 8min (depends E1.F8.T2)
 - [ ] E1.F8.T4 [human] Prod OK for the release (D-10), inside `karvey-deploy` — executor: owner (depends E1.F8.T3)
 
 ---
@@ -114,9 +114,9 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F7.T2 [Backend] | ✅ done | 15 | 10 | 0 | F-04: re-record the fingerprint if 3.12.0 ships first |
 | E1.F7.T3 [Backend] | ✅ done | 15 | 9 | 0 |  |
 | E1.F8.T1 [Backend] | ✅ done | 8 | 6 | 0 | gate: unit 860, regr 10, hooks 66, tables 325/396, page 22, lint 0E/5W, validate 0E; dogfood: enforcement-defaults applies, global-config human, changes-in-flight report, statusline-launcher nothing here (own statusline in this environment, not the versioned one §7 expected); tree clean |
-| E1.F8.T2 [human] | ⬜ todo | — | — | — | executor: owner |
-| E1.F8.T3 [Backend] | ⬜ todo | 8 | — | — | |
-| E1.F8.T4 [human] | ⬜ todo | — | — | — | executor: owner |
+| E1.F8.T2 [human] | 🙋 awaiting-human | — | — | — | executor: owner — E2E offer → accept → PR on a throw-away repo + `tests/manual/upgrade-skill.md` |
+| E1.F8.T3 [Backend] | ✅ done | 8 | 4 | 0 |  |
+| E1.F8.T4 [human] | 🙋 awaiting-human | — | — | — | executor: owner — prod OK inside karvey-deploy (D-10), after E1.F8.T3 |
 
 `estimate_min` is written here once; impl fills the two actual columns and never edits the estimate.
 
@@ -128,3 +128,4 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | 2026-09-25 | requirements | 32 EARS requirements in 6 areas (REQ-UP-001..032), spec-delta ADDED 32; D-20 and BL-51 recorded. Awaiting the owner's approval. REQ-UP-005 (no offer when nothing applies) is an interpretation of D-20 to confirm at this gate. |
 | 2026-09-25 | architecture | `architecture.md`: hook offer with an in-hook short-circuit probe (1.5 s budget), seen record resolved only by `karvey-upgrade.py seen` / the skill, engine as the single writer (pure step functions → edits, confinement, CAS, preview digest), 8 initial steps, skill flow to one PR, L-37 (release-surface fingerprint) + L-38 (catalogue) + L-39 (docs); 32/32 REQ-UP covered; architect decisions A-01..A-14 under D-21. Infra skipped (no cloud). Awaiting approval. |
 | 2026-09-25 | tasks | `tasks.md`: 25 tasks in 8 features (20 Backend, 3 Test, 2 `[human]`: the E2E offer → PR on a throw-away repo, and the prod OK), 262 min calibrated to realistic AI + review (the default scale ran ~10× high), critical path 144 min along `karvey_lib/upgrade.py`; 32/32 REQ-UP traced. Awaiting approval. |
+| 2026-09-25 | impl | 23 agent tasks done (E1.F1.T1 … E1.F8.T3), one commit each with its `[Unreleased]` line; whole-repo gate green (unit 860, regression 10, test-hooks 66, guard tables 325 cases / 396 runs, page 22, lint 0 errors, validate 0 errors). Findings F-01..F-04: L-38 treats a `since` newer than `plugin.json` as a warning while `[Unreleased]` holds entries (F-01, deviation from §1.8); `Probe.plugin_read` / `plugin_json` added for the shipped shims and schema (F-02); the test-hooks path and its isolated HOME (F-03); re-record the fingerprint if 3.12.0 ships first (F-04). E1.F8.T3 done before the `[human]` E1.F8.T2 on the owner's instruction (release text only). E1.F8.T2 and E1.F8.T4 await the owner. |
