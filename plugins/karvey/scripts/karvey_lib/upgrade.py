@@ -855,13 +855,118 @@ def apply(root, ids, dry_run=False, preview=None, inputs=None, confirm_no_previe
     return _write(root, rep, evals, top, common, installed)
 
 
+def journal_path(root, create=False):
+    return pj.state_dir(root, create=create) / JOURNAL_NAME
+
+
+def read_journal(root):
+    """The upgrade journal of this clone, or None (absent, malformed or unknown ``v``)."""
+    try:
+        with open(journal_path(root), encoding="utf-8-sig") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("v") != JOURNAL_V or not isinstance(data.get("files"), list):
+        return None
+    return data
+
+
+def _write_journal(root, data):
+    d = pj.state_dir(root, create=True)
+    atomicio.write_text_atomic(d / JOURNAL_NAME, json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                               expected_sha256="*", mode=0o600)
+
+
+def dirty_paths(root):
+    """Paths (relative to the git top level) with uncommitted changes, untracked files included."""
+    rc, out = _git(["--no-optional-locks", "status", "--porcelain", "-z", "--untracked-files=all"], root)
+    if rc != 0:
+        raise Refused("git status failed: %s" % out.strip()[:200])
+    paths, entries = [], out.split("\0")
+    i = 0
+    while i < len(entries):
+        e = entries[i]
+        i += 1
+        if len(e) < 4:
+            continue
+        code, path = e[:2], e[3:]
+        paths.append(path)
+        if "R" in code or "C" in code:
+            i += 1  # the rename source follows
+    return paths
+
+
+def _top_rel(root, top, rel):
+    return os.path.relpath(os.path.join(str(root), rel), str(top)).replace(os.sep, "/")
+
+
 def _prepare_tree(root, rep, dry_run, installed):
-    """Steps 3–4 (clean tree, upgrade branch): added with the write half."""
+    """Steps 3–4: a clean tree (except the files this upgrade already wrote on its branch)."""
+    if dry_run:
+        return rep
+    dirty = dirty_paths(root)
+    journal = read_journal(root)
+    allowed = set()
+    if journal and journal.get("branch") and journal.get("branch") == current_branch(root):
+        allowed = set(journal.get("files") or [])
+    blocking = [p for p in dirty if p not in allowed]
+    if blocking:
+        raise Refused("the working tree has uncommitted changes: %s — commit or stash them first"
+                      % ", ".join(blocking[:20]) + (" …" if len(blocking) > 20 else ""))
     return rep
 
 
 def _write(root, rep, evals, top, common, installed):
-    """Step 10 (the write half)."""
-    if any(planned for _, _, planned in evals):
-        raise Refused("apply writes are not available yet")
+    """Step 10: write step by step (CAS, atomic), stop at the first failure, journal after every step."""
+    branch = current_branch(root)
+    rep.branch = branch
+    seen = read_seen(root)
+    journal = read_journal(root)
+    if not journal or journal.get("branch") != branch:
+        journal = {"v": JOURNAL_V, "branch": branch, "from": seen["version"] if seen else None, "to": installed,
+                   "applied": [], "failed": {}, "not_run": [], "files": [], "preview": None}
+    journal.update({"to": installed, "failed": {}, "not_run": [], "preview": rep.preview})
+    todo = [(st, planned) for st, _, planned in evals if planned]
+    sdir = pj.state_dir(root, create=True)
+    for n, (st, planned) in enumerate(todo):
+        written = []
+        try:
+            for p in planned:
+                target = confine(root, p.edit, top, common)
+                rel = _top_rel(root, top, p.edit.path) if p.edit.scope == "project" else None
+                if p.edit.op == "write":
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    atomicio.write_text_atomic(target, p.edit.text, expected_sha256=p.edit.before_sha256)
+                else:
+                    with atomicio.lock(target):
+                        if atomicio.file_sha256(target) != p.edit.before_sha256:
+                            raise atomicio.CASConflict("changed by another writer, re-run: %s" % p.edit.path)
+                        os.remove(str(target))
+                if rel:
+                    written.append(rel)
+        except (OSError, atomicio.AtomicIOError, Refused) as exc:
+            reason = str(exc) + (" (already written: %s)" % ", ".join(written) if written else "")
+            rep.failed[st["id"]] = reason
+            rep.not_run = [s["id"] for s, _ in todo[n + 1:]]
+            rep.files += [w for w in written if w not in rep.files]
+            journal["failed"] = dict(rep.failed)
+            journal["not_run"] = list(rep.not_run)
+            journal["files"] = journal["files"] + [w for w in written if w not in journal["files"]]
+            journal["at"] = audit.now_iso()
+            _write_journal(root, journal)
+            audit.append(sdir, {"event": "upgrade.apply", "step": st["id"], "status": "failed", "files": written})
+            rep.lines.append("%s: FAILED — %s" % (st["id"], reason))
+            if rep.not_run:
+                rep.lines.append("not run: %s" % ", ".join(rep.not_run))
+            rep.exit = EXIT_FINDINGS
+            return rep
+        rep.applied.append(st["id"])
+        rep.files += [w for w in written if w not in rep.files]
+        if st["id"] not in journal["applied"]:
+            journal["applied"].append(st["id"])
+        journal["files"] = journal["files"] + [w for w in written if w not in journal["files"]]
+        journal["at"] = audit.now_iso()
+        _write_journal(root, journal)
+        audit.append(sdir, {"event": "upgrade.apply", "step": st["id"], "status": "applied", "files": written})
+        rep.lines.append("%s: applied (%s)" % (st["id"], ", ".join(written) or "no file"))
     return rep

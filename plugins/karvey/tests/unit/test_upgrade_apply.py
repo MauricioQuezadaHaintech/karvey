@@ -231,5 +231,99 @@ class PlanningHalf(Base):
         self.refused(steps, ["a"], "--confirm-no-preview: a")
 
 
+class WriteHalf(Base):
+    def run_apply(self, steps, ids, **kw):
+        rep = self.apply(steps, ids, dry_run=True, **kw)
+        return self.apply(steps, ids, preview=rep.preview, **kw)
+
+    def test_dirty_tree_refused_naming_the_paths(self):
+        g.write(self.root, "stray.txt", "x\n")
+        g.write(self.root, "notes.txt", "hello\nedited\n")
+        msg = self.refused([appender("a", "A")], ["a"], "uncommitted changes", preview="x")
+        self.assertIn("stray.txt", msg)
+        self.assertIn("notes.txt", msg)
+
+    def test_a_second_apply_may_find_its_own_files_dirty(self):
+        steps = [appender("a", "A"), appender("b", "B", file="other.txt")]
+        rep = self.run_apply(steps, ["a"])
+        self.assertEqual((rep.exit, rep.applied), (0, ["a"]))
+        rep = self.run_apply(steps, ["b"])
+        self.assertEqual((rep.exit, rep.applied), (0, ["b"]))
+        j = upgrade.read_journal(self.root)
+        self.assertEqual(j["applied"], ["a", "b"])
+        self.assertEqual(sorted(j["files"]), ["notes.txt", "other.txt"])
+        g.write(self.root, "stray.txt", "x\n")
+        self.refused([appender("c", "C")], ["c"], "stray.txt", preview="x")
+
+    def test_writes_are_atomic_and_compare_and_swap(self):
+        calls = []
+        real = upgrade.atomicio.write_text_atomic
+
+        def spy(path, text, expected_sha256=None, mode=None):
+            calls.append(expected_sha256)
+            return real(path, text, expected_sha256=expected_sha256, mode=mode)
+        upgrade.atomicio.write_text_atomic, orig = spy, real
+        try:
+            rep = self.run_apply([appender("a", "A")], ["a"])
+        finally:
+            upgrade.atomicio.write_text_atomic = orig
+        self.assertEqual(rep.applied, ["a"])
+        from karvey_lib import atomicio
+        self.assertEqual(calls[0], atomicio.sha256_bytes(b"hello\n"))
+        self.assertEqual((self.root / "notes.txt").read_text(encoding="utf-8"), "hello\nA\n")
+        rep = self.run_apply([step("d", "t_delete_check", "t_delete_fix", params={"file": "notes.txt"})], ["d"])
+        self.assertFalse((self.root / "notes.txt").exists())
+        self.assertEqual(rep.files, ["notes.txt"])
+
+    def test_step_two_of_three_fails(self):
+        steps = [appender("a", "A"), step("b", "t_append_check", "t_bad_cas", params={"file": "b.txt", "marker": "B"}),
+                 appender("c", "C", file="c.txt")]
+        rep = self.run_apply(steps, ["a", "b", "c"])
+        self.assertEqual(rep.exit, 1)
+        self.assertEqual(rep.applied, ["a"])
+        self.assertEqual(list(rep.failed), ["b"])
+        self.assertIn("changed by another writer", rep.failed["b"])
+        self.assertEqual(rep.not_run, ["c"])
+        self.assertEqual((self.root / "notes.txt").read_text(encoding="utf-8"), "hello\nA\n", "step 1 kept")
+        self.assertFalse((self.root / "b.txt").exists())
+        self.assertFalse((self.root / "c.txt").exists())
+        j = upgrade.read_journal(self.root)
+        self.assertEqual((j["applied"], list(j["failed"]), j["not_run"], j["files"]), (["a"], ["b"], ["c"],
+                                                                                         ["notes.txt"]))
+        again = upgrade.plan(self.root, steps=steps, registry=REG, seen_version=None)
+        self.assertEqual([r["id"] for r in again.rows() if r["status"] != "nothing"], ["b", "c"])
+
+    def test_a_second_apply_is_nothing_to_do(self):
+        steps = [appender("a", "A")]
+        self.run_apply(steps, ["a"])
+        before = self.snapshot()
+        rep = self.apply(steps, ["a"])
+        self.assertEqual((rep.exit, rep.nothing, rep.applied), (0, ["a"], []))
+        self.assertEqual(self.snapshot(), before)
+
+    def test_audit_line_per_step(self):
+        from karvey_lib import audit
+        from karvey_lib import project as pj
+        self.run_apply([appender("a", "A")], ["a"])
+        recs = [r for r in audit.read(pj.state_dir(self.root)) if r.get("event") == "upgrade.apply"]
+        self.assertEqual([(r["step"], r["status"], r["files"]) for r in recs], [("a", "applied", ["notes.txt"])])
+
+    def test_journal_mode(self):
+        import stat
+        self.run_apply([appender("a", "A")], ["a"])
+        self.assertEqual(stat.S_IMODE(upgrade.journal_path(self.root).stat().st_mode), 0o600)
+
+    def test_outside_git_apply_is_refused_plan_works(self):
+        plain = self.t.path / "plain"
+        g.write(plain, "docs/spec/project.json", {})
+        g.write(plain, "notes.txt", "x\n")
+        with self.assertRaises(upgrade.Refused) as cm:
+            upgrade.apply(plain, ["a"], steps=[appender("a", "A")], registry=REG, installed=INSTALLED)
+        self.assertIn("apply needs git", str(cm.exception))
+        rep = upgrade.apply(plain, ["a"], steps=[appender("a", "A")], registry=REG, installed=INSTALLED,
+                            dry_run=True)
+        self.assertIn("+A", rep.diffs["a"])
+
+
 if __name__ == "__main__":
     unittest.main()
