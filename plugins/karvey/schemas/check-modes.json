@@ -1,0 +1,29 @@
+{
+  "$comment": "The check-mode registry (architecture §1.5, wave2-structural). Every check Wave 2 introduces declares its mode for 3.13 and for 4.0 here and nowhere else; karvey_lib/modes.py resolves it. No 3.13 default is blocking (REQ-W2-084); 4.0 flips exactly schema.strict, gates.merged and release.manifest (D-24).",
+  "version": 1,
+  "strictness": {
+    "levels": ["off", "advisory", "warn", "blocking"],
+    "gate_levels": ["granular", "merged"]
+  },
+  "checks": [
+    {"id": "schema.strict", "refuses": "lane, phase_history and skipped required; legacy shapes are errors",
+     "defaults": {"3.13": "warn", "4.0": "blocking"}, "project_key": "schema_mode", "decision": "D-24"},
+    {"id": "gates.merged", "refuses": "(a default, not a refusal) three human gates instead of seven",
+     "defaults": {"3.13": "granular", "4.0": "merged"}, "project_key": "gates", "levels": "gate_levels",
+     "decision": "D-22, D-24"},
+    {"id": "release.manifest", "refuses": "unmapped commit or change without QA in the release manifest",
+     "defaults": {"3.13": "warn", "4.0": "blocking"}, "decision": "D-24, D-26"},
+    {"id": "lane.diff", "refuses": "the diff exceeds the lane's criteria",
+     "defaults": {"3.13": "warn", "4.0": "warn"}, "decision": null},
+    {"id": "coverage.requirements", "refuses": "requirement without a green test or a manual exception",
+     "defaults": {"3.13": "warn", "4.0": "warn"}, "decision": null},
+    {"id": "trailer.guard", "refuses": "commit on an active change's feature branch without a Karvey-Change trailer",
+     "defaults": {"3.13": "off", "4.0": "off"}, "project_key": "enforcement.trailer_guard", "decision": "D-26"},
+    {"id": "judges.mode", "refuses": "open Critical/High judge finding at approve",
+     "defaults": {"3.13": "advisory", "4.0": "advisory"}, "project_key": "judges.mode", "decision": "D-23"},
+    {"id": "security.tools", "refuses": "a security category not evaluated",
+     "defaults": {"3.13": "advisory", "4.0": "advisory"}, "decision": null},
+    {"id": "postdeploy.contract", "refuses": "deploy without a post-deploy contract",
+     "defaults": {"3.13": "advisory", "4.0": "advisory"}, "decision": null}
+  ]
+}
