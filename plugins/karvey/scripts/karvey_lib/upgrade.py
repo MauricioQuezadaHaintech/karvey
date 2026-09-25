@@ -385,3 +385,153 @@ def overlay_apply(overlay, edits):
     for e in edits:
         if e.scope == "project":
             overlay[e.path] = e.text if e.op == "write" else None
+
+
+# --------------------------------------------------------------------------- the plan (§1.4, REQ-UP-007..010)
+COST_ORDER = {"low": 0, "scan": 1}
+_UNSET = object()
+
+
+def _registry(registry):
+    return registry if registry is not None else _default_registry()
+
+
+def run_check(step, probe, registry=None):
+    """One step's check as a :class:`StepResult`; a raising check becomes ``check-failed`` (REQ-UP-009).
+
+    The catalogue's flags win over the function: a ``human`` or ``report_only`` step never carries edits
+    (a check may downgrade itself to ``human``, never upgrade itself to a write, §3.3)."""
+    fn = _registry(registry)[step["check"]]
+    try:
+        res = fn(probe, step["params"])
+    except DeadlineExceeded:
+        raise
+    except CheckFailed as exc:
+        res = StepResult("check-failed", summary="check-failed: %s" % exc)
+    except Exception as exc:  # a broken check must not stop the others
+        res = StepResult("check-failed", summary="check-failed: %s: %s" % (type(exc).__name__, exc))
+    if not isinstance(res, StepResult):
+        res = StepResult("check-failed", summary="check-failed: %s returned %s" % (step["check"], type(res).__name__))
+    if step["human"] and res.status in ("applies", "needs-input"):
+        res.status = "human"
+    if step["report_only"] and res.status in ("applies", "needs-input"):
+        res.status = "report"
+    if step["human"] or step["report_only"] or res.status not in ("applies",):
+        res.edits = []
+    return res
+
+
+def current_branch(root):
+    rc, out = _git(["symbolic-ref", "--quiet", "--short", "HEAD"], root)
+    return out.strip() if rc == 0 and out.strip() else None
+
+
+def _git(args, cwd, timeout=5, env=None):
+    """``(returncode, stdout)`` of ``git <args>`` (argv, never a shell; stdout not stripped)."""
+    try:
+        cp = subprocess.run(["git"] + list(args), cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            timeout=timeout, check=False, env=env)
+    except FileNotFoundError:
+        return 127, ""
+    except subprocess.TimeoutExpired:
+        return 124, ""
+    except (NotADirectoryError, OSError):
+        return 128, ""
+    out = cp.stdout.decode("utf-8", "replace")
+    if cp.returncode != 0 and not out:
+        out = cp.stderr.decode("utf-8", "replace")
+    return cp.returncode, out
+
+
+@dataclass
+class Plan:
+    from_version: object
+    to_version: str
+    computed_on: object
+    steps: list
+    results: dict
+    exit: int
+
+    def rows(self):
+        return list(self.steps)
+
+    def as_json(self):
+        return {"from": self.from_version, "to": self.to_version, "computed_on": self.computed_on,
+                "steps": [dict(r) for r in self.steps]}
+
+    def nothing_to_do(self):
+        return all(r["status"] == "nothing" for r in self.steps)
+
+    def table(self):
+        head = "Karvey project upgrade %s → %s (computed on %s)" % (
+            self.from_version or "(none resolved)", self.to_version, self.computed_on or "no branch")
+        if self.nothing_to_do():
+            return head + "\nnothing to do: every step is already satisfied."
+        lines = [head, "", "| step | what changes | dry-run | risk | needs human |", "|---|---|---|---|---|"]
+        for r in self.steps:
+            if r["status"] == "nothing":
+                continue
+            what = r["summary"] or r["status"]
+            if r["status"] not in ("applies",):
+                what = "[%s] %s" % (r["status"], what)
+            lines.append("| %s | %s | %s | %s | %s |" % (r["id"], what.replace("|", "/"),
+                                                        "yes" if r["dry_run"] else "no", r["risk"],
+                                                        "yes" if r["human"] else "no"))
+        done = [r["id"] for r in self.steps if r["status"] == "nothing"]
+        if done:
+            lines.append("")
+            lines.append("already satisfied: %s" % ", ".join(done))
+        for r in self.steps:
+            for w in r["warnings"]:
+                lines.append("  %s: %s" % (r["id"], w))
+        return "\n".join(lines)
+
+
+def _row(step, res):
+    return {"id": step["id"], "since": step["since"], "title": step["title"], "status": res.status,
+            "summary": res.summary, "dry_run": step["dry_run"], "risk": step["risk"],
+            "human": bool(step["human"] or res.status == "human"), "report_only": step["report_only"],
+            "inputs_needed": list(res.inputs_needed), "warnings": list(res.warnings)}
+
+
+def plan(root, steps=None, registry=None, home=None, seen_version=_UNSET, installed=None):
+    """Evaluate **every** step in catalogue order over one overlay. Writes nothing (REQ-UP-010)."""
+    if steps is None:
+        steps = load_catalogue(registry=registry)
+    overlay = {}
+    probe = Probe(root, overlay=overlay, home=home, installed=installed)
+    rows, results = [], {}
+    for st in steps:
+        res = run_check(st, probe, registry)
+        results[st["id"]] = res
+        rows.append(_row(st, res))
+        if res.status == "applies" and res.edits:
+            overlay_apply(overlay, res.edits)
+    if seen_version is _UNSET:
+        rec = read_seen(root) if "read_seen" in globals() else None
+        seen_version = rec["version"] if rec else None
+    failed = any(r["status"] == "check-failed" for r in rows)
+    return Plan(seen_version, probe.installed, current_branch(root), rows, results, 1 if failed else 0)
+
+
+def any_applicable(root, deadline, steps=None, registry=None, home=None):
+    """The hook's short-circuit probe (REQ-UP-005): ``found`` (a step does not return ``nothing``),
+    ``failed`` (a check raised), ``timeout`` (the deadline passed first) or ``none``.
+
+    Steps run in ``cost`` order (``low`` first, then ``scan``) and it stops at the first hit."""
+    if steps is None:
+        steps = load_catalogue(registry=registry)
+    ordered = sorted(steps, key=lambda s: COST_ORDER.get(s["cost"], 1))
+    probe = Probe(root, home=home, deadline=deadline)
+    for st in ordered:
+        if time.monotonic() > deadline:
+            return "timeout"
+        try:
+            res = run_check(st, probe, registry)
+        except DeadlineExceeded:
+            return "timeout"
+        if res.status == "check-failed":
+            return "failed"
+        if res.status != "nothing":
+            return "found"
+    return "none"
