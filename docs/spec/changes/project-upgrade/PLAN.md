@@ -38,7 +38,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F1: Engine foundation — catalogue, Probe, plan, seen record
 
-- [ ] E1.F1.T1 [Backend] Catalogue contract: schema, `load_catalogue`, `CatalogueError`, empty `REGISTRY` — est: 12min
+- [x] E1.F1.T1 [Backend] Catalogue contract: schema, `load_catalogue`, `CatalogueError`, empty `REGISTRY` — est: 12min
 - [ ] E1.F1.T2 [Backend] Read-only `Probe`, `StepResult`, `Edit`, overlay — est: 12min (depends E1.F1.T1)
 - [ ] E1.F1.T3 [Test] Fixtures `legacy-project` and `fake-home` (anonymised) — est: 8min (P)
 - [ ] E1.F1.T4 [Backend] `plan(root)` and `any_applicable(root, deadline)` — est: 12min (depends E1.F1.T2, E1.F1.T3)
@@ -92,7 +92,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 | Task | Status | estimate_min | actual_ai_min | actual_review_min | Notes |
 |------|--------|--------------|---------------|-------------------|-------|
-| E1.F1.T1 [Backend] | ⬜ todo | 12 | — | — | |
+| E1.F1.T1 [Backend] | ✅ done | 12 | 7 | 0 |  |
 | E1.F1.T2 [Backend] | ⬜ todo | 12 | — | — | |
 | E1.F1.T3 [Test] | ⬜ todo | 8 | — | — | |
 | E1.F1.T4 [Backend] | ⬜ todo | 12 | — | — | |

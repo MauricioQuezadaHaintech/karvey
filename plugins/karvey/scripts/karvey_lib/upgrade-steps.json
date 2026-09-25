@@ -1,0 +1,9 @@
+{
+  "$comment": "The project-upgrade step catalogue (schema: schemas/upgrade-steps.schema.json). Order is the apply order. Functions live in upgrade_steps.REGISTRY; since is the release that added the step.",
+  "catalogue_version": 1,
+  "steps": [
+    {"id": "placeholder", "since": "3.13.0", "title": "Placeholder (removed with the first real step)",
+     "check": "placeholder_nothing", "fix": null, "dry_run": false, "human": false, "risk": "low",
+     "report_only": true}
+  ]
+}
