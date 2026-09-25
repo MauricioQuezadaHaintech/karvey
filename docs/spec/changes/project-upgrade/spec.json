@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "change_id": "project-upgrade",
+  "phase": "init",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-25T11:58:16+00:00",
+      "by": "Mauricio Quezada Ibáñez"
+    }
+  ],
+  "approvals": {},
+  "created_at": "2026-09-25T11:58:16+00:00",
+  "updated_at": "2026-09-25T11:58:16+00:00"
+}
