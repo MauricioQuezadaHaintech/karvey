@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-25 (wave1-hardening E1.F17.T7: BUG-26 RESUELTO, F-53). Before: 2026-09-25 (E1.F17.T1: BUG-22 RESUELTO).
+Last updated: 2026-09-25 (wave1-hardening E1.F17.T4..T8: BUG-23..26 RESUELTO from the manual-script findings F-50..F-53; BUG-25 reopened by its rerun and resolved again with the subagent-prompt guard). Before: 2026-09-25 (E1.F17.T1: BUG-22 RESUELTO).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|

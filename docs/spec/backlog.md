@@ -52,7 +52,8 @@
 | BL-48 | 2026-09-24 | wave1-hardening / F-30 | spec-gap (deferred) | low | Release ledger is clone-local: `advance deployed` / `--write-spec` need the same clone | open | — | — |
 | BL-49 | 2026-09-24 | wave1-hardening / F-31 | spec-gap (deferred) | low | karvey-import cannot resume at the furthest phase the content supports | open | — | — |
 | BL-50 | 2026-09-24 | wave1-hardening / F-32 | spec-gap (deferred) | low | Per-period decision logs vs the single `docs/spec/decisions.md` path (L-30) | open | — | — |
-| BL-51 | 2026-09-25 | project-upgrade / F-51 | emergent | med | Project upgrade plan after each plugin update; statusline stable launcher (F-51) folds in | in change `project-upgrade` | D-20 | — |
+| BL-51 | 2026-09-25 | project-upgrade / owner request (D-20) | emergent | med | Project upgrade plan after each plugin update; the statusline stable-launcher item folds in | in change `project-upgrade` | D-20 | — |
+| BL-52 | 2026-09-25 | wave1-hardening / F-54 | spec-gap (deferred) | low | `spec.json:clickup.feature_ids` is an array; tracker ids should be keyed by natural key like `task_ids` | routed to change `wave2-structural` | — | wave2-structural |
 
 ## BL-01 — Run graphify over the repo at the end of all the changes
 - **Origin:** owner request (Mauricio Quezada Ibáñez), 2026-09-22, after publishing 3.8.0 / 3.9.0 and during the 3.9.1 docs sync.
@@ -303,6 +304,17 @@
 - **Status:** open
 
 ## BL-51 — Project upgrade plan after each plugin update (D-20)
-- **Origin:** owner request 2026-09-25 (D-20); statusline finding F-51 (README suggests a versioned plugin path for the statusline, which goes stale on the next update) folds in.
+- **Origin:** owner request 2026-09-25 (D-20); the statusline stable-launcher item (README suggests a versioned plugin path for the statusline, which goes stale on the next update) folds in.
 - **Why:** updating the plugin never brings an existing project up to the new method (legacy shapes, copied hook shims, versioned statusline path, new standards). Routed to change `project-upgrade` (REQ-UP-001..032).
 - **Status:** in change `project-upgrade`
+
+## BL-52 — `clickup.feature_ids` keyed by natural key, like `task_ids`
+- **Origin:** change `wave1-hardening`, finding F-54 (spec-gap, low), seen during the E1.F17.T3 manual scripts
+  (`find-or-create`, `missing-status-map`); not an Expected line of any script, so not fixed in Wave 1.
+- **Why:** `spec.schema.json` types `clickup.feature_ids` as an array while `task_ids` is a map keyed by natural key, and
+  `management-adapters.md` stores every tracker id by its natural key for find-or-create. With an array a Feature id
+  loses its key `E{n}.F{n}`; an agent that wrote the keyed form had to rewrite it as an array to pass `validate`.
+  Decide the shape: a keyed map `{"E1.F1": "<id>"}`, with the array kept as a legacy warning and migrated by
+  `validate --fix`.
+- **Scope:** schema, `validate --fix` migration, the find-or-create text in `management-adapters.md` / `karvey-tasks`.
+- **Status:** routed to change `wave2-structural`

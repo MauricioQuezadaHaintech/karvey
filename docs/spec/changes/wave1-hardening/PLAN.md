@@ -192,11 +192,12 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 - [x] E1.F17.T1 [Backend] BUG-22: profile-only commits after a save are not drift — est: 30min (depends E1.F6.T1)
 - [x] E1.F17.T2 [Backend] Status names may contain `( )` (F-19) — est: 20min (depends E1.F7.T1)
-- [ ] E1.F17.T3 [human] Run the 10 manual agent-behaviour scripts with the agent (F-47) — executor: owner (depends E1.F14.T4, E1.F17.T1, E1.F17.T2) — 🔄 run 2026-09-25: 6 PASS / 4 FAIL
+- [x] E1.F17.T3 [human] Run the 10 manual agent-behaviour scripts with the agent (F-47) — executor: owner (depends E1.F14.T4, E1.F17.T1, E1.F17.T2) — run 2026-09-25: 6 PASS / 4 FAIL; rerun after T4..T7: 10/10 PASS
 - [x] E1.F17.T4 [Backend] BUG-23 (F-50): the settings lookup reads integration and production — est: 20min
 - [x] E1.F17.T5 [Backend] BUG-24 (F-51): visible-version check against the deployed commit, any DEV mark — est: 20min
 - [x] E1.F17.T6 [Backend] BUG-25 (F-52): composed subagent prompts carry the project.json ban — est: 15min
 - [x] E1.F17.T7 [Backend] BUG-26 (F-53): tracker credentials looked up in `.connections.json` first — est: 15min
+- [x] E1.F17.T8 [Test] Rerun the four failing manual scripts; route F-54 (BL-52); fix the BL-51 id collision — est: 30min
 
 ---
 
@@ -280,11 +281,12 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F16.T7 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F17.T1 [Backend] | ✅ done | 30 | 6 | 0 | BUG-22 RESUELTO: `livestate.profile_only_since` (python path) + the same rule in the degraded bash block; test-hooks.sh 4 cases × 2 paths (case 1 red before the fix, 2-4 over-matching guards); regression index BUG-22 |
 | E1.F17.T2 [Backend] | ✅ done | 20 | 3 | 0 | F-19: `KIND_EXEMPTIONS["status"] = ( )`; test_safe_values.py: accepted by `check_status` and `get … --shell`, `a$(b)` / backtick / `"` / `;` refused, exemption per kind (red before the fix) |
-| E1.F17.T3 [human] | 🔄 in_progress | — | — | — | [human] run headless by the maintainer agent (D-19/D-28): 6 PASS / 4 FAIL; FAIL → F-50 (settings notice ignores the reviewed line), F-51 (visible-version), F-52 (subagent prompt allows project.json), F-53 (block comment not posted); F-54 spec-gap; evidence qa/manual/*-2026-09-25.md |
+| E1.F17.T3 [human] | ✅ done | — | — | — | [human] run headless by the maintainer agent (D-19/D-28): 6 PASS / 4 FAIL; rerun 2026-09-25 after E1.F17.T4..T7: the 4 FAIL scripts PASS → **10/10 PASS** (tracker lines of no-human-no-mapping and per-level-maps not re-run, covered by regression tests; evidence qa/manual/*-2026-09-25-rerun.md); first run: FAIL → F-50 (settings notice ignores the reviewed line), F-51 (visible-version), F-52 (subagent prompt allows project.json), F-53 (block comment not posted); F-54 spec-gap; evidence qa/manual/*-2026-09-25.md |
 | E1.F17.T4 [Backend] | ✅ done | 20 | 8 | 0 | BUG-23 RESUELTO: `project.settings_lines` (integration, production, origin/HEAD) used by the session notice and `karvey-config.py Settings.remotes`; table ss-24 + `OriginProductionFallback` red before the fix; regression index BUG-23 |
 | E1.F17.T5 [Backend] | ✅ done | 20 | 6 | 0 | BUG-24 RESUELTO: deploy 2.6 + versioning.md read `git show <deployed-sha>:<version file>`, any DEV mark format; test_skill_rules.py VisibleVersionCheck (5 tests) red before the fix; regression index BUG-24 |
 | E1.F17.T6 [Backend] | ✅ done | 15 | 25 | 0 | BUG-25 RESUELTO: management-adapters rule 5 + impl `(P)` dispatch carry the ban verbatim (test_skill_rules.py, 3 tests); reopened by the rerun (prompt composed before any skill loads) → `subagent-prompt` guard on PreToolUse Agent|Task, table subagent-prompt.json (7 cases, red on 691f2f7); regression index BUG-25 |
 | E1.F17.T7 [Backend] | ✅ done | 15 | 5 | 0 | BUG-26 RESUELTO: management-adapters rule 2 is an ordered lookup (`.connections.json`, env, vault/MCP); impl Step 3 and blockers point to it, `blocked: null` → comment only; test_skill_rules.py TrackerCredentialsAreLookedUpEverywhere (3 tests) red before the fix; regression index BUG-26 |
+| E1.F17.T8 [Test] | ✅ done | 30 | 25 | 0 | reruns PASS: settings-docs-branch (A, B), visible-version (1, 2, 3), no-human-no-mapping (headless, subagent after the guard; tracker line by tests), per-level-maps (A without tracker; comment and B by tests); F-54 → BL-52 (wave2-structural); BL-51 reworded |
 
 ---
 
@@ -319,3 +321,4 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-25 | impl | E1.F17.T6 done (D-21): BUG-25 / F-52 — rule 5 of `management-adapters.md` and `karvey-impl` Step 7 make every composed subagent prompt carry "Do not write `docs/spec/project.json` …"; a user's request to persist settings stays with the orchestrating session and the human; 3 tests; BUG-25 RESUELTO. Estimate 15 min vs actual 5 min (AI), 0 review. |
 | 2026-09-25 | impl | E1.F17.T7 done (D-21): BUG-26 / F-53 — rule 2 of `management-adapters.md` is a lookup order with `.connections.json` first; `karvey-impl` Step 3 and Handling blockers point to it; `blocked: null` keeps the status and posts the comment; 3 tests; BUG-26 RESUELTO. Estimate 15 min vs actual 5 min (AI), 0 review. |
 | 2026-09-25 | impl | E1.F17.T6 reopened by its rerun: the orchestrating session wrote the subagent prompt before loading any skill, so the rule 5 text never reached it. Added the `subagent-prompt` guard (PreToolUse `Agent|Task`, fail open) and table subagent-prompt.json; rerun PASS (first prompt blocked, re-sent prompt carries the ban). Estimate 15 min vs actual 25 min (AI) for the task, 0 review. |
+| 2026-09-25 | impl | E1.F17.T8 done and E1.F17.T3 ✅ (D-21): the four failing manual scripts re-run headless in throw-away repos: settings-docs-branch PASS (B silent), visible-version PASS (deployed commit's VERSION read, `DEV 2.10.4` accepted, no mismatch with a later bump, no-version = recommendation), no-human-no-mapping PASS (subagent run failed after the text fix, passed after the subagent-prompt guard), per-level-maps PASS for the lines without a tracker (`.connections.json` looked up first); total 10/10 PASS. F-54 → BL-52 routed to wave2-structural; BL-51 names the statusline stable-launcher item without an F-number. Estimate 30 min vs actual 25 min (AI), 0 review. |

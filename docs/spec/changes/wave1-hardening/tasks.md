@@ -8,9 +8,9 @@
 | Item | Value |
 |---|---|
 | Features | 17 |
-| Tasks | 76 (59 Backend, 1 Frontend, 2 Infra, 7 Test, 7 human) — revision 1 (D-19): +E1.F17.T1..T3, E1.F16.T2 → `[human]` |
-| Agent tasks / `[human]` tasks | 69 / 7 (E1.F1.T2 is conditional: only if T-0 cannot run headless) |
-| Total estimate (agent tasks, AI + human review) | **2150 min** (35.8 h); revision 1: +50 (E1.F17) −15 (E1.F16.T2 to `[human]`) = **2185 min** |
+| Tasks | 81 (63 Backend, 1 Frontend, 2 Infra, 8 Test, 7 human) — revision 1 (D-19): +E1.F17.T1..T3, E1.F16.T2 → `[human]`; D-21: +E1.F17.T4..T8 (manual-script findings F-50..F-54) |
+| Agent tasks / `[human]` tasks | 74 / 7 (E1.F1.T2 is conditional: only if T-0 cannot run headless) |
+| Total estimate (agent tasks, AI + human review) | **2150 min** (35.8 h); revision 1: +50 (E1.F17) −15 (E1.F16.T2 to `[human]`) = **2185 min**; D-21: +100 (E1.F17.T4..T8) = **2285 min** |
 | Critical path (agent minutes; `[human]` waits not counted) | **550 min** (9.2 h), 18 tasks |
 | REQ-W1 coverage | 109/109 |
 | Largest task | 50 min (cap 60) |
@@ -812,9 +812,9 @@ Total estimated time: 85 min (7 tasks)
 
 ## Feature E1.F17: Test-phase iteration (revision 1, D-19)
 
-Findings of the first test phase: BUG-22 (F-40), status names with parentheses (F-19), the manual scripts' executor (F-47).  
-Requirements covered: 048, 085, 093, 107, AC-7  
-Total estimated time: 50 min (2 agent tasks + 1 human)
+Findings of the first test phase: BUG-22 (F-40), status names with parentheses (F-19), the manual scripts' executor (F-47); then the manual scripts' own findings F-50..F-54 (BUG-23..26, BL-52; D-21).  
+Requirements covered: 041, 048, 081, 082, 083, 085, 093, 107, AC-7  
+Total estimated time: 150 min (7 agent tasks + 1 human)
 
 ### E1.F17.T1 [Backend] BUG-22: profile-only commits after a save are not drift — _Depends: E1.F6.T1_
 
@@ -841,7 +841,7 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 **Verification:** one `docs/spec/changes/wave1-hardening/qa/manual/<script>-<date>.md` per script with PASS / FAIL / not run (reason); every FAIL logged as a finding.  
 **Rollback:** delete the throw-away repos.  
 **Requirements:** REQ-W1-080..085, 089, 095, 096 (AC-7)  
-**Executed:** maintainer agent, headless under D-19/D-28 · 2026-09-25 13:01 UTC · qa/manual/ — 6 PASS / 4 FAIL (FAIL: settings-docs-branch, visible-version, no-human-no-mapping, per-level-maps → F-50..F-53; F-54 spec-gap observed)
+**Executed:** maintainer agent, headless under D-19/D-28 · 2026-09-25 13:01 UTC · qa/manual/ — 6 PASS / 4 FAIL (FAIL: settings-docs-branch, visible-version, no-human-no-mapping, per-level-maps → F-50..F-53; F-54 spec-gap observed). **Rerun** 2026-09-25 after E1.F17.T4..T7 (E1.F17.T8): the 4 FAIL scripts PASS (`qa/manual/*-2026-09-25-rerun.md`); the tracker lines of no-human-no-mapping and per-level-maps not re-run by instruction, covered by the regression tests → 10/10 PASS
 
 ### E1.F17.T4 [Backend] BUG-23 (F-50): the settings lookup reads integration and production — _Depends: E1.F17.T3_
 
@@ -874,6 +874,14 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 **Requirements:** REQ-W1-082, REQ-W1-107  
 **Tests added:** `TrackerCredentialsAreLookedUpEverywhere`: rule 2 ordered with `.connections.json` first and "only after" every place; impl Step 3 names it; impl blockers cover `blocked: null`. Red before the fix.  
 **Done when:** the tests pass; BUG-26 RESUELTO; the per-level-maps rerun (parts without the tracker) passes, the tracker part rests on the tests.
+
+### E1.F17.T8 [Test] Rerun the four failing manual scripts; route F-54; fix the BL-51 id collision — _Depends: E1.F17.T4, E1.F17.T5, E1.F17.T6, E1.F17.T7_
+
+**Estimate:** 30 min · **Actual:** 25 min (AI)  
+**Files:** `docs/spec/changes/wave1-hardening/qa/manual/{settings-docs-branch,visible-version,no-human-no-mapping,per-level-maps}-2026-09-25-rerun.md`; `docs/spec/backlog.md` (BL-52, BL-51 wording); `findings.md`  
+**Requirements:** REQ-W1-041, REQ-W1-081, REQ-W1-082, REQ-W1-083 (AC-7)  
+**Tests added:** — (evidence runs: headless `claude -p` per script in throw-away repos, as the first run; the tracker parts of no-human-no-mapping and per-level-maps not re-run, covered by the regression tests)  
+**Done when:** every rerun Expected line run is PASS; F-54 is BL-52 routed to `wave2-structural`; BL-51 names the statusline stable-launcher item without an F-number; the throw-away repos and their session transcripts are deleted.
 
 ## Traceability matrix (REQ-W1 → tasks)
 
