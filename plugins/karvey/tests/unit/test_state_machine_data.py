@@ -22,8 +22,10 @@ class StateMachine(unittest.TestCase):
 
     def test_skippable(self):
         self.assertEqual({p["id"] for p in SM["phases"] if p["skippable"]}, {"mockup", "design_graphic", "infra"})
+        # wave2 §2.1: skipped names every approvable phase before deploy (lane skips); the manual skip
+        # stays limited to the skippable three (semantic check state.skip_not_lane)
         self.assertEqual(set(SPEC["properties"]["skipped"]["propertyNames"]["enum"]),
-                         {"mockup", "design_graphic", "infra"})
+                         {p["id"] for p in SM["phases"] if p["approval"] and p["approval"] not in ("deploy", "prod")})
 
     def test_reopen_targets(self):
         self.assertEqual(SM["reopen_targets"], ["requirements", "architecture", "tasks", "impl"])

@@ -203,7 +203,13 @@ class SpecSchema(unittest.TestCase):
         self.assertEqual(sorted(i["path"] for i in out), ["$.approvals.impl", "$.gates_skipped"])
 
     def test_skipped_only_skippable_and_with_reason(self):
-        self.assertEqual(paths(SPEC.validate(spec(skipped={"tasks": "x"}))), ["$.skipped.tasks"])
+        # wave2 §2.1: a non-lane phase name is refused by the schema; a non-skippable approvable phase
+        # is refused by the semantic check unless it is a lane skip of the change's own lane
+        self.assertEqual(paths(SPEC.validate(spec(skipped={"impl": "x"}))), ["$.skipped.impl"])
+        from _state import state
+        sem = [i for i in state.validate_data(spec(skipped={"tasks": "x"}), "spec", False, "spec.json")
+               if i["severity"] == "error"]
+        self.assertEqual([(i["code"], i["path"]) for i in sem], [("state.skip_not_lane", "$.skipped.tasks")])
         self.assertEqual(paths(SPEC.validate(spec(skipped={"infra": ""}))), ["$.skipped.infra"])
 
     def test_history_entry_shape(self):

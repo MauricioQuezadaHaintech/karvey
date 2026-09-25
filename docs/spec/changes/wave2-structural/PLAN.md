@@ -69,7 +69,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F1: Records and flow metrics (first: the baseline precedes every default)
 
-- [ ] E1.F1.T1 [Backend] Schema additions: lane enum, the four logs, role `auto`, `generated_at`/`imported`, `skipped` keys, `D-NN@repo`; project `gates`/`judges`/`lanes`/`checks`/`branch_flow.mode`/`trailer_guard`/`tests`/`security` — est: 12min
+- [x] E1.F1.T1 [Backend] Schema additions: lane enum, the four logs, role `auto`, `generated_at`/`imported`, `skipped` keys, `D-NN@repo`; project `gates`/`judges`/`lanes`/`checks`/`branch_flow.mode`/`trailer_guard`/`tests`/`security` — est: 12min
 - [ ] E1.F1.T2 [Backend] Check-mode registry `check-modes.json` + `karvey_lib/modes.py` (`resolve`, `record_hit` → `changes/{id}/checks.jsonl`) — est: 12min (depends E1.F1.T1)
 - [ ] E1.F1.T3 [Backend] State tool: `generated_at`, `outcome` command (`changes_requested`, `--kind plan-exception`, `no reason given`), `approve` appends `gate_outcomes`, `--role auto` (refused on prod) — est: 12min (depends E1.F1.T1)
 - [ ] E1.F1.T4 [Backend] State tool: `deploy-record`, `approvals.deploy` legacy warning, `deploying.approval → null`, `advance deployed --attested --ref D-NN --pipeline-run URL` — est: 12min (depends E1.F1.T3)
@@ -182,7 +182,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 | Task | Status | estimate_min | actual_ai_min | actual_review_min | Notes |
 |------|--------|--------------|---------------|-------------------|-------|
-| E1.F1.T1 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F1.T1 [Backend] | ✅ done | 12 | 6 | 0 |  |
 | E1.F1.T2 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F1.T3 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F1.T4 [Backend] | ⬜ todo | 12 | — | — |  |

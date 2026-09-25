@@ -35,19 +35,242 @@
       "type": "object",
       "propertyNames": {
         "enum": [
+          "requirements",
           "mockup",
           "design_graphic",
-          "infra"
+          "architecture",
+          "infra",
+          "tasks",
+          "qa"
         ]
       },
       "additionalProperties": {
         "type": "string",
         "minLength": 1
-      }
+      },
+      "x-karvey-note": "a non-skippable phase is accepted only with the reason lane:{lane} matching spec.json:lane (semantic check, wave2-structural §2.1)"
     },
     "lane": {
-      "type": "string",
-      "x-karvey-note": "data only in Wave 1 (R-09)"
+      "enum": [
+        "patch",
+        "standard",
+        "feature-ui",
+        "ops",
+        "hotfix",
+        "docs"
+      ],
+      "x-karvey-note": "rules/lanes.md; absent = legacy (the 3.12 pipeline)"
+    },
+    "lane_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "at",
+          "reason"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "x-karvey-format": "datetime-tz"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "by": {
+            "type": "string"
+          },
+          "ref": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "lane_evidence": {
+      "type": "object",
+      "properties": {
+        "bug_id": {
+          "type": "string",
+          "pattern": "^BUG-\\d+(@[a-z0-9][a-z0-9._-]*)?$"
+        },
+        "finding": {
+          "type": "string"
+        },
+        "regression_test": {
+          "type": "string"
+        }
+      }
+    },
+    "gate_outcomes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "outcome",
+          "phases",
+          "by",
+          "role",
+          "ref",
+          "at"
+        ],
+        "properties": {
+          "outcome": {
+            "enum": [
+              "approved",
+              "changes_requested"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "gate",
+              "plan-exception"
+            ]
+          },
+          "gate": {
+            "enum": [
+              "what",
+              "how",
+              "release",
+              "phase"
+            ]
+          },
+          "phases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "by": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/$defs/role"
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string",
+            "x-karvey-format": "datetime-tz"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "deploys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "env",
+          "version",
+          "at",
+          "verification"
+        ],
+        "properties": {
+          "env": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "x-karvey-format": "datetime-tz"
+          },
+          "verification": {
+            "enum": [
+              "pass",
+              "regression",
+              "not-evaluated"
+            ]
+          },
+          "rollback": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "judge_runs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "phase",
+          "lens",
+          "model",
+          "intra_model",
+          "verdict",
+          "at"
+        ],
+        "properties": {
+          "phase": {
+            "type": "string"
+          },
+          "lens": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "intra_model": {
+            "type": "boolean"
+          },
+          "verdict": {
+            "enum": [
+              "pass",
+              "concerns",
+              "fail",
+              "not-run"
+            ]
+          },
+          "findings": {
+            "type": "object"
+          },
+          "discarded": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tokens_in": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tokens_out": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "usd": {
+            "type": "number",
+            "minimum": 0
+          },
+          "estimated": {
+            "type": "boolean"
+          },
+          "at": {
+            "type": "string"
+          }
+        }
+      }
     },
     "approvals": {
       "type": "object",
@@ -149,7 +372,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[DC]-\\d+$"
+            "pattern": "^[DC]-\\d+(@[a-z0-9][a-z0-9._-]*)?$"
           }
         },
         {
@@ -250,15 +473,31 @@
           "type": "string"
         },
         "evidence": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "attested": {
+              "type": "boolean"
+            },
+            "pipeline_run": {
+              "type": "string"
+            },
+            "ref": {
+              "type": "string"
+            },
+            "post_deploy_check": {
+              "type": "string"
+            }
+          }
         }
       }
     },
     "role": {
       "enum": [
         "human",
-        "ceo-delegate"
-      ]
+        "ceo-delegate",
+        "auto"
+      ],
+      "x-karvey-note": "auto = recorded by -y (never for prod: prodApproval.role is const human)"
     },
     "evidence": {
       "type": "object",
@@ -289,6 +528,13 @@
             "boolean",
             "null"
           ]
+        },
+        "generated_at": {
+          "type": "string",
+          "x-karvey-format": "datetime-tz"
+        },
+        "imported": {
+          "type": "boolean"
         },
         "by": {
           "type": "string"

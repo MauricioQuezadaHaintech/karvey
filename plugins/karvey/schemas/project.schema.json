@@ -49,7 +49,8 @@
         "none",
         "graphify",
         "obsidian"
-      ]
+      ],
+      "x-karvey-default": "none"
     },
     "targets": {
       "type": "array",
@@ -95,6 +96,13 @@
             "type": "string",
             "pattern": "^[A-Za-z0-9._/*-]{1,100}$"
           }
+        },
+        "mode": {
+          "enum": [
+            "trunk",
+            "env-branches"
+          ],
+          "x-karvey-note": "derived: trunk when integration = production (wave2-structural §1.11)"
         }
       }
     },
@@ -148,6 +156,14 @@
               }
             }
           }
+        },
+        "trailer_guard": {
+          "enum": [
+            "off",
+            "warn",
+            "blocking"
+          ],
+          "x-karvey-default": "off"
         }
       }
     },
@@ -275,6 +291,109 @@
         "strict"
       ],
       "x-karvey-default": "advisory"
+    },
+    "gates": {
+      "enum": [
+        "granular",
+        "merged"
+      ],
+      "x-karvey-note": "absent = the check-mode registry default (gates.merged)"
+    },
+    "judges": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "enum": [
+            "advisory",
+            "blocking"
+          ]
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "requirements",
+              "mockup",
+              "design_graphic",
+              "architecture",
+              "infra",
+              "tasks",
+              "qa"
+            ]
+          }
+        },
+        "lenses": {
+          "type": "object"
+        },
+        "per_lane": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "cross_model": {
+          "enum": [
+            "prefer",
+            "never"
+          ]
+        },
+        "budget": {
+          "x-karvey-severity": "warning",
+          "x-karvey-note": "ignored: measure only (D-30)"
+        }
+      }
+    },
+    "lanes": {
+      "type": "object",
+      "properties": {
+        "globs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_./*{},-]{1,200}$"
+            }
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "off",
+          "advisory",
+          "warn",
+          "blocking",
+          "granular",
+          "merged"
+        ]
+      }
+    },
+    "tests": {
+      "type": "object",
+      "properties": {
+        "globs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_./*{},-]{1,200}$"
+          }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "tools": {
+          "type": "object"
+        }
+      }
     },
     "karvey_version": {
       "type": "string",

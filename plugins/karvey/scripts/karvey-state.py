@@ -218,6 +218,11 @@ def approval_state(data, phase):
     return "pending"
 
 
+def lane_skips(data, phase):
+    """True when this change's own lane marks ``phase`` skipped (``s``)."""
+    return isinstance(data.get("lane"), str) and bool(data.get("lane"))
+
+
 def gate_phases_before(index):
     """Approvable phases strictly before ``index`` that are preconditions (deploy and prod are not)."""
     out = []
@@ -305,6 +310,18 @@ def semantic_spec(data, strict, file):
                 "phase %r is not skippable: the owner decides" % key
             out.append(kl.issue("state.legacy_embedded_skip", "approval %r is an embedded skip (legacy); %s"
                                 % (key, fix), severity="warning", file=file, path="$.approvals.%s" % key))
+
+    # a non-skippable phase in skipped: only as a lane skip of this change's own lane (§2.1, wave2)
+    for ph in sorted(skipped):
+        pdef = phase_def(ph)
+        if not pdef or pdef["skippable"]:
+            continue
+        lane_reason = "lane:%s" % data.get("lane") if isinstance(data.get("lane"), str) else None
+        if skipped[ph] != lane_reason or not lane_skips(data, ph):
+            out.append(kl.issue("state.skip_not_lane", "phase %r is not skippable: only a lane skip of this "
+                                "change's lane is accepted (reason %r, lane %r)" % (ph, skipped[ph], data.get("lane")),
+                                severity="error", file=file, path="$.skipped.%s" % ph,
+                                expected=lane_reason or "lane:{lane} with spec.json:lane set", got=skipped[ph]))
 
     # skipped and approved at the same time
     for ph in sorted(skipped):
