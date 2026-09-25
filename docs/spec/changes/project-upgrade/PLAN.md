@@ -48,7 +48,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 - [x] E1.F2.T1 [Backend] `apply` planning half: ids, values as data, selection, order, human/report, confinement, dry-run + preview id — est: 15min (depends E1.F1.T5)
 - [x] E1.F2.T2 [Backend] `apply` write half: clean tree, CAS writes, stop at first failure, journal, audit — est: 12min (depends E1.F2.T1)
-- [ ] E1.F2.T3 [Backend] `ensure_branch` and `commit` — est: 12min (depends E1.F2.T2)
+- [x] E1.F2.T3 [Backend] `ensure_branch` and `commit` — est: 12min (depends E1.F2.T2)
 
 ### Feature E1.F3: The initial step catalogue (8 steps)
 
@@ -99,7 +99,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F1.T5 [Backend] | ✅ done | 8 | 4 | 0 |  |
 | E1.F2.T1 [Backend] | ✅ done | 15 | 9 | 0 |  |
 | E1.F2.T2 [Backend] | ✅ done | 12 | 6 | 0 |  |
-| E1.F2.T3 [Backend] | ⬜ todo | 12 | — | — | |
+| E1.F2.T3 [Backend] | ✅ done | 12 | 7 | 0 |  |
 | E1.F3.T1 [Backend] | ⬜ todo | 12 | — | — | |
 | E1.F3.T2 [Backend] | ⬜ todo | 10 | — | — | |
 | E1.F3.T3 [Backend] | ⬜ todo | 10 | — | — | |

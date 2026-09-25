@@ -325,5 +325,72 @@ class WriteHalf(Base):
         self.assertIn("+A", rep.diffs["a"])
 
 
+class Branch(Base):
+    UB = "chore/karvey-upgrade-" + INSTALLED
+
+    def dev_repo(self):
+        g.write(self.root, "docs/spec/project.json", {"branch_flow": {"integration": "dev", "production": "main"}})
+        g.commit_all(self.root)
+        g.run(["checkout", "-q", "-b", "dev"], self.root)
+
+    def test_on_dev_the_changes_land_on_the_upgrade_branch(self):
+        self.dev_repo()
+        dev_before = self.git("rev-parse", "dev")
+        rep = self.apply([appender("a", "A")], ["a"], dry_run=True)
+        rep = self.apply([appender("a", "A")], ["a"], preview=rep.preview)
+        self.assertEqual(rep.branch, self.UB)
+        self.assertEqual(self.git("symbolic-ref", "--short", "HEAD"), self.UB)
+        upgrade.commit(self.root, "The Owner")
+        self.assertEqual(self.git("rev-parse", "dev"), dev_before, "dev has no new commit")
+        self.assertEqual(self.git("rev-list", "--count", "dev.." + self.UB), "1")
+
+    def test_base_is_origin_integration_when_present_never_a_fetch(self):
+        self.dev_repo()
+        g.with_origin(self.root, "dev")
+        g.write(self.root, "local.txt", "ahead\n")
+        g.commit_all(self.root, "local only")
+        origin_dev = self.git("rev-parse", "refs/remotes/origin/dev")
+        res = upgrade.ensure_branch(self.root, INSTALLED)
+        self.assertEqual((res["base"], res["created"]), ("refs/remotes/origin/dev", True))
+        self.assertEqual(self.git("rev-parse", "HEAD"), origin_dev)
+        self.assertEqual(self.git("rev-parse", "refs/remotes/origin/dev"), origin_dev, "no fetch")
+
+    def test_base_is_the_local_integration_branch_without_origin(self):
+        self.dev_repo()
+        dev = self.git("rev-parse", "dev")
+        g.run(["checkout", "-q", "main"], self.root)
+        res = upgrade.ensure_branch(self.root, INSTALLED)
+        self.assertEqual(res["base"], "refs/heads/dev")
+        self.assertEqual(self.git("rev-parse", "HEAD"), dev)
+
+    def test_an_existing_upgrade_branch_is_only_switched_to(self):
+        g.run(["branch", self.UB], self.root)
+        g.write(self.root, "x.txt", "x\n")
+        g.commit_all(self.root)
+        res = upgrade.ensure_branch(self.root, INSTALLED)
+        self.assertEqual((res["created"], res["switched"]), (False, True))
+        res = upgrade.ensure_branch(self.root, INSTALLED)
+        self.assertEqual((res["created"], res["switched"]), (False, False))
+
+    def test_no_integration_branch_and_no_origin_head(self):
+        g.write(self.root, "docs/spec/project.json", {})
+        g.commit_all(self.root)
+        with self.assertRaises(upgrade.Refused) as cm:
+            upgrade.ensure_branch(self.root, INSTALLED)
+        self.assertIn("project.json:branch_flow.integration", str(cm.exception))
+
+    def test_trunk_branches_from_it(self):
+        main = self.git("rev-parse", "main")
+        res = upgrade.ensure_branch(self.root, INSTALLED)
+        self.assertEqual(res["base"], "refs/heads/main")
+        self.assertEqual(self.git("rev-parse", "HEAD"), main)
+
+    def test_branch_refuses_a_dirty_tree(self):
+        g.write(self.root, "stray.txt", "x\n")
+        with self.assertRaises(upgrade.Refused) as cm:
+            upgrade.ensure_branch(self.root, INSTALLED)
+        self.assertIn("stray.txt", str(cm.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

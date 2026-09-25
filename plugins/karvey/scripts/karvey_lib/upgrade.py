@@ -20,6 +20,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -913,7 +914,165 @@ def _prepare_tree(root, rep, dry_run, installed):
     if blocking:
         raise Refused("the working tree has uncommitted changes: %s — commit or stash them first"
                       % ", ".join(blocking[:20]) + (" …" if len(blocking) > 20 else ""))
+    rep.branch = ensure_branch(root, installed)["branch"]
     return rep
+
+
+# --------------------------------------------------------------------------- branch and commit (§1.5)
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+TRAILER_KEY = re.compile(r"^[A-Za-z][A-Za-z0-9-]{0,40}$")
+ANSWER_MAX = 200
+
+
+def _clean(value, limit):
+    text = _CONTROL.sub(" ", str(value or ""))
+    text = re.sub(r" {2,}", " ", text).strip()
+    return text[:limit]
+
+
+def upgrade_branch(installed=None):
+    installed = installed or INSTALLED
+    if not VERSION_RE.match(installed or ""):
+        raise Refused("installed version %r is not a release number (plugin.json)" % (installed,))
+    name = UPGRADE_BRANCH_PREFIX + installed
+    try:
+        return sv.check_branch(name, key="upgrade branch")
+    except sv.UnsafeValue as exc:
+        raise Refused("upgrade branch name refused: %s" % exc)
+
+
+def _ref_exists(root, ref):
+    rc, _ = _git(["rev-parse", "--verify", "--quiet", ref + "^{commit}"], root)
+    return rc == 0
+
+
+def _origin_head(root):
+    rc, out = _git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], root)
+    out = out.strip()
+    return out[len("origin/"):] if rc == 0 and out.startswith("origin/") else None
+
+
+def integration_branch(root, integ):
+    """The declared integration branch, else ``origin/HEAD``, else :class:`Refused` (E-13)."""
+    if integ:
+        return integ
+    head = _origin_head(root)
+    if head:
+        try:
+            return sv.check_branch(head, key="origin/HEAD")
+        except sv.UnsafeValue as exc:
+            raise Refused("invalid branch name in origin/HEAD (%s)" % exc.rule)
+    raise Refused("no integration branch: set project.json:branch_flow.integration")
+
+
+def ensure_branch(root, installed=None):
+    """Create or switch to ``chore/karvey-upgrade-<installed>`` (§1.5 ``branch``). It never fetches: the base
+    is ``refs/remotes/origin/<integration>`` when that ref exists locally, else ``refs/heads/<integration>``."""
+    root = Path(os.path.realpath(str(root)))
+    if pj.git_toplevel(root) is None:
+        raise Refused("apply needs git: the upgrade goes through a branch")
+    _, integ, _ = check_values(root, installed)
+    ub = upgrade_branch(installed)
+    cur = current_branch(root)
+    if cur == ub:
+        return {"branch": ub, "base": None, "created": False, "switched": False}
+    dirty = dirty_paths(root)
+    if dirty:
+        raise Refused("the working tree has uncommitted changes: %s — commit or stash them first"
+                      % ", ".join(dirty[:20]))
+    if _ref_exists(root, "refs/heads/" + ub):
+        rc, out = _git(["checkout", "-q", ub], root)
+        if rc != 0:
+            raise Refused("could not switch to %s: %s" % (ub, out.strip()[:200]))
+        return {"branch": ub, "base": None, "created": False, "switched": True}
+    integ = integration_branch(root, integ)
+    base = None
+    for ref in ("refs/remotes/origin/" + integ, "refs/heads/" + integ):
+        if _ref_exists(root, ref):
+            base = ref
+            break
+    if base is None:
+        raise Refused("integration branch %s (project.json:branch_flow.integration) not found locally; fetch it "
+                      "first: git fetch origin %s" % (integ, integ))
+    rc, out = _git(["checkout", "-q", "--no-track", "-b", ub, base], root)
+    if rc != 0:
+        raise Refused("could not create %s from %s: %s" % (ub, base, out.strip()[:200]))
+    return {"branch": ub, "base": base, "created": True, "switched": True}
+
+
+def commit(root, picked_by, picked_at=None, answer=None, trailers=(), installed=None):
+    """One commit of exactly the journal's files, with the deterministic message (REQ-UP-018, REQ-UP-028).
+
+    Returns ``{sha, branch, steps, files, message, pr_title, pr_body}``."""
+    root = Path(os.path.realpath(str(root)))
+    top = pj.git_toplevel(root)
+    if top is None:
+        raise Refused("commit needs git")
+    journal = read_journal(root)
+    if not journal:
+        raise Refused("no upgrade journal: run apply first")
+    _, integ, prod = check_values(root, installed)
+    cur = current_branch(root)
+    protected = {b for b in (integ, prod, _origin_head(root)) if b}
+    if cur is None or cur in protected:
+        raise Refused("commit refused on %s: the upgrade is committed on its own branch (run branch first)"
+                      % (cur or "a detached HEAD"))
+    if cur != journal.get("branch"):
+        raise Refused("commit refused on %s: the journal belongs to %s" % (cur, journal.get("branch")))
+    files = [f for f in journal.get("files") or [] if isinstance(f, str) and f]
+    if not files:
+        raise Refused("nothing to commit: the journal lists no file")
+    who = _clean(picked_by, 100)
+    if not who:
+        raise Refused("--picked-by is required (the person who picked the steps)")
+    when = _clean(picked_at, 40) if picked_at else audit.now_iso()
+    lines_tr = []
+    for t in trailers or ():
+        k, sep, v = str(t).partition("=")
+        k = k.strip()
+        if not sep or not TRAILER_KEY.match(k):
+            raise Refused("trailer refused (expected Key=Value): %s" % _clean(t, 60))
+        lines_tr.append("%s: %s" % (k, _clean(v, 200)))
+    steps = list(journal.get("applied") or [])
+    title = "chore(karvey): project upgrade %s → %s" % (journal.get("from") or "none", journal.get("to") or installed
+                                                         or INSTALLED)
+    body = ["Steps: %s" % (", ".join(steps) or "none"), "Picked-by: %s" % who, "Picked-at: %s" % when]
+    if answer:
+        body.append('Answer: "%s"' % _clean(answer, ANSWER_MAX).replace('"', "'"))
+    message = title + "\n\n" + "\n".join(body) + "\n"
+    if lines_tr:
+        message += "\n" + "\n".join(lines_tr) + "\n"
+    rc, out = _git(["add", "-A", "--"] + files, top)
+    if rc != 0:
+        raise Refused("git add failed: %s" % out.strip()[:200])
+    rc, _ = _git(["diff", "--cached", "--quiet", "--"] + files, top)
+    if rc == 0:
+        raise Refused("nothing to commit: the journal's files have no change")
+    fd, tmp = tempfile.mkstemp(prefix="karvey-upgrade-msg-", suffix=".txt")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(message)
+        rc, out = _git(["commit", "-q", "-F", tmp, "--"] + files, top)
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+    if rc != 0:
+        raise Refused("git commit failed: %s" % out.strip()[:300])
+    _, sha = _git(["rev-parse", "HEAD"], top)
+    sha = sha.strip()
+    journal.setdefault("commits", []).append(sha)
+    journal["at"] = audit.now_iso()
+    _write_journal(root, journal)
+    audit.append(pj.state_dir(root, create=True), {"event": "upgrade.commit", "sha": sha, "steps": steps})
+    pr_body = ("Project upgrade %s → %s, planned from this project's state by `karvey-upgrade.py`.\n\n"
+               "- Steps applied: %s\n- Picked by %s at %s\n- Files: %s\n\n"
+               "Review the diff as any other change; merging follows this repository's normal review "
+               "(the upgrade never merges).\n" % (journal.get("from") or "none", journal.get("to"),
+                                                 ", ".join(steps) or "none", who, when, ", ".join(files)))
+    return {"sha": sha, "branch": cur, "steps": steps, "files": files, "message": message, "pr_title": title,
+            "pr_body": pr_body}
 
 
 def _write(root, rep, evals, top, common, installed):
