@@ -27,7 +27,8 @@
 ## Resolution order (one, cited by every skill)
 
 1. The change's `spec.json:management` override `{tool, location, statuses, sprints}`.
-2. `project.json:management` (working copy, then `origin/{integration}` before declaring it missing).
+2. `project.json:management` (working copy, then `origin/{integration}`, then `origin/{production}` before
+   declaring it missing).
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" resolve management --change "{change-id}" --json

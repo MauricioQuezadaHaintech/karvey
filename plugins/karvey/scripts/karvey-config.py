@@ -29,8 +29,8 @@ Commands:
 
 Exit codes: the shared ones plus ``10`` = confirmation required (notify-check).
 
-Settings missing from the working copy are looked up on ``origin/{integration}`` (local ref,
-no fetch) before being declared missing (REQ-W1-083).
+Settings missing from the working copy are looked up on ``origin/{integration}``, then
+``origin/{production}`` (local refs, no fetch) before being declared missing (REQ-W1-083, BUG-23).
 """
 import argparse
 import copy
@@ -89,7 +89,7 @@ class Usage(Exception):
 
 # --------------------------------------------------------------------------- loading
 class Settings:
-    """``project.json`` of the working copy plus the ``origin/{integration}`` fallback."""
+    """``project.json`` of the working copy plus the reviewed-line fallback (integration, production)."""
 
     def __init__(self, root):
         self.root = Path(root)
@@ -101,33 +101,39 @@ class Settings:
         self._remote_done = False
         self.remote_name = None
 
-    def remote(self):
-        """``project.json`` on ``origin/{integration}`` or None (REQ-W1-083)."""
+    def remotes(self):
+        """``[(name, project.json)]`` of the reviewed lines, in order: ``origin/{integration}``, then
+        ``origin/{production}`` (REQ-W1-083, BUG-23). Local refs only, no fetch."""
         if not self._remote_done:
             self._remote_done = True
-            _, integ, _ = pj.branch_flow(self.project)
-            integ = integ or "main"
-            try:
-                sv.check_branch(integ, key="branch_flow.integration", use_git=False)
-            except sv.UnsafeValue:
-                return None
-            data, status = pj.read_reviewed_project_json(self.root, production=integ)
-            if status == "ok":
-                self._remote = data
-                self.remote_name = "origin/%s" % integ
+            self._remote = []
+            for line in pj.settings_lines(self.project):
+                data, status = pj.read_reviewed_project_json(self.root, production=line)
+                if status == "ok":
+                    self._remote.append(("origin/%s" % line, data))
         return self._remote
 
+    def remote(self):
+        """The first readable reviewed ``project.json``, or None."""
+        r = self.remotes()
+        if r:
+            self.remote_name = r[0][0]
+            return r[0][1]
+        return None
+
     def block(self, key):
-        """``(value, source)`` for a top-level key: working copy first, then origin/{integration}."""
+        """``(value, source)`` for a top-level key: working copy first, then the first reviewed line
+        (origin/{integration}, then origin/{production}) that has it."""
         if key in self.project:
             return self.project[key], "project"
-        remote = self.remote()
-        if remote is not None and key in remote:
-            return remote[key], self.remote_name
+        for name, data in self.remotes():
+            if key in data:
+                self.remote_name = name
+                return data[key], name
         return None, None
 
     def legacy_backlog_list_id(self):
-        for data in (self.project, self.remote() or {}):
+        for data in [self.project] + [d for _, d in self.remotes()]:
             cu = data.get("clickup")
             if isinstance(cu, dict) and cu.get("backlog_list_id") not in (None, ""):
                 return str(cu["backlog_list_id"])
@@ -224,7 +230,8 @@ def resolve_management(settings, change=None):
         res["tool"], sources["tool"] = "markdown", "default"
         if proj is None:
             warnings.append(kl.issue("config.no_management", "no management block in project.json "
-                                     "(nor on origin/{integration}); using markdown", severity="warning"))
+                                     "(nor on origin/{integration} or origin/{production}); using markdown",
+                                     severity="warning"))
     if (res["tool"] == "clickup" and res["location"] is None and inherit):
         blid = settings.legacy_backlog_list_id()
         if blid:

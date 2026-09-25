@@ -334,6 +334,43 @@ class OriginIntegrationFallback(Base):
         self.assertEqual(self.resolve()[1]["result"]["tool"], "markdown")
 
 
+class OriginProductionFallback(Base):
+    """BUG-23 / F-50: integration and production differ; the settings reached origin/{production} only.
+
+    A readable origin/{integration} without the settings must not end the lookup."""
+
+    def setUp(self):
+        super().setUp()
+        g.isolate_git()
+        g.init(self.root)
+        flow = {"branch_flow": {"integration": "dev", "production": "main"}}
+        g.write(self.root, "docs/spec/project.json", flow)
+        g.commit_all(self.root, "base")
+        g.run(["branch", "dev"], self.root)
+        g.write(self.root, "docs/spec/project.json",
+                dict(flow, notifications={"channel": "google-chat", "target": "spaces/AAA"},
+                     management={"tool": "jira", "location": "PAY"}))
+        g.commit_all(self.root, "settings")
+        bare = g.with_origin(self.root)
+        g.run(["push", "-q", str(bare), "dev"], self.root)
+        g.run(["fetch", "-q", "origin"], self.root)
+        g.run(["checkout", "-q", "dev"], self.root)  # the working copy predates the settings
+
+    def test_resolve_reads_production_after_integration(self):
+        r = self.resolve()[1]["result"]
+        self.assertEqual((r["tool"], r["location"], r["source"]), ("jira", "PAY", "origin/main"))
+
+    def test_session_notice_silent(self):
+        from karvey_lib import karvey_hooks as kh
+        self.assertIsNone(kh.settings_notice(str(self.root), None, "startup", {}))
+
+    def test_session_notice_when_no_line_has_them(self):
+        from karvey_lib import karvey_hooks as kh
+        g.run(["push", "-q", "-f", "origin", "dev:main"], self.root)
+        g.run(["fetch", "-q", "origin"], self.root)
+        self.assertIn("team settings not set", kh.settings_notice(str(self.root), None, "startup", {}) or "")
+
+
 class Outbox(Base):
     """REQ-W1-090: failed tracker operations queued; a child of a pending parent is never sent."""
 

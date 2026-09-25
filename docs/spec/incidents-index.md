@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
+Last updated: 2026-09-25 (wave1-hardening E1.F17.T4: BUG-23 RESUELTO, F-50). Before: 2026-09-25 (E1.F17.T1: BUG-22 RESUELTO).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -30,6 +30,7 @@ Last updated: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2
 | BUG-20 | karvey | medium | False NOT FOUND drift when state.json names the repo itself | team-layer / agente-kloketen | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.4 |
 | BUG-21 | karvey | medium | Git worktrees reported NOT FOUND in the live-state check | team-layer / wave1 F-01 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.4 |
 | BUG-22 | karvey | medium | Committing state.json after a save reported as drift | wave1-hardening / F-40 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh (profile-only commits, BUG-22) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-23 | karvey | medium | Settings notice ignores origin/{production} when origin/{integration} lacks the settings | wave1-hardening / F-50 | RESUELTO | plugins/karvey/tests/hooks/tables/session.json (ss-24); plugins/karvey/tests/unit/test_config_resolve.py (OriginProductionFallback) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 
 ## Summary by state
 
@@ -38,7 +39,7 @@ Last updated: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 22 | BUG-01 .. BUG-22 |
+| RESUELTO | 23 | BUG-01 .. BUG-23 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-23**.
+Next number: **BUG-24**.

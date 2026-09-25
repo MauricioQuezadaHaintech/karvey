@@ -505,7 +505,8 @@ def settings_notice(start, team_root, mode, env):
 
     Only on ``startup``; only in a Karvey project found by walking up no further than the git
     top level; the settings count as present when the working copy **or** ``project.json`` on
-    ``origin/{integration}`` (local ref, no fetch) has them."""
+    ``origin/{integration}``, ``origin/{production}`` or ``origin/HEAD`` (local refs, no fetch) has
+    them."""
     if mode != "startup":
         return None
     kp = pj.find_root(start=start)  # REQ-W1-050: walk up no further than the git top level
@@ -522,14 +523,14 @@ def settings_notice(start, team_root, mode, env):
     else:
         missing, legacy = _settings_gaps(data)
     if missing:
-        _, integ, _ = pj.branch_flow(data or {})
-        for ref in [x for x in (integ, _origin_head(kp)) if x]:
+        # every reviewed line counts (BUG-23): a readable origin/{integration} without the settings
+        # does not end the lookup before origin/{production} and origin/HEAD
+        for ref in pj.settings_lines(data, kp):
             rdata, status = pj.read_reviewed_project_json(kp, production=ref)
             if status == "ok":
                 rmissing, rlegacy = _settings_gaps(rdata)
                 if not rmissing:
                     return None if not rlegacy else _legacy_line(rlegacy, " on origin/%s" % ref)
-                break
     if missing:
         return ("Karvey (info): team settings not set (%s). To set them, the user can run "
                 "`/karvey:karvey-init --settings` \u2014 settings only, it creates no change and nothing in any "
@@ -542,11 +543,6 @@ def settings_notice(start, team_root, mode, env):
 def _legacy_line(legacy, where):
     return ("Karvey (info): team settings in a legacy shape (%s)%s \u2014 run `karvey-state.py validate --fix` "
             "to migrate them." % (", ".join(legacy), where))
-
-
-def _origin_head(root):
-    rc, out = pj.git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], root)
-    return out[len("origin/"):] if rc == 0 and out.startswith("origin/") else None
 
 
 def session_text(mode, env):

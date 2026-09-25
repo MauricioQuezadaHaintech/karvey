@@ -193,6 +193,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F17.T1 [Backend] BUG-22: profile-only commits after a save are not drift — est: 30min (depends E1.F6.T1)
 - [x] E1.F17.T2 [Backend] Status names may contain `( )` (F-19) — est: 20min (depends E1.F7.T1)
 - [ ] E1.F17.T3 [human] Run the 10 manual agent-behaviour scripts with the agent (F-47) — executor: owner (depends E1.F14.T4, E1.F17.T1, E1.F17.T2) — 🔄 run 2026-09-25: 6 PASS / 4 FAIL
+- [x] E1.F17.T4 [Backend] BUG-23 (F-50): the settings lookup reads integration and production — est: 20min
 
 ---
 
@@ -277,6 +278,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F17.T1 [Backend] | ✅ done | 30 | 6 | 0 | BUG-22 RESUELTO: `livestate.profile_only_since` (python path) + the same rule in the degraded bash block; test-hooks.sh 4 cases × 2 paths (case 1 red before the fix, 2-4 over-matching guards); regression index BUG-22 |
 | E1.F17.T2 [Backend] | ✅ done | 20 | 3 | 0 | F-19: `KIND_EXEMPTIONS["status"] = ( )`; test_safe_values.py: accepted by `check_status` and `get … --shell`, `a$(b)` / backtick / `"` / `;` refused, exemption per kind (red before the fix) |
 | E1.F17.T3 [human] | 🔄 in_progress | — | — | — | [human] run headless by the maintainer agent (D-19/D-28): 6 PASS / 4 FAIL; FAIL → F-50 (settings notice ignores the reviewed line), F-51 (visible-version), F-52 (subagent prompt allows project.json), F-53 (block comment not posted); F-54 spec-gap; evidence qa/manual/*-2026-09-25.md |
+| E1.F17.T4 [Backend] | ✅ done | 20 | 8 | 0 | BUG-23 RESUELTO: `project.settings_lines` (integration, production, origin/HEAD) used by the session notice and `karvey-config.py Settings.remotes`; table ss-24 + `OriginProductionFallback` red before the fix; regression index BUG-23 |
 
 ---
 
@@ -306,3 +308,4 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-25 | impl | E1.F17.T1 done (D-21): BUG-22 — commits since the save touching only the profile files (`state.json`, `handoff.md`, `board.md`, `manifest.md`, `checklist.md`) on a descendant of the recorded commit match, lower-or-equal uncommitted count too; both the python session path and the degraded bash block; 4 cases in test-hooks.sh on both paths; BUG-22 RESUELTO in the tracker and incidents index. Estimate 30 min vs actual 6 min (AI), 0 review. |
 | 2026-09-25 | impl | E1.F17.T2 done (D-21): F-19 — status names may contain `( )` (`KIND_EXEMPTIONS["status"]`, `check_status` passes the exemption); 3 tests in test_safe_values.py (accepted via `check_status` and `get --shell`, refusals kept, per-kind only). Estimate 20 min vs actual 3 min (AI), 0 review. |
 | 2026-09-25 | impl | E1.F17.T3 run (D-19/D-28): the 10 manual agent-behaviour scripts run headless by the maintainer agent, each in its own throw-away repo under $SCRATCH, ClickUp scripts against a throw-away sandbox list, visible-version against a local fixture page. 6 PASS (find-or-create, impl-resume, init-not-now, missing-status-map, qa-review-to-done, settings-merge) / 4 FAIL (settings-docs-branch B, visible-version 1–2, no-human-no-mapping subagent, per-level-maps A). New findings F-50..F-53 (bug), F-54 (spec-gap). Evidence `qa/manual/*-2026-09-25.md`. Task stays 🔄 until the FAILs are routed and re-run. |
+| 2026-09-25 | impl | E1.F17.T4 done (D-21): BUG-23 / F-50 — the settings notice and `resolve` read `origin/{integration}` and `origin/{production}` (and `origin/HEAD` for the notice) before "missing"; the lookup no longer stops at the first readable line; table case ss-24 and 3 unit tests; BUG-23 RESUELTO in the tracker and incidents index. Estimate 20 min vs actual 8 min (AI), 0 review. |

@@ -843,6 +843,14 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 **Requirements:** REQ-W1-080..085, 089, 095, 096 (AC-7)  
 **Executed:** maintainer agent, headless under D-19/D-28 · 2026-09-25 13:01 UTC · qa/manual/ — 6 PASS / 4 FAIL (FAIL: settings-docs-branch, visible-version, no-human-no-mapping, per-level-maps → F-50..F-53; F-54 spec-gap observed)
 
+### E1.F17.T4 [Backend] BUG-23 (F-50): the settings lookup reads integration and production — _Depends: E1.F17.T3_
+
+**Estimate:** 20 min · **Actual:** 8 min (AI)  
+**Files:** `plugins/karvey/scripts/karvey_lib/project.py` (`settings_lines`), `karvey_lib/karvey_hooks.py` (`settings_notice`), `scripts/karvey-config.py` (`Settings.remotes`); `tests/hooks/tables/session.json` (ss-24), `tests/unit/test_config_resolve.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
+**Requirements:** REQ-W1-083, REQ-W1-107  
+**Tests added:** integration `dev` readable without the settings and production `main` with them → no notice, `resolve` source `origin/main`; no line with them → notice. Red before the fix.  
+**Done when:** the table case and unit tests pass; BUG-23 RESUELTO; the settings-docs-branch rerun passes variant B.
+
 ## Traceability matrix (REQ-W1 → tasks)
 
 | REQ-W1 | Tasks |

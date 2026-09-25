@@ -690,3 +690,33 @@ Architecture §1.4 revision 1 (D-19): a changed commit matches when the recorded
 | 2026-09-24 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-40, first agente-karvey save (da3d70a → cb3946e) |
 | 2026-09-24 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-19): cause read in the hook's live-state block |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T1 (D-21): profile-only commits since the save match on both the python and the degraded path; case 1 red before the fix, cases 2-4 guard against over-matching |
+
+## BUG-23 — Settings notice ignores the production line when integration lacks the settings
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/karvey_hooks.py (`settings_notice`), plugins/karvey/scripts/karvey-config.py (`Settings.remote`)
+- **Change / origin:** wave1-hardening — finding F-50 (manual script `settings-docs-branch.md`, E1.F17.T3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`branch_flow {integration: dev, production: main}`. Settings committed on a docs branch and merged to `main` (pushed), not yet on `dev`. A worktree made from the older commit, whose `project.json` has neither block. Start a session there.
+
+### Actual vs expected
+- Actual: `Karvey (info): team settings not set (notifications + management)`; `karvey-config.py resolve management` falls back to `markdown` (source `default`).
+- Expected: no settings notice, and `resolve` returns the settings with source `origin/main`: REQ-W1-083 says the reviewed line counts before "missing".
+
+### Root cause
+`karvey_hooks.py:526-532` (before the fix) looked at `origin/{integration}` and then `origin/HEAD`, but the loop ended with `break` at the first readable `project.json`, so a readable `origin/dev` without the settings ended the lookup; `origin/{production}` was never a candidate, and `origin/HEAD` does not exist in a clone whose remote was added by hand. `karvey-config.py:104-118` (`Settings.remote`) read only `origin/{integration}`. The requirement names `origin/{integration}`, the manual script `origin/main`: the code read one line and stopped. Latent since E1.F6.T2 / E1.F7.T2; every earlier test used `integration = production = main`.
+
+### Fix
+`project.settings_lines(project, root)` gives the reviewed lines in order: `origin/{integration}`, `origin/{production}`, then `origin/HEAD`, deduplicated and checked with `safe_values.check_branch`. The session notice reads each and stays silent when any has both blocks (no `break`); `karvey-config.py` `Settings.remotes()` returns every readable line and `block(key)` takes the first line that has the key (source `origin/<line>`). Settled: both lines count (integration first). `management-adapters.md` resolution order, `karvey-init` Step 3 and `hooks/README.md` say so.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/session.json` case `ss-24-settings-on-origin-production-not-integration-silent` (integration `dev` readable without the settings, production `main` with them → silent) and `plugins/karvey/tests/unit/test_config_resolve.py` `OriginProductionFallback` (`resolve` source `origin/main`; `settings_notice` None; notice still printed when no line has them). The table case and the first two unit tests were red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-50, manual script settings-docs-branch variant B (E1.F17.T3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: the lookup breaks at the first readable line and never reads production |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T4: every reviewed line counts; table case and unit tests red before the fix, green after |

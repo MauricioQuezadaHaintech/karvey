@@ -37,7 +37,7 @@ relative to the team root; anything not listed is `ceo`. The profile lives in th
 Inside a Karvey project whose team settings (`notifications`, `management`) are missing, on `startup` only
 it adds one informational line pointing to `/karvey:karvey-init --settings`.
 <!-- guard-case: ss-13-empty-notifications-startup-one-line --> On resume, or when the settings are merged on
-`origin/{integration}`, it prints nothing. <!-- guard-case: ss-14-empty-notifications-resume-silent, ss-16-settings-only-on-origin-main-silent -->
+`origin/{integration}` or `origin/{production}`, it prints nothing. <!-- guard-case: ss-14-empty-notifications-resume-silent, ss-16-settings-only-on-origin-main-silent, ss-24-settings-on-origin-production-not-integration-silent -->
 
 For each repo in `state.json` it compares branch, last commit and uncommitted count with the live tree
 (`matches` or `DRIFT — branch X -> Y`) and tells the session to run `/karvey:karvey-checkpoint restore`

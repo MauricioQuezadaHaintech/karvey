@@ -1,6 +1,6 @@
 {
  "table": "session",
- "description": "E1.F6.T4 / REQ-W1-045..048, 050, 051, 083: the SessionStart hook (karvey-session-context.sh <startup|resume>) selects the active change without archive/ or IMPLEMENTED, injects the compact manifest XOR the full one, at most 40 open board rows and 6 KB of handoff with truncation notices, as hookSpecificOutput.additionalContext; the settings notice appears only on startup, only in a Karvey project, and not when origin/{integration} has the settings.",
+ "description": "E1.F6.T4 / REQ-W1-045..048, 050, 051, 083: the SessionStart hook (karvey-session-context.sh <startup|resume>) selects the active change without archive/ or IMPLEMENTED, injects the compact manifest XOR the full one, at most 40 open board rows and 6 KB of handoff with truncation notices, as hookSpecificOutput.additionalContext; the settings notice appears only on startup, only in a Karvey project, and not when origin/{integration} or origin/{production} has the settings (BUG-23).",
  "cases": [
   {
    "id": "ss-01-archive-newer-not-active",
@@ -802,6 +802,82 @@
     "REQ-W1-083"
    ],
    "note": "a worktree created before the settings were merged: the working copy lacks them, origin/main has them"
+  },
+  {
+   "id": "ss-24-settings-on-origin-production-not-integration-silent",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "origin_files": {
+      "dev": {
+       "docs/spec/project.json": {
+        "git_platform": "github",
+        "repos": [
+         "repo"
+        ],
+        "spec_repo": "repo",
+        "branch_flow": {
+         "feature_prefix": "feature/",
+         "integration": "dev",
+         "production": "main"
+        }
+       }
+      },
+      "main": {
+       "docs/spec/project.json": {
+        "git_platform": "github",
+        "repos": [
+         "repo"
+        ],
+        "spec_repo": "repo",
+        "branch_flow": {
+         "feature_prefix": "feature/",
+         "integration": "dev",
+         "production": "main"
+        },
+        "notifications": {
+         "channel": "none"
+        },
+        "management": {
+         "tool": "markdown"
+        }
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "context_not_contains": "team settings"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-083",
+    "BUG-23"
+   ],
+   "note": "BUG-23 / F-50: integration dev, production main; the settings reached origin/main but not origin/dev, and the worktree predates them: a readable origin/dev without settings must not stop the lookup before origin/main"
   },
   {
    "id": "ss-17-no-python-degraded-line",
