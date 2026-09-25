@@ -38,7 +38,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import approval, atomicio, project as pj, schema_lite as sl  # noqa: E402
+from karvey_lib import approval, atomicio, lanes as ln, project as pj, schema_lite as sl  # noqa: E402
 
 TOOL = "karvey-state"
 SCHEMA_VERSION = 1
@@ -207,6 +207,8 @@ def approval_state(data, phase):
     skipped = data.get("skipped") if isinstance(data.get("skipped"), dict) else {}
     if phase in skipped and isinstance(skipped[phase], str) and skipped[phase].strip():
         return "skipped"
+    if key and key != "prod" and lane_skips(data, phase):
+        return "skipped"  # skipped by the change's lane (recorded as lane:{lane} when advance passes it)
     approvals = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
     ap = approvals.get(key) if key else None
     if key == "prod":
@@ -222,8 +224,18 @@ def approval_state(data, phase):
 
 
 def lane_skips(data, phase):
-    """True when this change's own lane marks ``phase`` skipped (``s``)."""
-    return isinstance(data.get("lane"), str) and bool(data.get("lane"))
+    """True when this change's own ``spec.json:lane`` marks ``phase`` skipped (``s``) (wave2 §1.3)."""
+    lane = data.get("lane") if isinstance(data, dict) else None
+    if not isinstance(lane, str) or not lane:
+        return False
+    try:
+        return ln.lane_skips(lane, phase)
+    except ln.LaneError:
+        return False
+
+
+def lane_reason(data):
+    return "lane:%s" % data.get("lane")
 
 
 def gate_phases_before(index):
@@ -314,10 +326,12 @@ def semantic_spec(data, strict, file):
             out.append(kl.issue("state.legacy_embedded_skip", "approval %r is an embedded skip (legacy); %s"
                                 % (key, fix), severity="warning", file=file, path="$.approvals.%s" % key))
 
-    # a non-skippable phase in skipped: only as a lane skip of this change's own lane (§2.1, wave2)
+    # a non-skippable phase in skipped: only as a lane skip of this change's own lane (§2.1, wave2); a
+    # lane:{x} reason must name this change's lane and a phase that lane skips
     for ph in sorted(skipped):
         pdef = phase_def(ph)
-        if not pdef or pdef["skippable"]:
+        is_lane = isinstance(skipped[ph], str) and skipped[ph].startswith("lane:")
+        if not pdef or (pdef["skippable"] and not is_lane):
             continue
         lane_reason = "lane:%s" % data.get("lane") if isinstance(data.get("lane"), str) else None
         if skipped[ph] != lane_reason or not lane_skips(data, ph):
@@ -373,7 +387,7 @@ def semantic_spec(data, strict, file):
         seen |= {map_phase(e.get("to"))[0] for e in hist if _is_legacy_transition(e)}
         seen |= {map_phase(e.get("from"))[0] for e in hist if _is_legacy_transition(e)}
         for p in machine()["phases"][:idx + 1]:
-            if p["id"] in skipped or p["id"] in seen:
+            if p["id"] in skipped or p["id"] in seen or lane_skips(data, p["id"]):
                 continue
             if p["skippable"] and approval_state(data, p["id"]) == "skipped":
                 continue
@@ -769,6 +783,8 @@ def load_change(root, change):
 
 def is_skipped(data, pid):
     pdef = phase_def(pid)
+    if pdef and lane_skips(data, pid):
+        return True  # the lane passes it (wave2 §1.4)
     return bool(pdef and pdef["skippable"] and approval_state(data, pid) == "skipped")
 
 
@@ -862,6 +878,14 @@ def cmd_next(args, root):
     ledger, known = read_ledger_safe(root, args.change)
     res = compute_next(loaded.data, ledger, known)
     res["file"] = name
+    lane, source = ln.lane_of(loaded.data)
+    res["lane"], res["lane_source"] = lane, source
+    if source != "spec" and mapped != "archived":
+        warns = warns + [kl.issue("state.lane_missing", "no lane in spec.json: %s (every phase mandatory unless "
+                                  "recorded as skipped); set one with lane set" % (
+                                      "the 3.12 pipeline applies" if source == "legacy" else
+                                      "type %r gives lane %r for display only" % (loaded.data.get("type"), lane)),
+                                  severity="warning", file=name, path="$.lane")]
     human = "%s: phase %s · %s · next %s%s" % (
         args.change, res["phase"], res["status"], res["next_phase"] or "—",
         (" (" + res["skill"] + ")") if res.get("skill") else "")
@@ -1048,6 +1072,9 @@ def cmd_advance(args, root):
         if to == "archived" and approval_state(data, "deployed") != "approved":
             raise Refused("archived needs approvals.prod in spec.json (by, role human, ref): run "
                           "approve %s prod --write-spec on the archive branch" % args.change, code="state.precondition")
+        lane_skipped = record_lane_skips(data, ti)
+        if lane_skipped:
+            info["lane_skipped"] = lane_skipped
         _move_history(data, to, now, by=args.by, evidence=evidence)
         data["phase"] = to
         data["updated_at"] = now
@@ -1064,6 +1091,23 @@ def cmd_advance(args, root):
     res["consumed"] = consume_on_close(root, args.change, loaded.data, res["from"])
     res["file"] = rel(root, path)
     return kl.EXIT_OK, res, [], [], "%s: %s → %s" % (args.change, res["from"], res["to"])
+
+
+def record_lane_skips(data, before_index):
+    """Write ``skipped[phase] = lane:{lane}`` for every approvable phase before ``before_index`` that the change's
+    lane skips and that is not recorded yet (REQ-W2-015). A manual skip is never overwritten."""
+    out = []
+    for p in machine()["phases"][:max(before_index, 0)]:
+        if not p["approval"] or p["approval"] == "prod" or not lane_skips(data, p["id"]):
+            continue
+        sk = data.get("skipped")
+        if not isinstance(sk, dict):
+            sk = {}
+            data["skipped"] = sk
+        if p["id"] not in sk:
+            sk[p["id"]] = lane_reason(data)
+            out.append(p["id"])
+    return out
 
 
 ATTESTED_MSG = ("an attested deployed needs both evidences: --ref D-NN (a decision in docs/spec/decisions.md) "
