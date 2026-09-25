@@ -150,3 +150,137 @@ def build_inputs(root, change, phase, extras=(), project=None, diff_path=None, p
             res["dropped"].append("dropped: %s (not a phase input)" % x)
     res["status"] = "%d judge(s): %s" % (len(res["lenses"]), ", ".join(res["lenses"]) or "none")
     return res
+
+
+# --------------------------------------------------------------------------- collect (REQ-W2-025, 026, 029, 030)
+VERDICTS = ("pass", "concerns", "fail")
+SEVERITIES = ("Critical", "High", "Medium", "Low")
+TYPES = ("bug", "spec-gap", "emergent")
+FINDINGS_HEAD = "| ID | Date | Phase | Origin | Type | Severity | Finding | Status | Routed to |"
+_FENCE = re.compile(r"```.*?(```|\Z)", re.S)
+_PATCH_LINE = re.compile(r"^(diff --git|@@|\+\+\+|---|[+-])", re.M)
+_CTRL = re.compile(r"[\x00-\x1f\x7f]")
+_FID = re.compile(r"^\|\s*F-(\d+)\s*\|", re.M)
+
+
+def sanitise(text):
+    """Finding text for a Markdown table cell: no code block or patch, escaped, at most 300 characters."""
+    t = _FENCE.sub(" ", str(text or ""))
+    if re.search(r"^(@@|diff --git|\+\+\+ )", t, re.M):  # a patch: drop its lines, keep the prose
+        t = "\n".join(ln for ln in t.splitlines() if not _PATCH_LINE.match(ln))
+    t = t.replace("\r", " ").replace("\n", " ").replace("\t", " ")
+    t = _CTRL.sub("", t).replace("|", "\\|")
+    t = re.sub(r"\s+", " ", t).strip()
+    return t if len(t) <= TEXT_MAX else t[:TEXT_MAX - 1] + "…"
+
+
+def _lines_of(root, path):
+    p = Path(path) if os.path.isabs(path) else Path(root) / path
+    try:
+        return len(p.read_text(encoding="utf-8-sig", errors="replace").splitlines())
+    except OSError:
+        return None
+
+
+def resolve_cite(root, cite, allowed):
+    """True when ``path:line`` names one of the inputs and a line within its length."""
+    if not isinstance(cite, str) or ":" not in cite:
+        return False
+    path, _, line = cite.rpartition(":")
+    path = path.strip()
+    if not line.strip().isdigit():
+        return False
+    if path not in allowed:
+        return False
+    n = _lines_of(root, path)
+    return n is not None and 1 <= int(line) <= n
+
+
+def _valid_result(r):
+    if not isinstance(r, dict) or r.get("verdict") not in VERDICTS or not isinstance(r.get("lens"), str):
+        return False
+    fs = r.get("findings", [])
+    if not isinstance(fs, list):
+        return False
+    return all(isinstance(f, dict) and f.get("severity") in SEVERITIES and isinstance(f.get("text"), str)
+               for f in fs)
+
+
+def price(model):
+    table = defaults().get("judge_price_table") or {}
+    p = table.get(model) or table.get("default") or {"in": 0.0, "out": 0.0}
+    return float(p.get("in", 0.0)), float(p.get("out", 0.0))
+
+
+def cost(usage, chars_in, chars_out, model):
+    """``(tokens_in, tokens_out, usd, estimated)``: measured when ``usage`` has tokens, else chars ÷ 4."""
+    pin, pout = price(model)
+    if isinstance(usage, dict) and isinstance(usage.get("tokens_in"), int) and isinstance(usage.get("tokens_out"), int):
+        ti, to = usage["tokens_in"], usage["tokens_out"]
+        usd = usage.get("usd")
+        if not isinstance(usd, (int, float)) or isinstance(usd, bool):
+            usd = (ti * pin + to * pout) / 1e6
+        return ti, to, round(float(usd), 6), False
+    ti, to = chars_in // 4, chars_out // 4
+    return ti, to, round((ti * pin + to * pout) / 1e6, 6), True
+
+
+def collect(root, change, phase, results, allowed, model=None, intra_model=None, at=None, chars_in=0):
+    """Filter the judge results (``[(name, raw_text)]``). Returns ``(runs, kept, lines)``; writes nothing."""
+    runs, kept, lines = [], [], []
+    for name, raw in results:
+        try:
+            r = json.loads(raw)
+        except ValueError:
+            r = None
+        if not _valid_result(r):
+            lens = r.get("lens") if isinstance(r, dict) and isinstance(r.get("lens"), str) else Path(name).stem
+            rmodel = r.get("model") if isinstance(r, dict) and isinstance(r.get("model"), str) else None
+            runs.append({"phase": phase, "lens": lens, "model": rmodel or model or "unknown",
+                         "intra_model": bool(intra_model), "verdict": "not-run",
+                         "findings": {}, "discarded": 0, "at": at, "reason": "invalid output"})
+            lines.append("%s: not run (invalid output)" % lens)
+            continue
+        discarded, counts = 0, {}
+        for f in r.get("findings", []):
+            if not resolve_cite(root, f.get("cite"), allowed):
+                discarded += 1
+                continue
+            sev = f["severity"]
+            counts[sev] = counts.get(sev, 0) + 1
+            kept.append({"lens": r["lens"], "severity": sev, "type": f.get("type_guess") if f.get("type_guess") in TYPES
+                         else "emergent", "text": sanitise(f["text"]), "cite": f["cite"]})
+        m = r.get("model") or model or "unknown"
+        im = r.get("intra_model") if isinstance(r.get("intra_model"), bool) else bool(intra_model)
+        ti, to, usd, est = cost(r.get("usage"), chars_in, len(raw), m)
+        runs.append({"phase": phase, "lens": r["lens"], "model": m, "intra_model": im, "verdict": r["verdict"],
+                     "findings": counts, "discarded": discarded, "tokens_in": ti, "tokens_out": to, "usd": usd,
+                     "estimated": est, "at": at})
+        lines.append("%s: %s · %d kept · %d discarded (no citation) · %s%s" % (
+            r["lens"], r["verdict"], sum(counts.values()), discarded, m, " (intra-model)" if im else ""))
+    return runs, kept, lines
+
+
+def append_findings(path, phase, kept, day):
+    """Append the kept judge findings as ``open`` rows (origin ``judge:{lens}``); returns the new ids."""
+    from . import atomicio
+    path = Path(path)
+    exists = path.is_file()
+    text = path.read_text(encoding="utf-8-sig") if exists else "# Findings\n\n%s\n%s\n" % (
+        FINDINGS_HEAD, "|" + "----|" * 9)
+    expected = atomicio.file_sha256(path) if exists else None  # compare-and-swap under the writer's lock
+    nums = [int(n) for n in _FID.findall(text)]
+    nxt = max(nums) + 1 if nums else 1
+    rows, ids = [], []
+    for k in kept:
+        fid = "F-%02d" % nxt
+        nxt += 1
+        ids.append(fid)
+        rows.append("| %s | %s | %s | judge:%s | %s | %s | %s (%s) | open | — |" % (
+            fid, day, phase, k["lens"], k["type"], k["severity"], k["text"], k["cite"].replace("|", "\\|")))
+    if rows:
+        lines = text.rstrip("\n").split("\n")
+        last = max((i for i, ln in enumerate(lines) if ln.startswith("|")), default=len(lines) - 1)
+        lines[last + 1:last + 1] = rows
+        atomicio.write_text_atomic(str(path), "\n".join(lines) + "\n", expected_sha256=expected)
+    return ids

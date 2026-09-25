@@ -16,9 +16,12 @@ finding, edits an artifact or writes ``spec.json``.
 Exit: 0 ok · 2 usage · 3 refused · 4 not found · 5 internal. Python >= 3.9, stdlib only.
 """
 import argparse
+import json
 import os
 import sys
 import tempfile
+from datetime import datetime
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -60,6 +63,44 @@ def cmd_inputs(args):
     return kl.EXIT_OK, res, "\n".join(lines)
 
 
+def cmd_collect(args):
+    root = _root(args)
+    rdir = Path(args.results)
+    if not rdir.is_dir():
+        raise jd.JudgeError("--results %s is not a directory" % rdir)
+    inp = jd.build_inputs(root, args.change, args.phase, diff_path=args.diff)
+    allowed = list(inp["inputs"])
+    chars_in = 0
+    for p in allowed + ([inp["rubric"]] if inp["rubric"] else []):
+        q = Path(p) if os.path.isabs(p) else Path(root) / p
+        try:
+            chars_in += q.stat().st_size
+        except OSError:
+            pass
+    out_path = Path(args.out) if args.out else rdir / "runs.json"
+    results = []
+    for f in sorted(rdir.glob("*.json")):
+        if f.resolve() == out_path.resolve():
+            continue
+        results.append((f.name, f.read_text(encoding="utf-8-sig", errors="replace")))
+    at = datetime.now().astimezone().isoformat(timespec="seconds")
+    runs, kept, lines = jd.collect(root, args.change, args.phase, results, allowed, model=args.model,
+                                   intra_model=args.intra_model, at=at, chars_in=chars_in)
+    ids = []
+    if not args.dry_run:
+        fpath = Path(root) / pj.CHANGES_DIR / args.change / "findings.md"
+        ids = jd.append_findings(fpath, args.phase, kept, at[:10])
+        out_path.write_text(json.dumps(runs, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    discarded = sum(r.get("discarded", 0) for r in runs)
+    lines.append("%d finding(s) appended to findings.md (%s) · %d discarded (no citation)%s" % (
+        len(ids), ", ".join(ids) or "none", discarded, " · dry run" if args.dry_run else ""))
+    lines += inp["notes"]
+    lines.append("next: karvey-state.py judge-run %s %s --from %s" % (args.change, args.phase, out_path))
+    res = {"change": args.change, "phase": args.phase, "runs": runs, "appended": ids, "discarded": discarded,
+           "runs_file": str(out_path), "notes": inp["notes"]}
+    return kl.EXIT_OK, res, "\n".join(lines)
+
+
 def build_parser():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--root", help="Karvey project root (default: walk up from the cwd)")
@@ -71,10 +112,20 @@ def build_parser():
     i.add_argument("phase")
     i.add_argument("--extra", action="append", help="an item a caller wants to add (it is dropped and listed)")
     i.add_argument("--base", help="qa: the ref the diff is taken from (base...HEAD)")
+    c = sub.add_parser("collect", parents=[common], help="filter judge results, append findings, write run records")
+    c.add_argument("change")
+    c.add_argument("phase")
+    c.add_argument("--results", required=True, help="directory with one JSON result per judge")
+    c.add_argument("--out", help="run records for karvey-state.py judge-run (default: <results>/runs.json)")
+    c.add_argument("--diff", help="qa: the diff file the judges read (from inputs)")
+    c.add_argument("--model", help="the model the judges ran on, when a result does not say")
+    c.add_argument("--intra-model", dest="intra_model", action="store_true",
+                   help="the judges ran on the author's model family")
+    c.add_argument("--dry-run", action="store_true", help="filter only; append and write nothing")
     return p
 
 
-COMMANDS = {"inputs": cmd_inputs}
+COMMANDS = {"inputs": cmd_inputs, "collect": cmd_collect}
 
 
 def main(argv=None):

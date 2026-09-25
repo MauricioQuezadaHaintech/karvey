@@ -97,7 +97,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 - [x] E1.F3.T1 [Backend] `rules/judges.md` (prompt template, output contract, Read/Grep/Glob only) + rubrics `rules/judges/{requirements,architecture,qa}.md` + L-51 — est: 12min (P)
 - [x] E1.F3.T2 [Backend] `karvey_lib/judges.py` input builder + `karvey-judges.py inputs` (closed list, per-lane count, `dropped:` lines, `disabled by project setting`, `none for lane patch`) — est: 12min (depends E1.F3.T1, E1.F2.T1)
-- [ ] E1.F3.T3 [Backend] `karvey-judges.py collect`: schema check, citation resolver, sanitiser (cap 300, escape, drop patches), measured/estimated cost, `budget` ignored, append `findings.md` rows — est: 15min (depends E1.F3.T2)
+- [x] E1.F3.T3 [Backend] `karvey-judges.py collect`: schema check, citation resolver, sanitiser (cap 300, escape, drop patches), measured/estimated cost, `budget` ignored, append `findings.md` rows — est: 15min (depends E1.F3.T2)
 - [ ] E1.F3.T4 [Backend] State tool: `judge-run` append + judge `blocking` refusal in `approve` — est: 10min (depends E1.F3.T3, E1.F2.T4, E1.F1.T2)
 - [ ] E1.F3.T5 [Backend] Skill `karvey-judges` + calls in `karvey-requirements`, `karvey-architecture`, `karvey-qa` (fiscal before `approve qa`) + README/`plugin.json` counts (L-11) — est: 10min (depends E1.F3.T4)
 - [ ] E1.F3.T6 [Backend] Iterate: `accepted:{type} {ref}` / `rejected: {reason}` for judge rows; convergence lists `unresolved (no routing or reason)` — est: 8min (depends E1.F3.T3) (P)
@@ -204,7 +204,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F2.T9 [Test] | ⬜ todo | 10 | — | — |  |
 | E1.F3.T1 [Backend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F3.T2 [Backend] | ✅ done | 12 | 8 | 0 |  |
-| E1.F3.T3 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F3.T3 [Backend] | ✅ done | 15 | 10 | 0 |  |
 | E1.F3.T4 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F3.T5 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F3.T6 [Backend] | ⬜ todo | 8 | — | — |  |
