@@ -841,7 +841,7 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 **Verification:** one `docs/spec/changes/wave1-hardening/qa/manual/<script>-<date>.md` per script with PASS / FAIL / not run (reason); every FAIL logged as a finding.  
 **Rollback:** delete the throw-away repos.  
 **Requirements:** REQ-W1-080..085, 089, 095, 096 (AC-7)  
-**Executed:** (filled when done: name · YYYY-MM-DD HH:MM · evidence)
+**Executed:** maintainer agent, headless under D-19/D-28 · 2026-09-25 13:01 UTC · qa/manual/ — 6 PASS / 4 FAIL (FAIL: settings-docs-branch, visible-version, no-human-no-mapping, per-level-maps → F-50..F-53; F-54 spec-gap observed)
 
 ## Traceability matrix (REQ-W1 → tasks)
 
