@@ -213,7 +213,7 @@ corrected, not annotated at the end.
 ## D-23 — Wave 2: judges advisory, intra-model accepted (panel §6.2, JU-01 / R-11)
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Advisory, intra-modelo ok (Recomendado)»
-- **What:** judges start advisory until 4–6 measured changes; they run at requirements, architecture and qa; a declared intra-model judge is accepted; a token / US$ cap per change lives in `project.json`.
+- **What:** judges start advisory until 4–6 measured changes; they run at requirements, architecture and qa; a declared intra-model judge is accepted. (The token / US$ cap first stated here is superseded by D-30: no cap, measure only.)
 - **What it does NOT say:** it does not use client projects' API keys (manifest); moving to blocking is a later decision.
 
 ## D-24 — Wave 2 versioning: 3.13 opt-in, 4.0 when defaults turn blocking (panel §6.3)
@@ -240,3 +240,23 @@ corrected, not annotated at the end.
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Crea lista sandbox en ClickUp (Recomendado)» — option text: create a throw-away `karvey-sandbox` list in HainTech's ClickUp, run the scripts headless (`claude -p`), delete it at the end; `visible-version` read-only against Paáutin DEV through the playwright agent.
 - **What:** the agent runs the 10 manual scripts itself under D-19's headless clause; the sandbox list is deleted after the run.
+
+## D-29 — Objective criterion of the `patch` lane (Wave 2)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «≤ 3 archivos, sin schema/API (Recomendado)»
+- **What:** a bug goes through the `patch` lane (D-25) when its fix touches ≤ 3 code files and changes no DB schema, no API contract, no permissions and no Security Tier ≥ 3 surface; otherwise it goes through the standard lane.
+
+## D-30 — Judge budget: no cap, measure only (supersedes the cap in D-23)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Sin tope, solo medir»
+- **What:** judge cost (tokens and US$) is recorded per gate and per change; no cap cuts a judge run. Supersedes D-23's "token / US$ cap per change in `project.json`".
+
+## D-31 — Wave 3 client report: one HTML page per change for the sponsor (R-19 / R-25)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «HTML por change al sponsor (Recomendado)»
+- **What:** one page per change (scope, state, cost, risks), published when each gate closes, addressed to the stakeholder declared in `project.json`.
+
+## D-32 — Wave 3 portfolio: all of HainTech; Claude Code only (R-28 / R-30)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «HainTech completo, solo Claude Code (Recomendado)»
+- **What:** one portfolio over every Karvey repo of HainTech; R-30 stays a portability guide without official support for other runtimes.
