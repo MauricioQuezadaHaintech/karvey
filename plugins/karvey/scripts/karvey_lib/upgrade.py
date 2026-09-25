@@ -303,7 +303,7 @@ class Probe:
         for rel, text in self.overlay.items():
             if text is None:
                 out.discard(rel)
-            elif fnmatch.fnmatchcase(rel, pattern) or Path(rel).match(pattern):
+            elif glob_match(rel, pattern):
                 out.add(rel)
         return sorted(out)
 
@@ -374,6 +374,17 @@ class Probe:
     @property
     def config(self):
         return config_module()
+
+
+def glob_match(rel, pattern):
+    """Segment-aware glob: ``*`` stays inside one path segment, ``**`` spans any number of them."""
+    def m(parts, pats):
+        if not pats:
+            return not parts
+        if pats[0] == "**":
+            return any(m(parts[i:], pats[1:]) for i in range(len(parts) + 1))
+        return bool(parts) and fnmatch.fnmatchcase(parts[0], pats[0]) and m(parts[1:], pats[1:])
+    return m(rel.split("/"), pattern.split("/"))
 
 
 def _parse_json(text, where):

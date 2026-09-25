@@ -32,6 +32,9 @@
        "compat_marker": {"hook_pattern": "plan[-_]?approved", "env": "KARVEY_COMPAT_MARKER",
                          "value": "<the marker file your own plan hook checks>"},
        "claude_md_line": {"when": "(?i)(spaces/[A-Za-z0-9_-]{6,}|hooks\\.slack\\.com|webhook\\.office\\.com)",
-                          "line": "Karvey reads notification destinations only from each project's docs/spec/project.json (notifications); a table here is not used."}}}}
+                          "line": "Karvey reads notification destinations only from each project's docs/spec/project.json (notifications); a table here is not used."}}}},
+    {"id": "changes-in-flight", "since": "3.13.0", "title": "Report changes in flight whose gates are unmet",
+     "check": "changes_in_flight_check", "fix": null, "dry_run": false, "human": false, "risk": "low",
+     "report_only": true, "cost": "scan"}
   ]
 }

@@ -107,6 +107,15 @@ class Catalogue(unittest.TestCase):
         for s in steps:
             self.assertIn(s["check"], upgrade_steps.REGISTRY)
 
+    def test_shipped_catalogue_has_exactly_the_eight_steps_in_order(self):
+        self.assertEqual([s["id"] for s in upgrade.load_catalogue()], [
+            "schema-migrate", "schema-migrate-proposed", "legacy-shims", "team-settings", "enforcement-defaults",
+            "statusline-launcher", "global-config", "changes-in-flight"])
+        by = {s["id"]: s for s in upgrade.load_catalogue()}
+        self.assertTrue(by["statusline-launcher"]["human"] and by["global-config"]["human"])
+        self.assertTrue(by["changes-in-flight"]["report_only"])
+        self.assertEqual({s["since"] for s in by.values()}, {"3.13.0"})
+
 
 if __name__ == "__main__":
     unittest.main()

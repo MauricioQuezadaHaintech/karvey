@@ -491,6 +491,51 @@ def global_config_check(probe, params):
                       instructions="Apply these lines by hand; Karvey never writes under ~/.claude.")
 
 
+
+# --------------------------------------------------------------------------- 8 changes-in-flight (report)
+def changes_in_flight_check(probe, params):
+    """Changes not archived whose recorded phases do not satisfy this version's gates. Report only: the
+    changes are never modified, and archived changes (history, D-14) are never listed."""
+    st = probe.state
+    lines = []
+    for rel in probe.glob("docs/spec/changes/*/spec.json"):
+        probe.check_deadline()
+        cid = rel.split("/")[-2]
+        if cid == "archive":
+            continue
+        try:
+            doc = probe.read_json(rel)
+        except CheckFailed as exc:
+            lines.append("%s: unreadable (%s)" % (cid, exc))
+            continue
+        data = doc.data
+        if not isinstance(data, dict):
+            lines.append("%s: spec.json is not a JSON object" % cid)
+            continue
+        gates = []
+        for i in st.validate_data(data, "spec", True, file=rel):
+            if i["code"] == "state.gate_skipped" and isinstance(i.get("path"), str):
+                gates.append(i["path"].rsplit(".", 1)[-1])
+        mapped, _ = st.map_phase(data.get("phase"))
+        if mapped is not None:
+            try:
+                for b in st.compute_next(data).get("blockers") or []:
+                    g = b.split(" ", 1)[0]
+                    if g not in gates and b.endswith("not approved or skipped"):
+                        gates.append(g)
+            except Exception as exc:  # a spec the state tool cannot read is reported, never fixed
+                lines.append("%s: next phase not computable (%s)" % (cid, exc))
+        if gates:
+            lines.append("%s (phase %s): unmet gate%s %s" % (cid, data.get("phase"), "" if len(gates) == 1 else "s",
+                                                            ", ".join(gates)))
+    if not lines:
+        return StepResult("nothing")
+    return StepResult("report", summary="%d change%s in flight with unmet gates (reported, never reprocessed)" % (
+        len(lines), "" if len(lines) == 1 else "s"),
+        instructions="Changes in flight (the state tool decides what to do with each; nothing is changed here):\n"
+                     + "\n".join("  - " + x for x in lines))
+
+
 REGISTRY = {
     "schema_migrate_check": schema_migrate_check,
     "schema_migrate_fix": schema_migrate_fix,
@@ -504,4 +549,5 @@ REGISTRY = {
     "enforcement_defaults_fix": enforcement_defaults_fix,
     "statusline_launcher_check": statusline_launcher_check,
     "global_config_check": global_config_check,
+    "changes_in_flight_check": changes_in_flight_check,
 }

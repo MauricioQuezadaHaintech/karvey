@@ -104,6 +104,14 @@ class ProbeReads(unittest.TestCase):
         self.assertNotIn("docs/spec/project.json", p.glob("docs/spec/*.json"))
         self.assertEqual((self.root / "notes.txt").read_text(encoding="utf-8"), "hello\n", "nothing written")
 
+    def test_overlay_glob_is_segment_aware(self):
+        overlay = {"docs/spec/changes/archive/x-a/spec.json": "{}\n", "docs/spec/changes/b/spec.json": "{}\n"}
+        p = self.probe(overlay=overlay)
+        self.assertEqual(p.glob("docs/spec/changes/*/spec.json"), ["docs/spec/changes/b/spec.json"])
+        self.assertEqual(len(p.glob("docs/spec/**/spec.json")), 2)
+        self.assertTrue(upgrade.glob_match("a/b/c", "a/**"))
+        self.assertFalse(upgrade.glob_match("a/b/c", "a/*"))
+
     def test_state_and_config_modules_load_via_importlib(self):
         p = self.probe()
         self.assertTrue(callable(p.state.fix_spec))

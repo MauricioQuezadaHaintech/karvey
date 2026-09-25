@@ -355,5 +355,28 @@ class HumanSteps(FixtureCase):
         self.assertEqual(home_digest(self.home), before)
 
 
+class ChangesInFlight(FixtureCase):
+    def test_the_impl_change_is_listed_the_archived_one_is_not(self):
+        row, res = self.row("changes-in-flight")
+        self.assertEqual((row["status"], row["report_only"]), ("report", True))
+        self.assertIn("fixture-60 (phase impl)", res.instructions)
+        self.assertIn("tasks", res.instructions.split("fixture-60", 1)[1].splitlines()[0])
+        self.assertNotIn("fixture-61", res.instructions)
+        self.assertNotIn("archive", res.instructions)
+
+    def test_apply_writes_nothing(self):
+        before = {p: p.read_bytes() for p in self.root.rglob("*") if p.is_file() and ".git" not in p.parts}
+        rep = self.apply(["changes-in-flight"])
+        self.assertEqual((rep.applied, rep.shown), ([], ["changes-in-flight"]))
+        self.assertIn("fixture-60", rep.text())
+        after = {p: p.read_bytes() for p in self.root.rglob("*") if p.is_file() and ".git" not in p.parts}
+        self.assertEqual(after, before)
+
+    def test_a_change_with_its_gates_met_is_not_listed(self):
+        (self.root / SPEC60).unlink()
+        g.commit_all(self.root)
+        self.assertEqual(self.row("changes-in-flight")[0]["status"], "nothing")
+
+
 if __name__ == "__main__":
     unittest.main()
