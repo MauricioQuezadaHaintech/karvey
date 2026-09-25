@@ -191,7 +191,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 ### Feature E1.F17: Test-phase iteration (revision 1, D-19)
 
 - [x] E1.F17.T1 [Backend] BUG-22: profile-only commits after a save are not drift — est: 30min (depends E1.F6.T1)
-- [ ] E1.F17.T2 [Backend] Status names may contain `( )` (F-19) — est: 20min (depends E1.F7.T1)
+- [x] E1.F17.T2 [Backend] Status names may contain `( )` (F-19) — est: 20min (depends E1.F7.T1)
 - [ ] E1.F17.T3 [human] Run the 10 manual agent-behaviour scripts with the agent (F-47) — executor: owner (depends E1.F14.T4, E1.F17.T1, E1.F17.T2)
 
 ---
@@ -275,7 +275,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F16.T6 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F16.T7 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F17.T1 [Backend] | ✅ done | 30 | 6 | 0 | BUG-22 RESUELTO: `livestate.profile_only_since` (python path) + the same rule in the degraded bash block; test-hooks.sh 4 cases × 2 paths (case 1 red before the fix, 2-4 over-matching guards); regression index BUG-22 |
-| E1.F17.T2 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F17.T2 [Backend] | ✅ done | 20 | 3 | 0 | F-19: `KIND_EXEMPTIONS["status"] = ( )`; test_safe_values.py: accepted by `check_status` and `get … --shell`, `a$(b)` / backtick / `"` / `;` refused, exemption per kind (red before the fix) |
 | E1.F17.T3 [human] | ⬜ todo | — | — | — | [human] |
 
 ---
@@ -304,3 +304,4 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-24 | impl | E1.F13.T2 observed on PR #24: F-42 (POSIX mode test on Windows), F-43 (bash from PATH), F-44 (macOS timeout + /private/var), F-45 (no-python PATH on Windows), F-46 (time factor) found and fixed; every leg green except lint (team-adapters, E1.F15.T3). |
 | 2026-09-24 | test | Test phase entered (`advance … test`). Unit 694 · regression 10 · test-hooks 58 · tables 313 cases / 381 runs · page 22 — all green; lint 0 errors / 3 warnings; `validate --all` 0 errors; CI run 36063032643 7/7 green; E2E in the live session: state edges refused/allowed, plan and prod approval markers, protect-paths block. Benchmark baseline: hooks and CLI 72–92 ms median. Not run: 10 manual scripts (F-47); E2E release/archive belong to deploy/archive. E1.F16.T2 refused by the auto-mode classifier (F-49). New findings F-47..F-49 (spec-gap). Evidence `docs/test_evidence.md`, plan `docs/test_plan.md`. |
 | 2026-09-25 | impl | E1.F17.T1 done (D-21): BUG-22 — commits since the save touching only the profile files (`state.json`, `handoff.md`, `board.md`, `manifest.md`, `checklist.md`) on a descendant of the recorded commit match, lower-or-equal uncommitted count too; both the python session path and the degraded bash block; 4 cases in test-hooks.sh on both paths; BUG-22 RESUELTO in the tracker and incidents index. Estimate 30 min vs actual 6 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T2 done (D-21): F-19 — status names may contain `( )` (`KIND_EXEMPTIONS["status"]`, `check_status` passes the exemption); 3 tests in test_safe_values.py (accepted via `check_status` and `get --shell`, refusals kept, per-kind only). Estimate 20 min vs actual 3 min (AI), 0 review. |

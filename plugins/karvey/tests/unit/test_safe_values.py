@@ -161,6 +161,41 @@ class SprintsStatusesBranches(unittest.TestCase):
                 with self.assertRaises(sv.UnsafeValue):
                     sv.check_status(v)
 
+    def test_status_parentheses_allowed_f19(self):
+        # F-19 (architecture §3.1 revision 1): real status lists have "In Progress (QA)"
+        for v in ("In Progress (QA)", "Review (peer)", "(blocked)"):
+            with self.subTest(accept=v):
+                self.assertEqual(sv.check_status(v), v)
+        for v in ("a$(b)", "a`b", 'a"b', "a;b", "(x)$", "a{b}"):
+            with self.subTest(reject=v):
+                with self.assertRaises(sv.UnsafeValue):
+                    sv.check_status(v)
+
+    def test_parentheses_exempt_only_for_status(self):
+        with self.assertRaises(sv.UnsafeValue):
+            sv.check_sprints("linear", "Cycle (12)")
+        with self.assertRaises(sv.UnsafeValue):
+            sv.check_location("other", "board (x)")
+
+    def test_status_parentheses_through_get_shell(self):
+        import _config as C
+        import _gitrepo as g
+        tmp = g.TempDir()
+        try:
+            root = tmp.path / "proj"
+            C.make_project(root, {"management": {"tool": "jira", "location": "PAY", "statuses": {
+                "todo": "To Do", "in_progress": "In Progress (QA)", "review": "a$(b)", "done": 'a"b',
+                "blocked": "a;b"}}})
+            code, out, _ = C.run("get", "management.statuses.in_progress", "--shell", "--root", root)
+            self.assertEqual((code, out), (0, "In Progress (QA)\n"))
+            for k in ("review", "done", "blocked"):
+                with self.subTest(refused=k):
+                    code, out, err = C.run("get", "management.statuses." + k, "--shell", "--root", root)
+                    self.assertEqual((code, out), (3, ""))
+                    self.assertIn("management.statuses." + k, err)
+        finally:
+            tmp.cleanup()
+
     def test_branch_names(self):
         for v in ("main", "dev", "release/3.12", "feature/wave1-hardening"):
             with self.subTest(accept=v):

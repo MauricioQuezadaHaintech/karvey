@@ -33,6 +33,9 @@ KIND_EXEMPTIONS = {
     "location:markdown": frozenset("{}"),
     "location:azure-boards": frozenset("\\"),
     "sprints:azure-boards": frozenset("\\"),
+    # F-19 (§3.1 revision 1): tracker lists have "In Progress (QA)". STATUS_PATTERN still refuses
+    # ` and $, so "$(" can never form; values reach commands double-quoted.
+    "status": frozenset("()"),
 }
 
 # ----------------------------------------------------------------------------- the §3.1 table
@@ -174,7 +177,7 @@ def check_sprints(tool, value, key="management.sprints"):
 def check_status(value, key="status"):
     """A status name of a status map (``null`` is the unsupported state, never a command value)."""
     kind = "status"
-    check_common(value, key, kind)
+    check_common(value, key, kind, allow=KIND_EXEMPTIONS.get(kind, frozenset()))
     return _match(STATUS_PATTERN, value, key, kind)
 
 
