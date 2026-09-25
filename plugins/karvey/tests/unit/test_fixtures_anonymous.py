@@ -13,6 +13,10 @@ import unittest
 import _path
 
 LEGACY = _path.FIXTURES_DIR / "legacy"
+UPGRADE = _path.FIXTURES_DIR / "upgrade"
+# Claude Code settings keys the upgrade fixtures carry (project .claude/settings.json and the fixture home)
+SETTINGS_KEYS = {"hooks", "PreToolUse", "matcher", "type", "command", "statusLine", "padding"}
+HOME_PATH = re.compile(r"(/home/|/Users/|[A-Za-z]:\\\\)")
 
 # Keys the scan found that no schema declares (architecture §2.5 and §6.3); anything else is not a shape
 # the catalogue describes and must not be copied into a fixture.
@@ -103,6 +107,47 @@ class Anonymous(unittest.TestCase):
                 continue
             self.assertNotIn(cid, seen, "%s and %s share %s" % (seen.get(cid), f.name, cid))
             seen[cid] = f.name
+
+
+class AnonymousUpgrade(unittest.TestCase):
+    """``tests/fixtures/upgrade/`` (the project-upgrade fixtures): same rules, plus no home paths, and the
+    copied hook shim is byte-identical to a shipped one (it carries nothing of its own)."""
+
+    def files(self):
+        files = sorted(p for p in UPGRADE.rglob("*") if p.is_file())
+        self.assertTrue(files, "no upgrade fixture found")
+        return files
+
+    def test_no_at_sign_no_long_digit_run_no_home_path(self):
+        for f in self.files():
+            text = f.read_text(encoding="utf-8-sig")
+            with self.subTest(fixture=str(f.relative_to(UPGRADE))):
+                self.assertNotIn("@", text)
+                self.assertIsNone(DIGIT_RUN.search(text), DIGIT_RUN.search(text))
+                self.assertIsNone(HOME_PATH.search(text), HOME_PATH.search(text))
+
+    def test_json_shapes_only(self):
+        allowed = schema_keys() | LEGACY_KEYS | SETTINGS_KEYS
+        for f in self.files():
+            if f.suffix != ".json":
+                continue
+            data = json.loads(f.read_text(encoding="utf-8-sig"))
+            with self.subTest(fixture=str(f.relative_to(UPGRADE))):
+                if isinstance(data, dict) and "change_id" in data:
+                    self.assertRegex(data["change_id"], r"^fixture-\d\d$")
+                for path, key, value in walk_items(data):
+                    if key is not None:
+                        self.assertTrue(key in allowed or any(p.match(key) for p in KEY_PATTERNS),
+                                        "key %r at %s is outside the catalogue" % (key, path))
+                    elif isinstance(value, str) and re.search(r"\s", value) and not path.endswith(".command"):
+                        self.assertEqual(value, "…", "free text at %s" % path)
+
+    def test_copied_shims_are_the_shipped_ones(self):
+        shipped = _path.PLUGIN_ROOT / "skills" / "karvey" / "hooks"
+        for f in self.files():
+            if f.suffix == ".sh":
+                with self.subTest(fixture=str(f.relative_to(UPGRADE))):
+                    self.assertEqual(f.read_bytes(), (shipped / f.name).read_bytes())
 
 
 if __name__ == "__main__":

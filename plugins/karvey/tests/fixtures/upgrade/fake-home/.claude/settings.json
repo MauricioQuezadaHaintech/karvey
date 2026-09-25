@@ -1,0 +1,7 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash \"$HOME/.claude/plugins/cache/example-marketplace/karvey/3.11.2/hooks/karvey-statusline.sh\"",
+    "padding": 0
+  }
+}
