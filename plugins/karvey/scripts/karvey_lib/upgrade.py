@@ -12,6 +12,7 @@ shims, add team settings, adopt new defaults. The steps are **data plus pure fun
 
 Python >= 3.9, standard library only. Every subprocess is an argv list.
 """
+import difflib
 import fnmatch
 import hashlib
 import importlib.util
@@ -25,8 +26,10 @@ from pathlib import Path
 
 from . import LIB_DIR, PLUGIN_ROOT, SCHEMAS_DIR, SCRIPTS_DIR
 from . import __version__ as INSTALLED
+from . import EXIT_FINDINGS, EXIT_OK, EXIT_REFUSED
 from . import atomicio, audit
 from . import project as pj
+from . import safe_values as sv
 from . import schema_lite as sl
 
 CATALOGUE_PATH = LIB_DIR / "upgrade-steps.json"
@@ -598,3 +601,267 @@ def write_seen(root, version, resolution, from_version=_UNSET):
                              "session" % (getattr(exc, "strerror", None) or exc))
     audit.append(d, {"event": "upgrade.seen", "resolution": resolution, "version": version})
     return rec
+
+
+# --------------------------------------------------------------------------- apply (§1.4 apply flow)
+UPGRADE_BRANCH_PREFIX = "chore/karvey-upgrade-"
+JOURNAL_NAME = "upgrade-journal.json"
+JOURNAL_V = 1
+# the engine's own records and the gate evidence: no step may ever write them (§1.4 step 7, §3.3)
+FORBIDDEN_STATE = ("karvey/approvals", "karvey/ledger", "karvey/" + SEEN_NAME, "karvey/" + JOURNAL_NAME,
+                   "karvey/audit.log")
+PREVIEW_HINT = "the tree changed since the preview, or no preview was shown: run apply --dry-run"
+
+
+class Refused(Exception):
+    """An unmet precondition or an unsafe value: exit 3, nothing changed by this call."""
+    exit_code = EXIT_REFUSED
+
+
+@dataclass
+class PlannedEdit:
+    step: str
+    edit: Edit
+    before_text: object
+
+
+@dataclass
+class ApplyReport:
+    exit: int = EXIT_OK
+    dry_run: bool = False
+    preview: object = None
+    nothing: list = field(default_factory=list)
+    shown: list = field(default_factory=list)
+    applied: list = field(default_factory=list)
+    failed: dict = field(default_factory=dict)
+    not_run: list = field(default_factory=list)
+    files: list = field(default_factory=list)
+    branch: object = None
+    lines: list = field(default_factory=list)
+    diffs: dict = field(default_factory=dict)
+
+    def as_json(self):
+        return {"dry_run": self.dry_run, "preview": self.preview, "nothing": self.nothing, "shown": self.shown,
+                "applied": self.applied, "failed": self.failed, "not_run": self.not_run, "files": self.files,
+                "branch": self.branch, "diffs": self.diffs}
+
+    def text(self):
+        return "\n".join(self.lines)
+
+
+def check_values(root, installed=None):
+    """Project values used in commands are data (REQ-UP-019): ``(project, integration, production)``.
+
+    ``integration`` / ``production`` are the declared names (None when undeclared)."""
+    installed = installed or INSTALLED
+    if not VERSION_RE.match(installed or ""):
+        raise Refused("installed version %r is not a release number (plugin.json)" % (installed,))
+    data, err = pj.load_project_json(root)
+    if data is None and err != "missing":
+        raise Refused("project.json unreadable: %s" % err)
+    data = data or {}
+    bf = data.get("branch_flow") if isinstance(data.get("branch_flow"), dict) else {}
+    names = {}
+    for k in ("integration", "production"):
+        if k not in bf or bf[k] is None:
+            names[k] = None
+            continue
+        key = "project.json:branch_flow.%s" % k
+        try:
+            names[k] = sv.check_branch(bf[k], key=key)
+        except sv.UnsafeValue as exc:
+            raise Refused("invalid branch name in %s (%s)" % (key, exc.rule))
+    return data, names["integration"], names["production"]
+
+
+def _norm_rel(path):
+    if not isinstance(path, str) or not path or "\0" in path:
+        raise Refused("edit path refused: %r" % (path,))
+    p = path.replace("\\", "/")
+    if p.startswith("/") or (len(p) > 1 and p[1] == ":"):
+        raise Refused("edit path refused (absolute): %s" % path)
+    parts = [x for x in p.split("/") if x not in ("", ".")]
+    if not parts or ".." in parts:
+        raise Refused("edit path refused ('..'): %s" % path)
+    return "/".join(parts)
+
+
+def _under(child, parent):
+    return child == parent or parent in child.parents
+
+
+def confine(root, edit, top=None, common=None):
+    """The absolute target of ``edit``, or :class:`Refused` (REQ-UP-016): scope ``project`` stays under the
+    git top level (the root outside git), scope ``git_dir`` under the git common dir; no symlink escape,
+    never the approvals, the ledger or the engine's own records."""
+    rel = _norm_rel(edit.path)
+    root = Path(os.path.realpath(str(root)))
+    if top is None:
+        top = pj.git_toplevel(root)
+    if common is None:
+        common = pj.git_common_dir(root)
+    common = Path(os.path.realpath(str(common))) if common else None
+    if edit.scope == "project":
+        base, boundary = root, Path(os.path.realpath(str(top))) if top else root
+    else:
+        if common is None:
+            raise Refused("edit %s refused: no git dir for scope git_dir" % rel)
+        base, boundary = common, common
+    target = base / rel
+    real = Path(os.path.realpath(str(target)))
+    if not _under(real, boundary):
+        raise Refused("edit %s refused: it resolves outside the %s (symlink escape)" % (
+            rel, "working tree" if edit.scope == "project" else "git dir"))
+    if edit.scope == "project":
+        if ".git" in rel.split("/") or (common is not None and _under(real, common)):
+            raise Refused("edit %s refused: scope project may not write inside the git dir" % rel)
+    if common is not None:
+        for f in FORBIDDEN_STATE:
+            if _under(real, common / f):
+                raise Refused("edit %s refused: %s is never written by an upgrade step" % (rel, f))
+    return target
+
+
+def _run_fix(step, probe, values, registry):
+    fn = _registry(registry)[step["fix"]]
+    try:
+        res = fn(probe, step["params"], values or {})
+    except NeedsInput as exc:
+        raise Refused("step %s needs input: %s (pass --values FILE)" % (step["id"], exc))
+    except sv.UnsafeValue as exc:
+        raise Refused("step %s: value refused: %s" % (step["id"], exc))
+    except CheckFailed as exc:
+        raise Refused("step %s: %s" % (step["id"], exc))
+    if not isinstance(res, StepResult):
+        raise Refused("step %s: fix %s returned %s" % (step["id"], step["fix"], type(res).__name__))
+    return res
+
+
+def preview_id(planned):
+    """sha256 of the canonical JSON of ``[(step, op, path, before_sha256, sha256(text))]``."""
+    items = [[p.step, p.edit.op, p.edit.scope, p.edit.path, p.edit.before_sha256,
+              _sha_text(p.edit.text) if p.edit.op == "write" else None] for p in planned]
+    return hashlib.sha256(json.dumps(items, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def unified_diff(p):
+    before = p.before_text or ""
+    after = p.edit.text if p.edit.op == "write" else ""
+    a = "/dev/null" if p.before_text is None else "a/" + p.edit.path
+    b = "/dev/null" if p.edit.op == "delete" else "b/" + p.edit.path
+    return "".join(difflib.unified_diff(before.splitlines(True), after.splitlines(True), fromfile=a, tofile=b))
+
+
+def apply(root, ids, dry_run=False, preview=None, inputs=None, confirm_no_preview=(), steps=None,
+          registry=None, home=None, installed=None):
+    """Apply the picked steps (§1.4). Returns an :class:`ApplyReport`; raises :class:`Refused` (exit 3)
+    before anything changes when a precondition fails."""
+    root = Path(os.path.realpath(str(root)))
+    if steps is None:
+        steps = load_catalogue(registry=registry)
+    ids = [i for i in (ids or []) if i]
+    if not ids:
+        raise Refused("no step selected: pass --steps a,b (see plan)")
+    known = {s["id"] for s in steps}
+    unknown = [i for i in ids if i not in known]
+    if unknown:
+        raise Refused("unknown step id(s): %s (see plan)" % ", ".join(unknown))
+    installed = installed or INSTALLED
+    check_values(root, installed)
+    top = pj.git_toplevel(root)
+    common = pj.git_common_dir(root)
+    if not dry_run and top is None:
+        raise Refused("apply needs git: the upgrade goes through a branch")
+    rep = ApplyReport(dry_run=bool(dry_run))
+    rep = _prepare_tree(root, rep, dry_run, installed)
+
+    # 5–6. evaluate the selected steps in catalogue order over one overlay
+    selected = [s for s in steps if s["id"] in set(ids)]
+    overlay = {}
+    probe = Probe(root, overlay=overlay, home=home, installed=installed)
+    inputs = inputs or {}
+    evals, missing, failed_checks = [], [], []
+    for st in selected:
+        res = run_check(st, probe, registry)
+        planned = []
+        if res.status == "check-failed":
+            failed_checks.append("%s (%s)" % (st["id"], res.summary))
+        elif res.status == "needs-input" and not inputs.get(st["id"]):
+            missing.append("%s: %s" % (st["id"], ", ".join(res.inputs_needed) or "values"))
+        elif res.status in ("applies", "needs-input") and st["fix"] and not st["human"] and not st["report_only"]:
+            fres = _run_fix(st, probe, inputs.get(st["id"]), registry)
+            res.warnings = list(res.warnings) + [w for w in fres.warnings if w not in res.warnings]
+            for e in fres.edits:
+                try:  # 7. path confinement, before any read or write of the target
+                    confine(root, e, top, common)
+                except Refused as exc:
+                    raise Refused("step %s: %s" % (st["id"], exc))
+                planned.append(PlannedEdit(st["id"], e, probe.read_text(e.path) if e.scope == "project" else None))
+                overlay_apply(overlay, [e])
+        evals.append((st, res, planned))
+    statuses = {st["id"]: res.status for st, res, _ in evals}
+    nothing = [i for i in ids if statuses.get(i) == "nothing"]
+    if len(nothing) == len(ids):
+        rep.nothing = [s["id"] for s, _, _ in evals]
+        rep.lines = ["%s: nothing to do" % i for i in rep.nothing]
+        return rep
+    if nothing:
+        raise Refused("not applicable (nothing to do): %s — pick only steps the plan lists" % ", ".join(
+            s["id"] for s, _, _ in evals if s["id"] in nothing))
+    if failed_checks:
+        raise Refused("check failed: %s — fix the input, then run plan again" % "; ".join(failed_checks))
+    if missing:
+        raise Refused("needs input: %s (pass --values FILE)" % "; ".join(missing))
+
+    # human and report steps: shown, never performed (REQ-UP-015, REQ-UP-024)
+    for st, res, planned in evals:
+        if res.status in ("human", "report") or (res.status == "applies" and not planned):
+            rep.shown.append(st["id"])
+            rep.lines.append("%s [%s, shown, not applied]: %s" % (st["id"], res.status, res.summary))
+            for part in (res.instructions, res.diff):
+                if part:
+                    rep.lines.append(part.rstrip("\n"))
+        for w in res.warnings:
+            rep.lines.append("  %s: %s" % (st["id"], w))
+
+    previewable = [p for st, _, planned in evals if st["dry_run"] for p in planned]
+    blind = [st["id"] for st, _, planned in evals if planned and not st["dry_run"]]
+    pid = preview_id(previewable) if previewable else None
+    rep.preview = pid
+
+    # 8. dry-run: diffs and the preview id, no write
+    if dry_run:
+        for st, res, planned in evals:
+            if not planned:
+                continue
+            if not st["dry_run"]:
+                rep.lines.append("%s: no preview for this step; confirm it with --confirm-no-preview %s" % (
+                    st["id"], st["id"]))
+                continue
+            text = "".join(unified_diff(p) for p in planned)
+            rep.diffs[st["id"]] = text
+            rep.lines.append("%s: %s" % (st["id"], res.summary))
+            rep.lines.append(text.rstrip("\n"))
+        if pid:
+            rep.lines.append("preview id: %s" % pid)
+        return rep
+
+    # 9. the preview digest and the blind-step confirmations
+    if pid and preview != pid:
+        raise Refused(PREVIEW_HINT)
+    unconfirmed = [i for i in blind if i not in set(confirm_no_preview or ())]
+    if unconfirmed:
+        raise Refused("step(s) without a preview need --confirm-no-preview: %s" % ", ".join(unconfirmed))
+    return _write(root, rep, evals, top, common, installed)
+
+
+def _prepare_tree(root, rep, dry_run, installed):
+    """Steps 3–4 (clean tree, upgrade branch): added with the write half."""
+    return rep
+
+
+def _write(root, rep, evals, top, common, installed):
+    """Step 10 (the write half)."""
+    if any(planned for _, _, planned in evals):
+        raise Refused("apply writes are not available yet")
+    return rep
