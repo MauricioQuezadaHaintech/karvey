@@ -75,7 +75,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 ### Feature E1.F7: Linter, fingerprint and docs
 
 - [x] E1.F7.T1 [Backend] L-38 and `--list` accepting `REQ-UP` claims — est: 12min (depends E1.F3.T5) (P)
-- [ ] E1.F7.T2 [Backend] `upgrade-surface.json`, `surface [--write]`, L-37 — est: 15min (depends E1.F7.T1, E1.F4.T1)
+- [x] E1.F7.T2 [Backend] `upgrade-surface.json`, `surface [--write]`, L-37 — est: 15min (depends E1.F7.T1, E1.F4.T1)
 - [ ] E1.F7.T3 [Backend] L-39 and the docs (READMEs, hooks README, versioning, deploy) — est: 15min (depends E1.F7.T2, E1.F5.T2, E1.F6.T1, E1.F3.T4)
 
 ### Feature E1.F8: Verification, release docs and the prod OK
@@ -111,7 +111,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F6.T1 [Backend] | ✅ done | 10 | 6 | 0 |  |
 | E1.F6.T2 [Test] | ✅ done | 8 | 4 | 0 |  |
 | E1.F7.T1 [Backend] | ✅ done | 12 | 9 | 0 | F-01: since > plugin version = warning during [Unreleased] |
-| E1.F7.T2 [Backend] | ⬜ todo | 15 | — | — | |
+| E1.F7.T2 [Backend] | ✅ done | 15 | 10 | 0 | F-04: re-record the fingerprint if 3.12.0 ships first |
 | E1.F7.T3 [Backend] | ⬜ todo | 15 | — | — | |
 | E1.F8.T1 [Backend] | ⬜ todo | 8 | — | — | |
 | E1.F8.T2 [human] | ⬜ todo | — | — | — | executor: owner |

@@ -1146,3 +1146,85 @@ def _write(root, rep, evals, top, common, installed):
         audit.append(sdir, {"event": "upgrade.apply", "step": st["id"], "status": "applied", "files": written})
         rep.lines.append("%s: applied (%s)" % (st["id"], ", ".join(written) or "no file"))
     return rep
+
+
+# --------------------------------------------------------------------------- the release-surface fingerprint (§1.8, §2.2)
+SURFACE_NAME = "upgrade-surface.json"
+SURFACE_PATH = LIB_DIR / SURFACE_NAME
+PLUGIN_MANIFEST = "plugins/karvey/.claude-plugin/plugin.json"
+RELEASE_HEADING = re.compile(r"^## \[(\d+\.\d+\.\d+)\]", re.M)
+
+
+def expand_braces(pattern):
+    """``a/{b,c}.json`` → ``["a/b.json", "a/c.json"]`` (one level per group, left to right)."""
+    m = re.search(r"\{([^{}]*)\}", pattern)
+    if not m:
+        return [pattern]
+    out = []
+    for alt in m.group(1).split(","):
+        out += expand_braces(pattern[:m.start()] + alt + pattern[m.end():])
+    return out
+
+
+def normalised_sha256(data):
+    """sha256 of a file's bytes with a UTF-8 BOM stripped and CRLF / CR turned into LF (platform-stable)."""
+    if data.startswith(b"\xef\xbb\xbf"):
+        data = data[3:]
+    data = data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(data).hexdigest()
+
+
+def surface_files(repo_root, globs):
+    """``{repo-relative POSIX path: normalised sha256}`` of every file the globs match."""
+    root = Path(repo_root)
+    out = {}
+    for g in globs:
+        for pat in expand_braces(g):
+            for p in sorted(root.glob(pat)):
+                if p.is_file():
+                    out[p.relative_to(root).as_posix()] = normalised_sha256(p.read_bytes())
+    return dict(sorted(out.items()))
+
+
+def surface_diff(recorded, current):
+    """Sorted paths added, removed or changed between two fingerprints."""
+    return sorted(k for k in set(recorded) | set(current) if recorded.get(k) != current.get(k))
+
+
+def top_release(changelog_text):
+    m = RELEASE_HEADING.search(changelog_text or "")
+    return m.group(1) if m else None
+
+
+def surface_status(repo_root, surface_path=None):
+    """``{release, top_release, changed, recorded_files}`` of the committed fingerprint against the tree."""
+    root = Path(repo_root)
+    sp = Path(surface_path) if surface_path else root / "plugins" / "karvey" / "scripts" / "karvey_lib" / SURFACE_NAME
+    try:
+        data = json.loads(sp.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as exc:
+        raise CatalogueError("release-surface fingerprint unreadable: %s (%s)" % (sp.name, exc))
+    try:
+        top = top_release((root / "CHANGELOG.md").read_text(encoding="utf-8-sig"))
+    except OSError:
+        top = None
+    current = surface_files(root, data.get("globs") or [])
+    return {"release": data.get("release"), "top_release": top, "globs": data.get("globs") or [],
+            "changed": surface_diff(data.get("files") or {}, current), "path": str(sp), "data": data,
+            "current": current}
+
+
+def write_surface(repo_root):
+    """Refresh the fingerprint to the top CHANGELOG release (maintainers, the plugin repository only)."""
+    root = Path(repo_root)
+    if not (root / PLUGIN_MANIFEST).is_file():
+        raise Refused("surface --write runs only in the plugin repository (no %s here)" % PLUGIN_MANIFEST)
+    st = surface_status(root)
+    if not st["top_release"]:
+        raise Refused("CHANGELOG.md has no numbered release to fingerprint")
+    data = dict(st["data"])
+    data["release"] = st["top_release"]
+    data["files"] = st["current"]
+    atomicio.write_text_atomic(st["path"], json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+                               expected_sha256="*")
+    return {"release": data["release"], "files": len(data["files"]), "changed": st["changed"]}

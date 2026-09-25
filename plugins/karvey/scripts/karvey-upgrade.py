@@ -20,6 +20,9 @@ Commands:
                                          one commit of exactly the files the upgrade wrote; prints the PR text
   seen --decline | --accept | --empty | --show
                                          resolve (or show) the once-per-version offer of this clone
+  surface [--write]                      the release-surface fingerprint against the tree (lint check L-37);
+                                         --write refreshes it to the top CHANGELOG release (maintainers, in the
+                                         plugin repository only, at a release)
 """
 import argparse
 import json
@@ -130,7 +133,24 @@ def cmd_seen(args, root):
     return kl.EXIT_OK, {"record": rec}, [], [], "recorded: %s %s" % (resolution, rec["version"])
 
 
-COMMANDS = {"plan": cmd_plan, "branch": cmd_branch, "apply": cmd_apply, "commit": cmd_commit, "seen": cmd_seen}
+def cmd_surface(args, root):
+    top = pj.git_toplevel(root) or root
+    if args.write:
+        res = upgrade.write_surface(top)
+        return kl.EXIT_OK, res, [], [], "fingerprint refreshed to %s (%d files)" % (res["release"], res["files"])
+    try:
+        st = upgrade.surface_status(top)
+    except upgrade.CatalogueError as exc:
+        raise NotFound(str(exc))
+    res = {"release": st["release"], "top_release": st["top_release"], "changed": st["changed"]}
+    human = "fingerprint %s · top release %s · %s" % (
+        st["release"], st["top_release"],
+        "unchanged" if not st["changed"] else "changed: " + ", ".join(st["changed"]))
+    return kl.EXIT_OK, res, [], [], human
+
+
+COMMANDS = {"plan": cmd_plan, "branch": cmd_branch, "apply": cmd_apply, "commit": cmd_commit, "seen": cmd_seen,
+            "surface": cmd_surface}
 
 
 class _Parser(argparse.ArgumentParser):
@@ -166,6 +186,8 @@ def build_parser():
     g.add_argument("--accept", action="store_true", help="the person picked at least one step")
     g.add_argument("--empty", action="store_true", help="the plan was empty")
     g.add_argument("--show", action="store_true", help="print the record")
+    f = sub.add_parser("surface", parents=[common], help="the release-surface fingerprint (maintainers)")
+    f.add_argument("--write", action="store_true", help="refresh it to the top CHANGELOG release")
     return p
 
 

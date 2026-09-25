@@ -1044,7 +1044,7 @@ class ListAll(unittest.TestCase):
         self.assertEqual(code, 0, out)
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)] + ["L-38"])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 39)])
 
 
 if __name__ == "__main__":
@@ -1161,3 +1161,73 @@ class ListClaims(unittest.TestCase):
             code, _, err = run_cli("--root", str(_path.REPO_ROOT), "--list", "--requirements", str(req))
         self.assertEqual(code, 1)
         self.assertIn("L-38 claims REQ-UP-008", err)
+
+
+# --------------------------------------------------------------------------- L-37 (project-upgrade)
+SURF = LIB + "/upgrade-surface.json"
+HOOK_SH = "plugins/karvey/hooks/karvey-hook.sh"
+
+
+class L37(LintCase):
+    GLOBS = ["plugins/karvey/hooks/*.sh", "plugins/karvey/hooks/{hooks}.json"]
+
+    def setUp(self):
+        super().setUp()
+        self.fingerprint("1.0.0")
+
+    def fingerprint(self, release):
+        from karvey_lib import upgrade
+        self.t.write(SURF, {"$comment": "x", "release": release, "globs": self.GLOBS,
+                            "files": upgrade.surface_files(self.t.root, self.GLOBS)})
+
+    def new_release(self, extra=""):
+        self.t.replace("CHANGELOG.md", "## [1.0.0]", "## [1.1.0] - 2026-09-26\n\n### Added\n- a change\n%s\n### Why\n"
+                                                    "x\n\n## [1.0.0]" % extra)
+
+    def test_unchanged_surface_passes(self):
+        self.assertPasses("L-37")
+
+    def test_changed_under_unreleased_is_a_warning_listing_the_files(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        fs = lint(self.t.root, ["L-37"])
+        self.assertEqual([f["severity"] for f in fs], ["warning"])
+        self.assertIn(HOOK_SH, fs[0]["message"])
+        self.assertIn("the next release must add an upgrade step", fs[0]["message"])
+
+    def test_a_new_release_without_a_declaration_is_an_error(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        self.new_release()
+        fs = self.assertFails("L-37", "release 1.1.0 changed the upgrade surface (%s)" % HOOK_SH)
+        self.assertTrue(all(f["severity"] == "error" for f in fs))
+        self.assertTrue(any("refresh it for release 1.1.0" in f["message"] for f in fs))
+
+    def test_declaration_or_step_plus_refreshed_fingerprint_passes(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        self.new_release("- No project upgrade needed: wording of a comment only\n")
+        fs = self.assertFails("L-37", "refresh it for release 1.1.0")
+        self.assertFalse(any("declares no project upgrade" in f["message"] for f in fs))
+        self.fingerprint("1.1.0")
+        self.assertPasses("L-37")
+
+    def test_a_step_with_since_the_release_counts_as_the_declaration(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        self.new_release()
+        self.t.write(LIB + "/upgrade-steps.json", {"catalogue_version": 1, "steps": [{"id": "x-step", "since": "1.1.0"}]})
+        fs = self.assertFails("L-37", "refresh it for release 1.1.0")
+        self.assertFalse(any("declares no project upgrade" in f["message"] for f in fs))
+        self.fingerprint("1.1.0")
+        self.assertPasses("L-37")
+
+    def test_a_short_reason_does_not_count(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        self.new_release("- No project upgrade needed: typo\n")
+        self.assertFails("L-37", "declares no project upgrade")
+
+    def test_top_release_older_than_the_fingerprint(self):
+        self.fingerprint("2.0.0")
+        self.assertFails("L-37", "inconsistent")
+
+    def test_normalisation_is_platform_stable(self):
+        text = self.t.read(HOOK_SH)
+        self.t.path(HOOK_SH).write_bytes(b"\xef\xbb\xbf" + text.replace("\n", "\r\n").encode("utf-8"))
+        self.assertPasses("L-37")

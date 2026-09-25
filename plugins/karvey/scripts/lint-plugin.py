@@ -1878,6 +1878,55 @@ def glob_regex(pattern):
     return re.compile("^" + "".join(out) + "$")
 
 
+# --------------------------------------------------------------------------- L-37
+NO_UPGRADE_RE = re.compile(r"^- No project upgrade needed: .{10,}")
+
+
+def _list_files(paths, limit=12):
+    return ", ".join(paths[:limit]) + (" … (%d more)" % (len(paths) - limit) if len(paths) > limit else "")
+
+
+@check("L-37", "A release that changed the upgrade surface declares its project upgrade (a step with since = the "
+               "release, or 'No project upgrade needed: <reason>'), and the fingerprint is refreshed",
+       reqs=("UP-030",))
+def l37_release_declares_upgrade(ctx):
+    sp = ctx.plugin / "scripts" / "karvey_lib" / "upgrade-surface.json"
+    if not sp.is_file():
+        return  # a plugin without the upgrade tool
+    from karvey_lib import upgrade as up
+    try:
+        st = up.surface_status(ctx.root, sp)
+    except up.CatalogueError as exc:
+        yield sp, 1, str(exc)
+        return
+    rec, top, changed = st["release"], st["top_release"], st["changed"]
+    if not rec or not top:
+        yield sp, 1, "the fingerprint has no release, or CHANGELOG.md has no numbered release"
+        return
+    changelog = ctx.root / "CHANGELOG.md"
+    if _vtuple(top) < _vtuple(rec):
+        yield (sp, 1, "the fingerprint is for %s but the top CHANGELOG release is the older %s (inconsistent)"
+               % (rec, top))
+        return
+    if not changed:
+        return
+    if top == rec:
+        yield (sp, 1, "the upgrade surface changed since %s (%s): the next release must add an upgrade step (since = "
+                      "that release) or a '- No project upgrade needed: <reason>' line, then refresh the fingerprint "
+                      "(karvey-upgrade.py surface --write)" % (rec, _list_files(changed)), "warning")
+        return
+    cat = ctx.json(ctx.plugin / "scripts" / "karvey_lib" / "upgrade-steps.json") or {}
+    has_step = any(isinstance(s_, dict) and s_.get("since") == top for s_ in cat.get("steps") or [])
+    _, line, block = top_release(ctx)
+    declared = any(NO_UPGRADE_RE.match(b) for b in block)
+    if not (has_step or declared):
+        yield (changelog, line, "release %s changed the upgrade surface (%s) but declares no project upgrade: add a "
+                                "step with since = %s or a '- No project upgrade needed: <reason>' line"
+               % (top, _list_files(changed), top))
+    yield (sp, 1, "the fingerprint is still for %s: refresh it for release %s (karvey-upgrade.py surface --write); "
+                  "changed: %s" % (rec, top, _list_files(changed)))
+
+
 # --------------------------------------------------------------------------- L-38
 UPGRADE_REQUIRED = ("id", "since", "check", "fix", "dry_run", "human", "risk")
 UPGRADE_SCOPES = ("project", "git_dir")
@@ -2200,7 +2249,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser():
-    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-38).")
+    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-39).")
     p.add_argument("--root", help="repository root (default: git top level)")
     p.add_argument("--plugin", help="plugin directory (default: <root>/plugins/karvey)")
     p.add_argument("--only", help="comma list of check ids (L-NN)")

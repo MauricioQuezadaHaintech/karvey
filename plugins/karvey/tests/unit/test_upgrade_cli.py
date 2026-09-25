@@ -198,5 +198,49 @@ class Cli(unittest.TestCase):
         self.assertNotIn("os.system", src)
 
 
+class Surface(unittest.TestCase):
+    def test_surface_on_this_repository(self):
+        code, out, err = run_tool("surface", "--json", "--root", str(_path.REPO_ROOT))
+        self.assertEqual(code, 0, err)
+        res = json.loads(out)["result"]
+        self.assertRegex(res["release"], r"^\d+\.\d+\.\d+$")
+        self.assertEqual(set(res), {"release", "top_release", "changed"})
+
+    def test_write_is_refused_outside_the_plugin_repository(self):
+        g.isolate_git()
+        t = g.TempDir()
+        try:
+            root = g.init(t.path / "proj")
+            g.write(root, "docs/spec/project.json", {"a": 1})
+            g.write(root, "plugins/karvey/scripts/karvey_lib/upgrade-surface.json",
+                    {"release": "1.0.0", "globs": [], "files": {}})
+            code, out, _ = run_tool("surface", "--write", "--json", "--root", str(root))
+            self.assertEqual(code, 3)
+            self.assertIn("only in the plugin repository", json.loads(out)["errors"][0]["message"])
+        finally:
+            t.cleanup()
+
+    def test_write_refreshes_to_the_top_release(self):
+        g.isolate_git()
+        t = g.TempDir()
+        try:
+            root = g.init(t.path / "repo")
+            g.write(root, "docs/spec/project.json", {"a": 1})
+            g.write(root, "plugins/karvey/.claude-plugin/plugin.json", {"name": "karvey", "version": "1.1.0"})
+            g.write(root, "plugins/karvey/hooks/a.sh", "echo a\n")
+            g.write(root, "CHANGELOG.md", "# Changelog\n\n## [Unreleased]\n\n## [1.1.0] - 2026-09-26\n")
+            g.write(root, "plugins/karvey/scripts/karvey_lib/upgrade-surface.json",
+                    {"release": "1.0.0", "globs": ["plugins/karvey/hooks/*.sh"], "files": {}})
+            code, out, err = run_tool("surface", "--write", "--json", "--root", str(root))
+            self.assertEqual(code, 0, err)
+            data = json.loads((root / "plugins/karvey/scripts/karvey_lib/upgrade-surface.json").read_text())
+            self.assertEqual(data["release"], "1.1.0")
+            self.assertEqual(list(data["files"]), ["plugins/karvey/hooks/a.sh"])
+            code, out, _ = run_tool("surface", "--json", "--root", str(root))
+            self.assertEqual(json.loads(out)["result"]["changed"], [])
+        finally:
+            t.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main()
