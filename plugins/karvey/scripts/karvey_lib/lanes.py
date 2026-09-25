@@ -163,3 +163,68 @@ def matches(path, patterns):
         if fnmatch.fnmatchcase(p, g) or (g.startswith("**/") and fnmatch.fnmatchcase(p, g[3:])):
             return True
     return False
+
+
+# --------------------------------------------------------------------------- patch criteria (D-29)
+ANSWER_KEYS = ("touches_ui", "schema", "api_contract", "permissions_or_trust", "tier", "code_files")
+_FORBID_TEXT = {"schema": "schema change", "api_contract": "API contract change",
+                "permissions": "permissions or trust boundary change"}
+_FORBID_ANSWER = {"schema": "schema", "api_contract": "api_contract", "permissions": "permissions_or_trust"}
+
+
+def _known_bool(v):
+    return isinstance(v, bool)
+
+
+def admit_patch(answers, lane="patch"):
+    """``{admitted, lane, reasons}`` for the init answers of REQ-W2-012 against the lane's criteria.
+
+    Any unknown answer proposes ``standard`` and says which one (REQ-W2-012 error scenario)."""
+    answers = answers if isinstance(answers, dict) else {}
+    crit = lane_def(lane).get("criteria") or {}
+    unknown = [k for k in ANSWER_KEYS if k != "touches_ui" and not (
+        _known_bool(answers.get(k)) if k not in ("tier", "code_files") else
+        isinstance(answers.get(k), int) and not isinstance(answers.get(k), bool))]
+    if unknown:
+        return {"admitted": False, "lane": "standard",
+                "reasons": ["%s: %s unknown — use standard" % (lane, ", ".join(unknown))]}
+    reasons = []
+    for f in crit.get("forbid", []):
+        if answers.get(_FORBID_ANSWER[f]) is True:
+            reasons.append("%s: %s — use standard" % (lane, _FORBID_TEXT[f]))
+    if "max_tier" in crit and answers["tier"] > crit["max_tier"]:
+        reasons.append("%s: Security Tier %d is not below 3 — use standard" % (lane, answers["tier"]))
+    if "max_code_files" in crit and answers["code_files"] > crit["max_code_files"]:
+        reasons.append("%s: %d > %d code files — use standard" % (lane, answers["code_files"], crit["max_code_files"]))
+    proposed = "feature-ui" if answers.get("touches_ui") is True else "standard"
+    return {"admitted": not reasons, "lane": lane if not reasons else proposed, "reasons": reasons}
+
+
+def propose(answers):
+    """The lane init proposes from the answers: unknown → ``standard``; UI → ``feature-ui``; else ``standard``."""
+    answers = answers if isinstance(answers, dict) else {}
+    if answers.get("touches_ui") is True:
+        return "feature-ui", "touches UI"
+    if any(answers.get(k) is None for k in ANSWER_KEYS):
+        return "standard", "an answer is unknown (%s)" % ", ".join(k for k in ANSWER_KEYS if answers.get(k) is None)
+    return "standard", "no UI"
+
+
+def measure_diff(root, base, head="HEAD", lane="patch", project=None, files=None):
+    """Every criterion of ``lane`` the diff ``base...head`` exceeds (REQ-W2-017), as strings."""
+    from . import gitlog
+    crit = lane_def(lane).get("criteria") or {}
+    if not crit:
+        return []
+    paths = files if files is not None else gitlog.diff_names(root, base, head)
+    g = globs(project)
+    out = []
+    code = [p for p in paths if matches(p, g.get("code", []))]
+    mx = crit.get("max_code_files")
+    if mx is not None and len(code) > mx:
+        out.append("lane exceeded: %d > %d code files" % (len(code), mx))
+    for f in crit.get("forbid", []):
+        hit = [p for p in paths if matches(p, g.get(f, []))]
+        if hit:
+            out.append("lane exceeded: %s (%s)" % (_FORBID_TEXT[f], ", ".join(hit[:3])))
+    return out

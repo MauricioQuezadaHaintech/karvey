@@ -1,13 +1,17 @@
 """Lanes as data (architecture §1.3 of wave2-structural).
 
-@req REQ-W2-011 REQ-W2-019 REQ-W2-031
+@req REQ-W2-011 REQ-W2-012 REQ-W2-013 REQ-W2-017 REQ-W2-019 REQ-W2-031
 """
 import copy
 import json
 import unittest
 
 import _path
+import _gitrepo as g
+from karvey_lib import gitlog
 from karvey_lib import lanes as L
+
+g.isolate_git()
 
 SM = json.loads((_path.SCHEMAS_DIR / "state-machine.json").read_text(encoding="utf-8"))
 PHASES = [p["id"] for p in SM["phases"]]
@@ -100,6 +104,77 @@ class Globs(unittest.TestCase):
     def test_project_extends(self):
         g = L.globs({"lanes": {"globs": {"schema": ["**/*.avsc"]}}})
         self.assertIn("**/*.avsc", g["schema"])
+
+
+OK_ANSWERS = {"touches_ui": False, "schema": False, "api_contract": False, "permissions_or_trust": False,
+              "tier": 2, "code_files": 2}
+
+
+class AdmitPatch(unittest.TestCase):
+    def test_REQ_W2_013_two_files_tier2_admitted(self):
+        r = L.admit_patch(OK_ANSWERS)
+        self.assertEqual((r["admitted"], r["lane"], r["reasons"]), (True, "patch", []))
+
+    def test_REQ_W2_013_schema_change_refused(self):
+        r = L.admit_patch(dict(OK_ANSWERS, schema=True))
+        self.assertFalse(r["admitted"])
+        self.assertEqual(r["lane"], "standard")
+        self.assertIn("patch: schema change — use standard", r["reasons"])
+
+    def test_REQ_W2_013_every_criterion(self):
+        r = L.admit_patch(dict(OK_ANSWERS, api_contract=True, permissions_or_trust=True, tier=3, code_files=5))
+        self.assertEqual(len(r["reasons"]), 4, r["reasons"])
+        self.assertTrue(any("5 > 3 code files" in x for x in r["reasons"]))
+
+    def test_REQ_W2_012_unknown_answer_proposes_standard_with_reason(self):
+        r = L.admit_patch(dict(OK_ANSWERS, api_contract=None))
+        self.assertEqual((r["admitted"], r["lane"]), (False, "standard"))
+        self.assertIn("api_contract unknown", r["reasons"][0])
+        self.assertEqual(L.propose(dict(OK_ANSWERS, api_contract=None))[0], "standard")
+        self.assertEqual(L.propose(dict(OK_ANSWERS, touches_ui=True))[0], "feature-ui")
+
+
+class MeasureDiff(unittest.TestCase):
+    def setUp(self):
+        self.t = g.TempDir()
+        self.repo = g.init(self.t.path / "r")
+        g.write(self.repo, "README.md", "x\n")
+        g.commit_all(self.repo, "base")
+        g.run(["checkout", "-q", "-b", "feature/x"], self.repo)
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def test_REQ_W2_017_five_code_files_exceed(self):
+        for i in range(5):
+            g.write(self.repo, "src/m%d.py" % i, "x = %d\n" % i)
+        g.commit_all(self.repo, "five")
+        self.assertEqual(L.measure_diff(self.repo, "main", "HEAD"), ["lane exceeded: 5 > 3 code files"])
+
+    def test_REQ_W2_017_two_files_pass_and_migration_named(self):
+        g.write(self.repo, "src/a.py", "a\n")
+        g.write(self.repo, "docs/notes.md", "n\n")
+        g.commit_all(self.repo, "two")
+        self.assertEqual(L.measure_diff(self.repo, "main", "HEAD"), [])
+        g.write(self.repo, "db/migrations/002_col.sql", "alter table t add c int;\n")
+        g.commit_all(self.repo, "mig")
+        out = L.measure_diff(self.repo, "main", "HEAD")
+        self.assertEqual(len(out), 1)
+        self.assertIn("schema change (db/migrations/002_col.sql)", out[0])
+
+    def test_lane_without_criteria(self):
+        self.assertEqual(L.measure_diff(self.repo, "main", "HEAD", lane="standard"), [])
+
+
+class GitLog(unittest.TestCase):
+    def test_refuses_a_sub_command_outside_the_list(self):
+        for sub in ("push", "commit", "reset", "config", "-c"):
+            with self.assertRaises(gitlog.GitLogError):
+                gitlog.run([sub], ".")
+
+    def test_refuses_an_option_as_ref(self):
+        with self.assertRaises(gitlog.GitLogError):
+            gitlog.diff_names(".", "--output=/tmp/x")
 
 
 if __name__ == "__main__":
