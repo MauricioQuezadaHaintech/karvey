@@ -64,7 +64,197 @@ manifest makes "what was approved" equal "what shipped"; metrics make every one 
 Internal order for tasks (panel Ola 2): F1 → F2 + F3 → F4 + F5 → F6..F12 → F13 (4.0 is a later release of its own).
 
 ## Tasks
-(pending — karvey-tasks)
+
+Detail per task (files, requirements, tests, done-when command) in `tasks.md`. Estimates are calibrated to realistic AI execution + review (the default scale ran ~10× high in this repo). 71 tasks (69 agent, 2 `[human]`), 706 min total, critical path 141 min.
+
+### Feature E1.F1: Records and flow metrics (first: the baseline precedes every default)
+
+- [ ] E1.F1.T1 [Backend] Schema additions: lane enum, the four logs, role `auto`, `generated_at`/`imported`, `skipped` keys, `D-NN@repo`; project `gates`/`judges`/`lanes`/`checks`/`branch_flow.mode`/`trailer_guard`/`tests`/`security` — est: 12min
+- [ ] E1.F1.T2 [Backend] Check-mode registry `check-modes.json` + `karvey_lib/modes.py` (`resolve`, `record_hit` → `changes/{id}/checks.jsonl`) — est: 12min (depends E1.F1.T1)
+- [ ] E1.F1.T3 [Backend] State tool: `generated_at`, `outcome` command (`changes_requested`, `--kind plan-exception`, `no reason given`), `approve` appends `gate_outcomes`, `--role auto` (refused on prod) — est: 12min (depends E1.F1.T1)
+- [ ] E1.F1.T4 [Backend] State tool: `deploy-record`, `approvals.deploy` legacy warning, `deploying.approval → null`, `advance deployed --attested --ref D-NN --pipeline-run URL` — est: 12min (depends E1.F1.T3)
+- [ ] E1.F1.T5 [Backend] State tool: `next` prints each blocker once (F-26) — est: 5min (depends E1.F1.T4)
+- [ ] E1.F1.T6 [Backend] `karvey_lib/metrics.py`: one pure function per metric returning `(value|None, reasons)`, per lane and total — est: 15min (depends E1.F1.T1) (P)
+- [ ] E1.F1.T7 [Backend] `karvey-context.py --metrics [--from --to --as-of --lane --json]`: read-only, byte-identical, table + JSON — est: 12min (depends E1.F1.T6, E1.F1.T4)
+- [ ] E1.F1.T8 [Backend] `--readiness`: measured changes (A-06), would-refuse / confirmed per check from `checks.jsonl`, `schema.strict` computed on the fly, `ready for 4.0: N of 4` — est: 10min (depends E1.F1.T7, E1.F1.T2)
+- [ ] E1.F1.T9 [Backend] Baseline of this repo + L-48 (baseline before any Wave 2 default is set here) — est: 8min (depends E1.F1.T7)
+- [ ] E1.F1.T10 [Backend] `karvey-retro` on the method's artifacts: metrics, findings by type and phase, estimate accuracy, judge cost, `retro-{date}.md`, actions as `process` BL-NN with owner, follow-up of previous actions, `--per-person` optional — est: 10min (depends E1.F1.T7) (P)
+- [ ] E1.F1.T11 [Backend] Tracker `log_time` column per tool (`none` → actual columns) + impl text + L-50 — est: 8min (P)
+
+### Feature E1.F2: Lanes
+
+- [ ] E1.F2.T1 [Backend] `schemas/lanes.json` (six lanes, §1.3 table) + `karvey_lib/lanes.py` (`load`, `phase_rule`, `lane_of` with the `type`/legacy fallback, per-lane judge counts) — est: 12min (depends E1.F1.T1)
+- [ ] E1.F2.T2 [Backend] `karvey_lib/gitlog.py` (argv allow-list) + `lanes.admit_patch` (D-29 answers) + `lanes.measure_diff` — est: 12min (depends E1.F2.T1)
+- [ ] E1.F2.T3 [Backend] State tool: lane-aware `next`/`advance` (lane-`s` passed through and written `skipped: lane:{lane}`; manual `skip` unchanged) — est: 12min (depends E1.F2.T1, E1.F1.T5)
+- [ ] E1.F2.T4 [Backend] State tool: `lane set|raise|lower`, `lane_history`, `lane-evidence`, hotfix preconditions — est: 15min (depends E1.F2.T3, E1.F2.T2)
+- [ ] E1.F2.T5 [Backend] `rules/lanes.md` (generated table between markers) + `rules/multi-agent.md` §6–§7 pointer + L-40 — est: 10min (depends E1.F2.T1) (P)
+- [ ] E1.F2.T6 [Backend] Init lane questions → `lane set`; QA / QA-lite lane check (`measure_diff` + finding + `lane.diff` hit) — est: 10min (depends E1.F2.T4, E1.F1.T2)
+- [ ] E1.F2.T7 [Backend] Dashboard: `lane` column, `skipped (lane)`, `auto` approvals apart — est: 8min (depends E1.F2.T3, E1.F1.T7)
+- [ ] E1.F2.T8 [Backend] `global-instructions.diff` for the `patch` lane (one bullet, neutral header, A-11) — est: 5min (P)
+- [ ] E1.F2.T9 [Test] Integration `test_patch_lane_flow.py` (AC-2) — est: 10min (depends E1.F2.T4, E1.F5.T3)
+
+### Feature E1.F3: Advisory judges
+
+- [ ] E1.F3.T1 [Backend] `rules/judges.md` (prompt template, output contract, Read/Grep/Glob only) + rubrics `rules/judges/{requirements,architecture,qa}.md` + L-51 — est: 12min (P)
+- [ ] E1.F3.T2 [Backend] `karvey_lib/judges.py` input builder + `karvey-judges.py inputs` (closed list, per-lane count, `dropped:` lines, `disabled by project setting`, `none for lane patch`) — est: 12min (depends E1.F3.T1, E1.F2.T1)
+- [ ] E1.F3.T3 [Backend] `karvey-judges.py collect`: schema check, citation resolver, sanitiser (cap 300, escape, drop patches), measured/estimated cost, `budget` ignored, append `findings.md` rows — est: 15min (depends E1.F3.T2)
+- [ ] E1.F3.T4 [Backend] State tool: `judge-run` append + judge `blocking` refusal in `approve` — est: 10min (depends E1.F3.T3, E1.F2.T4, E1.F1.T2)
+- [ ] E1.F3.T5 [Backend] Skill `karvey-judges` + calls in `karvey-requirements`, `karvey-architecture`, `karvey-qa` (fiscal before `approve qa`) + README/`plugin.json` counts (L-11) — est: 10min (depends E1.F3.T4)
+- [ ] E1.F3.T6 [Backend] Iterate: `accepted:{type} {ref}` / `rejected: {reason}` for judge rows; convergence lists `unresolved (no routing or reason)` — est: 8min (depends E1.F3.T3) (P)
+- [ ] E1.F3.T7 [Test] Manual script `judges-gate.md` (real subagents, verdicts at the gate, intra-model declared) — est: 5min (depends E1.F3.T5) (P)
+
+### Feature E1.F4: Three merged human gates
+
+- [ ] E1.F4.T1 [Backend] `state-machine.json:gate` per phase + `approve-gate what|how|release` + imported phases need the human marker (`generated --imported`) — est: 15min (depends E1.F3.T4)
+- [ ] E1.F4.T2 [Backend] Gate mode resolution (`project.json:gates` via `gates.merged`), `--granular-gates`, invalid value refused — est: 6min (depends E1.F4.T1, E1.F1.T2)
+- [ ] E1.F4.T3 [Backend] `karvey-context.py --section gate --change --gate`: one-page summary (phases, lane, judges verdicts / disagreement / not run, decisions, risks, deviations, cost, `[human]` tasks, uncovered REQs, contract gaps, manifest) — est: 15min (depends E1.F4.T1, E1.F3.T4, E1.F2.T7)
+- [ ] E1.F4.T4 [Backend] `rules/gates.md` (the one closing block, granular / merged, `-y` = `role: auto`, plan exceptions) + the 13 phase-skill closings + `rules/phase-close.md:45` — est: 15min (depends E1.F4.T2, E1.F3.T5)
+- [ ] E1.F4.T5 [Backend] L-41 (no second gate question; closings cite `rules/gates.md`) + L-52 (`-y` = auto, never prod) — est: 10min (depends E1.F4.T4)
+- [ ] E1.F4.T6 [Backend] Grill: batches ≤ 4, recommended first, stack inferred from lockfiles / CI and only confirmed + manual script — est: 6min (P)
+- [ ] E1.F4.T7 [Test] Manual script `merged-gates-three-questions.md` (AC-4: count the gate questions of a real `standard` run) — est: 5min (depends E1.F4.T4) (P)
+
+### Feature E1.F5: Release per change
+
+- [ ] E1.F5.T1 [Backend] `karvey_lib/manifest.py`: trailer parse (strict pattern), merge-commit mapping, path-only mapping (A-12) — est: 12min (depends E1.F2.T2)
+- [ ] E1.F5.T2 [Backend] `karvey-release-gate.py manifest`: changes with version / lane / QA state, `unmapped`, verdict per mode, hits — est: 12min (depends E1.F5.T1, E1.F1.T2)
+- [ ] E1.F5.T3 [Backend] `karvey-release-gate.py check` (qa_gate, tests, changelog, version_match, lane_triplet, manifest, spec_merged, pr_body) + `release-branch` (read-only plan) — est: 15min (depends E1.F5.T2, E1.F2.T4, E1.F6.T1, E1.F7.T2)
+- [ ] E1.F5.T4 [Backend] Trailer guard (`enforcement.trailer_guard: off|warn|blocking`, reviewed line, `-m`/`-F`/`--trailer`, fail open) + table `trailer.json` + hooks README anchors — est: 12min (depends E1.F1.T2) (P)
+- [ ] E1.F5.T5 [Backend] Prod gate: manifest verdict after the Wave 1 allow (warn → allow + line; blocking → block; not computable), every manifest change through `check_prod`; `approve prod --manifest` — est: 15min (depends E1.F5.T2, E1.F4.T1)
+- [ ] E1.F5.T6 [Backend] Deploy flow text: 2.4-bis spec merge on the change branch, 2.5 integration by PR, 2.8-bis manifest + release gate, prod OK in PR body at deploy → D-NN at archive, attested fallback, `release/*` offer — est: 15min (depends E1.F5.T3)
+- [ ] E1.F5.T7 [Backend] `branch_flow.mode` derived (trunk when integration = production), contradiction reported, trunk recommended by `karvey-init --settings` — est: 6min (depends E1.F1.T1) (P)
+- [ ] E1.F5.T8 [Backend] L-42 (commit examples carry the trailer), L-43 (no local merge + push into integration), L-53 (deploy order and naming) — est: 12min (depends E1.F5.T6, E1.F10.T2)
+- [ ] E1.F5.T9 [Backend] Inherited base commits: map `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` (wave1-hardening decision commits on the base branch) to `wave1-hardening` — no rewrite — est: 5min (depends E1.F5.T2)
+
+### Feature E1.F6: Living spec merged before production
+
+- [ ] E1.F6.T1 [Backend] `karvey-spec-merge.py --check` (merged | unmerged with ids | conflict), read-only — est: 10min (P)
+- [ ] E1.F6.T2 [Backend] Archive: `--check` first, move and close only, merge on `chore/archive-{id}` only when unmerged — est: 6min (depends E1.F6.T1)
+- [ ] E1.F6.T3 [Backend] L-49 (deployed with unmerged delta → error) + dashboard `deployed N d, not archived` (`deployed_stall_days: 7`) — est: 10min (depends E1.F6.T1, E1.F2.T7)
+
+### Feature E1.F7: Test-first and traceability
+
+- [ ] E1.F7.T1 [Backend] `karvey-trace.py`: parse requirements, tasks (test task precedes impl task, `manual:`), trailer commits, tests by globs and `@req`/`test_REQ_*` — est: 15min (depends E1.F5.T1)
+- [ ] E1.F7.T2 [Backend] `karvey-trace.py --write` (`traceability.md`) and `--check` (coverage gate, `coverage.requirements` mode, hits); last result from JUnit / `evidence.jsonl` — est: 12min (depends E1.F7.T1, E1.F1.T2, E1.F9.T4)
+- [ ] E1.F7.T3 [Backend] Tasks / test / QA text: test task per requirement, coverage plan read and `planned, not executed`, evidence under `changes/{id}/`, QA runs or cites the CI run of the reviewed commit + L-44 — est: 12min (depends E1.F7.T2)
+
+### Feature E1.F8: Deterministic security tools
+
+- [ ] E1.F8.T1 [Backend] `security_tools.json` (fixed argv templates per category) + `karvey-security-scan.py run` (applies?, first tool, timeout, cap, evidence wrapper, `not evaluated` / `not applicable`) — est: 15min (depends E1.F9.T4)
+- [ ] E1.F8.T2 [Backend] Suppressions (`validate-suppressions`), QA Dimension 1 cites tool lines and reviews what tools miss, infra `security-scan` CI stage — est: 10min (depends E1.F8.T1)
+- [ ] E1.F8.T3 [Test] Manual script `security-tools-present.md` (real tools installed) — est: 5min (depends E1.F8.T2) (P)
+
+### Feature E1.F9: Deterministic scripts: IDs, health score, evidence
+
+- [ ] E1.F9.T1 [Backend] `karvey-id.py next BUG|D|BL|F|Q` (lock, working tree + both decision-log shapes + `refs/remotes/*` scan, clone-local reservation, `--qualified`) + skills that mint IDs call it — est: 15min (P)
+- [ ] E1.F9.T2 [Backend] L-45 (no bounded Epic range in any skill) + L-33 as an error for duplicate IDs created after the release — est: 6min (depends E1.F9.T1)
+- [ ] E1.F9.T3 [Backend] `karvey-health-score.py` (named sub-score functions, `health_weights`, `KARVEY_TZ` fallback line) + health skill calls it — est: 10min (P)
+- [ ] E1.F9.T4 [Backend] `karvey-evidence.py -- <cmd>` (argv, streamed, hashes only, own exit code, `--junit`) + `rules/verification.md` cites `evidence.jsonl` lines — est: 10min (P)
+
+### Feature E1.F10: Post-deploy verification with thresholds
+
+- [ ] E1.F10.T1 [Backend] `karvey-postdeploy.py probe|evaluate` (contract block parse, https-only probes, no cross-host redirect, thresholds, `deploy_evidence.md`, prints `deploy-record`) — est: 15min (depends E1.F1.T4) (P)
+- [ ] E1.F10.T2 [Backend] Infra contract text + deploy 2.6/2.10 "post-deploy verification", regression → rollback asked, `deploy-record --rollback`, `karvey-id next BUG` + manual script — est: 8min (depends E1.F10.T1, E1.F5.T6)
+
+### Feature E1.F11: Knowledge sync optional
+
+- [ ] E1.F11.T1 [Backend] Knowledge sync optional everywhere (`none` default), archive syncs only when declared + L-46 — est: 8min (P)
+
+### Feature E1.F12: Deferred Wave 1 backlog
+
+- [ ] E1.F12.T1 [Backend] Import: `generated --imported` per artifact, gate questions in order (merged when enabled), resume at the first unapproved gate + manual script — est: 6min (depends E1.F4.T1)
+- [ ] E1.F12.T2 [Backend] Decisions: one log written, per-period files read with a migration note once, duplicates reported — est: 5min (depends E1.F9.T1) (P)
+- [ ] E1.F12.T3 [Test] Statusline failure-line table case + hooks README anchor + L-54 — est: 8min (P)
+
+### Feature E1.F13: Rollout 3.13 → 4.0, dogfooding and release
+
+- [ ] E1.F13.T1 [Backend] `validate --fix`: lane proposal (proposed tier), `approvals.deploy` → `deploys[]` only with data, idempotent, never an approval — est: 10min (depends E1.F4.T1, E1.F1.T4)
+- [ ] E1.F13.T2 [Test] `compat.json`: the 3.12.0 fixtures replayed under 3.13 defaults — every Wave 1 allow still allows — est: 10min (depends E1.F5.T5, E1.F13.T1, E1.F5.T4)
+- [ ] E1.F13.T3 [Test] Integration `test_wave2_flow.py`: init → lane → three `approve-gate` → trailer commits → `release-gate check` pass (AC-4, AC-5) — est: 12min (depends E1.F5.T3, E1.F5.T5, E1.F4.T2)
+- [ ] E1.F13.T4 [Backend] This repo: `validate --fix --accept-proposed` on its own changes, `branch_flow.mode: trunk`, then `gates: merged` and `judges` (after the baseline, L-48) — est: 6min (depends E1.F1.T9, E1.F13.T1, E1.F4.T2, E1.F5.T7)
+- [ ] E1.F13.T5 [Backend] Hand-off of the §7.4 upgrade steps for project-upgrade's catalogue (declarations only) — est: 8min (depends E1.F13.T1, E1.F5.T7)
+- [ ] E1.F13.T6 [Test] Whole-repo gate: lint 0 errors, every unit and regression suite, every table, `validate --all`, `karvey-trace.py wave2-structural --write --check`, manual scripts run headless (D-19) — est: 10min (depends every other agent task)
+- [ ] E1.F13.T7 [Backend] Release docs: `[Unreleased]` summary (modes table, the manual Upgrade list from the hand-off, the 3.13 → 4.0 note), no version or date — est: 6min (depends E1.F13.T6, E1.F13.T5)
+- [ ] E1.F13.T8 [human] Apply the `patch`-lane bullet to the owner's global instructions — executor: the owner (depends E1.F2.T8)
+- [ ] E1.F13.T9 [human] The prod OK for the release that ships this change (D-10) — executor: the owner — never delegated (depends E1.F13.T7)
+
+## Task status
+> Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked · 🙋 awaiting-human (blocked on a person)`
+
+| Task | Status | estimate_min | actual_ai_min | actual_review_min | Notes |
+|------|--------|--------------|---------------|-------------------|-------|
+| E1.F1.T1 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F1.T2 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F1.T3 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F1.T4 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F1.T5 [Backend] | ⬜ todo | 5 | — | — |  |
+| E1.F1.T6 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F1.T7 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F1.T8 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F1.T9 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F1.T10 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F1.T11 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F2.T1 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F2.T2 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F2.T3 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F2.T4 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F2.T5 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F2.T6 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F2.T7 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F2.T8 [Backend] | ⬜ todo | 5 | — | — |  |
+| E1.F2.T9 [Test] | ⬜ todo | 10 | — | — |  |
+| E1.F3.T1 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F3.T2 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F3.T3 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F3.T4 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F3.T5 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F3.T6 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F3.T7 [Test] | ⬜ todo | 5 | — | — |  |
+| E1.F4.T1 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F4.T2 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F4.T3 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F4.T4 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F4.T5 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F4.T6 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F4.T7 [Test] | ⬜ todo | 5 | — | — |  |
+| E1.F5.T1 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F5.T2 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F5.T3 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F5.T4 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F5.T5 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F5.T6 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F5.T7 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F5.T8 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F5.T9 [Backend] | ⬜ todo | 5 | — | — |  |
+| E1.F6.T1 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F6.T2 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F6.T3 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F7.T1 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F7.T2 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F7.T3 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F8.T1 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F8.T2 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F8.T3 [Test] | ⬜ todo | 5 | — | — |  |
+| E1.F9.T1 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F9.T2 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F9.T3 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F9.T4 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F10.T1 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F10.T2 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F11.T1 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F12.T1 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F12.T2 [Backend] | ⬜ todo | 5 | — | — |  |
+| E1.F12.T3 [Test] | ⬜ todo | 8 | — | — |  |
+| E1.F13.T1 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F13.T2 [Test] | ⬜ todo | 10 | — | — |  |
+| E1.F13.T3 [Test] | ⬜ todo | 12 | — | — |  |
+| E1.F13.T4 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F13.T5 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F13.T6 [Test] | ⬜ todo | 10 | — | — |  |
+| E1.F13.T7 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F13.T8 [human] | ⬜ todo | — | — | — | executor: the owner |
+| E1.F13.T9 [human] | ⬜ todo | — | — | — | executor: the owner — never delegated |
+
+`estimate_min` is written here once; impl fills the two actual columns and never edits the estimate.
 
 ## History
 | Date | Phase | Action |
@@ -72,3 +262,4 @@ Internal order for tasks (panel Ola 2): F1 → F2 + F3 → F4 + F5 → F6..F12 �
 | 2026-09-25 | init | Change initialised by the state tool; PRD written; spec.json metadata filled (strict validate 0 errors) |
 | 2026-09-25 | requirements | 88 EARS requirements (REQ-W2-001..088), spec-delta (ADDED 88 · MODIFIED 9 · REMOVED 0); 13 open points listed for the *what* gate; not approved |
 | 2026-09-25 | architecture | `architecture.md` generated (C-01..C-24, REQ-W2-001..088 covered, Tier 2 controls S-1..S-12, project-upgrade step declarations §7.4); infra skipped (no cloud); not approved |
+| 2026-09-25 | tasks | `tasks.md` generated: 71 tasks (69 agent, 2 `[human]`), 706 min calibrated, critical path 141 min, REQ-W2 88/88; inherited base commits `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` are `wave1-hardening` decision commits (spec-only, mapped to that change, E1.F5.T9); not approved |
