@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-25 (wave1-hardening E1.F17.T6: BUG-25 RESUELTO, F-52). Before: 2026-09-25 (E1.F17.T1: BUG-22 RESUELTO).
+Last updated: 2026-09-25 (wave1-hardening E1.F17.T7: BUG-26 RESUELTO, F-53). Before: 2026-09-25 (E1.F17.T1: BUG-22 RESUELTO).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -33,6 +33,7 @@ Last updated: 2026-09-25 (wave1-hardening E1.F17.T6: BUG-25 RESUELTO, F-52). Bef
 | BUG-23 | karvey | medium | Settings notice ignores origin/{production} when origin/{integration} lacks the settings | wave1-hardening / F-50 | RESUELTO | plugins/karvey/tests/hooks/tables/session.json (ss-24); plugins/karvey/tests/unit/test_config_resolve.py (OriginProductionFallback) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-24 | karvey | medium | DEV visible-version check demands `-dev.{build}+{sha}` and reads the tip of dev | wave1-hardening / F-51 | RESUELTO | plugins/karvey/tests/unit/test_skill_rules.py (VisibleVersionCheck) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-25 | karvey | medium | A subagent prompt composed by the agent authorises writing project.json | wave1-hardening / F-52 | RESUELTO | plugins/karvey/tests/unit/test_skill_rules.py (SubagentPromptsCarryTheProjectJsonBan) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-26 | karvey | low | Block comment queued: tracker key looked for only in the environment | wave1-hardening / F-53 | RESUELTO | plugins/karvey/tests/unit/test_skill_rules.py (TrackerCredentialsAreLookedUpEverywhere) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 
 ## Summary by state
 
@@ -41,7 +42,7 @@ Last updated: 2026-09-25 (wave1-hardening E1.F17.T6: BUG-25 RESUELTO, F-52). Bef
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 25 | BUG-01 .. BUG-25 |
+| RESUELTO | 26 | BUG-01 .. BUG-26 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-26**.
+Next number: **BUG-27**.

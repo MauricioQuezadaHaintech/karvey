@@ -196,6 +196,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F17.T4 [Backend] BUG-23 (F-50): the settings lookup reads integration and production — est: 20min
 - [x] E1.F17.T5 [Backend] BUG-24 (F-51): visible-version check against the deployed commit, any DEV mark — est: 20min
 - [x] E1.F17.T6 [Backend] BUG-25 (F-52): composed subagent prompts carry the project.json ban — est: 15min
+- [x] E1.F17.T7 [Backend] BUG-26 (F-53): tracker credentials looked up in `.connections.json` first — est: 15min
 
 ---
 
@@ -283,6 +284,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F17.T4 [Backend] | ✅ done | 20 | 8 | 0 | BUG-23 RESUELTO: `project.settings_lines` (integration, production, origin/HEAD) used by the session notice and `karvey-config.py Settings.remotes`; table ss-24 + `OriginProductionFallback` red before the fix; regression index BUG-23 |
 | E1.F17.T5 [Backend] | ✅ done | 20 | 6 | 0 | BUG-24 RESUELTO: deploy 2.6 + versioning.md read `git show <deployed-sha>:<version file>`, any DEV mark format; test_skill_rules.py VisibleVersionCheck (5 tests) red before the fix; regression index BUG-24 |
 | E1.F17.T6 [Backend] | ✅ done | 15 | 5 | 0 | BUG-25 RESUELTO: management-adapters rule 5 + impl `(P)` dispatch carry the ban verbatim; a request to persist is never delegated; test_skill_rules.py SubagentPromptsCarryTheProjectJsonBan (3 tests) red before the fix; regression index BUG-25 |
+| E1.F17.T7 [Backend] | ✅ done | 15 | 5 | 0 | BUG-26 RESUELTO: management-adapters rule 2 is an ordered lookup (`.connections.json`, env, vault/MCP); impl Step 3 and blockers point to it, `blocked: null` → comment only; test_skill_rules.py TrackerCredentialsAreLookedUpEverywhere (3 tests) red before the fix; regression index BUG-26 |
 
 ---
 
@@ -315,3 +317,4 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-25 | impl | E1.F17.T4 done (D-21): BUG-23 / F-50 — the settings notice and `resolve` read `origin/{integration}` and `origin/{production}` (and `origin/HEAD` for the notice) before "missing"; the lookup no longer stops at the first readable line; table case ss-24 and 3 unit tests; BUG-23 RESUELTO in the tracker and incidents index. Estimate 20 min vs actual 8 min (AI), 0 review. |
 | 2026-09-25 | impl | E1.F17.T5 done (D-21): BUG-24 / F-51 — `karvey-deploy` 2.6 and `versioning.md` implement REQ-W1-041: compare with the deployed commit's version file, accept any unmistakable DEV mark, a missing version is a recommendation; new `tests/unit/test_skill_rules.py`; BUG-24 RESUELTO. Estimate 20 min vs actual 6 min (AI), 0 review. |
 | 2026-09-25 | impl | E1.F17.T6 done (D-21): BUG-25 / F-52 — rule 5 of `management-adapters.md` and `karvey-impl` Step 7 make every composed subagent prompt carry "Do not write `docs/spec/project.json` …"; a user's request to persist settings stays with the orchestrating session and the human; 3 tests; BUG-25 RESUELTO. Estimate 15 min vs actual 5 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T7 done (D-21): BUG-26 / F-53 — rule 2 of `management-adapters.md` is a lookup order with `.connections.json` first; `karvey-impl` Step 3 and Handling blockers point to it; `blocked: null` keeps the status and posts the comment; 3 tests; BUG-26 RESUELTO. Estimate 15 min vs actual 5 min (AI), 0 review. |

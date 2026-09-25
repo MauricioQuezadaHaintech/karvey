@@ -867,6 +867,14 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 **Tests added:** `SubagentPromptsCarryTheProjectJsonBan`: rule 5 names every subagent prompt and the verbatim line; a request to persist is never passed on; impl's dispatch carries the line. Red before the fix.  
 **Done when:** the tests pass, L-34 stays at 0 errors; BUG-25 RESUELTO; the no-human-no-mapping subagent rerun shows the ban in the prompt.
 
+### E1.F17.T7 [Backend] BUG-26 (F-53): tracker credentials looked up in `.connections.json` first — _Depends: E1.F17.T3_
+
+**Estimate:** 15 min · **Actual:** 5 min (AI)  
+**Files:** `plugins/karvey/skills/karvey/rules/management-adapters.md` (rule 2), `skills/karvey-impl/SKILL.md` (Step 3, Handling blockers); `tests/unit/test_skill_rules.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
+**Requirements:** REQ-W1-082, REQ-W1-107  
+**Tests added:** `TrackerCredentialsAreLookedUpEverywhere`: rule 2 ordered with `.connections.json` first and "only after" every place; impl Step 3 names it; impl blockers cover `blocked: null`. Red before the fix.  
+**Done when:** the tests pass; BUG-26 RESUELTO; the per-level-maps rerun (parts without the tracker) passes, the tracker part rests on the tests.
+
 ## Traceability matrix (REQ-W1 → tasks)
 
 | REQ-W1 | Tasks |

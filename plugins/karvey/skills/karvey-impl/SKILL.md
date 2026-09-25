@@ -48,7 +48,7 @@ Select from **one declared source** — the tracker when `karvey-config.py resol
 
 ### Step 3 — Start the task in management
 
-**In the team's tracker** (`../karvey/rules/management-adapters.md`): `set_status(task, in_progress)`, plus the tool's timer if it has one. **Markdown:** edit `PLAN.md`, `⬜ todo` → `🔄 in_progress`.
+**In the team's tracker** (`../karvey/rules/management-adapters.md`): `set_status(task, in_progress)`, plus the tool's timer if it has one. The credential comes from the lookup of `management-adapters.md` rule 2 — `.connections.json` at the project root first, then the environment, then the vault or MCP session; never report the tracker unreachable after checking only the environment. **Markdown:** edit `PLAN.md`, `⬜ todo` → `🔄 in_progress`.
 
 ### Step 4 — Execute the task
 
@@ -133,7 +133,7 @@ Next step:
 
 If a task cannot be completed:
 
-- **Tracker:** `comment(task, "BLOCKED: {blocker} · I need: {what unblocks it}")` + `set_status(task, blocked)`; stop the timer.
+- **Tracker:** `comment(task, "BLOCKED: {blocker} · I need: {what unblocks it}")` + `set_status(task, blocked)`; stop the timer. When `blocked` maps to `null` (the tracker cannot show it), keep the tracker status and post the comment alone. The credential comes from `.connections.json` first (rule 2 of `management-adapters.md`); the comment goes to the outbox only when every place of that rule is empty.
 - **Markdown:** `⛔ blocked` + a note in `PLAN.md`.
 
 Report to the user with the specific blocker and wait for it to be unblocked.

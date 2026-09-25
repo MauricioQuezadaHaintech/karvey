@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-25 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-26 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -116,6 +116,12 @@ INDEX = {
         ("unit", "test_skill_rules.py", "SubagentPromptsCarryTheProjectJsonBan.test_impl_dispatch_carries_the_ban"),
         ("manual", "no-human-no-mapping.md"),
     ],
+    "BUG-26": [  # tracker credentials looked up in .connections.json first (REQ-W1-082)
+        ("unit", "test_skill_rules.py", "TrackerCredentialsAreLookedUpEverywhere.test_rule_2_is_a_lookup_order"),
+        ("unit", "test_skill_rules.py", "TrackerCredentialsAreLookedUpEverywhere.test_impl_points_to_the_lookup_when_it_touches_the_tracker"),
+        ("unit", "test_skill_rules.py", "TrackerCredentialsAreLookedUpEverywhere.test_impl_blocker_keeps_status_and_comments_when_blocked_is_null"),
+        ("manual", "per-level-maps.md"),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 
@@ -179,7 +185,7 @@ def tracker_sections():
 
 class NamedChecksExist(unittest.TestCase):
     def test_every_routed_incident_is_indexed(self):
-        for n in range(5, 26):
+        for n in range(5, 27):
             self.assertIn("BUG-%02d" % n, INDEX)
 
     def test_lint_ids_are_registered(self):

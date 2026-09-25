@@ -1,4 +1,4 @@
-"""Skill-text rules an agent must be told, proved by reading the text it loads (BUG-24, BUG-25).
+"""Skill-text rules an agent must be told, proved by reading the text it loads (BUG-24, BUG-25, BUG-26).
 
 The manual agent-behaviour scripts (tests/manual/) found that an agent followed the skill text exactly
 and still did the wrong thing, because the text said the wrong thing or nothing at all. Each class pins
@@ -74,6 +74,31 @@ class SubagentPromptsCarryTheProjectJsonBan(unittest.TestCase):
         dispatch = paragraph(self.impl, "If there are `(P)` tasks: dispatch")
         self.assertIn("rule 5", dispatch)
         self.assertIn(self.LINE, dispatch)
+
+
+class TrackerCredentialsAreLookedUpEverywhere(unittest.TestCase):
+    """BUG-26 / F-53, REQ-W1-082: before a tracker operation is queued for lack of a credential, the agent
+    looks in every place the method keeps it, `.connections.json` at the project root first."""
+
+    def setUp(self):
+        self.adapters = read(RULES / "management-adapters.md")
+        self.rule2 = paragraph(self.adapters, "2. **Credentials never in the repo**")
+        self.impl = read(SKILLS / "karvey-impl" / "SKILL.md")
+
+    def test_rule_2_is_a_lookup_order(self):
+        self.assertRegex(self.rule2, r"`\.connections\.json` at the project root[^.]*first")
+        self.assertRegex(self.rule2, r"only after[^.]*(all|every)")
+
+    def test_impl_points_to_the_lookup_when_it_touches_the_tracker(self):
+        start = paragraph(self.impl, "**In the team's tracker**")
+        self.assertIn(".connections.json", start)
+        self.assertIn("rule 2", start)
+
+    def test_impl_blocker_keeps_status_and_comments_when_blocked_is_null(self):
+        blockers = self.impl[self.impl.index("## Handling blockers"):]
+        blockers = blockers[:blockers.index("\n## ", 5)]
+        self.assertRegex(blockers, r"`blocked` (maps to|is) `null`")
+        self.assertIn(".connections.json", blockers)
 
 
 if __name__ == "__main__":

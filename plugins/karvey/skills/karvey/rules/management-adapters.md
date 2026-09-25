@@ -117,7 +117,11 @@ The next phase-close retries it. A child is never created under a parent missing
 ## Rules
 
 1. **Never assume the tool or a status name.** Resolve it; if missing, run `karvey-init --settings` or ask.
-2. **Credentials never in the repo** — `.connections.json` (git-ignored), env vars or a vault.
+2. **Credentials never in the repo** — `.connections.json` (git-ignored), env vars or a vault. To use one,
+   look in this order: `.connections.json` at the project root first (the tool's key, e.g. `clickup.api_key`
+   in `clickup-protocol.md`), then the environment, then the team's vault or the tool's MCP session. Report
+   "no credential" and queue the operation in the outbox only after all three came back empty, and say
+   where you looked.
 3. **A failed tracker update is reported** and queued in the outbox (phase-close gate).
 4. **`PLAN.md` is always a valid fallback** when the tracker is unreachable — say so and keep going.
 5. **Subagents never write `project.json`**; settings travel as a reviewed change. Every subagent prompt an

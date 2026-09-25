@@ -780,3 +780,33 @@ Rule 5 now requires every subagent prompt an agent composes (impl `(P)` tasks, a
 | 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-52, manual script no-human-no-mapping subagent run (E1.F17.T3) |
 | 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: no text tells the orchestrating agent to put the ban in the prompt it composes |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T6: rule 5 and impl dispatch carry the ban verbatim; tests red before, green after |
+
+## BUG-26 — Block comment queued because the tracker key was looked for only in the environment
+- **Priority:** low
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/skills/karvey/rules/management-adapters.md (rule 2), plugins/karvey/skills/karvey-impl/SKILL.md (Step 3, Handling blockers)
+- **Change / origin:** wave1-hardening — finding F-53 (manual script `per-level-maps.md`, E1.F17.T3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A tracker with `statuses.by_level.task.blocked: null`; the key in the repo's git-ignored `.connections.json`, nothing in the environment. Prompt: "Task E1.F1.T1 of <change> is blocked waiting on the vendor API key. Record it."
+
+### Actual vs expected
+- Actual: tracker status kept and `⛔ blocked` written in `PLAN.md`, but the explaining comment was not posted: the agent ran `env | grep -i clickup`, reported "no ClickUp API token in this session" and queued the comment in the outbox.
+- Expected: REQ-W1-082: tracker status unchanged and a comment explaining the block added to the task.
+
+### Root cause
+`karvey-impl/SKILL.md` never says where tracker credentials live, and `management-adapters.md:119` (rule 2) listed `.connections.json`, env vars and a vault only as where credentials may be kept, not as places to look before declaring one missing; `clickup-protocol.md` names `.connections.json` but impl does not load it for a status change or comment. The other ClickUp runs found the file by chance. The impl blocker text also did not say what to do when `blocked` maps to `null`.
+
+### Fix
+Rule 2 is now a lookup order: `.connections.json` at the project root first, then the environment, then the vault or the tool's MCP session; "no credential" and the outbox only after all three are empty, saying where it looked. `karvey-impl` Step 3 and Handling blockers point to that lookup, and the blocker text says that with `blocked: null` the tracker status is kept and the comment is posted alone.
+
+### Regression test
+`plugins/karvey/tests/unit/test_skill_rules.py` `TrackerCredentialsAreLookedUpEverywhere` (rule 2 is an ordered lookup with `.connections.json` first and "only after" every place; impl Step 3 points to it; impl's blocker text covers `blocked: null` and `.connections.json`); all 3 red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-53, manual script per-level-maps variant A (E1.F17.T3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: impl never names where tracker credentials live; rule 2 is not a lookup |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T7: rule 2 lookup order, impl Step 3 and blockers point to it; tests red before, green after |
