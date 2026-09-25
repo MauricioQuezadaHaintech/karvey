@@ -34,9 +34,9 @@ A change is *done* only when no open `bug`/`spec-gap` remains and every `emergen
 
 Optional team layer (opt-in, **not** the default — Karvey is complete with one agent): `team` · `decisions`.
 
-## Skills catalog (32)
+## Skills catalog (33)
 
-Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 18 support skills.** Each skill's full contract lives in `plugins/karvey/skills/<skill>/SKILL.md`; the shared rules in `plugins/karvey/skills/karvey/rules/`.
+Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 19 support skills.** Each skill's full contract lives in `plugins/karvey/skills/<skill>/SKILL.md`; the shared rules in `plugins/karvey/skills/karvey/rules/`.
 
 ### Orchestrator
 
@@ -84,6 +84,7 @@ Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 18 support sk
 | `karvey-standards` | Uplift the team's golden paths from the real system into its standards repo |
 | `karvey-team` | **Optional** team layer: roles, census, relay, cost |
 | `karvey-decisions` | Decision log (`D-NN` / `C-NN`) + `cross` before declaring a block |
+| `karvey-upgrade` | Project upgrade after a plugin update: state-based plan, dry-run, picked steps on a branch, one PR |
 
 ## Team settings — asked on first use
 
