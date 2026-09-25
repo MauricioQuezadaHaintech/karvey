@@ -8,10 +8,13 @@ the user's home.
 
 Signatures: ``check(probe, params) -> StepResult`` · ``fix(probe, params, values) -> StepResult``.
 """
+import copy
 import difflib
 import json
+import re
 
-from .upgrade import CheckFailed, Edit, StepResult
+from . import safe_values as sv
+from .upgrade import CheckFailed, Edit, NeedsInput, StepResult
 
 PROJECT_JSON = "docs/spec/project.json"
 
@@ -198,6 +201,166 @@ def legacy_shims_fix(probe, params, values):
     return legacy_shims_check(probe, params)
 
 
+
+# --------------------------------------------------------------------------- 4 team-settings
+INIT_SETTINGS = "/karvey:karvey-init --settings"
+PLACEHOLDER = re.compile(r"^<[^<>]+>$")
+
+
+def _no_project_json():
+    return StepResult("needs-input", summary="no docs/spec/project.json: run %s (settings only)" % INIT_SETTINGS,
+                      inputs_needed=["project.json (run %s)" % INIT_SETTINGS],
+                      instructions="The team settings live in docs/spec/project.json; %s creates it, asking the "
+                                   "person for each value." % INIT_SETTINGS)
+
+
+def _project(probe):
+    doc = probe.read_json(PROJECT_JSON)
+    if doc is not None and not isinstance(doc.data, dict):
+        raise CheckFailed("docs/spec/project.json is not a JSON object")
+    return doc
+
+
+def _placeholders(node, path=""):
+    out = []
+    if isinstance(node, dict):
+        for k, v in node.items():
+            out += _placeholders(v, "%s.%s" % (path, k) if path else k)
+    elif isinstance(node, str) and PLACEHOLDER.match(node):
+        out.append(path)
+    return out
+
+
+def _set_value(blocks, key, value):
+    top, _, rest = key.partition(".")
+    if top not in blocks or not rest or "." in rest:
+        raise sv.UnsafeValue(key, "settings", "not a settable key of the blocks this step adds (%s)"
+                             % ", ".join("%s.<key>" % b for b in sorted(blocks)), value)
+    blocks[top][rest] = value
+
+
+def _check_block_values(blocks, cfg):
+    """Every value the person gave goes through safe_values for its kind (REQ-UP-019, REQ-W1-093)."""
+    nt = blocks.get("notifications")
+    if isinstance(nt, dict):
+        ch = sv.check_enum(sv.CHANNEL_ALIASES.get(nt.get("channel"), nt.get("channel")), cfg.CHANNELS,
+                           "notifications.channel")
+        nt["channel"] = ch
+        tgt = nt.get("target", "")
+        if not (isinstance(tgt, str) and PLACEHOLDER.match(tgt)):
+            sv.check_target(ch, tgt, key="notifications.target")
+        if nt.get("via") not in (None, ""):
+            sv.check_enum(nt["via"], cfg.VIAS, "notifications.via")
+        if "events" in nt:
+            ev = nt["events"]
+            if not isinstance(ev, list) or not all(e in cfg.EVENTS for e in ev):
+                raise sv.UnsafeValue("notifications.events", "enum", "a list of %s" % "|".join(cfg.EVENTS), ev)
+        if "detail" in nt:
+            sv.check_enum(nt["detail"], cfg.DETAILS, "notifications.detail")
+    mg = blocks.get("management")
+    if isinstance(mg, dict):
+        tool = sv.check_enum(cfg.LEGACY_TOOLS.get(mg.get("tool"), mg.get("tool")), cfg.TOOLS, "management.tool")
+        loc = mg.get("location")
+        if isinstance(loc, str) and not PLACEHOLDER.match(loc) and "{change-id}" not in loc:
+            sv.check_location(tool, loc, key="management.location")
+        if isinstance(mg.get("sprints"), str) and not PLACEHOLDER.match(mg["sprints"]):
+            sv.check_sprints(tool, mg["sprints"], key="management.sprints")
+
+
+def _team_settings(probe, values):
+    doc = _project(probe)
+    if doc is None:
+        return None, _no_project_json()
+    from .karvey_hooks import _settings_gaps
+    missing, legacy = _settings_gaps(doc.data)
+    change = list(missing) + (["management"] if legacy and "management" not in missing else [])
+    if not change:
+        return None, StepResult("nothing")
+    cfg = probe.config
+    settings = cfg.Settings.__new__(cfg.Settings)
+    settings.root, settings.project = probe.root, copy.deepcopy(doc.data)
+    settings._remote, settings._remote_done, settings.remote_name = None, True, None
+    try:
+        proposal = cfg.propose_settings(settings, from_legacy=True)
+    except cfg.Refused as exc:
+        raise CheckFailed(str(exc))
+    blocks = {k: copy.deepcopy(proposal["snippet"][k]) for k in change}
+    for key, value in (values or {}).items():
+        _set_value(blocks, key, value)
+    _check_block_values(blocks, cfg)
+    new = copy.deepcopy(doc.data)
+    new.update(blocks)
+    holes = _placeholders(blocks)
+    summary = "set %s: %s" % (" + ".join(change), json.dumps(blocks, ensure_ascii=False, sort_keys=True))
+    if len(summary) > 240:
+        summary = summary[:237] + "..."
+    edit = Edit("write", PROJECT_JSON, before_sha256=doc.sha256, text=doc.dumps(new))
+    return (holes, edit), StepResult("applies", summary=summary, edits=[edit], warnings=list(proposal["notes"]))
+
+
+def team_settings_check(probe, params):
+    state, res = _team_settings(probe, {})
+    if state is None:
+        return res
+    holes, _ = state
+    if holes:
+        return StepResult("needs-input", summary=res.summary, inputs_needed=holes, warnings=res.warnings,
+                          instructions="Ask the person for: %s (pass them with --values)" % ", ".join(holes))
+    return res
+
+
+def team_settings_fix(probe, params, values):
+    state, res = _team_settings(probe, values)
+    if state is None:
+        if res.status == "needs-input":
+            raise NeedsInput("project.json (run %s)" % INIT_SETTINGS)
+        return res
+    holes, _ = state
+    if holes:
+        raise NeedsInput(", ".join(holes))
+    return res
+
+
+# --------------------------------------------------------------------------- 5 enforcement-defaults
+STANDARDS_SKILL = "/karvey:karvey-standards"
+
+
+def _enforcement_defaults(probe):
+    schema = probe.plugin_json("schemas/project.schema.json")
+    props = (((schema.data if schema else {}).get("properties") or {}).get("enforcement") or {}).get("properties") or {}
+    return {k: v["x-karvey-default"] for k, v in props.items() if isinstance(v, dict) and "x-karvey-default" in v}
+
+
+def enforcement_defaults_check(probe, params):
+    doc = _project(probe)
+    if doc is None:
+        return _no_project_json()
+    data = doc.data
+    enf = data.get("enforcement") if isinstance(data.get("enforcement"), dict) else {}
+    missing = {k: v for k, v in _enforcement_defaults(probe).items() if k not in enf}
+    warnings = []
+    if "standards" not in data:
+        templates = params.get("standards") or []
+        warnings.append("no engineering standards declared → %s%s" % (
+            STANDARDS_SKILL, " (templates: %s)" % ", ".join(templates) if templates else ""))
+    if not missing:
+        return StepResult("nothing", warnings=warnings)
+    new = copy.deepcopy(data)
+    new_enf = dict(enf)
+    new_enf.update(missing)
+    new["enforcement"] = new_enf
+    return StepResult("applies", summary="add %s (this version's defaults)" % ", ".join(
+        "enforcement.%s = %s" % (k, json.dumps(v)) for k, v in missing.items()),
+        edits=[Edit("write", PROJECT_JSON, before_sha256=doc.sha256, text=doc.dumps(new))], warnings=warnings)
+
+
+def enforcement_defaults_fix(probe, params, values):
+    res = enforcement_defaults_check(probe, params)
+    if res.status == "needs-input":
+        raise NeedsInput("project.json (run %s)" % INIT_SETTINGS)
+    return res
+
+
 REGISTRY = {
     "schema_migrate_check": schema_migrate_check,
     "schema_migrate_fix": schema_migrate_fix,
@@ -205,4 +368,8 @@ REGISTRY = {
     "schema_migrate_proposed_fix": schema_migrate_proposed_fix,
     "legacy_shims_check": legacy_shims_check,
     "legacy_shims_fix": legacy_shims_fix,
+    "team_settings_check": team_settings_check,
+    "team_settings_fix": team_settings_fix,
+    "enforcement_defaults_check": enforcement_defaults_check,
+    "enforcement_defaults_fix": enforcement_defaults_fix,
 }

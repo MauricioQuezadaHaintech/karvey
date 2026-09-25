@@ -17,6 +17,12 @@
                         "fb0dcc5cc5753de69d8ebd3b38fb94c0b4cde7dcabe975e11fec32984fcdc03c"],
        "git-flow-guard.sh": ["701bde10ddc10ffa9708b393c6e4238dfad817c78700d86ee461209af2016da2",
                              "d69c6e13d41ea05ddf290ec522697758d3ec9f4ee9eda175f2dc8f13b74a0b13",
-                             "bb50edcd7da58bf3d779f59a5cf875f4d492fe08f6cf42f1cacdf81244f385a6"]}}}
+                             "bb50edcd7da58bf3d779f59a5cf875f4d492fe08f6cf42f1cacdf81244f385a6"]}}},
+    {"id": "team-settings", "since": "3.13.0", "title": "Add missing or legacy team settings (management, notifications)",
+     "check": "team_settings_check", "fix": "team_settings_fix", "dry_run": true, "human": false, "risk": "low",
+     "cost": "low"},
+    {"id": "enforcement-defaults", "since": "3.13.0", "title": "Declare the enforcement defaults this version adds",
+     "check": "enforcement_defaults_check", "fix": "enforcement_defaults_fix", "dry_run": true, "human": false,
+     "risk": "low", "cost": "low", "params": {"standards": []}}
   ]
 }

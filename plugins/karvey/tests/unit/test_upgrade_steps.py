@@ -194,5 +194,86 @@ class LegacyShims(FixtureCase):
         self.assertEqual(cp.returncode, 0, cp.stdout.decode()[-2000:])
 
 
+class TeamSettings(FixtureCase):
+    def check(self, sid):
+        steps = {s["id"]: s for s in upgrade.load_catalogue()}
+        return upgrade.run_check(steps[sid], upgrade.Probe(self.root, home=self.home, installed=INSTALLED))
+
+    def test_missing_notifications_previewed_from_propose_settings(self):
+        cfg = upgrade.config_module()
+        with mock.patch.object(cfg, "propose_settings", wraps=cfg.propose_settings) as ps:
+            row, res = self.row("team-settings")
+        self.assertTrue(ps.called)
+        self.assertEqual(ps.call_args.kwargs.get("from_legacy"), True)
+        self.assertEqual(row["status"], "applies")
+        self.assertIn("notifications", row["summary"])
+        new = json.loads(res.edits[0].text)
+        self.assertEqual(new["notifications"]["channel"], "none")
+        rep = self.apply(["schema-migrate", "team-settings"])
+        self.assertEqual(rep.applied, ["schema-migrate", "team-settings"])
+        self.assertEqual(self.row("team-settings")[0]["status"], "nothing")
+
+    def test_a_placeholder_is_needs_input_and_apply_refuses_without_values(self):
+        data = json.loads(self.read(PJ))
+        data["management"] = "clickup"
+        self.write(PJ, data)
+        res = self.check("team-settings")
+        self.assertEqual(res.status, "needs-input")
+        self.assertEqual(res.inputs_needed, ["management.location"])
+        with self.assertRaises(upgrade.Refused) as cm:
+            self.apply(["team-settings"])
+        self.assertIn("management.location", str(cm.exception))
+        rep = self.apply(["team-settings"], inputs={"team-settings": {"management.location": "901234"}})
+        self.assertEqual(rep.applied, ["team-settings"])
+        self.assertEqual(json.loads(self.read(PJ))["management"]["location"], "901234")
+
+    def test_values_go_through_safe_values(self):
+        bad = [{"notifications.channel": "slack", "notifications.target": "https://hooks.example/x"},
+               {"notifications.channel": "slack", "notifications.target": "#a; rm -rf ~"},
+               {"notifications.channel": "carrier-pigeon"},
+               {"management.tool": "markdown", "management.location": "../outside.md"},
+               {"project": "x"}]
+        for vals in bad:
+            with self.subTest(values=vals):
+                with self.assertRaises(upgrade.Refused) as cm:
+                    self.apply(["team-settings"], inputs={"team-settings": vals})
+                self.assertIn("value refused", str(cm.exception))
+        rep = self.apply(["team-settings"], inputs={"team-settings": {"notifications.channel": "slack",
+                                                                      "notifications.target": "#team-dev"}})
+        self.assertEqual(rep.applied, ["team-settings"])
+        self.assertEqual(json.loads(self.read(PJ))["notifications"]["target"], "#team-dev")
+
+    def test_enforcement_defaults_lists_undeclared_keys_only(self):
+        row, res = self.row("enforcement-defaults")
+        self.assertEqual(row["status"], "applies")
+        self.assertIn("enforcement.prod_gate_hook = true", row["summary"])
+        self.assertIn("enforcement.plan_marker_ttl_min = 120", row["summary"])
+        self.assertNotIn("git_flow_hook", row["summary"], "an explicit value is never listed")
+        data = json.loads(self.read(PJ))
+        data["enforcement"] = {"prod_gate_hook": False, "plan_marker_ttl_min": 30}
+        self.write(PJ, data)
+        row, _ = self.row("enforcement-defaults")
+        self.assertEqual(row["status"], "nothing", "explicit non-default values are kept")
+
+    def test_no_standards_block_names_the_standards_skill(self):
+        row, _ = self.row("enforcement-defaults")
+        self.assertTrue(any("/karvey:karvey-standards" in w for w in row["warnings"]))
+        data = json.loads(self.read(PJ))
+        data["standards"] = {"backend": "docs/spec/standards/backend.md"}
+        self.write(PJ, data)
+        self.assertEqual(self.row("enforcement-defaults")[0]["warnings"], [])
+
+    def test_no_project_json_is_handed_to_init_settings(self):
+        (self.root / PJ).unlink()
+        g.commit_all(self.root)
+        for sid in ("team-settings", "enforcement-defaults"):
+            with self.subTest(step=sid):
+                row, _ = self.row(sid)
+                self.assertEqual(row["status"], "needs-input")
+                self.assertIn("/karvey:karvey-init --settings", row["summary"])
+                with self.assertRaises(upgrade.Refused):
+                    self.apply([sid], inputs={sid: {"x": "y"}})
+
+
 if __name__ == "__main__":
     unittest.main()
