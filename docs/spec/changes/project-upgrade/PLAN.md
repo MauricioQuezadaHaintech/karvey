@@ -52,7 +52,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F3: The initial step catalogue (8 steps)
 
-- [ ] E1.F3.T1 [Backend] `schema-migrate`, `schema-migrate-proposed` — est: 12min (depends E1.F1.T4, E1.F1.T3)
+- [x] E1.F3.T1 [Backend] `schema-migrate`, `schema-migrate-proposed` — est: 12min (depends E1.F1.T4, E1.F1.T3)
 - [ ] E1.F3.T2 [Backend] `legacy-shims` — est: 10min (depends E1.F3.T1)
 - [ ] E1.F3.T3 [Backend] `team-settings`, `enforcement-defaults` — est: 10min (depends E1.F3.T2)
 - [ ] E1.F3.T4 [Backend] `statusline-launcher`, `global-config`, `STABLE_STATUSLINE` — est: 10min (depends E1.F3.T3)
@@ -100,7 +100,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F2.T1 [Backend] | ✅ done | 15 | 9 | 0 |  |
 | E1.F2.T2 [Backend] | ✅ done | 12 | 6 | 0 |  |
 | E1.F2.T3 [Backend] | ✅ done | 12 | 7 | 0 |  |
-| E1.F3.T1 [Backend] | ⬜ todo | 12 | — | — | |
+| E1.F3.T1 [Backend] | ✅ done | 12 | 6 | 0 |  |
 | E1.F3.T2 [Backend] | ⬜ todo | 10 | — | — | |
 | E1.F3.T3 [Backend] | ⬜ todo | 10 | — | — | |
 | E1.F3.T4 [Backend] | ⬜ todo | 10 | — | — | |

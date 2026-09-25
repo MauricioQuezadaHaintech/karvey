@@ -1,9 +1,12 @@
 {
-  "$comment": "The project-upgrade step catalogue (schema: schemas/upgrade-steps.schema.json). Order is the apply order. Functions live in upgrade_steps.REGISTRY; since is the release that added the step.",
+  "$comment": "The project-upgrade step catalogue (schema: schemas/upgrade-steps.schema.json). Order is the apply order. Functions live in upgrade_steps.REGISTRY; since is the release that added the step (fixed at release by karvey-deploy).",
   "catalogue_version": 1,
   "steps": [
-    {"id": "placeholder", "since": "3.13.0", "title": "Placeholder (removed with the first real step)",
-     "check": "placeholder_nothing", "fix": null, "dry_run": false, "human": false, "risk": "low",
-     "report_only": true}
+    {"id": "schema-migrate", "since": "3.13.0", "title": "Migrate legacy spec.json / project.json shapes (exact tier)",
+     "check": "schema_migrate_check", "fix": "schema_migrate_fix", "dry_run": true, "human": false, "risk": "low",
+     "cost": "scan"},
+    {"id": "schema-migrate-proposed", "since": "3.13.0", "title": "Migrate legacy shapes of the proposed tier",
+     "check": "schema_migrate_proposed_check", "fix": "schema_migrate_proposed_fix", "dry_run": true, "human": false,
+     "risk": "medium", "cost": "scan"}
   ]
 }
