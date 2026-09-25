@@ -72,7 +72,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F1.T1 [Backend] Schema additions: lane enum, the four logs, role `auto`, `generated_at`/`imported`, `skipped` keys, `D-NN@repo`; project `gates`/`judges`/`lanes`/`checks`/`branch_flow.mode`/`trailer_guard`/`tests`/`security` — est: 12min
 - [x] E1.F1.T2 [Backend] Check-mode registry `check-modes.json` + `karvey_lib/modes.py` (`resolve`, `record_hit` → `changes/{id}/checks.jsonl`) — est: 12min (depends E1.F1.T1)
 - [x] E1.F1.T3 [Backend] State tool: `generated_at`, `outcome` command (`changes_requested`, `--kind plan-exception`, `no reason given`), `approve` appends `gate_outcomes`, `--role auto` (refused on prod) — est: 12min (depends E1.F1.T1)
-- [ ] E1.F1.T4 [Backend] State tool: `deploy-record`, `approvals.deploy` legacy warning, `deploying.approval → null`, `advance deployed --attested --ref D-NN --pipeline-run URL` — est: 12min (depends E1.F1.T3)
+- [x] E1.F1.T4 [Backend] State tool: `deploy-record`, `approvals.deploy` legacy warning, `deploying.approval → null`, `advance deployed --attested --ref D-NN --pipeline-run URL` — est: 12min (depends E1.F1.T3)
 - [ ] E1.F1.T5 [Backend] State tool: `next` prints each blocker once (F-26) — est: 5min (depends E1.F1.T4)
 - [ ] E1.F1.T6 [Backend] `karvey_lib/metrics.py`: one pure function per metric returning `(value|None, reasons)`, per lane and total — est: 15min (depends E1.F1.T1) (P)
 - [ ] E1.F1.T7 [Backend] `karvey-context.py --metrics [--from --to --as-of --lane --json]`: read-only, byte-identical, table + JSON — est: 12min (depends E1.F1.T6, E1.F1.T4)
@@ -185,7 +185,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F1.T1 [Backend] | ✅ done | 12 | 6 | 0 |  |
 | E1.F1.T2 [Backend] | ✅ done | 12 | 5 | 0 |  |
 | E1.F1.T3 [Backend] | ✅ done | 12 | 7 | 0 |  |
-| E1.F1.T4 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F1.T4 [Backend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F1.T5 [Backend] | ⬜ todo | 5 | — | — |  |
 | E1.F1.T6 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F1.T7 [Backend] | ⬜ todo | 12 | — | — |  |

@@ -22,6 +22,8 @@ Commands:
                                         prod → the release ledger (D-03), never spec.json
                                         unless --write-spec (archive branch, REQ-W1-032)
   check-prod <change>                   the prod-gate's question (REQ-W1-023)
+  deploy-record <change> --env --version --verification pass|regression|not-evaluated [--rollback] [--evidence]
+  advance <change> deployed --attested --ref D-NN --pipeline-run URL   (a clone without the ledger)
 """
 import argparse
 import copy
@@ -331,6 +333,12 @@ def semantic_spec(data, strict, file):
         if isinstance(ap, dict) and ap.get("approved") is True:
             out.append(kl.issue("state.skipped_and_approved", "phase %r is both skipped and approved" % ph,
                                 severity="warning", file=file, path="$.skipped.%s" % ph))
+
+    # approvals.deploy is retired: deploys live in spec.json:deploys (REQ-W2-051)
+    if "deploy" in approvals:
+        out.append(kl.issue("state.legacy_deploy_approval", "approvals.deploy is a legacy key: deploys are recorded "
+                            "in deploys[] (deploy-record); run validate --fix to migrate it", severity="warning",
+                            file=file, path="$.approvals.deploy", expected="deploys[]", got="approvals.deploy"))
 
     # management legacy alias
     if data.get("management") == "none":
@@ -995,8 +1003,8 @@ def cmd_advance(args, root):
     to = args.to
     if to not in phase_ids():
         raise Usage("unknown phase %r (one of %s)" % (to, ", ".join(phase_ids())))
-    if (args.pipeline_run or args.post_deploy_check) and to != "deployed":
-        raise Usage("--pipeline-run and --post-deploy-check are only for 'deployed'")
+    if (args.pipeline_run or args.post_deploy_check or args.attested) and to != "deployed":
+        raise Usage("--pipeline-run, --post-deploy-check and --attested are only for 'deployed'")
     now = now_iso()
     info = {}
 
@@ -1016,7 +1024,10 @@ def cmd_advance(args, root):
                 continue
             raise Refused("edge not in the graph: %s → %s (%s not passed)" % (cur, to, p["id"]), code="state.edge")
         evidence = None
-        if to == "deployed":
+        if to == "deployed" and args.attested:
+            evidence = attested_evidence(root, args)
+            info["ledger"] = "none (attested)"
+        elif to == "deployed":
             ledger, _ = read_ledger_safe(root, args.change)
             missing = []
             prod = (ledger or {}).get("prod") if ledger else None
@@ -1027,6 +1038,9 @@ def cmd_advance(args, root):
             if args.post_deploy_check != "pass":
                 missing.append("--post-deploy-check pass")
             if missing:
+                if ledger is None:
+                    missing.append("or, without a release ledger in this clone: --attested --ref D-NN "
+                                   "--pipeline-run https://…")
                 raise Refused("deployed needs release evidence: " + "; ".join(missing), code="state.evidence")
             evidence = {"pipeline_run": args.pipeline_run, "post_deploy_check": "pass"}
             info["ledger"] = "release"
@@ -1040,7 +1054,7 @@ def cmd_advance(args, root):
         return info
 
     path, loaded = load_change(root, args.change)  # exit 4 before touching the ledger
-    if to == "deployed":
+    if to == "deployed" and not args.attested:
         # validate first, then write the ledger, then spec.json (a re-run is idempotent)
         mutate(copy.deepcopy(loaded.data))
         approval.record_release(root, args.change, args.pipeline_run, "pass", at=now)
@@ -1049,6 +1063,29 @@ def cmd_advance(args, root):
     res["consumed"] = consume_on_close(root, args.change, loaded.data, res["from"])
     res["file"] = rel(root, path)
     return kl.EXIT_OK, res, [], [], "%s: %s → %s" % (args.change, res["from"], res["to"])
+
+
+ATTESTED_MSG = ("an attested deployed needs both evidences: --ref D-NN (a decision in docs/spec/decisions.md) "
+                "and --pipeline-run https://… (the green production pipeline run)")
+
+
+def attested_evidence(root, args):
+    """``deployed`` recorded from a clone without the release ledger (REQ-W2-053): attested, not measured."""
+    ledger, status = approval.read_ledger(root, args.change)
+    if status != "missing":
+        raise Refused("--attested is only for a clone without a release ledger; this clone has one (%s): use the "
+                      "measured path (approve %s prod, --pipeline-run, --post-deploy-check pass)"
+                      % (status, args.change), code="state.attested_with_ledger")
+    ref = (args.ref or "").strip()
+    run = (args.pipeline_run or "").strip()
+    missing = []
+    if not (re.match(r"^D-\d+$", ref) and decision_exists(root, ref)):
+        missing.append("--ref D-NN")
+    if not re.match(r"^https://\S+$", run):
+        missing.append("--pipeline-run https://…")
+    if missing:
+        raise Refused("%s (missing: %s)" % (ATTESTED_MSG, ", ".join(missing)), code="state.evidence")
+    return {"attested": True, "ref": ref, "pipeline_run": run}
 
 
 def cmd_init(args, root):
@@ -1382,6 +1419,42 @@ def append_outcome(data, entry):
     return entry
 
 
+VERIFICATIONS = ("pass", "regression", "not-evaluated")
+_ENV = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$")
+
+
+def cmd_deploy_record(args, root):
+    """``deploy-record``: append ``deploys[{env, version, at, verification, rollback, evidence}]`` (REQ-W2-002)."""
+    env, version = (args.env or "").strip(), (args.version or "").strip()
+    missing = [n for n, v in (("--env", env), ("--version", version), ("--verification", args.verification)) if not v]
+    if missing:
+        raise Refused("a deploy record needs --env, --version and --verification (missing: %s)" % ", ".join(missing),
+                      code="state.fields")
+    if args.verification not in VERIFICATIONS:
+        raise Refused("--verification must be one of %s (got %r)" % (", ".join(VERIFICATIONS), args.verification),
+                      code="state.verification")
+    if not _ENV.match(env) or len(version) > 60:
+        raise Refused("invalid --env %r or --version %r" % (env, version), code="state.fields")
+    entry = {"env": env, "version": version, "at": _date_arg(args.date), "verification": args.verification,
+             "rollback": (args.rollback or "").strip() or None}
+    if args.evidence:
+        entry["evidence"] = args.evidence.strip()
+
+    def mutate(data):
+        log = data.get("deploys")
+        if not isinstance(log, list):
+            log = []
+            data["deploys"] = log
+        log.append(entry)
+        data["updated_at"] = now_iso()
+        return {"change": args.change, "deploy": entry}
+
+    path, res, _ = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], [], "%s: deploy recorded (%s %s, verification %s%s)" % (
+        args.change, env, version, args.verification, ", rollback" if entry["rollback"] else "")
+
+
 def gate_phases(gate):
     """The phases a merged gate covers, from ``state-machine.json`` (``gate`` per phase)."""
     return [p["id"] for p in machine()["phases"] if p.get("gate") == gate]
@@ -1421,7 +1494,8 @@ def cmd_outcome(args, root):
 
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
-            "check-prod": cmd_check_prod, "outcome": cmd_outcome}
+            "check-prod": cmd_check_prod, "outcome": cmd_outcome,
+            "deploy-record": cmd_deploy_record}
 
 
 def build_parser():
@@ -1454,6 +1528,9 @@ def build_parser():
     a.add_argument("--by", help="who applies it (recorded in phase_history)")
     a.add_argument("--pipeline-run", help="deployed only: URL of the green production pipeline run")
     a.add_argument("--post-deploy-check", choices=["pass"], help="deployed only: the post-deploy check passed")
+    a.add_argument("--attested", action="store_true",
+                   help="deployed only, a clone without the release ledger: needs --ref D-NN and --pipeline-run URL")
+    a.add_argument("--ref", help="deployed --attested: the D-NN that records the production OK")
     gnr = sub.add_parser("generated", parents=[common], help="approvals.<phase>.generated = true")
     gnr.add_argument("change")
     gnr.add_argument("phase")
@@ -1484,6 +1561,14 @@ def build_parser():
     oc.add_argument("--reason")
     oc.add_argument("--kind", choices=["gate", "plan-exception"], default="gate")
     oc.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
+    dr = sub.add_parser("deploy-record", parents=[common], help="append a deploys[] entry (env, version, verification)")
+    dr.add_argument("change")
+    dr.add_argument("--env")
+    dr.add_argument("--version")
+    dr.add_argument("--verification")
+    dr.add_argument("--rollback", help="the rollback taken, if any")
+    dr.add_argument("--evidence", help="path of the deploy evidence (e.g. deploy_evidence.md)")
+    dr.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
     cp = sub.add_parser("check-prod", parents=[common], help="is a human prod approval recorded? (prod-gate)")
     cp.add_argument("change")
     return p

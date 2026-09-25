@@ -33,14 +33,14 @@ The table below is generated from `state-machine.json`; do not edit it by hand (
 | 7 | `impl` | `/karvey-impl` | — | no | — | `tasks.md`, `architecture.md` |
 | 8 | `test` | `/karvey-test` | — | no | — | `architecture.md`, `requirements.md` |
 | 9 | `qa` | `/karvey-qa` | `qa` | no | `qa/REVISION_PR_*.md` | — |
-| 10 | `deploying` | `/karvey-deploy` | `deploy` | no | — | `qa/REVISION_PR_*.md` |
+| 10 | `deploying` | `/karvey-deploy` | — | no | — | `qa/REVISION_PR_*.md` |
 | 11 | `deployed` | `/karvey-deploy` | `prod` | no | — | — |
 | 12 | `archived` | `/karvey-archive` | — | no | — | `spec-delta.md` |
 
 - **Edges:** forward: phases[i] -> phases[i+1]; a skipped phase is passed through.
 - **Reopen targets** (`karvey-state.py reopen`): `requirements`, `architecture`, `tasks`, `impl`.
-- **enter(P):** every phase before P with a non-null approval is approved or skipped; approvals.deploy is not a precondition in Wave 1.
-- **enter(deployed):** release ledger holds a human prod approval + pipeline run + post-deploy check.
+- **enter(P):** every phase before P with a non-null approval is approved or skipped (a phase the change's lane marks s counts as skipped); deploying carries no approval: deploys are recorded in spec.json:deploys (deploy-record).
+- **enter(deployed):** release ledger holds a human prod approval + pipeline run + post-deploy check; a clone without a ledger records it attested with --attested --ref D-NN --pipeline-run https://….
 - **enter(archived):** phase = deployed AND spec.json approvals.prod.by set, role human, ref non-empty.
 <!-- /generated:state-machine -->
 

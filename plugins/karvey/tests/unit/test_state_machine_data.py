@@ -36,7 +36,8 @@ class StateMachine(unittest.TestCase):
         approvals = [p["approval"] for p in SM["phases"] if p["approval"] is not None]
         self.assertEqual(len(approvals), len(set(approvals)))
         self.assertTrue(set(approvals) <= keys, set(approvals) - keys)
-        self.assertEqual(set(approvals), keys)
+        self.assertEqual(set(approvals), keys - {"deploy"})  # wave2 REQ-W2-051: approvals.deploy is legacy
+        self.assertIsNone([p for p in SM["phases"] if p["id"] == "deploying"][0]["approval"])
 
     def test_skills_exist(self):
         for p in SM["phases"]:

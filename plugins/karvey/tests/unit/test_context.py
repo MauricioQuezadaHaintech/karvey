@@ -203,7 +203,7 @@ class Approvals(Base):
 
     def test_every_approval_requirements_to_prod(self):
         self.assertEqual(list(self.rows()), ["requirements", "mockup", "design_graphic", "architecture", "infra",
-                                             "tasks", "qa", "deploy", "prod"])
+                                             "tasks", "qa", "prod"])  # wave2: approvals.deploy retired
 
     def test_skipped_with_reason(self):
         r = self.rows()

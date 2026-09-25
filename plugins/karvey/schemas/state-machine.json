@@ -122,7 +122,7 @@
     },
     {
       "id": "deploying",
-      "approval": "deploy",
+      "approval": null,
       "skippable": false,
       "skill": "karvey-deploy",
       "reads": [
@@ -153,8 +153,8 @@
     "impl"
   ],
   "preconditions": {
-    "enter(P)": "every phase before P with a non-null approval is approved or skipped; approvals.deploy is not a precondition in Wave 1",
-    "enter(deployed)": "release ledger holds a human prod approval + pipeline run + post-deploy check",
+    "enter(P)": "every phase before P with a non-null approval is approved or skipped (a phase the change's lane marks s counts as skipped); deploying carries no approval: deploys are recorded in spec.json:deploys (deploy-record)",
+    "enter(deployed)": "release ledger holds a human prod approval + pipeline run + post-deploy check; a clone without a ledger records it attested with --attested --ref D-NN --pipeline-run https://…",
     "enter(archived)": "phase = deployed AND spec.json approvals.prod.by set, role human, ref non-empty"
   }
 }
