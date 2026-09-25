@@ -53,6 +53,8 @@ One row per step that is not `nothing`: step · what changes (`summary`) · dry-
 
 One multi-select question (AskUserQuestion, the person's language). Every listed step is an option; the steps with `risk: low` that are not human are marked **(Recommended)**; human and report steps are labelled **"shown, not applied"** (they print instructions or a diff; nothing is performed, and no answer changes that).
 
+- You cannot ask (a non-interactive session) or there is no answer → stop after the table and record nothing:
+  the offer comes back next session.
 - The person picks **none** → record the decline and stop (no branch, no commit):
   ```bash
   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" seen --decline

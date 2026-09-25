@@ -70,7 +70,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 ### Feature E1.F6: The upgrade skill
 
 - [x] E1.F6.T1 [Backend] `skills/karvey-upgrade/SKILL.md`, orchestrator line, counts 18 → 19 — est: 10min (depends E1.F4.T1) (P)
-- [ ] E1.F6.T2 [Test] Manual script `tests/manual/upgrade-skill.md` — est: 8min (depends E1.F6.T1)
+- [x] E1.F6.T2 [Test] Manual script `tests/manual/upgrade-skill.md` — est: 8min (depends E1.F6.T1)
 
 ### Feature E1.F7: Linter, fingerprint and docs
 
@@ -109,7 +109,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F5.T1 [Backend] | ✅ done | 15 | 9 | 0 |  |
 | E1.F5.T2 [Test] | ✅ done | 15 | 10 | 0 | done-when path: `plugins/karvey/hooks/tests/test-hooks.sh` (tasks.md names `tests/test-hooks.sh`) |
 | E1.F6.T1 [Backend] | ✅ done | 10 | 6 | 0 |  |
-| E1.F6.T2 [Test] | ⬜ todo | 8 | — | — | |
+| E1.F6.T2 [Test] | ✅ done | 8 | 4 | 0 |  |
 | E1.F7.T1 [Backend] | ⬜ todo | 12 | — | — | |
 | E1.F7.T2 [Backend] | ⬜ todo | 15 | — | — | |
 | E1.F7.T3 [Backend] | ⬜ todo | 15 | — | — | |
