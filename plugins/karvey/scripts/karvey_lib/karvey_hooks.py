@@ -2,7 +2,7 @@
 
     python3 karvey_hooks.py <event> [--only <guard>[,<guard>…]] [--force-enabled]
 
-Events: ``prompt`` (UserPromptSubmit) · ``pre-bash`` / ``pre-edit`` (PreToolUse) ·
+Events: ``prompt`` (UserPromptSubmit) · ``pre-bash`` / ``pre-edit`` / ``pre-agent`` (PreToolUse) ·
 ``post-edit`` (PostToolUse) · ``session`` (SessionStart, E1.F6.T1).
 
 One process per event: the payload is parsed once (``hookio``), the command is segmented once
@@ -14,6 +14,7 @@ Guard registry (order, fail mode — §3.2):
 
     pre-bash   protect-paths (closed) → prod-gate (closed) → git-flow (closed) → plan-gate (closed)
     pre-edit   protect-paths (closed) → plan-gate (closed)
+    pre-agent  subagent-prompt (open; BUG-25)
     post-edit  spec-write (open) → pending-sync (open)
     prompt     approval (open)
 
@@ -46,9 +47,9 @@ else:
     from . import HOOK_ALLOW, HOOK_BLOCK, atomicio, audit, defaults, guards, hookio, livestate, shellparse
     from . import project as pj
 
-EVENTS = ("prompt", "pre-bash", "pre-edit", "post-edit", "session")
-# hooks.json timeouts: prompt 5 s · pre-bash 15 s · pre-edit 5 s · post-edit 10 s · session 10 s
-BUDGET_S = {"prompt": 4.0, "pre-bash": 12.0, "pre-edit": 4.0, "post-edit": 8.0, "session": 8.0}
+EVENTS = ("prompt", "pre-bash", "pre-edit", "pre-agent", "post-edit", "session")
+# hooks.json timeouts: prompt 5 s · pre-bash 15 s · pre-edit 5 s · pre-agent 5 s · post-edit 10 s · session 10 s
+BUDGET_S = {"prompt": 4.0, "pre-bash": 12.0, "pre-edit": 4.0, "pre-agent": 4.0, "post-edit": 8.0, "session": 8.0}
 STDIN_MAX = 4 * 1024 * 1024
 SELFTEST_ENV = "KARVEY_HOOK_SELFTEST"
 SELFTEST_TOKEN = "KARVEY-SELFTEST-BLOCK"
@@ -199,6 +200,8 @@ REGISTRY = [
           enabled=guards.git_flow_enabled),                             # E1.F5.T4
     Guard("plan-gate", ("pre-bash", "pre-edit"), "closed", False, wired=True, run=guards.plan_gate,
           enabled=guards.plan_gate_enabled),                            # E1.F5.T3
+    Guard("subagent-prompt", ("pre-agent",), "open", True, wired=True,
+          run=guards.subagent_prompt),                                  # BUG-25
     Guard("spec-write", ("post-edit",), "open", True, wired=True, run=spec_write),      # E1.F5.T7
     Guard("pending-sync", ("post-edit",), "open", True, wired=True, run=pending_sync),  # E1.F5.T7
     Guard("approval", ("prompt",), "open", True, wired=True, run=guards.approval_hook),  # E1.F5.T2

@@ -753,7 +753,7 @@ The skill text implemented the recommendation as the test. `karvey-deploy/SKILL.
 
 ## BUG-25 — A subagent prompt composed by the agent authorises writing project.json
 - **Priority:** medium
-- **Detected:** 2026-09-25 · **Component:** plugins/karvey/skills/karvey/rules/management-adapters.md (rule 5), plugins/karvey/skills/karvey-impl/SKILL.md (Step 7, `(P)` dispatch)
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/skills/karvey/rules/management-adapters.md (rule 5), plugins/karvey/skills/karvey-impl/SKILL.md (Step 7, `(P)` dispatch); plugins/karvey/scripts/karvey_lib/guards.py (`subagent_prompt`, new PreToolUse Agent|Task guard)
 - **Change / origin:** wave1-hardening — finding F-52 (manual script `no-human-no-mapping.md`, E1.F17.T3)
 - **Tracker:** —
 - **Current state:** RESUELTO
@@ -771,8 +771,10 @@ The skill text implemented the recommendation as the test. `karvey-deploy/SKILL.
 ### Fix
 Rule 5 now requires every subagent prompt an agent composes (impl `(P)` tasks, a delegated task, any `Agent` call) to carry the line "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed values to me and change no tracker status that needs them." verbatim, and says a user's request to persist settings is answered by the orchestrating session with the human (Missing map clause, docs branch), never passed on to a subagent as an authorisation. `karvey-impl` Step 7 carries the same line in its `(P)` dispatch.
 
+**Reopened by the rerun (same day):** the orchestrating session wrote the subagent prompt before it loaded any skill (it told the subagent to load `karvey-impl` itself), so the text never reached it and the prompt still said "persist them in the project's settings file … The user explicitly authorized persisting tracker settings". Cause refined: a rule in skill text cannot govern a prompt composed before the skill is loaded. Second fix: a `subagent-prompt` guard on PreToolUse `Agent|Task` (`guards.subagent_prompt`, event `pre-agent`, fail open, on in a Karvey project): a prompt with a sentence that lets the subagent write the settings (a write/persist/authorise verb with `project.json`, settings or a status map, not negated just before the verb) and without the ban line is blocked with the line to add; `hooks.json`, `karvey-hook.sh` (no-python: allow), `hooks/README.md` and `enforcement.md` document it.
+
 ### Regression test
-`plugins/karvey/tests/unit/test_skill_rules.py` `SubagentPromptsCarryTheProjectJsonBan` (rule 5 requires the line in every subagent prompt; a request to persist is never passed on; impl's dispatch carries the line); all 3 red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+`plugins/karvey/tests/unit/test_skill_rules.py` `SubagentPromptsCarryTheProjectJsonBan` (rule 5 requires the line in every subagent prompt; a request to persist is never passed on; impl's dispatch carries the line); all 3 red before the fix. The guard: `plugins/karvey/tests/hooks/tables/subagent-prompt.json` (sp-01..sp-07: the rerun and first-run prompts and the `Task` tool name blocked; the ban line, no settings talk, a negated sentence and a non-Karvey directory allowed; no python allows), red on 691f2f7 (the dispatcher did not know `pre-agent` and allowed), and `test_karvey_hooks.py` `Registry`. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
@@ -780,6 +782,9 @@ Rule 5 now requires every subagent prompt an agent composes (impl `(P)` tasks, a
 | 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-52, manual script no-human-no-mapping subagent run (E1.F17.T3) |
 | 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: no text tells the orchestrating agent to put the ban in the prompt it composes |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T6: rule 5 and impl dispatch carry the ban verbatim; tests red before, green after |
+| 2026-09-25 | REABIERTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | rerun of no-human-no-mapping: the prompt was composed before any skill was loaded and still authorised the write |
+| 2026-09-25 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | subagent-prompt guard (PreToolUse Agent|Task) |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T6: guard + table subagent-prompt.json (red on 691f2f7, green after); rerun PASS: the guard blocked the first prompt and the re-sent one carries the ban line |
 
 ## BUG-26 — Block comment queued because the tracker key was looked for only in the environment
 - **Priority:** low

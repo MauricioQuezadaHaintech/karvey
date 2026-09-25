@@ -1085,5 +1085,59 @@ def approval_hook(ctx):
         return None
 
 
+
+# --------------------------------------------------------------------------- subagent-prompt (BUG-25)
+# A subagent never writes docs/spec/project.json (management-adapters.md rule 5, REQ-W1-081). The rule in
+# the skill text does not reach an orchestrating session that composes a subagent prompt before it loads
+# any skill (F-52 rerun), so the prompt itself is checked when the Agent/Task tool is called.
+SUBAGENT_TOOLS = frozenset({"Agent", "Task"})
+SUBAGENT_BAN = "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the " \
+               "proposed values to me and change no tracker status that needs them."
+_BAN_RE = re.compile(r"\b(do not|don't|never|must not)\s+(write|edit|modify|change|touch)\s+`?"
+                     r"(docs/spec/)?project\.json`?", re.I)
+_SETTINGS_WRITE_RE = re.compile(
+    r"\b(persist\w*|writ(e|es|ing)|sav(e|es|ing)|updat(e|es|ing)|stor(e|es|ing)|record(s|ing)?|"
+    r"edit(s|ing)?|modif(y|ies|ying)|chang(e|es|ing)|authori[sz]\w*|set(s|ting)?)\b", re.I)
+_SETTINGS_TARGET_RE = re.compile(r"project\.json|\bsettings\b|\b(tracker|team|project)\s+setting\b|status(es)?\s+map|"
+                                 r"management\.statuses|"
+                                 r"\bstatus\s+mapping\b", re.I)
+_NEGATION_RE = re.compile(r"\b(not|never|no|don't|doesn't|mustn't|cannot|can't|without)\b[\s\w`'-]{0,20}$", re.I)
+
+
+def _sentences(text):
+    return [s for s in re.split(r"(?<=[.;!?])\s+|\n+", text) if s.strip()]
+
+
+def _allows_writing(sentence):
+    """A sentence naming the settings with a write/persist/authorise verb that is not negated just
+    before it ("do not write", "never change" …)."""
+    if not _SETTINGS_TARGET_RE.search(sentence):
+        return False
+    return any(not _NEGATION_RE.search(sentence[max(0, m.start() - 30):m.start()])
+               for m in _SETTINGS_WRITE_RE.finditer(sentence))
+
+
+def subagent_prompt(ctx):
+    """Block a subagent prompt, in a Karvey project, that lets the subagent write the project settings
+    and does not carry the ban line. Fail open: the text rule still applies without this guard."""
+    p = ctx.payload
+    if p.tool_name not in SUBAGENT_TOOLS or ctx.root is None:
+        return None
+    prompt = (p.tool_input or {}).get("prompt")
+    if not isinstance(prompt, str) or not prompt.strip() or _BAN_RE.search(prompt):
+        return None
+    for s in _sentences(prompt):
+        if _allows_writing(s):
+            return Decision.block(
+                "[karvey] BLOCK subagent-prompt: this subagent prompt lets the subagent write the project "
+                "settings (\"%s\"). Subagents never write docs/spec/project.json (management-adapters.md "
+                "rule 5): the orchestrating session persists settings with the human, on a docs branch. "
+                "Re-send the prompt without that permission and with this line: %s"
+                % (s.strip()[:160], SUBAGENT_BAN),
+                record={"reason": "subagent prompt allows writing project.json"})
+    return None
+
+
 __all__ = ["Decision", "protect_paths", "approval_hook", "plan_gate", "plan_gate_enabled", "git_flow",
-           "git_flow_enabled", "prod_gate", "prod_gate_enabled", "prod_gate_setting", "EDIT_TOOLS", "hookio"]
+           "git_flow_enabled", "prod_gate", "prod_gate_enabled", "prod_gate_setting", "EDIT_TOOLS", "hookio",
+           "subagent_prompt"]

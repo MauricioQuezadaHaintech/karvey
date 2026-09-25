@@ -25,17 +25,18 @@ class Registry(unittest.TestCase):
         self.assertEqual(names("pre-edit"), ["protect-paths", "plan-gate"])
         self.assertEqual(names("post-edit"), ["spec-write", "pending-sync"])
         self.assertEqual(names("prompt"), ["approval"])
+        self.assertEqual(names("pre-agent"), ["subagent-prompt"])  # BUG-25
         fail = {g.name: g.fail for g in kh.REGISTRY}
         self.assertEqual(fail, {"selftest": "closed", "protect-paths": "closed", "prod-gate": "closed",
                                 "git-flow": "closed", "plan-gate": "closed", "spec-write": "open",
-                                "pending-sync": "open", "approval": "open"})
+                                "pending-sync": "open", "approval": "open", "subagent-prompt": "open"})
         default = {g.name: g.default_on for g in kh.REGISTRY}
         self.assertTrue(default["prod-gate"])        # D-02
         self.assertFalse(default["git-flow"])        # opt-in
         self.assertFalse(default["plan-gate"])       # opt-in
 
     def test_wired_guards(self):
-        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths", "prod-gate", "git-flow", "plan-gate", "spec-write", "pending-sync", "approval"])
+        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths", "prod-gate", "git-flow", "plan-gate", "subagent-prompt", "spec-write", "pending-sync", "approval"])
 
     def test_only_filter(self):
         self.assertEqual([g.name for g in kh.guards_for("pre-bash", ["git-flow"])], ["git-flow"])
@@ -52,7 +53,7 @@ class Registry(unittest.TestCase):
                         ev = cmd.rsplit(" ", 1)[-1]
                         seen.add(ev)
                         self.assertLess(kh.BUDGET_S[ev], h["timeout"], ev)
-        self.assertEqual(seen, {"prompt", "pre-bash", "pre-edit", "post-edit"})
+        self.assertEqual(seen, {"prompt", "pre-bash", "pre-edit", "pre-agent", "post-edit"})
 
 
 class Dispatch(unittest.TestCase):

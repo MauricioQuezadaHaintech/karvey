@@ -18,6 +18,7 @@ Switches live in `project.json:enforcement` and are read from the working copy *
 | git-flow | off | `enforcement.git_flow_hook: true` |
 | plan-gate | off | `enforcement.plan_gate_hook: true` |
 | spec-write validator | on | `schema_mode` (advisory / strict) |
+| subagent-prompt | on in a Karvey project (fail open) | none |
 
 - An opt-in guard left off blocks nothing. <!-- guard-case: gf-56-disabled-by-default, pg-59-disabled-by-default -->
 - Enabling it only on the reviewed line is enough: the guard blocks. <!-- guard-case: gf-57-on-in-reviewed-line-only, pg-61-on-in-reviewed-line-only -->
@@ -83,6 +84,16 @@ branch names whole.
 - A marker of another project or change, expired or consumed, still blocks. <!-- guard-case: pg-48-marker-of-another-project, pg-49-marker-121-min-old, pg-50-consumed-marker, pg-52-marker-of-another-change -->
 - A valid marker of the active change allows the write. <!-- guard-case: pg-47-valid-project-marker-10min, pg-53-marker-of-the-active-change -->
 - Limitation: a write done inside an interpreter (`python -c`, `node -e`) is allowed; the gate does not parse programs. <!-- guard-case: pg-57-interpreter-write-python, pg-58-interpreter-write-node -->
+
+## subagent-prompt (PreToolUse on Agent/Task, BUG-25)
+
+A subagent never writes `docs/spec/project.json` (`management-adapters.md` rule 5). The rule in the skill
+text does not reach a session that writes a subagent prompt before it loads any skill, so the prompt is
+checked when the tool is called.
+
+- A prompt with a sentence that lets the subagent write the settings (a write, persist or authorise verb with `project.json`, settings or a status map, not negated just before the verb) and without the ban line is blocked; the message gives the line to add. <!-- guard-case: sp-01-rerun-prompt-persist-settings-blocked, sp-02-first-run-prompt-persist-map-blocked, sp-07-task-tool-name-blocked -->
+- The ban line, a prompt that does not touch the settings, a negated sentence and any prompt outside a Karvey project are allowed. <!-- guard-case: sp-03-ban-line-present-allowed, sp-04-no-settings-talk-allowed, sp-05-negated-settings-sentence-allowed, sp-06-outside-a-karvey-project-allowed -->
+- Fail open: without python the call goes through, and the text rule still applies.
 
 ## spec-write validator (PostToolUse on Edit/Write)
 

@@ -114,6 +114,10 @@ INDEX = {
         ("unit", "test_skill_rules.py", "SubagentPromptsCarryTheProjectJsonBan.test_rule_5_puts_the_ban_in_every_prompt"),
         ("unit", "test_skill_rules.py", "SubagentPromptsCarryTheProjectJsonBan.test_a_user_request_to_persist_is_not_delegated"),
         ("unit", "test_skill_rules.py", "SubagentPromptsCarryTheProjectJsonBan.test_impl_dispatch_carries_the_ban"),
+        ("table", "subagent-prompt", "sp-01-rerun-prompt-persist-settings-blocked"),
+        ("table", "subagent-prompt", "sp-02-first-run-prompt-persist-map-blocked"),
+        ("table", "subagent-prompt", "sp-03-ban-line-present-allowed"),
+        ("unit", "test_karvey_hooks.py", "Registry.test_order_and_fail_modes_of_section_1_3"),
         ("manual", "no-human-no-mapping.md"),
     ],
     "BUG-26": [  # tracker credentials looked up in .connections.json first (REQ-W1-082)

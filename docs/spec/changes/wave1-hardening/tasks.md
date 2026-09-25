@@ -861,10 +861,10 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 
 ### E1.F17.T6 [Backend] BUG-25 (F-52): composed subagent prompts carry the project.json ban — _Depends: E1.F17.T3_
 
-**Estimate:** 15 min · **Actual:** 5 min (AI)  
-**Files:** `plugins/karvey/skills/karvey/rules/management-adapters.md` (rule 5), `skills/karvey-impl/SKILL.md` (Step 7); `tests/unit/test_skill_rules.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
+**Estimate:** 15 min · **Actual:** 25 min (AI; 5 text + 20 guard after the rerun reopened it)  
+**Files:** `plugins/karvey/skills/karvey/rules/management-adapters.md` (rule 5), `skills/karvey-impl/SKILL.md` (Step 7); `scripts/karvey_lib/guards.py` (`subagent_prompt`), `karvey_lib/karvey_hooks.py` (event `pre-agent`), `hooks/hooks.json`, `hooks/karvey-hook.sh`, `hooks/README.md`, `skills/karvey/rules/enforcement.md`; `tests/hooks/tables/subagent-prompt.json`, `tests/hooks/run_tables.py`, `tests/unit/test_karvey_hooks.py`; `tests/unit/test_skill_rules.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
 **Requirements:** REQ-W1-081, REQ-W1-107  
-**Tests added:** `SubagentPromptsCarryTheProjectJsonBan`: rule 5 names every subagent prompt and the verbatim line; a request to persist is never passed on; impl's dispatch carries the line. Red before the fix.  
+**Tests added:** `SubagentPromptsCarryTheProjectJsonBan`: rule 5 names every subagent prompt and the verbatim line; a request to persist is never passed on; impl's dispatch carries the line. Red before the fix. After the rerun: `subagent-prompt.json` sp-01..sp-07 (block the rerun and first-run prompts and the `Task` name; allow the ban line, no settings talk, a negated sentence, a non-Karvey dir; no python allows), red on 691f2f7.  
 **Done when:** the tests pass, L-34 stays at 0 errors; BUG-25 RESUELTO; the no-human-no-mapping subagent rerun shows the ban in the prompt.
 
 ### E1.F17.T7 [Backend] BUG-26 (F-53): tracker credentials looked up in `.connections.json` first — _Depends: E1.F17.T3_

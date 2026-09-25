@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Karvey hook dispatcher (architecture §1.3, wave1-hardening). bash 3.2 compatible.
 #
-#   karvey-hook.sh <prompt|pre-bash|pre-edit|post-edit|session> [--only <guard>] [--force-enabled]
+#   karvey-hook.sh <prompt|pre-bash|pre-edit|pre-agent|post-edit|session> [--only <guard>] [--force-enabled]
 #
 # 1. Finds the interpreter: python3, then python if it is major version 3, then `py -3` (Windows).
 # 2. With one: exec python "$ROOT/scripts/karvey_lib/karvey_hooks.py" <event> "$@" (stdin passes through).
@@ -41,6 +41,7 @@ guards_for() {
   case "$1" in
     pre-bash)  echo "selftest protect-paths prod-gate git-flow plan-gate" ;;
     pre-edit)  echo "selftest protect-paths plan-gate" ;;
+    pre-agent) echo "subagent-prompt" ;;
     post-edit) echo "spec-write pending-sync" ;;
     prompt)    echo "approval" ;;
     session)   echo "" ;;

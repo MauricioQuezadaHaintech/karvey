@@ -295,6 +295,8 @@ def event_of(case):
         return "pre-bash"
     if inp.get("tool_name") in EDIT_TOOLS:
         return "pre-edit"
+    if inp.get("tool_name") in ("Agent", "Task"):
+        return "pre-agent"
     raise CaseError("cannot infer the event (set 'event')")
 
 
