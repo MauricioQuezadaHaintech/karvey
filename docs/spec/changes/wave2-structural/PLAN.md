@@ -83,7 +83,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F2: Lanes
 
-- [ ] E1.F2.T1 [Backend] `schemas/lanes.json` (six lanes, §1.3 table) + `karvey_lib/lanes.py` (`load`, `phase_rule`, `lane_of` with the `type`/legacy fallback, per-lane judge counts) — est: 12min (depends E1.F1.T1)
+- [x] E1.F2.T1 [Backend] `schemas/lanes.json` (six lanes, §1.3 table) + `karvey_lib/lanes.py` (`load`, `phase_rule`, `lane_of` with the `type`/legacy fallback, per-lane judge counts) — est: 12min (depends E1.F1.T1)
 - [ ] E1.F2.T2 [Backend] `karvey_lib/gitlog.py` (argv allow-list) + `lanes.admit_patch` (D-29 answers) + `lanes.measure_diff` — est: 12min (depends E1.F2.T1)
 - [ ] E1.F2.T3 [Backend] State tool: lane-aware `next`/`advance` (lane-`s` passed through and written `skipped: lane:{lane}`; manual `skip` unchanged) — est: 12min (depends E1.F2.T1, E1.F1.T5)
 - [ ] E1.F2.T4 [Backend] State tool: `lane set|raise|lower`, `lane_history`, `lane-evidence`, hotfix preconditions — est: 15min (depends E1.F2.T3, E1.F2.T2)
@@ -193,7 +193,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F1.T9 [Backend] | ✅ done | 8 | 6 | 0 |  |
 | E1.F1.T10 [Backend] | ✅ done | 10 | 5 | 0 |  |
 | E1.F1.T11 [Backend] | ✅ done | 8 | 5 | 0 |  |
-| E1.F2.T1 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F2.T1 [Backend] | ✅ done | 12 | 6 | 0 |  |
 | E1.F2.T2 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F2.T3 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F2.T4 [Backend] | ⬜ todo | 15 | — | — |  |

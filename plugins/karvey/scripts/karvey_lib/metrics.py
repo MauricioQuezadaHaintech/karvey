@@ -15,8 +15,9 @@ the data a metric needs is excluded from that metric only and listed in ``reason
 import re
 from datetime import date, datetime
 
+from . import lanes
+
 NO_CHANGE = "n/a — no archived change in period"
-LEGACY_LANE = "legacy"
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DT = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$")
 
@@ -63,13 +64,8 @@ def spec_of(c):
 
 
 def lane_of(spec):
-    """``spec.lane``, else ``type: ops|hotfix``, else ``legacy`` (the 3.12 pipeline)."""
-    lane = spec.get("lane")
-    if isinstance(lane, str) and lane:
-        return lane
-    if spec.get("type") in ("ops", "hotfix"):
-        return spec["type"]
-    return LEGACY_LANE
+    """``spec.lane``, else ``type: ops|hotfix``, else ``legacy`` (the 3.12 pipeline; ``lanes.lane_of``)."""
+    return lanes.lane_of(spec)[0]
 
 
 def _approvals(spec):

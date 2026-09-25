@@ -1,0 +1,231 @@
+{
+  "$comment": "The lane table (architecture §1.3, wave2-structural): per lane and phase m = mandatory, o = optional (runs when the change needs it; skip with a reason is still accepted), s = skipped by the lane (recorded as skipped[phase] = lane:{lane}). rules/lanes.md renders it between generated markers; karvey_lib/lanes.py reads it.",
+  "version": 1,
+  "phases": [
+    "init",
+    "requirements",
+    "mockup",
+    "design_graphic",
+    "architecture",
+    "infra",
+    "tasks",
+    "impl",
+    "test",
+    "qa",
+    "deploying",
+    "deployed",
+    "archived"
+  ],
+  "lanes": {
+    "patch": {
+      "phases": {
+        "init": "m",
+        "requirements": "s",
+        "mockup": "s",
+        "design_graphic": "s",
+        "architecture": "s",
+        "infra": "s",
+        "tasks": "s",
+        "impl": "m",
+        "test": "m",
+        "qa": "m",
+        "deploying": "m",
+        "deployed": "m",
+        "archived": "m"
+      },
+      "notes": {
+        "impl": "test-first",
+        "test": "regression",
+        "qa": "qa-lite"
+      },
+      "gates": [
+        "prod"
+      ],
+      "judges": 0,
+      "requires": [
+        "bug_id",
+        "finding",
+        "regression_test"
+      ],
+      "criteria": {
+        "max_code_files": 3,
+        "forbid": [
+          "schema",
+          "api_contract",
+          "permissions"
+        ],
+        "max_tier": 2
+      }
+    },
+    "standard": {
+      "phases": {
+        "init": "m",
+        "requirements": "m",
+        "mockup": "s",
+        "design_graphic": "s",
+        "architecture": "m",
+        "infra": "o",
+        "tasks": "m",
+        "impl": "m",
+        "test": "m",
+        "qa": "m",
+        "deploying": "m",
+        "deployed": "m",
+        "archived": "m"
+      },
+      "notes": {},
+      "gates": [
+        "what",
+        "how",
+        "release"
+      ],
+      "judges": 2
+    },
+    "feature-ui": {
+      "phases": {
+        "init": "m",
+        "requirements": "m",
+        "mockup": "m",
+        "design_graphic": "m",
+        "architecture": "m",
+        "infra": "o",
+        "tasks": "m",
+        "impl": "m",
+        "test": "m",
+        "qa": "m",
+        "deploying": "m",
+        "deployed": "m",
+        "archived": "m"
+      },
+      "notes": {},
+      "gates": [
+        "what",
+        "how",
+        "release"
+      ],
+      "judges": 3
+    },
+    "ops": {
+      "phases": {
+        "init": "m",
+        "requirements": "m",
+        "mockup": "s",
+        "design_graphic": "s",
+        "architecture": "s",
+        "infra": "m",
+        "tasks": "m",
+        "impl": "m",
+        "test": "m",
+        "qa": "o",
+        "deploying": "m",
+        "deployed": "m",
+        "archived": "m"
+      },
+      "notes": {
+        "requirements": "lite",
+        "test": "verification"
+      },
+      "gates": [
+        "what+how",
+        "release"
+      ],
+      "judges": 2
+    },
+    "hotfix": {
+      "phases": {
+        "init": "m",
+        "requirements": "s",
+        "mockup": "s",
+        "design_graphic": "s",
+        "architecture": "s",
+        "infra": "s",
+        "tasks": "s",
+        "impl": "m",
+        "test": "m",
+        "qa": "o",
+        "deploying": "m",
+        "deployed": "m",
+        "archived": "m"
+      },
+      "notes": {
+        "impl": "no tasks approval",
+        "test": "regression",
+        "qa": "qa-lite"
+      },
+      "gates": [
+        "prod"
+      ],
+      "judges": 0,
+      "requires": [
+        "bug_id",
+        "finding",
+        "regression_test"
+      ]
+    },
+    "docs": {
+      "phases": {
+        "init": "m",
+        "requirements": "o",
+        "mockup": "s",
+        "design_graphic": "s",
+        "architecture": "s",
+        "infra": "s",
+        "tasks": "o",
+        "impl": "m",
+        "test": "o",
+        "qa": "m",
+        "deploying": "m",
+        "deployed": "m",
+        "archived": "m"
+      },
+      "notes": {
+        "qa": "qa-lite"
+      },
+      "gates": [
+        "release"
+      ],
+      "judges": 0
+    }
+  },
+  "globs": {
+    "code": [
+      "**/*.py",
+      "**/*.js",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.jsx",
+      "**/*.vue",
+      "**/*.go",
+      "**/*.java",
+      "**/*.kt",
+      "**/*.cs",
+      "**/*.rb",
+      "**/*.php",
+      "**/*.rs",
+      "**/*.swift",
+      "**/*.sh",
+      "**/*.sql"
+    ],
+    "schema": [
+      "**/migrations/**",
+      "**/*.sql",
+      "**/schema*.json",
+      "**/*.prisma"
+    ],
+    "api_contract": [
+      "**/openapi*.yml",
+      "**/openapi*.yaml",
+      "**/openapi*.json",
+      "**/swagger*.json",
+      "**/*.proto",
+      "**/*.graphql"
+    ],
+    "permissions": [
+      "**/*permission*",
+      "**/*policy*",
+      "**/*rbac*",
+      "**/*acl*"
+    ]
+  },
+  "legacy": "a change without lane (and without type ops|hotfix) keeps the 3.12 pipeline: every phase mandatory unless recorded as skipped"
+}
