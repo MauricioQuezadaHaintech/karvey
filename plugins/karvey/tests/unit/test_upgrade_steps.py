@@ -275,5 +275,85 @@ class TeamSettings(FixtureCase):
                     self.apply([sid], inputs={sid: {"x": "y"}})
 
 
+def home_digest(home):
+    import hashlib
+    h = hashlib.sha256()
+    for p in sorted(Path(home).rglob("*")):
+        if p.is_file():
+            h.update(str(p.relative_to(home)).encode() + p.read_bytes())
+    return h.hexdigest()
+
+
+class HumanSteps(FixtureCase):
+    def home_settings(self, data):
+        (self.home / ".claude" / "settings.json").write_text(
+            data if isinstance(data, str) else json.dumps(data, indent=2), encoding="utf-8")
+
+    def test_versioned_statusline_gets_the_stable_command(self):
+        row, res = self.row("statusline-launcher")
+        self.assertEqual((row["status"], row["human"]), ("human", True))
+        self.assertIn(json.dumps(upgrade_steps.STABLE_STATUSLINE)[1:-1], res.instructions)
+        self.assertIn("/karvey/3.11.2/hooks/karvey-statusline.sh", res.diff)
+        self.assertEqual(res.edits, [])
+
+    def test_no_statusline_is_human(self):
+        self.home_settings({})
+        self.assertEqual(self.row("statusline-launcher")[0]["status"], "human")
+
+    def test_own_statusline_is_left_as_is(self):
+        self.home_settings({"statusLine": {"type": "command", "command": "bash ~/bin/my-status.sh"}})
+        row, _ = self.row("statusline-launcher")
+        self.assertEqual(row["status"], "nothing")
+        self.assertIn("own statusline, left as is", row["warnings"])
+
+    def test_the_stable_command_passes(self):
+        self.home_settings({"statusLine": dict(upgrade_steps.STATUSLINE_BLOCK)})
+        self.assertEqual(self.row("statusline-launcher")[0]["status"], "nothing")
+
+    def test_global_config_diff_of_karvey_keys_only(self):
+        self.home_settings({"env": {"OTHER_SECRET": "do-not-print", "KARVEY_ROTATE_HOURS": "8"},
+                            "permissions": {"allow": ["Bash(ls)"]},
+                            "hooks": {"PreToolUse": [{"hooks": [
+                                {"type": "command", "command": "bash ~/.claude/hooks/check-plan-approved.sh"},
+                                {"type": "command",
+                                 "command": "bash ~/.claude/plugins/cache/m/karvey/3.11.2/skills/karvey/hooks/"
+                                            "git-flow-guard.sh"}]}]}})
+        row, res = self.row("global-config")
+        self.assertEqual(row["status"], "human")
+        self.assertIn('+    "KARVEY_COMPAT_MARKER"', res.diff)
+        self.assertIn("-    \"PreToolUse: bash ~/.claude/plugins/cache/m/karvey/3.11.2", res.diff)
+        self.assertNotIn("OTHER_SECRET", res.diff)
+        self.assertNotIn("do-not-print", res.diff)
+        self.assertNotIn("permissions", res.diff)
+        self.assertNotIn("check-plan-approved", res.diff, "the person's own hook is not a Karvey key")
+
+    def test_global_config_claude_md_line(self):
+        (self.home / ".claude" / "CLAUDE.md").write_text("| team | spaces/AAAAexample |\n", encoding="utf-8")
+        row, res = self.row("global-config")
+        self.assertEqual(row["status"], "human")
+        self.assertIn("+Karvey reads notification destinations only from", res.diff)
+
+    def test_global_config_nothing_on_a_clean_home(self):
+        self.assertEqual(self.row("global-config")[0]["status"], "nothing")
+
+    def test_unreadable_home_is_check_failed_the_rest_computed(self):
+        self.home_settings("{not json")
+        p = self.plan()
+        by = {r["id"]: r for r in p.rows()}
+        for sid in ("statusline-launcher", "global-config"):
+            self.assertEqual(by[sid]["status"], "check-failed")
+            self.assertIn("check-failed: unreadable", by[sid]["summary"])
+        self.assertEqual(by["schema-migrate"]["status"], "applies")
+        self.assertEqual(p.exit, 1)
+
+    def test_the_home_is_byte_identical_after_plan_and_apply(self):
+        before = home_digest(self.home)
+        self.plan()
+        rep = self.apply(["statusline-launcher", "schema-migrate"])
+        self.assertEqual(rep.applied, ["schema-migrate"])
+        self.assertIn("statusline-launcher", rep.shown)
+        self.assertEqual(home_digest(self.home), before)
+
+
 if __name__ == "__main__":
     unittest.main()

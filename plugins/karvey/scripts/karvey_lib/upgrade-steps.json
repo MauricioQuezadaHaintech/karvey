@@ -23,6 +23,15 @@
      "cost": "low"},
     {"id": "enforcement-defaults", "since": "3.13.0", "title": "Declare the enforcement defaults this version adds",
      "check": "enforcement_defaults_check", "fix": "enforcement_defaults_fix", "dry_run": true, "human": false,
-     "risk": "low", "cost": "low", "params": {"standards": []}}
+     "risk": "low", "cost": "low", "params": {"standards": []}},
+    {"id": "statusline-launcher", "since": "3.13.0", "title": "Statusline on the stable launcher command",
+     "check": "statusline_launcher_check", "fix": null, "dry_run": false, "human": true, "risk": "low", "cost": "low"},
+    {"id": "global-config", "since": "3.13.0", "title": "Karvey-related parts of the global configuration, as a diff",
+     "check": "global_config_check", "fix": null, "dry_run": false, "human": true, "risk": "low", "cost": "low",
+     "params": {"recommend": {
+       "compat_marker": {"hook_pattern": "plan[-_]?approved", "env": "KARVEY_COMPAT_MARKER",
+                         "value": "<the marker file your own plan hook checks>"},
+       "claude_md_line": {"when": "(?i)(spaces/[A-Za-z0-9_-]{6,}|hooks\\.slack\\.com|webhook\\.office\\.com)",
+                          "line": "Karvey reads notification destinations only from each project's docs/spec/project.json (notifications); a table here is not used."}}}}
   ]
 }

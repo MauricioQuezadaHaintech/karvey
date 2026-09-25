@@ -361,6 +361,136 @@ def enforcement_defaults_fix(probe, params, values):
     return res
 
 
+
+# --------------------------------------------------------------------------- 6 statusline-launcher (F-51)
+# A plugin cannot declare a statusline and the tool never writes under ~/.claude, so the stable launcher is a
+# command the person pastes once. It resolves the newest installed Karvey the same way the deprecated shims do,
+# so a plugin update never breaks it. hooks/README.md shows the same text (lint check L-39 compares them).
+STABLE_STATUSLINE = ("bash -c 'f=$(ls -1dt \"$HOME\"/.claude/plugins/cache/*/karvey/*/hooks/karvey-statusline.sh "
+                     "2>/dev/null | head -1); [ -n \"$f\" ] && exec bash \"$f\"'")
+STATUSLINE_BLOCK = {"type": "command", "padding": 0, "command": STABLE_STATUSLINE}
+VERSIONED_STATUSLINE = re.compile(r"/karvey/\d+\.\d+\.\d+[^/\s\"']*/hooks/karvey-statusline\.sh")
+HOME_SETTINGS = ".claude/settings.json"
+HOME_CLAUDE_MD = ".claude/CLAUDE.md"
+
+
+def _home_json(probe, rel):
+    try:
+        return probe.home_json(rel)
+    except CheckFailed as exc:
+        msg = str(exc)
+        raise CheckFailed(msg if msg.startswith("unreadable") else "unreadable: %s" % msg)
+
+
+def _statusline_of(data):
+    sl = data.get("statusLine") if isinstance(data, dict) else None
+    return sl.get("command") if isinstance(sl, dict) and isinstance(sl.get("command"), str) else None
+
+
+def statusline_launcher_check(probe, params):
+    found = []
+    home = _home_json(probe, HOME_SETTINGS)
+    if home is not None:
+        found.append(("~/" + HOME_SETTINGS, home.data))
+    for rel in SETTINGS_FILES:
+        try:
+            doc = probe.read_json(rel)
+        except CheckFailed as exc:
+            raise CheckFailed("unreadable: %s" % exc)
+        if doc is not None:
+            found.append((rel, doc.data))
+    kinds = []
+    for where, data in found:
+        cmd = _statusline_of(data)
+        if cmd is None:
+            continue
+        if "karvey-statusline.sh" in cmd and VERSIONED_STATUSLINE.search(cmd):
+            kinds.append(("versioned", where, data))
+        elif "karvey-statusline.sh" in cmd or cmd == STABLE_STATUSLINE:
+            kinds.append(("stable", where, data))
+        else:
+            kinds.append(("own", where, data))
+    snippet = json.dumps({"statusLine": STATUSLINE_BLOCK}, indent=2)
+    versioned = [k for k in kinds if k[0] == "versioned"]
+    if versioned:
+        _, where, data = versioned[0]
+        new = dict(data, statusLine=STATUSLINE_BLOCK)
+        diff = "".join(difflib.unified_diff(
+            json.dumps({"statusLine": data["statusLine"]}, indent=2).splitlines(True),
+            json.dumps({"statusLine": new["statusLine"]}, indent=2).splitlines(True),
+            fromfile=where, tofile=where))
+        return StepResult("human", summary="statusline on a versioned plugin path (%s): replace it with the stable "
+                                           "command" % where, diff=diff + "\n",
+                          instructions="Replace statusLine in %s by (Karvey never writes it):\n%s" % (where, snippet))
+    if not kinds:
+        return StepResult("human", summary="no statusline: the stable Karvey command is available",
+                          instructions="Optional: add to ~/.claude/settings.json (Karvey never writes it):\n%s"
+                                       % snippet)
+    if all(k[0] == "own" for k in kinds):
+        return StepResult("nothing", warnings=["own statusline, left as is"])
+    return StepResult("nothing")
+
+
+# --------------------------------------------------------------------------- 7 global-config
+KARVEY_HOOK = re.compile(r"(plan-gate\.sh|git-flow-guard\.sh|/karvey/\d+\.\d+\.\d+[^/\s\"']*/)")
+
+
+def _home_hook_commands(data):
+    out = []
+    hooks = data.get("hooks") if isinstance(data, dict) else None
+    if not isinstance(hooks, dict):
+        return out
+    for event, groups in hooks.items():
+        for grp in groups if isinstance(groups, list) else []:
+            for h in (grp.get("hooks") if isinstance(grp, dict) and isinstance(grp.get("hooks"), list) else []):
+                if isinstance(h, dict) and isinstance(h.get("command"), str):
+                    out.append((event, h["command"]))
+    return out
+
+
+def global_config_check(probe, params):
+    rec = params.get("recommend") or {}
+    home = _home_json(probe, HOME_SETTINGS)
+    try:
+        claude_md = probe.home_read(HOME_CLAUDE_MD)
+    except CheckFailed as exc:
+        raise CheckFailed("unreadable: %s" % exc)
+    data = home.data if home is not None and isinstance(home.data, dict) else {}
+    cmds = _home_hook_commands(data)
+    env = data.get("env") if isinstance(data.get("env"), dict) else {}
+    before = {"hooks naming Karvey": sorted("%s: %s" % c for c in cmds if KARVEY_HOOK.search(c[1])),
+              "env": {k: v for k, v in sorted(env.items()) if k.startswith("KARVEY_")}}
+    after = json.loads(json.dumps(before))
+    reasons = []
+    if after["hooks naming Karvey"]:
+        after["hooks naming Karvey"] = []
+        reasons.append("hook entries that name a deprecated shim or a versioned plugin path (the plugin's own "
+                       "hooks.json already runs every guard)")
+    compat = rec.get("compat_marker") or {}
+    pat = compat.get("hook_pattern")
+    if pat and compat.get("env") and compat["env"] not in env and any(
+            re.search(pat, c) and not KARVEY_HOOK.search(c) for _, c in cmds):
+        after["env"][compat["env"]] = compat.get("value", "<path>")
+        reasons.append("%s, so the approval hook also writes the marker your own plan hook checks" % compat["env"])
+    diffs = []
+    if before != after:
+        diffs.append("".join(difflib.unified_diff(json.dumps(before, indent=2).splitlines(True),
+                                                  json.dumps(after, indent=2).splitlines(True),
+                                                  fromfile="~/%s (Karvey-related keys only)" % HOME_SETTINGS,
+                                                  tofile="~/%s (recommended)" % HOME_SETTINGS)))
+    md = rec.get("claude_md_line") or {}
+    if claude_md and md.get("when") and md.get("line") and re.search(md["when"], claude_md) \
+            and md["line"] not in claude_md:
+        diffs.append("--- ~/%s\n+++ ~/%s (recommended)\n@@ end of file @@\n+%s\n" % (HOME_CLAUDE_MD, HOME_CLAUDE_MD,
+                                                                                    md["line"]))
+        reasons.append("the CLAUDE.md destinations line (destinations come only from project.json)")
+    if not diffs:
+        return StepResult("nothing")
+    return StepResult("human", summary="global configuration: %s" % "; ".join(reasons),
+                      diff="\n".join(d.rstrip("\n") for d in diffs) + "\n",
+                      instructions="Apply these lines by hand; Karvey never writes under ~/.claude.")
+
+
 REGISTRY = {
     "schema_migrate_check": schema_migrate_check,
     "schema_migrate_fix": schema_migrate_fix,
@@ -372,4 +502,6 @@ REGISTRY = {
     "team_settings_fix": team_settings_fix,
     "enforcement_defaults_check": enforcement_defaults_check,
     "enforcement_defaults_fix": enforcement_defaults_fix,
+    "statusline_launcher_check": statusline_launcher_check,
+    "global_config_check": global_config_check,
 }
