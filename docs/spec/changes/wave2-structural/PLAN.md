@@ -1,7 +1,7 @@
 # Plan: wave2-structural
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend, Infra
-**Created:** 2026-09-25 | **Status:** 🔄 in_progress (requirements generated, awaiting the *what* gate)
+**Created:** 2026-09-25 | **Status:** 🔄 in_progress (impl: batch 1 done, 25 of 69 agent tasks; see Task status)
 **Lane:** standard (no UI: mockup and design_graphic to be skipped at the architecture transition)
 **Release target:** 3.13.0 (advisory / opt-in) → 4.0.0 when the D-24 defaults turn blocking
 **Flow:** trunk (`feature/wave2-structural` → PR → `main`) · **Decisions:** D-22..D-27, D-29, D-30 (D-01..D-19 hold)
@@ -263,3 +263,4 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | 2026-09-25 | requirements | 88 EARS requirements (REQ-W2-001..088), spec-delta (ADDED 88 · MODIFIED 9 · REMOVED 0); 13 open points listed for the *what* gate; not approved |
 | 2026-09-25 | architecture | `architecture.md` generated (C-01..C-24, REQ-W2-001..088 covered, Tier 2 controls S-1..S-12, project-upgrade step declarations §7.4); infra skipped (no cloud); not approved |
 | 2026-09-25 | tasks | `tasks.md` generated: 71 tasks (69 agent, 2 `[human]`), 706 min calibrated, critical path 141 min, REQ-W2 88/88; inherited base commits `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` are `wave1-hardening` decision commits (spec-only, mapped to that change, E1.F5.T9); not approved |
+| 2026-09-25 | impl | Batch 1 (25 tasks): E1.F1.T1..T11 (F1 complete), E1.F2.T1..T8, E1.F3.T1..T4, E1.F3.T6, E1.F6.T1; one commit each with `Karvey-Change: wave2-structural`, one `[Unreleased]` line each, no version change. Deviations: (1) E1.F2.T6 adds `karvey-state.py lane-check` so the QA lane-check text is executable (the design names `measure_diff` + `record_hit`, not the CLI); (2) E1.F1.T5 done-when grep prints 0, not 1 — the change is in impl with no blocker, the duplicate is reproduced by `test_state_next` BlockersOnce; (3) E1.F2.T8 diff has no `@@` hunk header (it conflicts with the no-`@` check; applied by hand); (4) `project.schema.json:checks` also accepts `granular`/`merged` (the `gates.merged` levels); (5) `lanes.json` gains no rank: raise/lower order is derived from the number of phases a lane runs. Next: E1.F2.T9 waits on E1.F5.T3; continue with E1.F3.T5, E1.F4.*, E1.F5.*, E1.F9.* |
