@@ -9,12 +9,12 @@
     "Infra"
   ],
   "created_at": "2026-09-25T12:27:48+00:00",
-  "updated_at": "2026-09-25T12:36:05+00:00",
+  "updated_at": "2026-09-25T12:36:49+00:00",
   "language": "en",
   "management": "markdown",
   "security_tier": 2,
   "security_tier_reason": "extends the guards that gate the merge to production (release manifest, per-change approvals, trailer check) and adds scripts that run external security tools and read project.json values into shell commands; judges run subagents that read the change's artifacts",
-  "phase": "requirements",
+  "phase": "architecture",
   "phase_history": [
     {
       "phase": "init",
@@ -24,7 +24,12 @@
     },
     {
       "phase": "requirements",
-      "entered_at": "2026-09-25T12:30:10+00:00"
+      "entered_at": "2026-09-25T12:30:10+00:00",
+      "exited_at": "2026-09-25T12:36:49+00:00"
+    },
+    {
+      "phase": "architecture",
+      "entered_at": "2026-09-25T12:36:49+00:00"
     }
   ],
   "type": "feature",
@@ -82,7 +87,18 @@
   "approvals": {
     "requirements": {
       "generated": true,
-      "approved": false
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-25T12:36:42+00:00",
+      "ref": "D-21",
+      "evidence": {
+        "marker": "none"
+      }
     }
+  },
+  "skipped": {
+    "mockup": "no UI: plugin scripts, hooks and skill text",
+    "design_graphic": "no UI"
   }
 }
