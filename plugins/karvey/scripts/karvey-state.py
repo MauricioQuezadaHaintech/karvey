@@ -838,6 +838,7 @@ def compute_next(data, ledger=None, ledger_known=False):
             res["blockers"].append("%s not approved or skipped" % mapped)
     else:
         satisfied = False  # no approval: the phase's own skill says when it is done
+    res["blockers"] = list(dict.fromkeys(res["blockers"]))  # each blocker once, in order (F-26, REQ-W2-074)
     if satisfied and not [b for b in res["blockers"]]:
         res["status"] = "ready"
         res["skill"] = phase_def(nxt)["skill"]

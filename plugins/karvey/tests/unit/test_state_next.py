@@ -147,6 +147,18 @@ class Active(Base):
         self.assertIn("several active: feat-a, feat-b", out)
 
 
+class BlockersOnce(Base):
+    def test_REQ_W2_074_current_phase_blocker_listed_once(self):
+        """@req REQ-W2-074 — the current phase is also a precondition of the next one (F-26)."""
+        data = spec_at("architecture", approve_current=False, skipped={"mockup": "no UI", "design_graphic": "no UI"})
+        data["approvals"]["architecture"] = {"generated": True, "approved": False}
+        code, env = self.next(data)
+        self.assertEqual(code, 0, env)
+        self.assertEqual(env["result"]["blockers"].count("architecture not approved or skipped"), 1)
+        code, out, _ = run("next", "feat-a", "--root", str(self.root))
+        self.assertEqual(out.count("blocker: architecture not approved or skipped"), 1)
+
+
 class ThisRepo(unittest.TestCase):
     def test_next_wave1_prints_a_status(self):
         code, env = run_json("next", "wave1-hardening", "--root", str(_path.REPO_ROOT))
