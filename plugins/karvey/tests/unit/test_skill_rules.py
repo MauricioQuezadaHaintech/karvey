@@ -1,4 +1,4 @@
-"""Skill-text rules an agent must be told, proved by reading the text it loads (BUG-24).
+"""Skill-text rules an agent must be told, proved by reading the text it loads (BUG-24, BUG-25).
 
 The manual agent-behaviour scripts (tests/manual/) found that an agent followed the skill text exactly
 and still did the wrong thing, because the text said the wrong thing or nothing at all. Each class pins
@@ -50,6 +50,30 @@ class VisibleVersionCheck(unittest.TestCase):
         self.assertIn("any format", self.vcheck)
         self.assertRegex(self.vcheck, r"deployed commit")
         self.assertNotRegex(self.vcheck, r"DEV shows `-dev` of the version just bumped")
+
+
+class SubagentPromptsCarryTheProjectJsonBan(unittest.TestCase):
+    """BUG-25 / F-52, REQ-W1-081: a subagent never writes project.json, so every subagent prompt an agent
+    composes says so, even when the user asked for the settings to be persisted."""
+
+    LINE = "Do not write `docs/spec/project.json`"
+
+    def setUp(self):
+        self.adapters = read(RULES / "management-adapters.md")
+        self.rule5 = paragraph(self.adapters, "5. **Subagents never write `project.json`**")
+        self.impl = read(SKILLS / "karvey-impl" / "SKILL.md")
+
+    def test_rule_5_puts_the_ban_in_every_prompt(self):
+        self.assertRegex(self.rule5, r"[Ee]very subagent prompt")
+        self.assertIn(self.LINE, self.rule5)
+
+    def test_a_user_request_to_persist_is_not_delegated(self):
+        self.assertRegex(self.rule5, r"(?s)asked[^.]*persist[^.]*never (passed|delegated)")
+
+    def test_impl_dispatch_carries_the_ban(self):
+        dispatch = paragraph(self.impl, "If there are `(P)` tasks: dispatch")
+        self.assertIn("rule 5", dispatch)
+        self.assertIn(self.LINE, dispatch)
 
 
 if __name__ == "__main__":

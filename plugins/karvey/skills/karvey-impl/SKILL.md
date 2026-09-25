@@ -103,7 +103,7 @@ A task is not done until its record is updated (`../karvey/rules/phase-close.md`
 
 Repeat steps 2–6 until no task is selectable (all are `review` or `done`, or wait on an `awaiting-human` or `blocked` task).
 
-If there are `(P)` tasks: dispatch parallel subagents to execute them simultaneously.
+If there are `(P)` tasks: dispatch parallel subagents to execute them simultaneously. Each subagent prompt carries the line of `management-adapters.md` rule 5 verbatim — "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed values to me and change no tracker status that needs them." — also when the user asked to persist settings; the orchestrating session persists them with the human.
 
 ### Step 8 — Complete the Epic
 

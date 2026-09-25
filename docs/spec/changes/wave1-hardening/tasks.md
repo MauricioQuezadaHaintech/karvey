@@ -859,6 +859,14 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 **Tests added:** `VisibleVersionCheck`: 2.6 names `git show …deployed…:`, "any format", not "must show `-dev`", "not the tip"; `versioning.md` the same. Red before the fix.  
 **Done when:** the tests pass; BUG-24 RESUELTO; the visible-version rerun passes variants 1-3.
 
+### E1.F17.T6 [Backend] BUG-25 (F-52): composed subagent prompts carry the project.json ban — _Depends: E1.F17.T3_
+
+**Estimate:** 15 min · **Actual:** 5 min (AI)  
+**Files:** `plugins/karvey/skills/karvey/rules/management-adapters.md` (rule 5), `skills/karvey-impl/SKILL.md` (Step 7); `tests/unit/test_skill_rules.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
+**Requirements:** REQ-W1-081, REQ-W1-107  
+**Tests added:** `SubagentPromptsCarryTheProjectJsonBan`: rule 5 names every subagent prompt and the verbatim line; a request to persist is never passed on; impl's dispatch carries the line. Red before the fix.  
+**Done when:** the tests pass, L-34 stays at 0 errors; BUG-25 RESUELTO; the no-human-no-mapping subagent rerun shows the ban in the prompt.
+
 ## Traceability matrix (REQ-W1 → tasks)
 
 | REQ-W1 | Tasks |

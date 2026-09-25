@@ -120,4 +120,9 @@ The next phase-close retries it. A child is never created under a parent missing
 2. **Credentials never in the repo** — `.connections.json` (git-ignored), env vars or a vault.
 3. **A failed tracker update is reported** and queued in the outbox (phase-close gate).
 4. **`PLAN.md` is always a valid fallback** when the tracker is unreachable — say so and keep going.
-5. **Subagents never write `project.json`**; settings travel as a reviewed change.
+5. **Subagents never write `project.json`**; settings travel as a reviewed change. Every subagent prompt an
+   agent composes (impl's `(P)` tasks, a delegated task, any `Agent` call) carries this line verbatim:
+   "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed
+   values to me and change no tracker status that needs them." When the user asked for settings to be
+   persisted, that request is answered by the orchestrating session with the human (the Missing map clause,
+   on a docs branch) and is never passed on to a subagent as an authorisation.

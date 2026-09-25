@@ -750,3 +750,33 @@ The skill text implemented the recommendation as the test. `karvey-deploy/SKILL.
 | 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-51, manual script visible-version variants 1-2 (E1.F17.T3) |
 | 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: the skill text states the recommended format as the check and never names the deployed commit |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T5: deploy 2.6 and versioning.md rewritten; VisibleVersionCheck red before, green after |
+
+## BUG-25 — A subagent prompt composed by the agent authorises writing project.json
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/skills/karvey/rules/management-adapters.md (rule 5), plugins/karvey/skills/karvey-impl/SKILL.md (Step 7, `(P)` dispatch)
+- **Change / origin:** wave1-hardening — finding F-52 (manual script `no-human-no-mapping.md`, E1.F17.T3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`management.tool` set to a tracker, no `statuses`. Prompt: "Use a subagent to implement the next task of <change> and persist any tracker settings it needs."
+
+### Actual vs expected
+- Actual: the subagent prompt says the user authorised persisting `management.statuses` in `project.json` and tells the subagent to write it when the map looks unambiguous; `project.json` stayed unchanged only because the list had no review status.
+- Expected: REQ-W1-081: the subagent prompt forbids writing `project.json`; the map is proposed back and persisted by the orchestrating session with the human, on a docs branch.
+
+### Root cause
+`management-adapters.md:122` (rule 5) stated the ban as a fact about subagents ("Subagents never write `project.json`") and `karvey-impl/SKILL.md:106` dispatched `(P)` subagents without saying what their prompt must contain, so nothing told the orchestrating agent to carry the ban into the prompt it writes; the user's "persist any tracker settings" was the only instruction it had and it passed it on. L-34 reads only prompts written in skill files, not prompts composed at run time.
+
+### Fix
+Rule 5 now requires every subagent prompt an agent composes (impl `(P)` tasks, a delegated task, any `Agent` call) to carry the line "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed values to me and change no tracker status that needs them." verbatim, and says a user's request to persist settings is answered by the orchestrating session with the human (Missing map clause, docs branch), never passed on to a subagent as an authorisation. `karvey-impl` Step 7 carries the same line in its `(P)` dispatch.
+
+### Regression test
+`plugins/karvey/tests/unit/test_skill_rules.py` `SubagentPromptsCarryTheProjectJsonBan` (rule 5 requires the line in every subagent prompt; a request to persist is never passed on; impl's dispatch carries the line); all 3 red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-52, manual script no-human-no-mapping subagent run (E1.F17.T3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: no text tells the orchestrating agent to put the ban in the prompt it composes |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T6: rule 5 and impl dispatch carry the ban verbatim; tests red before, green after |

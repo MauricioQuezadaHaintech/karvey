@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-24 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-25 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -109,6 +109,13 @@ INDEX = {
         ("unit", "test_skill_rules.py", "VisibleVersionCheck.test_versioning_rule_says_the_same"),
         ("manual", "visible-version.md"),
     ],
+    "BUG-25": [  # composed subagent prompts carry the project.json ban (REQ-W1-081)
+        ("lint", "L-34"),
+        ("unit", "test_skill_rules.py", "SubagentPromptsCarryTheProjectJsonBan.test_rule_5_puts_the_ban_in_every_prompt"),
+        ("unit", "test_skill_rules.py", "SubagentPromptsCarryTheProjectJsonBan.test_a_user_request_to_persist_is_not_delegated"),
+        ("unit", "test_skill_rules.py", "SubagentPromptsCarryTheProjectJsonBan.test_impl_dispatch_carries_the_ban"),
+        ("manual", "no-human-no-mapping.md"),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 
@@ -172,7 +179,7 @@ def tracker_sections():
 
 class NamedChecksExist(unittest.TestCase):
     def test_every_routed_incident_is_indexed(self):
-        for n in range(5, 25):
+        for n in range(5, 26):
             self.assertIn("BUG-%02d" % n, INDEX)
 
     def test_lint_ids_are_registered(self):
