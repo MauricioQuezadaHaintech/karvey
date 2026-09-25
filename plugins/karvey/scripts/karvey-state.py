@@ -22,6 +22,8 @@ Commands:
                                         prod → the release ledger (D-03), never spec.json
                                         unless --write-spec (archive branch, REQ-W1-032)
   check-prod <change>                   the prod-gate's question (REQ-W1-023)
+  lane <change> set|raise|lower <lane> [--answers F] [--reason R] [--by --role human --ref]   (lower: the human)
+  lane-evidence <change> --bug BUG-NN --finding F-NN --regression-test PATH::NAME   (patch / hotfix)
   deploy-record <change> --env --version --verification pass|regression|not-evaluated [--rollback] [--evidence]
   advance <change> deployed --attested --ref D-NN --pipeline-run URL   (a clone without the ledger)
 """
@@ -234,6 +236,15 @@ def lane_skips(data, phase):
         return False
 
 
+def lane_optional(data, phase):
+    """True when the change's lane marks ``phase`` optional (``o``): a skip with a reason is accepted."""
+    lane = data.get("lane") if isinstance(data, dict) else None
+    try:
+        return isinstance(lane, str) and lane in ln.names() and ln.phase_rule(lane, phase) == "o"
+    except ln.LaneError:
+        return False
+
+
 def lane_reason(data):
     return "lane:%s" % data.get("lane")
 
@@ -333,6 +344,8 @@ def semantic_spec(data, strict, file):
         is_lane = isinstance(skipped[ph], str) and skipped[ph].startswith("lane:")
         if not pdef or (pdef["skippable"] and not is_lane):
             continue
+        if not is_lane and lane_optional(data, ph):
+            continue  # an optional phase of the lane, skipped with a reason
         lane_reason = "lane:%s" % data.get("lane") if isinstance(data.get("lane"), str) else None
         if skipped[ph] != lane_reason or not lane_skips(data, ph):
             out.append(kl.issue("state.skip_not_lane", "phase %r is not skippable: only a lane skip of this "
@@ -785,7 +798,7 @@ def is_skipped(data, pid):
     pdef = phase_def(pid)
     if pdef and lane_skips(data, pid):
         return True  # the lane passes it (wave2 §1.4)
-    return bool(pdef and pdef["skippable"] and approval_state(data, pid) == "skipped")
+    return bool(pdef and (pdef["skippable"] or lane_optional(data, pid)) and approval_state(data, pid) == "skipped")
 
 
 def next_phase_of(data, index):
@@ -854,6 +867,8 @@ def compute_next(data, ledger=None, ledger_known=False):
             res["blockers"].append("%s not approved or skipped" % mapped)
     else:
         satisfied = False  # no approval: the phase's own skill says when it is done
+    for m in lane_evidence_missing(data, nxt):
+        res["blockers"].append("lane %s needs %s (lane-evidence)" % (data.get("lane"), m))
     res["blockers"] = list(dict.fromkeys(res["blockers"]))  # each blocker once, in order (F-26, REQ-W2-074)
     if satisfied and not [b for b in res["blockers"]]:
         res["status"] = "ready"
@@ -1048,6 +1063,11 @@ def cmd_advance(args, root):
             if is_skipped(data, p["id"]) or (p["approval"] and approval_state(data, p["id"]) == "approved"):
                 continue
             raise Refused("edge not in the graph: %s → %s (%s not passed)" % (cur, to, p["id"]), code="state.edge")
+        missing_ev = lane_evidence_missing(data, to)
+        if missing_ev:
+            raise Refused("lane %s needs %s before %s: record them with lane-evidence %s --bug BUG-NN "
+                          "--regression-test PATH::NAME" % (data.get("lane"), " and ".join(missing_ev), to,
+                                                            args.change), code="state.lane_evidence")
         evidence = None
         if to == "deployed" and args.attested:
             evidence = attested_evidence(root, args)
@@ -1091,6 +1111,17 @@ def cmd_advance(args, root):
     res["consumed"] = consume_on_close(root, args.change, loaded.data, res["from"])
     res["file"] = rel(root, path)
     return kl.EXIT_OK, res, [], [], "%s: %s → %s" % (args.change, res["from"], res["to"])
+
+
+HOTFIX_EVIDENCE = (("bug_id", "a BUG-NN (--bug)"), ("regression_test", "a regression test (--regression-test)"))
+
+
+def lane_evidence_missing(data, to):
+    """The hotfix preconditions of REQ-W2-018: impl (and later) need the BUG-NN and the regression test."""
+    if data.get("lane") != "hotfix" or to is None or phase_index(to) < phase_index("impl"):
+        return []
+    ev = data.get("lane_evidence") if isinstance(data.get("lane_evidence"), dict) else {}
+    return [text for key, text in HOTFIX_EVIDENCE if not (isinstance(ev.get(key), str) and ev[key].strip())]
 
 
 def record_lane_skips(data, before_index):
@@ -1201,15 +1232,20 @@ def cmd_generated(args, root):
 def cmd_skip(args, root):
     pdef = phase_def(args.phase)
     skippable = [p["id"] for p in machine()["phases"] if p["skippable"]]
-    if not pdef or not pdef["skippable"]:
+    if not pdef or not pdef["approval"] or pdef["approval"] == "prod":
         raise Refused("phase %r is not skippable (skippable: %s)" % (args.phase, ", ".join(skippable)),
                       code="state.not_skippable")
     reason = (args.reason or "").strip()
     if not reason:
         raise Refused("a skip needs a non-empty --reason", code="state.reason")
+    if reason.startswith("lane:"):
+        raise Refused("a lane:{lane} reason is written by advance, not by skip", code="state.reason")
     warnings = []
 
     def mutate(data):
+        if not pdef["skippable"] and not lane_optional(data, args.phase):
+            raise Refused("phase %r is not skippable (skippable: %s; or a phase the change's lane marks optional)"
+                          % (args.phase, ", ".join(skippable)), code="state.not_skippable")
         sk = data.get("skipped")
         if not isinstance(sk, dict):
             sk = {}
@@ -1464,6 +1500,136 @@ def append_outcome(data, entry):
     return entry
 
 
+def lane_rank(lane):
+    """How much process a lane runs: the phases it does not skip (``legacy`` = all)."""
+    if lane in (None, ln.LEGACY):
+        return len(phase_ids())
+    return len([p for p, r in ln.lane_def(lane)["phases"].items() if r != "s"])
+
+
+def _read_answers(path):
+    if not path:
+        return None
+    try:
+        with open(path, encoding="utf-8-sig") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError) as exc:
+        raise NotFound("--answers %s is unreadable: %s" % (path, exc))
+    if not isinstance(data, dict):
+        raise Refused("--answers must hold a JSON object", code="state.answers")
+    return data
+
+
+def cmd_lane(args, root):
+    """``lane <change> set|raise|lower <lane>`` (REQ-W2-012, 013, 016)."""
+    if args.lane not in ln.names():
+        raise Refused("unknown lane %r (one of %s)" % (args.lane, ", ".join(ln.names())), code="state.lane")
+    now = now_iso()
+    answers = _read_answers(args.answers)
+    warnings = []
+    if args.action == "set" and args.lane == "patch":
+        adm = ln.admit_patch(answers)
+        if not adm["admitted"]:
+            raise Refused("; ".join(adm["reasons"]) or "patch needs the init answers (--answers)",
+                          code="state.lane_criteria", result={"proposed": adm["lane"]})
+    if args.action in ("raise", "lower"):
+        if not (args.reason or "").strip():
+            raise Refused("a lane %s needs --reason" % args.action, code="state.reason")
+    if args.action == "lower":
+        _require(args, ("by", "role", "ref"))
+        if args.role != "human":
+            raise Refused("lowering a lane needs the human (--role human)", code="state.lane_lower")
+        marker, _, reasons = approval.find_valid(root, args.change, kinds=("plan", "prod"), ttl_min=reviewed_ttl(root))
+        if marker is None:
+            raise Refused("lowering a lane needs the human's approval: no valid approval marker for %s (%s)" % (
+                args.change, ", ".join("%s: %s" % kv for kv in sorted(reasons.items()))), code="state.lane_lower")
+
+    def mutate(data):
+        cur = data.get("lane") if isinstance(data.get("lane"), str) and data.get("lane") else None
+        if args.action == "set":
+            if cur:
+                raise Refused("%s already has lane %s: use lane raise|lower" % (args.change, cur), code="state.lane")
+            if data.get("phase") not in ("init", None):
+                raise Refused("lane set is only for a change in init (%s is in %s): use lane raise|lower"
+                              % (args.change, data.get("phase")), code="state.lane")
+            data["lane"] = args.lane
+            data["updated_at"] = now
+            return {"change": args.change, "lane": args.lane, "action": "set"}
+        frm = cur or ln.LEGACY
+        if frm == args.lane:
+            raise Refused("%s is already in lane %s" % (args.change, args.lane), code="state.lane")
+        up = lane_rank(args.lane) > lane_rank(frm)
+        if args.action == "raise" and not up:
+            raise Refused("%s → %s is not a raise (it runs fewer phases): use lane lower, which needs the human"
+                          % (frm, args.lane), code="state.lane_lower")
+        entry = {"from": frm, "to": args.lane, "at": now, "reason": args.reason.strip()}
+        if args.by:
+            entry["by"] = args.by.strip()
+        if args.action == "lower":
+            entry["ref"] = args.ref.strip()
+        hist = data.get("lane_history") if isinstance(data.get("lane_history"), list) else []
+        hist.append(entry)
+        data["lane_history"] = hist
+        data["lane"] = args.lane
+        reopened = []
+        sk = data.get("skipped") if isinstance(data.get("skipped"), dict) else {}
+        for ph, reason in list(sk.items()):
+            if not (isinstance(reason, str) and reason.startswith("lane:")):
+                continue  # a manual skip survives any lane change
+            if lane_skips(data, ph):
+                sk[ph] = lane_reason(data)
+            else:
+                del sk[ph]
+                reopened.append(ph)
+        if "skipped" in data and not sk:
+            del data["skipped"]
+        moved = None
+        cur_phase, _ = map_phase(data.get("phase"))
+        pend = [p for p in reopened if approval_state(data, p) == "pending"]
+        if pend and cur_phase and phase_index(pend[0]) < phase_index(cur_phase):
+            _last_entry_ok(data)
+            target = min(pend, key=phase_index)
+            _move_history(data, target, now, by=args.by, ref=args.ref)
+            data["phase"] = moved = target
+        data["updated_at"] = now
+        return {"change": args.change, "lane": args.lane, "action": args.action, "from": frm,
+                "pending": sorted(pend, key=phase_index), "phase": data.get("phase"), "moved_to": moved}
+
+    path, res, _ = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    human = "%s: lane %s %s%s" % (args.change, args.action, args.lane,
+                                  (" (from %s; pending: %s)" % (res["from"], ", ".join(res["pending"]) or "none"))
+                                  if args.action != "set" else "")
+    return kl.EXIT_OK, res, [], warnings, human
+
+
+def cmd_lane_evidence(args, root):
+    """``lane-evidence``: the BUG-NN, finding and regression test of a patch / hotfix change (REQ-W2-014, 018)."""
+    fields = (("bug", "bug_id"), ("finding", "finding"), ("regression_test", "regression_test"))
+    given = {k: (getattr(args, a) or "").strip() for a, k in fields}
+    if not any(given.values()):
+        raise Refused("lane-evidence needs --bug BUG-NN, --finding F-NN and/or --regression-test PATH::NAME",
+                      code="state.fields")
+    if given["bug_id"] and not re.match(r"^BUG-\d+(@[a-z0-9][a-z0-9._-]*)?$", given["bug_id"]):
+        raise Refused("--bug must be BUG-NN (got %r)" % given["bug_id"], code="state.fields")
+    if given["regression_test"] and "::" not in given["regression_test"]:
+        raise Refused("--regression-test must be PATH::NAME (got %r)" % given["regression_test"], code="state.fields")
+
+    def mutate(data):
+        if data.get("lane") not in ("patch", "hotfix"):
+            raise Refused("lane-evidence is for the patch and hotfix lanes (%s is %r)" % (args.change, data.get("lane")),
+                          code="state.lane")
+        ev = dict(data["lane_evidence"]) if isinstance(data.get("lane_evidence"), dict) else {}
+        ev.update({k: v for k, v in given.items() if v})
+        data["lane_evidence"] = ev
+        data["updated_at"] = now_iso()
+        return {"change": args.change, "lane_evidence": ev}
+
+    path, res, _ = transact(root, args.change, mutate)
+    res["file"] = rel(root, path)
+    return kl.EXIT_OK, res, [], [], "%s: lane evidence %s" % (args.change, json.dumps(res["lane_evidence"]))
+
+
 VERIFICATIONS = ("pass", "regression", "not-evaluated")
 _ENV = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$")
 
@@ -1540,7 +1706,7 @@ def cmd_outcome(args, root):
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
             "check-prod": cmd_check_prod, "outcome": cmd_outcome,
-            "deploy-record": cmd_deploy_record}
+            "deploy-record": cmd_deploy_record, "lane": cmd_lane, "lane-evidence": cmd_lane_evidence}
 
 
 def build_parser():
@@ -1606,6 +1772,20 @@ def build_parser():
     oc.add_argument("--reason")
     oc.add_argument("--kind", choices=["gate", "plan-exception"], default="gate")
     oc.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
+    lnp = sub.add_parser("lane", parents=[common], help="set (at init), raise or lower (human) a change's lane")
+    lnp.add_argument("change")
+    lnp.add_argument("action", choices=["set", "raise", "lower"])
+    lnp.add_argument("lane")
+    lnp.add_argument("--answers", help="set: JSON file with the init answers (touches_ui, schema, …)")
+    lnp.add_argument("--reason")
+    lnp.add_argument("--by")
+    lnp.add_argument("--role")
+    lnp.add_argument("--ref")
+    lev = sub.add_parser("lane-evidence", parents=[common], help="record BUG-NN, finding, regression test (patch/hotfix)")
+    lev.add_argument("change")
+    lev.add_argument("--bug")
+    lev.add_argument("--finding")
+    lev.add_argument("--regression-test", dest="regression_test")
     dr = sub.add_parser("deploy-record", parents=[common], help="append a deploys[] entry (env, version, verification)")
     dr.add_argument("change")
     dr.add_argument("--env")
