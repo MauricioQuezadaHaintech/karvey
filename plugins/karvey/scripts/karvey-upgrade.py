@@ -13,10 +13,11 @@ Commands:
   plan                                   the table (step · what changes · dry-run · risk · needs human);
                                          writes nothing; exit 1 when a check failed
   branch                                 create / switch to chore/karvey-upgrade-<installed> (never fetches)
-  apply --steps a,b [--dry-run] [--preview ID] [--confirm-no-preview ID…] [--values FILE]
+  apply --steps a,b [--dry-run] [--preview ID] [--confirm-no-preview ID…] [--values FILE|-]
                                          the picked steps, in catalogue order; --dry-run prints the diffs and
                                          the preview id that apply then requires
-  commit --picked-by NAME [--picked-at ISO] [--answer TEXT] [--trailer K=V…]
+  commit --picked-by NAME [--picked-at ISO] [--answer TEXT | --answer-file FILE|-] [--pr-body-file FILE]
+         [--trailer K=V…]
                                          one commit of exactly the files the upgrade wrote; prints the PR text
   seen --decline | --accept | --empty | --show
                                          resolve (or show) the once-per-version offer of this clone
@@ -68,10 +69,16 @@ def read_values(path):
     strings. Each value is checked by its step through safe_values (REQ-UP-019)."""
     if not path:
         return {}
-    try:
-        data = atomicio.read_json(path).data
-    except atomicio.ReadError as exc:
-        raise NotFound("--values: %s" % exc)
+    if path == "-":  # a quoted heredoc: no file to write, no value on the command line (D1-1, D3-2)
+        try:
+            data = json.loads(sys.stdin.read())
+        except ValueError as exc:
+            raise Usage("--values -: stdin is not JSON (%s)" % exc)
+    else:
+        try:
+            data = atomicio.read_json(path).data
+        except atomicio.ReadError as exc:
+            raise NotFound("--values: %s" % exc)
     if not isinstance(data, dict):
         raise Usage("--values: expected a JSON object {step_id: {key: value}}")
     for sid, vals in data.items():
@@ -111,9 +118,35 @@ def cmd_apply(args, root):
     return rep.exit, rep.as_json(), errors, [], rep.text()
 
 
+def _read_text_arg(path, flag):
+    if path == "-":
+        return sys.stdin.read()
+    try:
+        with open(path, encoding="utf-8-sig") as fh:
+            return fh.read()
+    except OSError as exc:
+        raise NotFound("%s: %s" % (flag, exc))
+
+
+def _outside_repo(path, root, flag):
+    top = pj.git_toplevel(root) or root
+    real = os.path.realpath(path)
+    if real == str(top) or real.startswith(str(top).rstrip(os.sep) + os.sep):
+        raise Usage("%s must be outside the repository: %s" % (flag, path))
+    return real
+
+
 def cmd_commit(args, root):
-    res = upgrade.commit(root, args.picked_by, picked_at=args.picked_at, answer=args.answer,
+    answer = args.answer
+    if args.answer_file:
+        answer = _read_text_arg(args.answer_file, "--answer-file")
+    body_out = _outside_repo(args.pr_body_file, root, "--pr-body-file") if args.pr_body_file else None
+    res = upgrade.commit(root, args.picked_by, picked_at=args.picked_at, answer=answer,
                          trailers=args.trailer)
+    if body_out:
+        with open(body_out, "w", encoding="utf-8") as fh:
+            fh.write(res["pr_body"])
+        res["pr_body_file"] = body_out
     human = "committed %s on %s (%s)\n\nPR title: %s\n\n%s" % (res["sha"][:12], res["branch"], ", ".join(res["files"]),
                                                              res["pr_title"], res["pr_body"])
     return kl.EXIT_OK, res, [], [], human
@@ -179,6 +212,9 @@ def build_parser():
     c.add_argument("--picked-by", required=True, help="the person who picked the steps")
     c.add_argument("--picked-at", help="when they picked (ISO 8601; default now)")
     c.add_argument("--answer", help="their words (up to 200 characters)")
+    c.add_argument("--answer-file", metavar="FILE|-", help="their words from a file or stdin (a quoted heredoc)")
+    c.add_argument("--pr-body-file", metavar="FILE", help="also write pr_body to FILE (outside the repository), "
+                                                          "for `gh pr create --body-file`")
     c.add_argument("--trailer", action="append", default=[], metavar="KEY=VALUE", help="a commit trailer")
     s = sub.add_parser("seen", parents=[common], help="resolve or show the offer of this clone")
     g = s.add_mutually_exclusive_group(required=True)

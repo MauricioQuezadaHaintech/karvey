@@ -55,7 +55,7 @@ On resume it prints nothing, and it stays silent outside a Karvey project or for
 Once the person has answered ("Not for this version" runs `karvey-upgrade.py seen --decline`; the upgrade skill records the rest), that version stays silent in the clone and its worktrees. <!-- guard-case: ss-29-declined-no-offer, ss-34-worktree-shares-record -->
 When no step applies it records the version as seen (`empty`) and prints nothing. <!-- guard-case: ss-30-empty-plan-records-seen -->
 The probe has a budget (`session.upgrade_probe_ms` in `../scripts/karvey_lib/defaults.json`); past it the hook prints the offer anyway and records nothing. <!-- guard-case: ss-31-budget-exceeded-offers -->
-A broken step catalogue, a version that is not a release number or any error prints one line `[karvey] upgrade offer unavailable: <reason>` (without python: `python 3 not found`) and the session starts as usual. <!-- guard-case: ss-32-bad-catalogue-one-line, ss-35-degraded-no-python -->
+A step whose check fails still counts as work (the offer is shown). A broken step catalogue, a version that is not a release number or an internal error prints one line `[karvey] upgrade offer unavailable: <reason>` (without python: `python 3 not found`) and the session starts as usual. <!-- guard-case: ss-32-bad-catalogue-one-line, ss-35-degraded-no-python -->
 The offer lines are separate from the board and the handoff, whose bounds do not change. <!-- guard-case: ss-33-bounds-with-offer -->
 An unanswered offer is not recorded, so it comes back next session. The hook never fetches and never writes a
 project file; the plan and every write belong to `../scripts/karvey-upgrade.py` and the `/karvey:karvey-upgrade`

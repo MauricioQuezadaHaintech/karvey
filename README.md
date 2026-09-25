@@ -171,8 +171,10 @@ otherwise it records the version as seen and says nothing.
 - **By hand, any time:** `/karvey:karvey-upgrade`, or read the plan without changing anything:
 
 ```
-python3 plugins/karvey/scripts/karvey-upgrade.py plan
+python3 <the installed Karvey plugin>/scripts/karvey-upgrade.py plan
 ```
+
+(the offer itself prints the full path of the tool in this install)
 
 ## Knowledge graph (`graphify-out/`)
 

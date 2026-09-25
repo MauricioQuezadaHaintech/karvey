@@ -192,11 +192,12 @@ class RegressionProjectUpgradeSkillWording(unittest.TestCase):
         self.assertIn("unified diff **verbatim**", text)
 
 
-def run_tool(*args, cwd=None, home=None):
+def run_tool(*args, cwd=None, home=None, stdin=None):
     env = dict(os.environ, **g.ISOLATED_ENV)
     if home:
         env["HOME"] = str(home)
     cp = subprocess.run([sys.executable, TOOL] + list(args), cwd=str(cwd) if cwd else None, env=env,
+                        input=stdin.encode("utf-8") if stdin is not None else None,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
     return cp.returncode, cp.stdout.decode("utf-8"), cp.stderr.decode("utf-8")
 
@@ -344,3 +345,43 @@ class Surface(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RegressionProjectUpgradeStdinValues(unittest.TestCase):
+    """regression_project-upgrade_stdin_values (QA 2026-09-25, F-20): the person's words and values reach the
+    tool through a quoted heredoc on stdin, never a shell command line nor a file the plan-gate may block."""
+    setUp, tearDown, tool, tool_json = Cli.setUp, Cli.tearDown, Cli.tool, Cli.tool_json  # not Cli's tests (F-10)
+
+    def test_values_answer_and_body_file_through_stdin(self):
+        code, env = self.tool_json("branch")
+        self.assertEqual(code, 0, env)
+        vals = json.dumps({"team-settings": {"notifications.channel": "none"}})
+        code, out, err = run_tool("apply", "--steps", "team-settings", "--dry-run", "--values", "-", "--json",
+                                  "--root", str(self.root), home=self.home, stdin=vals)
+        self.assertEqual(code, 0, out + err)
+        pid = json.loads(out)["result"]["preview"]
+        code, out, err = run_tool("apply", "--steps", "team-settings", "--preview", pid, "--values", "-", "--json",
+                                  "--root", str(self.root), home=self.home, stdin=vals)
+        self.assertEqual(code, 0, out + err)
+        inside = str(self.root / "body.md")
+        code, out, _ = run_tool("commit", "--picked-by", "The Owner", "--answer-file", "-", "--pr-body-file",
+                                inside, "--json", "--root", str(self.root), home=self.home, stdin="ok")
+        self.assertEqual(code, 2, out)  # a body file inside the repository is refused, nothing committed
+        body = str(self.t.path / "body.md")
+        answer = "ok $(id) `id`\n"
+        code, out, err = run_tool("commit", "--picked-by", "The Owner", "--answer-file", "-", "--pr-body-file",
+                                  body, "--json", "--root", str(self.root), home=self.home, stdin=answer)
+        self.assertEqual(code, 0, out + err)
+        msg = subprocess.run(["git", "log", "-1", "--format=%B"], cwd=str(self.root), capture_output=True,
+                             text=True).stdout
+        self.assertIn('Answer: "ok $(id) `id`"', msg)
+        with open(body, encoding="utf-8") as fh:
+            self.assertIn("Steps applied: team-settings", fh.read())
+
+    def test_the_skill_passes_no_free_text_on_a_command_line(self):
+        text = RegressionProjectUpgradeSkillPush.SKILL.read_text(encoding="utf-8")
+        self.assertNotIn('--answer "', text)
+        self.assertNotIn("printf", text)
+        self.assertIn("--answer-file -", text)
+        self.assertIn("--values -", text)
+        self.assertIn("--body-file", text)

@@ -378,5 +378,129 @@ class ChangesInFlight(FixtureCase):
         self.assertEqual(self.row("changes-in-flight")[0]["status"], "nothing")
 
 
+
+class RegressionProjectUpgradeQA(FixtureCase):
+    """regression_project-upgrade_qa_* (QA 2026-09-25, F-11..F-19): each test reproduces a reviewer's case."""
+    UB = "chore/karvey-upgrade-" + INSTALLED
+
+    def git(self, *args, cwd=None):
+        return subprocess.run(["git"] + list(args), cwd=str(cwd or self.root), capture_output=True, text=True)
+
+    def commit(self):
+        return upgrade.commit(self.root, "The Owner", installed=INSTALLED)
+
+    def test_f11_nested_worktree_is_never_touched(self):
+        self.write(".gitignore", ".claude/worktrees/\n")
+        wt = self.root / ".claude" / "worktrees" / "w1"
+        self.assertEqual(self.git("worktree", "add", "-q", str(wt), "-b", "other").returncode, 0)
+        row, res = self.row("legacy-shims")
+        self.assertNotIn("worktrees", row["summary"])
+        self.assertTrue(all("worktrees" not in e.path for e in res.edits))
+        self.apply(["legacy-shims"])
+        self.assertTrue((wt / SHIM).exists())
+        self.assertEqual(self.git("status", "--porcelain", cwd=wt).stdout, "")
+        self.assertTrue(self.commit()["sha"])
+
+    def test_f12_ignored_local_settings_are_shown_not_written(self):
+        self.write(".gitignore", ".claude/settings.local.json\n")
+        local = json.loads(self.read(".claude/settings.json"))
+        self.write(".claude/settings.local.json", local, commit=False)
+        before = self.read(".claude/settings.local.json")
+        row, res = self.row("legacy-shims")
+        self.assertTrue(all(e.path != ".claude/settings.local.json" for e in res.edits))
+        self.assertTrue(any("git-ignored" in w for w in row["warnings"]))
+        self.apply(["legacy-shims"])
+        self.assertEqual(self.read(".claude/settings.local.json"), before)
+        self.assertTrue(self.commit()["sha"])
+
+    def test_f13_second_commit_after_a_deletion(self):
+        self.apply(["legacy-shims"])
+        self.commit()
+        self.apply(["enforcement-defaults"])
+        res = self.commit()
+        msg = self.git("log", "-1", "--format=%B").stdout
+        self.assertIn("Steps: enforcement-defaults\n", msg)
+        self.assertEqual(res["steps"], ["enforcement-defaults"])
+
+    def test_f13_a_new_upgrade_branch_starts_a_new_journal(self):
+        self.apply(["legacy-shims"])
+        self.commit()
+        self.git("checkout", "-q", "dev")
+        self.git("merge", "-q", "--no-ff", "-m", "merge", self.UB)
+        self.git("branch", "-q", "-D", self.UB)
+        self.apply(["enforcement-defaults"])
+        self.assertEqual(self.commit()["steps"], ["enforcement-defaults"])
+
+    def test_f14_the_flag_is_written_first_and_a_dangling_entry_is_work(self):
+        _, res = self.row("legacy-shims")
+        self.assertEqual((res.edits[0].op, res.edits[0].path), ("write", PJ))
+        self.assertEqual(res.edits[-1].op, "delete")
+        (self.root / SHIM).unlink()  # a half-applied run, or a copy deleted by hand: the entry still runs it
+        g.commit_all(self.root)
+        row, res = self.row("legacy-shims")
+        self.assertEqual(row["status"], "applies")
+        self.apply(["legacy-shims"])
+        self.assertNotIn("plan-gate", self.read(".claude/settings.json"))
+        self.assertTrue(json.loads(self.read(PJ))["enforcement"]["plan_gate_hook"])
+
+    def test_f15_bad_journal_shape_and_unwritable_journal(self):
+        d = self.root / ".git" / "karvey"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / upgrade.JOURNAL_NAME).write_text(json.dumps({"v": 1, "branch": self.UB, "files": []}))
+        self.assertEqual(upgrade.read_journal(self.root)["applied"], [])  # missing lists default, no KeyError
+        (d / upgrade.JOURNAL_NAME).write_text(json.dumps({"v": 1, "branch": self.UB, "files": [["a"]]}))
+        self.assertIsNone(upgrade.read_journal(self.root))
+        (d / upgrade.JOURNAL_NAME).unlink()
+        (d / upgrade.JOURNAL_NAME).mkdir()
+        before = self.read(PJ)
+        with self.assertRaises(upgrade.Refused) as cm:
+            self.apply(["enforcement-defaults"])
+        self.assertIn("journal", str(cm.exception))
+        self.assertEqual(self.read(PJ), before)
+
+    def test_f16_value_types_and_keys(self):
+        for vals in ({"notifications.channel": ["slack"]}, {"notifications.webhook": "x"},
+                     {"notifications.channel": 3}):
+            with self.subTest(vals=vals):
+                with self.assertRaises(upgrade.Refused):
+                    upgrade.apply(self.root, ["team-settings"], dry_run=True, installed=INSTALLED, home=self.home,
+                                  inputs={"team-settings": vals})
+
+    def test_f17_a_refusal_leaves_the_branch_as_it_was(self):
+        self.assertEqual(self.row("schema-migrate-proposed")[0]["status"], "nothing")
+        with self.assertRaises(upgrade.Refused):
+            upgrade.apply(self.root, ["legacy-shims", "schema-migrate-proposed"], preview="x", installed=INSTALLED,
+                          home=self.home)
+        with self.assertRaises(upgrade.Refused):
+            upgrade.apply(self.root, ["legacy-shims"], preview="stale", installed=INSTALLED, home=self.home)
+        rep = upgrade.apply(self.root, ["changes-in-flight"], installed=INSTALLED, home=self.home)
+        self.assertEqual(rep.shown, ["changes-in-flight"])
+        self.assertEqual(self.git("symbolic-ref", "--short", "HEAD").stdout.strip(), "dev")
+        self.assertEqual(self.git("branch", "--list", "chore/*").stdout, "")
+
+    def test_f18_the_current_phase_awaiting_its_approval_is_not_unmet(self):
+        spec = {"schema_version": 1, "change_id": "fixture-60", "phase": "requirements", "management": "markdown",
+                "goal": "x", "approvals": {}, "phase_history": [
+                    {"phase": "init", "entered_at": "2026-09-01T10:00:00+00:00",
+                     "exited_at": "2026-09-01T11:00:00+00:00"},
+                    {"phase": "requirements", "entered_at": "2026-09-01T11:00:00+00:00"}]}
+        self.write(SPEC60, spec)
+        self.assertEqual(self.row("changes-in-flight")[0]["status"], "nothing")
+
+    def test_f19_an_own_hook_with_a_similar_name_is_kept(self):
+        data = json.loads(self.read(".claude/settings.json"))
+        own = {"type": "command", "command": "bash ~/.claude/hooks/my-plan-gate.sh.v2"}
+        data["hooks"]["PreToolUse"][0]["hooks"].append(own)
+        self.write(".claude/settings.json", data)
+        self.apply(["legacy-shims"])
+        self.assertEqual(json.loads(self.read(".claude/settings.json"))["hooks"]["PreToolUse"][0]["hooks"], [own])
+
+    def test_git_read_refuses_writing_options(self):
+        p = upgrade.Probe(self.root, home=self.home, installed=INSTALLED)
+        for bad in (("show", "--output=x", "HEAD"), ("ls-files", "--output=x")):
+            with self.subTest(args=bad), self.assertRaises(upgrade.ProbeError):
+                p.git_read(*bad)
+
+
 if __name__ == "__main__":
     unittest.main()

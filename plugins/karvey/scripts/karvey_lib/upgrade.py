@@ -182,8 +182,10 @@ class DeadlineExceeded(Exception):
 
 
 # --------------------------------------------------------------------------- the read-only Probe
-GIT_READ_ALLOW = (("rev-parse",), ("symbolic-ref",), ("show",), ("status", "--porcelain"), ("ls-files",),
-                  ("config", "--get"))
+GIT_READ_ALLOW = (("rev-parse",), ("symbolic-ref",), ("status", "--porcelain"), ("ls-files",),
+                  ("config", "--get"), ("check-ignore", "-q", "--"))
+# options that make a read sub-command write or run something (``--output=<file>``, ``--exec``, …): refused
+GIT_READ_DENY_PREFIX = ("--output", "--exec", "--upload-pack", "--receive-pack", "-c", "--config")
 HOME_FILES = (".claude/settings.json", ".claude/settings.local.json", ".claude/CLAUDE.md")
 HOME_READ_MAX = 1024 * 1024
 _MODULES = {}
@@ -299,6 +301,8 @@ class Probe:
             rel = p.relative_to(self.root).as_posix()
             if ".git" in rel.split("/") or "node_modules" in rel.split("/") or not p.is_file():
                 continue
+            if self._in_nested_tree(p):
+                continue
             out.add(rel)
         for rel, text in self.overlay.items():
             if text is None:
@@ -307,12 +311,29 @@ class Probe:
                 out.add(rel)
         return sorted(out)
 
+    def _in_nested_tree(self, p):
+        """True when ``p`` sits inside another git work tree or submodule under the root (a directory between
+        the root and ``p`` holds its own ``.git`` entry, e.g. ``.claude/worktrees/<name>``) — F-11."""
+        d = p.parent
+        while d != self.root and self.root in d.parents:
+            if (d / ".git").exists():
+                return True
+            d = d.parent
+        return False
+
+    def is_ignored(self, rel):
+        """True when git ignores ``rel`` (``git check-ignore``); False outside git or on any error."""
+        rc, _ = self.git_read("check-ignore", "-q", "--", self._norm(rel))
+        return rc == 0
+
     # -- git (read-only sub-commands, argv only)
     def git_read(self, *args):
         """``(returncode, stdout)`` of an allowed read-only git sub-command."""
         args = [str(a) for a in args]
         if not any(tuple(args[:len(a)]) == a for a in GIT_READ_ALLOW):
             raise ProbeError("git sub-command not allowed for a step: %s" % " ".join(args[:2]))
+        if any(a.startswith(GIT_READ_DENY_PREFIX) for a in args[1:]):
+            raise ProbeError("git option not allowed for a step: %s" % " ".join(args[:2]))
         try:
             cp = subprocess.run(["git", "--no-optional-locks"] + args, cwd=str(self.root), stdout=subprocess.PIPE,
                                 stderr=subprocess.DEVNULL, timeout=5, check=False)
@@ -760,6 +781,8 @@ def _run_fix(step, probe, values, registry):
         raise Refused("step %s: value refused: %s" % (step["id"], exc))
     except CheckFailed as exc:
         raise Refused("step %s: %s" % (step["id"], exc))
+    except (TypeError, ValueError, KeyError) as exc:  # F-16: a malformed value is a refusal, not a traceback
+        raise Refused("step %s: value refused: %s: %s" % (step["id"], type(exc).__name__, exc))
     if not isinstance(res, StepResult):
         raise Refused("step %s: fix %s returned %s" % (step["id"], step["fix"], type(res).__name__))
     return res
@@ -800,9 +823,73 @@ def apply(root, ids, dry_run=False, preview=None, inputs=None, confirm_no_previe
     common = pj.git_common_dir(root)
     if not dry_run and top is None:
         raise Refused("apply needs git: the upgrade goes through a branch")
-    rep = ApplyReport(dry_run=bool(dry_run))
-    rep = _prepare_tree(root, rep, dry_run, installed)
+    def evaluate(rep):
+        """Steps 5–9 on the current tree: ``(evals, pid, blind)``, or ``None`` when every pick is satisfied
+        (``rep`` then says "nothing to do"). Raises :class:`Refused` before anything is written."""
+        return _evaluate(root, ids, steps, registry, home, installed, inputs, top, common, rep)
 
+    rep = ApplyReport(dry_run=bool(dry_run))
+    if dry_run:
+        got = evaluate(rep)
+        if got is None:
+            return rep
+        evals, pid, _ = got
+        for st, res, planned in evals:  # 8. dry-run: diffs and the preview id, no write
+            if not planned:
+                continue
+            if not st["dry_run"]:
+                rep.lines.append("%s: no preview for this step; confirm it with --confirm-no-preview %s" % (
+                    st["id"], st["id"]))
+                continue
+            text = "".join(unified_diff(p) for p in planned)
+            rep.diffs[st["id"]] = text
+            rep.lines.append("%s: %s" % (st["id"], res.summary))
+            rep.lines.append(text.rstrip("\n"))
+        if pid:
+            rep.lines.append("preview id: %s" % pid)
+        return rep
+
+    _check_tree(root)
+    ub = upgrade_branch(installed)
+    orig = current_branch(root)
+    if orig != ub:
+        # F-17: every refusal (not applicable, needs input, a stale preview …) is decided on the current tree
+        # BEFORE the branch is created or switched to; "refused" really means nothing changed
+        trial = ApplyReport(dry_run=False)
+        got = evaluate(trial)
+        if got is None:
+            return trial
+        _check_confirmations(got[1], got[2], preview, confirm_no_preview)
+        if not any(planned for _, _, planned in got[0]):
+            trial.lines.append("no file to write: nothing applied, no branch created")
+            return trial
+    info = ensure_branch(root, installed)
+    rep.branch = info["branch"]
+    try:
+        got = evaluate(rep)
+        if got is None:
+            return rep
+        evals, pid, blind = got
+        _check_confirmations(pid, blind, preview, confirm_no_preview)
+    except Refused:
+        if orig != ub:  # back where the person was, as if nothing happened
+            _git(["checkout", "-q", orig], root)
+            if info.get("created"):
+                _git(["branch", "-q", "-D", ub], root)
+        raise
+    return _write(root, rep, evals, top, common, installed)
+
+
+def _check_confirmations(pid, blind, preview, confirm_no_preview):
+    """Step 9: the preview digest and the blind-step confirmations."""
+    if pid and preview != pid:
+        raise Refused(PREVIEW_HINT)
+    unconfirmed = [i for i in blind if i not in set(confirm_no_preview or ())]
+    if unconfirmed:
+        raise Refused("step(s) without a preview need --confirm-no-preview: %s" % ", ".join(unconfirmed))
+
+
+def _evaluate(root, ids, steps, registry, home, installed, inputs, top, common, rep):
     # 5–6. evaluate the selected steps in catalogue order over one overlay
     selected = [s for s in steps if s["id"] in set(ids)]
     overlay = {}
@@ -832,7 +919,7 @@ def apply(root, ids, dry_run=False, preview=None, inputs=None, confirm_no_previe
     if len(nothing) == len(ids):
         rep.nothing = [s["id"] for s, _, _ in evals]
         rep.lines = ["%s: nothing to do" % i for i in rep.nothing]
-        return rep
+        return None
     if nothing:
         raise Refused("not applicable (nothing to do): %s — pick only steps the plan lists" % ", ".join(
             s["id"] for s, _, _ in evals if s["id"] in nothing))
@@ -856,31 +943,7 @@ def apply(root, ids, dry_run=False, preview=None, inputs=None, confirm_no_previe
     blind = [st["id"] for st, _, planned in evals if planned and not st["dry_run"]]
     pid = preview_id(previewable) if previewable else None
     rep.preview = pid
-
-    # 8. dry-run: diffs and the preview id, no write
-    if dry_run:
-        for st, res, planned in evals:
-            if not planned:
-                continue
-            if not st["dry_run"]:
-                rep.lines.append("%s: no preview for this step; confirm it with --confirm-no-preview %s" % (
-                    st["id"], st["id"]))
-                continue
-            text = "".join(unified_diff(p) for p in planned)
-            rep.diffs[st["id"]] = text
-            rep.lines.append("%s: %s" % (st["id"], res.summary))
-            rep.lines.append(text.rstrip("\n"))
-        if pid:
-            rep.lines.append("preview id: %s" % pid)
-        return rep
-
-    # 9. the preview digest and the blind-step confirmations
-    if pid and preview != pid:
-        raise Refused(PREVIEW_HINT)
-    unconfirmed = [i for i in blind if i not in set(confirm_no_preview or ())]
-    if unconfirmed:
-        raise Refused("step(s) without a preview need --confirm-no-preview: %s" % ", ".join(unconfirmed))
-    return _write(root, rep, evals, top, common, installed)
+    return evals, pid, blind
 
 
 def journal_path(root, create=False):
@@ -894,9 +957,27 @@ def read_journal(root):
             data = json.load(fh)
     except (OSError, ValueError):
         return None
-    if not isinstance(data, dict) or data.get("v") != JOURNAL_V or not isinstance(data.get("files"), list):
+    if not isinstance(data, dict) or data.get("v") != JOURNAL_V:
         return None
+    # F-15: the whole shape, not only ``files`` — a bad shape counts as no journal (§2.3), never a KeyError
+    # after a step already wrote its files
+    def str_list(v):
+        return isinstance(v, list) and all(isinstance(x, str) for x in v)
+    if not (str_list(data.get("files")) and str_list(data.get("applied", [])) and str_list(data.get("not_run", []))
+            and isinstance(data.get("failed", {}), dict) and isinstance(data.get("branch"), (str, type(None)))):
+        return None
+    data.setdefault("applied", [])
+    data.setdefault("not_run", [])
+    data.setdefault("failed", {})
     return data
+
+
+def _reset_journal(root):
+    """Forget the journal (a new upgrade branch starts a new journal — F-13)."""
+    try:
+        os.remove(str(journal_path(root)))
+    except OSError:
+        pass
 
 
 def _write_journal(root, data):
@@ -928,10 +1009,8 @@ def _top_rel(root, top, rel):
     return os.path.relpath(os.path.join(str(root), rel), str(top)).replace(os.sep, "/")
 
 
-def _prepare_tree(root, rep, dry_run, installed):
+def _check_tree(root):
     """Steps 3–4: a clean tree (except the files this upgrade already wrote on its branch)."""
-    if dry_run:
-        return rep
     dirty = dirty_paths(root)
     journal = read_journal(root)
     allowed = set()
@@ -941,8 +1020,6 @@ def _prepare_tree(root, rep, dry_run, installed):
     if blocking:
         raise Refused("the working tree has uncommitted changes: %s — commit or stash them first"
                       % ", ".join(blocking[:20]) + (" …" if len(blocking) > 20 else ""))
-    rep.branch = ensure_branch(root, installed)["branch"]
-    return rep
 
 
 # --------------------------------------------------------------------------- branch and commit (§1.5)
@@ -1024,6 +1101,7 @@ def ensure_branch(root, installed=None):
     rc, out = _git(["checkout", "-q", "--no-track", "-b", ub, base], root)
     if rc != 0:
         raise Refused("could not create %s from %s: %s" % (ub, base, out.strip()[:200]))
+    _reset_journal(root)  # F-13: a journal of an earlier (merged, deleted) branch of the same name is stale
     return {"branch": ub, "base": base, "created": True, "switched": True}
 
 
@@ -1069,8 +1147,12 @@ def commit(root, picked_by, picked_at=None, answer=None, trailers=(), installed=
     message = title + "\n\n" + "\n".join(body) + "\n"
     if lines_tr:
         message += "\n" + "\n".join(lines_tr) + "\n"
+    ignored = [f for f in files if _git(["check-ignore", "-q", "--", f], top)[0] == 0]
+    if ignored:  # F-12: refused before anything is staged
+        raise Refused("git ignores %s: the upgrade cannot commit it (edit it by hand)" % ", ".join(ignored))
     rc, out = _git(["add", "-A", "--"] + files, top)
     if rc != 0:
+        _git(["reset", "-q", "--"] + files, top)  # "refused, nothing changed": leave the index as it was
         raise Refused("git add failed: %s" % out.strip()[:200])
     rc, _ = _git(["diff", "--cached", "--quiet", "--"] + files, top)
     if rc == 0:
@@ -1090,7 +1172,10 @@ def commit(root, picked_by, picked_at=None, answer=None, trailers=(), installed=
     _, sha = _git(["rev-parse", "HEAD"], top)
     sha = sha.strip()
     journal.setdefault("commits", []).append(sha)
-    journal["at"] = audit.now_iso()
+    journal.setdefault("committed", []).append({"sha": sha, "steps": steps, "files": files})
+    # F-13: the next commit on this branch carries only what was applied after this one
+    journal.update({"applied": [], "files": [], "failed": {}, "not_run": [], "preview": None,
+                    "at": audit.now_iso()})
     _write_journal(root, journal)
     audit.append(pj.state_dir(root, create=True), {"event": "upgrade.commit", "sha": sha, "steps": steps})
     pr_body = ("Project upgrade %s → %s, planned from this project's state by `karvey-upgrade.py`.\n\n"
@@ -1100,6 +1185,17 @@ def commit(root, picked_by, picked_at=None, answer=None, trailers=(), installed=
                                                  ", ".join(steps) or "none", who, when, ", ".join(files)))
     return {"sha": sha, "branch": cur, "steps": steps, "files": files, "message": message, "pr_title": title,
             "pr_body": pr_body}
+
+
+def _journal_best_effort(root, journal, rep):
+    """Write the journal after a step; on failure report it (exit 1 with the file list), never a traceback."""
+    try:
+        _write_journal(root, journal)
+        return True
+    except (OSError, atomicio.AtomicIOError) as exc:
+        rep.lines.append("journal NOT written (%s): files changed so far: %s" % (exc, ", ".join(rep.files) or "none"))
+        rep.exit = EXIT_FINDINGS
+        return False
 
 
 def _write(root, rep, evals, top, common, installed):
@@ -1114,6 +1210,10 @@ def _write(root, rep, evals, top, common, installed):
     journal.update({"to": installed, "failed": {}, "not_run": [], "preview": rep.preview})
     todo = [(st, planned) for st, _, planned in evals if planned]
     sdir = pj.state_dir(root, create=True)
+    try:  # F-15: the journal must be writable before the first file is touched
+        _write_journal(root, journal)
+    except (OSError, atomicio.AtomicIOError) as exc:
+        raise Refused("the upgrade journal cannot be written (%s): nothing was applied" % exc)
     for n, (st, planned) in enumerate(todo):
         written = []
         try:
@@ -1139,7 +1239,7 @@ def _write(root, rep, evals, top, common, installed):
             journal["not_run"] = list(rep.not_run)
             journal["files"] = journal["files"] + [w for w in written if w not in journal["files"]]
             journal["at"] = audit.now_iso()
-            _write_journal(root, journal)
+            _journal_best_effort(root, journal, rep)
             audit.append(sdir, {"event": "upgrade.apply", "step": st["id"], "status": "failed", "files": written})
             rep.lines.append("%s: FAILED — %s" % (st["id"], reason))
             if rep.not_run:
@@ -1152,7 +1252,12 @@ def _write(root, rep, evals, top, common, installed):
             journal["applied"].append(st["id"])
         journal["files"] = journal["files"] + [w for w in written if w not in journal["files"]]
         journal["at"] = audit.now_iso()
-        _write_journal(root, journal)
+        if not _journal_best_effort(root, journal, rep):
+            rep.not_run = [s["id"] for s, _ in todo[n + 1:]]
+            if rep.not_run:
+                rep.lines.append("not run: %s" % ", ".join(rep.not_run))
+            rep.exit = EXIT_FINDINGS
+            return rep
         audit.append(sdir, {"event": "upgrade.apply", "step": st["id"], "status": "applied", "files": written})
         rep.lines.append("%s: applied (%s)" % (st["id"], ", ".join(written) or "no file"))
     return rep

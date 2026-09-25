@@ -68,12 +68,7 @@ One multi-select question (AskUserQuestion, the person's language). Every listed
 
 ### 5. Values for `needs-input` steps
 
-For each picked step whose status is `needs-input`, ask its `inputs_needed` (one question per step). Put the answers in a values file **outside the repository** (the session's scratch or temp dir), shaped `{"<step-id>": {"<key>": "<value>"}}`; the tool checks every value through its safe-value rules and refuses an unsafe one naming the key:
-
-```bash
-VALUES="$(mktemp "${TMPDIR:-/tmp}/karvey-upgrade-values.XXXXXX")"
-printf '%s\n' '{"team-settings": {"notifications.channel": "slack", "notifications.target": "#team-channel"}}' > "$VALUES"
-```
+For each picked step whose status is `needs-input`, ask its `inputs_needed` (one question per step). The answers are passed to the tool **on stdin** in step 8, as JSON shaped `{"<step-id>": {"<key>": "<value>"}}` inside a **quoted** heredoc (`<<'JSON'`): the person's words never reach a shell command line, and no file is written (a redirect to a file is a write the plan-gate may block). The tool accepts only the keys the plan proposed and checks every value through its safe-value rules, refusing an unsafe one by name.
 
 A step handed to `/karvey:karvey-init --settings` (no `project.json`) is not answered here: tell the person to run that skill first.
 
@@ -82,12 +77,12 @@ A step handed to `/karvey:karvey-init --settings` (no `project.json`) is not ans
 Fetch the integration branch when a remote exists (the tool itself never fetches), then create or switch to the upgrade branch:
 
 ```bash
-INTEG=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get branch_flow.integration --shell) || exit 1
-git remote get-url origin >/dev/null 2>&1 && git fetch origin "$INTEG"
+INTEG=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get branch_flow.integration --shell 2>/dev/null) || INTEG=""
+if git remote get-url origin >/dev/null 2>&1; then git fetch origin ${INTEG:+"$INTEG"}; fi
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" branch --json
 ```
 
-Keep the `branch` it returns (`chore/karvey-upgrade-<version>`): steps 9–10 write it **literally**. A dirty tree or an undeclared integration branch is refused by the tool with the paths / the key to set: relay it and stop.
+An undeclared `branch_flow.integration` is not an error here: the tool falls back to `origin/HEAD`, and the `base` it returns names the integration branch the PR targets. Keep the `branch` it returns (`chore/karvey-upgrade-<version>`): steps 9–10 write it **literally**. A dirty tree, or neither the key nor `origin/HEAD`, is refused by the tool with the paths / the key to set: relay it and stop.
 
 ### 7. Dry-run: show every diff
 
@@ -103,16 +98,27 @@ Show each step's unified diff **verbatim** (one diff block per step, not a summa
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" apply --steps "a,b" --preview "<preview id>" --json
 ```
 
-Add `--values "$VALUES"` when step 5 wrote one, and `--confirm-no-preview <id>` for each step confirmed on its own. Exit 3 "the tree changed since the preview" → run the dry-run again (step 7). Exit 1 → relay `applied` / `failed` / `not_run` and stop: the person decides whether to fix and re-run (`plan` then lists only what is left).
+When step 5 collected values, add `--values -` and the JSON as a quoted heredoc:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" apply --steps "a,b" --preview "<preview id>" --values - --json <<'JSON'
+{"team-settings": {"notifications.channel": "slack", "notifications.target": "#team-channel"}}
+JSON
+```
+
+(the dry-run of step 7 takes the same `--values -` heredoc). Add `--confirm-no-preview <id>` for each step confirmed on its own. Exit 3 "the tree changed since the preview" → run the dry-run again (step 7). Exit 1 → relay `applied` / `failed` / `not_run` and stop: the person decides whether to fix and re-run (`plan` then lists only what is left).
 
 ### 9. One commit, written by the tool
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" commit --picked-by "<the person>" --answer "<their words, short>" \
-  --trailer "Co-Authored-By=<the session's attribution line>" --json
+BODY="$(mktemp "${TMPDIR:-/tmp}/karvey-upgrade-pr.XXXXXX")"
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" commit --picked-by '<the person>' --answer-file - \
+  --pr-body-file "$BODY" --trailer 'Co-Authored-By=<the session attribution line>' --json <<'ANSWER'
+<their words, short>
+ANSWER
 ```
 
-The tool stages exactly the files it wrote and writes the message (`chore(karvey): project upgrade <from> → <to>`, `Steps`, `Picked-by`, `Picked-at`, `Answer`, the trailers). It prints `pr_title` and `pr_body`.
+The person's words go only through the quoted heredoc and their name in single quotes (a name containing `'` is written without it): nothing they typed is expanded by the shell. The tool stages exactly the files it wrote and writes the message (`chore(karvey): project upgrade <from> → <to>`, `Steps`, `Picked-by`, `Picked-at`, `Answer`, the trailers). It prints `pr_title` and writes `pr_body` to `$BODY`.
 
 ### 10. Push and open one PR — never merge
 
@@ -123,7 +129,7 @@ git push -u origin chore/karvey-upgrade-<version>
 Write the branch returned by step 6 literally (above, `<version>` is the installed version): Karvey's own
 prod-gate refuses a push whose destination is a shell variable ("the push destination cannot be resolved").
 
-Open **one** PR from the upgrade branch to the integration branch with `pr_title` / `pr_body`, using the repository's host (`project.json:git_platform`, or the `origin` URL): `gh pr create --base <integration> --head chore/karvey-upgrade-<version> --title … --body …` · `az repos pr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> …` · `glab mr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> …`. No PR tooling or no remote → print the exact commands for the person. A rejected push → report it with the retry command; the commit stays local. **Never merge**: the PR goes through the project's normal review.
+Open **one** PR from the upgrade branch to the integration branch with `pr_title` (single-quoted: it is the tool's fixed text) and the body file, using the repository's host (`project.json:git_platform`, or the `origin` URL): `gh pr create --base <integration> --head chore/karvey-upgrade-<version> --title '<pr_title>' --body-file "$BODY"` · `az repos pr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> --title '<pr_title>' --description "$(cat "$BODY")"` · `glab mr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> --title '<pr_title>' --description "$(cat "$BODY")"`. Never paste `pr_body` into a double-quoted argument: it contains backticks. No PR tooling or no remote → print the exact commands for the person. A rejected push → report it with the retry command; the commit stays local. **Never merge**: the PR goes through the project's normal review.
 
 ## What this skill never does
 

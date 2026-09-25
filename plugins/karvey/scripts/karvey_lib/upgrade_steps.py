@@ -105,11 +105,35 @@ def schema_migrate_proposed_fix(probe, params, values):
 SHIMS = {"plan-gate.sh": "plan_gate_hook", "git-flow-guard.sh": "git_flow_hook"}
 SHIPPED_SHIMS = "skills/karvey/hooks/"
 SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json")
+SHIM_DIR = ".claude/hooks/"
+
+
+def _names_shim(command, names):
+    """True when ``command`` runs the project copy ``.claude/hooks/<name>`` of one of ``names`` (relative, or
+    under ``$CLAUDE_PROJECT_DIR``) — not any command that merely contains the file name (F-19: a person's own
+    ``~/.claude/hooks/my-plan-gate.sh.v2`` stays)."""
+    for n in names:
+        pat = r"(?:\$\{?CLAUDE_PROJECT_DIR\}?/|(?<![\w~/.$}-]))\.claude/hooks/%s(?![\w.-])" % re.escape(n)
+        if re.search(pat, command):
+            return True
+    return False
+
+
+def _referenced_shims(data):
+    """The shim names the ``hooks`` entries of a settings document run (see :func:`_names_shim`)."""
+    found = set()
+    if isinstance(data, dict) and isinstance(data.get("hooks"), dict):
+        for groups in data["hooks"].values():
+            for grp in groups if isinstance(groups, list) else []:
+                for h in grp.get("hooks", []) if isinstance(grp, dict) and isinstance(grp.get("hooks"), list) else []:
+                    if isinstance(h, dict) and isinstance(h.get("command"), str):
+                        found.update(n for n in SHIMS if _names_shim(h["command"], [n]))
+    return found
 
 
 def _strip_hook_entries(data, names):
-    """``(new_data, removed)``: ``data["hooks"]`` without the command entries that name one of ``names``;
-    empty groups, events and an empty ``hooks`` object are dropped."""
+    """``(new_data, removed)``: ``data["hooks"]`` without the command entries that run one of ``names``
+    (:func:`_names_shim`); empty groups, events and an empty ``hooks`` object are dropped."""
     if not isinstance(data, dict) or not isinstance(data.get("hooks"), dict):
         return data, 0
     new = json.loads(json.dumps(data))
@@ -122,7 +146,7 @@ def _strip_hook_entries(data, names):
         for grp in groups:
             if isinstance(grp, dict) and isinstance(grp.get("hooks"), list):
                 kept = [h for h in grp["hooks"] if not (isinstance(h, dict) and isinstance(h.get("command"), str)
-                                                        and any(n in h["command"] for n in names))]
+                                                        and _names_shim(h["command"], names))]
                 removed += len(grp["hooks"]) - len(kept)
                 if not kept:
                     continue
@@ -141,7 +165,7 @@ def legacy_shims_check(probe, params):
     known = params.get("known_sha256") or {}
     copies, edited = [], []
     for name in SHIMS:
-        for rel in probe.glob(".claude/**/" + name):
+        for rel in probe.glob(SHIM_DIR + name):  # F-11: only the project's own copy, never a nested worktree's
             if probe.sha256(rel) in (known.get(name) or []):
                 copies.append((name, rel))
             else:
@@ -151,30 +175,45 @@ def legacy_shims_check(probe, params):
         shipped = probe.plugin_read(SHIPPED_SHIMS + name) or ""
         diffs.append("".join(difflib.unified_diff(shipped.splitlines(True), (probe.read_text(rel) or "").splitlines(True),
                                                   fromfile="shipped/" + name, tofile=rel)))
-    doc = probe.read_json(PROJECT_JSON) if copies else None
-    if copies and (doc is None or not isinstance(doc.data, dict)):
+    # F-14: an entry left pointing at a shim that is gone (a half-applied earlier run, or a copy deleted by hand)
+    # is still work: strip it and set the flag, so a partial failure never reads as "already satisfied".
+    copy_names = {name for name, _ in copies} | {name for name, _ in edited}
+    dangling = set()
+    for sf in SETTINGS_FILES:
+        sdoc = probe.read_json(sf)
+        if sdoc is not None:
+            dangling |= {n for n in _referenced_shims(sdoc.data) if n not in copy_names}
+    doc = probe.read_json(PROJECT_JSON) if (copies or dangling) else None
+    if (copies or dangling) and (doc is None or not isinstance(doc.data, dict)):
         edited += copies
         copies = []
+        dangling = set()
         diffs.append("(no readable docs/spec/project.json to carry enforcement.* — run /karvey:karvey-init "
                      "--settings first)\n")
-    if not copies:
+    if not copies and not dangling:
         if not edited:
             return StepResult("nothing")
         return StepResult("human", summary="%d locally edited shim cop%s: review by hand" % (
             len(edited), "y" if len(edited) == 1 else "ies"), diff="".join(diffs),
             instructions="These copies differ from every shipped version; nothing is deleted. Keep your change "
                          "or remove the copy and set project.json:enforcement.* yourself.")
-    edits = [Edit("delete", rel, before_sha256=probe.sha256(rel)) for _, rel in copies]
-    names = sorted({name for name, _ in copies})
-    removed_entries = 0
+    names = sorted({name for name, _ in copies} | dangling)
+    removed_entries, settings_edits, local_notes = 0, [], []
     for sf in SETTINGS_FILES:
         sdoc = probe.read_json(sf)
         if sdoc is None:
             continue
         new, n = _strip_hook_entries(sdoc.data, names)
-        if n:
-            removed_entries += n
-            edits.append(Edit("write", sf, before_sha256=sdoc.sha256, text=sdoc.dumps(new)))
+        if not n:
+            continue
+        if probe.is_ignored(sf):
+            # F-12: a git-ignored personal file cannot go through the upgrade commit: shown, not written
+            local_notes.append("".join(difflib.unified_diff(sdoc.text.splitlines(True), sdoc.dumps(new).splitlines(True),
+                                                            fromfile="a/" + sf, tofile="b/" + sf)))
+            continue
+        removed_entries += n
+        settings_edits.append(Edit("write", sf, before_sha256=sdoc.sha256, text=sdoc.dumps(new)))
+    deletes = [Edit("delete", rel, before_sha256=probe.sha256(rel)) for _, rel in copies]
     pdata = json.loads(json.dumps(doc.data))
     enf = pdata.get("enforcement") if isinstance(pdata.get("enforcement"), dict) else {}
     flags = []
@@ -183,14 +222,25 @@ def legacy_shims_check(probe, params):
         if enf.get(key) is not True:
             enf[key] = True
             flags.append("enforcement.%s = true" % key)
+    edits = []
     if flags:
         pdata["enforcement"] = enf
         edits.append(Edit("write", PROJECT_JSON, before_sha256=doc.sha256, text=doc.dumps(pdata)))
-    summary = "remove %s%s%s" % (", ".join(rel for _, rel in copies),
+    # F-14 order: the flag first, then the settings entries, the copies last — a stop midway never leaves the
+    # gate off (the flag is on, or the copy and its entry are both still there)
+    edits += settings_edits + deletes
+    if not edits:
+        return StepResult("human", summary="shim entries in a git-ignored settings file: edit by hand",
+                          diff="".join(local_notes), instructions="Remove these entries from your local settings "
+                          "file; enforcement.* is already set in docs/spec/project.json.")
+    summary = "remove %s%s%s" % (", ".join(rel for _, rel in copies) or "dangling shim entries",
                                   " + %d settings entr%s" % (removed_entries, "y" if removed_entries == 1 else "ies")
                                   if removed_entries else "",
                                   "; " + ", ".join(flags) if flags else "")
     res = StepResult("applies", summary=summary, edits=edits, diff="".join(diffs))
+    if local_notes:
+        res.warnings.append("git-ignored settings file(s) also run the shim: edit by hand (not committed):\n"
+                            + "".join(local_notes))
     if edited:
         res.warnings.append("%d locally edited cop%s left for a human" % (len(edited), "y" if len(edited) == 1
                                                                           else "ies"))
@@ -233,17 +283,25 @@ def _placeholders(node, path=""):
 
 def _set_value(blocks, key, value):
     top, _, rest = key.partition(".")
-    if top not in blocks or not rest or "." in rest:
+    if top not in blocks or not rest or "." in rest or not isinstance(blocks[top], dict) or rest not in blocks[top]:
+        # only the keys of the proposal itself (D1-8: no free notifications.* / management.* keys)
         raise sv.UnsafeValue(key, "settings", "not a settable key of the blocks this step adds (%s)"
                              % ", ".join("%s.<key>" % b for b in sorted(blocks)), value)
+    if not (isinstance(value, str) or (isinstance(value, list) and all(isinstance(v, str) for v in value))):
+        raise sv.UnsafeValue(key, "settings", "a string (or a list of strings for events)", value)  # F-16
     blocks[top][rest] = value
+
+
+def _str_or_none(v):
+    return v if isinstance(v, str) else None
 
 
 def _check_block_values(blocks, cfg):
     """Every value the person gave goes through safe_values for its kind (REQ-UP-019, REQ-W1-093)."""
     nt = blocks.get("notifications")
     if isinstance(nt, dict):
-        ch = sv.check_enum(sv.CHANNEL_ALIASES.get(nt.get("channel"), nt.get("channel")), cfg.CHANNELS,
+        raw = _str_or_none(nt.get("channel"))
+        ch = sv.check_enum(sv.CHANNEL_ALIASES.get(raw, raw) if raw is not None else nt.get("channel"), cfg.CHANNELS,
                            "notifications.channel")
         nt["channel"] = ch
         tgt = nt.get("target", "")
@@ -259,10 +317,13 @@ def _check_block_values(blocks, cfg):
             sv.check_enum(nt["detail"], cfg.DETAILS, "notifications.detail")
     mg = blocks.get("management")
     if isinstance(mg, dict):
-        tool = sv.check_enum(cfg.LEGACY_TOOLS.get(mg.get("tool"), mg.get("tool")), cfg.TOOLS, "management.tool")
+        raw = _str_or_none(mg.get("tool"))
+        tool = sv.check_enum(cfg.LEGACY_TOOLS.get(raw, raw) if raw is not None else mg.get("tool"), cfg.TOOLS,
+                             "management.tool")
         loc = mg.get("location")
-        if isinstance(loc, str) and not PLACEHOLDER.match(loc) and "{change-id}" not in loc:
-            sv.check_location(tool, loc, key="management.location")
+        if isinstance(loc, str) and not PLACEHOLDER.match(loc):
+            # D1-8: a `{change-id}` template is checked with a sample id in its place, never skipped
+            sv.check_location(tool, loc.replace("{change-id}", "sample-change"), key="management.location")
         if isinstance(mg.get("sprints"), str) and not PLACEHOLDER.match(mg["sprints"]):
             sv.check_sprints(tool, mg["sprints"], key="management.sprints")
 
@@ -521,6 +582,8 @@ def changes_in_flight_check(probe, params):
             try:
                 for b in st.compute_next(data).get("blockers") or []:
                     g = b.split(" ", 1)[0]
+                    if g == mapped:
+                        continue  # F-18: the phase the change sits in awaits its own approval: normal work
                     if g not in gates and b.endswith("not approved or skipped"):
                         gates.append(g)
             except Exception as exc:  # a spec the state tool cannot read is reported, never fixed

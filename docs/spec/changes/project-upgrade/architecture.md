@@ -682,7 +682,7 @@ E-04, E-07, E-08, E-10, E-15, E-16, E-17, E-18, E-19, E-27 each have a named tes
 2. **Release checklist.** `karvey-deploy` and `rules/versioning.md` gain one line: "if the upgrade surface changed
    (L-37 warning), add an upgrade step with `since` = this release **or** a `No project upgrade needed: <reason>`
    line, then `karvey-upgrade.py surface --write`." L-19/L-20 keep the versioning rules consistent.
-3. **Other projects (HainTech, Tarien).** Nothing is pushed to them. Each person gets the offer in their own clone
+3. **Other projects of the team.** Nothing is pushed to them. Each person gets the offer in their own clone
    on the first startup after the update (D-20). The PR goes through that repo's normal review.
 4. **Deprecated shims.** Unchanged until 4.0.0. `legacy-shims` now removes the project copies, which is the path
    wave1 §7.4 proposed by hand.
@@ -799,7 +799,7 @@ Component keys: **HK** hook offer (§1.2) · **SR** seen record + `seen` (§1.3)
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| The probe slows every startup in big repos (137 spec files at HainTech) | Medium | Medium | short-circuit on the first hit; `scan` steps run last; 1.5 s deadline; `ms` logged to tune it |
+| The probe slows every startup in big repos (a large repository: 137 spec files) | Medium | Medium | short-circuit on the first hit; `scan` steps run last; 1.5 s deadline; `ms` logged to tune it |
 | The offer shows on every version because a human step never passes (e.g. the owner keeps a versioned statusline) | Medium | Low | once per version only; "Not for this version" is one answer; accepted as the intended nudge |
 | Existing session tables change behaviour | High if unhandled | Medium | the runner seeds seen = installed by default (E-27) |
 | L-37 makes rule typo fixes noisy at release | Medium | Low | a one-line `No project upgrade needed: wording only` satisfies it; during `[Unreleased]` it is only a warning |
@@ -822,3 +822,4 @@ None. See *Cloud infrastructure* after §1.10: `cloud.provider: none`, infra ski
 | Date | Version | Change |
 |---|---|---|
 | 2026-09-25 | 1 | First architecture from REQ-UP-001..032 (D-21); architect decisions A-01..A-14 recorded for the owner. |
+| 2026-09-25 | 1.1 | QA wording only: company names removed from §7 item 3 and §12 (public repo). Behaviour fixes F-05..F-20 are recorded in `findings.md`; the spec-gaps F-08, F-21..F-27 wait for karvey-iterate. |

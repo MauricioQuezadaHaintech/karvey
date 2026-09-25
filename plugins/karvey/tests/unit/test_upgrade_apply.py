@@ -260,7 +260,8 @@ class WriteHalf(Base):
         real = upgrade.atomicio.write_text_atomic
 
         def spy(path, text, expected_sha256=None, mode=None):
-            calls.append(expected_sha256)
+            if not str(path).endswith(upgrade.JOURNAL_NAME):  # the journal is written first (F-15)
+                calls.append(expected_sha256)
             return real(path, text, expected_sha256=expected_sha256, mode=mode)
         upgrade.atomicio.write_text_atomic, orig = spy, real
         try:
