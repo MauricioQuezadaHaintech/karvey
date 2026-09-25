@@ -127,7 +127,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F6: Living spec merged before production
 
-- [ ] E1.F6.T1 [Backend] `karvey-spec-merge.py --check` (merged | unmerged with ids | conflict), read-only — est: 10min (P)
+- [x] E1.F6.T1 [Backend] `karvey-spec-merge.py --check` (merged | unmerged with ids | conflict), read-only — est: 10min (P)
 - [ ] E1.F6.T2 [Backend] Archive: `--check` first, move and close only, merge on `chore/archive-{id}` only when unmerged — est: 6min (depends E1.F6.T1)
 - [ ] E1.F6.T3 [Backend] L-49 (deployed with unmerged delta → error) + dashboard `deployed N d, not archived` (`deployed_stall_days: 7`) — est: 10min (depends E1.F6.T1, E1.F2.T7)
 
@@ -225,7 +225,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F5.T7 [Backend] | ⬜ todo | 6 | — | — |  |
 | E1.F5.T8 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F5.T9 [Backend] | ⬜ todo | 5 | — | — |  |
-| E1.F6.T1 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F6.T1 [Backend] | ✅ done | 10 | 5 | 0 |  |
 | E1.F6.T2 [Backend] | ⬜ todo | 6 | — | — |  |
 | E1.F6.T3 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F7.T1 [Backend] | ⬜ todo | 15 | — | — |  |

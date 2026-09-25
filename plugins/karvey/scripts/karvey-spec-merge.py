@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """karvey-spec-merge.py — deterministic spec-delta merge (architecture §1.9, wave1-hardening).
 
-    karvey-spec-merge.py <change> [--capability NAME] [--date YYYY-MM-DD] [--dry-run] [--root DIR] [--json]
+    karvey-spec-merge.py <change> [--capability NAME] [--date YYYY-MM-DD] [--dry-run | --check] [--root DIR] [--json]
 
 Merges ``docs/spec/changes/<change>/spec-delta.md`` into the living spec
 ``docs/spec/specs/<capability>/spec.md`` (REQ-W1-065, REQ-W1-066). Python >= 3.9, stdlib only.
@@ -26,6 +26,8 @@ Behaviour:
 - REMOVED → the item becomes ``- ~~**<ID>**~~ — REMOVED by `<change>` (<date>): <reason>``. A second
   run is a no-op; a missing id is an error.
 - ``--dry-run`` prints the unified diff and writes nothing.
+- ``--check`` (wave2-structural) writes nothing and answers ``merged`` · ``unmerged`` (the pending ids) ·
+  ``conflict`` (the ids that cannot merge); exit 0 only for ``merged``.
 
 Exit: 0 applied or no-op · 1 conflict / missing id (nothing written) · 2 usage · 3 unparsable delta
 (with the line number) or a file over 5 MB · 4 file missing · 5 internal.
@@ -449,6 +451,8 @@ def run(args):
     rel_target = os.path.relpath(str(target), str(root)).replace(os.sep, "/")
     result = {"change": args.change, "capability": cap, "target": rel_target, "dry_run": bool(args.dry_run)}
     result.update(report)
+    if args.check:
+        return check_result(result, report, errors, rel_target)
     if errors:
         for e in errors:
             e["file"] = rel_target
@@ -470,12 +474,34 @@ def run(args):
     return kl.EXIT_OK, result, [], "%s merged into %s (%s)" % (args.change, rel_target, summary)
 
 
+def check_result(result, report, errors, rel_target):
+    """``--check`` (wave2 REQ-W2-054, 055): ``merged`` · ``unmerged`` (ids) · ``conflict`` (ids); writes nothing."""
+    pending = report["added"] + report["modified"] + report["removed"]
+    conflicts = report["conflicts"] + report["missing"]
+    if conflicts:
+        status, code = "conflict", kl.EXIT_FINDINGS
+        human = "%s: conflict in %s — %s (merge stops; see --dry-run)" % (
+            result["change"], rel_target, "; ".join(e["message"] for e in errors))
+    elif pending:
+        status, code = "unmerged", kl.EXIT_FINDINGS
+        human = "%s: unmerged into %s — %s" % (result["change"], rel_target, ", ".join(pending))
+    else:
+        status, code = "merged", kl.EXIT_OK
+        human = "%s: already merged into %s" % (result["change"], rel_target)
+    result.update({"check": True, "status": status, "pending": pending, "conflict_ids": conflicts})
+    for e in errors:
+        e["file"] = rel_target
+    return code, result, errors if status == "conflict" else [], human
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="karvey-spec-merge.py", description=__doc__.split("\n\n")[0])
     p.add_argument("change", help="change id (docs/spec/changes/<change>/spec-delta.md)")
     p.add_argument("--capability", help="living-spec capability (default: spec.json:capability)")
     p.add_argument("--date", help="merge date YYYY-MM-DD (default: today)")
     p.add_argument("--dry-run", action="store_true", help="print the unified diff, write nothing")
+    p.add_argument("--check", action="store_true",
+                   help="read-only: merged | unmerged (ids) | conflict (ids); exit 0 only when merged")
     p.add_argument("--root", help="Karvey project root (default: walk up from the cwd)")
     p.add_argument("--json", action="store_true", help="print one JSON envelope")
     return p
