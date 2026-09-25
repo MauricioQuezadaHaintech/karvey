@@ -100,8 +100,146 @@ class Dispatch(unittest.TestCase):
 
     def test_main_unknown_event_and_session_are_not_blocking(self):
         self.assertEqual(kh.main(["nosuch"]), 0)
-        self.assertEqual(kh.main(["session", "startup"]), 0)
+        import os
+        import tempfile
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": d}):
+            # never the repository under test: the startup offer may write its seen record there
+            self.assertEqual(kh.main(["session", "startup"]), 0)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------------------------------------------------------- the project-upgrade offer (REQ-UP-002..006)
+import os  # noqa: E402
+import shutil  # noqa: E402
+from unittest import mock  # noqa: E402
+
+import _gitrepo as g  # noqa: E402
+import karvey_lib  # noqa: E402
+from karvey_lib import upgrade, upgrade_steps  # noqa: E402
+
+CLEAN_PROJECT = {
+    "git_platform": "github", "repos": ["repo-a"], "spec_repo": "repo-a",
+    "branch_flow": {"feature_prefix": "feature/", "integration": "main", "production": "main"},
+    "enforcement": {"prod_gate_hook": True, "plan_marker_ttl_min": 120},
+    "notifications": {"channel": "none", "target": "", "via": "", "events": []},
+    "management": {"tool": "markdown", "location": "docs/spec/changes/{change-id}/PLAN.md"},
+    "standards": {},
+}
+
+
+class UpgradeOffer(unittest.TestCase):
+    def setUp(self):
+        g.isolate_git()
+        self.t = g.TempDir()
+        self.home = self.t.path / "home"
+        g.write(self.home, ".claude/settings.json", {"statusLine": dict(upgrade_steps.STATUSLINE_BLOCK)})
+        self._env = mock.patch.dict(os.environ, {"HOME": str(self.home)})
+        self._env.start()
+        self.clean = g.init(self.t.path / "clean")
+        g.write(self.clean, "docs/spec/project.json", CLEAN_PROJECT)
+        g.commit_all(self.clean)
+        self.legacy = self.t.path / "legacy"
+        shutil.copytree(str(_path.FIXTURES_DIR / "upgrade" / "legacy-project"), str(self.legacy))
+        g.init(self.legacy, branch="dev")
+        g.commit_all(self.legacy)
+
+    def tearDown(self):
+        self._env.stop()
+        self.t.cleanup()
+
+    def offer(self, root, mode="startup", env=None):
+        return kh.upgrade_offer(str(root), None, mode, env or {})
+
+    def test_only_on_startup(self):
+        for mode in ("resume", "compact", "clear"):
+            self.assertEqual(self.offer(self.legacy, mode), [])
+        self.assertIsNone(upgrade.read_seen(self.legacy))
+
+    def test_silent_outside_a_karvey_project_no_record(self):
+        plain = g.init(self.t.path / "plain")
+        g.write(plain, "docs/spec/openapi.yaml", "x: 1\n")
+        self.assertEqual(self.offer(plain), [])
+        self.assertFalse((plain / ".git" / "karvey").exists())
+
+    def test_silent_when_the_version_was_resolved(self):
+        upgrade.write_seen(self.legacy, karvey_lib.__version__, "declined")
+        self.assertEqual(self.offer(self.legacy), [])
+
+    def test_nothing_applies_records_empty_and_stays_silent(self):
+        self.assertEqual(self.offer(self.clean), [])
+        rec = upgrade.read_seen(self.clean)
+        self.assertEqual((rec["resolution"], rec["version"]), ("empty", karvey_lib.__version__))
+
+    def test_found_gives_two_bounded_lines(self):
+        lines = self.offer(self.legacy)
+        self.assertEqual(len(lines), 2)
+        for line in lines:
+            self.assertLessEqual(len(line), 300)
+        self.assertIn("no upgrade resolved yet in this clone", lines[0])
+        self.assertIn("→ %s: do you want a plan" % karvey_lib.__version__, lines[1])
+        self.assertIn("/karvey:karvey-upgrade", lines[1])
+        self.assertIn("Not for this version", lines[1])
+        self.assertIsNone(upgrade.read_seen(self.legacy), "an unanswered offer records nothing")
+        upgrade.write_seen(self.legacy, "3.0.0", "declined")
+        lines = self.offer(self.legacy)
+        self.assertIn("last resolved in this clone 3.0.0", lines[0])
+        self.assertIn('"Karvey 3.0.0 → %s' % karvey_lib.__version__, lines[1])
+
+    def test_the_plugin_path_is_shell_quoted(self):
+        with mock.patch.object(kh, "kl_plugin_root", return_value="/opt/a b/karvey"):
+            lines = self.offer(self.legacy)
+        self.assertIn("python3 '/opt/a b/karvey/scripts/karvey-upgrade.py' seen --decline", lines[0])
+
+    def test_timeout_and_a_raising_check_offer(self):
+        lines = self.offer(self.clean, env={kh.UPGRADE_PROBE_ENV: "0"})
+        self.assertEqual(len(lines), 2)
+        self.assertIsNone(upgrade.read_seen(self.clean), "a timeout records nothing")
+        with mock.patch.object(upgrade, "any_applicable", return_value="failed"):
+            self.assertEqual(len(self.offer(self.clean)), 2)
+
+    def test_the_test_override_can_only_lower_the_budget(self):
+        seen = {}
+
+        def spy(root, deadline, **kw):
+            seen["left"] = deadline - __import__("time").monotonic()
+            return "found"
+        with mock.patch.object(upgrade, "any_applicable", side_effect=spy):
+            self.offer(self.clean, env={kh.UPGRADE_PROBE_ENV: "999999"})
+        self.assertLessEqual(seen["left"], 1.5)
+
+    def test_bad_catalogue_or_version_is_one_line_record_unchanged(self):
+        bad = self.t.path / "bad.json"
+        bad.write_text("{not json", encoding="utf-8")
+        with mock.patch.object(upgrade, "CATALOGUE_PATH", bad):
+            lines = self.offer(self.clean)
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(lines[0].startswith("[karvey] upgrade offer unavailable: "))
+        self.assertIsNone(upgrade.read_seen(self.clean))
+        with mock.patch.object(karvey_lib, "__version__", "3.13"):
+            lines = self.offer(self.clean)
+        self.assertEqual(len(lines), 1)
+        self.assertIn("not a release number", lines[0])
+        self.assertIsNone(upgrade.read_seen(self.clean))
+
+    def test_any_exception_is_one_line_and_the_session_text_is_still_produced(self):
+        with mock.patch.object(upgrade, "read_seen", side_effect=RuntimeError("boom")):
+            self.assertEqual(self.offer(self.legacy), ["[karvey] upgrade offer unavailable: RuntimeError: boom"])
+            text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)})
+        self.assertIn("team settings not set", text)
+        self.assertIn("upgrade offer unavailable: RuntimeError: boom", text)
+
+    def test_session_text_places_the_offer(self):
+        text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)})
+        lines = text.splitlines()
+        self.assertTrue(lines[0].startswith("Karvey (info): team settings"))
+        self.assertTrue(lines[1].startswith("Karvey (upgrade): "))
+        g.write(self.legacy, "docs/spec/agent/manifest.md", "# me\n")
+        text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)})
+        first = text.split("=== First action ===", 1)[1].strip().splitlines()
+        self.assertTrue(first[0].startswith("Run `/karvey-checkpoint restore`"))
+        self.assertTrue(first[3].startswith("Karvey (upgrade): "), first)
+        self.assertEqual(kh.session_text("resume", {"CLAUDE_PROJECT_DIR": str(self.legacy)}).count("(upgrade)"), 0)

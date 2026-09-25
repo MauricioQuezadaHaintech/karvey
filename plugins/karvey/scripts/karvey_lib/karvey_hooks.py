@@ -33,6 +33,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import sys
 import threading
 import time
@@ -549,6 +550,92 @@ def _origin_head(root):
     return out[len("origin/"):] if rc == 0 and out.startswith("origin/") else None
 
 
+UPGRADE_PROBE_ENV = "KARVEY_TEST_UPGRADE_PROBE_MS"  # tests only: it can only LOWER the budget (→ offer shown)
+
+
+def _cap(line, limit):
+    return line if len(line) <= limit else line[:max(0, limit - 1)] + "\u2026"
+
+
+def upgrade_offer(start, team_root, mode, env):
+    """The once-per-version project-upgrade offer (project-upgrade §1.2): ``[]`` (silent), two lines (the offer
+    and the instruction) or one line ``[karvey] upgrade offer unavailable: <reason>``.
+
+    Only on ``startup`` and only in a Karvey project (the settings notice's test). It never fetches and never
+    resolves the offer itself: it writes the seen record only when every step is ``nothing`` (``empty``); an
+    answer is recorded by ``karvey-upgrade.py seen`` or the upgrade skill, an unanswered offer comes back."""
+    if mode != "startup":
+        return []
+    cfg = defaults().get("session", {})
+    limit = int(cfg.get("offer_line_max", 300))
+
+    def unavailable(reason):
+        return [_cap("[karvey] upgrade offer unavailable: %s" % reason, limit)]
+    try:
+        kp = pj.find_root(start=start)
+        if kp is None and team_root and pj.is_karvey_project(team_root):
+            kp = team_root
+        if kp is None:
+            return []
+        from karvey_lib import __version__ as installed, upgrade  # absolute: the hook also runs as a script
+        if not upgrade.VERSION_RE.match(installed or ""):
+            return unavailable("plugin version %r is not a release number" % (installed,))
+        seen = upgrade.read_seen(kp)
+        if seen is not None and seen["version"] == installed:
+            return []
+        budget = int(cfg.get("upgrade_probe_ms", 1500))
+        forced = (env or {}).get(UPGRADE_PROBE_ENV)
+        if forced is not None and str(forced).isdigit():
+            budget = min(budget, int(forced))
+        t0 = time.monotonic()
+        try:
+            result = upgrade.any_applicable(kp, t0 + budget / 1000.0)
+        except upgrade.CatalogueError as exc:
+            _offer_audit(kp, seen, installed, "unavailable", t0)
+            return unavailable(str(exc))
+        if result == "none":
+            try:
+                upgrade.write_seen(kp, installed, "empty")
+            except upgrade.SeenWriteError as exc:
+                return [_cap(str(exc), limit)]
+            _offer_audit(kp, seen, installed, "empty", t0)
+            return []
+        _offer_audit(kp, seen, installed, "shown" if result == "found" else result, t0)
+        frm = seen["version"] if seen else None
+        tool = shlex.quote(os.path.join(kl_plugin_root(), "scripts", "karvey-upgrade.py"))
+        decline = "python3 %s seen --decline" % tool
+        first = "Karvey (upgrade): installed %s, %s \u2014 project upgrade steps may apply; to decline: %s" % (
+            installed, "last resolved in this clone %s" % frm if frm else "no upgrade resolved yet in this clone",
+            decline)
+        if len(first) > limit:
+            first = ("Karvey (upgrade): installed %s, %s \u2014 project upgrade steps may apply; to decline: run "
+                     "scripts/karvey-upgrade.py seen --decline from the Karvey plugin" % (
+                         installed, "last resolved here %s" % frm if frm else "none resolved here"))
+        second = ('Ask ONE question (AskUserQuestion, their language): "Karvey %s\u2192 %s: do you want a plan '
+                  'to upgrade this project?" \u2014 "Yes, show me the plan (Recommended)" \u2192 /karvey:karvey-upgrade'
+                  ' \u00b7 "Not for this version" \u2192 the decline command above. No answer or cannot ask: '
+                  'record nothing.' % (frm + " " if frm else "", installed))
+        return [_cap(first, limit), _cap(second, limit)]
+    except Exception as exc:  # open: the offer must never break the session (REQ-UP-006)
+        return unavailable("%s: %s" % (type(exc).__name__, exc))
+
+
+def kl_plugin_root():
+    from karvey_lib import PLUGIN_ROOT
+    return str(PLUGIN_ROOT)
+
+
+def _offer_audit(kp, seen, installed, result, t0):
+    """``upgrade.offer`` audit line — only where the state dir already exists (the offer writes nothing else)."""
+    try:
+        d = pj.state_dir(kp, create=False)
+        if d.is_dir():
+            audit.append(d, {"event": "upgrade.offer", "from": seen["version"] if seen else None, "to": installed,
+                             "result": result, "duration_ms": int((time.monotonic() - t0) * 1000)})
+    except Exception:
+        pass
+
+
 def session_text(mode, env):
     """The SessionStart context as text ('' when there is nothing to say)."""
     start = env.get("CLAUDE_PROJECT_DIR") or env.get("PWD") or os.getcwd()
@@ -564,7 +651,7 @@ def session_text(mode, env):
     out = []
     if root is None:
         n = settings_notice(start, None, mode, env)
-        return n or ""
+        return "\n".join([x for x in [n] + upgrade_offer(start, None, mode, env) if x])
     rel = os.path.relpath(start, root) if start != root else ""
     top = rel.split(os.sep, 1)[0] if rel and not rel.startswith("..") else ""
     name, role, profile, board = resolve_profile(root, cfg, kind, top)
@@ -626,6 +713,7 @@ def session_text(mode, env):
         out.append("scheduled tasks and proposes the next step. A hook cannot do any of that.")
     else:
         out.append("Nothing pending to restore. Re-read the board before starting.")
+    out.extend(upgrade_offer(start, root, mode, env))
     if act["reason"] == "several":
         out.append("(several active changes: %s \u2014 none selected)" % ", ".join(act["candidates"]))
     return "\n".join(out)
