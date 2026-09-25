@@ -371,3 +371,58 @@ def compute_all(changes, frm, to, lane=None):
     return {"total": compute(changes, frm, to),
             "lanes": {k: compute(v, frm, to) for k, v in sorted(groups.items())},
             "changes": sorted(c["id"] for c in changes)}
+
+
+# --------------------------------------------------------------------------- readiness (REQ-W2-010, 086)
+READY_AT = 4
+MEASURED_PHASES = ("deployed", "archived")
+
+
+def is_measured(spec):
+    """Deployed or archived, with a ``lane``, a timed ``phase_history`` and at least one gate outcome (A-06)."""
+    if spec.get("phase") not in MEASURED_PHASES or not (isinstance(spec.get("lane"), str) and spec["lane"]):
+        return False
+    hist = _list(spec, "phase_history")
+    if not hist or not all(parse_dt(e.get("entered_at")) for e in hist):
+        return False
+    return bool(_list(spec, "gate_outcomes"))
+
+
+def readiness(records, check_ids):
+    """``{measured, measured_changes, checks: {id: {would_refuse, confirmed, text}}, ready, text}``.
+
+    Each record: ``{id, spec, findings, hits, strict_errors}`` — ``hits`` are the ``checks.jsonl`` lines,
+    ``strict_errors`` the number of ``validate --strict`` errors (``schema.strict`` is computed, not recorded)."""
+    measured = sorted(r["id"] for r in records if is_measured(spec_of(r)))
+    checks = {}
+    for cid in check_ids:
+        hits = confirmed = 0
+        seen = False
+        for r in records:
+            if cid == "schema.strict":
+                if r.get("strict_errors") is not None:
+                    seen = True
+                    if r["strict_errors"]:
+                        hits += 1
+                continue
+            finds = {f.get("id"): f for f in (r.get("findings") or [])}
+            for h in r.get("hits") or []:
+                if h.get("check") != cid or not h.get("would_refuse"):
+                    continue
+                seen = True
+                hits += 1
+                f = finds.get(h.get("finding"))
+                if f and f.get("type") in ("bug", "spec-gap") and f.get("status") not in ("open", "rejected"):
+                    confirmed += 1
+        entry = {"would_refuse": hits, "confirmed": confirmed}
+        if cid == "schema.strict":
+            entry["computed"] = True
+        entry["text"] = ("no data" if not seen else
+                         "%d would refuse · %d confirmed" % (hits, confirmed) if cid != "schema.strict" else
+                         "%d change(s) with strict errors (computed)" % hits)
+        checks[cid] = entry
+    n = len(measured)
+    ready = n >= READY_AT
+    text = ("ready for 4.0: %d of %d measured changes" % (n, READY_AT) if ready
+            else "not ready: %d of %d measured changes" % (n, READY_AT))
+    return {"measured": n, "measured_changes": measured, "checks": checks, "ready": ready, "text": text}

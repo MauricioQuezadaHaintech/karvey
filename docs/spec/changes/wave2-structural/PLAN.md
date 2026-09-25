@@ -76,7 +76,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F1.T5 [Backend] State tool: `next` prints each blocker once (F-26) — est: 5min (depends E1.F1.T4)
 - [x] E1.F1.T6 [Backend] `karvey_lib/metrics.py`: one pure function per metric returning `(value|None, reasons)`, per lane and total — est: 15min (depends E1.F1.T1) (P)
 - [x] E1.F1.T7 [Backend] `karvey-context.py --metrics [--from --to --as-of --lane --json]`: read-only, byte-identical, table + JSON — est: 12min (depends E1.F1.T6, E1.F1.T4)
-- [ ] E1.F1.T8 [Backend] `--readiness`: measured changes (A-06), would-refuse / confirmed per check from `checks.jsonl`, `schema.strict` computed on the fly, `ready for 4.0: N of 4` — est: 10min (depends E1.F1.T7, E1.F1.T2)
+- [x] E1.F1.T8 [Backend] `--readiness`: measured changes (A-06), would-refuse / confirmed per check from `checks.jsonl`, `schema.strict` computed on the fly, `ready for 4.0: N of 4` — est: 10min (depends E1.F1.T7, E1.F1.T2)
 - [ ] E1.F1.T9 [Backend] Baseline of this repo + L-48 (baseline before any Wave 2 default is set here) — est: 8min (depends E1.F1.T7)
 - [ ] E1.F1.T10 [Backend] `karvey-retro` on the method's artifacts: metrics, findings by type and phase, estimate accuracy, judge cost, `retro-{date}.md`, actions as `process` BL-NN with owner, follow-up of previous actions, `--per-person` optional — est: 10min (depends E1.F1.T7) (P)
 - [ ] E1.F1.T11 [Backend] Tracker `log_time` column per tool (`none` → actual columns) + impl text + L-50 — est: 8min (P)
@@ -189,7 +189,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F1.T5 [Backend] | ✅ done | 5 | 3 | 0 | done-when grep prints 0 now (change is in impl, no blocker); the duplicate is reproduced by test_state_next BlockersOnce |
 | E1.F1.T6 [Backend] | ✅ done | 15 | 9 | 0 |  |
 | E1.F1.T7 [Backend] | ✅ done | 12 | 7 | 0 |  |
-| E1.F1.T8 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F1.T8 [Backend] | ✅ done | 10 | 6 | 0 |  |
 | E1.F1.T9 [Backend] | ⬜ todo | 8 | — | — |  |
 | E1.F1.T10 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F1.T11 [Backend] | ⬜ todo | 8 | — | — |  |

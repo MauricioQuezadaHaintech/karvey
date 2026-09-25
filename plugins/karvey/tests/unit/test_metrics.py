@@ -172,5 +172,51 @@ class Cli(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+class Readiness(unittest.TestCase):
+    """@req REQ-W2-010 REQ-W2-086 — ``karvey-context.py --readiness``."""
+
+    def setUp(self):
+        self.t = g.TempDir()
+        self.root = self.t.path / "proj"
+        shutil.copytree(str(FIX), str(self.root))
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def readiness(self):
+        code, out = run_ctx("--root", str(self.root), "--readiness", "--json")
+        self.assertEqual(code, 0)
+        return json.loads(out)["result"]
+
+    def test_REQ_W2_086_two_measured_not_ready(self):
+        r = self.readiness()
+        self.assertEqual(r["measured_changes"], ["alpha", "beta"])
+        self.assertEqual(r["text"], "not ready: 2 of 4 measured changes")
+
+    def test_REQ_W2_010_five_measured_counts_per_check(self):
+        arch = self.root / "docs/spec/changes/archive"
+        for n in ("epsilon", "zeta", "eta"):
+            d = arch / ("2026-09-13-" + n)
+            shutil.copytree(str(arch / "2026-09-10-alpha"), str(d))
+            spec = json.loads((d / "spec.json").read_text())
+            spec["change_id"] = n
+            (d / "spec.json").write_text(json.dumps(spec, indent=2))
+        hits = [{"check": "lane.diff", "at": "2026-09-10T10:00:00-03:00", "mode": "warn", "would_refuse": True,
+                 "detail": "lane exceeded: 5 > 3 code files", "finding": "F-1"},
+                {"check": "lane.diff", "at": "2026-09-10T11:00:00-03:00", "mode": "warn", "would_refuse": True,
+                 "detail": "lane exceeded", "finding": "F-3"},
+                {"check": "release.manifest", "at": "2026-09-10T12:00:00-03:00", "mode": "warn",
+                 "would_refuse": True, "detail": "unmapped abc", "finding": None}]
+        (arch / "2026-09-10-alpha/checks.jsonl").write_text("".join(json.dumps(h) + "\n" for h in hits))
+        r = self.readiness()
+        self.assertEqual(r["measured"], 5)
+        self.assertEqual(r["text"], "ready for 4.0: 5 of 4 measured changes")
+        self.assertEqual((r["checks"]["lane.diff"]["would_refuse"], r["checks"]["lane.diff"]["confirmed"]), (2, 1))
+        self.assertEqual(r["checks"]["release.manifest"]["would_refuse"], 1)
+        self.assertEqual(r["checks"]["coverage.requirements"]["text"], "no data")
+        self.assertTrue(r["checks"]["schema.strict"]["computed"])
+        self.assertEqual(sorted(r["checks"]), sorted(__import__("karvey_lib.modes").modes.check_ids()))
+
+
 if __name__ == "__main__":
     unittest.main()

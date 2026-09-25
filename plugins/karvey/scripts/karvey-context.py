@@ -5,6 +5,7 @@
                       [--section overview|open-work|approvals|enforcement|calibration|convergence|close-report]
                       [--json]
     karvey-context.py --metrics [--from YYYY-MM-DD --to YYYY-MM-DD] [--as-of YYYY-MM-DD] [--lane L] [--json]
+    karvey-context.py --readiness [--json]
 
 - Opens every file read-only and never writes, also under ``--json`` (REQ-W1-072). JSON is parsed as
   JSON; Markdown tables are parsed by header name (``Type``, ``Status``, …), never by position.
@@ -46,7 +47,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import outbox as obx  # noqa: E402
-from karvey_lib import approval, audit, metrics as mx, project as pj  # noqa: E402
+from karvey_lib import approval, audit, metrics as mx, modes, project as pj  # noqa: E402
 
 TOOL = "karvey-context"
 SECTIONS = ("overview", "open-work", "approvals", "enforcement", "close-report", "calibration", "convergence")
@@ -915,6 +916,43 @@ def metrics_view(args, rd):
     return res
 
 
+def readiness_records(rd):
+    """Every change (active and archived) with its hits and its ``validate --strict`` error count."""
+    base = rd.root / pj.CHANGES_DIR
+    dirs = []
+    if base.is_dir():
+        dirs = [d for d in sorted(base.iterdir(), key=lambda x: x.name) if d.is_dir() and d.name != pj.ARCHIVE_NAME
+                and not d.name.startswith(".")]
+        arch = base / pj.ARCHIVE_NAME
+        if arch.is_dir():
+            dirs += sorted((d for d in arch.iterdir() if d.is_dir()), key=lambda x: x.name)
+    out = []
+    for d in dirs:
+        spec = rd.json(d / "spec.json")
+        if not isinstance(spec, dict):
+            continue
+        strict = [i for i in state.validate_data(spec, "spec", True, rd.rel(d / "spec.json"))
+                  if i["severity"] == "error"]
+        out.append({"id": spec.get("change_id") if isinstance(spec.get("change_id"), str) else d.name,
+                    "spec": spec, "findings": read_findings(rd, d), "hits": modes.read_hits(d / modes.HITS_FILE),
+                    "strict_errors": len(strict)})
+    return out
+
+
+def readiness_view(args, rd):
+    res = mx.readiness(readiness_records(rd), modes.check_ids())
+    res["unreadable"] = list(rd.unreadable)
+    return res
+
+
+def render_readiness(res):
+    L = ["== READINESS FOR 4.0 ==", "%d measured: %s" % (res["measured"], ", ".join(res["measured_changes"]) or "none")]
+    for cid, c in sorted(res["checks"].items()):
+        L.append("%-24s %s" % (cid, c["text"]))
+    L.append(res["text"])
+    return "\n".join(L)
+
+
 def _fmt_value(v):
     if v is None:
         return "n/a"
@@ -964,6 +1002,9 @@ def run(args):
     if root is None or not (Path(root) / pj.SPEC_DIR).is_dir():
         raise NotFound("no docs/spec here (not a Karvey project): %s" % (args.root or os.getcwd()))
     rd = Reader(root)
+    if args.readiness:
+        res = readiness_view(args, rd)
+        return kl.EXIT_OK, res, list(rd.warnings), render_readiness(res)
     if args.metrics:
         res = metrics_view(args, rd)
         return kl.EXIT_OK, res, list(rd.warnings), render_metrics(res)
@@ -992,6 +1033,8 @@ def build_parser():
     p.add_argument("--to", metavar="YYYY-MM-DD", help="--metrics: last day of the period")
     p.add_argument("--as-of", dest="as_of", metavar="YYYY-MM-DD", help="--metrics: the reference day (default today)")
     p.add_argument("--lane", help="--metrics: only this lane")
+    p.add_argument("--readiness", action="store_true",
+                   help="4.0 readiness: measured changes and would-refuse / confirmed hits per check")
     p.add_argument("--json", action="store_true", help="print one JSON envelope")
     return p
 
@@ -1018,7 +1061,7 @@ def main(argv=None):
         return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL,
                                    errors=[kl.issue("internal", "%s: %s" % (type(exc).__name__, exc))]), args.json)
     env = kl.envelope(TOOL, code, result=result, warnings=warnings)
-    if args.json and args.metrics:  # byte-identical output: sorted keys, no wall clock, no absolute path
+    if args.json and (args.metrics or args.readiness):  # byte-identical output: sorted keys, no wall clock, no absolute path
         sys.stdout.write(json.dumps(env, ensure_ascii=False, sort_keys=True) + "\n")
         return code
     return kl.emit(env, args.json, human=human)
