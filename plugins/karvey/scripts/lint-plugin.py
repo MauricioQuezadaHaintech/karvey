@@ -1887,6 +1887,43 @@ def l48_baseline_before_defaults(ctx):
                "defaults" % (dates[0], ", ".join(keys), first))
 
 
+# --------------------------------------------------------------------------- L-50 (wave2-structural)
+def _cells(line):
+    return [c.strip() for c in line.strip().strip("|").split("|")]
+
+
+@check("L-50", "rules/management-adapters.md: every tool row has a log_time cell (an operation or none); "
+               "karvey-impl records the actual with log_time and falls back to the actual columns on none",
+       reqs=("W2-007",))
+def l50_log_time(ctx):
+    rule = ctx.rule("management-adapters.md")
+    if rule is not None:
+        lines = ctx.lines(rule)
+        for i, line in enumerate(lines):
+            if not line.startswith("|") or not re.match(r"^\|\s*Tool\s*\|", line):
+                continue
+            head = [h.lower() for h in _cells(line)]
+            if "log_time" not in head:
+                yield rule, i + 1, "the adapters table has no log_time column (REQ-W2-007)"
+                continue
+            k = head.index("log_time")
+            for j in range(i + 2, len(lines)):
+                if not lines[j].startswith("|"):
+                    break
+                cells = _cells(lines[j])
+                if len(cells) <= k or not cells[k]:
+                    yield rule, j + 1, "adapter row %s has no log_time cell (an operation or none)" % (
+                        cells[0] if cells else "?")
+    impl = ctx.skill("karvey-impl")
+    if impl is None:
+        return
+    text = ctx.read(impl) or ""
+    if "log_time" not in text:
+        yield impl, 1, "karvey-impl does not record the actual through log_time (REQ-W2-007)"
+    elif not re.search(r"log_time[^\n]*\bnone\b[^\n]*actual", text):
+        yield impl, 1, "karvey-impl does not fall back to the actual columns when log_time is none"
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""

@@ -47,7 +47,7 @@ manifest makes "what was approved" equal "what shipped"; metrics make every one 
 
 | Feature | Area | Requirements covered | Panel / sources | Status |
 |---------|------|----------------------|-----------------|--------|
-| F1 | Flow metrics, gate outcomes, deploy records, retro | REQ-W2-001..010 | R-14 · DM-11, PM-05, PM-12 · D-24, D-30 · BL-17, BL-45 | ⬜ |
+| F1 | Flow metrics, gate outcomes, deploy records, retro | REQ-W2-001..010 | R-14 · DM-11, PM-05, PM-12 · D-24, D-30 · BL-17, BL-45 | ✅ |
 | F2 | Lanes with objective criteria, official `patch` lane | REQ-W2-011..021 | R-09 · DM-01, PM-09, H-03, H-04 · D-25, D-29 · BL-12 | ⬜ |
 | F3 | Advisory judges (incl. the qa fiscal) | REQ-W2-022..033 | R-11 / JU-01 · AG-12, DM-06, DM-08, B-12 · D-23, D-30 · BL-14 | ⬜ |
 | F4 | Three merged human gates, one question, `-y` = auto | REQ-W2-034..042 | R-10 · DM-06, AG-08, H-06 · D-22 · BL-13 | ⬜ |
@@ -79,7 +79,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F1.T8 [Backend] `--readiness`: measured changes (A-06), would-refuse / confirmed per check from `checks.jsonl`, `schema.strict` computed on the fly, `ready for 4.0: N of 4` — est: 10min (depends E1.F1.T7, E1.F1.T2)
 - [x] E1.F1.T9 [Backend] Baseline of this repo + L-48 (baseline before any Wave 2 default is set here) — est: 8min (depends E1.F1.T7)
 - [x] E1.F1.T10 [Backend] `karvey-retro` on the method's artifacts: metrics, findings by type and phase, estimate accuracy, judge cost, `retro-{date}.md`, actions as `process` BL-NN with owner, follow-up of previous actions, `--per-person` optional — est: 10min (depends E1.F1.T7) (P)
-- [ ] E1.F1.T11 [Backend] Tracker `log_time` column per tool (`none` → actual columns) + impl text + L-50 — est: 8min (P)
+- [x] E1.F1.T11 [Backend] Tracker `log_time` column per tool (`none` → actual columns) + impl text + L-50 — est: 8min (P)
 
 ### Feature E1.F2: Lanes
 
@@ -192,7 +192,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F1.T8 [Backend] | ✅ done | 10 | 6 | 0 |  |
 | E1.F1.T9 [Backend] | ✅ done | 8 | 6 | 0 |  |
 | E1.F1.T10 [Backend] | ✅ done | 10 | 5 | 0 |  |
-| E1.F1.T11 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F1.T11 [Backend] | ✅ done | 8 | 5 | 0 |  |
 | E1.F2.T1 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F2.T2 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F2.T3 [Backend] | ⬜ todo | 12 | — | — |  |

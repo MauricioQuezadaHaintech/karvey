@@ -1074,6 +1074,27 @@ class L48(LintCase):
         self.assertPasses("L-48")
 
 
+class L50(LintCase):
+    """@req REQ-W2-007 — the log_time column and the impl fallback."""
+    ADAPTERS = RULES + "/management-adapters.md"
+
+    def test_pass(self):
+        self.assertPasses("L-50")
+
+    def test_row_without_log_time_cell_fails(self):
+        self.t.replace(self.ADAPTERS, "| **Jira** | REST | worklog | transition |", "| **Jira** | REST |  | transition |")
+        self.assertFails("L-50", "Jira", file=self.ADAPTERS)
+
+    def test_table_without_the_column_fails(self):
+        self.t.replace(self.ADAPTERS, "| Tool | How the session does it | log_time | Notes |",
+                       "| Tool | How the session does it | Time | Notes |")
+        self.assertFails("L-50", "no log_time column", file=self.ADAPTERS)
+
+    def test_impl_without_fallback_fails(self):
+        self.t.replace(IMPL, "; when the tool's `log_time` is `none`, fill the actual columns", "")
+        self.assertFails("L-50", "fall back", file=IMPL)
+
+
 class ListAll(unittest.TestCase):
     def test_list_names_l01_to_l36(self):
         code, out, _ = run_cli("--root", str(_path.REPO_ROOT), "--list")

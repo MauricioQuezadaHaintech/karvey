@@ -82,6 +82,7 @@ as a precondition of its gate.
 | `cascade(parent)` | phase-close, impl | the one cascade (below) |
 | `link(item, url)` | deploy, qa | PR / review document |
 | `mirror_backlog(BL-NN)` | iterate, archive | backlog item in the tracker, if the team wants it |
+| `log_time(task, actual_min)` | impl | the actual time as the tool's own time object (the `log_time` column below); `none` → the task record's `actual_ai_min` / `actual_review_min` columns. The estimate is never touched |
 
 **Natural keys (find-or-create):** before creating, search for the item by its key — `E{n}`, `E{n}.F{n}`,
 `E{n}.F{n}.T{n}`, `F-NN`, `BUG-NN`, `[Deploy] {change-id}@{version}` — and reuse it; store the id in
@@ -102,16 +103,19 @@ The next phase-close retries it. A child is never created under a parent missing
 
 ## Adapters
 
-| Tool | How the session does it | Notes |
-|---|---|---|
-| **ClickUp** | ClickUp MCP or REST — `clickup-protocol.md` | `time_estimate` only via REST |
-| **Jira** | Atlassian MCP, `jira` CLI or REST | status change = **transition** (look up its id) |
-| **Linear** | Linear MCP or GraphQL | states are per team (`workflowStates`) |
-| **Azure Boards** | `az boards work-item create/update` | Epic/Feature/Task per process template |
-| **GitHub Projects** | `gh project item-add/item-edit`, issues | status is a single-select field |
-| **Spreadsheet** | a file under `docs/spec/` or a Sheet via CLI/MCP | row: `id, level, title, layer, estimate_min, status, updated_at, link` |
-| **Markdown** | `PLAN.md` in the change directory | the fallback; legend in the states table |
-| **Other** | ask how the team tracks work; record `location` + `via` | no programmatic path → `PLAN.md` |
+| Tool | How the session does it | log_time | Notes |
+|---|---|---|---|
+| **ClickUp** | ClickUp MCP or REST — `clickup-protocol.md` | time entry (`POST /task/{id}/time`) | `time_estimate` only via REST |
+| **Jira** | Atlassian MCP, `jira` CLI or REST | worklog (`POST /issue/{key}/worklog`) | status change = **transition** (look up its id) |
+| **Linear** | Linear MCP or GraphQL | none | states are per team (`workflowStates`) |
+| **Azure Boards** | `az boards work-item create/update` | `Completed Work` field of the Task | Epic/Feature/Task per process template |
+| **GitHub Projects** | `gh project item-add/item-edit`, issues | none | status is a single-select field |
+| **Spreadsheet** | a file under `docs/spec/` or a Sheet via CLI/MCP | none | row: `id, level, title, layer, estimate_min, actual_ai_min, actual_review_min, status, updated_at, link` |
+| **Markdown** | `PLAN.md` in the change directory | none | the fallback; legend in the states table |
+| **Other** | ask how the team tracks work; record `location` + `via` | none unless the team names one | no programmatic path → `PLAN.md` |
+
+`log_time: none` means the tool has no time object the method writes: the actual goes to the task record's
+`actual_ai_min` / `actual_review_min` columns (`PLAN.md`, the spreadsheet row), never over the estimate.
 
 ## Rules
 

@@ -95,7 +95,7 @@ If the test fails: fix it within the same task before advancing.
 
 A task is not done until its record is updated (`../karvey/rules/phase-close.md`): **status per task**; the close comment and the cascade run per Feature.
 
-- **Tracker:** `set_status(task, review)`; stop the timer; record the actual as a time entry / worklog where the tool has one. The estimate field is never overwritten.
+- **Tracker:** `set_status(task, review)`; stop the timer; record the actual with `log_time(task, actual_min)`, the operation the tool's adapter row declares (`../karvey/rules/management-adapters.md`); when its `log_time` is `none`, fill the task record's `actual_ai_min` / `actual_review_min` columns instead. The estimate field is never overwritten.
 - **Markdown:** `🔄 in_progress` → `👀 review` in `PLAN.md` (it becomes `✅ done` at QA approval); fill `actual_ai_min` / `actual_review_min`, keep `estimate_min`; date the history.
 - **Feature finished:** `comment(feature, "✅ COMPLETED …")` with what was done and the files, then `cascade(feature)` exactly as `management-adapters.md` defines it.
 
