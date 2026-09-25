@@ -720,3 +720,33 @@ Architecture §1.4 revision 1 (D-19): a changed commit matches when the recorded
 | 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-50, manual script settings-docs-branch variant B (E1.F17.T3) |
 | 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: the lookup breaks at the first readable line and never reads production |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T4: every reviewed line counts; table case and unit tests red before the fix, green after |
+
+## BUG-24 — DEV visible-version check demands the `-dev.{build}+{sha}` form and reads the tip of dev
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/skills/karvey-deploy/SKILL.md (2.6), plugins/karvey/skills/karvey/rules/versioning.md (visible version)
+- **Change / origin:** wave1-hardening — finding F-51 (manual script `visible-version.md`, E1.F17.T3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A UI target; DEV shows `DEV 2.10.4`; the deployed commit's `VERSION` is 2.10.4. Run `/karvey:karvey-deploy <change>`. Variant 2: a second change merged into `dev` after the deploy bumps `VERSION` to 2.10.5.
+
+### Actual vs expected
+- Actual: variant 1: the deploy stops because the label is not `2.10.4-dev.{build}+{sha}`, and the deployed commit's version file is never read; variant 2: it compares with `origin/dev:VERSION` (2.10.5) and reports a mismatch.
+- Expected: REQ-W1-041: the bumped version with an unmistakable DEV mark in any format passes; the comparison uses `git show <deployed-sha>:<version file>`; a missing visible version is a recommendation.
+
+### Root cause
+The skill text implemented the recommendation as the test. `karvey-deploy/SKILL.md:88` (2.6) said "With a UI, DEV must show `-dev` of the version just released; anything else is a finding", and `versioning.md:43` said the canary checks "`-dev` of the version just bumped"; neither named the deployed commit or its version file, so the agent compared with the only version it had, the tip of `dev`. REQ-W1-041 (E1.F12 text tasks) was never carried into either sentence.
+
+### Fix
+`karvey-deploy` 2.6: take the deployed commit (the green DEV run's source commit, else the one pushed in 2.5), read `git show "<deployed-sha>:<version file>"` (not the tip of `$I`), pass when DEV shows that version with an unmistakable DEV mark in any format; another version or no DEV mark is a finding, no visible version is the 2.4 recommendation. `versioning.md` says the same (the `-dev.{build}+{sha}` form is the recommendation, not the test) and its step references are corrected to 2.6 / 2.10; the orchestrator summary line in `skills/karvey/SKILL.md` follows.
+
+### Regression test
+`plugins/karvey/tests/unit/test_skill_rules.py` `VisibleVersionCheck` (5 tests: `git show …deployed…:` in 2.6, "any format", no "must show `-dev`", "not the tip", and the same rule in `versioning.md`); all 5 red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-51, manual script visible-version variants 1-2 (E1.F17.T3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: the skill text states the recommended format as the check and never names the deployed commit |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T5: deploy 2.6 and versioning.md rewritten; VisibleVersionCheck red before, green after |

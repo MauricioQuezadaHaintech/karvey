@@ -851,6 +851,14 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 **Tests added:** integration `dev` readable without the settings and production `main` with them → no notice, `resolve` source `origin/main`; no line with them → notice. Red before the fix.  
 **Done when:** the table case and unit tests pass; BUG-23 RESUELTO; the settings-docs-branch rerun passes variant B.
 
+### E1.F17.T5 [Backend] BUG-24 (F-51): visible-version check against the deployed commit, any DEV mark — _Depends: E1.F17.T3_
+
+**Estimate:** 20 min · **Actual:** 6 min (AI)  
+**Files:** `plugins/karvey/skills/karvey-deploy/SKILL.md` (2.6), `skills/karvey/rules/versioning.md`, `skills/karvey/SKILL.md` (summary line); `tests/unit/test_skill_rules.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
+**Requirements:** REQ-W1-041, REQ-W1-107  
+**Tests added:** `VisibleVersionCheck`: 2.6 names `git show …deployed…:`, "any format", not "must show `-dev`", "not the tip"; `versioning.md` the same. Red before the fix.  
+**Done when:** the tests pass; BUG-24 RESUELTO; the visible-version rerun passes variants 1-3.
+
 ## Traceability matrix (REQ-W1 → tasks)
 
 | REQ-W1 | Tasks |

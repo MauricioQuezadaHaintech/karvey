@@ -85,7 +85,7 @@ git merge "feature/{change-id}"
 git push origin "$I"               # ⇒ DEV pipeline
 ```
 
-**2.6 — DEV canary (Step 2-bis).** Wait for the green pipeline and run the canary over the real DEV runtime. No advance to prod if DEV is unhealthy. With a UI, DEV must show `-dev` of the version just released; anything else is a finding.
+**2.6 — DEV canary (Step 2-bis).** Wait for the green pipeline and run the canary over the real DEV runtime. No advance to prod if DEV is unhealthy. With a UI, check the visible version against the commit DEV actually runs: take the deployed commit (the source commit of the green DEV run; the one pushed in 2.5 if the run does not name it) and read its version file with `git show "<deployed-sha>:<version file>"` — not the tip of `$I`, which another change may have bumped since. The check passes when DEV shows that version with an unmistakable DEV mark, in any format (`DEV 2.10.4`, `2.10.4-dev.42+74571ae`, a `DEV` badge beside `2.10.4`). Another version, or no DEV mark, is a finding; a UI with no visible version at all is the 2.4 recommendation, not a finding and not a blocker.
 
 **2.7 — Pull production and open the PR** (integration → production; trunk: feature → production). Use the host from Step 1:
 ```bash

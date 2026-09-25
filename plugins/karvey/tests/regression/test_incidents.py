@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-23 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-24 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -102,6 +102,13 @@ INDEX = {
         ("unit", "test_config_resolve.py", "OriginProductionFallback.test_resolve_reads_production_after_integration"),
         ("unit", "test_config_resolve.py", "OriginProductionFallback.test_session_notice_silent"),
     ],
+    "BUG-24": [  # visible version vs the deployed commit (REQ-W1-041)
+        ("unit", "test_skill_rules.py", "VisibleVersionCheck.test_deploy_reads_the_version_file_of_the_deployed_commit"),
+        ("unit", "test_skill_rules.py", "VisibleVersionCheck.test_deploy_accepts_any_dev_mark_format"),
+        ("unit", "test_skill_rules.py", "VisibleVersionCheck.test_deploy_never_compares_with_the_tip"),
+        ("unit", "test_skill_rules.py", "VisibleVersionCheck.test_versioning_rule_says_the_same"),
+        ("manual", "visible-version.md"),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 
@@ -165,7 +172,7 @@ def tracker_sections():
 
 class NamedChecksExist(unittest.TestCase):
     def test_every_routed_incident_is_indexed(self):
-        for n in range(5, 24):
+        for n in range(5, 25):
             self.assertIn("BUG-%02d" % n, INDEX)
 
     def test_lint_ids_are_registered(self):
