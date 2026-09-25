@@ -283,7 +283,8 @@ def overview(rd, ctx):
     rows = []
     for c in active:
         age = age_of(c, ctx["now"], ctx["stall_days"])
-        row = {"change": c["id"], "phase": c["phase"], "age": age}
+        row = {"change": c["id"], "phase": c["phase"], "age": age,
+               "lane": state.ln.lane_of(c["data"])[0] if c["data"] else None}
         if c["phase_tier"] in ("exact", "proposed"):
             row["phase_raw"] = c["phase_raw"]
         if c["data"] is not None and c["phase_tier"] != "unmappable":
@@ -500,6 +501,11 @@ def approval_row(c, key, phase, rd):
            "date": ap.get("date") or None, "ref": ap.get("ref") or None}
     if st == "skipped":
         reason = skipped.get(phase) if isinstance(skipped.get(phase), str) else state.embedded_skip(ap)
+        if (reason or "").startswith("lane:") or (reason is None and state.lane_skips(data, phase)):
+            row["state"] = "skipped (lane)"  # never pending, never awaiting approval (REQ-W2-021)
+            row["text"] = "skipped (lane %s)" % data.get("lane")
+            row["reason"] = reason or "lane:%s" % data.get("lane")
+            return row
         row["text"] = "skipped: %s" % (reason or "(no reason)")
         row["reason"] = reason
         return row
@@ -517,10 +523,14 @@ def approval_row(c, key, phase, rd):
             row["text"] = "approved — approver missing"
             row["approver_missing"] = True
         else:
-            row["text"] = "approved by %s (%s) %s%s%s" % (row["by"], row["role"] or "role missing",
-                                                         row["date"] or "date missing",
-                                                         " · " + row["ref"] if row["ref"] else "",
-                                                         " · ledger" if row.get("source") == "ledger" else "")
+            ref = " · " + row["ref"] if row["ref"] else ""
+            if row["role"] == "auto":  # shown apart from human approvals (REQ-W2-040)
+                row["auto"] = True
+                row["text"] = "auto-approved (-y) %s%s" % (row["date"] or "date missing", ref)
+            else:
+                row["text"] = "approved by %s (%s) %s%s%s" % (row["by"], row["role"] or "role missing",
+                                                             row["date"] or "date missing", ref,
+                                                             " · ledger" if row.get("source") == "ledger" else "")
     elif ap.get("approved") is True:  # prod with approved:true but not by/role/ref
         row["text"] = "approved — approver missing"
         row["approver_missing"] = True
@@ -542,7 +552,9 @@ def approvals(rd, ctx):
         for p in state.machine()["phases"]:
             if p["approval"]:
                 rows.append(approval_row(c, p["approval"], p["id"], rd))
-        res[c["id"]] = {"approvals": rows}
+        lane, source = state.ln.lane_of(c["data"])
+        res[c["id"]] = {"approvals": rows, "lane": lane, "lane_source": source,
+                        "auto": [r["key"] for r in rows if r.get("auto")]}
     return res
 
 
@@ -806,8 +818,9 @@ def render(result, ctx):
             L.append("no active change")
         for r in ov["active"]:
             nxt = r.get("next") or {}
-            L.append("%-24s %-14s %-12s next: %s (%s)" % (r["change"], r["phase"], r["age"]["text"],
-                                                          nxt.get("phase") or "—", nxt.get("status") or "?"))
+            L.append("%-24s %-14s lane %-11s %-12s next: %s (%s)" % (
+                r["change"], r["phase"], r.get("lane") or "?", r["age"]["text"], nxt.get("phase") or "—",
+                nxt.get("status") or "?"))
         w = ov["wip"]
         if w["limit"]:
             L.append(("WARNING WIP %d/%d" if w["exceeded"] else "WIP %d/%d") % (w["count"], w["limit"]))
@@ -844,9 +857,11 @@ def render(result, ctx):
             if a.get("unreadable"):
                 L.append("%s: spec.json unreadable" % cid)
                 continue
-            L.append(cid + ":")
+            L.append("%s (lane %s):" % (cid, a.get("lane") or "?"))
             for r in a["approvals"]:
                 L.append("  %-15s %s" % (r["key"], r["text"]))
+            if a.get("auto"):
+                L.append("  automatic approvals (role auto, not human): %s" % ", ".join(a["auto"]))
     en = result.get("enforcement")
     if en is not None:
         L.append("== ENFORCEMENT ==")
