@@ -80,7 +80,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F8: Verification, release docs and the prod OK
 
-- [ ] E1.F8.T1 [Backend] Whole-repo gate and read-only dogfood plan — est: 8min (depends E1.F7.T3, E1.F6.T2, E1.F5.T2)
+- [x] E1.F8.T1 [Backend] Whole-repo gate and read-only dogfood plan — est: 8min (depends E1.F7.T3, E1.F6.T2, E1.F5.T2)
 - [ ] E1.F8.T2 [human] E2E offer → accept → PR on a throw-away repo + manual skill script — executor: owner (depends E1.F8.T1)
 - [ ] E1.F8.T3 [Backend] Release docs: `[Unreleased]` declares the project upgrade — est: 8min (depends E1.F8.T2)
 - [ ] E1.F8.T4 [human] Prod OK for the release (D-10), inside `karvey-deploy` — executor: owner (depends E1.F8.T3)
@@ -113,7 +113,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F7.T1 [Backend] | ✅ done | 12 | 9 | 0 | F-01: since > plugin version = warning during [Unreleased] |
 | E1.F7.T2 [Backend] | ✅ done | 15 | 10 | 0 | F-04: re-record the fingerprint if 3.12.0 ships first |
 | E1.F7.T3 [Backend] | ✅ done | 15 | 9 | 0 |  |
-| E1.F8.T1 [Backend] | ⬜ todo | 8 | — | — | |
+| E1.F8.T1 [Backend] | ✅ done | 8 | 6 | 0 | gate: unit 860, regr 10, hooks 66, tables 325/396, page 22, lint 0E/5W, validate 0E; dogfood: enforcement-defaults applies, global-config human, changes-in-flight report, statusline-launcher nothing here (own statusline in this environment, not the versioned one §7 expected); tree clean |
 | E1.F8.T2 [human] | ⬜ todo | — | — | — | executor: owner |
 | E1.F8.T3 [Backend] | ⬜ todo | 8 | — | — | |
 | E1.F8.T4 [human] | ⬜ todo | — | — | — | executor: owner |
