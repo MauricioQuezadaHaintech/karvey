@@ -666,7 +666,7 @@ ask git: `git -C <path> rev-parse --git-dir`.
 - **Detected:** 2026-09-24 · **Component:** plugins/karvey/hooks/karvey-session-context.sh (live state vs handoff)
 - **Change / origin:** wave1-hardening — finding F-40 (checkpoint dogfood); seen again on this session's start (`c793a5f -> 1dbd98e · uncommitted 1 -> 0`)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 A profile inside the repo it measures (`docs/spec/agent/`). `karvey-checkpoint save`: commit the handoff, run `karvey-handoff-capture.py`, then commit `state.json`. Start a new session.
@@ -682,10 +682,11 @@ The capture records HEAD and the uncommitted count before `state.json` is commit
 Architecture §1.4 revision 1 (D-19): a changed commit matches when the recorded commit is an ancestor of HEAD and every path in `git log <recorded>..HEAD` is a profile file; then a lower uncommitted count also matches. Task E1.F17.T1.
 
 ### Regression test
-(pending: E1.F17.T1)
+`plugins/karvey/hooks/tests/test-hooks.sh`, section "session-context: profile-only commits since the save (BUG-22)": four cases (state.json alone → matches; state.json plus another file → DRIFT; amended, non-descendant HEAD → DRIFT; higher uncommitted count → DRIFT), each run on the python path (`karvey_hooks.live_state` → `livestate.profile_only_since`) and on the degraded path's live-state block. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-24 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-40, first agente-karvey save (da3d70a → cb3946e) |
 | 2026-09-24 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-19): cause read in the hook's live-state block |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T1 (D-21): profile-only commits since the save match on both the python and the degraded path; case 1 red before the fix, cases 2-4 guard against over-matching |

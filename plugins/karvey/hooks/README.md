@@ -41,7 +41,9 @@ it adds one informational line pointing to `/karvey:karvey-init --settings`.
 
 For each repo in `state.json` it compares branch, last commit and uncommitted count with the live tree
 (`matches` or `DRIFT — branch X -> Y`) and tells the session to run `/karvey:karvey-checkpoint restore`
-first. **A hook cannot invoke a skill**: crossing open questions against the decision log and proposing
+first. Commits since the save that touch only the profile's own files (`state.json`, `handoff.md`,
+`board.md`, `manifest.md`, `checklist.md`), on a descendant of the recorded commit, are the save itself
+and read `matches (…; profile-only commits since the save)` (BUG-22). **A hook cannot invoke a skill**: crossing open questions against the decision log and proposing
 the next step stay the skill's job.
 
 ## The statusline is installed by the user, once

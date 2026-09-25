@@ -9,6 +9,8 @@ Ported from the 3.11.4 ``karvey-session-context.sh`` (BUG-20, BUG-21), not rewri
   ``.git`` *file*, so looking for a ``.git/`` directory reports it as missing (BUG-21, F-01).
 - ``measure(path)``: branch (``rev-parse --abbrev-ref HEAD``), commit (``log -1 --pretty=%h``)
   and the uncommitted count (``status --porcelain``), or ``None`` with the reason.
+- ``profile_only_since(path, recorded, profile_dir)``: the commits since the save touch only the
+  profile's own files (BUG-22); the degraded bash path in ``karvey-session-context.sh`` agrees.
 
 Every subprocess call is an argv list (§3.1 rule 1).
 """
@@ -84,3 +86,33 @@ def measure(path):
         return None, "git status --porcelain failed (rc %d)" % rc
     return {"branch": branch, "commit": commit,
             "uncommitted": len([x for x in status.splitlines() if x])}, None
+
+
+# The profile's own files (architecture §1.4 revision 1, BUG-22): committing them after the capture
+# is the save finishing, not the tree moving on.
+PROFILE_FILES = ("state.json", "handoff.md", "board.md", "manifest.md", "checklist.md")
+
+
+def profile_only_since(path, recorded, profile_dir):
+    """True when ``recorded`` is an ancestor of HEAD and every path touched by
+    ``git log <recorded>..HEAD`` is one of the profile's own files, as paths relative to the
+    repository top level (BUG-22). Anything unknown is False: the caller then reports DRIFT."""
+    if not isinstance(recorded, str) or not recorded or recorded.startswith("-") or not profile_dir:
+        return False
+    if git(path, "merge-base", "--is-ancestor", recorded, "HEAD")[0] != 0:
+        return False
+    rc, top = git(path, "rev-parse", "--show-toplevel")
+    if rc != 0 or not top:
+        return False
+    rel = os.path.relpath(os.path.realpath(str(profile_dir)), os.path.realpath(top))
+    if rel == ".." or rel.startswith(".." + os.sep):
+        return False  # the profile lives outside this repository: none of its files can be touched here
+    allowed = {os.path.normpath(os.path.join(rel, f)).replace(os.sep, "/") for f in PROFILE_FILES}
+    touched = set()
+    for args in (("log", "-z", "--no-renames", "--format=", "--name-only", recorded + "..HEAD"),
+                 ("diff", "-z", "--no-renames", "--name-only", recorded, "HEAD")):
+        rc, out = git(path, *args)
+        if rc != 0:
+            return False
+        touched.update(x.strip("\n") for x in out.split("\0") if x.strip("\n"))
+    return touched <= allowed

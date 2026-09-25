@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-21 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-22 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -96,6 +96,7 @@ INDEX = {
     "BUG-19": [("hooks", "team.json inside the repo (BUG-19)")],
     "BUG-20": [("hooks", "state.json paths (BUG-20)")],
     "BUG-21": [("hooks", "worktrees (BUG-21)")],
+    "BUG-22": [("hooks", "profile-only commits since the save (BUG-22)")],  # python and degraded paths
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 
@@ -159,7 +160,7 @@ def tracker_sections():
 
 class NamedChecksExist(unittest.TestCase):
     def test_every_routed_incident_is_indexed(self):
-        for n in range(5, 22):
+        for n in range(5, 23):
             self.assertIn("BUG-%02d" % n, INDEX)
 
     def test_lint_ids_are_registered(self):

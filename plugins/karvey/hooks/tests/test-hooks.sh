@@ -122,6 +122,35 @@ printf '{"repos":[{"path":"%s","branch":"wtb","commit":"%s","uncommitted":0}]}' 
 out=$(ctx "$T/wteam")
 [[ "$out" != *"NOT FOUND"* ]] && ok "a git worktree (.git file) is found" || bad "worktree" "$(echo "$out" | grep -A2 'Live state')"
 
+echo "session-context: profile-only commits since the save (BUG-22)"
+# The degraded path's live-state block, run on its own so both comparisons are held to the same cases.
+awk '/<<.PY.$/ && /STATE/ {f=1; next} f && /^PY$/ {exit} f' "$H/karvey-session-context.sh" > "$T/degraded-live.py"
+gc() { git -C "$1" -c user.email=t@t -c user.name=t commit -q "${@:2}"; }
+b22() {  # a solo repo with its profile committed, then the capture: $1 = directory
+  mkdir -p "$1/docs/spec/agent"; git -C "$1" init -q -b main; echo H > "$1/docs/spec/agent/handoff.md"; echo x > "$1/app.txt"
+  git -C "$1" add -A; gc "$1" -m init; echo H2 > "$1/docs/spec/agent/handoff.md"; git -C "$1" add -A; gc "$1" -m handoff
+  python3 "$(dirname "$H")/scripts/karvey-handoff-capture.py" --profile "$1/docs/spec/agent" >/dev/null
+}
+b22check() {  # $1 = repo, $2 = label, $3 = want (match|drift)
+  local py dg; py=$(ctx "$1" | grep -A3 'Live state'); dg=$(python3 "$T/degraded-live.py" "$1/docs/spec/agent/state.json" "$1" 2>&1)
+  for pair in "python path:$py" "degraded path:$dg"; do
+    local lab="${pair%%:*}" o="${pair#*:}"
+    if [ "$3" = match ]; then
+      [[ "$o" == *"profile-only commits since the save"* && "$o" != *"DRIFT"* ]] && ok "$2 ($lab)" || bad "$2 ($lab)" "$o"
+    else
+      [[ "$o" == *"DRIFT"* && "$o" != *"profile-only"* ]] && ok "$2 ($lab)" || bad "$2 ($lab)" "$o"
+    fi
+  done
+}
+P="$T/b22a"; b22 "$P"; git -C "$P" add docs/spec/agent/state.json; gc "$P" -m state
+b22check "$P" "commit of state.json alone after the capture → matches, no DRIFT" match
+P="$T/b22b"; b22 "$P"; echo y >> "$P/app.txt"; git -C "$P" add -A; gc "$P" -m "state + app"
+b22check "$P" "commit of state.json plus another file → DRIFT" drift
+P="$T/b22c"; b22 "$P"; git -C "$P" add docs/spec/agent/state.json; gc "$P" --amend -m "handoff + state"
+b22check "$P" "HEAD not a descendant of the recorded commit (amend) → DRIFT" drift
+P="$T/b22d"; b22 "$P"; git -C "$P" add docs/spec/agent/state.json; gc "$P" -m state; echo n > "$P/new1.txt"; echo n > "$P/new2.txt"
+b22check "$P" "higher uncommitted count after a profile-only commit → DRIFT" drift
+
 echo "statusline: reset time (BUG-03) and private debug copy (BUG-04)"
 NOW=$(date +%s)
 export TMPDIR="$T/tmp"; mkdir -p "$TMPDIR"   # isolated: a leftover debug file from an earlier run must not make BUG-04 pass

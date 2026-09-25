@@ -146,6 +146,32 @@ def resolve(p):
 def is_repo(path):
     # a worktree has a .git FILE, not a directory — ask git instead of looking for .git/ (BUG-21)
     return os.path.isdir(path) and bool(git(path, 'rev-parse', '--git-dir'))
+def rc(repo, *a):
+    try:
+        return subprocess.run(['git','-C',repo,*a], capture_output=True, timeout=10).returncode
+    except Exception:
+        return 1
+PROFILE_FILES = ('state.json','handoff.md','board.md','manifest.md','checklist.md')
+def profile_only_since(repo, recorded, profile_dir):
+    # BUG-22: the recorded commit is an ancestor of HEAD and every path since it is a profile file
+    # (the same rule as livestate.profile_only_since on the python path)
+    if not isinstance(recorded, str) or not recorded or recorded.startswith('-'): return False
+    if rc(repo, 'merge-base', '--is-ancestor', recorded, 'HEAD') != 0: return False
+    top = git(repo, 'rev-parse', '--show-toplevel')
+    if not top: return False
+    rel = os.path.relpath(os.path.realpath(profile_dir), os.path.realpath(top))
+    if rel == '..' or rel.startswith('..' + os.sep): return False
+    allowed = {os.path.normpath(os.path.join(rel, f)).replace(os.sep, '/') for f in PROFILE_FILES}
+    touched = set()
+    for a in (('log','-z','--no-renames','--format=','--name-only',recorded+'..HEAD'),
+              ('diff','-z','--no-renames','--name-only',recorded,'HEAD')):
+        try:
+            cp = subprocess.run(['git','-C',repo,*a], capture_output=True, text=True, timeout=10)
+        except Exception:
+            return False
+        if cp.returncode != 0: return False
+        touched.update(x.strip('\n') for x in cp.stdout.split('\0') if x.strip('\n'))
+    return touched <= allowed
 for r in d.get('repos', []):
     p = r.get('path','')
     rp = resolve(p)
@@ -154,12 +180,15 @@ for r in d.get('repos', []):
     br  = git(rp,'rev-parse','--abbrev-ref','HEAD')
     cm  = git(rp,'log','-1','--pretty=%h')
     un  = len([x for x in git(rp,'status','--porcelain').splitlines() if x])
-    marks = []
+    marks = []; ru = r.get('uncommitted')
+    po = br == r.get('branch') and cm != r.get('commit') and profile_only_since(rp, r.get('commit'), os.path.dirname(sys.argv[1]))
     if br != r.get('branch'): marks.append(f"branch {r.get('branch')} -> {br}")
-    if cm != r.get('commit'): marks.append(f"commit {r.get('commit')} -> {cm}")
-    if un != r.get('uncommitted'): marks.append(f"uncommitted {r.get('uncommitted')} -> {un}")
+    if cm != r.get('commit') and not po: marks.append(f"commit {r.get('commit')} -> {cm}")
+    if un != ru and not (po and type(ru) is int and un <= ru): marks.append(f"uncommitted {ru} -> {un}")
     if marks:
         print(f"  {p}: DRIFT — " + " · ".join(marks)); drift = True
+    elif po:
+        print(f"  {p}: matches ({br} @{cm}; profile-only commits since the save)")
     else:
         print(f"  {p}: matches ({br} @{cm})")
 if d.get('saved_at'): print(f"  saved_at: {d['saved_at']}")

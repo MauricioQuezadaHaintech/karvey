@@ -459,15 +459,23 @@ def live_state(state_path, root):
             drift = True
             continue
         marks = []
+        # BUG-22: commits since the save that touch only the profile's own files are the save itself
+        # finishing (state.json committed after the capture); then a lower uncommitted count matches too.
+        profile_only = (m["branch"] == r.get("branch") and m["commit"] != r.get("commit")
+                        and livestate.profile_only_since(rp, r.get("commit"), os.path.dirname(state_path)))
+        rec_un = r.get("uncommitted")
         if m["branch"] != r.get("branch"):
             marks.append("branch %s -> %s" % (r.get("branch"), m["branch"]))
-        if m["commit"] != r.get("commit"):
+        if m["commit"] != r.get("commit") and not profile_only:
             marks.append("commit %s -> %s" % (r.get("commit"), m["commit"]))
-        if m["uncommitted"] != r.get("uncommitted"):
-            marks.append("uncommitted %s -> %s" % (r.get("uncommitted"), m["uncommitted"]))
+        if m["uncommitted"] != rec_un and not (profile_only and isinstance(rec_un, int)
+                                               and not isinstance(rec_un, bool) and m["uncommitted"] <= rec_un):
+            marks.append("uncommitted %s -> %s" % (rec_un, m["uncommitted"]))
         if marks:
             out.append("  %s: DRIFT \u2014 %s" % (p, " \u00b7 ".join(marks)))
             drift = True
+        elif profile_only:
+            out.append("  %s: matches (%s @%s; profile-only commits since the save)" % (p, m["branch"], m["commit"]))
         else:
             out.append("  %s: matches (%s @%s)" % (p, m["branch"], m["commit"]))
     if d.get("saved_at"):
