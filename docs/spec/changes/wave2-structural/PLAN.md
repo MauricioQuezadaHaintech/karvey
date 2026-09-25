@@ -39,7 +39,7 @@ manifest makes "what was approved" equal "what shipped"; metrics make every one 
 | Knowledge sync | D-27 — graphify optional; `knowledge_sync: none` by default |
 | `patch` criterion | D-29 — ≤ 3 code files, no schema / API contract / permissions change, Tier < 3 |
 | Judge budget | D-30 — no cap; cost measured per gate and per change |
-| Architecture | (pending — karvey-architecture) |
+| Architecture | `architecture.md` — lane table + check-mode registry as data; append-only logs in spec.json; judges as clean-context subagents + deterministic collector; release manifest from trailers; L-40..L-54 (architect's defaults A-01..A-13, D-21) |
 
 ---
 
@@ -71,3 +71,4 @@ Internal order for tasks (panel Ola 2): F1 → F2 + F3 → F4 + F5 → F6..F12 �
 |-------|------|--------|
 | 2026-09-25 | init | Change initialised by the state tool; PRD written; spec.json metadata filled (strict validate 0 errors) |
 | 2026-09-25 | requirements | 88 EARS requirements (REQ-W2-001..088), spec-delta (ADDED 88 · MODIFIED 9 · REMOVED 0); 13 open points listed for the *what* gate; not approved |
+| 2026-09-25 | architecture | `architecture.md` generated (C-01..C-24, REQ-W2-001..088 covered, Tier 2 controls S-1..S-12, project-upgrade step declarations §7.4); infra skipped (no cloud); not approved |
