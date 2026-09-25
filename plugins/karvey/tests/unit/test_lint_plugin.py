@@ -1044,8 +1044,120 @@ class ListAll(unittest.TestCase):
         self.assertEqual(code, 0, out)
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)] + ["L-38"])
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --------------------------------------------------------------------------- L-38 (project-upgrade)
+LIB = "plugins/karvey/scripts/karvey_lib"
+CAT = LIB + "/upgrade-steps.json"
+STEPS = LIB + "/upgrade_steps.py"
+
+
+class L38(LintCase):
+    """The shipped catalogue, its schema and the step functions copied into the mini plugin, then mutated."""
+
+    def setUp(self):
+        super().setUp()
+        for rel in ("scripts/karvey_lib/upgrade-steps.json", "scripts/karvey_lib/upgrade_steps.py",
+                    "schemas/upgrade-steps.schema.json"):
+            dst = self.t.path("plugins/karvey/" + rel)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(str(_path.PLUGIN_ROOT / rel), str(dst))
+        cat = json.loads(self.t.read(CAT))
+        for st in cat["steps"]:
+            st["since"] = "1.0.0"  # the mini plugin's version
+        self.t.write(CAT, cat)
+
+    def mutate_step(self, sid, **changes):
+        cat = json.loads(self.t.read(CAT))
+        for st in cat["steps"]:
+            if st["id"] == sid:
+                for k, v in changes.items():
+                    if v is KeyError:
+                        del st[k]
+                    else:
+                        st[k] = v
+        self.t.write(CAT, cat)
+
+    def test_the_shipped_catalogue_passes(self):
+        self.assertPasses("L-38")
+
+    def test_a_plugin_without_the_upgrade_tool_is_skipped(self):
+        self.t.remove(CAT)
+        self.t.remove(STEPS)
+        self.assertPasses("L-38")
+
+    def test_missing_risk_names_the_step(self):
+        self.mutate_step("legacy-shims", risk=KeyError)
+        self.assertFails("L-38", "step legacy-shims: missing field risk")
+
+    def test_direct_writes_in_a_step_function_fail(self):
+        for body, what in (('open(".x", "w").write("x")', "open() in a write mode"),
+                           ('os.remove(".x")', "os.remove"),
+                           ('shutil.copy(".a", ".b")', "shutil.copy"),
+                           ('subprocess.run(["true"])', "subprocess.run"),
+                           ('atomicio.write_text_atomic(".x", "x")', "atomicio.write_text_atomic"),
+                           ('probe.root.joinpath("x").write_text("x")', ".write_text()")):
+            with self.subTest(what=what):
+                self.t.write(STEPS, (_path.PLUGIN_ROOT / "scripts/karvey_lib/upgrade_steps.py").read_text(
+                    encoding="utf-8"))
+                self.t.replace(STEPS, "def schema_migrate_fix(probe, params, values):\n",
+                               "def schema_migrate_fix(probe, params, values):\n    %s\n" % body)
+                self.assertFails("L-38", "step schema-migrate: fix schema_migrate_fix does direct I/O (%s)" % what)
+
+    def test_a_helper_reached_from_a_check_is_scanned(self):
+        self.t.replace(STEPS, "def _spec_files(probe):\n", "def _spec_files(probe):\n    os.unlink('.x')\n")
+        self.assertFails("L-38", "does direct I/O (os.unlink)")
+
+    def test_reading_is_allowed(self):
+        self.t.replace(STEPS, "def schema_migrate_fix(probe, params, values):\n",
+                       "def schema_migrate_fix(probe, params, values):\n    open('.x').read()\n    'a'.replace('a', 'b')\n")
+        self.assertPasses("L-38")
+
+    def test_a_non_human_fix_reading_the_home_fails(self):
+        self.t.replace(STEPS, "def enforcement_defaults_fix(probe, params, values):\n",
+                       "def enforcement_defaults_fix(probe, params, values):\n"
+                       "    probe.home_read('.claude/settings.json')\n")
+        self.assertFails("L-38", "step enforcement-defaults: the fix of a non-human step reads the user's home")
+
+    def test_writes_outside_the_scopes_and_invariants(self):
+        self.mutate_step("team-settings", writes=["home"])
+        self.assertFails("L-38", "writes outside project|git_dir")
+        self.mutate_step("team-settings", writes=["project"], human=True)
+        self.assertFails("L-38", "step team-settings: a human step has fix null")
+        self.mutate_step("team-settings", human=False, fix="no_such_fn")
+        self.assertFails("L-38", "fix function no_such_fn is not in upgrade_steps.REGISTRY")
+
+    def test_since_newer_than_the_plugin(self):
+        self.mutate_step("global-config", since="9.0.0")
+        self.assertFails("L-38", "step global-config: since 9.0.0 is newer than the plugin version 1.0.0")
+        self.t.replace("CHANGELOG.md", "## [Unreleased]\n", "## [Unreleased]\n\n### Added\n- a line\n")
+        fs = lint(self.t.root, ["L-38"])
+        self.assertTrue(fs)
+        self.assertTrue(all(f["severity"] == "warning" and "since 9.0.0 (1 step: global-config)" in f["message"]
+                            for f in fs), "a working number is a warning while [Unreleased] holds the change")
+
+
+class ListClaims(unittest.TestCase):
+    def test_claim_ids(self):
+        self.assertEqual(lp.claim_id("055"), "REQ-W1-055")
+        self.assertEqual(lp.claim_id("UP-030"), "REQ-UP-030")
+
+    def test_list_accepts_up_claims_and_keeps_w1_claims(self):
+        code, out, err = run_cli("--root", str(_path.REPO_ROOT), "--list", "--format", "json")
+        self.assertEqual(code, 0, err)
+        checks = {c["id"]: c for c in json.loads(out)["result"]["checks"]}
+        self.assertEqual(checks["L-38"]["reqs"], ["REQ-UP-008", "REQ-UP-010", "REQ-UP-016", "REQ-UP-031"])
+        self.assertEqual(checks["L-11"]["reqs"], ["REQ-W1-055"])
+
+    def test_an_up_claim_absent_from_the_requirements_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            req = Path(d) / "reqs.md"
+            req.write_text("only REQ-W1-055\n", encoding="utf-8")
+            code, _, err = run_cli("--root", str(_path.REPO_ROOT), "--list", "--requirements", str(req))
+        self.assertEqual(code, 1)
+        self.assertIn("L-38 claims REQ-UP-008", err)

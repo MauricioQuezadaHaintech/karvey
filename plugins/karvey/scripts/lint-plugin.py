@@ -21,6 +21,7 @@ Usage::
 Exit codes: ``0`` no error-severity finding · ``1`` at least one · ``2`` usage error.
 """
 import argparse
+import ast
 import json
 import os
 import re
@@ -1877,6 +1878,184 @@ def glob_regex(pattern):
     return re.compile("^" + "".join(out) + "$")
 
 
+# --------------------------------------------------------------------------- L-38
+UPGRADE_REQUIRED = ("id", "since", "check", "fix", "dry_run", "human", "risk")
+UPGRADE_SCOPES = ("project", "git_dir")
+# direct I/O a step function may never do: only the Probe reads, only the engine writes (project-upgrade §1.4)
+FORBIDDEN_MODULES = ("shutil", "subprocess")
+FORBIDDEN_OS = ("remove", "unlink", "rename", "replace", "mkdir", "makedirs", "rmdir", "removedirs", "chmod",
+                "symlink", "link", "truncate", "system", "popen")
+FORBIDDEN_METHODS = ("write_text", "write_bytes", "unlink", "rmdir", "mkdir", "touch", "chmod", "symlink_to")
+HOME_READS = ("home_read", "home_json")
+
+
+def upgrade_paths(ctx):
+    lib = ctx.plugin / "scripts" / "karvey_lib"
+    schema = ctx.plugin / "schemas" / "upgrade-steps.schema.json"
+    return lib / "upgrade-steps.json", lib / "upgrade_steps.py", schema if schema.is_file() else (
+        kl.SCHEMAS_DIR / "upgrade-steps.schema.json")
+
+
+def _step_functions(tree):
+    """``(registry, functions)``: the ``REGISTRY`` dict literal (name → function name) and every module-level
+    function by name."""
+    funcs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+    registry = {}
+    for n in tree.body:
+        if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "REGISTRY" for t in n.targets) \
+                and isinstance(n.value, ast.Dict):
+            for k, v in zip(n.value.keys, n.value.values):
+                if isinstance(k, ast.Constant) and isinstance(k.value, str) and isinstance(v, ast.Name):
+                    registry[k.value] = v.id
+    return registry, funcs
+
+
+def _reachable(start, funcs):
+    """``start`` and every module-level function it calls, transitively."""
+    seen, todo = set(), [start]
+    while todo:
+        name = todo.pop()
+        if name in seen or name not in funcs:
+            continue
+        seen.add(name)
+        for node in ast.walk(funcs[name]):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in funcs:
+                todo.append(node.func.id)
+    return seen
+
+
+def _io_violations(fn):
+    """``(line, what)`` of every direct write or process call in one function."""
+    out = []
+    for node in ast.walk(fn):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            names = [a.name for a in node.names] + ([node.module] if isinstance(node, ast.ImportFrom) and
+                                                     node.module else [])
+            for nm in names:
+                if nm and nm.split(".")[0] in FORBIDDEN_MODULES:
+                    out.append((node.lineno, "imports %s" % nm))
+        if not isinstance(node, ast.Call):
+            continue
+        f = node.func
+        if isinstance(f, ast.Name) and f.id == "open":
+            mode = node.args[1] if len(node.args) > 1 else next((k.value for k in node.keywords if k.arg == "mode"),
+                                                                None)
+            if mode is not None and not (isinstance(mode, ast.Constant) and isinstance(mode.value, str)
+                                         and not set(mode.value) & set("wax+")):
+                out.append((node.lineno, "open() in a write mode"))
+        elif isinstance(f, ast.Attribute):
+            base = f.value.id if isinstance(f.value, ast.Name) else None
+            if base in FORBIDDEN_MODULES:
+                out.append((node.lineno, "%s.%s" % (base, f.attr)))
+            elif base == "os" and f.attr in FORBIDDEN_OS:
+                out.append((node.lineno, "os.%s" % f.attr))
+            elif base == "atomicio" and f.attr.startswith("write"):
+                out.append((node.lineno, "atomicio.%s" % f.attr))
+            elif f.attr in FORBIDDEN_METHODS:
+                out.append((node.lineno, ".%s()" % f.attr))
+    return out
+
+
+def _home_reads(fn):
+    return [node.lineno for node in ast.walk(fn) if isinstance(node, ast.Attribute) and node.attr in HOME_READS]
+
+
+@check("L-38", "The project-upgrade step catalogue is valid and its step functions only read through the Probe",
+       reqs=("UP-008", "UP-010", "UP-016", "UP-031"))
+def l38_upgrade_catalogue(ctx):
+    cat_path, steps_py, schema_path = upgrade_paths(ctx)
+    if not cat_path.is_file() and not steps_py.is_file():
+        return  # a plugin without the upgrade tool
+    data = ctx.json(cat_path)
+    if not isinstance(data, dict):
+        yield cat_path, 1, "the step catalogue is missing or not valid JSON"
+        return
+    steps = data.get("steps") if isinstance(data.get("steps"), list) else []
+    for i, st in enumerate(steps):
+        name = st.get("id") if isinstance(st, dict) and isinstance(st.get("id"), str) else "#%d" % (i + 1)
+        line = line_of(ctx, cat_path, '"id": "%s"' % name) if isinstance(st, dict) else 1
+        for f in UPGRADE_REQUIRED:
+            if not isinstance(st, dict) or f not in st:
+                yield cat_path, line, "step %s: missing field %s" % (name, f)
+    schema = ctx.json(schema_path)
+    if isinstance(schema, dict):
+        try:
+            from karvey_lib import schema_lite
+            for it in schema_lite.validate(data, schema, registry={}):
+                if it["severity"] == "error" and "missing required field" not in it["message"]:
+                    yield cat_path, 1, "%s: %s" % (it["path"], it["message"])
+        except Exception as exc:  # an unusable schema is itself a finding
+            yield schema_path, 1, "catalogue schema unusable: %s" % exc
+    try:
+        tree = ast.parse(ctx.read(steps_py) or "", filename=str(steps_py))
+    except SyntaxError as exc:
+        yield steps_py, exc.lineno or 1, "upgrade_steps.py does not parse: %s" % exc.msg
+        return
+    registry, funcs = _step_functions(tree)
+    pj = ctx.json(plugin_json_path(ctx)) or {}
+    version = str(pj.get("version", "0.0.0"))
+    unreleased = _unreleased_has_entries(ctx)
+    ids = set()
+    working = {}
+    for st in steps:
+        if not isinstance(st, dict):
+            continue
+        sid = st.get("id", "?")
+        line = line_of(ctx, cat_path, '"id": "%s"' % sid)
+        if sid in ids:
+            yield cat_path, line, "step %s: duplicate id" % sid
+        ids.add(sid)
+        human, report = st.get("human") is True, st.get("report_only") is True
+        for key in ("check", "fix"):
+            fname = st.get(key)
+            if fname is not None and fname not in registry:
+                yield cat_path, line, "step %s: %s function %s is not in upgrade_steps.REGISTRY" % (sid, key, fname)
+        if human and st.get("fix") is not None:
+            yield cat_path, line, "step %s: a human step has fix null" % sid
+        if report and st.get("fix") is not None:
+            yield cat_path, line, "step %s: a report_only step has fix null" % sid
+        if st.get("fix") is None and not human and not report:
+            yield cat_path, line, "step %s: fix null on a non-human step requires report_only" % sid
+        if not human and not set(st.get("writes") or ["project"]) <= set(UPGRADE_SCOPES):
+            yield cat_path, line, "step %s: writes outside %s" % (sid, "|".join(UPGRADE_SCOPES))
+        since = st.get("since")
+        if isinstance(since, str) and _vtuple(since) > _vtuple(version):
+            if unreleased:
+                working.setdefault(since, (line, []))[1].append(sid)
+            else:
+                yield cat_path, line, "step %s: since %s is newer than the plugin version %s" % (sid, since, version)
+        for key in ("check", "fix"):
+            fname = registry.get(st.get(key)) if st.get(key) else None
+            if not fname or fname not in funcs:
+                continue
+            for fn in sorted(_reachable(fname, funcs)):
+                for ln, what in _io_violations(funcs[fn]):
+                    yield (steps_py, ln, "step %s: %s %s does direct I/O (%s): only the Probe reads and only the "
+                                         "engine writes" % (sid, key, fn, what))
+                if key == "fix" and not human:
+                    for ln in _home_reads(funcs[fn]):
+                        yield (steps_py, ln, "step %s: the fix of a non-human step reads the user's home (%s)"
+                               % (sid, fn))
+    for since, (line, sids) in sorted(working.items()):
+        yield (cat_path, line, "since %s (%d step%s: %s) is newer than plugin.json %s — a working number while "
+                               "[Unreleased] holds the change; karvey-deploy sets it to the release"
+               % (since, len(sids), "" if len(sids) == 1 else "s", ", ".join(sids), version), "warning")
+
+
+def _unreleased_has_entries(ctx):
+    lines = ctx.lines(ctx.root / "CHANGELOG.md")
+    inside = False
+    for line in lines:
+        if line.startswith("## [Unreleased]"):
+            inside = True
+            continue
+        if inside and line.startswith("## ["):
+            return False
+        if inside and line.startswith("- "):
+            return True
+    return False
+
+
 def path_filter(globs):
     if not globs:
         return None
@@ -1911,8 +2090,14 @@ def run_checks(ctx, only=None, paths=None):
     return findings
 
 
+def claim_id(r):
+    """A check's requirement claim as a full id: a bare ``"055"`` is ``REQ-W1-055``, ``"UP-030"`` is
+    ``REQ-UP-030``."""
+    return "REQ-" + r if re.match(r"^[A-Z][A-Z0-9]*-\d{3}$", r) else "REQ-W1-" + r
+
+
 def requirement_ids(ctx, files=None):
-    """Every ``REQ-W1-NNN`` number that appears in the requirements text."""
+    """Every ``REQ-W1-NNN`` / ``REQ-UP-NNN`` id that appears in the requirements text."""
     if files:
         paths = [Path(f) for f in files]
     else:
@@ -1922,7 +2107,7 @@ def requirement_ids(ctx, files=None):
     ids = set()
     for p in paths:
         text = ctx.read(p) or ""
-        ids.update(re.findall(r"REQ-W1-(\d{3})", text))
+        ids.update(re.findall(r"REQ-(?:W1|UP)-\d{3}", text))
     return ids, paths
 
 
@@ -1934,13 +2119,13 @@ def cmd_list(ctx, args):
         reqs = ",".join(c.reqs) if c.reqs else "—"
         rows.append("%-5s %-8s REQ %-24s %s" % (c.id, c.severity, reqs, c.title))
         for r in c.reqs:
-            if r not in ids:
-                missing.append((c.id, r))
-    errors = [kl.issue("lint.req_missing", "%s claims REQ-W1-%s, absent from the requirements" % (cid, r),
+            if claim_id(r) not in ids:
+                missing.append((c.id, claim_id(r)))
+    errors = [kl.issue("lint.req_missing", "%s claims %s, absent from the requirements" % (cid, r),
                        file=None, path=cid) for cid, r in missing]
     code = kl.EXIT_FINDINGS if missing else kl.EXIT_OK
     result = {"checks": [{"id": c.id, "title": c.title, "severity": c.severity,
-                          "reqs": ["REQ-W1-" + r for r in c.reqs]} for c in registry()],
+                          "reqs": [claim_id(r) for r in c.reqs]} for c in registry()],
               "requirements": [ctx.rel(p) for p in paths]}
     if args.format == "json":
         sys.stdout.write(json.dumps(kl.envelope(TOOL, code, result, errors), ensure_ascii=False) + "\n")
@@ -1948,7 +2133,7 @@ def cmd_list(ctx, args):
         sys.stdout.write("\n".join(rows) + "\n")
         sys.stdout.write("%d checks\n" % len(rows))
         for cid, r in missing:
-            msg = "%s claims REQ-W1-%s, absent from the requirements" % (cid, r)
+            msg = "%s claims %s, absent from the requirements" % (cid, r)
             if args.format == "github":
                 sys.stdout.write("::error title=%s::%s\n" % (cid, msg))
             else:
@@ -2015,7 +2200,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser():
-    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-36).")
+    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-38).")
     p.add_argument("--root", help="repository root (default: git top level)")
     p.add_argument("--plugin", help="plugin directory (default: <root>/plugins/karvey)")
     p.add_argument("--only", help="comma list of check ids (L-NN)")
