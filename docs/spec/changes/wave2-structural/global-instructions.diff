@@ -1,0 +1,8 @@
+--- a/global-instructions
++++ b/global-instructions
+-- **Bugs / iteraciones / tickets de soporte:** registrar como `BUG-NN` en el tracker del repo (`docs/bugs_dev_testing.md`) y como finding en el `findings.md` del change; enrutar con `/karvey-iterate` (finding → root-cause → impl → test/regresión). Root-cause complejo → `/karvey-investigate` (Iron Law: no hay fix sin investigar la causa). Un incidente llega a RESUELTO solo con su test de regresión.
++- **Bugs / iteraciones / tickets de soporte:** registrar como `BUG-NN` en el tracker del repo (`docs/bugs_dev_testing.md`) y como finding en el `findings.md` del change.
++  Un bug pequeño (≤ 3 archivos de código, sin cambio de esquema, de contrato de API ni de permisos, Security Tier < 3) va por el carril `patch` (`karvey-state.py lane set patch`): `BUG-NN` + finding + fix + test de regresión que falla sin el fix, en el mismo PR, con un solo gate humano (el de producción).
++  Lo que no cumple ese criterio se enruta con `/karvey-iterate` (finding → root-cause → impl → test/regresión), en su carril (`standard` o mayor).
++  Root-cause complejo → `/karvey-investigate` (Iron Law: no hay fix sin investigar la causa).
++  Un incidente llega a RESUELTO solo con su test de regresión.
