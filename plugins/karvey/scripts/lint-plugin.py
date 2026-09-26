@@ -21,6 +21,7 @@ Usage::
 Exit codes: ``0`` no error-severity finding · ``1`` at least one · ``2`` usage error.
 """
 import argparse
+import ast
 import json
 import os
 import re
@@ -1882,6 +1883,467 @@ def glob_regex(pattern):
     return re.compile("^" + "".join(out) + "$")
 
 
+# --------------------------------------------------------------------------- L-37
+NO_UPGRADE_RE = re.compile(r"^- No project upgrade needed: .{10,}")
+
+
+def _list_files(paths, limit=12):
+    return ", ".join(paths[:limit]) + (" … (%d more)" % (len(paths) - limit) if len(paths) > limit else "")
+
+
+@check("L-37", "A release that changed the upgrade surface declares its project upgrade (a step with since = the "
+               "release, or 'No project upgrade needed: <reason>'), and the fingerprint is refreshed",
+       reqs=("UP-030",))
+def l37_release_declares_upgrade(ctx):
+    sp = ctx.plugin / "scripts" / "karvey_lib" / "upgrade-surface.json"
+    if not sp.is_file():
+        return  # a plugin without the upgrade tool
+    from karvey_lib import upgrade as up
+    try:
+        st = up.surface_status(ctx.root, sp)
+    except up.CatalogueError as exc:
+        yield sp, 1, str(exc)
+        return
+    rec, top, changed = st["release"], st["top_release"], st["changed"]
+    if not rec or not top:
+        yield sp, 1, "the fingerprint has no release, or CHANGELOG.md has no numbered release"
+        return
+    changelog = ctx.root / "CHANGELOG.md"
+    if _vtuple(top) < _vtuple(rec):
+        yield (sp, 1, "the fingerprint is for %s but the top CHANGELOG release is the older %s (inconsistent)"
+               % (rec, top))
+        return
+    if not changed:
+        return
+    if top == rec:
+        yield (sp, 1, "the upgrade surface changed since %s (%s): the next release must add an upgrade step (since = "
+                      "that release) or a '- No project upgrade needed: <reason>' line, then refresh the fingerprint "
+                      "(karvey-upgrade.py surface --write)" % (rec, _list_files(changed)), "warning")
+        return
+    cat = ctx.json(ctx.plugin / "scripts" / "karvey_lib" / "upgrade-steps.json") or {}
+    has_step = any(isinstance(s_, dict) and s_.get("since") == top for s_ in cat.get("steps") or [])
+    _, line, block = top_release(ctx)
+    declared = any(NO_UPGRADE_RE.match(b) for b in block)
+    if not (has_step or declared):
+        yield (changelog, line, "release %s changed the upgrade surface (%s) but declares no project upgrade: add a "
+                                "step with since = %s or a '- No project upgrade needed: <reason>' line"
+               % (top, _list_files(changed), top))
+    yield (sp, 1, "the fingerprint is still for %s: refresh it for release %s (karvey-upgrade.py surface --write); "
+                  "changed: %s" % (rec, top, _list_files(changed)))
+
+
+# --------------------------------------------------------------------------- L-38
+UPGRADE_REQUIRED = ("id", "since", "check", "fix", "dry_run", "human", "risk")
+UPGRADE_SCOPES = ("project", "git_dir")
+# direct I/O a step function may never do: only the Probe reads, only the engine writes (project-upgrade §1.4)
+FORBIDDEN_MODULES = ("shutil", "subprocess")
+FORBIDDEN_OS = ("remove", "unlink", "rename", "replace", "mkdir", "makedirs", "rmdir", "removedirs", "chmod",
+                "symlink", "link", "truncate", "system", "popen", "open", "write", "renames", "chown", "utime")
+FORBIDDEN_METHODS = ("write_text", "write_bytes", "unlink", "rmdir", "mkdir", "touch", "chmod", "symlink_to",
+                     "rename", "hardlink_to")
+FORBIDDEN_OS_PREFIXES = ("exec", "spawn", "posix_spawn", "fork", "kill")
+OPEN_FUNCTIONS = ("open", "io.open", "codecs.open")  # the mode is the 2nd argument
+HOME_READS = ("home_read", "home_json")
+# F-26: the only names a step may use on the state / config tools it gets from the Probe (all read-only);
+# anything else (cmd_*, write_*, …) could write the project behind the engine's back
+PROBE_TOOLS = {
+    "state": ("SCHEMA_VERSION", "Unmigratable", "fix_spec", "fix_project", "validate_data", "map_phase",
+              "compute_next"),
+    "config": ("Settings", "propose_settings", "Refused", "CHANNELS", "VIAS", "EVENTS", "DETAILS", "TOOLS",
+               "LEGACY_TOOLS"),
+}
+
+
+def upgrade_paths(ctx):
+    lib = ctx.plugin / "scripts" / "karvey_lib"
+    schema = ctx.plugin / "schemas" / "upgrade-steps.schema.json"
+    return lib / "upgrade-steps.json", lib / "upgrade_steps.py", schema if schema.is_file() else (
+        kl.SCHEMAS_DIR / "upgrade-steps.schema.json")
+
+
+def _step_functions(tree):
+    """``(registry, functions)``: the ``REGISTRY`` dict literal (name → function name) and every module-level
+    function by name."""
+    funcs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+    registry = {}
+    for n in tree.body:
+        if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "REGISTRY" for t in n.targets) \
+                and isinstance(n.value, ast.Dict):
+            for k, v in zip(n.value.keys, n.value.values):
+                if isinstance(k, ast.Constant) and isinstance(k.value, str) and isinstance(v, ast.Name):
+                    registry[k.value] = v.id
+    return registry, funcs
+
+
+def _reachable(start, funcs):
+    """``start`` and every module-level function it calls, transitively."""
+    seen, todo = set(), [start]
+    while todo:
+        name = todo.pop()
+        if name in seen or name not in funcs:
+            continue
+        seen.add(name)
+        for node in ast.walk(funcs[name]):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in funcs:
+                todo.append(node.func.id)
+    return seen
+
+
+def _module_aliases(tree):
+    """``{local name: canonical dotted name}`` of the module-level imports (``import os as o`` → ``o: os``,
+    ``from os import remove`` → ``remove: os.remove``, ``from . import atomicio`` → ``atomicio: atomicio``), so
+    an alias never hides a forbidden call (F-26)."""
+    out = {}
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for a in node.names:
+                out[a.asname or a.name.split(".")[0]] = a.name if a.asname else a.name.split(".")[0]
+        elif isinstance(node, ast.ImportFrom):
+            mod = (node.module or "").split(".")[-1] if node.level else (node.module or "")
+            for a in node.names:
+                out[a.asname or a.name] = ("%s.%s" % (mod, a.name)) if mod else a.name
+    return out
+
+
+def _forbidden_import(line, dotted):
+    top = dotted.split(".")[0]
+    if top in FORBIDDEN_MODULES:
+        return line, "imports %s" % dotted
+    return None
+
+
+def _write_mode(node, pos):
+    """True when the ``open`` call ``node`` passes a mode (positional ``pos`` or ``mode=``) that may write."""
+    mode = node.args[pos] if len(node.args) > pos else next((k.value for k in node.keywords if k.arg == "mode"),
+                                                            None)
+    return mode is not None and not (isinstance(mode, ast.Constant) and isinstance(mode.value, str)
+                                     and not set(mode.value) & set("wax+"))
+
+
+def _canonical_call(f, aliases):
+    """The dotted name a call target resolves to through the module's import aliases, or None."""
+    if isinstance(f, ast.Name):
+        return aliases.get(f.id, f.id)
+    if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name):
+        return "%s.%s" % (aliases.get(f.value.id, f.value.id), f.attr)
+    return None
+
+
+def _io_violations(fn, aliases=None, tools=None):
+    """``(line, what)`` of every direct write or process call in one function. ``aliases`` are the module's import
+    aliases; ``tools`` maps a local name to ``"state"``/``"config"`` (bound to ``probe.state`` / ``probe.config``)."""
+    aliases = aliases or {}
+    tools = dict(tools or {})
+    out = []
+    for _ in range(2):  # names bound to the Probe (``p = probe``) or to its tools, in any order of assignment
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                if isinstance(node.value, ast.Name) and (node.value.id == "probe" or
+                                                         tools.get(node.value.id) == "probe"):
+                    tools[node.targets[0].id] = "probe"
+                    continue
+                kind = _tool_kind(node.value, tools)
+                if kind:
+                    tools[node.targets[0].id] = kind
+    for node in ast.walk(fn):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            names = [a.name for a in node.names] + ([node.module] if isinstance(node, ast.ImportFrom) and
+                                                     node.module else [])
+            for nm in names:
+                if nm and nm.split(".")[0] in FORBIDDEN_MODULES:
+                    out.append((node.lineno, "imports %s" % nm))
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "getattr" and node.args:
+            kind = _tool_kind(node.args[0], tools)
+            name = node.args[1].value if len(node.args) > 1 and isinstance(node.args[1], ast.Constant) else None
+            if kind and kind != "probe" and name not in PROBE_TOOLS[kind]:
+                out.append((node.lineno, "getattr(probe.%s, %r), not a read-only function of the %s tool" % (
+                    kind, name, kind)))
+        if isinstance(node, ast.Attribute):
+            kind = _tool_kind(node.value, tools)
+            if kind and kind != "probe" and node.attr not in PROBE_TOOLS[kind]:
+                out.append((node.lineno, "probe.%s.%s, not a read-only function of the %s tool" % (
+                    kind, node.attr, kind)))
+        if not isinstance(node, ast.Call):
+            continue
+        f = node.func
+        name = _canonical_call(f, aliases)
+        if name in OPEN_FUNCTIONS:
+            if _write_mode(node, 1):
+                out.append((node.lineno, "open() in a write mode"))
+            continue
+        if isinstance(f, ast.Attribute) and f.attr == "open" and name != "os.open":
+            if _write_mode(node, 0):
+                out.append((node.lineno, ".open() in a write mode"))
+            continue
+        top, _, attr = (name or "").partition(".")
+        if top in FORBIDDEN_MODULES:
+            out.append((node.lineno, name if attr else "%s()" % name))
+        elif top == "os" and (attr in FORBIDDEN_OS or attr.startswith(FORBIDDEN_OS_PREFIXES)):
+            out.append((node.lineno, name))
+        elif top == "atomicio" and attr.startswith("write"):
+            out.append((node.lineno, name))
+        elif isinstance(f, ast.Attribute) and f.attr in FORBIDDEN_METHODS:
+            out.append((node.lineno, ".%s()" % f.attr))
+    return out
+
+
+def _tool_kind(node, tools):
+    """``"state"``/``"config"`` when ``node`` is ``probe.state`` / ``probe.config`` or a name bound to one."""
+    if isinstance(node, ast.Attribute) and node.attr in PROBE_TOOLS and isinstance(node.value, ast.Name) \
+            and (node.value.id == "probe" or tools.get(node.value.id) == "probe"):
+        return node.attr
+    if isinstance(node, ast.Name):
+        return tools.get(node.id)
+    return None
+
+
+def _tool_params(funcs):
+    """``{function: {param: kind}}``: parameters that receive ``probe.state`` / ``probe.config`` (or a name bound
+    to one) at a call site between module functions, propagated to a fixed point (F-26)."""
+    params = {}
+    changed = True
+    while changed:
+        changed = False
+        for name, fn in funcs.items():
+            local = dict(params.get(name, {}))
+            for node in ast.walk(fn):
+                if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                    kind = _tool_kind(node.value, local)
+                    if kind:
+                        local[node.targets[0].id] = kind
+            for node in ast.walk(fn):
+                if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in funcs):
+                    continue
+                callee = funcs[node.func.id]
+                names = [a.arg for a in callee.args.posonlyargs + callee.args.args]
+                bound = list(zip(names, node.args)) + [(k.arg, k.value) for k in node.keywords if k.arg]
+                for pname, arg in bound:
+                    kind = _tool_kind(arg, local)
+                    if kind and params.setdefault(node.func.id, {}).get(pname) != kind:
+                        params[node.func.id][pname] = kind
+                        changed = True
+    return params
+
+
+def _home_reads(fn):
+    return [node.lineno for node in ast.walk(fn) if isinstance(node, ast.Attribute) and node.attr in HOME_READS]
+
+
+@check("L-38", "The project-upgrade step catalogue is valid and its step functions only read through the Probe",
+       reqs=("UP-008", "UP-010", "UP-016", "UP-031"))
+def l38_upgrade_catalogue(ctx):
+    cat_path, steps_py, schema_path = upgrade_paths(ctx)
+    if not cat_path.is_file() and not steps_py.is_file():
+        return  # a plugin without the upgrade tool
+    data = ctx.json(cat_path)
+    if not isinstance(data, dict):
+        yield cat_path, 1, "the step catalogue is missing or not valid JSON"
+        return
+    steps = data.get("steps") if isinstance(data.get("steps"), list) else []
+    for i, st in enumerate(steps):
+        name = st.get("id") if isinstance(st, dict) and isinstance(st.get("id"), str) else "#%d" % (i + 1)
+        line = line_of(ctx, cat_path, '"id": "%s"' % name) if isinstance(st, dict) else 1
+        for f in UPGRADE_REQUIRED:
+            if not isinstance(st, dict) or f not in st:
+                yield cat_path, line, "step %s: missing field %s" % (name, f)
+    schema = ctx.json(schema_path)
+    if isinstance(schema, dict):
+        try:
+            from karvey_lib import schema_lite
+            for it in schema_lite.validate(data, schema, registry={}):
+                if it["severity"] == "error" and "missing required field" not in it["message"]:
+                    yield cat_path, 1, "%s: %s" % (it["path"], it["message"])
+        except Exception as exc:  # an unusable schema is itself a finding
+            yield schema_path, 1, "catalogue schema unusable: %s" % exc
+    try:
+        tree = ast.parse(ctx.read(steps_py) or "", filename=str(steps_py))
+    except SyntaxError as exc:
+        yield steps_py, exc.lineno or 1, "upgrade_steps.py does not parse: %s" % exc.msg
+        return
+    registry, funcs = _step_functions(tree)
+    aliases = _module_aliases(tree)
+    tool_params = _tool_params(funcs)
+    for node in tree.body:  # F-26: a forbidden module imported at module level (under any alias)
+        if isinstance(node, ast.Import):
+            dotted = [a.name for a in node.names]
+        elif isinstance(node, ast.ImportFrom) and not node.level:
+            dotted = [node.module or ""]
+            if any(a.name == "*" for a in node.names) and (node.module or "").split(".")[0] in ("os",) + \
+                    FORBIDDEN_MODULES:
+                yield steps_py, node.lineno, ("upgrade_steps.py does direct I/O (imports %s.*): a star import hides "
+                                              "forbidden calls" % node.module)
+        else:
+            continue
+        for d in dotted:
+            hit = _forbidden_import(node.lineno, d)
+            if hit:
+                yield (steps_py, hit[0], "upgrade_steps.py does direct I/O (%s): only the Probe reads and only the "
+                                         "engine writes" % hit[1])
+    pj = ctx.json(plugin_json_path(ctx)) or {}
+    version = str(pj.get("version", "0.0.0"))
+    unreleased = _unreleased_has_entries(ctx)
+    ids = set()
+    working = {}
+    for st in steps:
+        if not isinstance(st, dict):
+            continue
+        sid = st.get("id", "?")
+        line = line_of(ctx, cat_path, '"id": "%s"' % sid)
+        if sid in ids:
+            yield cat_path, line, "step %s: duplicate id" % sid
+        ids.add(sid)
+        human, report = st.get("human") is True, st.get("report_only") is True
+        for key in ("check", "fix"):
+            fname = st.get(key)
+            if fname is not None and fname not in registry:
+                yield cat_path, line, "step %s: %s function %s is not in upgrade_steps.REGISTRY" % (sid, key, fname)
+        if human and st.get("fix") is not None:
+            yield cat_path, line, "step %s: a human step has fix null" % sid
+        if report and st.get("fix") is not None:
+            yield cat_path, line, "step %s: a report_only step has fix null" % sid
+        if st.get("fix") is None and not human and not report:
+            yield cat_path, line, "step %s: fix null on a non-human step requires report_only" % sid
+        if not human and not set(st.get("writes") or ["project"]) <= set(UPGRADE_SCOPES):
+            yield cat_path, line, "step %s: writes outside %s" % (sid, "|".join(UPGRADE_SCOPES))
+        since = st.get("since")
+        if isinstance(since, str) and _vtuple(since) > _vtuple(version):
+            if unreleased:
+                working.setdefault(since, (line, []))[1].append(sid)
+            else:
+                yield cat_path, line, "step %s: since %s is newer than the plugin version %s" % (sid, since, version)
+        for key in ("check", "fix"):
+            fname = registry.get(st.get(key)) if st.get(key) else None
+            if not fname or fname not in funcs:
+                continue
+            for fn in sorted(_reachable(fname, funcs)):
+                for ln, what in _io_violations(funcs[fn], aliases, tool_params.get(fn)):
+                    yield (steps_py, ln, "step %s: %s %s does direct I/O (%s): only the Probe reads and only the "
+                                         "engine writes" % (sid, key, fn, what))
+                if key == "fix" and not human:
+                    for ln in _home_reads(funcs[fn]):
+                        yield (steps_py, ln, "step %s: the fix of a non-human step reads the user's home (%s)"
+                               % (sid, fn))
+    for since, (line, sids) in sorted(working.items()):
+        yield (cat_path, line, "since %s (%d step%s: %s) is newer than plugin.json %s — a working number while "
+                               "[Unreleased] holds the change; karvey-deploy sets it to the release"
+               % (since, len(sids), "" if len(sids) == 1 else "s", ", ".join(sids), version), "warning")
+
+
+def _unreleased_has_entries(ctx):
+    lines = ctx.lines(ctx.root / "CHANGELOG.md")
+    inside = False
+    for line in lines:
+        if line.startswith("## [Unreleased]"):
+            inside = True
+            continue
+        if inside and line.startswith("## ["):
+            return False
+        if inside and line.startswith("- "):
+            return True
+    return False
+
+
+# --------------------------------------------------------------------------- L-39
+UPDATE_HEADING = "## Update to the latest version"
+
+
+def _section(lines, start_re, stop_re):
+    """``(line_no, lines)`` of the section whose heading matches ``start_re`` (up to ``stop_re``), or ``(0, [])``."""
+    for i, line in enumerate(lines):
+        if re.match(start_re, line):
+            out = []
+            for nxt in lines[i + 1:]:
+                if re.match(stop_re, nxt):
+                    break
+                out.append(nxt)
+            return i + 1, out
+    return 0, []
+
+
+def stable_statusline(ctx):
+    """``STABLE_STATUSLINE`` of the plugin's ``upgrade_steps.py`` (a string literal), or None."""
+    _, steps_py, _ = upgrade_paths(ctx)
+    try:
+        tree = ast.parse(ctx.read(steps_py) or "")
+    except SyntaxError:
+        return None
+    for n in tree.body:
+        if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "STABLE_STATUSLINE"
+                                             for t in n.targets):
+            try:
+                v = ast.literal_eval(n.value)
+            except ValueError:
+                return None
+            return v if isinstance(v, str) else None
+    return None
+
+
+def _statusline_commands(ctx, path):
+    out = []
+    for n, block in json_blocks(ctx, path):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        sl = data.get("statusLine") if isinstance(data, dict) else None
+        if isinstance(sl, dict) and isinstance(sl.get("command"), str):
+            out.append((n, sl["command"]))
+    return out
+
+
+@check("L-39", "The project upgrade is documented: the README upgrade section, the hooks README offer section with "
+               "its table anchors, the stable statusline command, and the release entry that ships it",
+       reqs=("UP-032", "UP-023"))
+def l39_upgrade_documented(ctx):
+    cat_path, steps_py, _ = upgrade_paths(ctx)
+    if not cat_path.is_file() or not steps_py.is_file():
+        return  # a plugin without the upgrade tool
+    readme = ctx.root / "README.md"
+    lines = ctx.lines(readme)
+    at, update = _section(lines, re.escape(UPDATE_HEADING) + r"\s*$", r"^## ")
+    if not at:
+        yield readme, 1, "README.md has no '%s' section" % UPDATE_HEADING
+    else:
+        sub_at, sub = _section(lines[at - 1:], r"^### .*[Uu]pgrad", r"^##+ ")
+        text = "\n".join(sub)
+        if not sub_at:
+            yield readme, at, "'%s' has no project-upgrade subsection (### Upgrading your project)" % UPDATE_HEADING
+        else:
+            for need, what in (("/karvey:karvey-upgrade", "the skill"), ("Not for this version", "how to decline"),
+                               ("plan", "the read-only plan")):
+                if need not in text:
+                    yield readme, at + sub_at - 1, "the upgrade subsection does not mention %s (%s)" % (need, what)
+    hooks_readme = ctx.plugin / "hooks" / "README.md"
+    hl = ctx.lines(hooks_readme)
+    off_at, offer = _section(hl, r"^## The upgrade offer\s*$", r"^## ")
+    if not off_at:
+        yield hooks_readme, 1, "hooks/README.md has no '## The upgrade offer' section"
+    elif not any(re.search(r"<!--\s*guard-case:[^>]*\bss-24", x) for x in offer):
+        yield hooks_readme, off_at, "'## The upgrade offer' carries no <!-- guard-case: ss-24… --> anchor"
+    want = stable_statusline(ctx)
+    cmds = _statusline_commands(ctx, hooks_readme)
+    if want is None:
+        yield steps_py, 1, "upgrade_steps.py defines no STABLE_STATUSLINE string"
+    elif not cmds:
+        yield hooks_readme, 1, "hooks/README.md shows no statusLine command"
+    else:
+        for n, cmd in cmds:
+            if cmd != want:
+                yield hooks_readme, n, "the statusLine command differs from upgrade_steps.STABLE_STATUSLINE (stable launcher)"
+    cat = ctx.json(cat_path) or {}
+    steps = [s_ for s_ in cat.get("steps") or [] if isinstance(s_, dict)]
+    sinces = [s_.get("since") for s_ in steps if isinstance(s_.get("since"), str)]
+    version, line, block = top_release(ctx)
+    if version and sinces and _vtuple(version) >= min(_vtuple(x) for x in sinces):
+        text = "\n".join(block)
+        ids = [s_.get("id") for s_ in steps if isinstance(s_.get("id"), str)]
+        if not (re.search(r"project upgrade", text, re.I) or any(NO_UPGRADE_RE.match(b) for b in block) or
+                any(i in text for i in ids)):
+            yield (ctx.root / "CHANGELOG.md", line, "release %s ships the project upgrade but its entry does not "
+                                                    "mention it (the upgrade steps or 'No project upgrade needed:')"
+                   % version)
+
+
 def path_filter(globs):
     if not globs:
         return None
@@ -1916,8 +2378,14 @@ def run_checks(ctx, only=None, paths=None):
     return findings
 
 
+def claim_id(r):
+    """A check's requirement claim as a full id: a bare ``"055"`` is ``REQ-W1-055``, ``"UP-030"`` is
+    ``REQ-UP-030``."""
+    return "REQ-" + r if re.match(r"^[A-Z][A-Z0-9]*-\d{3}$", r) else "REQ-W1-" + r
+
+
 def requirement_ids(ctx, files=None):
-    """Every ``REQ-W1-NNN`` number that appears in the requirements text."""
+    """Every ``REQ-W1-NNN`` / ``REQ-UP-NNN`` id that appears in the requirements text."""
     if files:
         paths = [Path(f) for f in files]
     else:
@@ -1927,7 +2395,7 @@ def requirement_ids(ctx, files=None):
     ids = set()
     for p in paths:
         text = ctx.read(p) or ""
-        ids.update(re.findall(r"REQ-W1-(\d{3})", text))
+        ids.update(re.findall(r"REQ-(?:W1|UP)-\d{3}", text))
     return ids, paths
 
 
@@ -1939,13 +2407,13 @@ def cmd_list(ctx, args):
         reqs = ",".join(c.reqs) if c.reqs else "—"
         rows.append("%-5s %-8s REQ %-24s %s" % (c.id, c.severity, reqs, c.title))
         for r in c.reqs:
-            if r not in ids:
-                missing.append((c.id, r))
-    errors = [kl.issue("lint.req_missing", "%s claims REQ-W1-%s, absent from the requirements" % (cid, r),
+            if claim_id(r) not in ids:
+                missing.append((c.id, claim_id(r)))
+    errors = [kl.issue("lint.req_missing", "%s claims %s, absent from the requirements" % (cid, r),
                        file=None, path=cid) for cid, r in missing]
     code = kl.EXIT_FINDINGS if missing else kl.EXIT_OK
     result = {"checks": [{"id": c.id, "title": c.title, "severity": c.severity,
-                          "reqs": ["REQ-W1-" + r for r in c.reqs]} for c in registry()],
+                          "reqs": [claim_id(r) for r in c.reqs]} for c in registry()],
               "requirements": [ctx.rel(p) for p in paths]}
     if args.format == "json":
         sys.stdout.write(json.dumps(kl.envelope(TOOL, code, result, errors), ensure_ascii=False) + "\n")
@@ -1953,7 +2421,7 @@ def cmd_list(ctx, args):
         sys.stdout.write("\n".join(rows) + "\n")
         sys.stdout.write("%d checks\n" % len(rows))
         for cid, r in missing:
-            msg = "%s claims REQ-W1-%s, absent from the requirements" % (cid, r)
+            msg = "%s claims %s, absent from the requirements" % (cid, r)
             if args.format == "github":
                 sys.stdout.write("::error title=%s::%s\n" % (cid, msg))
             else:
@@ -2020,7 +2488,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser():
-    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-36).")
+    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-39).")
     p.add_argument("--root", help="repository root (default: git top level)")
     p.add_argument("--plugin", help="plugin directory (default: <root>/plugins/karvey)")
     p.add_argument("--only", help="comma list of check ids (L-NN)")

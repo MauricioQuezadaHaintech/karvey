@@ -68,8 +68,21 @@ print(' + '.join(k for k in ('notifications','management') if not isinstance(d.g
   fi
   [ -n "$missing" ] && printf 'Karvey (info): team settings not set (%s). To set them, the user can run `/karvey:karvey-init --settings` — settings only, it creates no change and nothing in any tracker.\n' "$missing"
 }
+# The once-per-version upgrade offer needs python (it evaluates the step catalogue): without it, one line,
+# only on startup inside a Karvey project (project-upgrade REQ-UP-006).
+upgrade_unavailable() {
+  [ "$MODE" = "startup" ] || return 0
+  local d="${ROOT:-$START}"
+  while [ -n "$d" ] && [ "$d" != "/" ]; do
+    if [ -f "$d/docs/spec/project.json" ] || [ -d "$d/docs/spec/changes" ]; then
+      printf '[karvey] upgrade offer unavailable: python 3 not found\n'; return 0
+    fi
+    [ -n "$ROOT" ] && return 0
+    d=$(dirname "$d")
+  done
+}
 
-[ -z "$ROOT" ] && { settings_nudge; exit 0; }
+[ -z "$ROOT" ] && { settings_nudge; upgrade_unavailable; exit 0; }
 
 REL="${START#"$ROOT"/}"; [ "$REL" = "$START" ] && REL=""
 TOP="${REL%%/*}"
@@ -212,6 +225,7 @@ for c in "$ROOT"/docs/spec/changes/*/; do
 done
 [ "$NACT" -ne 1 ] && ACTIVE=""
 settings_nudge
+upgrade_unavailable
 printf '\n=== First action ===\n'
 if [ -n "$ACTIVE" ] || [ "$DRIFT" -eq 1 ] || [ ! -f "$HANDOFF" ]; then
   printf 'Run `/karvey-checkpoint restore` BEFORE anything else'

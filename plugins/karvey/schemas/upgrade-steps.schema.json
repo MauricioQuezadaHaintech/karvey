@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "karvey:upgrade-steps.schema.json",
+  "$comment": "The project-upgrade step catalogue (scripts/karvey_lib/upgrade-steps.json). Invariants the schema cannot express (unique ids, function names in upgrade_steps.REGISTRY, human => fix null, report_only => fix null, fix null and not human => report_only) live in karvey_lib/upgrade.py load_catalogue and lint check L-38.",
+  "x-karvey-schema-version": 1,
+  "type": "object",
+  "required": ["catalogue_version", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "$comment": {"type": "string"},
+    "catalogue_version": {"const": 1},
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "since", "check", "fix", "dry_run", "human", "risk"],
+        "properties": {
+          "$comment": {"type": "string"},
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,40}$"},
+          "since": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+          "title": {"type": "string", "maxLength": 80},
+          "check": {"type": "string", "pattern": "^[a-z_][a-z0-9_]*$"},
+          "fix": {"type": ["string", "null"], "pattern": "^[a-z_][a-z0-9_]*$"},
+          "dry_run": {"type": "boolean"},
+          "human": {"type": "boolean"},
+          "risk": {"enum": ["low", "medium", "high"]},
+          "report_only": {"type": "boolean"},
+          "writes": {"type": "array", "items": {"enum": ["project", "git_dir"]}},
+          "cost": {"enum": ["low", "scan"]},
+          "params": {"type": "object"}
+        }
+      }
+    }
+  }
+}

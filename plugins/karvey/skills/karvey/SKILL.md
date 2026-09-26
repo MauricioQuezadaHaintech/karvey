@@ -94,9 +94,10 @@ These are not phases; they do not advance `spec.json:phase` forward. See `rules/
 /karvey-standards          → Uplift engineering standards (golden paths) from the real system → standards repo
 /karvey-team               → OPTIONAL team layer: roles, census, relay, cost (one agent is the default)
 /karvey-decisions          → Decision log (D-NN / C-NN) + cross-check before declaring a block
+/karvey-upgrade            → Project upgrade after a plugin update: plan, dry-run, picked steps on a branch, one PR
 ```
 
-Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue + live branches (read-only; one of the 18 support skills).
+Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue + live branches (read-only; one of the 19 support skills).
 
 ## Execution by argument
 

@@ -73,7 +73,7 @@ python3 "$S" advance "{change-id}" deploying
 git pull origin "$I"
 ```
 
-**2.3 — Release step: one bump per release** (`../karvey/rules/versioning.md`). On the feature branch, turn `## [Unreleased]` into `## [x.y.z] - YYYY-MM-DD` and bump the version file once (`package.json`, `pyproject.toml`, `*.csproj`, `VERSION`, …): **major** = breaking, **minor** = backward-compatible feature, **rev** = fix. Commit it as `release: x.y.z` with the rest of the change.
+**2.3 — Release step: one bump per release** (`../karvey/rules/versioning.md`). On the feature branch, turn `## [Unreleased]` into `## [x.y.z] - YYYY-MM-DD` and bump the version file once (`package.json`, `pyproject.toml`, `*.csproj`, `VERSION`, …): **major** = breaking, **minor** = backward-compatible feature, **rev** = fix. Commit it as `release: x.y.z` with the rest of the change. When the repository is the Karvey plugin itself and its upgrade surface changed (lint check L-37), the same commit adds a project-upgrade step with `since` = x.y.z **or** a `- No project upgrade needed: <reason>` line in the entry, and refreshes the fingerprint (`karvey-upgrade.py surface --write`).
 
 **2.4 — Visible version (recommendation).** If a `target` has a UI, recommend a version visible in it, differentiated by environment (`versioning.md`): DEV `{version}-dev.{build}+{sha}` with a `DEV` mark, PROD `{version}`, read from the version file at build time. A missing visible version is a recommendation, not a blocker.
 

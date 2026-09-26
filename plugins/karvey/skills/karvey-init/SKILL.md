@@ -89,9 +89,12 @@ The plugin's hooks read `project.json:enforcement` (`../karvey/rules/enforcement
 - plan-gate: blocks edits without an approval recorded from the human's own message.
 ```
 
-Write the answer as flags (only what the user accepted is `true`):
+Write the answer as flags (only what the user accepted is `true`), together with every `enforcement` default
+the installed version declares (the `x-karvey-default` keys under `enforcement` in
+`${CLAUDE_PLUGIN_ROOT}/schemas/project.schema.json`), so a new project starts current and the upgrade offer has
+nothing to propose:
 ```json
-"enforcement": { "git_flow_hook": false, "plan_gate_hook": false, "prod_gate_hook": true }
+"enforcement": { "git_flow_hook": false, "plan_gate_hook": false, "prod_gate_hook": true, "plan_marker_ttl_min": 120 }
 ```
 
 ### Step 4 — Management for this change

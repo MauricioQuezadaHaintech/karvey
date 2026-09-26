@@ -1058,8 +1058,289 @@ class ListAll(unittest.TestCase):
         self.assertEqual(code, 0, out)
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)])
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --------------------------------------------------------------------------- L-38 (project-upgrade)
+LIB = "plugins/karvey/scripts/karvey_lib"
+CAT = LIB + "/upgrade-steps.json"
+STEPS = LIB + "/upgrade_steps.py"
+
+
+class UpgradeMiniPlugin(LintCase):
+    """The shipped catalogue, its schema and the step functions copied into the mini plugin (no tests here:
+    L38 and L39 both build on it, so the L-38 tests are not run twice — F-10)."""
+
+    def setUp(self):
+        super().setUp()
+        for rel in ("scripts/karvey_lib/upgrade-steps.json", "scripts/karvey_lib/upgrade_steps.py",
+                    "schemas/upgrade-steps.schema.json"):
+            dst = self.t.path("plugins/karvey/" + rel)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(str(_path.PLUGIN_ROOT / rel), str(dst))
+        cat = json.loads(self.t.read(CAT))
+        for st in cat["steps"]:
+            st["since"] = "1.0.0"  # the mini plugin's version
+        self.t.write(CAT, cat)
+
+    def mutate_step(self, sid, **changes):
+        cat = json.loads(self.t.read(CAT))
+        for st in cat["steps"]:
+            if st["id"] == sid:
+                for k, v in changes.items():
+                    if v is KeyError:
+                        del st[k]
+                    else:
+                        st[k] = v
+        self.t.write(CAT, cat)
+
+
+class L38(UpgradeMiniPlugin):
+    """The mini plugin's catalogue and step functions, mutated."""
+
+    def test_the_shipped_catalogue_passes(self):
+        self.assertPasses("L-38")
+
+    def test_a_plugin_without_the_upgrade_tool_is_skipped(self):
+        self.t.remove(CAT)
+        self.t.remove(STEPS)
+        self.assertPasses("L-38")
+
+    def test_missing_risk_names_the_step(self):
+        self.mutate_step("legacy-shims", risk=KeyError)
+        self.assertFails("L-38", "step legacy-shims: missing field risk")
+
+    def test_direct_writes_in_a_step_function_fail(self):
+        for body, what in (('open(".x", "w").write("x")', "open() in a write mode"),
+                           ('os.remove(".x")', "os.remove"),
+                           ('shutil.copy(".a", ".b")', "shutil.copy"),
+                           ('subprocess.run(["true"])', "subprocess.run"),
+                           ('atomicio.write_text_atomic(".x", "x")', "atomicio.write_text_atomic"),
+                           ('probe.root.joinpath("x").write_text("x")', ".write_text()")):
+            with self.subTest(what=what):
+                self.t.write(STEPS, (_path.PLUGIN_ROOT / "scripts/karvey_lib/upgrade_steps.py").read_text(
+                    encoding="utf-8"))
+                self.t.replace(STEPS, "def schema_migrate_fix(probe, params, values):\n",
+                               "def schema_migrate_fix(probe, params, values):\n    %s\n" % body)
+                self.assertFails("L-38", "step schema-migrate: fix schema_migrate_fix does direct I/O (%s)" % what)
+
+    def test_f26_path_open_os_open_aliases_and_state_writers_fail(self):
+        """regression_project-upgrade_iterate_l38_scan (F-26): the gaps the QA review found in the AST scan."""
+        src = (_path.PLUGIN_ROOT / "scripts/karvey_lib/upgrade_steps.py").read_text(encoding="utf-8")
+        cases = (
+            ("", 'probe.root.joinpath("x").open("w")', ".open() in a write mode"),
+            ("", 'probe.root.joinpath("x").open(mode="a")', ".open() in a write mode"),
+            ("", 'os.open(".x", 1)', "os.open"),
+            ("import os as o\n", 'o.remove(".x")', "os.remove"),
+            ("from os import remove\n", 'remove(".x")', "os.remove"),
+            ("from shutil import rmtree as rt\n", 'rt(".x")', "shutil.rmtree"),
+            ("import subprocess as sp\n", 'sp.run(["true"])', "subprocess.run"),
+            ("", "probe.state.cmd_approve(None, None)", "probe.state.cmd_approve"),
+            ("", "c = probe.config\n    c.cmd_set(None)", "probe.config.cmd_set"),
+            ("", "_hand(probe.state)", "probe.state.write_spec"),
+            ("import io\n", 'io.open(".x", "w")', "open() in a write mode"),
+            ("", 'probe.root.joinpath("x").rename("y")', ".rename()"),
+            ("", 'os.execv("/bin/sh", ["sh"])', "os.execv"),
+            ("from os import *\n", "pass", "imports os.*"),
+            ("", "p = probe\n    p.state.cmd_init(None)", "probe.state.cmd_init"),
+            ("", 'getattr(probe.state, "cmd_init")(None)', "getattr(probe.state, 'cmd_init')"),
+        )
+        for head, body, what in cases:
+            with self.subTest(what=what, body=body):
+                text = src.replace("import copy\n", "import copy\n" + head, 1)
+                text = text.replace("def schema_migrate_fix(probe, params, values):\n",
+                                    "def schema_migrate_fix(probe, params, values):\n    %s\n" % body, 1)
+                text += "\n\ndef _hand(mod):\n    mod.write_spec({})\n"
+                self.t.write(STEPS, text)
+                self.assertFails("L-38", "does direct I/O (%s" % what)
+        self.t.write(STEPS, src.replace("def schema_migrate_fix(probe, params, values):\n",
+                                        "def schema_migrate_fix(probe, params, values):\n"
+                                        "    import io\n    io.open(probe.root / 'x').read()\n", 1))
+        self.assertPasses("L-38")  # a read-only io.open is not a write
+        self.t.write(STEPS, src)
+        self.assertPasses("L-38")
+
+    def test_a_helper_reached_from_a_check_is_scanned(self):
+        self.t.replace(STEPS, "def _spec_files(probe):\n", "def _spec_files(probe):\n    os.unlink('.x')\n")
+        self.assertFails("L-38", "does direct I/O (os.unlink)")
+
+    def test_reading_is_allowed(self):
+        self.t.replace(STEPS, "def schema_migrate_fix(probe, params, values):\n",
+                       "def schema_migrate_fix(probe, params, values):\n    open('.x').read()\n    'a'.replace('a', 'b')\n")
+        self.assertPasses("L-38")
+
+    def test_a_non_human_fix_reading_the_home_fails(self):
+        self.t.replace(STEPS, "def enforcement_defaults_fix(probe, params, values):\n",
+                       "def enforcement_defaults_fix(probe, params, values):\n"
+                       "    probe.home_read('.claude/settings.json')\n")
+        self.assertFails("L-38", "step enforcement-defaults: the fix of a non-human step reads the user's home")
+
+    def test_writes_outside_the_scopes_and_invariants(self):
+        self.mutate_step("team-settings", writes=["home"])
+        self.assertFails("L-38", "writes outside project|git_dir")
+        self.mutate_step("team-settings", writes=["project"], human=True)
+        self.assertFails("L-38", "step team-settings: a human step has fix null")
+        self.mutate_step("team-settings", human=False, fix="no_such_fn")
+        self.assertFails("L-38", "fix function no_such_fn is not in upgrade_steps.REGISTRY")
+
+    def test_since_newer_than_the_plugin(self):
+        self.mutate_step("global-config", since="9.0.0")
+        self.assertFails("L-38", "step global-config: since 9.0.0 is newer than the plugin version 1.0.0")
+        self.t.replace("CHANGELOG.md", "## [Unreleased]\n", "## [Unreleased]\n\n### Added\n- a line\n")
+        fs = lint(self.t.root, ["L-38"])
+        self.assertTrue(fs)
+        self.assertTrue(all(f["severity"] == "warning" and "since 9.0.0 (1 step: global-config)" in f["message"]
+                            for f in fs), "a working number is a warning while [Unreleased] holds the change")
+
+
+class ListClaims(unittest.TestCase):
+    def test_claim_ids(self):
+        self.assertEqual(lp.claim_id("055"), "REQ-W1-055")
+        self.assertEqual(lp.claim_id("UP-030"), "REQ-UP-030")
+
+    def test_list_accepts_up_claims_and_keeps_w1_claims(self):
+        code, out, err = run_cli("--root", str(_path.REPO_ROOT), "--list", "--format", "json")
+        self.assertEqual(code, 0, err)
+        checks = {c["id"]: c for c in json.loads(out)["result"]["checks"]}
+        self.assertEqual(checks["L-38"]["reqs"], ["REQ-UP-008", "REQ-UP-010", "REQ-UP-016", "REQ-UP-031"])
+        self.assertEqual(checks["L-11"]["reqs"], ["REQ-W1-055"])
+
+    def test_an_up_claim_absent_from_the_requirements_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            req = Path(d) / "reqs.md"
+            req.write_text("only REQ-W1-055\n", encoding="utf-8")
+            code, _, err = run_cli("--root", str(_path.REPO_ROOT), "--list", "--requirements", str(req))
+        self.assertEqual(code, 1)
+        self.assertIn("L-38 claims REQ-UP-008", err)
+
+
+# --------------------------------------------------------------------------- L-37 (project-upgrade)
+SURF = LIB + "/upgrade-surface.json"
+HOOK_SH = "plugins/karvey/hooks/karvey-hook.sh"
+
+
+class L37(LintCase):
+    GLOBS = ["plugins/karvey/hooks/*.sh", "plugins/karvey/hooks/{hooks}.json"]
+
+    def setUp(self):
+        super().setUp()
+        self.fingerprint("1.0.0")
+
+    def fingerprint(self, release):
+        from karvey_lib import upgrade
+        self.t.write(SURF, {"$comment": "x", "release": release, "globs": self.GLOBS,
+                            "files": upgrade.surface_files(self.t.root, self.GLOBS)})
+
+    def new_release(self, extra=""):
+        self.t.replace("CHANGELOG.md", "## [1.0.0]", "## [1.1.0] - 2026-09-26\n\n### Added\n- a change\n%s\n### Why\n"
+                                                    "x\n\n## [1.0.0]" % extra)
+
+    def test_unchanged_surface_passes(self):
+        self.assertPasses("L-37")
+
+    def test_changed_under_unreleased_is_a_warning_listing_the_files(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        fs = lint(self.t.root, ["L-37"])
+        self.assertEqual([f["severity"] for f in fs], ["warning"])
+        self.assertIn(HOOK_SH, fs[0]["message"])
+        self.assertIn("the next release must add an upgrade step", fs[0]["message"])
+
+    def test_a_new_release_without_a_declaration_is_an_error(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        self.new_release()
+        fs = self.assertFails("L-37", "release 1.1.0 changed the upgrade surface (%s)" % HOOK_SH)
+        self.assertTrue(all(f["severity"] == "error" for f in fs))
+        self.assertTrue(any("refresh it for release 1.1.0" in f["message"] for f in fs))
+
+    def test_declaration_or_step_plus_refreshed_fingerprint_passes(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        self.new_release("- No project upgrade needed: wording of a comment only\n")
+        fs = self.assertFails("L-37", "refresh it for release 1.1.0")
+        self.assertFalse(any("declares no project upgrade" in f["message"] for f in fs))
+        self.fingerprint("1.1.0")
+        self.assertPasses("L-37")
+
+    def test_a_step_with_since_the_release_counts_as_the_declaration(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        self.new_release()
+        self.t.write(LIB + "/upgrade-steps.json", {"catalogue_version": 1, "steps": [{"id": "x-step", "since": "1.1.0"}]})
+        fs = self.assertFails("L-37", "refresh it for release 1.1.0")
+        self.assertFalse(any("declares no project upgrade" in f["message"] for f in fs))
+        self.fingerprint("1.1.0")
+        self.assertPasses("L-37")
+
+    def test_a_short_reason_does_not_count(self):
+        self.t.append(HOOK_SH, "# changed\n")
+        self.new_release("- No project upgrade needed: typo\n")
+        self.assertFails("L-37", "declares no project upgrade")
+
+    def test_top_release_older_than_the_fingerprint(self):
+        self.fingerprint("2.0.0")
+        self.assertFails("L-37", "inconsistent")
+
+    def test_normalisation_is_platform_stable(self):
+        text = self.t.read(HOOK_SH)
+        self.t.path(HOOK_SH).write_bytes(b"\xef\xbb\xbf" + text.replace("\n", "\r\n").encode("utf-8"))
+        self.assertPasses("L-37")
+
+
+# --------------------------------------------------------------------------- L-39 (project-upgrade)
+README_UPGRADE = """
+## Update to the latest version
+
+Update the plugin.
+
+### Upgrading your project
+
+The first startup asks once; "Not for this version" declines; run `/karvey:karvey-upgrade` or
+`karvey-upgrade.py plan` by hand.
+
+## Next section
+"""
+
+
+class L39(UpgradeMiniPlugin):
+    """The mini plugin with the upgrade tool (from UpgradeMiniPlugin's setUp) and its docs, then mutated."""
+
+    def setUp(self):
+        super().setUp()
+        self.t.append("README.md", README_UPGRADE)
+        self.t.replace("CHANGELOG.md", "- The mini plugin.\n", "- The mini plugin and its project upgrade.\n")
+        from karvey_lib import upgrade_steps
+        block = json.dumps({"statusLine": upgrade_steps.STATUSLINE_BLOCK}, indent=2)
+        self.t.append("plugins/karvey/hooks/README.md",
+                      "\n## The upgrade offer\n\nIt prints two lines. <!-- guard-case: ss-24-offer -->\n\n"
+                      "## The statusline\n\n```json\n%s\n```\n" % block)
+
+    def test_documented_passes(self):
+        self.assertPasses("L-39")
+
+    def test_readme_section_removed(self):
+        self.t.replace("README.md", "### Upgrading your project\n", "")
+        self.assertFails("L-39", "no project-upgrade subsection")
+
+    def test_readme_section_without_the_decline(self):
+        self.t.replace("README.md", '"Not for this version" declines; ', "")
+        self.assertFails("L-39", "does not mention Not for this version")
+
+    def test_hooks_readme_section_removed(self):
+        self.t.replace("plugins/karvey/hooks/README.md", "## The upgrade offer\n", "## Something else\n")
+        self.assertFails("L-39", "no '## The upgrade offer' section")
+
+    def test_hooks_readme_section_without_anchor(self):
+        self.t.replace("plugins/karvey/hooks/README.md", " <!-- guard-case: ss-24-offer -->", "")
+        self.assertFails("L-39", "no <!-- guard-case: ss-24")
+
+    def test_stable_command_drifted(self):
+        self.t.replace("plugins/karvey/hooks/README.md", "head -1", "head -2")
+        self.assertFails("L-39", "differs from upgrade_steps.STABLE_STATUSLINE")
+
+    def test_the_release_that_ships_it_mentions_it(self):
+        self.t.replace("CHANGELOG.md", "- The mini plugin and its project upgrade.\n", "- Something else.\n")
+        self.assertFails("L-39", "release 1.0.0 ships the project upgrade but its entry does not mention it")
+        self.t.replace("CHANGELOG.md", "- Something else.\n", "- Something else; step legacy-shims.\n")
+        self.assertPasses("L-39")

@@ -359,7 +359,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
       <h1 id="en-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> is a word of the <strong>Ona</strong> language of the <strong>Selknam</strong> people of Patagonia, meaning <strong>Afán</strong> — zeal, the drive to get things done.</p>
       <ul class="badges" aria-label="Plugin facts">
-        <li class="badge v">v3.12.0</li>
+        <li class="badge v">v3.13.0</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">stack-agnostic</li>
@@ -1123,7 +1123,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="en-t-ver">Version history</h2>
   <p class="lede">Why does the history start at <strong>3.0.0</strong>? Pure whim: our flagship software, <strong>Paáutin</strong>, was at version 3 when we built the plugin, so Karvey was born as a 3 too. There never was a 1.x or a 2.x.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>Wave 1 hardening: phase state through one tool over a schema-checked <code>spec.json</code>; approvals recorded by a hook from the human's own words; a prod-gate (on by default) that lets a production merge through only with a human approval bound to the PR's head commit; notification destinations only from <code>project.json</code>; the linter checks the plugin's text against its files.</li>
+    <li class="now"><span class="ver">3.13.0</span><span class="date">2026-09-26</span><br>After a plugin update, the first session in a Karvey project asks once per clone whether to build a project upgrade plan (only when a step applies); <code>/karvey:karvey-upgrade</code> turns the picked steps into one reviewable pull request. Every later release that changes what projects rely on must declare how they upgrade.</li>
+    <li><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>Wave 1 hardening: phase state through one tool over a schema-checked <code>spec.json</code>; approvals recorded by a hook from the human's own words; a prod-gate (on by default) that lets a production merge through only with a human approval bound to the PR's head commit; notification destinations only from <code>project.json</code>; the linter checks the plugin's text against its files.</li>
     <li><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>Hotfix: the live-state check finds the repo when the team lives inside it, and recognises git worktrees — no more false "not found" drift.</li>
     <li><span class="ver">3.11.3</span><span class="date">2026-09-23</span><br>Hotfix: the session hook runs again (a quoting error in <code>hooks.json</code> had disabled it since 3.8.0); a <code>team.json</code> inside the repo resolves the right profile. Regression tests run the hook exactly as declared.</li>
     <li><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>Hotfix: <code>karvey-init --settings</code> only configures the team and stops (it no longer creates a change or a tracker Epic); the session notice only appears in real Karvey projects; the statusline survives odd reset values; its debug copy is private per user. Regression tests for the hooks.</li>
@@ -1190,7 +1191,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="es-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> es una palabra del <strong>ona</strong>, la lengua del pueblo <strong>selknam</strong> de la Patagonia, que significa <strong>Afán</strong> (de hacer).</p>
       <ul class="badges" aria-label="Datos del plugin">
-        <li class="badge v">v3.12.0</li>
+        <li class="badge v">v3.13.0</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">agnóstico de stack</li>
@@ -1954,7 +1955,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="es-t-ver">Historial de versiones</h2>
   <p class="lede">¿Por qué el historial parte en la <strong>3.0.0</strong>? Por puro capricho: nuestro software emblema, <strong>Paáutin</strong>, estaba en la versión 3 cuando hicimos el plugin, así que Karvey nació también como 3. Nunca existieron una 1.x ni una 2.x.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.12.0</span><span class="date">26-09-2026</span><br>Endurecimiento, ola 1: el estado de fase pasa por una sola herramienta sobre un <code>spec.json</code> validado por esquema; las aprobaciones las registra un hook a partir de las palabras del humano; un prod-gate (activo por defecto) deja pasar un merge a producción solo con una aprobación humana ligada al commit de cabeza del PR; los destinos de notificación salen solo de <code>project.json</code>; el linter contrasta el texto del plugin con sus archivos.</li>
+    <li class="now"><span class="ver">3.13.0</span><span class="date">26-09-2026</span><br>Tras actualizar el plugin, la primera sesión en un proyecto Karvey pregunta una vez por clon si armar un plan de actualización del proyecto (solo cuando algún paso aplica); <code>/karvey:karvey-upgrade</code> convierte los pasos elegidos en un único pull request revisable. Cada versión posterior que cambie aquello de lo que dependen los proyectos debe declarar cómo se actualizan.</li>
+    <li><span class="ver">3.12.0</span><span class="date">26-09-2026</span><br>Endurecimiento, ola 1: el estado de fase pasa por una sola herramienta sobre un <code>spec.json</code> validado por esquema; las aprobaciones las registra un hook a partir de las palabras del humano; un prod-gate (activo por defecto) deja pasar un merge a producción solo con una aprobación humana ligada al commit de cabeza del PR; los destinos de notificación salen solo de <code>project.json</code>; el linter contrasta el texto del plugin con sus archivos.</li>
     <li><span class="ver">3.11.4</span><span class="date">23-09-2026</span><br>Hotfix: la comparación de estado encuentra el repo cuando el equipo vive dentro de él y reconoce los worktrees de git — se acaba el falso drift "no encontrado".</li>
     <li><span class="ver">3.11.3</span><span class="date">23-09-2026</span><br>Hotfix: el hook de sesión vuelve a ejecutarse (un error de comillas en <code>hooks.json</code> lo tenía desactivado desde la 3.8.0); un <code>team.json</code> dentro del repo resuelve el perfil correcto. Los tests de regresión ejecutan el hook tal como está declarado.</li>
     <li><span class="ver">3.11.2</span><span class="date">23-09-2026</span><br>Hotfix: <code>karvey-init --settings</code> solo configura el equipo y se detiene (ya no crea un change ni un Epic en el tracker); el aviso de sesión solo aparece en proyectos Karvey reales; el statusline resiste valores de reset raros; su copia de depuración es privada por usuario. Tests de regresión para los hooks.</li>
@@ -2020,7 +2022,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="pt-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> é uma palavra da língua <strong>Ona</strong> do povo <strong>Selknam</strong> da Patagônia, que significa <strong>Afán</strong> — empenho, o ímpeto de fazer as coisas acontecerem.</p>
       <ul class="badges" aria-label="Dados do plugin">
-        <li class="badge v">v3.12.0</li>
+        <li class="badge v">v3.13.0</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · orientado a especificação</li>
         <li class="badge">agnóstico de stack</li>
@@ -2784,7 +2786,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="pt-t-ver">Histórico de versões</h2>
   <p class="lede">Por que o histórico começa na <strong>3.0.0</strong>? Por puro capricho: nosso software emblemático, o <strong>Paáutin</strong>, estava na versão 3 quando criamos o plugin, então o Karvey também nasceu como 3. Nunca existiram uma 1.x nem uma 2.x.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>Endurecimento, onda 1: o estado de fase passa por uma única ferramenta sobre um <code>spec.json</code> validado por esquema; as aprovações são registradas por um hook a partir das palavras do humano; um prod-gate (ativo por padrão) só deixa passar um merge para produção com uma aprovação humana vinculada ao commit de topo do PR; os destinos de notificação vêm apenas do <code>project.json</code>; o linter confere o texto do plugin com seus arquivos.</li>
+    <li class="now"><span class="ver">3.13.0</span><span class="date">2026-09-26</span><br>Após atualizar o plugin, a primeira sessão num projeto Karvey pergunta uma vez por clone se deve montar um plano de atualização do projeto (só quando algum passo se aplica); <code>/karvey:karvey-upgrade</code> transforma os passos escolhidos num único pull request revisável. Cada versão seguinte que mude aquilo de que os projetos dependem deve declarar como eles se atualizam.</li>
+    <li><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>Endurecimento, onda 1: o estado de fase passa por uma única ferramenta sobre um <code>spec.json</code> validado por esquema; as aprovações são registradas por um hook a partir das palavras do humano; um prod-gate (ativo por padrão) só deixa passar um merge para produção com uma aprovação humana vinculada ao commit de topo do PR; os destinos de notificação vêm apenas do <code>project.json</code>; o linter confere o texto do plugin com seus arquivos.</li>
     <li><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>Hotfix: a verificação de estado encontra o repositório quando a equipe vive dentro dele e reconhece worktrees do git — fim do falso drift "não encontrado".</li>
     <li><span class="ver">3.11.3</span><span class="date">2026-09-23</span><br>Hotfix: o hook de sessão volta a rodar (um erro de aspas em <code>hooks.json</code> o desativava desde a 3.8.0); um <code>team.json</code> dentro do repositório resolve o perfil correto. Os testes de regressão executam o hook exatamente como declarado.</li>
     <li><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>Hotfix: <code>karvey-init --settings</code> só configura a equipe e para (não cria mais uma mudança nem um Epic no tracker); o aviso de sessão só aparece em projetos Karvey reais; o statusline resiste a valores de reset estranhos; sua cópia de depuração é privada por usuário. Testes de regressão para os hooks.</li>
@@ -2850,7 +2853,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="de-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> ist ein Wort aus der <strong>Ona</strong>-Sprache des <strong>Selknam</strong>-Volkes in Patagonien und bedeutet <strong>Afán</strong> — Eifer, der Antrieb, Dinge zu erledigen.</p>
       <ul class="badges" aria-label="Eckdaten des Plugins">
-        <li class="badge v">v3.12.0</li>
+        <li class="badge v">v3.13.0</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">stack-agnostisch</li>
@@ -3614,7 +3617,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="de-t-ver">Versionshistorie</h2>
   <p class="lede">Warum beginnt die Historie bei <strong>3.0.0</strong>? Aus reiner Laune: Unsere Vorzeigesoftware <strong>Paáutin</strong> war bei Version 3, als wir das Plugin gebaut haben, also kam auch Karvey als 3 zur Welt. Eine 1.x oder 2.x hat es nie gegeben.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>Härtung, Welle 1: der Phasenzustand läuft über ein einziges Werkzeug auf einer schemageprüften <code>spec.json</code>; Freigaben zeichnet ein Hook aus den eigenen Worten des Menschen auf; ein Prod-Gate (standardmäßig aktiv) lässt einen Merge in die Produktion nur mit einer menschlichen Freigabe durch, die an den Head-Commit des PR gebunden ist; Benachrichtigungsziele nur aus <code>project.json</code>; der Linter prüft den Text des Plugins gegen seine Dateien.</li>
+    <li class="now"><span class="ver">3.13.0</span><span class="date">2026-09-26</span><br>Nach einem Plugin-Update fragt die erste Sitzung in einem Karvey-Projekt einmal pro Klon, ob ein Upgrade-Plan für das Projekt erstellt werden soll (nur wenn ein Schritt zutrifft); <code>/karvey:karvey-upgrade</code> macht aus den gewählten Schritten einen einzigen prüfbaren Pull Request. Jede spätere Version, die ändert, worauf Projekte sich stützen, muss angeben, wie sie aktualisiert werden.</li>
+    <li><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>Härtung, Welle 1: der Phasenzustand läuft über ein einziges Werkzeug auf einer schemageprüften <code>spec.json</code>; Freigaben zeichnet ein Hook aus den eigenen Worten des Menschen auf; ein Prod-Gate (standardmäßig aktiv) lässt einen Merge in die Produktion nur mit einer menschlichen Freigabe durch, die an den Head-Commit des PR gebunden ist; Benachrichtigungsziele nur aus <code>project.json</code>; der Linter prüft den Text des Plugins gegen seine Dateien.</li>
     <li><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>Hotfix: der Zustandsabgleich findet das Repository, wenn das Team darin lebt, und erkennt Git-Worktrees — kein falscher „nicht gefunden“-Drift mehr.</li>
     <li><span class="ver">3.11.3</span><span class="date">2026-09-23</span><br>Hotfix: der Sitzungs-Hook läuft wieder (ein Anführungszeichenfehler in <code>hooks.json</code> hatte ihn seit 3.8.0 deaktiviert); ein <code>team.json</code> im Repository löst das richtige Profil auf. Regressionstests führen den Hook genau wie deklariert aus.</li>
     <li><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>Hotfix: <code>karvey-init --settings</code> konfiguriert nur das Team und hält an (legt keine Änderung und kein Epic im Tracker mehr an); der Sitzungshinweis erscheint nur in echten Karvey-Projekten; die Statuszeile übersteht ungewöhnliche Reset-Werte; ihre Debug-Kopie ist pro Benutzer privat. Regressionstests für die Hooks.</li>
@@ -3680,7 +3684,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="zh-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> 是巴塔哥尼亚<strong>塞尔克南人</strong>（Selknam）<strong>欧纳语</strong>（Ona）中的一个词，意为 <strong>Afán</strong>——热忱，把事情做成的干劲。</p>
       <ul class="badges" aria-label="插件概况">
-        <li class="badge v">v3.12.0</li>
+        <li class="badge v">v3.13.0</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · 规格驱动</li>
         <li class="badge">技术栈无关</li>
@@ -4444,7 +4448,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="zh-t-ver">版本历史</h2>
   <p class="lede">为什么版本历史从 <strong>3.0.0</strong> 开始？纯属心血来潮：我们开发这个插件时，我们的旗舰软件 <strong>Paáutin</strong> 正处于第 3 版，所以 Karvey 也从 3 起步。从来没有 1.x 或 2.x。</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>加固第一波：阶段状态统一经由一个工具、基于经过模式校验的 <code>spec.json</code>；审批由钩子根据人的原话记录；prod-gate（默认开启）只在存在绑定到 PR 头部提交的人工审批时才放行生产合并；通知目标只来自 <code>project.json</code>；linter 将插件文本与其文件逐一核对。</li>
+    <li class="now"><span class="ver">3.13.0</span><span class="date">2026-09-26</span><br>插件更新后，Karvey 项目中的第一次会话会在每个克隆中询问一次是否生成项目升级计划（仅当有步骤适用时）；<code>/karvey:karvey-upgrade</code> 把选中的步骤变成一个可审查的拉取请求。此后每个改变项目所依赖内容的版本都必须声明项目如何升级。</li>
+    <li><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>加固第一波：阶段状态统一经由一个工具、基于经过模式校验的 <code>spec.json</code>；审批由钩子根据人的原话记录；prod-gate（默认开启）只在存在绑定到 PR 头部提交的人工审批时才放行生产合并；通知目标只来自 <code>project.json</code>；linter 将插件文本与其文件逐一核对。</li>
     <li><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>热修复：当团队配置位于仓库内部时，状态比对能找到该仓库，并能识别 git worktree——不再出现虚假的“未找到”漂移。</li>
     <li><span class="ver">3.11.3</span><span class="date">2026-09-23</span><br>热修复：会话钩子重新运行（<code>hooks.json</code> 中的引号错误自 3.8.0 起使其失效）；仓库内的 <code>team.json</code> 能解析到正确的配置目录。回归测试按声明方式原样执行钩子。</li>
     <li><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>热修复：<code>karvey-init --settings</code> 只配置团队设置并随即停止（不再创建变更或在跟踪器中创建 Epic）；会话提示只出现在真正的 Karvey 项目中；状态栏能容忍异常的重置值；其调试副本按用户私有。为钩子新增回归测试。</li>
