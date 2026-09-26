@@ -44,6 +44,18 @@ It answers `mode` (`granular` | `merged`), `closes_gate` and `record_with`. The 
 
 Every approval records `--by`, `--role` and `--ref` (the `D-NN` or URL where the answer lives).
 
+**After the answer is recorded** (approved or changes requested), run the close steps once:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-close.py" "{change-id}" "{phase}" --outcome approved|changes_requested \
+  [--review-min N] --json
+```
+
+It builds and leak-checks the sponsor page, filters the notifications due through the sent-log, lists the risk
+owners to ask at *qa* and *release*, records the phase's effort last and offers the checkpoint. Then only: send
+the payloads it prints, verbatim (a failed send goes to the outbox); ask the listed owners and record each answer
+with `karvey-state.py risk`. A failed step is reported; it never reopens the gate.
+
 ## Phases without a gate
 
 `grill`, `init`, `impl`, `test` and `deploying` have no approval of their own. They end by stating what the
