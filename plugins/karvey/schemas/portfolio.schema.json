@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "karvey:portfolio.schema.json",
+  "$comment": "wave3-optimization §1.20 (C-20; REQ-W3-045, 047): the organisation's Karvey repositories by local path. Default location {ops_repo or spec_repo}/docs/spec/portfolio.json. The view reads files only: `clone` is information, never fetched or cloned.",
+  "x-karvey-schema-version": 1,
+  "type": "object",
+  "required": ["repos"],
+  "properties": {
+    "repos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "client"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "x-karvey-note": "a local clone: absolute, or relative to the portfolio file's directory; checked before any read (no control or shell characters)"
+          },
+          "clone": {
+            "type": "string",
+            "x-karvey-note": "where the repository can be cloned from: shown, never used"
+          },
+          "client": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner": {
+            "type": "string",
+            "x-karvey-note": "a role (the team that answers for the repository), not a person's name"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
