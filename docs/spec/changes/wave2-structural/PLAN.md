@@ -123,7 +123,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [ ] E1.F5.T6 [Backend] Deploy flow text: 2.4-bis spec merge on the change branch, 2.5 integration by PR, 2.8-bis manifest + release gate, prod OK in PR body at deploy → D-NN at archive, attested fallback, `release/*` offer — est: 15min (depends E1.F5.T3)
 - [ ] E1.F5.T7 [Backend] `branch_flow.mode` derived (trunk when integration = production), contradiction reported, trunk recommended by `karvey-init --settings` — est: 6min (depends E1.F1.T1) (P)
 - [ ] E1.F5.T8 [Backend] L-42 (commit examples carry the trailer), L-43 (no local merge + push into integration), L-53 (deploy order and naming) — est: 12min (depends E1.F5.T6, E1.F10.T2)
-- [ ] E1.F5.T9 [Backend] Inherited base commits: map `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` (wave1-hardening decision commits on the base branch) to `wave1-hardening` — no rewrite — est: 5min (depends E1.F5.T2)
+- [x] E1.F5.T9 [Backend] Inherited base commits: map `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` (wave1-hardening decision commits on the base branch) to `wave1-hardening` — no rewrite — est: 5min (depends E1.F5.T2)
 
 ### Feature E1.F6: Living spec merged before production
 
@@ -224,7 +224,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F5.T6 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F5.T7 [Backend] | ⬜ todo | 6 | — | — |  |
 | E1.F5.T8 [Backend] | ⬜ todo | 12 | — | — |  |
-| E1.F5.T9 [Backend] | ⬜ todo | 5 | — | — |  |
+| E1.F5.T9 [Backend] | ✅ done | 5 | 3 | 0 |  |
 | E1.F6.T1 [Backend] | ✅ done | 10 | 5 | 0 |  |
 | E1.F6.T2 [Backend] | ⬜ todo | 6 | — | — |  |
 | E1.F6.T3 [Backend] | ⬜ todo | 10 | — | — |  |
@@ -264,3 +264,4 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | 2026-09-25 | architecture | `architecture.md` generated (C-01..C-24, REQ-W2-001..088 covered, Tier 2 controls S-1..S-12, project-upgrade step declarations §7.4); infra skipped (no cloud); not approved |
 | 2026-09-25 | tasks | `tasks.md` generated: 71 tasks (69 agent, 2 `[human]`), 706 min calibrated, critical path 141 min, REQ-W2 88/88; inherited base commits `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` are `wave1-hardening` decision commits (spec-only, mapped to that change, E1.F5.T9); not approved |
 | 2026-09-25 | impl | Batch 1 (25 tasks): E1.F1.T1..T11 (F1 complete), E1.F2.T1..T8, E1.F3.T1..T4, E1.F3.T6, E1.F6.T1; one commit each with `Karvey-Change: wave2-structural`, one `[Unreleased]` line each, no version change. Deviations: (1) E1.F2.T6 adds `karvey-state.py lane-check` so the QA lane-check text is executable (the design names `measure_diff` + `record_hit`, not the CLI); (2) E1.F1.T5 done-when grep prints 0, not 1 — the change is in impl with no blocker, the duplicate is reproduced by `test_state_next` BlockersOnce; (3) E1.F2.T8 diff has no `@@` hunk header (it conflicts with the no-`@` check; applied by hand); (4) `project.schema.json:checks` also accepts `granular`/`merged` (the `gates.merged` levels); (5) `lanes.json` gains no rank: raise/lower order is derived from the number of phases a lane runs. Next: E1.F2.T9 waits on E1.F5.T3; continue with E1.F3.T5, E1.F4.*, E1.F5.*, E1.F9.* |
+| 2026-09-26 | impl | E1.F5.T9 — inherited base commits: `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` (decision-log and wave1 fix commits on the base branch) belong to `wave1-hardening`; no history is rewritten. `karvey-release-gate.py manifest --base origin/main` run on 2026-09-26: `wave1-hardening` is not yet on `origin/main`, so the four shas are listed among the 107 inherited commits of that change (all pre-trailer). After `wave1-hardening` merges they leave this range; if they are still in it at the release gate, run it with `--base` at the merge base and quote this note in the PR body. |
