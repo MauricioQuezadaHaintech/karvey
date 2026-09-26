@@ -98,6 +98,10 @@ fail modes and no phase write can go through `karvey-state.py`.
 
 **6b. Karvey skills installed in this agent's environment.** Each agent (lab server, laptop, CI runner, remote sandbox) must be able to load the method:
 - Look for the skills where the harness loads them — the plugin install (e.g. `~/.claude/plugins/marketplaces/*/plugins/karvey/`) or user/project skill folders (`~/.claude/skills/karvey*`, `.claude/skills/karvey*`) — and read the installed version from its `plugin.json`.
+- **Loaded vs available:** a running session keeps the plugin version it loaded at start. Report it with
+  `cd "${CLAUDE_PLUGIN_ROOT}/scripts" && python3 -m karvey_lib.runtime` — it reads the runtime's installed-plugins
+  record read-only and prints `loaded X, available Y` (a difference → update the plugin and start a new session) or
+  `loaded version unknown` when there is no record; never guess the loaded version from the files on disk.
 - Compare with the version the project expects (`project.json:karvey_version`, if declared) and verify the skills the project's changes will need are present (at least `karvey`, the phase skills in use, and `karvey-iterate`).
 - Missing or outdated → **FAIL** with the install/update instructions **for this environment** (plugin marketplace install/update for Claude Code; copying the `${CLAUDE_PLUGIN_ROOT}/skills/` folder for harnesses without plugins; re-starting the agent session so the skills load). Never report a phase as runnable in an environment where its skill is not installed.
 
