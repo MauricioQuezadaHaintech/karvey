@@ -70,5 +70,30 @@ class TablesRunOnce(unittest.TestCase):
         self.assertIn('"${KARVEY_SKIP_TABLES:-}" != "1"', text)
 
 
+@unittest.skipUnless(WORKFLOW.is_file(), "not this repository")
+class ContextSizeStep(unittest.TestCase):
+    """@req REQ-W3-011 — the lint job runs the size comparison after the linter, read-only and pinned."""
+
+    def test_size_step_follows_the_linter_in_the_lint_job(self):
+        job = jobs()["lint"]
+        runs = re.findall(r"- run: (.*)", job)
+        lint = next(i for i, r in enumerate(runs) if "lint-plugin.py" in r)
+        size = next(i for i, r in enumerate(runs) if "karvey-context-budget.py compare" in r)
+        self.assertGreater(size, lint)
+        self.assertIn("--live", runs[size])
+        self.assertIn("--warn-growth 10", runs[size])
+        base = re.search(r"compare (\S+)", runs[size]).group(1)
+        self.assertTrue((_path.REPO_ROOT / base).is_file(), base)
+
+    def test_workflow_stays_read_only_and_pinned(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("permissions:\n  contents: read", text)
+        self.assertNotIn("secrets.", text)
+        self.assertNotRegex(text, r"(?m)^\s*pull_request_target:")
+        self.assertNotRegex(text, r"(?m)^\s*(contents|packages|id-token|pull-requests):\s*write")
+        for use in re.findall(r"uses:\s*(\S+)", text):
+            self.assertRegex(use, r"@[0-9a-f]{40}$", use)
+
+
 if __name__ == "__main__":
     unittest.main()

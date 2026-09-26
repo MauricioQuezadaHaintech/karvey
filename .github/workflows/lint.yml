@@ -26,6 +26,9 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 plugins/karvey/scripts/lint-plugin.py --format github
+      # per-phase instruction size against the last released snapshot: warns on > 10% growth, never fails
+      # (REQ-W3-011); a Load: entry naming a missing file already fails the linter above (L-62, REQ-W3-072)
+      - run: python3 plugins/karvey/scripts/karvey-context-budget.py compare docs/spec/retros/context-size-4.0.0.json --live --warn-growth 10
       - run: python3 plugins/karvey/scripts/karvey-state.py validate --all --root .
 
   tests:
