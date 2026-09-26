@@ -344,7 +344,7 @@ def _team_settings(probe, values):
     cfg = probe.config
     settings = cfg.Settings.__new__(cfg.Settings)
     settings.root, settings.project = probe.root, copy.deepcopy(doc.data)
-    settings._remote, settings._remote_done, settings.remote_name = None, True, None
+    settings._remote, settings._remote_done, settings.remote_name = [], True, None  # no reviewed line: the working copy only
     try:
         proposal = cfg.propose_settings(settings, from_legacy=True)
     except cfg.Refused as exc:
