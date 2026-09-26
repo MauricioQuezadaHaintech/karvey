@@ -169,7 +169,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 - [x] E1.F13.T1 [Backend] `validate --fix`: lane proposal (proposed tier), `approvals.deploy` → `deploys[]` only with data, idempotent, never an approval — est: 10min (depends E1.F4.T1, E1.F1.T4)
 - [x] E1.F13.T2 [Test] `compat.json`: the 3.12.0 fixtures replayed under 3.13 defaults — every Wave 1 allow still allows — est: 10min (depends E1.F5.T5, E1.F13.T1, E1.F5.T4)
-- [ ] E1.F13.T3 [Test] Integration `test_wave2_flow.py`: init → lane → three `approve-gate` → trailer commits → `release-gate check` pass (AC-4, AC-5) — est: 12min (depends E1.F5.T3, E1.F5.T5, E1.F4.T2)
+- [x] E1.F13.T3 [Test] Integration `test_wave2_flow.py`: init → lane → three `approve-gate` → trailer commits → `release-gate check` pass (AC-4, AC-5) — est: 12min (depends E1.F5.T3, E1.F5.T5, E1.F4.T2)
 - [ ] E1.F13.T4 [Backend] This repo: `validate --fix --accept-proposed` on its own changes, `branch_flow.mode: trunk`, then `gates: merged` and `judges` (after the baseline, L-48) — est: 6min (depends E1.F1.T9, E1.F13.T1, E1.F4.T2, E1.F5.T7)
 - [ ] E1.F13.T5 [Backend] Hand-off of the §7.4 upgrade steps for project-upgrade's catalogue (declarations only) — est: 8min (depends E1.F13.T1, E1.F5.T7)
 - [ ] E1.F13.T6 [Test] Whole-repo gate: lint 0 errors, every unit and regression suite, every table, `validate --all`, `karvey-trace.py wave2-structural --write --check`, manual scripts run headless (D-19) — est: 10min (depends every other agent task)
@@ -246,7 +246,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F12.T3 [Test] | ✅ done | 8 | 6 | 0 |  |
 | E1.F13.T1 [Backend] | ✅ done | 10 | 8 | 0 | the catalogue idempotency test now allows the retired `approvals.deploy` key to leave `approvals` |
 | E1.F13.T2 [Test] | ✅ done | 10 | 5 | 0 | generated from the four tables (74 allow cases) |
-| E1.F13.T3 [Test] | ⬜ todo | 12 | — | — |  |
+| E1.F13.T3 [Test] | ✅ done | 12 | 12 | 0 | found F-06 (merged gates unreachable past one phase), fixed with regression tests in its own commit |
 | E1.F13.T4 [Backend] | ⬜ todo | 6 | — | — |  |
 | E1.F13.T5 [Backend] | ⬜ todo | 8 | — | — |  |
 | E1.F13.T6 [Test] | ⬜ todo | 10 | — | — |  |
