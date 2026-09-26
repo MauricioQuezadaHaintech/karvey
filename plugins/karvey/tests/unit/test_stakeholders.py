@@ -1,6 +1,6 @@
 """Stakeholders (architecture §1.12, C-12).
 
-@req REQ-W3-020
+@req REQ-W3-020 REQ-W3-044
 """
 import copy
 import unittest
@@ -63,6 +63,44 @@ class Resolve(unittest.TestCase):
         self.assertEqual(r["sponsor"]["name"], "Program sponsor")
         self.assertEqual(r["approver"]["name"], "approver")
         self.assertNotIn("executor", r)
+
+
+class Client(unittest.TestCase):
+    """@req REQ-W3-044 — ``client`` is first-level; a change inherits it; a differing tracker tag warns."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from _state import make_project
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-client-"))
+        self.addCleanup(__import__("shutil").rmtree, str(self.tmp), True)
+        make_project(self.tmp, project=dict(PROJECT, client="sample-client-a"))
+
+    def test_REQ_W3_044_a_new_change_inherits_the_project_client(self):
+        import json
+        from _state import run_json
+        code, env = run_json("init", "new-change", "--root", str(self.tmp))
+        self.assertEqual(code, 0, env)
+        data = json.loads((self.tmp / "docs/spec/changes/new-change/spec.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["client"], "sample-client-a")
+
+    def test_REQ_W3_044_a_differing_tracker_tag_warns_naming_both(self):
+        import json
+        from _state import run_json
+        spec = dict(GOOD_SPEC, client="sample-client-a", clickup={"client_tag": "sample-client-b"})
+        d = self.tmp / "docs/spec/changes/feat-a"
+        d.mkdir(parents=True)
+        (d / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
+        code, env = run_json("validate", "--all", "--root", str(self.tmp))
+        self.assertEqual(code, 0, env["errors"])
+        msgs = [w["message"] for w in env["warnings"] if w["code"] == "client.mismatch"]
+        self.assertEqual(len(msgs), 1)
+        self.assertIn("'sample-client-a'", msgs[0])
+        self.assertIn("'sample-client-b'", msgs[0])
+
+    def test_client_is_a_valid_first_level_field(self):
+        self.assertEqual(errors(dict(PROJECT, client="sample-client-a")), [])
+        self.assertEqual(errors(dict(GOOD_SPEC, client="sample-client-a"), "spec"), [])
 
 
 if __name__ == "__main__":

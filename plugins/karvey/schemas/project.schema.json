@@ -224,6 +224,11 @@
         }
       }
     },
+    "client": {
+      "type": "string",
+      "minLength": 1,
+      "x-karvey-note": "the client this project serves; every new change inherits it (wave3 §1.20, REQ-W3-044)"
+    },
     "stakeholders": {
       "$ref": "#/$defs/stakeholders"
     },

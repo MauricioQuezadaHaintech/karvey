@@ -906,6 +906,7 @@ def cmd_validate(args, root):
         issues = validate_data(data, kind_of(f), strict, file=name)
         if kind_of(f) == "spec":
             issues += risk_register_issues(root, Path(f).parent)
+            issues += client_issues(data, name)
         e = [i for i in issues if i["severity"] == "error"]
         w = [i for i in issues if i["severity"] == "warning"]
         entry["errors"], entry["warnings"] = len(e), len(w)
@@ -938,6 +939,20 @@ def cmd_validate(args, root):
     lines.append("mode: %s · %d files · %d errors · %d warnings" % (strict_mode, len(report), len(errors),
                                                                    len(warnings)))
     return worst, result, errors, warnings, "\n".join(lines)
+
+
+def client_issues(data, file):
+    """wave3 §1.20 (REQ-W3-044): a change whose ``client`` differs from its tracker tag (``clickup.client_tag``, the
+    historical read fallback) → a warning naming both values (check ``client.mismatch``, warn in 4.1)."""
+    if not isinstance(data, dict):
+        return []
+    client = data.get("client")
+    tag = (data.get("clickup") or {}).get("client_tag") if isinstance(data.get("clickup"), dict) else None
+    if isinstance(client, str) and isinstance(tag, str) and client.strip() and tag.strip() and \
+            client.strip().lower() != tag.strip().lower():
+        return [kl.issue("client.mismatch", "client %r differs from the tracker tag clickup.client_tag %r"
+                         % (client, tag), severity="warning", file=file, path="$.client")]
+    return []
 
 
 def risk_register_issues(root, change_dir):
@@ -1410,6 +1425,10 @@ def cmd_init(args, root):
     state_fields = {"schema_version": SCHEMA_VERSION, "change_id": change, "phase": "init",
                     "phase_history": [entry], "approvals": {}}
     path = Path(root) / pj.CHANGES_DIR / change / "spec.json"
+    project, _ = pj.load_project_json(root)
+    client = (project or {}).get("client") if isinstance(project, dict) else None
+    if isinstance(client, str) and client.strip():
+        state_fields["client"] = client.strip()  # a change inherits the project's client (REQ-W3-044)
     if not path.is_file():
         data = dict(state_fields, created_at=now, updated_at=now)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1426,6 +1445,8 @@ def cmd_init(args, root):
         for k, v in state_fields.items():
             if k == "approvals" and isinstance(data.get("approvals"), dict):
                 continue
+            if k == "client" and data.get("client"):
+                continue  # a client the skill already wrote wins over the project's
             data[k] = v
         data.setdefault("created_at", now)
         data["updated_at"] = now

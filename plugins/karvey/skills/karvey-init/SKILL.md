@@ -164,6 +164,10 @@ Then let the state tool add the state (phase `init`, `phase_history`, `approvals
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" init "{change-id}" --by "{name}"
 ```
 
+The change inherits `project.json:client` as its first-level `client` (write a different one in `spec.json` only
+when this change serves another client). The tracker's `clickup.client_tag` is a read fallback, never the source;
+`validate` warns when the two differ.
+
 Record the lane of Step 5 through the tool (`set patch` checks the answers and refuses with the failing
 criterion, e.g. `patch: schema change — use standard`; then propose that lane):
 

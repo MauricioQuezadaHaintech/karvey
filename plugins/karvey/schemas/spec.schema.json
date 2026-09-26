@@ -330,6 +330,11 @@
         }
       }
     },
+    "client": {
+      "type": "string",
+      "minLength": 1,
+      "x-karvey-note": "the client this change serves, inherited from project.json:client at init (wave3 §1.20); clickup.client_tag is only a read fallback"
+    },
     "stakeholders": {
       "$ref": "karvey:project.schema.json#/$defs/stakeholders",
       "x-karvey-note": "per-role override of project.json:stakeholders (wave3 §1.12)"
