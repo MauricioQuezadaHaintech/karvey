@@ -265,3 +265,18 @@ corrected, not annotated at the end.
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Mantenerlo (Recomendado)» — to: keep the new `subagent-prompt` guard (blocks, in a Karvey project, an Agent/Task call whose prompt lets the subagent write `project.json` without the ban line; allows the call when python is missing)?
 - **What:** the guard ships in 3.12.0; `architecture.md` gets revision 2 describing it, and QA reviews it.
+
+## D-34 — Prod-gate verifies the approval hook's audit record (F-76)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-26. **Answer, verbatim:** «Registro de auditoría del hook (Recomendado)»
+- **What:** the prod-gate accepts a prod approval only when its marker has the matching audit-log line written by the `UserPromptSubmit` approval hook (prompt hash, session, time). The D-NN is still written at archive (BL-47).
+
+## D-35 — Prod approval bound to the approved head SHA, valid 24 h (F-77)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-26. **Answer, verbatim:** «SHA aprobado + vence en 24 h (Recomendado)»
+- **What:** the release ledger stores the head SHA shown when the owner approved; at merge time the prod-gate refuses when the released SHA differs or 24 h have passed. A new commit needs a new OK.
+
+## D-36 — A reopen invalidates the prod approval (F-79)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-26. **Answer, verbatim:** «Sí, reopen lo invalida (Recomendado)»
+- **What:** `reopen` marks the ledger's prod approval as superseded; the owner gives it again after the rework.
