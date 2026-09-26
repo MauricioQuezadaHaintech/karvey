@@ -61,9 +61,15 @@ For **each** `.kiro/specs/{feature-name}/`:
    S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
    python3 "$S" init "{change-id}"
    python3 "$S" advance "{change-id}" requirements
-   python3 "$S" generated "{change-id}" requirements   # and architecture / tasks when imported
+   python3 "$S" generated "{change-id}" requirements --imported   # one call per imported artifact
+   python3 "$S" generated "{change-id}" architecture --imported   # only when it was imported
+   python3 "$S" generated "{change-id}" tasks --imported          # only when it was imported
    ```
-   Every gate stays unapproved, so the change resumes at `requirements` and the user re-validates each gate in order (`karvey-state.py next {change-id}` shows the way). Kiro approvals are reported, not copied.
+   `generated … --imported` records each imported artifact as generated **and** marks it imported: the state tool then refuses any approval of that phase that does not come from the human with a valid approval marker (`--role human`, the human's own message) — `-y`, `--role auto` or an agent cannot approve an imported artifact (REQ-W2-080). Kiro/gstack approvals are reported, never copied.
+5b. **Walk the gates with the human, in order.** Resolve the gate mode once (`karvey-state.py gate "{change-id}" requirements --json`, `../karvey/rules/gates.md`) and ask the **gate question** of each imported gate in pipeline order, one `AskUserQuestion` per gate, never two for the same gate:
+   - **merged** (`project.json:gates: merged`) — the *what* gate (requirements, plus mockup / design_graphic when imported), then the *how* gate (architecture, infra, tasks that were imported); print `karvey-context.py --section gate --change {change-id} --gate {gate}` before each question and record an approval with `karvey-state.py approve-gate "{change-id}" {what|how} --by … --role human --ref …`.
+   - **granular** (the 3.13 default) — one question per imported phase, recorded with `karvey-state.py approve "{change-id}" {phase} --by … --role human --ref …`, then `advance` to the next imported phase.
+   - The first gate the human does not approve (*Request changes* → `outcome … changes_requested`, or *Stop here*) ends the walk: later gates are **not** asked. The change resumes at that first unapproved gate — `karvey-state.py next {change-id}` names it — and the phase skill that owns it continues from there.
 6. **spec-delta.md / living specs**: create a `spec-delta.md` stub for `karvey-archive` to merge later.
 7. Report per feature: what mapped cleanly vs. what needs review (the TODO placeholders).
 
@@ -86,7 +92,7 @@ gstack does **not** persist a fixed on-disk spec layout, so this mode is **heuri
    | eng-review plan / architecture notes | `architecture.md` (+ TODO placeholders for missing Karvey sections) |
    | task/backlog list | `tasks.md` |
    | design-system notes | `design-spec.md` |
-3. **Generate `prd.md`**, the state (`karvey-state.py init`, `advance … requirements`, `generated`) and, if missing, `project.json`, as in the Kiro flow.
+3. **Generate `prd.md`**, the state (`karvey-state.py init`, `advance … requirements`, `generated … --imported` per imported artifact) and, if missing, `project.json`, then walk the gates with the human (Step 5b of the Kiro flow), as in the Kiro flow.
 4. Because mapping is heuristic, **always present the proposed file map to the user for confirmation before writing**.
 
 ---
@@ -97,7 +103,9 @@ Report, per imported change:
 ```text
 ✅ Imported {change-id} from {kiro|gstack}
    Created: prd.md, requirements.md, architecture.md, tasks.md, spec.json
-   Resume phase: requirements  (generated: {phases}; every gate needs re-approval)
+   Imported (generated --imported): {phases}
+   Gates asked: {gate → approved | changes requested | not asked}
+   Resume at: {first unapproved gate}  (karvey-state.py next {change-id})
    ⚠️ Needs review: {list of TODO placeholders / non-EARS items}
 
 Next step: /karvey {change-id}   → see status and continue the pipeline
@@ -107,7 +115,7 @@ Next step: /karvey {change-id}   → see status and continue the pipeline
 
 - **Never delete or modify the source** (`.kiro/`, gstack docs) — read-only on the origin.
 - **Do not invent** content Karvey requires but the source lacks — use clearly marked `> TODO` placeholders so the user fills them via the proper phase.
-- All gates are imported as **not approved**, so the user re-validates requirements/architecture/etc. through Karvey.
+- All gates are imported as **not approved**; only the human approves an imported phase (the state tool refuses anything else), gate by gate, and the change resumes at the first gate the human did not approve.
 - Generated artifacts follow the project's language (`spec.json` `language`), never forced to English.
 
 ---
