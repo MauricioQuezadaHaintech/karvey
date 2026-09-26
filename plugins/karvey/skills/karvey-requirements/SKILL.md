@@ -126,6 +126,10 @@ If the capability is new (empty spec.md), everything is ADDED.
 
 Write `docs/spec/changes/{change-id}/spec-delta.md` (at the change root; `karvey-archive` merges it with `karvey-spec-merge.py`).
 
+### Step 6-bis — Judges (before the gate)
+
+Run `/karvey-judges {change-id} requirements` (`../karvey/rules/judges.md`). It is advisory by default and is a no-op when the lane has no judges or the project disables them; its verdicts and Critical/High findings go into the summary below.
+
 ### Step 7 — Present for approval
 
 Show a summary:
@@ -142,6 +146,7 @@ Spec-delta:
   - REMOVED: {N} requirements
 
 Review gate: ✅ passed
+Judges: {one line per lens: verdict · findings by severity · model} | {none for lane / disabled}
 
 Do you approve the requirements to continue?
 ```

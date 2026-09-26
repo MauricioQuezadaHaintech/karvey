@@ -30,13 +30,13 @@ A change is *done* only when no open `bug`/`spec-gap` remains and every `emergen
 
 ## Cross-cutting layer (support skills, invokable any time)
 
-`context` · `iterate` · `investigate` · `second-opinion` · `health` · `browse` · `checkpoint` · `diagram` · `docs` · `guard` · `devex` · `retro` · `scrape` · `benchmark-models` · `import` · `standards`
+`context` · `iterate` · `investigate` · `second-opinion` · `judges` · `health` · `browse` · `checkpoint` · `diagram` · `docs` · `guard` · `devex` · `retro` · `scrape` · `benchmark-models` · `import` · `standards`
 
 Optional team layer (opt-in, **not** the default — Karvey is complete with one agent): `team` · `decisions`.
 
-## Skills catalog (32)
+## Skills catalog (33)
 
-Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 18 support skills.** Each skill's full contract lives in `plugins/karvey/skills/<skill>/SKILL.md`; the shared rules in `plugins/karvey/skills/karvey/rules/`.
+Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 19 support skills.** Each skill's full contract lives in `plugins/karvey/skills/<skill>/SKILL.md`; the shared rules in `plugins/karvey/skills/karvey/rules/`.
 
 ### Orchestrator
 
@@ -70,6 +70,7 @@ Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 18 support sk
 | `karvey-iterate` | Iteration engine: routes findings → `bug` / `spec-gap` / `emergent` |
 | `karvey-investigate` | Root-cause debugging — Iron Law: no fix without investigation; dates the symptom, asks what changed |
 | `karvey-second-opinion` | Adversarial cross-model review (Review / Challenge / Consult) |
+| `karvey-judges` | Independent clean-context judges per lens before the requirements, architecture and qa gates; advisory, cited findings, cost logged |
 | `karvey-health` | 0-10 code-quality score with trend + method readiness (skills installed, pinned inputs) |
 | `karvey-browse` | Eyes on the real runtime: browser, simulator, terminal |
 | `karvey-checkpoint` | Save / restore work state **and the agent handoff** (+ `state.json`) |

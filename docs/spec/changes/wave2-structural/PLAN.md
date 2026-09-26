@@ -99,7 +99,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F3.T2 [Backend] `karvey_lib/judges.py` input builder + `karvey-judges.py inputs` (closed list, per-lane count, `dropped:` lines, `disabled by project setting`, `none for lane patch`) — est: 12min (depends E1.F3.T1, E1.F2.T1)
 - [x] E1.F3.T3 [Backend] `karvey-judges.py collect`: schema check, citation resolver, sanitiser (cap 300, escape, drop patches), measured/estimated cost, `budget` ignored, append `findings.md` rows — est: 15min (depends E1.F3.T2)
 - [x] E1.F3.T4 [Backend] State tool: `judge-run` append + judge `blocking` refusal in `approve` — est: 10min (depends E1.F3.T3, E1.F2.T4, E1.F1.T2)
-- [ ] E1.F3.T5 [Backend] Skill `karvey-judges` + calls in `karvey-requirements`, `karvey-architecture`, `karvey-qa` (fiscal before `approve qa`) + README/`plugin.json` counts (L-11) — est: 10min (depends E1.F3.T4)
+- [x] E1.F3.T5 [Backend] Skill `karvey-judges` + calls in `karvey-requirements`, `karvey-architecture`, `karvey-qa` (fiscal before `approve qa`) + README/`plugin.json` counts (L-11) — est: 10min (depends E1.F3.T4)
 - [x] E1.F3.T6 [Backend] Iterate: `accepted:{type} {ref}` / `rejected: {reason}` for judge rows; convergence lists `unresolved (no routing or reason)` — est: 8min (depends E1.F3.T3) (P)
 - [ ] E1.F3.T7 [Test] Manual script `judges-gate.md` (real subagents, verdicts at the gate, intra-model declared) — est: 5min (depends E1.F3.T5) (P)
 
@@ -206,7 +206,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F3.T2 [Backend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F3.T3 [Backend] | ✅ done | 15 | 10 | 0 |  |
 | E1.F3.T4 [Backend] | ✅ done | 10 | 6 | 0 |  |
-| E1.F3.T5 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F3.T5 [Backend] | ✅ done | 10 | 7 | 0 | docs/karvey.html counts (32/18) left for the release docs task |
 | E1.F3.T6 [Backend] | ✅ done | 8 | 6 | 0 |  |
 | E1.F3.T7 [Test] | ⬜ todo | 5 | — | — |  |
 | E1.F4.T1 [Backend] | ⬜ todo | 15 | — | — |  |

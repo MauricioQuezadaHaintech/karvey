@@ -80,6 +80,7 @@ These are not phases; they do not advance `spec.json:phase` forward. See `rules/
 /karvey-iterate            → Iteration engine: route findings (bug/spec-gap/emergent) to their edge
 /karvey-investigate        → Root-cause debugging (Iron Law: no fix without investigating)
 /karvey-second-opinion     → Adversarial cross-model review (Claude vs another model)
+/karvey-judges             → Independent judges per lens before a gate (advisory, cited findings)
 /karvey-health             → 0-10 dashboard (type/lint/tests/dead-code) + trend
 /karvey-browse             → "Give it eyes": the target's real runtime (browser/sim/CLI)
 /karvey-checkpoint         → Save/restore work state + the agent's handoff (who I am, rules, board, checklist, state)
@@ -96,7 +97,7 @@ These are not phases; they do not advance `spec.json:phase` forward. See `rules/
 /karvey-decisions          → Decision log (D-NN / C-NN) + cross-check before declaring a block
 ```
 
-Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue + live branches (read-only; one of the 18 support skills).
+Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue + live branches (read-only; one of the 19 support skills).
 
 ## Execution by argument
 

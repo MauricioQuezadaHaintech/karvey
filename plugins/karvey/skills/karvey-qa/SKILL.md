@@ -237,6 +237,7 @@ Add a "QA Review" section at the end of PLAN.md with the list of findings and pe
 ### Step 3C — Record the result through the state tool
 
 - **Blocking findings** (critical/high, the security gate of Dimension 1, a valid critical/high from the second model, a visual deviation that breaks accessibility/security, or a standards departure with no approved entry in `deviations.md`) → QA is not approved; route the findings (Step 3D).
+- **The fiscal before the approval.** After writing `REVISION_PR_*.md` and before asking for the QA approval (or the *release* gate), run `/karvey-judges {change-id} qa --base {integration branch}`. The `fiscal` lens always runs: it lists every claim of the review without evidence (an `evidence.jsonl` line, a CI run of the reviewed commit, or a `file:line`). Its findings are in `findings.md` like any other and go into the summary the human sees.
 - **None** → `karvey-state.py generated "{change-id}" qa`, then ask the human for the QA approval. On their OK:
   ```bash
   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" approve "{change-id}" qa --by "{human}" --role human --ref "{D-NN or PR URL}"

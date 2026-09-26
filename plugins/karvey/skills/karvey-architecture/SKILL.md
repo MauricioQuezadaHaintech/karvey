@@ -290,6 +290,10 @@ docs/spec/changes/{change-id}/architecture.md
 
 Record it: `python3 "$S" generated "{change-id}" architecture`.
 
+### Step 6-bis — Judges (before the gate)
+
+Run `/karvey-judges {change-id} architecture` (`../karvey/rules/judges.md`: lenses security, methods, agents-cost, as many as the lane allows). Advisory by default; show each lens's verdict and every Critical/High finding in the summary of Step 7.
+
 ### Step 7 — Present for approval
 
 Present a summary and ask for approval (`-y` only skips the question when the human's own invocation already approved it; the approval is still theirs).
