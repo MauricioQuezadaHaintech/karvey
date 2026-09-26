@@ -1,0 +1,203 @@
+{
+ "table": "shims",
+ "description": "E1.F5.T8 / REQ-W1-016, 020, 029: the 3.11 templates skills/karvey/hooks/{git-flow-guard,plan-gate}.sh are shims that exec the dispatcher with --only <guard> --force-enabled, so a project that copied them into settings.json gets the dispatcher's decision (removed in 4.0.0).",
+ "cases": [
+  {
+   "id": "shim-01-git-flow-commit-on-master-blocks",
+   "guard": "git-flow",
+   "command": "bash \"{{plugin}}/skills/karvey/hooks/git-flow-guard.sh\"",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": false,
+       "plan_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "env": {
+     "CLAUDE_PLUGIN_ROOT": null
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": "[karvey] BLOCK git-flow: commit on master"
+   },
+   "tags": [
+    "shim",
+    "REQ-W1-020",
+    "REQ-W1-029"
+   ],
+   "note": "a 3.11 settings.json entry: no CLAUDE_PLUGIN_ROOT, git_flow_hook off in project.json; the shim force-enables the guard"
+  },
+  {
+   "id": "shim-02-git-flow-feature-commit-allowed",
+   "guard": "git-flow",
+   "command": "bash \"{{plugin}}/skills/karvey/hooks/git-flow-guard.sh\"",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": false,
+       "plan_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "env": {
+     "CLAUDE_PLUGIN_ROOT": null
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x && git push origin master-notes"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "shim",
+    "REQ-W1-021"
+   ]
+  },
+  {
+   "id": "shim-03-plan-gate-write-without-marker-blocks",
+   "guard": "plan-gate",
+   "command": "bash \"{{plugin}}/skills/karvey/hooks/plan-gate.sh\"",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": false,
+       "plan_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "env": {
+     "CLAUDE_PLUGIN_ROOT": null,
+     "KARVEY_PLAN_FLAG": "{{tmp}}/old-flag"
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": "[karvey] BLOCK plan-gate: file edit (Write)",
+    "stderr_not_contains": "touch"
+   },
+   "tags": [
+    "shim",
+    "REQ-W1-016",
+    "REQ-W1-029"
+   ],
+   "note": "the old KARVEY_PLAN_FLAG file is no longer honoured, and the message never tells the agent to create a marker"
+  },
+  {
+   "id": "shim-04-plan-gate-stream-redirection-allowed",
+   "guard": "plan-gate",
+   "command": "bash \"{{plugin}}/skills/karvey/hooks/plan-gate.sh\"",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": false,
+       "plan_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls 2>/dev/null"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "shim",
+    "REQ-W1-014",
+    "H-10"
+   ]
+  }
+ ]
+}

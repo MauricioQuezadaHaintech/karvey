@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Karvey session context — SessionStart hook (startup | resume | compact | clear).
 #
+#   karvey-session-context.sh [startup|resume]    (hooks.json passes the matcher's source)
+#
+# With python 3 it delegates to `karvey_hooks.py session <mode>` (wave1-hardening E1.F6.T1: active
+# change without archive/ or IMPLEMENTED, compact XOR full manifest, bounded board and handoff,
+# hookSpecificOutput.additionalContext). Without python the bash code below is the degraded path.
+#
 # Brings a blank session back to being THIS agent:
 #   1. identity, rules, board, checklist and handoff, reinjected;
 #   2. the live repo state MEASURED and compared against what the handoff claims (state.json);
@@ -14,6 +20,17 @@
 # or docs/spec/changes/), a one-line notice when the team settings are missing — and exits 0.
 set -u
 exec 2>/dev/null
+MODE="${1:-startup}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+for c in python3 python; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c 'import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1; then
+    exec "$c" "$HERE/../scripts/karvey_lib/karvey_hooks.py" session "$MODE" </dev/null
+  fi
+done
+if command -v py >/dev/null 2>&1 && py -3 -c 'import sys' >/dev/null 2>&1; then
+  exec py -3 "$HERE/../scripts/karvey_lib/karvey_hooks.py" session "$MODE" </dev/null
+fi
+# ---------------------------------------------------------------- no python: degraded bash path
 
 START="${CLAUDE_PROJECT_DIR:-$PWD}"
 # absolute path: a relative CLAUDE_PROJECT_DIR made the dirname loops below spin forever on "."
@@ -27,6 +44,7 @@ while [ "$DIR" != "/" ] && [ -n "$DIR" ]; do
 done
 # Team settings nudge (REQ-ADP-003): only inside a Karvey project (has docs/spec/), never elsewhere.
 settings_nudge() {
+  [ "$MODE" = "startup" ] || return 0   # REQ-W1-050: on session start only
   # Only a Karvey project: docs/spec/project.json or docs/spec/changes/ (a bare docs/spec/ can be an
   # OpenAPI folder, RFCs, a study). The root found above wins over walking up from the cwd.
   local d="${ROOT:-$START}" kp=""
@@ -44,7 +62,9 @@ try: d=json.load(open(sys.argv[1],encoding='utf-8-sig'))
 except Exception: print('project.json unreadable'); sys.exit()
 if not isinstance(d,dict): print('project.json is not an object'); sys.exit()
 print(' + '.join(k for k in ('notifications','management') if not isinstance(d.get(k),dict) or not d.get(k)))" "$pj")
-  else missing="unknown: python3 not available to check"
+  else
+    printf 'Karvey (info): team settings could not be read (python3 not available). If they are missing, the user can run `/karvey:karvey-init --settings` — settings only, it creates no change and nothing in any tracker.\n'
+    return
   fi
   [ -n "$missing" ] && printf 'Karvey (info): team settings not set (%s). To set them, the user can run `/karvey:karvey-init --settings` — settings only, it creates no change and nothing in any tracker.\n' "$missing"
 }
@@ -126,6 +146,32 @@ def resolve(p):
 def is_repo(path):
     # a worktree has a .git FILE, not a directory — ask git instead of looking for .git/ (BUG-21)
     return os.path.isdir(path) and bool(git(path, 'rev-parse', '--git-dir'))
+def rc(repo, *a):
+    try:
+        return subprocess.run(['git','-C',repo,*a], capture_output=True, timeout=10).returncode
+    except Exception:
+        return 1
+PROFILE_FILES = ('state.json','handoff.md','board.md','manifest.md','checklist.md')
+def profile_only_since(repo, recorded, profile_dir):
+    # BUG-22: the recorded commit is an ancestor of HEAD and every path since it is a profile file
+    # (the same rule as livestate.profile_only_since on the python path)
+    if not isinstance(recorded, str) or not recorded or recorded.startswith('-'): return False
+    if rc(repo, 'merge-base', '--is-ancestor', recorded, 'HEAD') != 0: return False
+    top = git(repo, 'rev-parse', '--show-toplevel')
+    if not top: return False
+    rel = os.path.relpath(os.path.realpath(profile_dir), os.path.realpath(top))
+    if rel == '..' or rel.startswith('..' + os.sep): return False
+    allowed = {os.path.normpath(os.path.join(rel, f)).replace(os.sep, '/') for f in PROFILE_FILES}
+    touched = set()
+    for a in (('log','-z','--no-renames','--format=','--name-only',recorded+'..HEAD'),
+              ('diff','-z','--no-renames','--name-only',recorded,'HEAD')):
+        try:
+            cp = subprocess.run(['git','-C',repo,*a], capture_output=True, text=True, timeout=10)
+        except Exception:
+            return False
+        if cp.returncode != 0: return False
+        touched.update(x.strip('\n') for x in cp.stdout.split('\0') if x.strip('\n'))
+    return touched <= allowed
 for r in d.get('repos', []):
     p = r.get('path','')
     rp = resolve(p)
@@ -134,12 +180,15 @@ for r in d.get('repos', []):
     br  = git(rp,'rev-parse','--abbrev-ref','HEAD')
     cm  = git(rp,'log','-1','--pretty=%h')
     un  = len([x for x in git(rp,'status','--porcelain').splitlines() if x])
-    marks = []
+    marks = []; ru = r.get('uncommitted')
+    po = br == r.get('branch') and cm != r.get('commit') and profile_only_since(rp, r.get('commit'), os.path.dirname(sys.argv[1]))
     if br != r.get('branch'): marks.append(f"branch {r.get('branch')} -> {br}")
-    if cm != r.get('commit'): marks.append(f"commit {r.get('commit')} -> {cm}")
-    if un != r.get('uncommitted'): marks.append(f"uncommitted {r.get('uncommitted')} -> {un}")
+    if cm != r.get('commit') and not po: marks.append(f"commit {r.get('commit')} -> {cm}")
+    if un != ru and not (po and type(ru) is int and un <= ru): marks.append(f"uncommitted {ru} -> {un}")
     if marks:
         print(f"  {p}: DRIFT — " + " · ".join(marks)); drift = True
+    elif po:
+        print(f"  {p}: matches ({br} @{cm}; profile-only commits since the save)")
     else:
         print(f"  {p}: matches ({br} @{cm})")
 if d.get('saved_at'): print(f"  saved_at: {d['saved_at']}")
@@ -153,7 +202,15 @@ elif [ -f "$HANDOFF" ]; then
   DRIFT=1
 fi
 
-ACTIVE=$(ls -1dt "$ROOT"/docs/spec/changes/*/ 2>/dev/null | head -1)
+# the only change that is not archived and has no IMPLEMENTED marker (H-08; phases need python)
+ACTIVE=""; NACT=0
+for c in "$ROOT"/docs/spec/changes/*/; do
+  [ -d "$c" ] || continue
+  case "$(basename "$c")" in archive|.*) continue ;; esac
+  [ -e "$c/IMPLEMENTED" ] && continue
+  ACTIVE="$c"; NACT=$((NACT+1))
+done
+[ "$NACT" -ne 1 ] && ACTIVE=""
 settings_nudge
 printf '\n=== First action ===\n'
 if [ -n "$ACTIVE" ] || [ "$DRIFT" -eq 1 ] || [ ! -f "$HANDOFF" ]; then

@@ -5,11 +5,18 @@
 # Uses the fields Claude Code provides on stdin (context_window, rate_limits, cost).
 # If this CLI version does not provide them, it falls back to reading the transcript.
 #
-# Thresholds (env): KARVEY_ROTATE_CTX_YELLOW (def. 100000) · KARVEY_ROTATE_CTX_RED (def. 150000)
-#                   KARVEY_ROTATE_HOURS (def. 8)
-#                   KARVEY_TZ (IANA zone for the reset clock, e.g. America/Santiago; def. the system's)
+# Thresholds (env), each defaulting to scripts/karvey_lib/defaults.json, the one place for them (REQ-W1-049):
+#                   KARVEY_ROTATE_CTX_YELLOW_PCT · KARVEY_ROTATE_CTX_RED_PCT (`context_pct`, D-18): percent of
+#                   the context window, used whenever the percentage is known (native or computed from
+#                   context_window_size)
+#                   KARVEY_ROTATE_CTX_YELLOW · KARVEY_ROTATE_CTX_RED (`context_tokens`): tokens, only when the
+#                   window size is unknown
+#                   KARVEY_ROTATE_HOURS (`rotation_hours` of defaults.json, D-06; `rot?` is shown when that file cannot be found)
+#                   KARVEY_TZ (IANA zone for the reset clock, e.g. America/Santiago; def. the system's;
+#                   an invalid zone shows the system time marked `(TZ?)`, REQ-W1-100)
 # Each account window shows when it resets and how long is left: `5h 29% ↻18:05 (1h31m)`.
-# 150k comes from measurement: at 588k a turn costs 7x what it costs at 80k, and rotating costs ~40k.
+# A percentage scales with the window (200k or 1M); the token pair is the fallback. Cost grows with
+# context: at 588k a turn costs 7x what it costs at 80k, and rotating costs ~40k.
 #
 # A plugin cannot declare a statusline (only `agent` and `subagentStatusLine` are accepted), so this
 # is installed by the user, once, in their own settings.json. See hooks/README.md.
@@ -21,6 +28,9 @@ DBG="${TMPDIR:-/tmp}/.karvey-statusline-last.$(id -u).json"
 # The output is captured instead of printed directly: if the CLI changes the stdin format (it did,
 # with current_usage), the traceback shows up in the statusline instead of leaving it empty.
 # A statusline that disappears is indistinguishable from one that is switched off.
+# The rotation default lives in defaults.json, read relative to this script (no second literal).
+KARVEY_DEFAULTS_JSON="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/../scripts/karvey_lib/defaults.json"
+export KARVEY_DEFAULTS_JSON
 ERRF=$(mktemp 2>/dev/null || echo "${TMPDIR:-/tmp}/.karvey-statusline-err.$$")
 OUT=$(python3 - "$IN" 2>"$ERRF" <<'PY'
 import sys, json, os, datetime
@@ -30,9 +40,44 @@ try:
 except Exception:
     d = {}
 
-CTX_Y = int(os.environ.get('KARVEY_ROTATE_CTX_YELLOW', 100_000))
-CTX_R = int(os.environ.get('KARVEY_ROTATE_CTX_RED', 150_000))
-HOURS = float(os.environ.get('KARVEY_ROTATE_HOURS', 8))
+def _load_defaults():
+    try:
+        with open(os.environ.get('KARVEY_DEFAULTS_JSON') or '', encoding='utf-8-sig') as fh:
+            v = json.load(fh)
+        return v if isinstance(v, dict) else {}
+    except Exception:
+        return {}
+
+DEFAULTS = _load_defaults()
+
+def _threshold(env, *keys):
+    # The env variable wins; else defaults.json at keys; else None (a missing threshold never fires).
+    v = os.environ.get(env)
+    if v not in (None, ''):
+        try:
+            return float(v)
+        except ValueError:
+            pass
+    r = DEFAULTS
+    for key in keys:
+        r = r.get(key) if isinstance(r, dict) else None
+    return float(r) if isinstance(r, (int, float)) and not isinstance(r, bool) and r > 0 else None
+
+PCT_Y = _threshold('KARVEY_ROTATE_CTX_YELLOW_PCT', 'context_pct', 'yellow')
+PCT_R = _threshold('KARVEY_ROTATE_CTX_RED_PCT', 'context_pct', 'red')
+CTX_Y = _threshold('KARVEY_ROTATE_CTX_YELLOW', 'context_tokens', 'yellow')
+CTX_R = _threshold('KARVEY_ROTATE_CTX_RED', 'context_tokens', 'red')
+HOURS = _threshold('KARVEY_ROTATE_HOURS', 'rotation_hours')
+
+# The reset-clock zone, resolved once per run. An invalid KARVEY_TZ is not silent (BUG-08).
+TZ, TZ_BAD = None, False
+_tzname = os.environ.get('KARVEY_TZ') or ''
+if _tzname:
+    try:
+        from zoneinfo import ZoneInfo
+        TZ = ZoneInfo(_tzname)
+    except Exception:
+        TZ, TZ_BAD = None, True
 
 cw     = d.get('context_window') or {}
 cost   = d.get('cost') or {}
@@ -101,10 +146,18 @@ def k(n):
     if n >= 1_000:     return f'{n/1_000:.0f}k'
     return str(int(n))
 
-if   ctx >= CTX_R: light, why = '🔴', 'context'
-elif ctx >= CTX_Y: light, why = '🟡', ''
-else:              light, why = '🟢', ''
-if h >= HOURS:
+# Percentage of the window when it is known (D-18), tokens otherwise.
+size = cw.get('context_window_size')
+if pct is None and ctx and isinstance(size, (int, float)) and not isinstance(size, bool) and size > 0:
+    pct = ctx * 100.0 / size
+if pct is not None and (PCT_Y is not None or PCT_R is not None):
+    level, y, r = pct, PCT_Y, PCT_R
+else:
+    level, y, r = ctx, CTX_Y, CTX_R
+if   r is not None and level >= r: light, why = '🔴', 'context'
+elif y is not None and level >= y: light, why = '🟡', ''
+else:                              light, why = '🟢', ''
+if HOURS is not None and h >= HOURS:
     light = '🔴'
     why = f'{why} + hours' if why else 'hours'
 
@@ -114,7 +167,7 @@ if pct is not None:
 parts = [left]
 if new:  parts.append(f'new {k(new)}')
 if read: parts.append(f'cache {k(read)}')
-parts.append(f'{h:.1f}h')
+parts.append(f'{h:.1f}h' + ('' if HOURS is not None else ' rot?'))
 
 # account limit consumption: the number that actually decides a rotation
 
@@ -139,30 +192,22 @@ def _reset(w, week=False):
         now = datetime.datetime.now().timestamp()
         if ts <= now or ts - now > 400 * 86400:
             return ''                      # already reset, or absurd
-        tz = None
-        name = os.environ.get('KARVEY_TZ') or ''
-        if name:
-            try:
-                from zoneinfo import ZoneInfo
-                tz = ZoneInfo(name)
-            except Exception:
-                tz = None
-        at = datetime.datetime.fromtimestamp(ts, tz) if tz else datetime.datetime.fromtimestamp(ts)
+        at = datetime.datetime.fromtimestamp(ts, TZ) if TZ else datetime.datetime.fromtimestamp(ts)
         left = int(round((ts - now) / 60.0)) * 60
         d_, r_ = divmod(left, 86400); h_, r_ = divmod(r_, 3600); m_ = r_ // 60
         rem = f'{d_}d{h_}h' if d_ else (f'{h_}h{m_:02d}m' if h_ else f'{max(m_, 1)}m')
         day = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][at.weekday()] + ' ' if week else ''
-        return f' ↻{day}{at:%H:%M} ({rem})'
+        return f' ↻{day}{at:%H:%M}' + (' (TZ?)' if TZ_BAD else '') + f' ({rem})'
     except Exception:
         return ''
 
 l5 = (limits.get('five_hour') or {}).get('used_percentage')
 l7 = (limits.get('seven_day') or {}).get('used_percentage')
 if l5 is not None or l7 is not None:
-    lim = 'limit'
-    if l5 is not None: lim += f' 5h {l5:.0f}%' + _reset(limits.get('five_hour'))
-    if l7 is not None: lim += f' · 7d {l7:.0f}%' + _reset(limits.get('seven_day'), week=True)
-    parts.append(lim)
+    windows = []   # joined, so no separator precedes the first present window (BUG-09)
+    if l5 is not None: windows.append(f'5h {l5:.0f}%' + _reset(limits.get('five_hour')))
+    if l7 is not None: windows.append(f'7d {l7:.0f}%' + _reset(limits.get('seven_day'), week=True))
+    parts.append('limit ' + ' · '.join(windows))
     if (l5 or 0) >= 80 or (l7 or 0) >= 80:
         light = '🔴'
         why = f'{why} + limit' if why else 'limit'

@@ -1,0 +1,29 @@
+{
+  "change_id": "fixture-57",
+  "phase": "impl",
+  "management": "markdown",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "fases": [
+    "…"
+  ],
+  "orden": 1,
+  "verificacion": "…",
+  "notes": "…",
+  "ripple": [
+    "…"
+  ],
+  "tenant": "…"
+}

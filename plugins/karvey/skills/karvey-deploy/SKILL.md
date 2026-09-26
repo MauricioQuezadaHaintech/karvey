@@ -1,6 +1,6 @@
 ---
 name: karvey-deploy
-description: Execute the ordered deployment flow (feature branch → dev → PR master) honoring the team's hard rules. Pull before start and before merge. Pipeline-triggered, never manual. Verifies the PR's own gates (CI + branch policies) before requesting the prod OK, and detects the git host (GitHub / Azure Repos / GitLab) for the PR CLI. Prod requires explicit human OK. Bumps semver + changelog before push, auto-detects the deploy platform, and runs a post-deploy canary loop (dev and prod) to guard zero-downtime. Use after karvey-qa passes. Triggers include "karvey deploy", "desplegar", "deploy", "liberar", "release", "subir a dev", "push to dev", "pasar a prod", "promote to prod".
+description: Karvey phase 11 — pipeline-triggered release (feature → integration → PR to production), PR gates, prod OK in the release ledger, canary. After karvey-qa. Triggers include "karvey deploy", "karvey release", "desplegar con karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 argument-hint: <change-id>
 ---
@@ -9,356 +9,196 @@ argument-hint: <change-id>
 
 ## Purpose
 
-PHASE 11 of the Karvey Method, between `karvey-qa` (PHASE 10) and `karvey-archive` (PHASE 12). It executes the **ordered deployment flow** (feature branch → `dev` → PR to `master`) honoring the team's hard rules to the letter: never commit directly to `dev`/`master`, never deploy manually (the deploy is triggered by the pipeline), `pull` before starting and before each merge/PR, and **prod never without explicit human OK**.
+PHASE 11 of the Karvey Method, between `karvey-qa` (PHASE 10) and `karvey-archive` (PHASE 12). It runs the **ordered deployment flow** (feature branch → integration → PR to production) by the team's hard rules: never commit directly on the integration or production branch, never deploy manually (the pipeline deploys), `pull` before starting and before each merge/PR, and **prod never without the human's explicit OK**.
 
-It runs **only after** `karvey-qa` has passed with no open critical/high findings. The central rule is `karvey/rules/deploy-workflow.md`; follow it exactly.
+It runs **only after** `karvey-qa` passed with no open critical/high findings. The central rules are `../karvey/rules/deploy-workflow.md` and `../karvey/rules/state-machine.md`; follow them exactly.
+
+```bash
+S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
+C="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py"
+I="$(python3 "$C" get branch_flow.integration --shell)"
+P="$(python3 "$C" get branch_flow.production --shell)"
+```
 
 ## Execution steps
 
 ### Step 0 — Pre-checks (release gate)
 
-BEFORE touching git, read:
-- `docs/spec/changes/{change-id}/spec.json`
-- `docs/spec/project.json`
+BEFORE touching git, run `python3 "$S" next "{change-id}" --json` and read `docs/spec/project.json`. No `project.json` → stop and run `karvey-init` first (`../karvey/rules/project-config.md`). `next` must report `qa` approved; `invalid` → show its errors and stop.
 
-If `project.json` does not exist, stop and indicate to run `karvey-init` first (see `karvey/rules/project-config.md`).
+If **anything below fails, STOP and report what is missing. Do not deploy.**
 
-Verify the release gate. If **anything fails, STOP and report what is missing. Do not deploy.**
-
-1. **QA approved with no open critical/high findings.**
-   - Locate the most recent review document: `REVISION_PR_*_{date}.md` at the root of each affected repo (`ls -t REVISION_PR_*.md | head -1`).
-   - The `karvey-qa` security gate must be OK: **0 critical findings and 0 unresolved high findings** in the severity table / pre-merge checklist.
-   - Confirm QA status in `spec.json` (`approvals.qa` / `phase`).
-
-2. **Tests PASS.** Review `docs/test_evidence.md`: there must be entries for the `{change-id}` with PASS result for the change's tests.
-
-3. **CHANGELOG updated in each affected repo** (see `karvey/rules/changelog-policy.md`). For each repo in `project.json:repos` with changes, verify `CHANGELOG.md`:
-   - [ ] Entry for the current version.
-   - [ ] **Responsible human** (name + contact) — never empty nor replaced by "AI".
-   - [ ] **AI model** that assisted (e.g., `Claude Opus 4.8`).
-   - [ ] The **why**, not just the what.
-   - [ ] CHANGELOG version matches the project's version file.
-
-4. **Hotfix lane** (`spec.json:type = "hotfix"`, see `karvey/rules/multi-agent.md` §7): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three. The regression test is green in CI. The version is its own rev bump, and `revision_history` has the entry with `bug` + `release`. Missing any → stop.
-
-5. **Parent/child** (`links`): if this change is a **child**, deploy only this repo and report the result to the parent change. If it is a **parent**, it has no deploy of its own — verify every child is deployed and then mark the parent `deployed`.
-
-If any of these fail, report exactly what is missing and stop. **Do not deploy.**
+1. **QA approved, no open critical/high.** Read the review from `docs/spec/changes/{change-id}/qa/` (`REVISION_PR_*.md`, the one QA wrote for this change — never the newest file at a repo root). Its security gate must show **0 critical and 0 unresolved high**.
+2. **Tests PASS** for `{change-id}` in `docs/test_evidence.md`.
+3. **CHANGELOG `[Unreleased]`** in each affected repo (`../karvey/rules/changelog-policy.md`): one line per commit of the change, with the **responsible human** (never empty nor "AI"), the **AI model** and the **why**. It becomes the release entry in Step 2.4.
+4. **Hotfix lane** (`spec.json:type = "hotfix"`, `../karvey/rules/multi-agent.md` §7): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three, the test green in CI. Missing any → stop.
+5. **Parent/child** (`links`): a **child** deploys only its repo and reports to the parent; a **parent** has no deploy of its own — verify every child is deployed.
 
 ### Step 0-bis — Documentation-only PRs
 
-If the diff of the PR touches only docs/specs (`docs/**`, `*.md`, `spec.json`) — check with `git diff --name-only {base}...HEAD` — it follows the **docs-only lane** (`karvey/rules/multi-agent.md` §8):
-- It runs the **light CI** (spec lint: valid JSON in every `spec.json`, required fields, well-formed `links`/`decisions`/`inputs`, no broken markdown links). If the repo has no such job yet, propose adding one with a path filter so build/test/deploy jobs are skipped for docs-only paths.
-- It is merged by whoever `project.json:docs_pr.merged_by` declares (if not declared, ask once and record it). No version bump is needed unless the repo versions its docs.
-- It never triggers a deploy, never carries code, and does not need `approvals.prod`. If code sneaks in, it is not docs-only: go back to the normal flow.
+If the diff touches only docs/specs (`git diff --name-only "origin/$I"...HEAD`), it follows the **docs-only lane** (`../karvey/rules/multi-agent.md` §8): light CI only (the plugin linter / spec validation), merged by `project.json:docs_pr.merged_by`, no version bump, no deploy, no prod approval. If code sneaks in, it is not docs-only.
 
-### Step 1 — Determine repos and order
+### Step 1 — Repos, order, platform, git host
 
-Read from `project.json`:
-- `repos` (array, at least 1).
-- `branch_flow`: `feature_prefix` (default `feature/`), `integration` (default `dev`), `production` (default `master`).
+- **Repos and order:** `project.json:repos`; honor the dependency order of `architecture.md` (e.g. **DB → backend → frontend**) and apply Step 2 per repo in that order.
+- **Deploy platform** (only to know **where to monitor**, never to deploy): use `project.json:deploy` (`platform`, `prod_url`, `dev_url`, `health_check`) or detect it from evidence — `fly.toml`, `render.yaml`, `vercel.json`, `netlify.toml`, `host.json` + pipeline, `.github/workflows/`, `azure-pipelines.yml`, `Dockerfile` + `k8s/`/`helm/`. Health: `/health`, `/healthz`, the root page, or the target's runtime equivalent (`../karvey/rules/targets.md`). Unknown URL → do not invent it; ask before the prod canary.
+- **Git host** (`project.json:git_platform`, else from `git remote get-url origin`): `github.com` → `gh pr` · `dev.azure.com`/`visualstudio.com` → `az repos pr` · `gitlab.com` → `glab mr` · other → ask. The remote wins over a stale config, and it is reported.
 
-If the change touches **multiple repos**, honor the dependency order declared in `architecture.md` (e.g., **DB → backend → frontend**). For each repo, the Step 2 flow is applied in that order.
+Propose any detected value as a settings change on a docs branch (`project-config.md`); do not write `project.json` on the integration branch.
 
-Record the resolved order before starting.
+### Step 1.9 — 6-step pre-deploy checklist (before the first push)
 
-### Step 1.5 — Auto-detection of the deploy platform
+From `../karvey/rules/deploy-workflow.md`. Show it and verify each item **before any `git push`**:
 
-Before deploying, confirm **how and where** each repo is released. If `project.json` already declares it (`deploy.platform`, `deploy.prod_url`, `deploy.health_check` per repo), use that. If it is **not configured**, detect it and record it in `project.json` for future runs.
+1. On the feature branch `feature/{change-id}` (not integration, not production)?
+2. `CHANGELOG.md` `[Unreleased]` complete (Step 0.3)?
+3. Everything pending committed?
+4. Feature branch pushed?
+5. Merged to integration?
+6. Integration pushed?
 
-**Detect the platform** by evidence in the repo (do not assume):
-
-| Signal in the repo | Likely platform |
-|------------------|---------------------|
-| `fly.toml` | Fly.io |
-| `render.yaml` | Render |
-| `vercel.json` / `.vercel/` | Vercel |
-| `netlify.toml` | Netlify |
-| `host.json` + `azure-pipelines.yml` / `.github/workflows/*azure*` | Azure Functions (pipeline) |
-| `.github/workflows/*.yml` | GitHub Actions (the workflow target defines the actual destination) |
-| `azure-pipelines.yml` / `.azure-pipelines/` | Azure DevOps Pipelines |
-| `Dockerfile` + `k8s/` or `helm/` manifests | Kubernetes |
-
-**Discover the production URL and health check:**
-- Look for the prod URL in `project.json:deploy`, pipeline variables, `README`/`docs/spec/`, or the platform config (e.g., `fly.toml`, `vercel.json`).
-- Determine the health endpoint: `/health`, `/healthz`, `/api/health`, the frontend's root page, or whatever `architecture.md` declares. For non-web targets (CLI/API/mobile), the "health check" is the equivalent in the target's **actual runtime** (see `karvey/rules/targets.md`).
-
-If the prod URL/health cannot be discovered, **do not invent it**: record it as pending and ask the user for the data before the prod canary. The hard rule stands: the deploy is triggered by the pipeline, this detection is **only** to know **where to monitor**, never to deploy manually.
-
-Record what was detected in `project.json:deploy` (`platform`, `prod_url`, `dev_url`, `health_check`) per repo.
-
-### Step 1.5-bis — Git host (which CLI opens and merges the PR)
-
-The deploy platform and the **git host** are different things: a repo can deploy to Azure and live on GitHub,
-or the reverse. **The PR CLI is not interchangeable** — assuming `gh` against Azure Repos fails at the worst
-moment, with the branch already merged into `dev`.
-
-Read **`project.json:git_platform`** (see `karvey/rules/project-config.md`). If it is not declared, detect it
-from the remote and record it there:
-
-```bash
-git remote get-url origin
-```
-
-| Remote | `git_platform` | PR CLI |
-|---|---|---|
-| `github.com/…` | `github` | `gh pr …` |
-| `dev.azure.com/…` or `…visualstudio.com/…` | `azure_devops` | `az repos pr …` |
-| `gitlab.com/…` | `gitlab` | `glab mr …` |
-| other | ask the user | — |
-
-If a repo's remote contradicts the declared `git_platform`, **the remote wins** and it is reported: the
-config is stale. Used in 2.9, 2.9-bis and 2.10.
+Items 4–6 are done in Step 2; the pipeline deploys integration only after all six. **Trunk flow** (`$I` = `$P`): items 5–6 become "one PR feature → production".
 
 ### Step 2 — Ordered deployment flow (FOR EACH repo)
 
-Apply following `karvey/rules/deploy-workflow.md` EXACTLY, in the dependency order from Step 1.
-
-**2.1 — `git pull` before starting:**
+**2.1 — Pull and check the branch.** `feature/{change-id}` must exist (created by `karvey-impl`); do not create it here.
 ```bash
 git pull
+git branch --show-current          # must be feature/{change-id}
+python3 "$S" advance "{change-id}" deploying
 ```
 
-**2.2 — Ensure feature branch.** NEVER commit directly to `dev`/`master`. Verify you are working on `feature/{change-id}`:
+**2.2 — Pull integration before the merge.**
 ```bash
-git branch --show-current   # must be feature/{change-id}
-```
-If the `feature/{change-id}` branch does not exist, **stop** — `karvey-impl` should have created it. Do not create it here.
-
-**2.3 — Before the merge, `pull` integration:**
-```bash
-git pull origin {integration}     # default: dev
+git pull origin "$I"
 ```
 
-**2.4 — Version bump + CHANGELOG BEFORE the push (see `karvey/rules/versioning.md` and `karvey/rules/changelog-policy.md`).** This is part of the 6-step checklist (Step 3) and is mandatory: **NEVER deploy without bumping the version.**
+**2.3 — Release step: one bump per release** (`../karvey/rules/versioning.md`). On the feature branch, turn `## [Unreleased]` into `## [x.y.z] - YYYY-MM-DD` and bump the version file once (`package.json`, `pyproject.toml`, `*.csproj`, `VERSION`, …): **major** = breaking, **minor** = backward-compatible feature, **rev** = fix. Commit it as `release: x.y.z` with the rest of the change.
 
-1. **Determine the semver segment to increment** (`major.minor.rev`) per the nature of the change:
-   - **major** → breaking change (breaks API/contract/schema/behavior compatibility).
-   - **minor** → new backward-compatible feature.
-   - **rev** → fix/adjustment/minor change with no new feature.
-2. **Version bump in each affected component/repo.** Edit the version file per the stack (`package.json`, `pyproject.toml`, `*.csproj`, `VERSION`, git tags, etc.). If a repo has several deployable components, bump the one of the component that changed.
-3. **Document in `CHANGELOG.md` per component AND per repository** (`changelog-policy.md` format): an entry for the new version with the **responsible human** (name + contact, never empty nor "AI"), the **AI model** that assisted (e.g., `Claude Opus 4.8`), and the **why** of the change (not just the what). Indicate the incremented semver segment and why.
-4. **(If the repo has a frontend) recommend a version visible in the UI** — see Step 2.4-bis.
+**2.4 — Visible version (recommendation).** If a `target` has a UI, recommend a version visible in it, differentiated by environment (`versioning.md`): DEV `{version}-dev.{build}+{sha}` with a `DEV` mark, PROD `{version}`, read from the version file at build time. A missing visible version is a recommendation, not a blocker.
 
-**2.4-bis — Version visible in the front (recommendation).** If any `target` in `project.json` is `web`/mobile/desktop with a UI (check `project.json:targets`), **recommend to the user** exposing the version in the interface (footer, "About" screen), **differentiated by environment** (`karvey/rules/versioning.md`): **DEV shows the dev version** (`{version}-dev.{build}+{sha}` + a visible `DEV` mark) and **PROD shows the release version** (`{version}`). The version is read from the version file at build time — never from a pipeline variable, which goes stale silently; the pipeline stage only provides the environment, build number and commit. If the version is already visible, confirm it was updated with the bump and that it differs by environment.
-
-**2.5 — Merge feature → integration:**
+**2.5 — Push the branch, merge to integration, push ⇒ DEV pipeline** (skip in trunk flow):
 ```bash
-git checkout {integration}        # dev
-git merge feature/{change-id}
+git push origin "feature/{change-id}"
+git checkout "$I"
+git merge "feature/{change-id}"
+git push origin "$I"               # ⇒ DEV pipeline
 ```
 
-**2.6 — Push to integration ⇒ triggers DEV pipeline** (the deploy is done by the pipeline, NOT manually):
+**2.6 — DEV canary (Step 2-bis).** Wait for the green pipeline and run the canary over the real DEV runtime. No advance to prod if DEV is unhealthy. With a UI, check the visible version against the commit DEV actually runs: take the deployed commit (the source commit of the green DEV run; the one pushed in 2.5 if the run does not name it) and read its version file with `git show "<deployed-sha>:<version file>"` — not the tip of `$I`, which another change may have bumped since. The check passes when DEV shows that version with an unmistakable DEV mark, in any format (`DEV 2.10.4`, `2.10.4-dev.42+74571ae`, a `DEV` badge beside `2.10.4`). Another version, or no DEV mark, is a finding; a UI with no visible version at all is the 2.4 recommendation, not a finding and not a blocker.
+
+**2.7 — Pull production and open the PR** (integration → production; trunk: feature → production). Use the host from Step 1:
 ```bash
-git push origin {integration}     # dev → triggers DEV pipeline
+git pull origin "$P"
+gh pr create --base "$P" --head "$I" --title "[Deploy] {change-id}" \
+  --body "Deploy of {change-id}. QA OK, tests PASS, CHANGELOG released. Needs the human's prod OK."
+az repos pr create --source-branch "$I" --target-branch "$P" --title "[Deploy] {change-id}" \
+  --description "Deploy of {change-id}. QA OK, tests PASS, CHANGELOG released. Needs the human's prod OK."
 ```
 
-**2.7 — Post-deploy canary in DEV (see Step 2-bis):** wait for the pipeline to deploy and run the **canary loop** over the actual DEV runtime (green pipeline build + health monitoring). Do not advance to prod if DEV did not end up healthy or if the canary detects a regression. **If there is a front, check the visible version:** DEV must show `-dev` of the version just bumped (`{version}-dev.…`); anything else is a finding (stale build, wrong stage variable, version read from the wrong source).
-
-**2.8 — Before the PR, `pull` production:**
+**2.8 — Verify the PR's own gates; do NOT skip to 2.9.** CI, required reviewers and branch policies run on this PR's merge commit and can fail for reasons Step 0 could not see. Wait for them to settle:
 ```bash
-git pull origin {production}      # default: master
-```
-
-**2.9 — Create PR `dev` → `master`.** Use the host detected in Step 1.5-bis:
-
-```bash
-# GitHub
-gh pr create --base {production} --head {integration} \
-  --title "[Deploy] {change-id}" \
-  --body "Deploy of {change-id}. QA OK, tests PASS, CHANGELOG updated. Requires human OK to merge to prod."
-
-# Azure Repos
-az repos pr create --source-branch {integration} --target-branch {production} \
-  --title "[Deploy] {change-id}" \
-  --description "Deploy of {change-id}. QA OK, tests PASS, CHANGELOG updated. Requires human OK to merge to prod."
-```
-
-**2.9-bis — Verify the PR's own gates. Do NOT skip to 2.10.**
-
-The PR carries checks the repo enforces — CI, required reviewers, and whatever policies the team applied
-(build validation, status checks). They are **not** the same as the release gate of Step 0: that one
-validated the local state before starting; these validate this PR, on the merge commit, and can fail for
-reasons Step 0 could not see (a conflict with what advanced on production, a policy someone added since).
-
-Retrieve them and **wait for them to settle** — right after creating the PR they are queued, not passed:
-
-```bash
-gh pr checks {pr}                              # GitHub
-az repos pr policy list --id {pr} -o table     # Azure Repos
+gh pr checks "{pr}"                            # GitHub
+az repos pr policy list --id "{pr}" -o table   # Azure Repos
 ```
 
 | Gate state | Action |
 |---|---|
-| ✅ All required ones passed | Continue to 2.10 (request the human OK). |
-| ⏳ Still running/queued | Wait and re-check. Do not request approval on an unresolved gate. |
-| ❌ A required one failed | **STOP.** Report which one and why. It goes back to `karvey-iterate`, not to the merge. |
-| ⚪ Not configured (no policies) | Report it: this repo has **no gate on production**. Continue if the user accepts, and note it as a finding — a `master` with no build validation merges untested code. |
+| ✅ all required passed | Continue to 2.9. |
+| ⏳ running/queued | Wait and re-check. Never request the OK on an unresolved gate. |
+| ❌ a required one failed | **STOP**, report which and why; it goes to `karvey-iterate`, not to the merge. |
+| ⚪ none configured | Report that production has **no gate**; continue only if the user accepts, and log it as a finding. |
 
-**Never request the prod OK while a required gate is red or unresolved.** Asking a human to approve over a
-red gate turns the approval into a rubber stamp, which is exactly what the gate exists to prevent. Bypassing
-a policy is the human's call and their explicit responsibility — never the agent's initiative, never to
-unblock itself.
+Bypassing a policy is the human's call and responsibility — never the agent's initiative to unblock itself.
 
-**2.10 — Merge to `master` ONLY with explicit human OK ⇒ triggers PROD pipeline.**
-Use `AskUserQuestion` to request explicit prod approval. Without human OK, **do not merge**.
-
-**`approvals.prod` is mandatory before the merge** (`karvey/rules/multi-agent.md` §4): record in `spec.json` `approvals.prod = { "by": "{human name}", "date": "YYYY-MM-DD", "ref": "D-NN" }`, where `D-NN` is the entry in the decision log that holds the OK, and commit it on the branch that goes to `master`. This keeps the prod approval **in the repo history** even when the git platform cannot enforce required reviewers (e.g. no GitHub Enterprise / branch protection). The prod gate is never delegated to an agent (`role` is always `human`). Without a filled `approvals.prod`, **do not merge**. With OK and the record committed:
+**2.9 — Prod OK from the human ⇒ merge ⇒ PROD pipeline.** First read the PR head SHA and show it in the question:
 ```bash
-gh pr merge --merge                            # GitHub    ⇒ triggers PROD pipeline
-az repos pr update --id {pr} --status completed # Azure Repos ⇒ triggers PROD pipeline
+gh pr view "{pr}" --json headRefOid -q .headRefOid                                    # GitHub
+az repos pr show --id "{pr}" --query lastMergeSourceCommit.commitId -o tsv            # Azure Repos
 ```
+Ask with `AskUserQuestion`; the human answers in their own words, with an approval word **and** a production word (D-10), so the approval hook records a prod marker and its audit line. Then:
+1. Allocate the decision `D-NN` and put its text (who, when, the words verbatim) in the PR body or a PR comment. It is written into `docs/spec/decisions.md` at archive, on `chore/archive-{change-id}` (D-03).
+2. Record it in the release ledger — never in a commit on the integration branch:
+   ```bash
+   python3 "$S" approve "{change-id}" prod --by "{human name}" --role human --ref "D-NN" --sha "{pr head}"
+   python3 "$S" check-prod "{change-id}" --sha "{pr head}"   # what the prod-gate reads
+   ```
+   Refused (no prod marker, missing `--by`/`--ref`) → do not merge; ask the human again. The prod approval is never delegated (`role` is always `human`).
+   The approval covers **that SHA only, for 24 h** (D-35): a new push to the PR, or a merge the next day, needs a new OK. A `reopen` of the change supersedes it (D-36).
+3. Merge (the prod-gate hook lets it through only with the ledger entry for the PR's current head), as its own command — not chained after a push or a branch move:
+   ```bash
+   gh pr merge "{pr}" --merge                          # GitHub      ⇒ PROD pipeline
+   az repos pr update --id "{pr}" --status completed   # Azure Repos ⇒ PROD pipeline
+   ```
 
-**2.11 — Post-deploy canary in PROD (see Step 2-bis):** after the merge to `master`, wait for the PROD pipeline and run the **canary loop** over the actual production runtime (`prod_url` / health from Step 1.5). It is the direct reinforcement of zero-downtime: if the canary detects a regression, **alert and recommend an immediate rollback**. **If there is a front, check the visible version:** PROD must show exactly the released `{version}`, with no `-dev` suffix and no DEV mark.
+**2.10 — PROD canary (Step 2-bis).** Wait for the PROD pipeline and run the canary over production. A regression → **alert and recommend an immediate rollback** (via pipeline). With a UI, PROD shows exactly `{version}`. Keep the green pipeline run URL and the canary result: archive records them (`advance … deployed --pipeline-run <url> --post-deploy-check pass`).
 
-**2.12 — Branch hygiene: delete what production absorbed (see `karvey/rules/deploy-workflow.md` → *Branch hygiene*).**
-Once PROD is merged and the canary is OK, no branch of this change stays alive. For each repo:
+**2.11 — Branch hygiene** (`deploy-workflow.md` → *Branch hygiene*). Delete what production absorbed; never delete what it did not:
 ```bash
 git fetch origin --prune
-git branch -r --merged origin/{production}      # + the cherry / tree checks of the rule for squash or cherry-pick
-git push origin --delete feature/{change-id}     # only if absorbed
-git branch -d feature/{change-id}
-git fetch origin --prune
+git branch -r --merged "origin/$P"             # + the cherry / tree checks of the rule
+git push origin --delete "feature/{change-id}"   # only if absorbed
+git branch -d "feature/{change-id}"
 ```
-Extend the check to the **other** non-protected branches of the repo: absorbed ones are deleted (closing their
-PR if still open, with a comment naming what absorbed them); **not absorbed ones are never deleted** — list
-them with their unique commits and PR for the human to decide. Report deleted / kept counts.
+Absorbed non-protected branches are deleted (closing their PR with a comment); **not absorbed ones are listed** with their unique commits and PR for the human. Report the counts.
 
-### Step 2-bis — Post-deploy canary loop (zero-downtime reinforcement)
+### Step 2-bis — Post-deploy canary loop
 
-Inspired by gstack's `/canary` and adapted to the target's actual runtime (see `karvey/rules/targets.md`). It runs **after each deploy** (in DEV after 2.7 and in PROD after 2.11), pointing at the just-deployed environment (`dev_url`/`prod_url` and health from Step 1.5). It watches that the deploy did not degrade the service.
+After each deploy (DEV in 2.6, PROD in 2.10), over the just-deployed environment and the target's real runtime (`targets.md`, eyes via `karvey-browse`: browser, simulator, HTTP client or terminal). Several spaced iterations, not one shot, each recorded:
+1. **Console/log errors** new since the deploy.
+2. **Performance** of health and key endpoints against the pre-deploy baseline.
+3. **Page/endpoint failures** on the change's critical routes and the product's main ones (5xx, timeout, broken page).
 
-**What the loop watches (several iterations, not a single check):**
-1. **Console/log errors** — browser console (web, via `karvey-browse`), runtime/platform logs (Functions, container, etc.). Look for new errors that did not exist before the deploy.
-2. **Performance regressions** — latency/response time of the health and of key endpoints; compare against the pre-deploy baseline. Noticeable degradation = regression.
-3. **Page/endpoint failures** — walk through the change's critical routes/endpoints and the product's main ones; any 5xx, timeout, or broken page counts as a failure.
+Result: OK, or REGRESSION with what failed. DEV regression → stop before prod. PROD regression → alert and recommend a rollback (always via pipeline).
 
-**How to run it:**
-- Rely on **`karvey-browse`** ("get eyes") for the target's runtime: headless browser (web), simulator/device (mobile), HTTP client (API), process/terminal (CLI). It does not assume a browser.
-- Repeat the cycle (console → performance → pages/endpoints) over a reasonable window post-deploy (several spaced iterations), not a single shot. Record evidence of each iteration.
-- In DEV: if the canary flags a regression, **stop and do not advance to prod**; fix it first.
-- In PROD: if the canary flags a regression, **alert immediately and recommend a rollback** (revert the merge / deploy the previous version via pipeline). Never leave prod degraded. The rollback is also executed by the pipeline, never manually.
+### Step 3 — Hard rules (NEVER skip)
 
-**Canary result:** OK (no regressions) or REGRESSION (with detail of what failed: console/perf/endpoint). Leave the result recorded for the final output and management.
-
-### Step 3 — 6-step checklist (before the push to dev)
-
-From `karvey/rules/deploy-workflow.md`. Show and verify before the push to `dev`:
-
-1. Am I on a feature branch? (not `dev`/`master`)
-2. Did I bump the semver version (major/minor/rev) in each affected component/repo and update `CHANGELOG.md` per component and per repo? (see `versioning.md` and `changelog-policy.md`; if there is a frontend, did I recommend/update the version visible in the UI?) **NEVER deploy without bumping the version.**
-3. Is everything pending committed?
-4. Pushed the branch?
-5. Merged to `dev`?
-6. Pushed `dev`?
-
-Only after the 6 → the pipeline deploys dev. For prod, repeat the verification and PR to `master` with human approval.
-
-### Step 4 — Hard rules (NEVER skip)
-
-- **NEVER commit directly to `dev` or `master`.** Always a feature branch.
-- **NEVER deploy manually.** The deploy is triggered by the pipeline (push to `dev`, merge to `master`). `func azure functionapp publish` or manual equivalents are FORBIDDEN.
+- **NEVER commit directly on the integration or production branch**; always a feature branch.
+- **NEVER deploy manually** — `func azure functionapp publish` and equivalents are forbidden; the pipeline deploys.
 - **`pull` before starting and before each merge/PR.**
-- **Prod NEVER without explicit human OK.** The PR to `master` is not merged without approval, and without `approvals.prod` (`by` + `date` + `ref: D-NN`) recorded in the repo.
-- **NEVER request the prod OK with the PR's gates red or unresolved** (2.9-bis). Approving over a red gate
-  turns the human into a rubber stamp. Bypassing a policy is the human's decision and their explicit
-  responsibility — never the agent's initiative to unblock itself.
-- **NEVER assume the git host.** `gh` against Azure Repos (or the reverse) fails with the branch already in
-  `dev`. Detect it from the remote (1.5-bis).
-- **Hotfix = fix + BUG-NN + regression test in the same PR.** Never a bare fix.
-- **Docs-only PRs** run the light CI and never trigger a deploy.
-- **NEVER deploy without bumping the version** (semver + CHANGELOG per component and repo).
-- **NEVER leave an absorbed branch alive, NEVER delete one that is not absorbed** (2.12). Absorption is verified (`--merged` / `cherry` / tree test), never assumed.
-- **Zero downtime**: the deployment cannot cause a service outage; the post-deploy canary reinforces this and, on a prod regression, recommends a rollback (via pipeline, never manual).
+- **Prod NEVER without the human's explicit OK**, recorded as D-NN + PR + ledger (`approve … prod`); never as a commit.
+- **NEVER request the prod OK with the PR's gates red or unresolved.**
+- **NEVER assume the git host** — detect it from the remote.
+- **Hotfix = fix + BUG-NN + regression test in the same PR.**
+- **One version bump per release**, from `[Unreleased]`, in Step 2.3.
+- **Branches:** absorbed → deleted; not absorbed → never deleted, reported.
+- **Zero downtime**: the canary reinforces it; a prod regression → rollback recommended.
+- In multi-repo, the dependency order of `architecture.md`.
 
-### Step 5 — Record in management
+### Step 4 — Record in the tracker
 
-Read `management` from `spec.json` (the tool; its settings in `project.json:management` — `karvey/rules/management-adapters.md`).
+Resolve the tracker with `python3 "$C" resolve management --change "{change-id}" --json` (`../karvey/rules/management-adapters.md`, including its missing-map clause). If `external` is true: `create_task("[Deploy] {change-id}")` with the checklist as subtasks, `set_status(…, in_progress)` while it runs, `link(…, PR)`, `set_status(…, done)` on the PROD confirmation, `blocked` if the gate or the canary stops it; a failed call goes to the outbox (`karvey-config.py outbox add`). Otherwise add to `PLAN.md` the deploy status per repo and environment:
 
-**In the team's tracker:** `create_task("[Deploy] {change-id}")` with the 6-step checklist as subtasks, `set_status(…, in_progress)`
-while the deploy runs, `link(…, PR)`, and `set_status(…, done)` on prod confirmation (`blocked` if the release gate or the
-canary stops it). ClickUp adapter example:
-```
-clickup_create_task
-  name: "[Deploy] {change-id}"
-  list_id: "{sprint_list_id}"
-  priority: "high"
-```
-For each repo, record DEV and PROD deploy status. Close the task on confirming the merge to prod (PROD pipeline OK).
-
-**Markdown (`PLAN.md`):** add an entry in `PLAN.md` with the deploy status **per repo and environment**:
 ```markdown
 ## Deploy — {change-id}
 | Repo | DEV | PROD |
 |------|-----|------|
-| {repo1} | ✅ deployed | ⏳ PR open / ✅ merged |
-| {repo2} | ... | ... |
+| {repo1} | ✅ deployed | 👀 PR open / ✅ merged |
 ```
 
-### Step 6 — Update spec.json
+### Step 5 — Notify the team + final output
 
-```
-spec.json:
-  phase: "deployed"
-  approvals.deploy.generated: {YYYY-MM-DD}
-  approvals.deploy.approved: {YYYY-MM-DD if there was prod human OK, otherwise null}
-  approvals.prod: { by, date, ref: D-NN }   # already committed before the merge (2.10)
-```
-
-### Step 7 — Knowledge sync
-
-Run the sync step of `karvey/rules/knowledge-sync.md` per `knowledge_sync` in `project.json`:
-- `obsidian` → sync the modified documents to the vault via the Obsidian MCP (fallback to graphify if it fails).
-- `graphify` → `/graphify docs/spec/ --update` (if `docs/spec/graphify-out/` does not exist, without `--update`).
-- Multi-repo with code changes → graphify also in each affected repo.
-
-### Step 8 — Notify the team + final output
-
-Send the `deploy` notification per `karvey/rules/notifications.md`: read `project.json:notifications`; if `channel` is
-unset, `none`, or `deploy` is not in `events` → skip and say so. Otherwise post to `target` via `via`, in the channel's own
-markup: repos + versions, DEV/PROD state, canary result, branches cleaned. Never read the destination from `CLAUDE.md`;
-a failed send is reported, not swallowed.
+Send the `deploy` notification per `../karvey/rules/notifications.md`: `python3 "$C" resolve notifications --json`; `none` or `deploy` not in `events` → skip and say so. Run `python3 "$C" notify-check` first: exit 10 (destination changed) → show old and new destination and ask the human before sending. Post in the channel's own markup: repos + versions, DEV/PROD state, canary, branches. A failed send is reported, not swallowed.
 
 ```
 ✅ Deploy complete — {change-id}
 
-Repos deployed (in dependency order):
-  - {repo1}: v{new_version} · DEV ✅ canary OK  |  PROD {✅ merged, canary OK / ⏳ PR open, awaiting human OK}
-  - {repo2}: v{new_version} · DEV ✅ canary OK  |  PROD ...
-
-6-step checklist: verified
-QA gate: OK (0 critical, 0 high) · Tests: PASS · Version bumped + CHANGELOG: OK
-Prod approval: {by} · {date} · {D-NN}   Type: {feature | ops | hotfix (BUG-NN, release x.y.z)}
-Deploy platform: {Fly | Render | Vercel | Netlify | Azure | GitHub Actions | ...} · Prod URL: {prod_url}
-Post-deploy canary: DEV {OK / REGRESSION} · PROD {OK / REGRESSION → rollback recommended / N/A}
-Branches: deleted {N} ({list}) · kept {N} ({branch}: not absorbed, {N} commits, PR #{n})
-{If there is a frontend} Version visible in UI: {yes / recommended to the user}
-
-Management: {[Deploy] {change-id} in {tool} → {done | in_progress (PR open) | blocked} | PLAN.md updated}
-Notification: {channel → target | skipped (none) | not configured}
-Knowledge sync: {obsidian | graphify} updated
+Repos (dependency order):
+  - {repo1}: v{version} · DEV ✅ canary OK | PROD {✅ merged, canary OK / 👀 PR open, awaiting the human's OK}
+Checklist: verified · QA: OK (0 critical, 0 high) · Tests: PASS · Release: [Unreleased] → [x.y.z]
+Prod approval: {by} · {D-NN} · ledger ✅ (check-prod)   Type: {feature | ops | hotfix (BUG-NN)}
+Platform: {…} · Prod URL: {prod_url} · Pipeline run: {url}
+Canary: DEV {OK / REGRESSION} · PROD {OK / REGRESSION → rollback recommended}
+Branches: deleted {N} ({list}) · kept {N} ({branch}: not absorbed, PR #{n})
+{UI} Visible version: {yes / recommended}
+Management: {[Deploy] in {tool} → {status} | PLAN.md updated} · Notification: {channel → target | skipped}
 
 Next step: /karvey-archive {change-id}
 ```
 
-## Safety
-
-- **NEVER commit directly to `dev` or `master`** — always a feature branch.
-- **NEVER deploy manually** — `func azure functionapp publish` and equivalents are forbidden; the deploy is triggered by the pipeline (push `dev`, merge `master`).
-- **`pull` before starting and before each merge/PR.**
-- **Prod NEVER without explicit human OK** — the PR to `master` is not merged without approval.
-- **NEVER deploy without bumping the version** — semver (major/minor/rev) bumped and CHANGELOG per component and per repo (see `versioning.md` and `changelog-policy.md`).
-- **Zero downtime** — the deployment cannot cause a service outage; the post-deploy canary (DEV and PROD) reinforces this and, on a prod regression, recommends a rollback (always via pipeline, never manual).
-- **Mandatory release gate** — without QA OK (0 critical/high), tests PASS, version bumped, and CHANGELOG complete, no deploy happens.
-- In multi-repo, honor the dependency order from `architecture.md` (DB → backend → frontend).
-
-
 ## Advance to the next phase
 
-When finishing this phase and having the corresponding approval, **actively ask the user**: "Shall we advance to the Archive (closure) phase now?"
-- If they confirm → run `/karvey-archive {change-id}`.
-- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
-- If you resume in another session, `/karvey {change-id}` indicates which phase you are in and which one follows.
+Ask the user: "Shall we advance to the Archive (closure) phase now?" Confirm → `/karvey-archive {change-id}`; otherwise wait. In another session, `/karvey {change-id}` (it calls `karvey-state.py next`) says where the change is.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

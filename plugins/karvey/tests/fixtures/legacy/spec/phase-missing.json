@@ -1,0 +1,15 @@
+{
+  "change_id": "fixture-35",
+  "management": "markdown",
+  "goal": "…",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": false
+    }
+  }
+}

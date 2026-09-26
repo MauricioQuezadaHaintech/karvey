@@ -1,6 +1,6 @@
 ---
 name: karvey-diagram
-description: Diagram maker for the Karvey method. Natural language in, diagram out — mermaid source + editable .excalidraw + rendered SVG/PNG. Offline-friendly. Triggers include "karvey diagram", "diagrama", "mermaid", "excalidraw", "diagrama de flujo", "diagrama de arquitectura".
+description: Karvey support — a diagram from plain words: source, editable file and rendered SVG/PNG, offline. Triggers include "karvey diagram", "karvey diagrama", "diagrama de flujo", "diagrama de arquitectura".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [diagram description] [--type flow|sequence|architecture|er]
 ---
@@ -52,4 +52,4 @@ When the user asks for a diagram: "flow diagram", "architecture diagram", "make 
 - **It does not advance the phase.** This skill never writes nor modifies `spec.json:phase` nor the state of the Karvey Method. It is pure visualization support.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

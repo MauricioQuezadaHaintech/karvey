@@ -1,0 +1,21 @@
+{
+  "change_id": "fixture-40",
+  "phase": "tasks",
+  "management": "markdown",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "mockup": {
+      "approved": null,
+      "generated": false,
+      "na": true,
+      "nota": "…"
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true
+    }
+  }
+}

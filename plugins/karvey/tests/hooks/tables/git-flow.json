@@ -1,0 +1,2768 @@
+{
+ "table": "git-flow",
+ "description": "E1.F5.T4 / REQ-W1-020, 021, 022, 035 (H-12): with enforcement.git_flow_hook on, the rule table of architecture §3.4 is applied to the target repository of each segment (cd chains, git -C, GIT_DIR, bash -c, aliases), with whole-name branch matching, the integration-push rule and trunk projects.",
+ "cases": [
+  {
+   "id": "gf-01-commit-on-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "commit on master"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": "BLOCK git-flow"
+   }
+  },
+  {
+   "id": "gf-02-commit-on-dev",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "dev",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "commit on dev"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020"
+   ]
+  },
+  {
+   "id": "gf-03-commit-on-feature",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK git-flow",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "gf-04-amend-on-dev",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "dev",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit --amend --no-edit"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020"
+   ]
+  },
+  {
+   "id": "gf-05-commit-with-config-option-on-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git -c user.name=x commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020"
+   ]
+  },
+  {
+   "id": "gf-06-commit-no-verify-on-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit --no-verify -am x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020"
+   ]
+  },
+  {
+   "id": "gf-07-commit-am-on-feature",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git add -A && git commit -am x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020"
+   ]
+  },
+  {
+   "id": "gf-08-commit-after-switch-is-not-predicted",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git switch master && git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "limitation"
+   ],
+   "limitation": true,
+   "note": "the branch is read before the command runs; a branch switch inside the same command is not followed"
+  },
+  {
+   "id": "gf-09-bare-push-on-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "bare push"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021",
+    "H-12"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-10-bare-push-on-dev-allowed",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "dev",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-022"
+   ]
+  },
+  {
+   "id": "gf-11-bare-push-on-feature",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021"
+   ]
+  },
+  {
+   "id": "gf-12-push-master-from-feature",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin master"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "production branch master"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": "BLOCK git-flow"
+   },
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-13-push-head-to-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin HEAD:master"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-14-push-refs-heads-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin refs/heads/master"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-15-push-delete-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin :master"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-16-push-plus-refspec-to-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin +feature/feat-a:master"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-17-push-all",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push --all origin"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "--all"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-18-push-mirror",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push --mirror origin"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-19-push-master-notes-whole-name",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin master-notes"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021",
+    "H-12"
+   ]
+  },
+  {
+   "id": "gf-20-push-feature-into-dev",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin feature/x:dev"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "integration branch dev"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-022",
+    "H-12"
+   ]
+  },
+  {
+   "id": "gf-21-push-dev-from-feature-allowed",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin dev"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-022",
+    "Q-A9",
+    "D-09",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK git-flow",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "gf-22-force-push-dev",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push -f origin dev"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "force push"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-022"
+   ]
+  },
+  {
+   "id": "gf-23-push-head-into-dev-from-feature",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin HEAD:dev"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-022"
+   ]
+  },
+  {
+   "id": "gf-24-push-dry-run-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push --dry-run origin master"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021"
+   ]
+  },
+  {
+   "id": "gf-25-push-unresolvable-destination",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin \"$BRANCH\""
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "without variables"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.2"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-26-push-set-upstream-feature",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push -u origin feature/feat-a"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021"
+   ]
+  },
+  {
+   "id": "gf-27-push-delete-flag-dev",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin --delete dev"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-022"
+   ]
+  },
+  {
+   "id": "gf-28-merge-on-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git merge dev"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "through a PR"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4"
+   ]
+  },
+  {
+   "id": "gf-29-merge-on-dev-allowed",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "dev",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git merge feature/feat-a"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "§3.4"
+   ]
+  },
+  {
+   "id": "gf-30-cherry-pick-on-dev",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "dev",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git cherry-pick abc123"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4"
+   ]
+  },
+  {
+   "id": "gf-31-revert-on-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git revert HEAD"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4"
+   ]
+  },
+  {
+   "id": "gf-32-merge-abort-on-master-allowed",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git merge --abort"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "§3.4"
+   ]
+  },
+  {
+   "id": "gf-33-am-on-dev",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "dev",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git am < fix.patch"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4"
+   ]
+  },
+  {
+   "id": "gf-34-manual-deploy-func-publish",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "func azure functionapp publish my-app"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "manual deploy"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4",
+    "deploy",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": "BLOCK git-flow"
+   }
+  },
+  {
+   "id": "gf-35-manual-deploy-az-webapp-up",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "az webapp up -n app"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "manual deploy"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4",
+    "deploy"
+   ]
+  },
+  {
+   "id": "gf-36-manual-deploy-az-config-zip",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "az functionapp deployment source config-zip -g rg -n app --src a.zip"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "manual deploy"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4",
+    "deploy"
+   ]
+  },
+  {
+   "id": "gf-37-manual-deploy-vercel-prod",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "vercel --prod"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "manual deploy"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4",
+    "deploy"
+   ]
+  },
+  {
+   "id": "gf-38-manual-deploy-netlify-prod",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "netlify deploy --prod --dir dist"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "manual deploy"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4",
+    "deploy"
+   ]
+  },
+  {
+   "id": "gf-39-manual-deploy-firebase-deploy",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "firebase deploy --only hosting"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "manual deploy"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4",
+    "deploy"
+   ]
+  },
+  {
+   "id": "gf-40-manual-deploy-gcloud-run-deploy",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gcloud run deploy api --source ."
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "manual deploy"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.4",
+    "deploy"
+   ]
+  },
+  {
+   "id": "gf-41-vercel-preview-allowed",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "vercel"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "§3.4",
+    "deploy"
+   ]
+  },
+  {
+   "id": "gf-42-git-C-repo-on-master-from-elsewhere",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "cwd": "{{tmp}}/elsewhere"
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git -C {{root}} commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "commit on master"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020",
+    "H-12"
+   ]
+  },
+  {
+   "id": "gf-43-git-C-repo-on-feature-allowed",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "cwd": "{{tmp}}/elsewhere"
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git -C {{root}} commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020"
+   ]
+  },
+  {
+   "id": "gf-44-cd-then-commit",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "cwd": "{{tmp}}/elsewhere"
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cd {{root}} && git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020",
+    "H-12"
+   ]
+  },
+  {
+   "id": "gf-45-bash-c-wrapped-commit",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "cwd": "{{tmp}}/elsewhere"
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "bash -c 'git -C {{root}} commit -m x'"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020",
+    "H-12"
+   ]
+  },
+  {
+   "id": "gf-46-GIT_DIR-assignment",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "cwd": "{{tmp}}/elsewhere"
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "GIT_DIR={{root}}/.git git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020",
+    "H-12"
+   ]
+  },
+  {
+   "id": "gf-47-alias-ci-is-commit",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "git_config": {
+      "alias.ci": "commit"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git ci -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "via alias ci"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020",
+    "H-12"
+   ]
+  },
+  {
+   "id": "gf-48-shell-alias-push",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "git_config": {
+      "alias.shipit": "!git push origin master"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git shipit"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and, since BUG-28, also blocks this aliased push; it is switched off here so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-49-unresolvable-C-variable",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git -C \"$REPO\" commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "cannot resolve the target"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-020",
+    "§3.2"
+   ]
+  },
+  {
+   "id": "gf-50-trunk-commit-on-main",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [],
+     "branch": "main",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "commit on main"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-035",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": "BLOCK git-flow"
+   }
+  },
+  {
+   "id": "gf-51-trunk-merge-on-main",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [],
+     "branch": "main",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git merge feature/feat-a"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "through a PR"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-035"
+   ]
+  },
+  {
+   "id": "gf-52-trunk-bare-push-on-main",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [],
+     "branch": "main",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow",
+     "bare push"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-035"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-53-trunk-push-feature",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin feature/feat-a"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-035"
+   ]
+  },
+  {
+   "id": "gf-54-trunk-push-head-to-main",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin HEAD:main"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-035"
+   ],
+   "note": "prod-gate runs first in the §1.3 order and would block this push too; it is switched off in both the working copy and origin (REQ-W1-027) so the case pins git-flow's own rule"
+  },
+  {
+   "id": "gf-55-trunk-commit-on-feature",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-035",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK git-flow",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "gf-56-disabled-by-default",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "opt-in",
+    "nopy"
+   ]
+  },
+  {
+   "id": "gf-57-on-in-reviewed-line-only",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/project.json": {
+       "branch_flow": {
+        "feature_prefix": "feature/",
+        "integration": "dev",
+        "production": "master"
+       },
+       "enforcement": {
+        "git_flow_hook": false
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "§3.5"
+   ]
+  },
+  {
+   "id": "gf-58-non-karvey-repo-inert",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "branch": "master",
+     "default_branch": "master"
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "non-karvey",
+    "nopy"
+   ]
+  },
+  {
+   "id": "gf-59-read-only-git-allowed",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git status --short && git log --oneline -3"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "git-flow",
+    "nopy"
+   ]
+  },
+  {
+   "id": "gf-bug28-push-at-sign-on-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin @"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021",
+    "BUG-28"
+   ]
+  }
+ ]
+}

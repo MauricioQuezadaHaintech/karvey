@@ -1,0 +1,48 @@
+{
+  "project": "…",
+  "git_platform": "azure_devops",
+  "cloud": {
+    "provider": "azure"
+  },
+  "iac_tool": "bicep",
+  "knowledge_sync": "graphify",
+  "repos": [
+    "repo-a",
+    "repo-b"
+  ],
+  "spec_repo": "repo-a",
+  "branch_flow": {
+    "integration": "dev",
+    "production": "master",
+    "feature_prefix": "feature/"
+  },
+  "enforcement": {
+    "git_flow_hook": true,
+    "plan_gate_hook": false
+  },
+  "notes": "…",
+  "management": {
+    "tool": "clickup",
+    "via": "mcp",
+    "location": "9015",
+    "location_name": "…",
+    "hierarchy": "…",
+    "status_flow": {
+      "todo": "open",
+      "in_progress": "doing",
+      "review": "review",
+      "done": "complete",
+      "blocked": null
+    },
+    "wbs_note": "…"
+  },
+  "notifications": {
+    "channel": "google_chat",
+    "target": "spaces/AAAAfixture",
+    "via": "cli",
+    "events": [
+      "qa",
+      "deploy"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "change_id": "fixture-19",
+  "phase": "mockup-approved",
+  "management": "markdown",
+  "goal": "…",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": false
+    }
+  }
+}

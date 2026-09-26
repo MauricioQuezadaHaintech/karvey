@@ -12,7 +12,10 @@ Each deployable component carries a **`major.minor.rev`** (semver) version:
 | **minor** | New backward-compatible feature. |
 | **rev** | Fix, adjustment or minor change without a new feature. |
 
-**Hard rule:** **NEVER deploy without incrementing the version.** Every change that reaches deploy bumps at least `rev`. The version is incremented **every time**, it is not reused.
+**Hard rule:** **each release increments the version, once.** During implementation every commit adds its
+line under `## [Unreleased]` in `CHANGELOG.md` and never touches the version; the release step
+(`karvey-deploy`) turns `[Unreleased]` into `[x.y.z]` and bumps the version files in the same commit. A
+version is never reused and never deployed unbumped.
 
 The version file depends on the stack (detect it): `package.json`, `pyproject.toml`, `*.csproj`, `VERSION`, git tags, etc.
 
@@ -37,12 +40,21 @@ How to build it:
 - **The environment and the build identity come from the pipeline:** the stage sets `APP_ENV` (`dev` | `prod`), the CI provides the build number and the short commit (`git rev-parse --short HEAD`). The code composes: `APP_ENV === 'prod' ? version : `${version}-dev.${build}+${sha}``.
 - Discreet but accessible place; the DEV mark must be impossible to confuse with production.
 
-`karvey-deploy` must **recommend this to the user** when it detects a frontend layer whose version is not visible or not differentiated by environment, and its canary **checks the visible version** (see `karvey-deploy` 2.7 / 2.11): DEV shows `-dev` of the version just bumped; PROD shows exactly the released version. A mismatch is a finding (stale build, wrong stage variable, or a version read from the wrong source).
+`karvey-deploy` must **recommend this to the user** when it detects a frontend layer whose version is not visible or not differentiated by environment, and its canary **checks the visible version** (see `karvey-deploy` 2.6 / 2.10): DEV shows the version in the version file **of the deployed commit** (`git show <deployed-sha>:<version file>`, never the tip of the integration branch, where a later change may already have bumped it) with an unmistakable DEV mark, in any format — the `-dev.{build}+{sha}` form above is the recommendation, not the test; PROD shows exactly the released version. A mismatch is a finding (stale build, wrong stage variable, or a version read from the wrong source); a UI with no visible version is a recommendation, not a finding.
 
 ## In the step-by-step deployment (`karvey-deploy`)
 
-Before the push to the integration branch (part of the 6-step checklist):
-1. Determine the segment to increment (major/minor/rev) according to the nature of the change.
-2. Bump the version in each affected component/repo.
-3. Document the changes: update `CHANGELOG.md` per component and per repo.
-4. (If there is a front) verify/recommend a visible version in the UI — **dev version in DEV, release version in PROD** — and check it in the canary.
+At the release step, before the first push (part of the 6-step checklist of `deploy-workflow.md`):
+1. Determine the segment (major/minor/rev) from the `[Unreleased]` lines.
+2. Bump the version once in each affected component/repo.
+3. Rename `## [Unreleased]` to `## [x.y.z] - date`, with its **Why** (`changelog-policy.md`).
+4. (If there is a front) verify/recommend a visible version in the UI — dev version in DEV, release version in PROD — and check it in the canary.
+
+## QA items (`karvey-qa` Dimension 6)
+
+QA verifies each item by its key:
+
+- `unreleased-section` — every commit of the change has its line under `## [Unreleased]`. <!-- qa-item: unreleased-section -->
+- `one-bump-per-release` — no commit of the change bumps a version file outside the release step. <!-- qa-item: one-bump-per-release -->
+- `versions-agree` — the version files, the plugin/package manifests and the top CHANGELOG release agree. <!-- qa-item: versions-agree -->
+- `changelog-why` — each entry says why, with the human owner and the AI model. <!-- qa-item: changelog-why -->

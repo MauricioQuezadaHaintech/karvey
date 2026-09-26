@@ -1,36 +1,31 @@
 #!/usr/bin/env bash
-# Karvey™ — plan-gate hook (PreToolUse on Edit/Write/destructive Bash)
-# Requires an approved plan throughout the flow: blocks modifications if there is no approval marker.
-# Template installed (opt-in) by karvey-init / managed by karvey-guard.
+# Karvey™ — plan-gate (PreToolUse on Edit/Write/Bash) — DEPRECATED SHIM, removed in 4.0.0.
 #
-# Override: after presenting and approving the plan, create the approval marker
-#   (default: touch "$KARVEY_PLAN_FLAG"). The hook lets things through while it exists.
-set -euo pipefail
-
-FLAG="${KARVEY_PLAN_FLAG:-/tmp/claude-plan-approved}"
-
-input="$(cat)"
-if command -v jq >/dev/null 2>&1; then
-  tool="$(printf '%s' "$input" | jq -r '.tool_name // empty')"
-  cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // empty')"
-else
-  tool="$(printf '%s' "$input" | grep -o '"tool_name"[^,]*' | head -1)"
-  cmd="$(printf '%s' "$input" | grep -o '"command"[^,]*' | head -1)"
-fi
-
-block() { echo "🚫 [Karvey plan-gate] $1 Present the plan, wait for approval and create the marker: touch $FLAG" >&2; exit 2; }
-
-# If a plan is already approved, let it through.
-[ -f "$FLAG" ] && exit 0
-
-case "$tool" in
-  Edit|Write|NotebookEdit)
-    block "File change without an approved plan." ;;
-  Bash)
-    # Destructive commands without a plan
-    if printf '%s' "$cmd" | grep -Eq '\brm +-rf?\b|\bDROP +TABLE\b|\bTRUNCATE\b|git +push +--force|git +reset +--hard|>[^>]'; then
-      block "Destructive command without an approved plan."
-    fi ;;
+# Since 3.12.0 the plan-gate lives in the plugin's hook dispatcher (hooks/karvey-hook.sh →
+# karvey_lib/guards.py) and is switched on per project with project.json:enforcement.plan_gate_hook.
+# This file stays for 3.12.x so a project that copied it into its settings.json keeps the same
+# behaviour — now with the H-10/H-11 fixes (stream redirections are not writes; git clean,
+# find -delete, sed -i … are gated; the marker is scoped, expires and is created only by the
+# approval hook from the human's own message, never by the agent). It execs the dispatcher with
+# `--only plan-gate --force-enabled`. The old $KARVEY_PLAN_FLAG file is no longer honoured.
+# `karvey-guard` detects this entry and proposes removing it.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+find_dispatcher() {
+  local c
+  for c in "${CLAUDE_PLUGIN_ROOT:+$CLAUDE_PLUGIN_ROOT/hooks/karvey-hook.sh}" "$HERE/../../../hooks/karvey-hook.sh"; do
+    [ -n "$c" ] && [ -f "$c" ] && { printf '%s' "$c"; return 0; }
+  done
+  c="$(ls -1dt "$HOME"/.claude/plugins/cache/*/karvey/*/hooks/karvey-hook.sh 2>/dev/null | head -1)"
+  [ -n "$c" ] && { printf '%s' "$c"; return 0; }
+  return 1
+}
+D="$(find_dispatcher)" || {
+  echo "[karvey] plan-gate shim: the Karvey plugin (hooks/karvey-hook.sh) was not found; not evaluated. Install the plugin or remove this entry from settings.json." >&2
+  exit 0
+}
+INPUT="$(cat)"
+case "$INPUT" in
+  *'"tool_name"'*'"Bash"'*) EVENT=pre-bash ;;
+  *) EVENT=pre-edit ;;
 esac
-
-exit 0
+printf '%s' "$INPUT" | exec bash "$D" "$EVENT" --only plan-gate --force-enabled

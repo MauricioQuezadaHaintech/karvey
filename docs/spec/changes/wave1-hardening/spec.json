@@ -1,0 +1,245 @@
+{
+  "change_id": "wave1-hardening",
+  "capability": "method",
+  "description": "Wave 1 of the 2026-09-23 expert panel (3.12.0): phase state machine as code, guards with table tests and a prod-gate, deploy/archive off dev, one versioning moment, estimates preserved, bounded session hook, plugin linter in CI, graphify off the hot path, spec-merge script, open-work dashboard, QA observes only, short descriptions — plus convergence of team-adapters' open bugs and spec-gaps.",
+  "goal": "Everything the method claims to guarantee is either enforced by a script or hook with a test, or stated as a recommendation — never promised in prose and silently skipped.",
+  "layers": [
+    "Backend",
+    "Infra"
+  ],
+  "created_at": "2026-09-23T19:22:52Z",
+  "updated_at": "2026-09-26T14:13:13+00:00",
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 2,
+  "security_tier_reason": "adds hooks that gate git operations and the merge to production; values from project.json reach shell commands",
+  "phase": "deploying",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-23T19:22:52Z",
+      "exited_at": "2026-09-23T19:22:52Z"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-23T19:22:52Z",
+      "exited_at": "2026-09-23T21:00:00Z"
+    },
+    {
+      "phase": "architecture",
+      "entered_at": "2026-09-23T21:00:00Z",
+      "exited_at": "2026-09-23T22:30:00Z",
+      "by": "Mauricio Quezada Ibáñez",
+      "ref": "D-05"
+    },
+    {
+      "phase": "tasks",
+      "entered_at": "2026-09-23T22:30:00Z",
+      "exited_at": "2026-09-24T00:10:00Z",
+      "by": "Mauricio Quezada Ibáñez",
+      "ref": "D-09"
+    },
+    {
+      "phase": "impl",
+      "entered_at": "2026-09-24T00:10:00Z",
+      "exited_at": "2026-09-24T21:48:06+00:00",
+      "by": "Mauricio Quezada Ibáñez",
+      "ref": "D-13"
+    },
+    {
+      "phase": "test",
+      "entered_at": "2026-09-24T21:48:06+00:00",
+      "exited_at": "2026-09-24T22:06:42+00:00"
+    },
+    {
+      "phase": "architecture",
+      "entered_at": "2026-09-24T22:06:42+00:00",
+      "exited_at": "2026-09-25T12:15:31+00:00",
+      "ref": "D-19"
+    },
+    {
+      "phase": "tasks",
+      "entered_at": "2026-09-25T12:15:31+00:00",
+      "exited_at": "2026-09-25T12:15:32+00:00"
+    },
+    {
+      "phase": "impl",
+      "entered_at": "2026-09-25T12:15:32+00:00",
+      "exited_at": "2026-09-26T01:29:50+00:00"
+    },
+    {
+      "phase": "test",
+      "entered_at": "2026-09-26T01:29:50+00:00",
+      "exited_at": "2026-09-26T01:40:18+00:00"
+    },
+    {
+      "phase": "qa",
+      "entered_at": "2026-09-26T01:40:18+00:00",
+      "exited_at": "2026-09-26T14:13:13+00:00"
+    },
+    {
+      "phase": "deploying",
+      "entered_at": "2026-09-26T14:13:13+00:00"
+    }
+  ],
+  "type": "feature",
+  "lane": "standard",
+  "skipped": {
+    "mockup": "no UI",
+    "design_graphic": "no UI",
+    "infra": "no cloud; the CI workflow is built as tasks E1.F13 (D-12)"
+  },
+  "lane_note": "The method has no lanes yet (R-09 is Wave 2). lane/skipped are recorded here as this change's own workaround; karvey-state must support them (REQ-W1-004, REQ-W1-007). Recorded by hand at init because the state tool does not exist yet.",
+  "links": {
+    "parent": "",
+    "children": []
+  },
+  "converges": [
+    "team-adapters"
+  ],
+  "decisions": [
+    "D-01",
+    "D-02",
+    "D-03",
+    "D-04",
+    "D-05",
+    "D-06",
+    "D-07",
+    "D-08",
+    "D-09",
+    "D-10",
+    "D-11",
+    "D-12",
+    "D-13"
+  ],
+  "inputs": {
+    "panel_review": "karvey docs/spec/reviews/2026-09-23-panel-review.md @d38abc9",
+    "qa_team_adapters": "karvey REVISION_PR_17-19_20260923.md @d38abc9",
+    "findings_team_adapters": "karvey docs/spec/changes/team-adapters/findings.md @d38abc9",
+    "incidents": "karvey docs/bugs_dev_testing.md @d38abc9"
+  },
+  "iteration_count": 0,
+  "revision_history": [
+    {
+      "at": "2026-09-24T22:06:42+00:00",
+      "reopened": "architecture",
+      "from_phase": "test",
+      "reason": "test-phase spec-gaps: §3.1 lags safe_values.py and refuses status names with parentheses (F-16..F-19); retroactive --write-spec date (F-48); manual scripts and E1.F16.T2 have no executor (F-47, F-49); BUG-22 fix task (F-40)",
+      "ref": "D-19",
+      "superseded_approvals": {
+        "architecture": {
+          "generated": true,
+          "approved": true,
+          "by": "Mauricio Quezada Ibáñez",
+          "role": "human",
+          "date": "2026-09-23",
+          "ref": "D-09"
+        },
+        "infra": {
+          "generated": false,
+          "approved": false
+        },
+        "tasks": {
+          "generated": true,
+          "approved": true,
+          "by": "Mauricio Quezada Ibáñez",
+          "role": "human",
+          "date": "2026-09-24",
+          "ref": "D-13"
+        },
+        "qa": {
+          "generated": false,
+          "approved": false
+        },
+        "deploy": {
+          "generated": false,
+          "approved": false
+        }
+      }
+    }
+  ],
+  "seed_backlog_id": [
+    "BL-04",
+    "BL-05",
+    "BL-06",
+    "BL-07",
+    "BL-08",
+    "BL-09",
+    "BL-10",
+    "BL-19",
+    "BL-20",
+    "BL-21",
+    "BL-24",
+    "BL-25"
+  ],
+  "clickup": {
+    "epic_id": "",
+    "feature_ids": [],
+    "backlog_list_id": "",
+    "client_tag": ""
+  },
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-23",
+      "ref": "D-05"
+    },
+    "mockup": {
+      "generated": false,
+      "approved": false
+    },
+    "design_graphic": {
+      "generated": false,
+      "approved": false
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-25T12:15:31+00:00",
+      "ref": "D-21",
+      "evidence": {
+        "marker": "none"
+      }
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-25T12:15:31+00:00",
+      "ref": "D-21",
+      "evidence": {
+        "marker": "none"
+      }
+    },
+    "infra": {
+      "generated": false,
+      "approved": false
+    },
+    "qa": {
+      "generated": false,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-26T14:07:49+00:00",
+      "ref": "D-21",
+      "evidence": {
+        "marker": "none"
+      }
+    },
+    "deploy": {
+      "generated": false,
+      "approved": false
+    },
+    "prod": {
+      "by": "",
+      "date": "",
+      "ref": ""
+    }
+  }
+}

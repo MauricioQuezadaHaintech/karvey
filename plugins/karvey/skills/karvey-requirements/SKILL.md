@@ -1,6 +1,6 @@
 ---
 name: karvey-requirements
-description: Generate EARS-format requirements and spec-delta for a Karvey spec. Creates Features in the team's tracker or updates PLAN.md. Use after karvey-init. Triggers include "karvey requirements", "generar requisitos", "generate requirements", "especificar requisitos", "specify requirements".
+description: Karvey phase 2 — EARS requirements traced to the PRD, spec-delta.md, Features in the tracker or PLAN.md. Use after karvey-init. Triggers include "karvey requirements", "requisitos karvey", "karvey EARS", "generar requisitos karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, WebSearch, AskUserQuestion
 argument-hint: <change-id> [-y]
 ---
@@ -9,24 +9,28 @@ argument-hint: <change-id> [-y]
 
 ## Purpose
 
-Generate requirements in EARS format for the change, produce the spec-delta with ADDED/MODIFIED/REMOVED operations, and register the Features in the team's tracker (`karvey/rules/management-adapters.md`) or PLAN.md.
+Generate requirements in EARS format for the change, produce the spec-delta with ADDED/MODIFIED/REMOVED operations, and register the Features in the team's tracker (`../karvey/rules/management-adapters.md`) or PLAN.md.
 
 ## Execution steps
 
 ### Step 1 — Load context
 
+Enter the phase through the state tool (refused, with the reason, if init is not done):
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" advance "{change-id}" requirements
+```
+
 Read:
 - `docs/spec/changes/{change-id}/spec.json`
 - `docs/spec/changes/{change-id}/prd.md` (PRD generated in karvey-init)
-- `docs/spec/changes/{change-id}/proposal.md`
 - `docs/spec/specs/{capability}/spec.md` (current living spec)
-- `rules/ears-format.md`
-- `rules/living-specs.md`
-- `rules/security-tiers.md`
+- `../karvey/rules/ears-format.md`
+- `../karvey/rules/living-specs.md`
+- `../karvey/rules/security-tiers.md`
 
 The requirements must derive from the PRD and cover its objectives and acceptance criteria.
 
-**Multi-agent / multi-repo context** (see `karvey/rules/multi-agent.md`):
+**Multi-agent / multi-repo context** (see `../karvey/rules/multi-agent.md`):
 - If `links.parent` is set, also read the **parent change's** `prd.md` and acceptance criteria in its repo: this child's requirements trace to the parent PRD.
 - For each `decisions` entry (`D-NN@{repo}`), read the decision in the operations repo's decision log.
 - For each `inputs.*` entry (`design`, `design_system`, `copy`, `legal`), read the file **at the pinned commit** (`git -C {repo} show {commit}:{path}`), not the working copy. If an input the requirements need is missing or unpinned, ask for it — never assume "the latest version".
@@ -38,7 +42,7 @@ If the codebase is brownfield: dispatch a subagent to explore existing implement
 
 ### Step 2 — Clarify scope before generating
 
-For each functional area identified in `proposal.md`, ask whether there's any scope ambiguity or edge-case behavior. Ask only the necessary questions — don't ask about what's already clear.
+For each functional area identified in `prd.md`, ask whether there's any scope ambiguity or edge-case behavior. Ask only the necessary questions — don't ask about what's already clear.
 
 **Don't ask about**: technology, architecture, implementation patterns (that goes in karvey-architecture).
 
@@ -106,10 +110,9 @@ If there's a real ambiguity that requires a user decision: ask before continuing
 docs/spec/changes/{change-id}/requirements.md
 ```
 
-Update `spec.json`:
-- `phase: "requirements-generated"`
-- `approvals.requirements.generated: true`
-- `updated_at: {timestamp}`
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" generated "{change-id}" requirements
+```
 
 ### Step 6 — Generate spec-delta.md
 
@@ -121,7 +124,7 @@ For each requirement that removes an existing one: `## REMOVED Requirements` sec
 
 If the capability is new (empty spec.md), everything is ADDED.
 
-Write `docs/spec/changes/{change-id}/specs/{capability}/spec-delta.md`.
+Write `docs/spec/changes/{change-id}/spec-delta.md` (at the change root; `karvey-archive` merges it with `karvey-spec-merge.py`).
 
 ### Step 7 — Present for approval
 
@@ -143,27 +146,21 @@ Review gate: ✅ passed
 Do you approve the requirements to continue?
 ```
 
-If the `-y` flag is present: auto-approve.
+`-y` skips the question only; the approval is still recorded with who gave it.
 
-If the user approves: update `spec.json` with `approvals.requirements.approved: true` plus `by`, `role` (`human` | `ceo-delegate`), `date` and `ref` (the `D-NN` where the approval is recorded) — see `karvey/rules/multi-agent.md` §4.
+When the user approves, record it (`ref` = the `D-NN` or URL where the OK lives; `../karvey/rules/multi-agent.md` §4):
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" approve "{change-id}" requirements \
+  --by "{name}" --role human --ref "D-NN"
+```
 
 **`ops` changes** (`spec.json:type = "ops"`): requirements are **lite** — the verifiable goal, one EARS requirement per observable end state (e.g. "the deploy service account SHALL hold role X on project Y") and the rollback expectation. No mockup/design phases follow; the next step is `/karvey-infra`.
 
 ### Step 8A — Create Features in the team's tracker (`management-adapters.md`)
 
-Read `spec.json` to get the tracker ids (`clickup.epic_id`, `clickup.backlog_list_id` — the block keeps its historical key for every tool).
-Create one Feature per functional area in requirements.md: `create_feature(epic, area)` in `project.json:management.tool`
+Resolve the tool with `karvey-config.py resolve management` (`external: true` → tracker; otherwise Step 8B) and read the Epic id from the tracker-ids block of `spec.json` (`clickup.epic_id`, historical key for every tool).
+Create one Feature per functional area, found by its natural key first so a re-run does not duplicate it: `create_feature(epic, area)`
 (skip the level if `management.hierarchy` has no feature level; Jira/ADO: issue/work item of type Feature, Linear: sub-issue or project milestone, GitHub Projects: issue added to the project, spreadsheet: a `feature` row).
-
-**ClickUp adapter example:**
-```
-clickup_create_task
-  name: "E{n}.F{n} {Feature name}"
-  list_id: "{backlog_list_id}"
-  task_type: "Feature"
-  tags: ["{client_tag}"]
-  description: (see format)
-```
 
 Feature description format:
 ```
@@ -186,23 +183,11 @@ Tasks: (pending — karvey-tasks)
 Estimated time: (pending)
 ```
 
-Link Epic ← Feature (parent/child or dependency, per tool). ClickUp: dependency via REST API:
-```bash
-curl -s -X POST "https://api.clickup.com/api/v2/task/{EPIC_ID}/dependency" \
-  -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
-  -d '{"depends_on":"{FEATURE_ID}"}'
-```
-
-Update `spec.json` with `clickup.feature_ids` (the tracker's ids).
+Link Epic ← Feature (parent/child or dependency, per tool; ClickUp detail in `../karvey/rules/clickup-protocol.md`). Store the ids in `spec.json:clickup.feature_ids`.
 
 ### Step 8B — Update PLAN.md (Markdown)
 
 Add a Features section in `PLAN.md` with the list of features and their covered requirements.
-
-### Step 8C — Update the knowledge graph
-
-Sync knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the documents created or modified.
-If `docs/spec/graphify-out/` doesn't exist, invoke `/graphify docs/spec/` without `--update`.
 
 ### Step 9 — Final output
 
@@ -211,8 +196,8 @@ If `docs/spec/graphify-out/` doesn't exist, invoke `/graphify docs/spec/` withou
 
 Files created/updated:
   - docs/spec/changes/{change-id}/requirements.md
-  - docs/spec/changes/{change-id}/specs/{capability}/spec-delta.md
-  - spec.json updated
+  - docs/spec/changes/{change-id}/spec-delta.md
+  - spec.json (through karvey-state.py)
 
 Management: {Features E{n}.F1..F{n} created in {tool} | PLAN.md updated}
 
@@ -223,10 +208,10 @@ Next step:
 
 ## Advance to the next phase
 
-When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Mockup phase now?"
-- If they confirm → run `/karvey-mockup {change-id}`.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the next phase now?" — the next skill is the one `karvey-state.py next {change-id}` names (mockup, or architecture when mockup and design-graphic are skipped for a no-UI change).
+- If they confirm → run that skill.
 - If they prefer to review or adjust first → wait. Advancing is always with the user's OK (a gate of the method).
-- If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
+- If you resume in another session, `karvey-state.py next {change-id}` (or `/karvey {change-id}`) says where the change is.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

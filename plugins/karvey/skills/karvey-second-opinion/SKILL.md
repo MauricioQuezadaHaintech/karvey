@@ -1,6 +1,6 @@
 ---
 name: karvey-second-opinion
-description: Independent cross-model code review for the Karvey method. Get an adversarial second opinion from a different AI model (e.g. Claude vs GPT/Codex/Gemini). Three modes: Review (PASS/FAIL), Challenge (adversarial), Consult. Triggers include "karvey second opinion", "segunda opinión", "cross-model review", "revisión independiente", "codex", "otro modelo".
+description: Karvey support — an independent review by another AI model: review (PASS/FAIL), challenge or consult. Triggers include "karvey second opinion", "segunda opinión", "cross-model review", "revisión independiente".
 allowed-tools: Read, Bash, Glob, Grep, Agent
 argument-hint: [--mode review|challenge|consult] [<file or diff>]
 ---
@@ -88,4 +88,4 @@ Deliver a clear report with:
 This skill **complements, does not replace** `karvey-qa`'s safety gate. A favorable second opinion does not authorize a release: the QA gate and human approval remain mandatory. And this skill **never advances the phase** of the Karvey Method.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

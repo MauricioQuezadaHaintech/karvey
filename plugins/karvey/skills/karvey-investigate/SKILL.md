@@ -1,6 +1,6 @@
 ---
 name: karvey-investigate
-description: Systematic root-cause debugging for the Karvey method. Iron Law — no fixes without investigation first. Dates the symptom, asks what changed before what is wrong, traces data flow across repo boundaries, forms and tests hypotheses, separates root cause from latent fragility, stops after repeated failures. Triggers include "karvey investigate", "investigar bug", "root cause", "depurar", "por qué falla", "debugging".
+description: Karvey support — a root-cause report: no fix without investigation (dates the symptom, what changed, data flow, hypotheses). Triggers include "karvey investigate", "investigar bug", "por qué falla", "why does it fail".
 allowed-tools: Read, Bash, Glob, Grep, Agent
 argument-hint: [symptom description]
 ---
@@ -13,7 +13,7 @@ A **cross-cutting** skill of the Karvey Method: a debugging and root-cause-analy
 
 **Iron Law:** NEVER apply fixes without first investigating the root cause. The investigation produces evidence and a recommendation; the fix is applied by `karvey-impl`, respecting the corresponding gates.
 
-It is **stack-agnostic**: it uses the target's real runtime (see `karvey/rules/targets.md`), whether it's Python/Azure Functions, Vue, SQL Server, Node-RED, Asterisk, etc.
+It is **stack-agnostic**: it uses the target's real runtime (see `../karvey/rules/targets.md`), whether it's Python/Azure Functions, Vue, SQL Server, Node-RED, Asterisk, etc.
 
 ## Steps
 
@@ -23,8 +23,8 @@ It is **stack-agnostic**: it uses the target's real runtime (see `karvey/rules/t
    - **Date the symptom.** Get the timestamp of the report and, if possible, of the first occurrence. Ask the reporter if it is not in the ticket. This gives you the **incident window** (first occurrence → report), and steps 2 and 3 are useless without it. An investigation that never establishes a date is not an investigation; it is a code review.
 
 2. **Check what is already known before reading any code.**
-   - Read the incident tracker (`docs/bugs_dev_testing.md`, `incidents-index.md` — see `karvey/rules/incident-tracking.md`): this symptom may already be diagnosed, or reopened.
-   - Read the engineering standards (`karvey/rules/engineering-standards.md`) for the layer involved: a known gray zone or a documented migration often IS the explanation.
+   - Read the incident tracker (`docs/bugs_dev_testing.md`, `incidents-index.md` — see `../karvey/rules/incident-tracking.md`): this symptom may already be diagnosed, or reopened.
+   - Read the engineering standards (`../karvey/rules/engineering-standards.md`) for the layer involved: a known gray zone or a documented migration often IS the explanation.
    - Skim the team's `CHANGELOG.md` for the incident window.
    - The team's accumulated knowledge is a first-class source of evidence. Skipping it means re-deriving from scratch a root cause somebody already paid for.
 
@@ -43,7 +43,7 @@ It is **stack-agnostic**: it uses the target's real runtime (see `karvey/rules/t
    - Prioritize by likelihood and by verification cost (verify the cheapest and most likely first).
 
 6. **Test each hypothesis with evidence.**
-   - Confirm or rule out with concrete evidence: logs, temporary prints/traces, read queries, state inspection, and **reproduction in the target's real runtime** (see `karvey/rules/targets.md`).
+   - Confirm or rule out with concrete evidence: logs, temporary prints/traces, read queries, state inspection, and **reproduction in the target's real runtime** (see `../karvey/rules/targets.md`).
    - Each hypothesis is closed with a verdict: confirmed / ruled out, and the evidence that backs it.
    - Do not mix several diagnostic changes at once: change one variable at a time so the signal is not contaminated.
    - **Never state what a symbol does without opening it.** Helpers, wrappers and loggers defined inside the project are the usual trap: their behavior is a project decision, not a language default. If a claim in the report depends on what `logger.error`, a retry helper or a guard actually does, read its definition and cite file and line. An unread assumption is not evidence.
@@ -73,4 +73,4 @@ It is **stack-agnostic**: it uses the target's real runtime (see `karvey/rules/t
 - **No claim about a symbol's behavior without having read its definition**, cited by file and line.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

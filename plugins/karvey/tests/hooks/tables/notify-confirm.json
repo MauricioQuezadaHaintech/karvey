@@ -1,0 +1,593 @@
+{
+ "table": "notify-confirm",
+ "description": "D-16 / F-15 (REQ-W1-097): a changed notification destination is confirmed only by the human. The UserPromptSubmit hook records 'confirmo notificacion <code>' (code = first 8 hex of the destination hash) as a marker scoped to the clone, the project and that destination, with the approval-marker TTL; karvey-config.py notify-check --confirm records the destination only against a live matching marker (single use); protect-paths blocks the agent from writing the marker or the notify record.",
+ "cases": [
+  {
+   "id": "nc-01-human-phrase-records-the-confirmation",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "confirmo notificación 099549b3"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": "[karvey] notification destination confirmation recorded (099549b3, expires ",
+    "files_exist": "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json",
+    "file_contains": {
+     "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json": [
+      "\"kind\": \"notify\"",
+      "\"code\": \"099549b3\"",
+      "\"project\": \".\"",
+      "\"ttl_min\": 120"
+     ]
+    }
+   },
+   "expect_nopy": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "files_absent": "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16",
+    "REQ-W1-097",
+    "nopy"
+   ]
+  },
+  {
+   "id": "nc-02-english-phrase-and-approval-together",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok, confirm notification 099549b3"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": [
+     "notification destination confirmation recorded (099549b3",
+     "[karvey] approval recorded (plan, feat-a"
+    ],
+    "files_exist": "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16"
+   ]
+  },
+  {
+   "id": "nc-03-question-or-negation-records-nothing",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "no confirmo notificacion 099549b3 todavia"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "files_absent": "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16"
+   ]
+  },
+  {
+   "id": "nc-04-quoted-phrase-records-nothing",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "> confirmo notificacion 099549b3\nwhat does this mean"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "files_absent": "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16"
+   ]
+  },
+  {
+   "id": "nc-05-agent-alone-cannot-confirm",
+   "guard": "notify-check",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {},
+   "event": "prompt",
+   "command": "python3 {{plugin}}/scripts/karvey-config.py notify-check --confirm --root {{root}}; echo \"rc=$?\"",
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": [
+     "NOT CONFIRMED",
+     "no human confirmation recorded",
+     "confirmo notificacion 099549b3",
+     "rc=10"
+    ],
+    "files_absent": "{{repo}}/karvey/notify-last.json"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16",
+    "REQ-W1-097"
+   ]
+  },
+  {
+   "id": "nc-06-human-prompt-then-confirm-records",
+   "guard": "notify-check",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "setup": "printf '%s' '{\"session_id\": \"s\", \"transcript_path\": \"\", \"cwd\": \"{{root}}\", \"hook_event_name\": \"UserPromptSubmit\", \"prompt\": \"confirmo notificacion 099549b3\"}' | CLAUDE_PROJECT_DIR={{root}} bash {{plugin}}/hooks/karvey-hook.sh prompt >/dev/null"
+   },
+   "input": {},
+   "event": "prompt",
+   "command": "python3 {{plugin}}/scripts/karvey-config.py notify-check --confirm --root {{root}}; echo \"rc=$?\"",
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": [
+     "destination confirmed and recorded",
+     "rc=0"
+    ],
+    "files_exist": "{{repo}}/karvey/notify-last.json",
+    "file_contains": {
+     "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json": "\"consumed_at\": \"20"
+    }
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16",
+    "REQ-W1-097"
+   ]
+  },
+  {
+   "id": "nc-07-marker-for-another-destination-does-not-count",
+   "guard": "notify-check",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "setup": "printf '%s' '{\"session_id\": \"s\", \"transcript_path\": \"\", \"cwd\": \"{{root}}\", \"hook_event_name\": \"UserPromptSubmit\", \"prompt\": \"confirmo notificacion 31954a31\"}' | CLAUDE_PROJECT_DIR={{root}} bash {{plugin}}/hooks/karvey-hook.sh prompt >/dev/null"
+   },
+   "input": {},
+   "event": "prompt",
+   "command": "python3 {{plugin}}/scripts/karvey-config.py notify-check --confirm --root {{root}}; echo \"rc=$?\"",
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": [
+     "NOT CONFIRMED",
+     "another destination (31954a31)",
+     "rc=10"
+    ],
+    "files_absent": "{{repo}}/karvey/notify-last.json"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16"
+   ]
+  },
+  {
+   "id": "nc-08-marker-for-another-project-does-not-count",
+   "guard": "notify-check",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "sub/docs/spec/project.json": {
+       "branch_flow": {
+        "feature_prefix": "feature/",
+        "integration": "main",
+        "production": "main"
+       },
+       "notifications": {
+        "channel": "google-chat",
+        "target": "spaces/AAAAexample1",
+        "via": "cli",
+        "events": [
+         "qa",
+         "deploy"
+        ]
+       }
+      }
+     }
+    },
+    "setup": "printf '%s' '{\"session_id\": \"s\", \"transcript_path\": \"\", \"cwd\": \"{{root}}/sub\", \"hook_event_name\": \"UserPromptSubmit\", \"prompt\": \"confirmo notificacion 099549b3\"}' | CLAUDE_PROJECT_DIR={{root}}/sub bash {{plugin}}/hooks/karvey-hook.sh prompt >/dev/null"
+   },
+   "input": {},
+   "event": "prompt",
+   "command": "python3 {{plugin}}/scripts/karvey-config.py notify-check --confirm --root {{root}}; echo \"rc=$?\"",
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": [
+     "NOT CONFIRMED",
+     "no human confirmation recorded",
+     "rc=10"
+    ],
+    "files_absent": "{{repo}}/karvey/notify-last.json",
+    "files_exist": "{{repo}}/karvey/approvals/notify/confirm-ddc6e2b224d0fd82.json",
+    "file_contains": {
+     "{{repo}}/karvey/approvals/notify/confirm-ddc6e2b224d0fd82.json": "\"project\": \"sub\""
+    }
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16"
+   ]
+  },
+  {
+   "id": "nc-09-expired-marker-does-not-count",
+   "guard": "notify-check",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    },
+    "setup": "python3 -c \"import sys; sys.path.insert(0, '{{plugin}}/scripts'); from datetime import timedelta; from karvey_lib import approval; approval.write_notify_marker('{{root}}', '099549b3', 'confirmo notificacion 099549b3', now=approval.now_dt() - timedelta(minutes=121))\""
+   },
+   "input": {},
+   "event": "prompt",
+   "command": "python3 {{plugin}}/scripts/karvey-config.py notify-check --confirm --root {{root}}; echo \"rc=$?\"",
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": [
+     "NOT CONFIRMED",
+     "expired (older than 120 min)",
+     "rc=10"
+    ],
+    "files_absent": "{{repo}}/karvey/notify-last.json"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16"
+   ]
+  },
+  {
+   "id": "nc-10-protect-paths-blocks-writing-the-confirmation",
+   "guard": "protect-paths",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "mkdir -p .git/karvey/approvals/notify && echo '{\"v\":1,\"kind\":\"notify\"}' > .git/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": "BLOCK protect-paths",
+    "files_absent": "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16",
+    "REQ-W1-018",
+    "nopy"
+   ]
+  },
+  {
+   "id": "nc-11-protect-paths-blocks-editing-the-confirmation",
+   "guard": "protect-paths",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json",
+     "content": "{}"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": "BLOCK protect-paths"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16",
+    "REQ-W1-018",
+    "nopy"
+   ]
+  },
+  {
+   "id": "nc-12-protect-paths-blocks-writing-the-notify-record",
+   "guard": "protect-paths",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "google-chat",
+       "target": "spaces/AAAAexample1",
+       "via": "cli",
+       "events": [
+        "qa",
+        "deploy"
+       ]
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cp /tmp/forged.json \"$(git rev-parse --git-common-dir)/karvey/notify-last.json\""
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": "BLOCK protect-paths"
+   },
+   "tags": [
+    "notify-confirm",
+    "D-16",
+    "REQ-W1-018",
+    "nopy"
+   ]
+  }
+ ]
+}

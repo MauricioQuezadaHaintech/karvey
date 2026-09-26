@@ -1,0 +1,1191 @@
+{
+ "table": "session",
+ "description": "E1.F6.T4 / REQ-W1-045..048, 050, 051, 083: the SessionStart hook (karvey-session-context.sh <startup|resume>) selects the active change without archive/ or IMPLEMENTED, injects the compact manifest XOR the full one, at most 40 open board rows and 6 KB of handoff with truncation notices, as hookSpecificOutput.additionalContext; the settings notice appears only on startup, only in a Karvey project, and not when origin/{integration} or origin/{production} has the settings (BUG-23).",
+ "cases": [
+  {
+   "id": "ss-01-archive-newer-not-active",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/changes/archive/2026-old/spec.json": {
+       "change_id": "old",
+       "phase": "archived"
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "(active change: feat-a)",
+    "context_not_contains": "archive"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-045",
+    "H-08"
+   ]
+  },
+  {
+   "id": "ss-02-only-archived-no-restore",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {},
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/changes/archive/2026-old/spec.json": {
+       "change_id": "old",
+       "phase": "archived"
+      }
+     }
+    },
+    "setup": "{{python}} {{plugin}}/scripts/karvey-handoff-capture.py --profile {{root}}/docs/spec/agent >/dev/null"
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "Nothing pending to restore",
+    "context_not_contains": [
+     "active change",
+     "checkpoint restore"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-W1-045"
+   ]
+  },
+  {
+   "id": "ss-03-implemented-excluded",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      },
+      "feat-b": {
+       "change_id": "feat-b",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/changes/feat-a/IMPLEMENTED": ""
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "(active change: feat-b)"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-045"
+   ]
+  },
+  {
+   "id": "ss-04-several-active-none-selected",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      },
+      "feat-b": {
+       "change_id": "feat-b",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "several active changes: feat-a, feat-b",
+    "context_not_contains": "(active change:"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-045"
+   ]
+  },
+  {
+   "id": "ss-05-branch-selects-change",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      },
+      "feat-b": {
+       "change_id": "feat-b",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n"
+     },
+     "branch": "feature/feat-b"
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "(active change: feat-b)"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-045"
+   ]
+  },
+  {
+   "id": "ss-06-compact-wins-over-full",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/agent/manifest.md": "FULL-MANIFEST\n",
+      "docs/spec/agent/manifest-compact.md": "COMPACT-MANIFEST\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "COMPACT-MANIFEST",
+    "context_not_contains": "FULL-MANIFEST"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-046",
+    "H-09"
+   ]
+  },
+  {
+   "id": "ss-07-full-when-no-compact",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/agent/manifest.md": "FULL-MANIFEST\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "=== Manifest (",
+     "FULL-MANIFEST"
+    ],
+    "context_not_contains": "Compact manifest"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-046"
+   ]
+  },
+  {
+   "id": "ss-08-team-level-compact-wins",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/team.json": {
+       "ops_repo": "repo",
+       "roles": {
+        "repo": "ceo"
+       }
+      },
+      "docs/spec/agents/ceo/manifest.md": "FULL-MANIFEST\n",
+      "docs/spec/agents/manifest-compact.md": "TEAM-COMPACT\n",
+      "docs/spec/agents/ceo/handoff.md": "H\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "TEAM-COMPACT",
+    "context_not_contains": "FULL-MANIFEST"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-046",
+    "BUG-19"
+   ]
+  },
+  {
+   "id": "ss-09-board-40-open-rows",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/agent/board.md": "| Task | Status |\n|---|---|\n| d1 | ✅ done |\n| d2 | ✅ done |\n| d3 | ✅ done |\n| d4 | ✅ done |\n| d5 | ✅ done |\n| d6 | ✅ done |\n| d7 | ✅ done |\n| d8 | ✅ done |\n| d9 | ✅ done |\n| d10 | ✅ done |\n| d11 | ✅ done |\n| d12 | ✅ done |\n| d13 | ✅ done |\n| d14 | ✅ done |\n| d15 | ✅ done |\n| d16 | ✅ done |\n| d17 | ✅ done |\n| d18 | ✅ done |\n| d19 | ✅ done |\n| d20 | ✅ done |\n| d21 | ✅ done |\n| d22 | ✅ done |\n| d23 | ✅ done |\n| d24 | ✅ done |\n| d25 | ✅ done |\n| d26 | ✅ done |\n| d27 | ✅ done |\n| d28 | ✅ done |\n| d29 | ✅ done |\n| d30 | ✅ done |\n| d31 | ✅ done |\n| d32 | ✅ done |\n| d33 | ✅ done |\n| d34 | ✅ done |\n| d35 | ✅ done |\n| d36 | ✅ done |\n| d37 | ✅ done |\n| d38 | ✅ done |\n| d39 | ✅ done |\n| d40 | ✅ done |\n| d41 | ✅ done |\n| d42 | ✅ done |\n| d43 | ✅ done |\n| d44 | ✅ done |\n| d45 | ✅ done |\n| d46 | ✅ done |\n| d47 | ✅ done |\n| d48 | ✅ done |\n| d49 | ✅ done |\n| d50 | ✅ done |\n| o1 | todo |\n| o2 | todo |\n| o3 | todo |\n| o4 | todo |\n| o5 | todo |\n| o6 | todo |\n| o7 | todo |\n| o8 | todo |\n| o9 | todo |\n| o10 | todo |\n| o11 | todo |\n| o12 | todo |\n| o13 | todo |\n| o14 | todo |\n| o15 | todo |\n| o16 | todo |\n| o17 | todo |\n| o18 | todo |\n| o19 | todo |\n| o20 | todo |\n| o21 | todo |\n| o22 | todo |\n| o23 | todo |\n| o24 | todo |\n| o25 | todo |\n| o26 | todo |\n| o27 | todo |\n| o28 | todo |\n| o29 | todo |\n| o30 | todo |\n| o31 | todo |\n| o32 | todo |\n| o33 | todo |\n| o34 | todo |\n| o35 | todo |\n| o36 | todo |\n| o37 | todo |\n| o38 | todo |\n| o39 | todo |\n| o40 | todo |\n| o41 | todo |\n| o42 | todo |\n| o43 | todo |\n| o44 | todo |\n| o45 | todo |\n| o46 | todo |\n| o47 | todo |\n| o48 | todo |\n| o49 | todo |\n| o50 | todo |\n| o51 | todo |\n| o52 | todo |\n| o53 | todo |\n| o54 | todo |\n| o55 | todo |\n| o56 | todo |\n| o57 | todo |\n| o58 | todo |\n| o59 | todo |\n| o60 | todo |\n| o61 | todo |\n| o62 | todo |\n| o63 | todo |\n| o64 | todo |\n| o65 | todo |\n| o66 | todo |\n| o67 | todo |\n| o68 | todo |\n| o69 | todo |\n| o70 | todo |\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "| o40 | todo |",
+     "… 30 more open rows in ",
+     "board.md",
+     "(50 done rows not shown)"
+    ],
+    "context_not_contains": [
+     "| o41 | todo |",
+     "| d1 |"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-W1-047"
+   ]
+  },
+  {
+   "id": "ss-10-handoff-6kb-cut",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "line of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \nline of handoff text line of handoff text line of handoff text line of handoff text \n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "… truncated (",
+     "KB of ",
+     "— full file: ",
+     "handoff.md"
+    ],
+    "context_max_bytes": 8000
+   },
+   "tags": [
+    "session",
+    "REQ-W1-047"
+   ]
+  },
+  {
+   "id": "ss-11-small-board-untouched",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/agent/board.md": "| T | S |\n|---|---|\n| a | todo |\n- [ ] item\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "| a | todo |",
+     "- [ ] item"
+    ],
+    "context_not_contains": "more open rows"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-047"
+   ]
+  },
+  {
+   "id": "ss-12-checklist-done-items-dropped",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/agent/board.md": "## Board\n- [x] shipped\n- [ ] pending\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "## Board",
+     "- [ ] pending",
+     "(1 done rows not shown)"
+    ],
+    "context_not_contains": "shipped"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-047"
+   ]
+  },
+  {
+   "id": "ss-13-empty-notifications-startup-one-line",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {},
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "Karvey (info): team settings not set (notifications"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-050",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "allow",
+    "stdout_contains": "team settings could not be read (python3 not available)"
+   }
+  },
+  {
+   "id": "ss-14-empty-notifications-resume-silent",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {},
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true
+   },
+   "tags": [
+    "session",
+    "REQ-W1-050",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-15-bare-openapi-under-karvey-parent-silent",
+   "guard": "session",
+   "given": {
+    "outer_files": {
+     "parent/docs/spec/project.json": {
+      "management": "markdown"
+     }
+    },
+    "repo": {
+     "at": "parent/api",
+     "files": {
+      "docs/spec/openapi.yaml": "openapi: 3.1.0\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true
+   },
+   "tags": [
+    "session",
+    "REQ-W1-050"
+   ]
+  },
+  {
+   "id": "ss-16-settings-only-on-origin-main-silent",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "origin_files": {
+      "main": {
+       "docs/spec/project.json": {
+        "git_platform": "github",
+        "repos": [
+         "repo"
+        ],
+        "spec_repo": "repo",
+        "branch_flow": {
+         "feature_prefix": "feature/",
+         "integration": "main",
+         "production": "main"
+        },
+        "notifications": {
+         "channel": "none"
+        },
+        "management": {
+         "tool": "markdown"
+        }
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "context_not_contains": "team settings"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-083"
+   ],
+   "note": "a worktree created before the settings were merged: the working copy lacks them, origin/main has them"
+  },
+  {
+   "id": "ss-24-settings-on-origin-production-not-integration-silent",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "origin_files": {
+      "dev": {
+       "docs/spec/project.json": {
+        "git_platform": "github",
+        "repos": [
+         "repo"
+        ],
+        "spec_repo": "repo",
+        "branch_flow": {
+         "feature_prefix": "feature/",
+         "integration": "dev",
+         "production": "main"
+        }
+       }
+      },
+      "main": {
+       "docs/spec/project.json": {
+        "git_platform": "github",
+        "repos": [
+         "repo"
+        ],
+        "spec_repo": "repo",
+        "branch_flow": {
+         "feature_prefix": "feature/",
+         "integration": "dev",
+         "production": "main"
+        },
+        "notifications": {
+         "channel": "none"
+        },
+        "management": {
+         "tool": "markdown"
+        }
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "context_not_contains": "team settings"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-083",
+    "BUG-23"
+   ],
+   "note": "BUG-23 / F-50: integration dev, production main; the settings reached origin/main but not origin/dev, and the worktree predates them: a readable origin/dev without settings must not stop the lookup before origin/main"
+  },
+  {
+   "id": "ss-17-no-python-degraded-line",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "team settings not set (notifications + management)"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-050",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "allow",
+    "stdout_contains": "team settings could not be read (python3 not available)"
+   }
+  },
+  {
+   "id": "ss-18-legacy-management-string",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": "markdown"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "team settings in a legacy shape (management: \"markdown\")",
+     "karvey-state.py validate --fix"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-W1-050"
+   ]
+  },
+  {
+   "id": "ss-19-complete-settings-silent",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true
+   },
+   "tags": [
+    "session",
+    "REQ-W1-050",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "allow",
+    "stdout_contains": "team settings could not be read (python3 not available)"
+   }
+  },
+  {
+   "id": "ss-20-non-karvey-dir-silent",
+   "guard": "session",
+   "given": {
+    "dir": "plain"
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "stderr_empty": true
+   },
+   "tags": [
+    "session",
+    "REQ-W1-050",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-21-structured-additional-context",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "structured": true,
+    "context_contains": [
+     "=== Karvey — session context (solo) ===",
+     "HANDOFF-TEXT"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-W1-047",
+    "A-6"
+   ]
+  },
+  {
+   "id": "ss-22-resume-still-reinjects-without-notice",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {}
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n"
+     }
+    }
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "structured": true,
+    "context_contains": "HANDOFF-TEXT",
+    "context_not_contains": "team settings"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-047",
+    "REQ-W1-050"
+   ]
+  },
+  {
+   "id": "ss-23-worktree-state-measured",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/agent/state.json": {
+       "repos": [
+        {
+         "path": "{{tmp}}/wt"
+        }
+       ]
+      }
+     },
+     "worktree": "wt"
+    },
+    "setup": "{{python}} {{plugin}}/scripts/karvey-handoff-capture.py --profile {{root}}/docs/spec/agent --repos-from state >/dev/null"
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     ": matches (wt-wt @"
+    ],
+    "context_not_contains": "NOT FOUND"
+   },
+   "tags": [
+    "session",
+    "REQ-W1-048",
+    "BUG-21"
+   ]
+  }
+ ]
+}

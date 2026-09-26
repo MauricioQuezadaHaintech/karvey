@@ -9,27 +9,48 @@
 ```json
 "notifications": {
   "channel": "google-chat | slack | teams | email | webhook | none",
-  "target": "{space / #channel / team+channel / address or list / webhook URL reference}",
+  "target": "{space id / #channel / team+channel / address or list / name of the secret holding a webhook}",
   "via": "mcp | cli | webhook | api",
-  "events": ["qa", "deploy"]
+  "events": ["qa", "deploy"],
+  "detail": "counts",
+  "deferred": false
 }
 ```
 
 - **`channel`** — where the team talks. `none` is a valid, explicit answer.
-- **`target`** — the concrete destination: a Google Chat space id (`spaces/XXXX`), a Slack channel
+- **`target`** — the concrete destination: a Google Chat space (`spaces/XXXX`), a Slack channel
   (`#dev-releases`), a Teams team/channel, an e-mail list, or the **name of the secret** that holds a webhook
-  URL. **Never write a webhook URL or token in `project.json`** — reference where it lives (`.connections.json`,
-  an env var, a key vault), same policy as `clickup-protocol.md`.
-- **`via`** — how this session reaches it: an MCP server, a CLI the team uses (e.g. a Workspace CLI, `slack`,
-  `az`), an incoming webhook (`curl`), or the tool's REST API. The skill uses what is actually available and
-  **says so if it is not**.
+  URL. A value containing `://` is refused: URLs and tokens never live in `project.json`
+  (`.connections.json`, an env var or a vault, as in `clickup-protocol.md`).
+- **`via`** — how this session reaches it (MCP server, the team's CLI, an incoming webhook, REST). The skill
+  uses what is available and **says so if it is not**.
 - **`events`** — which moments notify. Default `["qa", "deploy"]`.
+- **`detail`** — `counts` (default: severity counts, ids and the link) or `full` (the findings text too).
+- **`deferred`** — `true` records a "not now" at init, so the question is not repeated; set it later with
+  `/karvey:karvey-init --settings`.
+
+## Before every send
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" notify-check --json
+```
+
+Exit `0`: the destination is the one the human last confirmed — send. Exit `10`: it changed (or was never
+confirmed) — show the new and previous destination and ask the human to confirm it **by typing** the phrase
+the command prints, `confirmo notificacion <code>` (or `confirm notification <code>`), where `<code>` is the
+first 8 hex characters of the destination's hash. The approval hook records that confirmation for this project
+and exactly that destination, with the approval-marker TTL (`plan_marker_ttl_min`, `karvey_lib/defaults.json`).
+Then run `notify-check --confirm` and send. `--confirm` counts only against that confirmation (D-16): without
+it — the agent alone, a confirmation of another destination or project, or an expired one — it records nothing
+and exits `10` again with the phrase to type. The confirmation is used once; the agent can never write it
+(protect-paths). The command also validates the target (§3.1 patterns); an invalid target is reported, never
+sent to.
 
 ## Who notifies, and what
 
 | Event | Skill | Content |
 |---|---|---|
-| `qa` | `karvey-qa` (Step 4) | change-id, source → target, findings by severity, manual-testing areas, review document |
+| `qa` | `karvey-qa` | change-id, source → target, findings by severity, manual-testing areas, review document |
 | `deploy` | `karvey-deploy` (final output) | repos + versions, DEV/PROD state, canary result, branches cleaned |
 | `incident` (opt-in) | `karvey-iterate` | a `BUG-NN` reaching `DIAGNOSTICADO` or `REABIERTO` |
 
@@ -45,10 +66,10 @@ Write the same content, in the channel's own markup — do not send Markdown whe
 
 ## Rules
 
-1. **Unset or `none` → skip and say it.** The skill's output shows `Notification: skipped (channel none)`
-   or `(not configured — run /karvey:karvey-init --settings)`. Never invent a destination.
-2. **Never read destinations from `CLAUDE.md` tables** or any file other than `project.json` (+ the secret it
-   references). A team's private address book is not method configuration.
-3. **A failed send is reported, not swallowed** — the phase still closes, and the output says the
-   notification failed and why.
+1. **Unset or `none` → skip and say it.** The output shows `Notification: skipped (channel none)` or
+   `(not configured — run /karvey:karvey-init --settings)`. Never invent a destination.
+2. **Destinations come only from `project.json`** (+ the secret it references), never from `CLAUDE.md`
+   tables or other files. A project that kept them in `CLAUDE.md` moves them with `karvey-init --settings`,
+   which offers the values it finds there as a migration aid for the human to confirm.
+3. **A failed send is reported, not swallowed** — the phase still closes, and the output says why.
 4. **No secrets in the message** and none in the repo.

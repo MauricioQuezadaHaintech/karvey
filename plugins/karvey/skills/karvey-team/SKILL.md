@@ -1,7 +1,8 @@
 ---
 name: karvey-team
-description: OPTIONAL team layer of the Karvey method — set up and run a team of agents (roles, manifests, boards, census, relay) and measure what it costs. Karvey works fully with one agent; this is opt-in and not the default. Triggers include "karvey team", "equipo de agentes", "agent team", "multi-agente", "censo de agentes", "relevo", "relay agents", "cuánto cuesta el equipo", "agent cost".
+description: Karvey support — optional team layer: roles, manifests, boards, census, relay and cost of a team of agents — only when one agent is not enough. Triggers include "karvey team", "equipo de agentes karvey", "karvey census".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+disable-model-invocation: true
 argument-hint: [init | census | relay | cost] [--role <role>] [--dry-run]
 ---
 
@@ -13,7 +14,7 @@ pipeline, which is the work itself. **NOT a phase** — it never touches `spec.j
 > **Read this before running `init`.** A team of agents is **opt-in and not recommended by default**.
 > The measured run that produced this layer cost **≈US$1,000 over 3 days with 6 agents and ended by
 > going back to a single agent**: every hop between sessions is new context for the receiver, there is
-> no shared cache, and at 588k a turn costs **7×** what it costs at 80k. `rules/team.md` has the full
+> no shared cache, and at 588k a turn costs **7×** what it costs at 80k. `../karvey/rules/team.md` has the full
 > table and the conditions under which a team does pay off. With a bigger budget it may well be worth
 > it — but it is a choice made with the number in front of you.
 
@@ -23,19 +24,19 @@ it. A project that never runs `init` never sees it — **including the handoff**
 
 ## Execution steps
 
-Read `karvey/rules/team.md` first. Resolve the mode from `$ARGUMENTS`; with no argument, show the
+Read `../karvey/rules/team.md` first. Resolve the mode from `$ARGUMENTS`; with no argument, show the
 current state (whether `team.json` exists, which roles are declared, which handoffs are stale, and the
 last cost report) and offer the options.
 
 ### `init` — set the team up
 
-1. **Warn first.** Show the cost table from `rules/team.md` and confirm the user wants a team rather
+1. **Warn first.** Show the cost table from `../karvey/rules/team.md` and confirm the user wants a team rather
    than one agent. If they hesitate, recommend one agent. This is not a formality: it is the single
    most expensive decision in this layer.
 2. **Ask the minimum** — business `code`, `ops_repo`, and which role lives in which working directory.
    Nothing else; the rest has defaults.
-3. **Write `docs/spec/team.json`** (schema in `rules/team.md`), including `rotation` thresholds
-   (defaults 150000 / 24h) and `cost_report`.
+3. **Write `docs/spec/team.json`** (schema in `../karvey/rules/team.md`), with `cost_report` and, only if
+   the team wants other values, `rotation` (otherwise `karvey_lib/defaults.json` applies, D-06).
 4. **Create the ops structure**: `agents/<role>/manifest.md`, `agents/<role>/handoff.md`,
    `agents/<role>/checklist.md`, `board/<role>.md`, `agents/census.md`, and the **compact manifest**
    (`agents/manifest-compact.md`) — the 15–20 line version that a session reload can reinject whole.
@@ -43,8 +44,8 @@ last cost report) and offer the options.
    keeping history) instead of creating an empty one beside it: that agent already has a manifest, a
    board, a checklist and a handoff worth keeping, and two profiles for the same agent is how one of
    them starts lying.
-5. **Offer the session hook** (`hooks/` in this plugin) so each session re-reads its identity, compact
-   manifest and handoff on startup, resume, compact and clear. Explain that a plugin **cannot** declare
+5. **The session hook** (`${CLAUDE_PLUGIN_ROOT}/hooks/`, shipped with the plugin) re-reads each session's
+   identity, compact **or** full manifest and handoff on startup, resume, compact and clear. Explain that a plugin **cannot** declare
    a statusline (only `agent` and `subagentStatusLine` are accepted), so the rotation statusline is
    three lines the user pastes once into their own settings — the script ships here, the install does
    not happen behind their back.
@@ -55,7 +56,7 @@ last cost report) and offer the options.
 
 An **inventory, not a directory.** It records who each agent claims to be, on which machine, with what
 it owns and when it was last seen. It is **never** used to address a message: names and refs are local
-to whoever lists them and change on rename, reconnect and reset (`rules/team.md`).
+to whoever lists them and change on rename, reconnect and reset (`../karvey/rules/team.md`).
 
 1. Read `team.json` and the ops repo; list the declared roles and their artifacts.
 2. Mark, for each role: last handoff commit, its age, and whether the board moved more recently than
@@ -90,10 +91,10 @@ judged, and the judgment arrives as a monthly bill.
 
 ## Notes
 
-- Complements `rules/multi-agent.md` (several agents on the **work**: parent/child changes, pinned
+- Complements `../karvey/rules/multi-agent.md` (several agents on the **work**: parent/child changes, pinned
   inputs, `[human]` tasks). This skill is about the **agents**; multi-repo work does not require it.
 - Never touches `spec.json:phase`, never approves a gate, and never launches or stops a session.
 - Writing to a shared ops repo: commit by explicit path (`git commit -- <paths>`).
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

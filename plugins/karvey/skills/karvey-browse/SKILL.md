@@ -1,7 +1,7 @@
 ---
 name: karvey-browse
-description: Give the agent eyes in the target's real runtime for the Karvey method. Real browser (web), simulator/device (mobile), terminal (CLI) — click, screenshot, inspect. Imports session cookies for authenticated views. Triggers include "karvey browse", "dar ojos", "navegador real", "screenshot", "inspeccionar UI", "abrir la app".
-allowed-tools: Read, Bash, Glob, Grep
+description: Karvey support — eyes in the real runtime (browser, simulator, terminal): click, capture, inspect — when a check needs the running target. Triggers include "karvey browse", "dar ojos karvey", "navegador real karvey".
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [url or target] [--target web|ios|android|cli]
 ---
 
@@ -15,7 +15,7 @@ Its role is simple: **give it eyes**. The agent stops reasoning blindly about th
 
 ### Stack-agnostic
 
-It operates on the real runtime of the target declared in `project.json:targets` (see `karvey/rules/targets.md`). It does not assume a fixed stack:
+It operates on the real runtime of the target declared in `project.json:targets` (see `../karvey/rules/targets.md`). It does not assume a fixed stack:
 
 | Target | Real runtime | How it is observed |
 |--------|--------------|-----------------|
@@ -33,7 +33,7 @@ It operates on the real runtime of the target declared in `project.json:targets`
 
 ### Findings (feed the iteration loop)
 
-When browsing surfaces a defect or a gap (something looks wrong, behaves wrong, or contradicts/exceeds the spec), and a `change-id` is in context, **append it to `docs/spec/changes/{change-id}/findings.md`** classified as `bug` / `spec-gap` / `emergent` (see `karvey/rules/iteration-loop.md`). Browse only **observes and classifies** — routing is `karvey-iterate`'s job. This is how "I saw it break with my own eyes" becomes tracked work instead of a passing comment.
+When browsing surfaces a defect or a gap (something looks wrong, behaves wrong, or contradicts/exceeds the spec), and a `change-id` is in context, **append it to `docs/spec/changes/{change-id}/findings.md`** classified as `bug` / `spec-gap` / `emergent` (see `../karvey/rules/iteration-loop.md`). Browse only **observes and classifies** — routing is `karvey-iterate`'s job. This is how "I saw it break with my own eyes" becomes tracked work instead of a passing comment.
 
 ### Session handling (web target)
 
@@ -41,7 +41,7 @@ When the target is web, it can **import cookies/session from a real browser** to
 
 ## Steps
 
-1. **Determine the target.** Read `project.json:targets` (and `karvey/rules/targets.md`). If the user passed `--target`, use that; if not, infer it from the destination or from the project's main target.
+1. **Determine the target.** Read `project.json:targets` (and `../karvey/rules/targets.md`). If the user passed `--target`, use that; if not, infer it from the destination or from the project's main target.
 2. **Bring up the corresponding runtime.** Headless browser for web, simulator/device for mobile, process/terminal for CLI, HTTP client for API. If it is authenticated web, import the real browser's cookies/session before navigating.
 3. **Execute the requested actions.** Navigate/open, click/interact, capture and read state as requested.
 4. **Return evidence.** Screenshots, DOM/state, console logs or process output — everything that backs up what was observed.
@@ -52,4 +52,4 @@ When the target is web, it can **import cookies/session from a real browser** to
 - **It does not advance the phase.** This skill is cross-cutting support; it never modifies `spec.json:phase` nor makes method transitions.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

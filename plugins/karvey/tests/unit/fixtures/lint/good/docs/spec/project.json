@@ -1,0 +1,9 @@
+{
+  "project": "Mini",
+  "git_platform": "github",
+  "repos": ["mini"],
+  "spec_repo": "mini",
+  "branch_flow": {"feature_prefix": "feature/", "integration": "main", "production": "main"},
+  "karvey_version": "1.0.0",
+  "management": {"tool": "markdown", "location": "docs/spec/changes/{change-id}/PLAN.md"}
+}

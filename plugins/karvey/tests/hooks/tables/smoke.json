@@ -1,0 +1,94 @@
+{
+  "table": "smoke",
+  "description": "Runner and dispatcher smoke cases (E1.F4.T4): allow, block and no-python paths. The block cases use the diagnostic selftest guard (F-08). Cases tagged windows (allow, block, an Edit path, a prompt marker, the post-edit validator) are the dispatcher cover the windows-advisory CI job runs through Git Bash (F-36).",
+  "cases": [
+    {
+      "id": "smoke-01-plain-dir-bash-allow",
+      "guard": "dispatcher",
+      "given": {},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "ls 2>/dev/null"}},
+      "expect": {"decision": "allow", "stdout_empty": true, "stderr_empty": true},
+      "tags": ["smoke", "windows", "nopy", "non-karvey"]
+    },
+    {
+      "id": "smoke-02-karvey-repo-bash-allow",
+      "guard": "dispatcher",
+      "given": {"repo": {"branch": "feature/feat-a", "remote_branches": ["dev"],
+                         "project_json": {"git_platform": "github", "repos": ["repo"], "spec_repo": "repo",
+                                          "branch_flow": {"feature_prefix": "feature/", "integration": "dev",
+                                                          "production": "main"}},
+                         "spec": {"feat-a": {"change_id": "feat-a", "phase": "impl"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "git -C {{root}} status --short"}},
+      "expect": {"decision": "allow", "stdout_empty": true},
+      "tags": ["smoke", "windows", "nopy"]
+    },
+    {
+      "id": "smoke-03-selftest-block",
+      "guard": "selftest",
+      "given": {"env": {"KARVEY_HOOK_SELFTEST": "1"}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "echo KARVEY-SELFTEST-BLOCK"}},
+      "expect": {"decision": "block", "stderr_contains": "[karvey] BLOCK selftest"},
+      "expect_nopy": {"decision": "block", "stderr_contains": ["[karvey] BLOCK selftest", "no python"]},
+      "tags": ["smoke", "windows", "nopy"]
+    },
+    {
+      "id": "smoke-04-selftest-off-allows",
+      "guard": "selftest",
+      "given": {},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "echo KARVEY-SELFTEST-BLOCK"}},
+      "expect": {"decision": "allow", "stderr_empty": true},
+      "tags": ["smoke", "nopy"]
+    },
+    {
+      "id": "smoke-05-edit-allow",
+      "guard": "dispatcher",
+      "given": {"repo": {"project_json": {"git_platform": "github", "repos": ["repo"], "spec_repo": "repo",
+                                          "branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Write", "tool_input": {"file_path": "{{root}}/docs/spec/notes.md", "content": "x"}},
+      "expect": {"decision": "allow", "stdout_empty": true},
+      "tags": ["smoke", "windows", "nopy"]
+    },
+    {
+      "id": "smoke-06-selftest-edit-block",
+      "guard": "selftest",
+      "given": {"env": {"KARVEY_HOOK_SELFTEST": "1"}},
+      "input": {"tool_name": "Edit", "tool_input": {"file_path": "/x/KARVEY-SELFTEST-BLOCK.txt", "old_string": "a",
+                                                    "new_string": "b"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK selftest"},
+      "tags": ["smoke", "nopy"]
+    },
+    {
+      "id": "smoke-07-prompt-records-marker",
+      "guard": "approval",
+      "given": {"repo": {"project_json": {"git_platform": "github", "repos": ["repo"], "spec_repo": "repo",
+                                          "branch_flow": {"integration": "main", "production": "main"}},
+                         "marker": {"_project": {"@valid": "plan", "age_min": 10}}}},
+      "input": {"prompt": "aprobado, ejecuta"},
+      "expect": {"decision": "allow", "stdout_contains": "[karvey] approval recorded (plan, _project",
+                 "marker_created": true},
+      "expect_nopy": {"decision": "allow", "stdout_empty": true, "marker_created": false},
+      "tags": ["smoke", "windows", "nopy"],
+      "note": "E1.F5.T2 wired the approval hook: an approval rewrites the project marker; without python it fails open (no marker)"
+    },
+    {
+      "id": "smoke-08-post-edit-silent",
+      "guard": "dispatcher",
+      "event": "post-edit",
+      "given": {"repo": {"project_json": {"git_platform": "github", "repos": ["repo"], "spec_repo": "repo",
+                                          "branch_flow": {"integration": "main", "production": "main"}},
+                         "spec": {"feat-a": {"change_id": "feat-a", "phase": "impl"}}}},
+      "input": {"tool_name": "Write", "tool_input": {"file_path": "{{root}}/docs/spec/changes/feat-a/spec.json",
+                                                     "content": "{}"}},
+      "expect": {"decision": "allow", "stdout_empty": true, "stderr_empty": true},
+      "tags": ["smoke", "windows"]
+    },
+    {
+      "id": "smoke-09-unparsable-command-stubs-allow",
+      "guard": "dispatcher",
+      "given": {},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "echo \"unbalanced"}},
+      "expect": {"decision": "allow"},
+      "tags": ["smoke"]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "change_id": "fixture-30",
+  "phase": "deploy_prod",
+  "management": "markdown",
+  "goal": "…",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": false
+    }
+  }
+}

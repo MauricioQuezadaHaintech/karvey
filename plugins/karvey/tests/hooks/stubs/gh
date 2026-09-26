@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# CLI stub for the guard tables (run_tables.py). Prints the canned output of this case from
+# $KARVEY_STUB_DATA/<name>.{stdout,stderr}, sleeps <name>.sleep seconds, exits <name>.rc (default 0),
+# and appends the call to $KARVEY_STUB_DATA/calls.log. No network, no real CLI.
+n="$(basename "$0")"
+d="${KARVEY_STUB_DATA:-}"
+if [ -z "$d" ] || [ ! -d "$d" ]; then echo "$n stub: no KARVEY_STUB_DATA" >&2; exit 1; fi
+printf '%s %s\n' "$n" "$*" >> "$d/calls.log"
+[ -f "$d/$n.sleep" ] && sleep "$(cat "$d/$n.sleep")"
+[ -f "$d/$n.stdout" ] && cat "$d/$n.stdout"
+[ -f "$d/$n.stderr" ] && cat "$d/$n.stderr" >&2
+rc=0
+[ -f "$d/$n.rc" ] && rc="$(cat "$d/$n.rc")"
+exit "$rc"

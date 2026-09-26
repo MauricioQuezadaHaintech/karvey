@@ -1,6 +1,6 @@
 ---
 name: karvey-infra
-description: Generate and configure cloud infrastructure (IaC) and CI/CD pipelines from the architecture's cloud spec. Idempotent over existing infra. Includes infra security review. Use after karvey-architecture. Triggers include "karvey infra", "infraestructura", "infrastructure", "pipeline CI/CD", "IaC", "terraform", "bicep".
+description: Karvey phase 6 — infra.md, IaC and CI/CD pipelines, idempotent, with an infra security review — after architecture approval; skip it when there is no cloud. Triggers include "karvey infra", "infraestructura karvey", "karvey IaC", "pipelines karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, WebSearch, AskUserQuestion
 argument-hint: <change-id> [-y]
 ---
@@ -21,11 +21,12 @@ Read in parallel:
 - `docs/spec/changes/{change-id}/spec.json` (especially `security_tier`, `layers`, `management`)
 - `docs/spec/changes/{change-id}/architecture.md` (especially the **"## Cloud Infrastructure"** section: which services from which cloud)
 - `docs/spec/project.json` (fields `git_platform`, `cloud.provider`, `iac_tool`, `repos`, `spec_repo`, `branch_flow`)
-- Shared rules: `rules/project-config.md`, `rules/deploy-workflow.md`, `rules/changelog-policy.md`, `rules/knowledge-sync.md`, `rules/security-tiers.md`
+- Shared rules: `../karvey/rules/project-config.md`, `../karvey/rules/deploy-workflow.md`, `../karvey/rules/changelog-policy.md`, `../karvey/rules/security-tiers.md`
 
 Entry checks:
 - If `docs/spec/project.json` **does not exist** → **stop** and indicate to run `karvey-init` first (see `project-config.md`).
-- Verify `approvals.architecture.approved = true`. If it is **not** approved → **stop**: the architecture must be approved before generating infra.
+- `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" next "{change-id}" --json`: architecture must be approved; relay the blockers and **stop** if not. Then `advance "{change-id}" infra`.
+- **No cloud resources to create or change** → do not run this phase: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" skip "{change-id}" infra --reason "…"` and go to karvey-tasks.
   - Exception: **`ops` changes** (`spec.json:type = "ops"`) come straight from lite requirements; architecture is required only if the plan changes trust boundaries. See Step 5-bis.
 
 ### Step 2 — Discovery of existing infra (idempotency)
@@ -165,7 +166,7 @@ Checklist format:
 
 ### Step 5-bis — Operations plan (`ops` changes) and human-executed IAM
 
-For changes **without application code** (IAM, DNS, secrets rotation, quotas, console configuration — `spec.json:type = "ops"`, see `karvey/rules/multi-agent.md` §6), this phase produces a **command plan** instead of (or besides) IaC. Its lifecycle is **plan → execution → verification → archive**:
+For changes **without application code** (IAM, DNS, secrets rotation, quotas, console configuration — `spec.json:type = "ops"`, see `../karvey/rules/multi-agent.md` §6), this phase produces a **command plan** instead of (or besides) IaC. Its lifecycle is **plan → execution → verification → archive**:
 
 1. **Plan** — in `infra.md`, an ordered table: step · exact command (or console path) · executor (agent / `[human]`) · read-only verification + expected output · rollback. Prefer IaC; when a step can only be done by a person (IAM grants on a production project, registrar DNS, destructive deletions), it becomes a `[human]` task in `karvey-tasks`.
 2. **Versioned script** — every IAM/permission change a human runs lives as a script in the repo (e.g. `infra/iam/{change-id}.sh`, idempotent, with its rollback counterpart). The human runs **that** script, not an ad-hoc command, so what was executed is reviewable in git.
@@ -189,7 +190,7 @@ Any IaC/pipeline generated or modified **must record an entry** in the `CHANGELO
 
 ### Step 8 — Management
 
-Record in the project's management, reading `management` from `spec.json` (settings in `project.json:management`, `karvey/rules/management-adapters.md`):
+Record in the project's management, reading `management` from `spec.json` (settings in `project.json:management`, `../karvey/rules/management-adapters.md`):
 - Team's tracker → `create_task` with the `[Infra]` prefix per relevant resource/pipeline (state `todo`).
 - Markdown (`PLAN.md`) → add entries in `PLAN.md` with the status of the infra and pipelines per repo/environment.
 
@@ -208,22 +209,9 @@ docs/spec/changes/{change-id}/infra.md
 - **Security review** (the checklist from Step 5 with findings and resolutions).
 - Idempotency notes (what was reused) and, if `iac_tool = none`, the manual-infra note.
 
-Update `spec.json`:
-- `phase: "infra-generated"`
-- `approvals.infra.generated: true`
+Record it with `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" generated "{change-id}" infra`, present a summary and ask for approval (`-y` only skips the question when the human's invocation already approved it). On the human's OK: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" approve "{change-id}" infra --by "{name}" --role human --ref D-NN`.
 
-After presentation/approval (auto-approve if flag `-y`; if not, present a summary and ask for approval):
-- `approvals.infra.approved: true`
-- `phase: "infra-approved"`
-
-### Step 10 — Knowledge sync
-
-At the end, run the sync step per `rules/knowledge-sync.md`:
-- If `knowledge_sync = "obsidian"` → sync `infra.md` to the vault via the Obsidian MCP (with a fallback to graphify if it fails).
-- If `knowledge_sync = "graphify"` → `/graphify docs/spec/ --update` (or `/graphify docs/spec/` if `graphify-out/` does not exist).
-- Multi-repo with infra code changes → graphify also in the affected repos.
-
-### Step 11 — Final output
+### Step 10 — Final output
 
 Confirm and show the next step:
 
@@ -254,4 +242,4 @@ When you finish this phase and have the corresponding approval, **actively ask t
 - If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

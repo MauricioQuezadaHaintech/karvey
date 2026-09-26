@@ -1,0 +1,11 @@
+{
+  "session_id": "00000000-0000-0000-0000-000000000000",
+  "transcript_path": "/SCRATCH/transcript/00000000-0000-0000-0000-000000000000.jsonl",
+  "cwd": "/SCRATCH/proj",
+  "hook_event_name": "SessionStart",
+  "source": "resume",
+  "seconds_since_last_response": 21,
+  "context_tokens": 23983,
+  "prompt_cache_likely_expired": false,
+  "estimated_cache_write_usd": 0.048
+}

@@ -1,0 +1,232 @@
+{
+  "table": "protect-paths",
+  "description": "E1.F5.T1 / REQ-W1-018: the agent never creates, touches, copies, moves or edits the approval marker, the release ledger, the compat marker or the plugin files. Always on, with plan-gate off (the default), inside and outside a Karvey project.",
+  "cases": [
+    {
+      "id": "pp-01-touch-marker",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"},
+                                          "enforcement": {"plan_gate_hook": false}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "touch {{repo}}/karvey/approvals/_project.json"}},
+      "expect": {"decision": "block", "stderr_contains": ["BLOCK protect-paths", "D-01"]},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-02-echo-redirect-into-marker",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "echo '{\"v\":1}' > .git/karvey/approvals/_project.json"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-03-cp-into-approvals",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "cp /tmp/forged.json \"$(git rev-parse --git-common-dir)/karvey/approvals/feat-a.json\""}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-04-mv-ledger",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "cd {{root}} && mv /tmp/l.json .git/karvey/ledger/feat-a.json"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-05-python-writes-marker",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "python3 -c \"open('.git/karvey/approvals/_project.json','w').write('{}')\""}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-06-quoted-split-path-in-bash-c",
+      "guard": "protect-paths",
+      "given": {},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "bash -c 'touch ~/.local/state/x/karvey/\"approvals\"/_project.json'"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "non-karvey"]
+    },
+    {
+      "id": "pp-07-write-tool-on-marker",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Write", "tool_input": {"file_path": "{{repo}}/karvey/approvals/_project.json", "content": "{}"}},
+      "expect": {"decision": "block", "stderr_contains": ["BLOCK protect-paths", "D-01"]},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-08-edit-tool-on-ledger-relative",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}},
+                         "ledger": {"feat-a": {"v": 1, "change": "feat-a"}}}},
+      "input": {"tool_name": "Edit", "tool_input": {"file_path": ".git/karvey/ledger/feat-a.json", "old_string": "{", "new_string": "{ "}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-09-write-audit-log-in-state-dir",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Write", "tool_input": {"file_path": "{{repo}}/karvey/audit.log", "content": ""}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018"]
+    },
+    {
+      "id": "pp-10-edit-plugin-hook",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Edit", "tool_input": {"file_path": "{{plugin}}/hooks/karvey-hook.sh", "old_string": "exit 2", "new_string": "exit 0"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-11-bash-redirect-into-plugin-root",
+      "guard": "protect-paths",
+      "given": {},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "echo '{}' > \"${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json\""}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "non-karvey"]
+    },
+    {
+      "id": "pp-12-compat-marker-touch",
+      "guard": "protect-paths",
+      "given": {"env": {"KARVEY_COMPAT_MARKER": "{{home}}/claude-plan-approved-tester"}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "touch {{home}}/claude-plan-approved-tester"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "D-11", "nopy", "non-karvey"]
+    },
+    {
+      "id": "pp-13-compat-marker-write-tool",
+      "guard": "protect-paths",
+      "given": {"env": {"KARVEY_COMPAT_MARKER": "~/claude-plan-approved-tester"}},
+      "input": {"tool_name": "Write", "tool_input": {"file_path": "{{home}}/claude-plan-approved-tester", "content": ""}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "D-11", "nopy", "non-karvey"]
+    },
+    {
+      "id": "pp-14-running-plugin-script-allowed",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py\" active --json"}},
+      "expect": {"decision": "allow", "stderr_empty": true},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-15-copy-template-out-of-plugin-allowed",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "cp \"${CLAUDE_PLUGIN_ROOT}/skills/karvey/hooks/plan-gate.sh\" .claude/hooks/"}},
+      "expect": {"decision": "allow"},
+      "tags": ["REQ-W1-018"]
+    },
+    {
+      "id": "pp-16-reading-the-audit-log-allowed",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "tail -n 5 .git/karvey/audit.log 2>/dev/null"}},
+      "expect": {"decision": "allow"},
+      "tags": ["REQ-W1-018"]
+    },
+    {
+      "id": "pp-17-docs-that-mention-the-path-allowed",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Write", "tool_input": {"file_path": "{{root}}/docs/notes.md", "content": "markers live in .git/karvey/approvals/"}},
+      "expect": {"decision": "allow", "stderr_empty": true},
+      "tags": ["REQ-W1-018", "nopy"]
+    },
+    {
+      "id": "pp-18-glob-in-state-dir-path-blocked",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}, "setup": ["mkdir -p {{repo}}/karvey/ledger"]},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "cd .git/kar?ey/ledger && printf %s x > feat-a.json"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "BUG-27", "nopy"]
+    },
+    {
+      "id": "pp-19-cd-chain-glob-then-mkdir-blocked",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "cd .git; cd kar*ey; mkdir -p ledger"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "BUG-27", "nopy"]
+    },
+    {
+      "id": "pp-20-variable-path-component-blocked",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "D=karvey; printf x > .git/$D/ledger/f.json"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "BUG-27", "nopy"]
+    },
+    {
+      "id": "pp-21-bare-wildcard-under-git-into-ledger-blocked",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}, "setup": ["mkdir -p {{repo}}/karvey/ledger"]},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "printf x > .git/*/ledger/f.json"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "BUG-27", "nopy"]
+    },
+    {
+      "id": "pp-22-glob-write-into-plugin-root-blocked",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "cp /dev/null {{plugin}}/hook?/karvey-hook.sh"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "BUG-27"]
+    },
+    {
+      "id": "pp-23-globs-elsewhere-allowed",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "mkdir -p out && cp docs/*.md out/ && rm -f out/*.tmp"}},
+      "expect": {"decision": "allow"},
+      "tags": ["REQ-W1-018", "BUG-27", "nopy"]
+    },
+    {
+      "id": "pp-24-variables-elsewhere-allowed",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "D=build; mkdir -p $D/out && printf x > $D/out/f.txt"}},
+      "expect": {"decision": "allow"},
+      "tags": ["REQ-W1-018", "BUG-27", "nopy"]
+    },
+    {
+      "id": "pp-25-commit-message-mentioning-the-path-allowed",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "git commit -m \"docs: explain the karvey/approvals layout\""}},
+      "expect": {"decision": "allow"},
+      "tags": ["REQ-W1-018", "BUG-39"]
+    },
+    {
+      "id": "pp-26-echo-text-mentioning-the-record-allowed",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "echo \"see notify-last.json for the record\" >> notes.md"}},
+      "expect": {"decision": "allow"},
+      "tags": ["REQ-W1-018", "BUG-39"]
+    },
+    {
+      "id": "pp-27-echo-into-the-ledger-still-blocked",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "echo \"{}\" > .git/karvey/ledger/feat-a.json"}},
+      "expect": {"decision": "block", "stderr_contains": "BLOCK protect-paths"},
+      "tags": ["REQ-W1-018", "BUG-39"]
+    },
+    {
+      "id": "pp-28-commit-message-with-a-glob-word-allowed",
+      "guard": "protect-paths",
+      "given": {"repo": {"project_json": {"branch_flow": {"integration": "main", "production": "main"}}}},
+      "input": {"tool_name": "Bash", "tool_input": {"command": "git commit -m \"fix kar* matching in the docs\""}},
+      "expect": {"decision": "allow"},
+      "tags": ["REQ-W1-018", "BUG-39"]
+    }
+  ]
+}

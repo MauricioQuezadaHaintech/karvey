@@ -1,0 +1,43 @@
+{
+  "change_id": "fixture-43",
+  "phase": "qa",
+  "management": "markdown",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    },
+    "impl": {
+      "generated": true,
+      "approved": true,
+      "note": "…"
+    },
+    "test": {
+      "approved": true,
+      "note": "…"
+    },
+    "deploy_dev": {
+      "approved": true,
+      "date": "2026-09-22"
+    },
+    "deploy_prod": {
+      "approved": false
+    },
+    "design": {
+      "generated": true,
+      "approved": false
+    },
+    "mockup_iter3": {
+      "generated": true,
+      "approved": false
+    }
+  }
+}

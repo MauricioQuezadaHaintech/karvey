@@ -1,81 +1,132 @@
 # Rule: Management adapters — the team's tracker and its status flow
 
-> Karvey used to assume **ClickUp**, with a team-specific status name (`listo! para pap`) written as a
-> literal in several skills; everything else fell back to `PLAN.md`. A team on Jira, Linear, Azure Boards,
-> GitHub Projects or a spreadsheet had no path. The tool and its status flow are now **team settings**,
-> asked once by `karvey-init` and stored in `project.json:management`. Phase skills speak in **logical
-> operations and logical states**; this rule maps them to each tool.
+> The tool and its status flow are **team settings**, asked once by `karvey-init` and stored in
+> `project.json:management` (schema: `${CLAUDE_PLUGIN_ROOT}/schemas/project.schema.json`). Phase skills speak
+> in **logical operations and logical states**; this rule maps them to each tool.
 
 ## Settings (`project.json:management`)
 
 ```json
 "management": {
   "tool": "clickup | jira | linear | azure-boards | github-projects | spreadsheet | markdown | other",
-  "location": "{ClickUp backlog list id | Jira project key | Linear team | ADO project/area | GitHub project number | spreadsheet path or id}",
-  "statuses": {
-    "todo": "{tool status name}",
-    "in_progress": "{…}",
-    "review": "{…}",
-    "done": "{…}",
-    "blocked": "{…}"
-  },
+  "location": "{ClickUp list id | Jira project key | Linear team | ADO project/area | GitHub project number | spreadsheet path under docs/spec/}",
+  "statuses": {"todo": "…", "in_progress": "…", "review": "…", "done": "…", "blocked": null},
+  "sprints": "{optional: folder, iteration or cycle}",
   "hierarchy": "epic>feature>task",
   "via": "mcp | cli | api | file"
 }
 ```
 
-`spec.json:management` keeps naming the **tool** of each change (`"clickup"`, `"markdown"`, `"jira"`…), so
-changes created before this rule stay valid.
+- `none` is a legacy alias of `markdown` (accepted with a warning). The legacy string shape
+  (`"management": "clickup"`) is still read; `karvey-state.py validate --fix` migrates it.
+- **Per-level or per-list maps:** `statuses` may be `{"by_level": {"task": {…}, "feature": {…}}}` or
+  `{"by_list": {"<list>": {…}}}`. A logical state the tracker cannot represent is `null`: keep the tracker
+  status, add a comment, record the state in `PLAN.md`.
+- `sprints` absent → work is filed in `location`; never guess a sprint.
+
+## Resolution order (one, cited by every skill)
+
+1. The change's `spec.json:management` override `{tool, location, statuses, sprints}`.
+2. `project.json:management` (working copy, then `origin/{integration}`, then `origin/{production}` before
+   declaring it missing).
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" resolve management --change "{change-id}" --json
+```
+
+The result carries `external` (false for `markdown`/`none`): that is the one "is there a tracker" test —
+never compare the tool name by hand. A value used in a command goes through `get --shell` and is
+double-quoted:
+
+```bash
+LOC="$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get management.location --change "{change-id}" --shell)" || exit 1
+jira issue list --project "$LOC"
+```
+
+**Tracker ids** of a change live in `spec.json:clickup` (historical name, any tool): `epic_id`,
+`feature_ids`, `task_ids` (`{"E1.F1.T1": "<id>"}`), `backlog_list_id`. Never read
+`backlog_list_id` from `project.json` directly; resolve `location`.
 
 ## The 5 logical states
 
-| Logical | Meaning in Karvey | Example — ClickUp (HainTech) | Example — Jira | Example — spreadsheet |
+| Logical | Meaning | Example — ClickUp | Example — Jira | Markdown |
 |---|---|---|---|---|
-| `todo` | planned, not started | `to do` | `To Do` | `Pending` |
-| `in_progress` | being worked on | `in progress` | `In Progress` | `In progress` |
-| `review` | implemented, awaiting validation / human review | `listo! para pap` | `In Review` | `Review` |
-| `done` | validated / released | `complete` | `Done` | `Done` |
-| `blocked` | cannot advance | `blocked` | `Blocked` | `Blocked` |
+| `todo` | planned, not started | `to do` | `To Do` | ⬜ |
+| `in_progress` | being worked on | `in progress` | `In Progress` | 🔄 |
+| `review` | implemented, awaiting validation | `listo! para pap` | `In Review` | 👀 |
+| `done` | validated / released | `complete` | `Done` | ✅ |
+| `blocked` | cannot advance | `blocked` | `Blocked` | ⛔ |
 
-Skills write `status → review`, never a literal name. The table's examples are **values a team declares**,
-not defaults.
+**`awaiting-human` (🙋)** is a qualifier, not a sixth state: a `[human]` task waiting for its executor is
+`blocked` plus the `awaiting-human` tag (🙋 next to ⛔ in `PLAN.md`); only its dependents are held.
 
-### Missing map (compatibility)
-IF a tracker tool is set and `statuses` is missing (e.g. a project created before 3.10 with only
-`"management": "clickup"`), THEN before the first status change the skill **reads the real statuses of the
-list/project from the tool**, proposes the mapping, confirms it **once** with the user and writes it to
-`project.json`. It never guesses a status name silently.
+Skills write `status → review`, never a literal name. The examples are values a team declares, not defaults.
+
+### Missing map (the one clause)
+Before the first status change of a run: resolve tool and location (above). IF `location` is missing, ask for
+it and change no status meanwhile. IF `statuses` (or one entry) is missing, read the real statuses of that
+location from the tool, propose the mapping, confirm it with the human and persist it on a feature or docs
+branch (it takes effect after merge). IF no human can answer (subagent, headless), persist nothing, use
+`PLAN.md` for that run and report "status map unresolved — no human". A mapped status that disappeared is
+re-mapped alone. The method never creates or edits the team's workflow states. `karvey-tasks` resolves the map
+as a precondition of its gate.
 
 ## Logical operations
 
 | Operation | Used by | What it means |
 |---|---|---|
 | `create_epic(change)` | init | the unit that represents the change |
-| `create_feature(epic, capability/layer)` | requirements, tasks | grouping level (skip if `hierarchy` has no feature level) |
-| `create_task(feature, E{n}.F{n}.T{n}, estimate_min)` | tasks | a 10–30 min AI task (see `clickup-protocol.md` → Estimation) |
-| `set_status(item, logical_state)` | impl, qa, deploy, phase-close | resolved via `statuses` |
+| `create_feature(epic, capability/layer)` | requirements, tasks | grouping level (skip if `hierarchy` has none) |
+| `create_task(feature, E{n}.F{n}.T{n}, estimate_min)` | tasks | a 10–30 min AI task (`clickup-protocol.md` → Estimation) |
+| `set_status(item, logical_state)` | impl, qa, deploy, archive, phase-close | resolved via `statuses` |
 | `comment(item, text)` | phase-close, qa, deploy | factual close comment |
-| `cascade(parent)` | phase-close, impl | parent → `review` when ALL children are; epic when ALL features are |
+| `cascade(parent)` | phase-close, impl | the one cascade (below) |
 | `link(item, url)` | deploy, qa | PR / review document |
 | `mirror_backlog(BL-NN)` | iterate, archive | backlog item in the tracker, if the team wants it |
+
+**Natural keys (find-or-create):** before creating, search for the item by its key — `E{n}`, `E{n}.F{n}`,
+`E{n}.F{n}.T{n}`, `F-NN`, `BUG-NN`, `[Deploy] {change-id}@{version}` — and reuse it; store the id in
+`spec.json:clickup`. Two items with the same key → stop and ask which is canonical.
+
+**Outbox:** a failed operation is queued, not dropped:
+`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" outbox add {change-id} --op set_status --args '{…}' --key E1.F1.T1 --error "…"`.
+The next phase-close retries it. A child is never created under a parent missing in the tracker: queue it with
+`--parent-key`.
+
+## The cascade (the only statement of it)
+
+- A Task reaches `review` when it is implemented; `done` when QA approves (QA moves every Task and Feature of
+  the change in `review` to `done`).
+- A Feature moves to `review` once every one of its Tasks, across all its layers, is at `review` or later.
+- The Epic moves to `review` at impl once every Feature is at `review`; it reaches `done` **only at archive**,
+  which first checks that nothing is left in `review` and lists what is.
 
 ## Adapters
 
 | Tool | How the session does it | Notes |
 |---|---|---|
-| **ClickUp** | ClickUp MCP or REST API — full protocol in `clickup-protocol.md` | `time_estimate` only via REST (MCP does not persist it) |
-| **Jira** | Atlassian MCP, `jira` CLI or REST (`/rest/api/3/issue`, `/transitions`) | status change = **transition**, look up the transition id for the target status |
-| **Linear** | Linear MCP or GraphQL API | states are per team (`workflowStates`) |
-| **Azure Boards** | `az boards work-item create/update` | Epic/Feature/Task or User Story per process template; state per template |
-| **GitHub Projects** | `gh project item-add/item-edit`, issues | status is a single-select field of the project |
-| **Spreadsheet** (Excel/Sheets/CSV) | a file in the repo (`docs/spec/plan.csv` / `.xlsx`) or a Sheet via the team's CLI/MCP | one row per item: `id, level, title, layer, estimate_min, status, updated_at, link` |
-| **Markdown** | `PLAN.md` in the change directory | the fallback; markers `⬜ 🔄 👀 ✅ ⛔` for `todo in_progress review done blocked` |
-| **Other** | ask how the team tracks work; record it in `location` + `via` | if no programmatic path exists, keep `PLAN.md` and tell the user what to copy |
+| **ClickUp** | ClickUp MCP or REST — `clickup-protocol.md` | `time_estimate` only via REST |
+| **Jira** | Atlassian MCP, `jira` CLI or REST | status change = **transition** (look up its id) |
+| **Linear** | Linear MCP or GraphQL | states are per team (`workflowStates`) |
+| **Azure Boards** | `az boards work-item create/update` | Epic/Feature/Task per process template |
+| **GitHub Projects** | `gh project item-add/item-edit`, issues | status is a single-select field |
+| **Spreadsheet** | a file under `docs/spec/` or a Sheet via CLI/MCP | row: `id, level, title, layer, estimate_min, status, updated_at, link` |
+| **Markdown** | `PLAN.md` in the change directory | the fallback; legend in the states table |
+| **Other** | ask how the team tracks work; record `location` + `via` | no programmatic path → `PLAN.md` |
 
 ## Rules
 
-1. **Never assume the tool or a status name.** Read `project.json:management`; if it is missing, run the
-   settings step (`karvey-init --settings`) or ask.
-2. **Credentials never in the repo** — `.connections.json` (git-ignored), env vars or a vault.
-3. **A failed tracker update is reported** (phase-close gate): the phase does not pretend it closed cleanly.
+1. **Never assume the tool or a status name.** Resolve it; if missing, run `karvey-init --settings` or ask.
+2. **Credentials never in the repo** — `.connections.json` (git-ignored), env vars or a vault. To use one,
+   look in this order: `.connections.json` at the project root first (the tool's key, e.g. `clickup.api_key`
+   in `clickup-protocol.md`), then the environment, then the team's vault or the tool's MCP session. Report
+   "no credential" and queue the operation in the outbox only after all three came back empty, and say
+   where you looked.
+3. **A failed tracker update is reported** and queued in the outbox (phase-close gate).
 4. **`PLAN.md` is always a valid fallback** when the tracker is unreachable — say so and keep going.
+5. **Subagents never write `project.json`**; settings travel as a reviewed change. Every subagent prompt an
+   agent composes (impl's `(P)` tasks, a delegated task, any `Agent` call) carries this line verbatim:
+   "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed
+   values to me and change no tracker status that needs them." When the user asked for settings to be
+   persisted, that request is answered by the orchestrating session with the human (the Missing map clause,
+   on a docs branch) and is never passed on to a subagent as an authorisation.

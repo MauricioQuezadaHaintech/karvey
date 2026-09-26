@@ -1,45 +1,27 @@
 #!/usr/bin/env bash
-# Karvey™ — git-flow-guard hook (PreToolUse on Bash)
-# Blocks git behavior that skips the feature/* -> dev -> PR -> master flow.
-# Template installed (opt-in) by karvey-init / managed by karvey-guard.
-# Parameterized with docs/spec/project.json:branch_flow.
+# Karvey™ — git-flow-guard (PreToolUse on Bash) — DEPRECATED SHIM, removed in 4.0.0.
 #
-# Hook convention: receives the tool JSON on stdin. To BLOCK, print the reason
-# to stderr and exit with code 2.
-set -euo pipefail
-
-# Defaults (overridable at install time, reading project.json:branch_flow)
-INTEGRATION="${KARVEY_BRANCH_INTEGRATION:-dev}"
-PRODUCTION="${KARVEY_BRANCH_PRODUCTION:-master}"
-FEATURE_PREFIX="${KARVEY_FEATURE_PREFIX:-feature/}"
-
-input="$(cat)"
-# Extract the proposed bash command (jq if available; otherwise raw grep)
-if command -v jq >/dev/null 2>&1; then
-  cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // empty')"
-else
-  cmd="$(printf '%s' "$input" | grep -o '"command"[^,]*' | head -1)"
-fi
-[ -z "$cmd" ] && exit 0
-
-block() { echo "🚫 [Karvey git-flow] $1" >&2; exit 2; }
-
-# Manual deploy forbidden (CI/CD does it)
-if printf '%s' "$cmd" | grep -Eq 'func +azure +functionapp +publish|az +webapp +up|vercel +--prod|netlify +deploy +--prod'; then
-  block "Manual deploy forbidden. Deployment is triggered by the pipelines (push to $INTEGRATION / merge to $PRODUCTION)."
-fi
-
-# Direct push to the production branch
-if printf '%s' "$cmd" | grep -Eq "git +push[^&|;]*\b$PRODUCTION\b"; then
-  block "Direct push to '$PRODUCTION' blocked. Flow: $FEATURE_PREFIX* -> $INTEGRATION -> PR -> $PRODUCTION."
-fi
-
-# Commit while on dev/master (must be feature/*)
-if printf '%s' "$cmd" | grep -Eq 'git +commit'; then
-  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
-  if [ "$branch" = "$INTEGRATION" ] || [ "$branch" = "$PRODUCTION" ]; then
-    block "Direct commit on '$branch' blocked. Work on a $FEATURE_PREFIX{change-id} branch."
-  fi
-fi
-
-exit 0
+# Since 3.12.0 the git-flow guard lives in the plugin's hook dispatcher (hooks/karvey-hook.sh →
+# karvey_lib/guards.py) and is switched on per project with project.json:enforcement.git_flow_hook.
+# This file stays for 3.12.x so a project that copied it into its settings.json keeps the same
+# behaviour — now with the H-12 fixes (target repository per segment, whole-name branch match,
+# bare push, aliases). It execs the dispatcher with `--only git-flow --force-enabled`.
+# `karvey-guard` detects this entry and proposes removing it (the plugin's hooks.json covers it).
+#
+# Branches come from project.json:branch_flow; outside a Karvey project the old variables
+# KARVEY_BRANCH_INTEGRATION / KARVEY_BRANCH_PRODUCTION (default dev / master) still apply.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+find_dispatcher() {
+  local c
+  for c in "${CLAUDE_PLUGIN_ROOT:+$CLAUDE_PLUGIN_ROOT/hooks/karvey-hook.sh}" "$HERE/../../../hooks/karvey-hook.sh"; do
+    [ -n "$c" ] && [ -f "$c" ] && { printf '%s' "$c"; return 0; }
+  done
+  c="$(ls -1dt "$HOME"/.claude/plugins/cache/*/karvey/*/hooks/karvey-hook.sh 2>/dev/null | head -1)"
+  [ -n "$c" ] && { printf '%s' "$c"; return 0; }
+  return 1
+}
+D="$(find_dispatcher)" || {
+  echo "[karvey] git-flow-guard shim: the Karvey plugin (hooks/karvey-hook.sh) was not found; not evaluated. Install the plugin or remove this entry from settings.json." >&2
+  exit 0
+}
+exec bash "$D" pre-bash --only git-flow --force-enabled

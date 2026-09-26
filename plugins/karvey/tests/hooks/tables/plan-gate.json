@@ -1,0 +1,2906 @@
+{
+ "table": "plan-gate",
+ "description": "E1.F5.T3 / REQ-W1-014, 015, 016 (H-10): with enforcement.plan_gate_hook on, Edit/Write and the write and destructive command classes of architecture §3.4 need a live, well-formed marker for (repo, change) or (repo, _project); stream redirections are not writes; the block message never tells the agent to create anything.",
+ "cases": [
+  {
+   "id": "pg-01-not-a-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls 2>/dev/null"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014",
+    "H-10",
+    "nopy"
+   ]
+  },
+  {
+   "id": "pg-02-not-a-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "npm test 2>&1"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-03-not-a-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo done >&2"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-04-not-a-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls &>/dev/null"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-05-not-a-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls >/dev/null"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014",
+    "H-10",
+    "nopy"
+   ]
+  },
+  {
+   "id": "pg-06-not-a-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls 2> /dev/null"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-07-not-a-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git status 2>&1 | head -5"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-08-not-a-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"a > b\""
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-09-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x > notes.txt"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "write to notes.txt",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "pg-10-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x >> log.txt"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "write to log.txt",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014"
+   ]
+  },
+  {
+   "id": "pg-11-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<EOF > f.txt\nhi\nEOF"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "write to f.txt",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014"
+   ]
+  },
+  {
+   "id": "pg-12-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "date | tee out.txt"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "write to out.txt",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014"
+   ]
+  },
+  {
+   "id": "pg-13-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x >| forced.txt"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "write to forced.txt",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014"
+   ]
+  },
+  {
+   "id": "pg-14-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "make &> build.log"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "write to build.log",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-014"
+   ]
+  },
+  {
+   "id": "pg-15-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "rm -rf build"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "recursive rm",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "pg-16-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "rm -r old"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "recursive rm",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-17-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git clean -fdx"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "git clean",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "pg-18-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git reset --hard HEAD~1"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "git reset --hard",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-19-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout -- src/a.py"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "git checkout --",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-20-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git restore src/a.py"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "git restore",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-21-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push --force origin feature/feat-a"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "git push --force",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-22-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i 's/a/b/' f.txt"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "sed -i",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "pg-23-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -e 's/a/b/' f.txt"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "perl -i",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-24-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "truncate -s 0 app.log"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "truncate",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-25-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.tmp' -delete"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "find -delete",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-26-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.o' -exec rm {} \\;"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "find -delete",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-27-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "psql -c 'DELETE FROM t;'"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "SQL DELETE without WHERE",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-28-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sqlcmd -Q \"DROP TABLE users\""
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "SQL DROP",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-29-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "mysql -e 'TRUNCATE TABLE logs'"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "SQL TRUNCATE",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-30-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "terraform destroy -auto-approve"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "terraform destroy",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-31-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "az group delete -n rg-x --yes"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "az delete",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-32-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gcloud run services delete api"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "gcloud delete",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-33-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "aws s3 rm s3://b/k"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "aws delete",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-34-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "kubectl delete pod api-1"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "kubectl delete",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-35-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "bash -c 'rm -rf /tmp/x'"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "recursive rm",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-36-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cd sub && git clean -n -d"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "git clean",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10"
+   ]
+  },
+  {
+   "id": "pg-37-allowed",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "psql -c 'DELETE FROM t WHERE id=1'"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015"
+   ]
+  },
+  {
+   "id": "pg-38-allowed",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git restore --staged src/a.py"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015"
+   ]
+  },
+  {
+   "id": "pg-39-allowed",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "rm notes.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015"
+   ]
+  },
+  {
+   "id": "pg-40-allowed",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -n 1,5p f.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015"
+   ]
+  },
+  {
+   "id": "pg-41-allowed",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin feature/feat-a"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015"
+   ]
+  },
+  {
+   "id": "pg-42-allowed",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo 'DROP TABLE x' | wc -c"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015"
+   ]
+  },
+  {
+   "id": "pg-43-edit-without-marker",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "file edit (Write)",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "pg-44-edit-without-marker",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "old_string": "a",
+     "new_string": "b"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "file edit (Edit)",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "pg-45-edit-without-marker",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "MultiEdit",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "edits": []
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "file edit (MultiEdit)",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016"
+   ]
+  },
+  {
+   "id": "pg-46-edit-without-marker",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "NotebookEdit",
+    "tool_input": {
+     "notebook_path": "{{root}}/nb.ipynb",
+     "new_source": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "file edit (NotebookEdit)",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016"
+   ]
+  },
+  {
+   "id": "pg-47-valid-project-marker-10min",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "_project": {
+       "@valid": "plan",
+       "age_min": 10
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "pg-48-marker-of-another-project",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "_project": {
+       "v": 1,
+       "kind": "plan",
+       "scope": "_project",
+       "repo": "/elsewhere/other/.git",
+       "created_at": "{{now-10m}}",
+       "ttl_min": 120,
+       "session_id": "",
+       "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "prompt_excerpt": "ok",
+       "consumed_at": null
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016"
+   ]
+  },
+  {
+   "id": "pg-49-marker-121-min-old",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "_project": {
+       "@valid": "plan",
+       "age_min": 121
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016",
+    "D-07"
+   ]
+  },
+  {
+   "id": "pg-50-consumed-marker",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "_project": {
+       "v": 1,
+       "kind": "plan",
+       "scope": "_project",
+       "repo": "{{repo}}",
+       "created_at": "{{now-10m}}",
+       "ttl_min": 120,
+       "session_id": "",
+       "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "prompt_excerpt": "ok",
+       "consumed_at": "{{now-1m}}"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016"
+   ]
+  },
+  {
+   "id": "pg-51-touch-empty-file-is-forged",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "_project": ""
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "forged-or-corrupt"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016",
+    "REQ-W1-018"
+   ]
+  },
+  {
+   "id": "pg-52-marker-of-another-change",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "feat-b": {
+       "@valid": "plan",
+       "age_min": 5
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016"
+   ]
+  },
+  {
+   "id": "pg-53-marker-of-the-active-change",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "feat-a": {
+       "@valid": "plan",
+       "age_min": 5
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016"
+   ]
+  },
+  {
+   "id": "pg-54-prod-marker-also-satisfies",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "_project": {
+       "@valid": "prod",
+       "age_min": 5
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016",
+    "D-10"
+   ]
+  },
+  {
+   "id": "pg-55-reviewed-ttl-30-min",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true,
+       "plan_marker_ttl_min": 30
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "_project": {
+       "@valid": "plan",
+       "age_min": 45
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-016",
+    "§3.5"
+   ]
+  },
+  {
+   "id": "pg-56-marker-allows-git-clean",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "marker": {
+      "_project": {
+       "@valid": "plan",
+       "age_min": 3
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git clean -fdx"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "REQ-W1-015",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "pg-57-interpreter-write-python",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open('out.txt','w').write('x')\""
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "limitation"
+   ],
+   "limitation": true
+  },
+  {
+   "id": "pg-58-interpreter-write-node",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "node -e \"require('fs').writeFileSync('out.txt','x')\""
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "limitation"
+   ],
+   "limitation": true
+  },
+  {
+   "id": "pg-59-disabled-by-default",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "opt-in",
+    "nopy"
+   ]
+  },
+  {
+   "id": "pg-60-non-karvey-repo-inert",
+   "guard": "plan-gate",
+   "given": {},
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/a.txt",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "non-karvey",
+    "nopy"
+   ]
+  },
+  {
+   "id": "pg-61-on-in-reviewed-line-only",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "wc_files": {
+      "docs/spec/project.json": {
+       "branch_flow": {
+        "feature_prefix": "feature/",
+        "integration": "main",
+        "production": "main"
+       },
+       "enforcement": {
+        "plan_gate_hook": false
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/src/a.py",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "§3.5",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "without python"
+    ]
+   }
+  },
+  {
+   "id": "pg-62-unparsable-destructive-falls-back-to-regex",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "rm -rf build 'unbalanced"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "BLOCK plan-gate",
+     "unparsable",
+     "wait for the human's approval"
+    ],
+    "stderr_not_contains": [
+     "touch",
+     "create the marker"
+    ]
+   },
+   "tags": [
+    "plan-gate",
+    "§3.2"
+   ]
+  },
+  {
+   "id": "pg-63-unparsable-harmless-allowed",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo 'unbalanced"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "plan-gate",
+    "§3.2"
+   ]
+  }
+ ]
+}

@@ -1,7 +1,8 @@
 ---
 name: karvey-benchmark-models
-description: Cross-model benchmark for the Karvey method. Side-by-side comparison of models (e.g. Claude vs GPT vs Gemini) on a skill or task — latency, tokens, cost, and optional LLM-judged quality. Triggers include "karvey benchmark models", "comparar modelos", "compare models", "benchmark de modelos", "model benchmark", "qué modelo conviene", "which model to use", "latencia tokens costo", "latency tokens cost".
+description: Karvey support — side-by-side model benchmark on a skill or task (latency, tokens, cost, judged quality) — when choosing a model. Triggers include "karvey benchmark models", "comparar modelos karvey".
 allowed-tools: Read, Bash, Glob, Grep, Agent
+disable-model-invocation: true
 argument-hint: [task or skill] [--models <list>]
 ---
 
@@ -48,4 +49,4 @@ It is a **meta / diagnostic** skill: it observes and measures, but **it does not
 - It is invocable at any point in the Karvey cycle as support for decision-making.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

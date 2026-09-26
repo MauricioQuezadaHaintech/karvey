@@ -1,0 +1,5 @@
+# Shell and python run on macOS/Linux runners and through Git Bash on Windows: never CRLF.
+*.sh text eol=lf
+*.py text eol=lf
+# Pending knowledge-sync list: parallel branches append lines; keep both sides.
+docs/spec/.graph-pending merge=union

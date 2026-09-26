@@ -1,6 +1,6 @@
 ---
 name: karvey-architecture
-description: Generate enterprise architecture design with explicit security controls, component boundaries, and integration patterns. Use after karvey-design-graphic. Triggers include "karvey architecture", "diseño técnico", "technical design", "arquitectura", "architecture", "diseño de sistema", "system design".
+description: Karvey phase 5 — architecture.md (components, boundaries, security per tier, diagrams, edge cases, test plan) — after design (or requirements, without UI). Triggers include "karvey architecture", "arquitectura karvey", "diseño técnico karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, WebSearch, AskUserQuestion
 argument-hint: <change-id> [-y]
 ---
@@ -18,14 +18,20 @@ Generate the enterprise architecture technical design: components, boundaries, i
 Read in parallel:
 - `docs/spec/changes/{change-id}/spec.json` (security_tier, layers, capability)
 - `docs/spec/changes/{change-id}/requirements.md`
-- `docs/spec/changes/{change-id}/design-spec.md`
+- `docs/spec/changes/{change-id}/design-spec.md` (absent when design_graphic was skipped)
 - `docs/spec/project.json` (cloud.provider, iac_tool, git_platform, **standards**)
-- `rules/security-tiers.md`
-- `rules/engineering-standards.md`
+- `../karvey/rules/security-tiers.md`
+- `../karvey/rules/engineering-standards.md`
 - **Engineering standards for the change's layers/targets**: resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and read the relevant `standards/{layer}.md`. These are a **hard constraint** on this design, not a suggestion. If no standard exists for a layer, announce it and treat every non-trivial pattern choice for that layer as a gray zone to ask (never silently pick one).
 - Project steering: `product.md`, `tech.md` or equivalents if they exist
 
-Verify `approvals.design_graphic.approved = true`. If not, stop.
+Check the precondition with the state tool: every earlier phase **approved or skipped** (`../karvey/rules/state-machine.md`):
+
+```bash
+S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
+python3 "$S" next "{change-id}" --json    # relay the blockers and stop if any
+python3 "$S" advance "{change-id}" architecture
+```
 
 ### Step 2 — Architecture discovery
 
@@ -282,34 +288,26 @@ If there are issues: fix and re-verify. Maximum 2 iterations.
 docs/spec/changes/{change-id}/architecture.md
 ```
 
-Update `spec.json`:
-- `phase: "architecture-generated"`
-- `approvals.architecture.generated: true`
-
-### Step 6B — Update knowledge graph
-
-Sync the knowledge per `karvey/rules/knowledge-sync.md` (Obsidian if available; at minimum `/graphify docs/spec/ --update`) to reflect the created `architecture.md`.
-If `docs/spec/graphify-out/` does not exist, invoke `/graphify docs/spec/` without `--update`.
+Record it: `python3 "$S" generated "{change-id}" architecture`.
 
 ### Step 7 — Present for approval
 
-If flag `-y`: auto-approve.
-If not: present a summary and ask for approval.
+Present a summary and ask for approval (`-y` only skips the question when the human's own invocation already approved it; the approval is still theirs).
 
-On approval: `approvals.architecture.approved: true`, `phase: "architecture-approved"`.
+On the human's OK: `python3 "$S" approve "{change-id}" architecture --by "{name}" --role human --ref D-NN`.
 
 ```
 ✅ Architecture approved
 
 Next step:
-/karvey-infra {change-id}
+{the skill of python3 "$S" next "{change-id}" --json — /karvey-infra, or /karvey-tasks when infra is skipped}
 ```
 
 
 ## Advance to the next phase
 
-When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Infrastructure phase now?"
-- If they confirm → run `/karvey-infra {change-id}`.
+When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the next phase now?" (the one `next` names; a change without cloud resources records `python3 "$S" skip "{change-id}" infra --reason "…"` and goes to tasks).
+- If they confirm → run the skill `next` names.
 - If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
 - If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
 

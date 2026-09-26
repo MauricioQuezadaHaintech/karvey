@@ -1,0 +1,368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "karvey:project.schema.json",
+  "$comment": "Architecture §2.6 (wave1-hardening). x-karvey-safe names the safe_values kind that checks the value before it reaches a command (§3.1).",
+  "x-karvey-schema-version": 1,
+  "type": "object",
+  "required": [
+    "git_platform",
+    "repos",
+    "spec_repo",
+    "branch_flow"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "git_platform": {
+      "enum": [
+        "github",
+        "azure_devops",
+        "gitlab"
+      ]
+    },
+    "cloud": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "enum": [
+            "azure",
+            "gcp",
+            "aws",
+            "mixed",
+            "none"
+          ]
+        }
+      }
+    },
+    "iac_tool": {
+      "enum": [
+        "terraform",
+        "bicep",
+        "pulumi",
+        "none"
+      ]
+    },
+    "knowledge_sync": {
+      "enum": [
+        "none",
+        "graphify",
+        "obsidian"
+      ]
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "repos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "object",
+            "x-karvey-severity": "warning",
+            "x-karvey-note": "legacy repo object {name, url, stack, layer}: list the repo by name or path (BUG-33)"
+          }
+        ]
+      }
+    },
+    "spec_repo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ops_repo": {
+      "type": "string"
+    },
+    "branch_flow": {
+      "type": "object",
+      "required": [
+        "integration",
+        "production"
+      ],
+      "properties": {
+        "feature_prefix": {
+          "$ref": "#/$defs/refPrefix"
+        },
+        "integration": {
+          "$ref": "#/$defs/branchName"
+        },
+        "production": {
+          "$ref": "#/$defs/branchName"
+        },
+        "protected_branches": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._/*-]{1,100}$"
+          }
+        }
+      }
+    },
+    "standards": {
+      "type": "object"
+    },
+    "enforcement": {
+      "type": "object",
+      "properties": {
+        "git_flow_hook": {
+          "type": "boolean"
+        },
+        "plan_gate_hook": {
+          "type": "boolean"
+        },
+        "prod_gate_hook": {
+          "type": "boolean",
+          "x-karvey-default": true
+        },
+        "plan_marker_ttl_min": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 1440,
+          "x-karvey-default": 120
+        },
+        "approval_vocabulary": {
+          "type": "object",
+          "properties": {
+            "approve": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "negate": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "prod_terms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            }
+          }
+        }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "enum": [
+            "google-chat",
+            "slack",
+            "teams",
+            "email",
+            "webhook",
+            "none",
+            "google_chat"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "x-karvey-safe": "notifications.target"
+        },
+        "via": {
+          "enum": [
+            "mcp",
+            "cli",
+            "webhook",
+            "api",
+            ""
+          ]
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "qa",
+              "deploy",
+              "incident"
+            ]
+          }
+        },
+        "detail": {
+          "enum": [
+            "counts",
+            "full"
+          ],
+          "x-karvey-default": "counts"
+        },
+        "deferred": {
+          "type": "boolean",
+          "x-karvey-note": "'not now' at init (REQ-W1-095)"
+        }
+      }
+    },
+    "management": {
+      "oneOf": [
+        {
+          "$ref": "karvey:spec.schema.json#/$defs/toolName",
+          "x-karvey-severity": "warning",
+          "x-karvey-note": "legacy string → --fix"
+        },
+        {
+          "type": "object",
+          "required": [
+            "tool"
+          ],
+          "properties": {
+            "tool": {
+              "$ref": "karvey:spec.schema.json#/$defs/toolName"
+            },
+            "location": {
+              "type": "string",
+              "x-karvey-safe": "management.location"
+            },
+            "statuses": {
+              "$ref": "#/$defs/statuses"
+            },
+            "hierarchy": {
+              "type": "string"
+            },
+            "via": {
+              "enum": [
+                "mcp",
+                "cli",
+                "api",
+                "file"
+              ]
+            },
+            "sprints": {
+              "type": "string",
+              "x-karvey-safe": "management.sprints"
+            }
+          }
+        }
+      ]
+    },
+    "wip_limit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "stall_days": {
+      "type": "integer",
+      "minimum": 1,
+      "x-karvey-default": 7
+    },
+    "calibration": {
+      "type": "object",
+      "properties": {
+        "threshold_pct": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500,
+          "x-karvey-default": 30
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "x-karvey-default": 3
+        }
+      }
+    },
+    "schema_mode": {
+      "enum": [
+        "advisory",
+        "strict"
+      ],
+      "x-karvey-default": "advisory"
+    },
+    "karvey_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "docs_pr": {
+      "type": "object"
+    },
+    "clickup": {
+      "type": "object",
+      "x-karvey-severity": "warning",
+      "x-karvey-note": "legacy top-level block"
+    }
+  },
+  "$defs": {
+    "branchName": {
+      "type": "string",
+      "pattern": "^(?!-)(?!.*\\.\\.)[A-Za-z0-9._/-]{1,100}(?<!\\.lock)(?<!/)$"
+    },
+    "refPrefix": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,40}/$"
+    },
+    "statusName": {
+      "oneOf": [
+        {
+          "type": "string",
+          "x-karvey-safe": "status"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "flatStatuses": {
+      "type": "object",
+      "properties": {
+        "todo": {
+          "$ref": "#/$defs/statusName"
+        },
+        "in_progress": {
+          "$ref": "#/$defs/statusName"
+        },
+        "review": {
+          "$ref": "#/$defs/statusName"
+        },
+        "done": {
+          "$ref": "#/$defs/statusName"
+        },
+        "blocked": {
+          "$ref": "#/$defs/statusName"
+        }
+      },
+      "additionalProperties": false
+    },
+    "statuses": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/flatStatuses"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "by_level": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/flatStatuses"
+              }
+            },
+            "by_list": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/flatStatuses"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

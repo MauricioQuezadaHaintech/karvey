@@ -1,0 +1,23 @@
+{
+  "change_id": "fixture-52",
+  "phase": "impl",
+  "management": "markdown",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "decisions": [
+    "D-01",
+    "D-02"
+  ]
+}

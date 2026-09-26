@@ -1,0 +1,351 @@
+# Plan: wave1-hardening
+
+**Capability:** method | **Security Tier:** 2 | **Layers:** Backend, Infra
+**Created:** 2026-09-23 | **Status:** 🔄 in_progress
+**Lane:** standard (recorded workaround — no lanes until R-09) · **Skipped:** mockup, design_graphic (no UI)
+**Release target:** 3.12.0 · **Flow:** trunk (`feature/wave1-hardening` → PR → `main`) · **Decisions:** D-01..D-04
+
+---
+
+## Epic: Wave 1 hardening — guarantees enforced by code, not by prose
+
+### Description
+Karvey 3.11.2 states its guarantees in prose that no script or hook enforces: a phase state the orchestrator
+cannot read, guards weaker than their rule, no guard on the production merge, instructions that force commits
+on `dev`, double versioning, estimates overwritten, a session hook that restores archived changes, 9 rule
+copies and no CI. The method's own repo skipped its gates (H-22). This Epic implements the panel's Wave 1
+(R-01..R-07, R-16, R-17 script, R-18, R-21, R-22) and converges the open bugs (BUG-05..BUG-17) and
+spec-gaps of `team-adapters` (D-04).
+
+North star: *everything the method claims to guarantee is either enforced by a script or hook with a test,
+or stated as a recommendation — never promised in prose and silently skipped.*
+
+### Strategic value
+A method that sells "gates" and "never delegated prod approval" must be able to show them working. Wave 1 is
+the foundation every Wave 2 item (lanes, judges, metrics, release per change) reads from, and it removes the
+failure mode that let two changes ship without QA.
+
+### Design decisions
+| Topic | Decision |
+|------|----------|
+| Plan-approval marker | D-01 — created by a `UserPromptSubmit` hook on the human's approval; never by the agent |
+| prod-gate default | D-02 — ON by default, switchable off per project |
+| Where prod approval lives | D-03 — D-NN + PR + `spec.json` at archive; never a commit on dev/integration |
+| Dogfooding | D-04 — built with Karvey on itself; team-adapters converges here |
+| Architecture | D-09 — approved with the architect's recommended defaults |
+| Prod approval words | D-10 — approval word AND production word in the human's own prompt |
+| Owner's plan hooks | D-11 — `KARVEY_COMPAT_MARKER` |
+
+---
+
+## Features
+
+| Feature | Area | Requirements covered | Panel / sources | Status |
+|---------|------|----------------------|-----------------|--------|
+| F1 | Single phase state machine | REQ-W1-001..013 | R-01 · H-01, H-02, H-03, H-07, H-22, H-24, H-25 · BUG-06, F-40 · BL-04 | ⬜ |
+| F2 | Guards with table tests, prod-gate, approval hook | REQ-W1-014..030 | R-02 · H-10..H-15 · BUG-15 · D-01, D-02 · BL-05 | ⬜ |
+| F3 | Deploy and archive off integration/production | REQ-W1-031..035 | R-03 · H-18, H-19, H-20 · D-03 · BL-06 | ⬜ |
+| F4 | One versioning moment | REQ-W1-036..041 | R-04 · H-17 · F-20, F-38, F-43 · BL-07 | ⬜ |
+| F5 | Estimate never overwritten | REQ-W1-042..044 | R-05 · H-16 · BL-08 | ⬜ |
+| F6 | Session hook: archive, bounded injection, state.json, threshold, settings notice | REQ-W1-045..051 | R-06 · H-08, H-09, H-32 · F-34, BUG-16 · BL-09 | ⬜ |
+| F7 | Plugin as code + CI linter | REQ-W1-052..060 | R-07 · H-23, H-24, H-26, H-27, H-33 · F-44, BUG-07, BUG-17 · BL-10 | ⬜ |
+| F8 | Graphify and tracker ritual off the hot path | REQ-W1-061..064 | R-16 · H-31 · BL-19 | ⬜ |
+| F9 | Spec-delta merge tool | REQ-W1-065..067 | R-17 (script) · BL-20 | ⬜ |
+| F10 | Open-work dashboard | REQ-W1-068..072 | R-18 · H-30 · BL-21 | ⬜ |
+| F11 | QA observes only; review inside the change | REQ-W1-073..076 | R-21 · H-28, H-29 · BL-24 | ⬜ |
+| F12 | Short descriptions, no generic triggers | REQ-W1-077..079 | R-22 · H-23 · BL-25 | ⬜ |
+| F13 | Tracker adapters converged (team-adapters) | REQ-W1-080..096 | F-05, F-06, F-10, F-12..F-19, F-36, F-37, F-39..F-41, BUG-05, BUG-06, F-01 (verify) | ⬜ |
+| F14 | Notifications converged (team-adapters) | REQ-W1-097..099 | F-11, F-32, F-33 | ⬜ |
+| F15 | Statusline and method-page defects | REQ-W1-100..106 | BUG-08..BUG-14, F-35 | ⬜ |
+| F16 | Convergence and dogfooding | REQ-W1-107..109 | D-04 · BUG-05..BUG-17 · H-22 | ⬜ |
+
+---
+
+## Tasks
+
+Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](tasks.md).
+
+> The task Features `E1.F1..E1.F16` group work by **architecture component**. The *Features* table above groups the **requirements by area**; its F-numbers are independent. The REQ → task matrix is at the end of `tasks.md`.
+
+### Feature E1.F1: Hook contract capture (T-0)
+
+- [x] E1.F1.T1 [Test] Capture one real hook payload per event in a throw-away plugin (T-0) — est: 30min
+- [ ] E1.F1.T2 [human] (Conditional) capture the payloads interactively if F1.T1 could not — executor: owner (depends E1.F1.T1)
+
+### Feature E1.F2: Shared library and schemas
+
+- [x] E1.F2.T1 [Backend] `karvey_lib` package skeleton, exit codes, JSON envelope and `defaults.json` — est: 15min (P)
+- [x] E1.F2.T2 [Backend] `atomicio.py`: BOM-tolerant read, format-preserving atomic write, lock and compare-and-swap — est: 20min (depends E1.F2.T1) (P)
+- [x] E1.F2.T3 [Backend] `schema_lite.py`: the JSON-Schema subset validator with the two `x-karvey-*` extensions — est: 25min (depends E1.F2.T1) (P)
+- [x] E1.F2.T4 [Backend] `project.py` (root discovery, active change, reviewed-config read, state dir) and `audit.py` — est: 30min (depends E1.F2.T1) (P)
+- [x] E1.F2.T5 [Backend] `schemas/spec.schema.json` and `schemas/project.schema.json` — est: 30min (depends E1.F2.T3)
+- [x] E1.F2.T6 [Backend] `schemas/state-machine.json` and `schemas/legacy-phase-map.json` — est: 15min (depends E1.F2.T5)
+
+### Feature E1.F3: State tool `karvey-state.py`
+
+- [x] E1.F3.T1 [Backend] `karvey-state.py` CLI and `validate` (schema + semantic checks, advisory/strict) — est: 30min (depends E1.F2.T2, E1.F2.T4, E1.F2.T5, E1.F2.T6)
+- [x] E1.F3.T2 [Backend] `validate --fix` migration (exact tier, `--accept-proposed`, `--dry-run`, idempotent) — est: 45min (depends E1.F3.T1)
+- [x] E1.F3.T3 [Backend] `next` and `active` commands — est: 20min (depends E1.F3.T2)
+- [x] E1.F3.T4 [Backend] `advance`, `generated`, `skip`, `reopen` with history, lock and legacy in-memory mapping — est: 40min (depends E1.F3.T3)
+- [x] E1.F3.T5 [Backend] Marker store and release ledger in `approval.py` — est: 30min (depends E1.F2.T2, E1.F2.T4) (P)
+- [x] E1.F3.T6 [Backend] `approve` (prod → ledger, `--write-spec`), `check-prod`, marker consumption on `advance` — est: 30min (depends E1.F3.T4, E1.F3.T5)
+
+### Feature E1.F4: Hook runtime: parser, shell segmentation, dispatcher, table runner
+
+- [x] E1.F4.T1 [Backend] `hookio.py`: tolerant payload parser and path normalisation — est: 20min (depends E1.F1.T1, E1.F2.T1) (P)
+- [x] E1.F4.T2 [Backend] `shellparse.py`: segmentation, wrappers, recursion, `cd` and git global options — est: 40min (depends E1.F2.T1) (P)
+- [x] E1.F4.T3 [Backend] Dispatcher `karvey-hook.sh`, `karvey_hooks.py` entry points with the guard registry, new `hooks.json` events — est: 35min (depends E1.F4.T1, E1.F4.T2, E1.F2.T4)
+- [x] E1.F4.T4 [Test] Table runner `run_tables.py` (throw-away repos, bare origin, CLI stubs, `nopy` pass) — est: 35min (depends E1.F4.T3)
+
+### Feature E1.F5: Guards and the approval hook
+
+- [x] E1.F5.T1 [Backend] protect-paths guard and its table — est: 20min (depends E1.F4.T4, E1.F3.T5)
+- [x] E1.F5.T2 [Backend] Approval hook: vocabulary, quote stripping, prod kind (D-10), scope, compat marker (D-11) — est: 45min (depends E1.F3.T5, E1.F4.T4) (P)
+- [x] E1.F5.T3 [Backend] plan-gate classifier and its table — est: 45min (depends E1.F5.T1, E1.F5.T2)
+- [x] E1.F5.T4 [Backend] git-flow guard (target repo per segment, aliases, whole-name match, trunk) and its table — est: 50min (depends E1.F5.T3)
+- [x] E1.F5.T5 [Backend] prod-gate: candidates, production set, base and change resolution, `check-prod` — est: 45min (depends E1.F5.T4, E1.F3.T6)
+- [x] E1.F5.T6 [Backend] prod-gate: reviewed-line switch-off, fail-closed reasons, audit lines, `nopy` classifier — est: 30min (depends E1.F5.T5)
+- [x] E1.F5.T7 [Backend] post-edit: spec-write validator and pending-sync recorder — est: 25min (depends E1.F3.T1, E1.F4.T4) (P)
+- [x] E1.F5.T8 [Backend] Legacy template shims (`--only <guard> --force-enabled`) — est: 15min (depends E1.F5.T4, E1.F6.T2)
+
+### Feature E1.F6: Session hook and handoff capture (on the 3.11.4 code)
+
+- [x] E1.F6.T1 [Backend] `karvey_hooks.py session`: active change, manifest xor, bounded board/handoff, structured output (port of the 3.11.4 logic) — est: 45min (depends E1.F4.T3, E1.F2.T4, E1.F5.T7)
+- [x] E1.F6.T2 [Backend] Settings notice on `startup` only, `origin/{integration}` check, legacy-shape message; SessionStart split by matcher — est: 30min (depends E1.F6.T1)
+- [x] E1.F6.T3 [Backend] `karvey-handoff-capture.py` writes `state.json` in the shape the 3.11.4 resolver reads — est: 25min (depends E1.F2.T2, E1.F2.T4) (P)
+- [x] E1.F6.T4 [Test] `session.json` table; `test-hooks.sh` becomes the entry point that also runs the tables — est: 30min (depends E1.F6.T2, E1.F6.T3, E1.F4.T4)
+
+### Feature E1.F7: Settings resolver `karvey-config.py` and safe values
+
+- [x] E1.F7.T1 [Backend] `safe_values.py` patterns and the no-shell rule — est: 25min (depends E1.F2.T1) (P)
+- [x] E1.F7.T2 [Backend] `karvey-config.py resolve | get --shell | propose-settings` — est: 30min (depends E1.F7.T1, E1.F2.T4, E1.F2.T5)
+- [x] E1.F7.T3 [Backend] `karvey-config.py notify-check [--confirm]` and `outbox add|list|done` — est: 30min (depends E1.F7.T2)
+
+### Feature E1.F8: Dashboard `karvey-context.py`
+
+- [x] E1.F8.T1 [Backend] `karvey-context.py`: overview, open work, approvals, WIP, enforcement (read-only) — est: 45min (depends E1.F3.T3, E1.F7.T3, E1.F2.T4)
+- [x] E1.F8.T2 [Backend] `karvey-context.py`: calibration, close report, convergence, audit block counts — est: 35min (depends E1.F8.T1)
+
+### Feature E1.F9: Spec-delta merge `karvey-spec-merge.py`
+
+- [x] E1.F9.T1 [Backend] `karvey-spec-merge.py` (ADDED / MODIFIED / REMOVED, `--dry-run`) — est: 40min (depends E1.F2.T1, E1.F2.T2) (P)
+
+### Feature E1.F10: Plugin linter `lint-plugin.py`
+
+- [x] E1.F10.T1 [Backend] Linter framework (registry, `--list`, `--only`, `--paths`, formats) and L-01..L-04 — est: 45min (depends E1.F2.T1) (P)
+- [x] E1.F10.T2 [Backend] Linter L-05..L-10 and L-14 (phase literals, no hand phase edits, `next`, produces/reads, paths, rule copies, allowed-tools) — est: 50min (depends E1.F10.T1, E1.F2.T6)
+- [x] E1.F10.T3 [Backend] Linter L-11..L-13, L-17, L-18 (counts, versions, release docs, rule JSON vs schema, docs/spec validate) — est: 40min (depends E1.F10.T2, E1.F3.T1, E1.F2.T5)
+- [x] E1.F10.T4 [Backend] Linter L-15, L-16 (hooks exist; guard-case anchors match the tables) and L-19..L-24 — est: 50min (depends E1.F10.T3)
+- [x] E1.F10.T5 [Backend] Linter L-25..L-30 (QA, stack rules, deploy/archive, management, shell interpolation, H-33) — est: 45min (depends E1.F10.T4)
+- [x] E1.F10.T6 [Backend] Linter L-31..L-35 (public tracker text, RESUELTO needs a regression, duplicate ids, subagent project.json writes, CHANGELOG compat line) — est: 30min (depends E1.F10.T5)
+
+### Feature E1.F11: Statusline and method page
+
+- [x] E1.F11.T1 [Backend] Statusline: visible invalid TZ, clean separators, rotation default from `defaults.json` — est: 25min (depends E1.F2.T1, E1.F4.T4) (P)
+- [x] E1.F11.T2 [Frontend] Method page `docs/karvey.html`: pure functions + `init(window)`; BUG-10..14 fixed; node and static tests — est: 45min (P)
+
+### Feature E1.F12: Skill and rule text changes
+
+- [x] E1.F12.T1 [Backend] Delete the 9 rule copies; rewrite references to `../karvey/rules/x.md` — est: 20min (depends E1.F10.T2)
+- [x] E1.F12.T2 [Backend] New rule `rules/state-machine.md` (generated block) and its agreement test — est: 20min (depends E1.F2.T6) (P)
+- [x] E1.F12.T3 [Backend] Text: orchestrator `karvey/SKILL.md`, `karvey-init`, `karvey-requirements` — est: 45min (depends E1.F12.T1, E1.F3.T6, E1.F7.T2) (P)
+- [x] E1.F12.T4 [Backend] Text: `karvey-mockup`, `karvey-design-graphic`, `karvey-architecture`, `karvey-infra`, `karvey-tasks` — est: 40min (depends E1.F12.T1, E1.F3.T6) (P)
+- [x] E1.F12.T5 [Backend] Text: `karvey-impl`, `karvey-test`, `karvey-qa` — est: 45min (depends E1.F12.T1, E1.F3.T6, E1.F7.T3) (P)
+- [x] E1.F12.T6 [Backend] Text: `karvey-deploy`, `karvey-archive`, `karvey-iterate` — est: 45min (depends E1.F12.T1, E1.F3.T6, E1.F9.T1, E1.F8.T2) (P)
+- [x] E1.F12.T7 [Backend] Text: context, checkpoint, guard, team, benchmark-models, scrape, import, retro, browse, health, decisions + `rules/multi-agent.md` — est: 45min (depends E1.F12.T1, E1.F6.T3, E1.F8.T1) (P)
+- [x] E1.F12.T8 [Backend] Text: frontmatter of the remaining 7 skills (devex, diagram, docs, grill, investigate, second-opinion, standards) — est: 20min (depends E1.F12.T1) (P)
+- [x] E1.F12.T9 [Backend] Rules A: `enforcement.md` (guard-case anchors), `deploy-workflow.md`, `versioning.md`, `knowledge-sync.md`, `engineering-standards.md` — est: 45min (depends E1.F12.T1, E1.F5.T6, E1.F5.T8) (P)
+- [x] E1.F12.T10 [Backend] Rules B: phase-close, management-adapters, notifications, project-config, living-specs, team, clickup-protocol, backlog, incident-tracking — est: 50min (depends E1.F12.T1, E1.F7.T3) (P)
+- [x] E1.F12.T11 [Backend] `hooks/README.md`, `README.md`, `plugins/karvey/README.md`, descriptions in `plugin.json` / `marketplace.json` — est: 30min (depends E1.F12.T1, E1.F6.T4, E1.F5.T6) (P)
+- [x] E1.F12.T12 [Backend] Move `REVISION_PR_17-19_20260923.md` into `docs/spec/changes/team-adapters/qa/` and update references — est: 10min (P)
+- [x] E1.F12.T13 [Backend] Text gate: the whole-repo lint is green — est: 30min (depends E1.F12.T2, E1.F12.T3, E1.F12.T4, E1.F12.T5, E1.F12.T6, E1.F12.T7, E1.F12.T8, E1.F12.T9, E1.F12.T10, E1.F12.T11, E1.F12.T12, E1.F10.T6, E1.F11.T1)
+
+### Feature E1.F13: CI workflow
+
+- [x] E1.F13.T1 [Infra] `.github/workflows/lint.yml` (4 jobs, pinned SHAs, read-only) and `.gitattributes` — est: 25min (depends E1.F12.T13, E1.F4.T4, E1.F6.T4, E1.F11.T2)
+- [x] E1.F13.T2 [Infra] CI observed on a draft PR `feature/wave1-hardening → main` — est: 15min (depends E1.F13.T1, E1.F14.T3, E1.F15.T3)
+
+### Feature E1.F14: Migration fixtures and regression suite
+
+- [x] E1.F14.T1 [Test] Legacy `spec.json` fixtures (anonymised) and the tests that iterate them — est: 40min (depends E1.F3.T2) (P)
+- [x] E1.F14.T2 [Test] Legacy `project.json` fixtures and config resolution over them — est: 20min (depends E1.F7.T2) (P)
+- [x] E1.F14.T3 [Test] Regression index BUG-05..17 (`tests/regression/test_incidents.py`) and its CI step — est: 25min (depends E1.F10.T6, E1.F11.T1, E1.F11.T2, E1.F13.T1, E1.F6.T4)
+- [x] E1.F14.T4 [Test] Agent-behaviour manual scripts under `tests/manual/` — est: 30min (depends E1.F12.T3, E1.F12.T5, E1.F12.T6, E1.F12.T10) (P)
+
+### Feature E1.F15: Dogfood migration of this repo
+
+- [x] E1.F15.T1 [Backend] This repo through `validate --fix`: dry-run diff shown, then applied to `wave1-hardening` and `team-adapters` — est: 20min (depends E1.F3.T2, E1.F14.T1)
+- [x] E1.F15.T2 [human] Owner's prod-kind approval phrase for the retroactive team-adapters record (D-08) — executor: owner (depends E1.F15.T1, E1.F5.T2, E1.F3.T6)
+- [x] E1.F15.T3 [Backend] Record the retro prod approval (`--write-spec`, D-08); this repo validates with 0 errors — est: 15min (depends E1.F15.T2)
+
+### Feature E1.F16: Release 3.12.0 (one versioning moment) and deploy-phase human steps
+
+- [x] E1.F16.T1 [Backend] Release docs and the single version bump to 3.12.0 — est: 30min (depends E1.F13.T2, E1.F14.T2, E1.F14.T4)
+- [ ] E1.F16.T2 [human] Prepare the owner's global-config diffs from architecture §7.3 (D-01, D-11) — executor: owner (revision 1, F-49) (depends E1.F5.T2) (P)
+- [ ] E1.F16.T3 [human] Branch protection on `main`: require the CI checks (Q-A8, D-09) — executor: owner (depends E1.F13.T2)
+- [ ] E1.F16.T4 [Backend] Release PR ready; `advance deploying` on the feature branch; the unapproved merge is blocked (E2E evidence) — est: 20min (depends E1.F16.T1, E1.F16.T3)
+- [ ] E1.F16.T5 [human] The prod OK for 3.12.0 (D-10) and the D-NN answer — executor: owner (depends E1.F16.T4)
+- [ ] E1.F16.T6 [Backend] `approve prod` (ledger), merge through the prod-gate, release facts in the ledger — est: 20min (depends E1.F16.T5)
+- [ ] E1.F16.T7 [human] Apply the diffs to `~/.claude/CLAUDE.md` and `~/.claude/settings.json` after seeing them (D-01, D-11) — executor: owner (depends E1.F16.T6, E1.F16.T2)
+
+### Feature E1.F17: Test-phase iteration (revision 1, D-19)
+
+- [x] E1.F17.T1 [Backend] BUG-22: profile-only commits after a save are not drift — est: 30min (depends E1.F6.T1)
+- [x] E1.F17.T2 [Backend] Status names may contain `( )` (F-19) — est: 20min (depends E1.F7.T1)
+- [x] E1.F17.T3 [human] Run the 10 manual agent-behaviour scripts with the agent (F-47) — executor: owner (depends E1.F14.T4, E1.F17.T1, E1.F17.T2) — run 2026-09-25: 6 PASS / 4 FAIL; rerun after T4..T7: 10/10 PASS
+- [x] E1.F17.T4 [Backend] BUG-23 (F-50): the settings lookup reads integration and production — est: 20min
+- [x] E1.F17.T5 [Backend] BUG-24 (F-51): visible-version check against the deployed commit, any DEV mark — est: 20min
+- [x] E1.F17.T6 [Backend] BUG-25 (F-52): composed subagent prompts carry the project.json ban — est: 15min
+- [x] E1.F17.T7 [Backend] BUG-26 (F-53): tracker credentials looked up in `.connections.json` first — est: 15min
+- [x] E1.F17.T8 [Test] Rerun the four failing manual scripts; route F-54 (BL-52); fix the BL-51 id collision — est: 30min
+
+### Feature E1.F18: QA spec-gaps on the production approval (revision 4, D-34..D-36)
+
+- [x] E1.F18.T1 [Backend] D-34: the prod approval's evidence is the approval hook's audit record — est: 30min
+- [x] E1.F18.T2 [Backend] D-35: prod approval bound to the approved head commit, valid 24 h — est: 50min
+- [x] E1.F18.T3 [Backend] D-36: `reopen` supersedes the ledger prod approval — est: 20min
+- [x] E1.F18.T4 [Backend] Spec revision and docs of the prod approval flow — est: 35min
+- [x] E1.F18.T5 [Test] QA re-run: D1 and D7 on the diff since 13170b1 — est: 30min
+
+---
+
+## Task status
+> Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked` · 🙋 `awaiting-human` (qualifier of `blocked`)
+
+| Task | Status | estimate_min | actual_ai_min | actual_review_min | Notes |
+|------|--------|--------------|---------------|-------------------|-------|
+| E1.F1.T1 [Test] | ✅ done | 30 | 3 | 0 | captured headless (CLI 2.1.281); A-1..A-7 confirmed, A-8 nuance → F-04; no human review yet |
+| E1.F1.T2 [human] | ➖ not needed | — | — | — | conditional: F1.T1 captured headless, no human step required |
+| E1.F2.T1 [Backend] | ✅ done | 15 | 1 | 0 | no human review yet |
+| E1.F2.T2 [Backend] | ✅ done | 20 | 1 | 0 | no human review yet |
+| E1.F2.T3 [Backend] | ✅ done | 25 | 3 | 0 | no human review yet; F-05 logged |
+| E1.F2.T4 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet |
+| E1.F2.T5 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; F-06 logged |
+| E1.F2.T6 [Backend] | ✅ done | 15 | 1 | 0 | no human review yet |
+| E1.F3.T1 [Backend] | ✅ done | 30 | 7 | 0 | no human review yet; F-07 logged (legacy shapes as state.legacy_* warnings) |
+| E1.F3.T2 [Backend] | ✅ done | 45 | 2 | 0 | no human review yet |
+| E1.F3.T3 [Backend] | ✅ done | 20 | 2 | 0 | no human review yet |
+| E1.F3.T4 [Backend] | ✅ done | 40 | 3 | 0 | no human review yet |
+| E1.F3.T5 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; done before T4 (T4's deployed precondition reads the ledger); F-04 applied |
+| E1.F3.T6 [Backend] | ✅ done | 30 | 3 | 0 | no human review yet |
+| E1.F4.T1 [Backend] | ✅ done | 20 | 2 | 0 | no human review yet; field order per F-02 (no correction to A-2/A-3) |
+| E1.F4.T2 [Backend] | ✅ done | 40 | 3 | 0 | no human review yet; hand-written lexer instead of shlex (fd redirections, $( ) positions) |
+| E1.F4.T3 [Backend] | ✅ done | 35 | 4 | 0 | no human review yet; guards registered as allow-stubs (wired in batch 3); diagnostic block-only selftest guard (F-08) |
+| E1.F4.T4 [Test] | ✅ done | 35 | 3 | 0 | no human review yet; smoke block case uses the selftest guard (F-08) |
+| E1.F5.T1 [Backend] | ✅ done | 20 | 7 | 0 | no human review yet; 17 table cases (13 required + 4 allow); plugin-root rule vs dogfooding → F-09 |
+| E1.F5.T2 [Backend] | ✅ done | 45 | 4 | 0 | no human review yet; 39 table cases + 12 unit tests; local config helpers → F-10; 200-char pasted-line rule → F-11 |
+| E1.F5.T3 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; 63 table cases (13 nopy); marker cannot be verified without python, so nopy blocks when enabled |
+| E1.F5.T4 [Backend] | ✅ done | 50 | 3 | 0 | no human review yet; 59 table cases (10 nopy); branch switch inside the same command not followed (limitation case) |
+| E1.F5.T5 [Backend] | ✅ done | 45 | 5 | 0 | no human review yet; 35 table cases (part 1); production set minus integration → F-12; git-flow push cases now run with prod-gate off (first block wins) |
+| E1.F5.T6 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; 53 prod-gate cases (13 nopy); without python every PR merge blocks (base unresolvable) |
+| E1.F5.T7 [Backend] | ✅ done | 25 | 2 | 0 | no human review yet; 14 table cases; post-edit keeps running the recorders after a validator block |
+| E1.F5.T8 [Backend] | ✅ done | 15 | 2 | 0 | no human review yet; 4 table cases; runner gained a command key and env unset; a missing plugin makes the shim warn and not block |
+| E1.F6.T1 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; port of the 3.11.4 logic; live-state resolver in new karvey_lib/livestate.py (shared with F6.T3); one legacy assertion changed for REQ-W1-046 → F-13 |
+| E1.F6.T2 [Backend] | ✅ done | 30 | 1 | 0 | no human review yet; hooks.json SessionStart split (startup | resume|compact|clear), both double-quoted; test-hooks 57/57 |
+| E1.F6.T3 [Backend] | ✅ done | 25 | 2 | 0 | no human review yet; 8 unit tests; re-measures after writing when state.json is inside the measured repo; save-order note → F-14 |
+| E1.F6.T4 [Test] | ✅ done | 30 | 3 | 0 | no human review yet; 23 session cases (5 nopy); runner: session event, setup commands, context assertions; test-hooks 58/58 incl. all tables |
+| E1.F7.T1 [Backend] | ✅ done | 25 | 8 | 0 | no human review yet; lane B; safe_values patterns; findings F-16..F-19 (§3.1 pattern gaps) |
+| E1.F7.T2 [Backend] | ✅ done | 30 | 3 | 0 | no human review yet; lane B |
+| E1.F7.T3 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; lane B; notify-check --confirm not tied to a human → F-15 |
+| E1.F8.T1 [Backend] | ✅ done | 45 | 4 | 0 | no human review yet; lane D; built without lane B: outbox format reconciled at integration (F-23) |
+| E1.F8.T2 [Backend] | ✅ done | 35 | 2 | 0 | no human review yet; lane D |
+| E1.F9.T1 [Backend] | ✅ done | 40 | 6 | 0 | no human review yet; lane D |
+| E1.F10.T1 [Backend] | ✅ done | 45 | 9 | 0 | no human review yet; lane C |
+| E1.F10.T2 [Backend] | ✅ done | 50 | 3 | 0 | no human review yet; lane C |
+| E1.F10.T3 [Backend] | ✅ done | 40 | 4 | 0 | no human review yet; lane C; L-17 found `capability` missing from spec.schema.json (fixed at integration, F-21) |
+| E1.F10.T4 [Backend] | ✅ done | 50 | 4 | 0 | no human review yet; lane C |
+| E1.F10.T5 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; lane C; L-29 flags 18 `branch_flow` placeholders in shell examples → E1.F12 (F-20) |
+| E1.F10.T6 [Backend] | ✅ done | 30 | 2 | 0 | no human review yet; lane C |
+| E1.F11.T1 [Backend] | ✅ done | 25 | 2 | 0 | no human review yet; lane D; 8 statusline table cases |
+| E1.F11.T2 [Frontend] | ✅ done | 45 | 4 | 0 | no human review yet; lane D; 22 node tests + static page tests |
+| E1.F12.T1 [Backend] | ✅ done | 20 | 5 | 0 | no human review yet; 9 identical copies deleted; 188 citations rewritten relative (L-09 README heuristic narrowed, F-24) |
+| E1.F12.T2 [Backend] | ✅ done | 20 | 1 | 0 | no human review yet; 3 agreement tests; block regenerated with --write |
+| E1.F12.T3 [Backend] | ✅ done | 45 | 6 | 0 | no human review yet; state init command added (F-25); 955 → 795 lines; 68 → 0 errors on the three files |
+| E1.F12.T4 [Backend] | ✅ done | 40 | 3 | 0 | no human review yet; 48 → 0 errors on the five files; 1478 → 1461 lines; advance into mockup/infra verified in a scratch repo |
+| E1.F12.T5 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; 910 → 798 lines; nested-fence linter weakness reported (fixed in T13) |
+| E1.F12.T6 [Backend] | ✅ done | 45 | 5 | 0 | no human review yet; 717 → 447 lines; 41 → 0 errors; findings F-28..F-30 |
+| E1.F12.T7 [Backend] | ✅ done | 45 | 7 | 0 | no human review yet; 11 skills + multi-agent.md, 1312 → 1159 lines; 59 → 0 errors; findings F-31, F-32 |
+| E1.F12.T8 [Backend] | ✅ done | 20 | 3 | 0 | no human review yet; 7 descriptions 200–223 chars; L-01..L-04 green on all 32 skills |
+| E1.F12.T9 [Backend] | ✅ done | 45 | 3 | 0 | no human review yet; enforcement 40 → 99 lines (one anchored line per promise); L-23 residue in project-config/support-skills handled in T10 |
+| E1.F12.T10 [Backend] | ✅ done | 50 | 5 | 0 | no human review yet; 9 rules + support-skills.md, 935 → 1034 lines (the one cascade, missing-map clause, outbox, natural keys and schema fields now live here, cited by the skills); L-24 comma heuristic narrowed (F-34) |
+| E1.F12.T11 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; hooks/README 'What ships' table anchored to table cases; clickup-sync-guard/standards-guard named only as not shipped; plugin.json/marketplace.json descriptions (versions untouched) |
+| E1.F12.T12 [Backend] | ✅ done | 10 | 3 | 0 | no human review yet; git mv; 11 references updated (CHANGELOG, backlog, decisions, team-adapters spec.json/findings, prd); graphify-out left for the archive sync; the qa/deploy L-25 hits close in T5/T6 |
+| E1.F12.T13 [Backend] | ✅ done | 30 | 4 | 0 | no human review yet; text residue fixed (init CLAUDE.md migration aid, karvey-test AskUserQuestion); whole-repo lint 539 → 7 errors, all L-18 spec.json data owned by E1.F15 (F-35); 0 errors in plugins/** |
+| E1.F13.T1 [Infra] | ✅ done | 25 | 9 | 0 | no human review yet; 4 jobs, actions pinned by commit SHA (checkout v7.0.1, setup-python v7.0.0, setup-node v7.0.0); every run: step executed locally, the unit suite, tables and test-hooks also under Python 3.9.25; lint and validate --all red until F-35 / E1.F15 (not hidden); act not installed; F-36, F-37 |
+| E1.F13.T2 [Infra] | ✅ done | 15 | 50 | 0 | draft PR #24; 5 runs to green on every leg but lint: first Windows/macOS runs found F-42..F-46 (all test-runner portability, no hook defect), fixed; run 36046395113 @ee8efb0: tests ubuntu/macos × 3.9/3.12 ✅, page ✅, windows-advisory ✅, lint ❌ only the 3 team-adapters approvals.prod errors; after E1.F15.T3, run 36063032643 @febcf59 all 7 jobs green: lint 6 s, tests ubuntu 3.9 108 s / 3.12 93 s, macos 3.9 279 s / 3.12 260 s, page 11 s, windows-advisory 22 s (none under 5 s) |
+| E1.F14.T1 [Test] | ✅ done | 40 | 5 | 0 | no human review yet; 57 hand-written synthetic fixtures: 35 phase shapes (8 enum incl. requirements, found in the 2026-09-24 re-scan, 10 exact, 14 proposed, iterate, null, missing ⊇ the 31 of §2.5), 6 embedded skips, approvals null / unknown keys, 4 management, 6 multi-type, gates-skipped, team-adapters-like, bom, unknown top-level keys; --fix idempotent and approval-neutral on all of them, with and without --accept-proposed |
+| E1.F14.T2 [Test] | ✅ done | 20 | 8 | 0 | no human review yet; 9 synthetic project.json fixtures (management markdown/clickup/absent/object, notifications absent/google_chat/none, clickup-backlog-list, trunk); resolve, propose-settings --from-legacy (never writes) and validate --fix (string → object, idempotent) over each; F-38 (status_flow not proposed as statuses) |
+| E1.F14.T3 [Test] | ✅ done | 25 | 5 | 0 | no human review yet; test_incidents.py 10 tests: BUG-05..21 each name their check (lint id, table case, unit/node test, test-hooks section, manual script), named lint checks run live, tracker/index agreement; CI regression step added; BUG-06..17 RESUELTO (each check verified red on main or 3.11.1, green here), BUG-05 stays DETECTADO (F-39); index regression column filled for BUG-18..21, summary and next number corrected |
+| E1.F14.T4 [Test] | ✅ done | 30 | 4 | 0 | no human review yet; 10 scripts (setup, exact prompt, Expected:, evidence), none run yet — they are evidence for karvey-test / QA; the common setup is inlined in each file so the done-criterion counts exactly 10 |
+| E1.F15.T1 [Backend] | ✅ done | 20 | 4 | 0 | `--fix` dry-run: only wave1-hardening changes (3 legacy `{from,to,at}` history rows → `{phase, entered_at, exited_at}`); team-adapters and team-layer nothing to fix (team-layer kept as history, D-14); applied to wave1-hardening; second `--fix --dry-run` empty; `validate --all`: 3 errors, all `team-adapters approvals.prod` (F15.T3) |
+| E1.F15.T2 [human] | ✅ done | — | — | — | [human] owner typed «ok, registra la aprobación de prod de team-adapters con D-08» 2026-09-24 18:39 -03; hook: `approval recorded (prod, team-adapters, expires 23:39)` |
+| E1.F15.T3 [Backend] | ✅ done | 15 | 3 | 0 | `approve team-adapters prod --by … --role human --ref D-08 --write-spec`: approvals.prod gains role, ISO date, ref `D-08` (the retroactive detail stays in D-08 and `qa_note`); approvals.qa stays false (REQ-W1-108); `validate --all` 0 errors / 35 warnings, rc 0; lint 3 → 0 errors, 3 warnings |
+| E1.F16.T1 [Backend] | ✅ done | 30 | 15 | 0 | `[Unreleased]` → `[3.12.0] - 2026-09-26` (Why, behaviour change, compatibility, 3.10.0 correction); plugin/marketplace/project.json 3.12.0; `pre_3_12_history.released_on`; method page 3.12.0 current in 5 languages; lint 0 errors |
+| E1.F16.T2 [human] | ⬜ todo | — | — | — | [human] revision 1 (F-49): auto mode refuses the agent's copy of the live files |
+| E1.F16.T3 [human] | ⬜ todo | — | — | — | [human] |
+| E1.F16.T4 [Backend] | 👀 review | 20 | — | — | `advance … deploying`; PR #24 out of draft; blocked-merge evidence and CI result in the PR body; required checks await the owner's branch protection (T3) |
+| E1.F16.T5 [human] | ⬜ todo | — | — | — | [human] |
+| E1.F16.T6 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F16.T7 [human] | ⬜ todo | — | — | — | [human] |
+| E1.F17.T1 [Backend] | ✅ done | 30 | 6 | 0 | BUG-22 RESUELTO: `livestate.profile_only_since` (python path) + the same rule in the degraded bash block; test-hooks.sh 4 cases × 2 paths (case 1 red before the fix, 2-4 over-matching guards); regression index BUG-22 |
+| E1.F17.T2 [Backend] | ✅ done | 20 | 3 | 0 | F-19: `KIND_EXEMPTIONS["status"] = ( )`; test_safe_values.py: accepted by `check_status` and `get … --shell`, `a$(b)` / backtick / `"` / `;` refused, exemption per kind (red before the fix) |
+| E1.F17.T3 [human] | ✅ done | — | — | — | [human] run headless by the maintainer agent (D-19/D-28): 6 PASS / 4 FAIL; rerun 2026-09-25 after E1.F17.T4..T7: the 4 FAIL scripts PASS → **10/10 PASS** (tracker lines of no-human-no-mapping and per-level-maps not re-run, covered by regression tests; evidence qa/manual/*-2026-09-25-rerun.md); first run: FAIL → F-50 (settings notice ignores the reviewed line), F-51 (visible-version), F-52 (subagent prompt allows project.json), F-53 (block comment not posted); F-54 spec-gap; evidence qa/manual/*-2026-09-25.md |
+| E1.F17.T4 [Backend] | ✅ done | 20 | 8 | 0 | BUG-23 RESUELTO: `project.settings_lines` (integration, production, origin/HEAD) used by the session notice and `karvey-config.py Settings.remotes`; table ss-24 + `OriginProductionFallback` red before the fix; regression index BUG-23 |
+| E1.F17.T5 [Backend] | ✅ done | 20 | 6 | 0 | BUG-24 RESUELTO: deploy 2.6 + versioning.md read `git show <deployed-sha>:<version file>`, any DEV mark format; test_skill_rules.py VisibleVersionCheck (5 tests) red before the fix; regression index BUG-24 |
+| E1.F17.T6 [Backend] | ✅ done | 15 | 25 | 0 | BUG-25 RESUELTO: management-adapters rule 5 + impl `(P)` dispatch carry the ban verbatim (test_skill_rules.py, 3 tests); reopened by the rerun (prompt composed before any skill loads) → `subagent-prompt` guard on PreToolUse Agent|Task, table subagent-prompt.json (7 cases, red on 691f2f7); regression index BUG-25 |
+| E1.F17.T7 [Backend] | ✅ done | 15 | 5 | 0 | BUG-26 RESUELTO: management-adapters rule 2 is an ordered lookup (`.connections.json`, env, vault/MCP); impl Step 3 and blockers point to it, `blocked: null` → comment only; test_skill_rules.py TrackerCredentialsAreLookedUpEverywhere (3 tests) red before the fix; regression index BUG-26 |
+| E1.F18.T1 [Backend] | ✅ done | 30 | 10 | 0 | F-76/D-34: marker audit line with hash/session/time; `check_prod` requires it (`missing=audit`); red on c4d81cf |
+| E1.F18.T2 [Backend] | ✅ done | 50 | 30 | 0 | F-77/D-35: `head_sha` + `expires_at`; `approve prod --sha`, `check-prod --sha`; prod-gate compares the released commit in every form; pg5-02..11 red on c4d81cf |
+| E1.F18.T3 [Backend] | ✅ done | 20 | 5 | 0 | F-79/D-36: `reopen` → ledger `superseded[]` + `revision_history` |
+| E1.F18.T4 [Backend] | ✅ done | 35 | 20 | 0 | requirements rev 1 (017, 023), spec-delta, architecture rev 4, tasks E1.F18, docs (enforcement, hooks README, deploy 2.9, state-machine, iterate) |
+| E1.F18.T5 [Test] | ✅ done | 30 | 90 | 0 | D1 + D7 (4 passes) over 13170b1..HEAD; BUG-47..51 fixed in the micro-loop; security gate PASS |
+| E1.F17.T8 [Test] | ✅ done | 30 | 25 | 0 | reruns PASS: settings-docs-branch (A, B), visible-version (1, 2, 3), no-human-no-mapping (headless, subagent after the guard; tracker line by tests), per-level-maps (A without tracker; comment and B by tests); F-54 → BL-52 (wave2-structural); BL-51 reworded |
+
+---
+
+## History
+| Date | Phase | Action |
+|-------|------|--------|
+| 2026-09-23 | init | Spec initialized on `feature/wave1-hardening` (Markdown tracker; no external tracker item). Decisions D-01..D-04 recorded in `docs/spec/decisions.md`. mockup and design_graphic recorded as skipped (no UI). |
+| 2026-09-23 | init | Knowledge sync (init Step 9C, `/graphify docs/spec/ --update`) **not run**, deliberately: this change moves the sync to archive only (REQ-W1-062). To run at archive. |
+| 2026-09-23 | requirements | 109 EARS requirements (REQ-W1-001..109) in 16 areas; spec-delta ADDED 109 + 12 carried REQ-ADP, MODIFIED 4 REQ-TEAM, REMOVED 0. `approvals.requirements.generated = true`; awaiting the owner's approval. Open question Q-01 (rotation threshold). |
+| 2026-09-23 | tasks | 73 tasks in 16 Features (`tasks.md`): 68 agent tasks, 2150 min total, critical path 550 min; 5 `[human]` (1 conditional). REQ-W1-001..109 all covered. `approvals.tasks.generated = true`; awaiting the owner's approval. Open point OP-1: `infra` neither approved nor skipped (recommended: skip, no cloud). Knowledge sync not run (REQ-W1-062). |
+| 2026-09-24 | impl | Batch 1 done: E1.F1.T1 (T-0 payload capture, headless; F-02 closed, F-04 opened; E1.F1.T2 [human] not needed) and E1.F2.T1..T6 (`karvey_lib` skeleton, `atomicio`, `schema_lite`, `project`, `audit`, the four schemas). 106 unit tests green; test-hooks.sh 32/32. New findings F-04, F-05, F-06 (F-06 must be decided before E1.F3.T1/E1.F15.T3). |
+| 2026-09-24 | impl | Batch 2 done: F-06/F-05 resolved (legacy date-only approvals are warnings, REQ-W1-003; §2.2 documents the subset). E1.F3.T1..T6 (`karvey-state.py` validate / --fix / next / active / advance / generated / skip / reopen / approve / check-prod; `approval.py` markers + ledger; T5 done before T4) and E1.F4.T1..T4 (`hookio`, `shellparse`, dispatcher `karvey-hook.sh` + `karvey_hooks.py` with allow-stub guards, `hooks.json` +UserPromptSubmit/PreToolUse/PostToolUse, `run_tables.py` + `smoke.json`). 275 unit tests green; test-hooks.sh 55/55; smoke table 9 cases / 16 runs. F-04 resolved; new findings F-07 (resolved), F-08 (open, owner). This change's own spec.json is not migrated yet (E1.F15.T1). |
+| 2026-09-24 | impl | Batch 3, lane A done: E1.F5.T1..T8 (protect-paths, approval hook with D-10 prod words and D-11 compat marker, plan-gate, git-flow, prod-gate ×2, post-edit validator + pending-sync, legacy shims) and E1.F6.T1..T4 (session hook ported to python on the 3.11.4 logic, settings notice on startup only with the `origin/{integration}` check, `karvey-handoff-capture.py`, `session.json`). Every guard wired in `hooks.json` is table-tested through the real dispatcher in throw-away repos (never through a live session); `KARVEY_COMPAT_MARKER` is implemented and tested, set nowhere. 295 unit tests green; test-hooks.sh 58/58 (it now also runs the tables); guard tables 281 cases / 343 runs (62 nopy). Estimate 405 min vs 39 min wall-clock (AI). New findings F-09..F-14 (F-10 is the lane A/lane B config-helper reconciliation for the merge). |
+| 2026-09-24 | impl | Batch 3, lanes B/C/D merged into `feature/wave1-hardening` (merge commits, `--no-ff`): E1.F7.T1..T3 (`safe_values.py`, `karvey-config.py`), E1.F10.T1..T6 (`lint-plugin.py`, L-01..L-35), E1.F8.T1..T2 (`karvey-context.py`), E1.F9.T1 (`karvey-spec-merge.py`), E1.F11.T1..T2 (statusline, method page). One conflict (`tests/hooks/run_tables.py`, lanes A and D), resolved keeping both. Integration fixes: `capability` in `spec.schema.json` (F-21), shared outbox format `karvey_lib/outbox.py` (F-23), §3.5 enforcement rules shared by guards and dashboard (F-10 resolved); test-pollution `audit.log` removed (F-22). Estimate 535 min vs 56 min wall-clock (AI). New findings F-15..F-23. The whole-repo lint fails as expected: it is the E1.F12 worklist. |
+| 2026-09-24 | impl | Batch 4 done: E1.F12.T1..T13 (skill and rule text). 9 rule copies deleted; new `rules/state-machine.md` (generated block + agreement test); new `karvey-state.py init` (F-25); every phase/approval write in the skills goes through `karvey-state.py`, settings through `karvey-config.py`, the dashboard, handoff and spec-merge through their scripts; QA review moved into `team-adapters/qa/`. T3..T11 ran as parallel forks on disjoint files, committed one per task. Whole-repo lint 539 → 7 errors (all L-18 in two `spec.json` data files, owned by E1.F15: F-35); `plugins/**` 0 errors. Skill corpus 8900 → 7433 lines, 122 090 → 108 436 tokens (cl100k). Four linter heuristics narrowed with tests (F-24, F-34). 642 unit tests, test-hooks 58/58, guard tables 289 cases / 351 runs, page 22/22. New findings F-24..F-35. |
+| 2026-09-24 | impl | Batch 5 done: E1.F13.T1 (`.github/workflows/lint.yml`: lint, tests ubuntu/macos × 3.9/3.12, page, windows-advisory; actions pinned by SHA; `.gitattributes`) and E1.F14.T1..T4 (57 legacy spec.json + 9 project.json anonymised fixtures, `test_fixtures_anonymous.py`, `tests/regression/test_incidents.py` + its CI step, 10 manual scripts). BUG-06..17 RESUELTO with their regression checks (each verified red on `main` or 3.11.1); BUG-05 stays DETECTADO (F-39). 658 unit + 10 regression tests (also green on Python 3.9.25), test-hooks 58/58, guard tables 289 cases / 351 runs, page 22/22; whole-repo lint still 7 L-18 errors (F-35, owner). Estimate 140 min vs 31 min wall-clock (AI). `act` not installed: the workflow is validated structurally only; E1.F13.T2 observes it on a PR after F-35 / E1.F15. New findings F-36..F-39. |
+| 2026-09-24 | impl | F-39 / BUG-05 done: karvey-impl dependency bullets rewritten to `review` or `done`; L-36 added (lint 36 checks) with 7 unit tests; BUG-05 RESUELTO in the tracker and the incidents index; architecture §6.4 names L-36. No code task picker exists (impl selection is skill text), so the automated check is a lint check. Estimate 30 min vs actual 14 min (AI), 0 review. |
+| 2026-09-24 | impl | F-15 (D-16) done: notify confirmation marker in `approval.py` (classify / write / check / consume), recorded by the approval hook, required by `notify-check --confirm`; protect-paths needles extended (python and bash fallback); 10 unit tests (`HumanConfirmation`), new table `notify-confirm.json` (12 cases / 16 runs: agent alone, human prompt, other destination, other project, expired, protect-paths); notifications/enforcement/README/qa text and architecture updated. Estimate 60 min vs actual 32 min (AI), 0 review. |
+| 2026-09-24 | impl | F-12 (D-15) done: `production_set` keeps `main`/`master` always (`ALWAYS_PRODUCTION`) and removes the integration branch otherwise; architecture §3.4 / §3.5 table and `rules/enforcement.md` updated; `prod-gate.json` pg3-01..06 (dev not gated with origin/HEAD=dev; master, main, HEAD:master gated; integration=main gated — the last one red on the previous code). Estimate 30 min vs actual 12 min (AI), 0 review. |
+| 2026-09-24 | impl | F-35 (D-14) done: `_downgrade_pre_312` in `validate_data` (archived path + all approval dates before `pre_3_12_history.released_on`, null = not released); L-35 checks the date at release; E1.F16.T1 note added; 7 unit tests + 1 lint test; team-layer 4 errors → warnings, team-adapters keeps its 3 (E1.F15.T2/T3); whole-repo lint 7 → 3 errors. Estimate 30 min vs actual 20 min (AI), 0 review. |
+| 2026-09-24 | impl | F-36 done: `windows` tag on smoke-01/02/03/05/07/08, windows-advisory runs `test_paths`/`test_hookio`/`test_atomicio` then `run_tables.py --tag windows -v` (python, fetch-depth 0), `test_ci_workflow.py` (3 tests) guards the selection; architecture §1.11 updated. Estimate 20 min vs actual 12 min (AI), 0 review; the Windows runner itself is observed in E1.F13.T2. |
+| 2026-09-24 | impl | F-37 done: `KARVEY_SKIP_TABLES: '1'` on the test-hooks.sh step of the tests job; `test_ci_workflow.py` `TablesRunOnce` (2 tests, red on the previous workflow); architecture §1.11 updated. Estimate 10 min vs actual 5 min (AI), 0 review. |
+| 2026-09-24 | impl | F-38 done: `pj.legacy_status_flow` + `pj.LEGACY_CHANNELS` shared by karvey-config and karvey-state; propose-settings proposes `statuses`, `fix_project(accept_proposed)` moves it, `google_chat` → `google-chat`; 2 new fixtures (catalogue 11), 4 new/updated tests in test_config_resolve.py, 3 in test_project.py; architecture §1.8/§2.6/§6.3. Estimate 30 min vs actual 18 min (AI), 0 review. |
+| 2026-09-24 | impl | F-41 / D-18: statusline context lights by percent (30 % amber, 50 % red), `defaults.json:context_pct`, table cases statusline-09..14. E1.F15.T1 done (`--fix` on wave1-hardening; second dry-run empty). E1.F13.T2 started: draft PR to observe CI. |
+| 2026-09-24 | impl | E1.F13.T2 observed on PR #24: F-42 (POSIX mode test on Windows), F-43 (bash from PATH), F-44 (macOS timeout + /private/var), F-45 (no-python PATH on Windows), F-46 (time factor) found and fixed; every leg green except lint (team-adapters, E1.F15.T3). |
+| 2026-09-24 | test | Test phase entered (`advance … test`). Unit 694 · regression 10 · test-hooks 58 · tables 313 cases / 381 runs · page 22 — all green; lint 0 errors / 3 warnings; `validate --all` 0 errors; CI run 36063032643 7/7 green; E2E in the live session: state edges refused/allowed, plan and prod approval markers, protect-paths block. Benchmark baseline: hooks and CLI 72–92 ms median. Not run: 10 manual scripts (F-47); E2E release/archive belong to deploy/archive. E1.F16.T2 refused by the auto-mode classifier (F-49). New findings F-47..F-49 (spec-gap). Evidence `docs/test_evidence.md`, plan `docs/test_plan.md`. |
+| 2026-09-25 | impl | E1.F17.T1 done (D-21): BUG-22 — commits since the save touching only the profile files (`state.json`, `handoff.md`, `board.md`, `manifest.md`, `checklist.md`) on a descendant of the recorded commit match, lower-or-equal uncommitted count too; both the python session path and the degraded bash block; 4 cases in test-hooks.sh on both paths; BUG-22 RESUELTO in the tracker and incidents index. Estimate 30 min vs actual 6 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T2 done (D-21): F-19 — status names may contain `( )` (`KIND_EXEMPTIONS["status"]`, `check_status` passes the exemption); 3 tests in test_safe_values.py (accepted via `check_status` and `get --shell`, refusals kept, per-kind only). Estimate 20 min vs actual 3 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T3 run (D-19/D-28): the 10 manual agent-behaviour scripts run headless by the maintainer agent, each in its own throw-away repo under $SCRATCH, ClickUp scripts against a throw-away sandbox list, visible-version against a local fixture page. 6 PASS (find-or-create, impl-resume, init-not-now, missing-status-map, qa-review-to-done, settings-merge) / 4 FAIL (settings-docs-branch B, visible-version 1–2, no-human-no-mapping subagent, per-level-maps A). New findings F-50..F-53 (bug), F-54 (spec-gap). Evidence `qa/manual/*-2026-09-25.md`. Task stays 🔄 until the FAILs are routed and re-run. |
+| 2026-09-25 | impl | E1.F17.T4 done (D-21): BUG-23 / F-50 — the settings notice and `resolve` read `origin/{integration}` and `origin/{production}` (and `origin/HEAD` for the notice) before "missing"; the lookup no longer stops at the first readable line; table case ss-24 and 3 unit tests; BUG-23 RESUELTO in the tracker and incidents index. Estimate 20 min vs actual 8 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T5 done (D-21): BUG-24 / F-51 — `karvey-deploy` 2.6 and `versioning.md` implement REQ-W1-041: compare with the deployed commit's version file, accept any unmistakable DEV mark, a missing version is a recommendation; new `tests/unit/test_skill_rules.py`; BUG-24 RESUELTO. Estimate 20 min vs actual 6 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T6 done (D-21): BUG-25 / F-52 — rule 5 of `management-adapters.md` and `karvey-impl` Step 7 make every composed subagent prompt carry "Do not write `docs/spec/project.json` …"; a user's request to persist settings stays with the orchestrating session and the human; 3 tests; BUG-25 RESUELTO. Estimate 15 min vs actual 5 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T7 done (D-21): BUG-26 / F-53 — rule 2 of `management-adapters.md` is a lookup order with `.connections.json` first; `karvey-impl` Step 3 and Handling blockers point to it; `blocked: null` keeps the status and posts the comment; 3 tests; BUG-26 RESUELTO. Estimate 15 min vs actual 5 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T6 reopened by its rerun: the orchestrating session wrote the subagent prompt before loading any skill, so the rule 5 text never reached it. Added the `subagent-prompt` guard (PreToolUse `Agent|Task`, fail open) and table subagent-prompt.json; rerun PASS (first prompt blocked, re-sent prompt carries the ban). Estimate 15 min vs actual 25 min (AI) for the task, 0 review. |
+| 2026-09-25 | impl | E1.F17.T8 done and E1.F17.T3 ✅ (D-21): the four failing manual scripts re-run headless in throw-away repos: settings-docs-branch PASS (B silent), visible-version PASS (deployed commit's VERSION read, `DEV 2.10.4` accepted, no mismatch with a later bump, no-version = recommendation), no-human-no-mapping PASS (subagent run failed after the text fix, passed after the subagent-prompt guard), per-level-maps PASS for the lines without a tracker (`.connections.json` looked up first); total 10/10 PASS. F-54 → BL-52 routed to wave2-structural; BL-51 names the statusline stable-launcher item without an F-number. Estimate 30 min vs actual 25 min (AI), 0 review. |
+| 2026-09-25 | architecture | Revision 2 (D-33): §1.3, §3.2, §6.1 describe the `subagent-prompt` guard added for BUG-25 (commit 55561c4). |
+| 2026-09-25 | test | Test phase 2 (`advance … test`). Unit 711 · regression 10 · test-hooks 68 · tables 321 cases / 390 runs · page 22 — all green; lint 0 errors; `validate --all` 0 errors; manual scripts 10/10 PASS (four after re-run); every requirement area PASS (E2E release/archive still in deploy/archive). Benchmark: pre-bash slower than baseline under load (F-55, emergent). Evidence `docs/test_evidence.md` § Test phase 2. |
+| 2026-09-25 | qa | QA entered (`advance … qa`); 9 dimensions over `origin/main...4c9b7c0` (D1–D4 and D7 by review subagents, D7 intra-model). 20 bugs fixed in the micro-loop (BUG-27..46, each red on 4c9b7c0); 13 spec-gap/emergent F-76..F-88: F-76, F-77, F-79 open for the owner (prod approval evidence and binding), 10 deferred to BL-53..BL-61. Security gate FAIL on F-76/F-77; QA not approved. Review `qa/REVISION_PR_24_20260925.md`. After the fixes: unit 735 · regression 10 · test-hooks 68 · tables 363 cases / 438 runs · page 22 · lint 0 errors · validate 0 errors. |
+| 2026-09-26 | qa | karvey-iterate for D-34..D-36: spec revision (REQ-W1-017/023, architecture rev 4, E1.F18) and implementation, tests red first on c4d81cf; QA re-run D1 + D7 (4 passes) found BUG-47..51 (prod-gate push forms, deferred merges, reopen ordering), all RESUELTO; F-90 → BL-62, F-91 → BL-63; security gate PASS, QA ready for approval (not recorded). |
+
+## QA Review (2026-09-25)
+
+Document: `docs/spec/changes/wave1-hardening/qa/REVISION_PR_24_20260925.md`. Not approved.
+
+Pending actions:
+- [x] Owner decision on F-76 (what evidence the prod-gate verifies), F-77 (bind the prod approval to the released commits, with an expiry) and F-79 (prod approval across a reopen) — D-34, D-35, D-36; routed by `/karvey-iterate` to E1.F18 (2026-09-26); then `/karvey-iterate wave1-hardening` routes them (architecture revision) and QA re-runs D1.
+- [ ] Manual areas: prod approval end to end (E2E-04), method page rendering in a browser, a real legacy project after upgrade.
+- [x] BUG-27..46 fixed with regression tests (RESUELTO).
+- [x] Deferred: BL-53..BL-61.

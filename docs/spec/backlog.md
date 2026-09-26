@@ -45,6 +45,24 @@
 | BL-41 | 2026-09-23 | team-adapters / F-46 | emergent | low | Statusline: keep the rotate warning visible on narrow terminals; recommend the copy-to-~/.claude install path | open | — | — |
 | BL-42 | 2026-09-23 | team-adapters / F-47 | emergent | low | Method page: alias table for the 12 anchors renamed after 3.10.0 | open | — | — |
 | BL-43 | 2026-09-23 | team-adapters / F-48 | emergent | low | Notification deduplication: run id + timestamp in the payload; notify QA on first run and verdict changes | open | — | — |
+| BL-44 | 2026-09-24 | wave1-hardening / F-26 | spec-gap (deferred) | low | Cross-repo decision refs (`D-12@{ops-repo}`) rejected by spec.schema.json | open | — | — |
+| BL-45 | 2026-09-24 | wave1-hardening / F-27 | spec-gap (deferred) | low | Time-entry / worklog operation in management-adapters.md | open | — | — |
+| BL-46 | 2026-09-24 | wave1-hardening / F-28 | spec-gap (deferred) | low | `approvals.deploy`: a write path or drop the key | open | — | — |
+| BL-47 | 2026-09-24 | wave1-hardening / F-29 | spec-gap (deferred) | low | Where the prod OK D-NN is written during deploy (D-03 vs a commit on a branch) | open | — | — |
+| BL-48 | 2026-09-24 | wave1-hardening / F-30 | spec-gap (deferred) | low | Release ledger is clone-local: `advance deployed` / `--write-spec` need the same clone | open | — | — |
+| BL-49 | 2026-09-24 | wave1-hardening / F-31 | spec-gap (deferred) | low | karvey-import cannot resume at the furthest phase the content supports | open | — | — |
+| BL-50 | 2026-09-24 | wave1-hardening / F-32 | spec-gap (deferred) | low | Per-period decision logs vs the single `docs/spec/decisions.md` path (L-30) | open | — | — |
+| BL-51 | 2026-09-25 | project-upgrade / owner request (D-20) | emergent | med | Project upgrade plan after each plugin update; the statusline stable-launcher item folds in | in change `project-upgrade` | D-20 | — |
+| BL-52 | 2026-09-25 | wave1-hardening / F-54 | spec-gap (deferred) | low | `spec.json:clickup.feature_ids` is an array; tracker ids should be keyed by natural key like `task_ids` | routed to change `wave2-structural` | — | wave2-structural |
+| BL-53 | 2026-09-25 | wave1-hardening / F-87, F-88 | spec-gap (deferred) | med | Text cleanup after wave1: method page hooks section, stale rule/skill sentences, footers, env vars in hooks/README, repo-specific ids in method text | open | — | — |
+| BL-54 | 2026-09-25 | wave1-hardening / F-78 | spec-gap (deferred) | med | plan-gate write classes: cp/mv/dd/curl -o/git apply/rm -f | open | — | — |
+| BL-55 | 2026-09-25 | wave1-hardening / F-80 | spec-gap (deferred) | low | prod-gate: no-python HEAD/@ on production; production set when no main/master ref exists | open | — | — |
+| BL-56 | 2026-09-25 | wave1-hardening / F-81 | spec-gap (deferred) | med | Approval vocabulary on affirmative statements; pending-sync and spec-write noise on legacy repos | open | — | — |
+| BL-57 | 2026-09-25 | wave1-hardening / F-82 | emergent | low | Statusline outside the plugin and token-threshold env vars under percent thresholds | open | — | — |
+| BL-58 | 2026-09-25 | wave1-hardening / F-83, F-55 | spec-gap (deferred) | med | Hook latency over the §9 budget; no-python git-flow compatibility with the 3.11 template | open | — | — |
+| BL-59 | 2026-09-25 | wave1-hardening / F-84 | spec-gap (deferred) | med | spec-merge item format: blank lines inside an item, `### REQ-` headings in ADDED | open | — | — |
+| BL-60 | 2026-09-25 | wave1-hardening / F-85 | spec-gap (deferred) | med | project.json ban line in every skill that dispatches subagents | open | — | — |
+| BL-61 | 2026-09-25 | wave1-hardening / F-86 | emergent | low | Factor duplicated helpers (now_iso, parse_dt, git) and the TTL literals into karvey_lib | open | — | — |
 
 ## BL-01 — Run graphify over the repo at the end of all the changes
 - **Origin:** owner request (Mauricio Quezada Ibáñez), 2026-09-22, after publishing 3.8.0 / 3.9.0 and during the 3.9.1 docs sync.
@@ -230,31 +248,137 @@
 - **Note:** a spec-gap normally re-opens requirements; `team-layer` had already shipped in 3.8.0, so it is deferred here as a known limitation instead of silently dropped.
 
 ## BL-38 — Validate team settings (required keys, enums, documented aliases) in the session hook / karvey-context
-- **Origin:** change `team-adapters`, finding F-21 (emergent; source I-03), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-21 (emergent; source I-03), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** Tarien stores `status_flow` instead of `statuses` and `google_chat` instead of `google-chat`; the hook only checks that each block is an object, so a drifted project looks configured and the first status change re-asks. Validate `tool`, `statuses` (5 keys), `channel`, `target`, `via` and print "settings invalid (...)", or accept documented aliases. Can reuse `project.schema.json` from BL-04. Fixing Tarien itself belongs to Tarien's repo.
 - **Status:** open
 
 ## BL-39 — Generate rule-citation tables, per-phase rule lists and command spellings from the source; one status notation
-- **Origin:** change `team-adapters`, finding F-42 (emergent; source C-08, C-12, C-13, C-14, C-17), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-42 (emergent; source C-08, C-12, C-13, C-14, C-17), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** The orchestrator's "Applies in" column, the management-adapters "Used by" column, the per-phase "Rules:" lines and README "Key rules" drift from what the skills actually cite; three notations for a status change and three spellings of the settings command. Generate them from citations and lint them (complements BL-10).
 - **Status:** open
 
 ## BL-40 — Settings nudge and skills for Karvey repos that keep specs under `spec/` instead of `docs/spec/`
-- **Origin:** change `team-adapters`, finding F-45 (emergent; source I-05), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-45 (emergent; source I-05), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** `paautin-newcapital` and `onnet_ams` keep changes under `spec/changes/`; the hook looks only for `docs/spec/`. Either detect `spec/project.json` / `spec/changes/*/spec.json` or document `docs/spec/` as required and list the repos that must move.
 - **Status:** open
 
 ## BL-41 — Statusline: keep the rotate warning visible on narrow terminals; recommend the copy-to-~/.claude install path
-- **Origin:** change `team-adapters`, finding F-46 (emergent; source I-08), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-46 (emergent; source I-08), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** The reset suffix made the line 34 characters longer (199 -> 233) and pushed "TIME TO ROTATE" from column 124 to 158, the part cut first on narrow terminals. Put the warning first or shorten the suffix; the README install path also pins `<version>`.
 - **Status:** open
 
 ## BL-42 — Method page: alias table for the 12 anchors renamed after 3.10.0
-- **Origin:** change `team-adapters`, finding F-47 (emergent; source I-09), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-47 (emergent; source I-09), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** 12 of the 59 ids published in 3.10.0 (`organigrama`, `inicio`, `como`, `instalar`, `iteracion`, `reglas`, `versiones`, ...) no longer resolve; no file links to them. Add an alias table in `mapHash` or note the rename in the CHANGELOG.
 - **Status:** open
 
 ## BL-43 — Notification deduplication: run id + timestamp in the payload; notify QA on first run and verdict changes
-- **Origin:** change `team-adapters`, finding F-48 (emergent; source N-13), retroactive QA on 2026-09-23 (`REVISION_PR_17-19_20260923.md`).
+- **Origin:** change `team-adapters`, finding F-48 (emergent; source N-13), retroactive QA on 2026-09-23 (`docs/spec/changes/team-adapters/qa/REVISION_PR_17-19_20260923.md`).
 - **Why:** Each micro-loop run and each deploy retry posts the full summary again; a noisy channel gets muted. Add `run`/`iteration` and `ts` to the payload; notify `qa` only on the first run and on verdict changes, or by option (`events: ["qa:verdict"]`).
+- **Status:** open
+
+## BL-44 — Cross-repo decision refs (`D-12@{ops-repo}`) rejected by spec.schema.json
+- **Origin:** change `wave1-hardening`, finding F-26 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** `spec.schema.json` accepts only `^[DC]-\d+$` in `decisions`, while `rules/multi-agent.md` §2 prescribes cross-repo references as `"D-12@{ops-repo}"`: a decision cited the way the rule says fails validation. The karvey-init example now uses `"D-NN"`; the schema pattern or the rule must change. Also cosmetic: `karvey-state.py next` prints the blocker line twice. (E1.F12.T3)
+- **Status:** open
+
+## BL-45 — Time-entry / worklog operation in management-adapters.md
+- **Origin:** change `wave1-hardening`, finding F-27 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** `rules/management-adapters.md` has no time-entry / worklog operation, so karvey-impl can only say "record the actual as a time entry where the tool has one, else the PLAN.md actual columns" — prose, not an adapter call (REQ-W1-042). The adapter should list a `log_time` operation per tool (ClickUp time entry, Jira worklog, …) with `none` for tools that have none. (E1.F12.T5)
+- **Status:** open
+
+## BL-46 — `approvals.deploy`: a write path or drop the key
+- **Origin:** change `wave1-hardening`, finding F-28 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** `approvals.deploy` has no write path: Wave 1 does not use it as a precondition (state-machine.json), so the rewritten karvey-deploy no longer records it. Architecture should say whether deploy ever runs `approve {id} deploy`, or drop the key. (E1.F12.T6)
+- **Status:** open
+
+## BL-47 — Where the prod OK D-NN is written during deploy (D-03 vs a commit on a branch)
+- **Origin:** change `wave1-hardening`, finding F-29 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** D-03 puts the prod OK "in the decision log", but writing `decisions.md` during deploy is a commit on some branch. The rewritten deploy keeps the D-NN text in the PR body and archive writes it into `decisions.md` on `chore/archive-{id}`; D-03 / `deploy-workflow.md` should state that order. (E1.F12.T6)
+- **Status:** open
+
+## BL-48 — Release ledger is clone-local: `advance deployed` / `--write-spec` need the same clone
+- **Origin:** change `wave1-hardening`, finding F-30 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** The release ledger lives under the local `<git-common-dir>/karvey/`, so `advance {id} deployed` and `approve {id} prod --write-spec` at archive work only in the clone where deploy recorded it. `approve --write-spec` can fall back to a D-NN / PR URL; `advance deployed` has no fallback and requires the ledger. Needs a decision (e.g. `advance deployed --ref D-NN --pipeline-run URL` accepted when the ledger is absent). (E1.F12.T6)
+- **Status:** open
+
+## BL-49 — karvey-import cannot resume at the furthest phase the content supports
+- **Origin:** change `wave1-hardening`, finding F-31 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** karvey-import can no longer resume "at the furthest phase the content supports": `karvey-state.py advance` refuses to pass an unapproved gate and imported gates are unapproved by design, so an import resumes at `requirements` and walks the gates in order. Either accept that (current text) or add an import path that records the imported artifacts as `generated` and asks the human per gate. (E1.F12.T7)
+- **Status:** open
+
+## BL-50 — Per-period decision logs vs the single `docs/spec/decisions.md` path (L-30)
+- **Origin:** change `wave1-hardening`, finding F-32 (spec-gap, low), deferred to Wave 2 by D-17 («Sí, todas (Recomendado)»).
+- **Why:** One decision-log path (L-30): karvey-decisions described one file per period under `{ops_repo}/decisions/`, multi-agent.md named `docs/decisiones.md`; both now say `{ops_repo}/docs/spec/decisions.md` (the shape this repo uses). A project keeping per-period files needs a migration note; architecture §8 does not say which shape wins. (E1.F12.T7)
+- **Status:** open
+
+## BL-51 — Project upgrade plan after each plugin update (D-20)
+- **Origin:** owner request 2026-09-25 (D-20); the statusline stable-launcher item (README suggests a versioned plugin path for the statusline, which goes stale on the next update) folds in.
+- **Why:** updating the plugin never brings an existing project up to the new method (legacy shapes, copied hook shims, versioned statusline path, new standards). Routed to change `project-upgrade` (REQ-UP-001..032).
+- **Status:** in change `project-upgrade`
+
+## BL-52 — `clickup.feature_ids` keyed by natural key, like `task_ids`
+- **Origin:** change `wave1-hardening`, finding F-54 (spec-gap, low), seen during the E1.F17.T3 manual scripts
+  (`find-or-create`, `missing-status-map`); not an Expected line of any script, so not fixed in Wave 1.
+- **Why:** `spec.schema.json` types `clickup.feature_ids` as an array while `task_ids` is a map keyed by natural key, and
+  `management-adapters.md` stores every tracker id by its natural key for find-or-create. With an array a Feature id
+  loses its key `E{n}.F{n}`; an agent that wrote the keyed form had to rewrite it as an array to pass `validate`.
+  Decide the shape: a keyed map `{"E1.F1": "<id>"}`, with the array kept as a legacy warning and migrated by
+  `validate --fix`.
+- **Scope:** schema, `validate --fix` migration, the find-or-create text in `management-adapters.md` / `karvey-tasks`.
+- **Status:** routed to change `wave2-structural`
+
+## BL-53 — Text cleanup after wave1: method page hooks section, stale rule/skill sentences, footers, env vars in hooks/README, repo-specific ids in method text
+- **Origin:** change `wave1-hardening`, QA finding F-87, F-88 (spec-gap (deferred)), deferred: out of the fix scope of the QA micro-loop.
+- **Why:** Text out of date with the code: `docs/karvey.html` hooks section still describes the 3.11 model (settings.json, `--override`, no prod-gate/protect-paths/approval hook/subagent-prompt) and fixed token thresholds; `karvey-checkpoint` says a committed `state.json` costs a drift line (BUG-22 says not); `multi-agent.md` says expiring markers belong to the user's hooks; half-fixed LICENSE footers; no pending-sync row in the enforcement switches table; §3.5 wording on main/master; `karvey-guard` shim text; `KARVEY_HOOK_SELFTEST` / `KARVEY_DEFAULTS_JSON` undocumented in `hooks/README.md`. Page audit (D8) was static only: no design-spec for this change and no browser on the review host. Method text cites this repository's own decision/incident ids (D-01, D-02, D-10, D-16, BUG-25, H-10 …) in `rules/enforcement.md`, `hooks/README.md` and several skills; they mean nothing to an adopting team (company-neutral method).
+- **Status:** open
+
+## BL-54 — plan-gate write classes: cp/mv/dd/curl -o/git apply/rm -f
+- **Origin:** change `wave1-hardening`, QA finding F-78 (spec-gap (deferred)), deferred: out of the fix scope of the QA micro-loop.
+- **Why:** plan-gate (opt-in) does not class `cp`/`mv`/`dd of=`/`curl -o`/`git apply`/`rm -f` as writes; §3.4 lists only redirections and `tee`.
+- **Status:** open
+
+## BL-55 — prod-gate: no-python HEAD/@ on production; production set when no main/master ref exists
+- **Origin:** change `wave1-hardening`, QA finding F-80 (spec-gap (deferred)), deferred: out of the fix scope of the QA micro-loop.
+- **Why:** No-python prod-gate: `git push origin HEAD` / `@` on the production branch pass (HEAD counts as a refspec); with python, a project without `branch_flow` and with no `origin/master`/`origin/main` ref lets `git push origin master` through (the set holds only existing names).
+- **Status:** open
+
+## BL-56 — Approval vocabulary on affirmative statements; pending-sync and spec-write noise on legacy repos
+- **Origin:** change `wave1-hardening`, QA finding F-81 (spec-gap (deferred)), deferred: out of the fix scope of the QA micro-loop.
+- **Why:** Approval vocabulary: "Sí, eso es lo que falla en prod" records a prod marker (an affirmative statement, not an approval); pending-sync leaves an untracked `docs/spec/.graph-pending` in legacy repos even with `knowledge_sync: none`; the advisory spec-write validator exits 2 on every save of an archived legacy spec with undated approvals.
+- **Status:** open
+
+## BL-57 — Statusline outside the plugin and token-threshold env vars under percent thresholds
+- **Origin:** change `wave1-hardening`, QA finding F-82 (emergent), deferred: out of the fix scope of the QA micro-loop.
+- **Why:** Statusline: a copy of the script outside the plugin cannot find `defaults.json` and shows `rot?` without warnings (by design, BUG-08 family); `KARVEY_ROTATE_CTX_YELLOW/RED` token thresholds are ignored when the window size is known (D-18 percent thresholds) and the CHANGELOG does not say so.
+- **Status:** open
+
+## BL-58 — Hook latency over the §9 budget; no-python git-flow compatibility with the 3.11 template
+- **Origin:** change `wave1-hardening`, QA finding F-83, F-55 (spec-gap (deferred)), deferred: out of the fix scope of the QA micro-loop.
+- **Why:** Without python, an enabled git-flow blocks every `git commit`/`git push` (documented fail mode, §3.2) where the 3.11 template needed no python; 10 known projects enable it. Dispatcher latency 135–167 ms median, over the §9 p95 150 ms budget; `find_python` spends 30–50 ms starting a second interpreter for the version check. Benchmark (F-55): pre-bash median 128–148 ms against the 88 ms phase-1 baseline.
+- **Status:** open
+
+## BL-59 — spec-merge item format: blank lines inside an item, `### REQ-` headings in ADDED
+- **Origin:** change `wave1-hardening`, QA finding F-84 (spec-gap (deferred)), deferred: out of the fix scope of the QA micro-loop.
+- **Why:** spec-merge: `read_item` stops at the first blank line (a MODIFIED item with an indented Scenario after a blank line keeps the old scenario), and an ADDED section written as `### REQ-…` headings reports "already up to date" with exit 0; the delta item format is not specified in karvey-requirements.
+- **Status:** open
+
+## BL-60 — project.json ban line in every skill that dispatches subagents
+- **Origin:** change `wave1-hardening`, QA finding F-85 (spec-gap (deferred)), deferred: out of the fix scope of the QA micro-loop.
+- **Why:** Only karvey-impl carries the `project.json` ban line in the subagent prompts it composes; karvey-qa, -architecture, -requirements, -infra and -standards dispatch subagents without it, although `management-adapters.md` rule 5 requires it everywhere. The subagent-prompt guard backstops it.
+- **Status:** open
+
+## BL-61 — Factor duplicated helpers (now_iso, parse_dt, git) and the TTL literals into karvey_lib
+- **Origin:** change `wave1-hardening`, QA finding F-86 (emergent), deferred: out of the fix scope of the QA micro-loop.
+- **Why:** Duplicated helpers (`now_iso` ×3, `parse_dt` ×2 disagreeing on fractional seconds on Python 3.9/3.10, `git()` ×2, an unreachable inline copy of `profile_only_since` in the session hook's no-python branch) and the plan-marker TTL values written in three places.
+- **Status:** open
+
+## BL-62 — Bind the human's prod OK to the commit at the approval hook; close the check-to-run window
+- **Origin:** change `wave1-hardening`, QA re-run finding F-90 (spec-gap (deferred)); needs the owner's decision.
+- **Why:** `approve … prod --sha` records the commit the agent names; neither the marker nor its audit line ties the human's words to a commit, so the agent can pick any existing commit (D-35 says "the head shown when the owner approved"). Candidate: the approval hook stores the SHAs written in the human's message (or the local HEAD at prompt time) in the marker and its audit line, and `approve --sha` must match one of them. Related residual: a writer started in an earlier tool call can move the pushed ref in the milliseconds between the gate's check and the push; `gh pr merge --match-head-commit` or a push by explicit SHA closes it.
+- **Status:** open
+
+## BL-63 — A reopen from `deploying` (D-36 in the documented flow)
+- **Origin:** change `wave1-hardening`, QA re-run finding F-91 (spec-gap (deferred)).
+- **Why:** The deploy skill records the prod approval in `deploying`, where `reopen` is refused ("allowed up to qa"), so D-36 only supersedes approvals recorded earlier. The SHA binding and the 24 h expiry limit the damage (a rework is a new commit and needs a new OK). Decide whether a spec-gap found in `deploying` reopens (and supersedes), or whether `approve prod` is restricted to `deploying` and documented as such.
 - **Status:** open

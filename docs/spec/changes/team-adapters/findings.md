@@ -1,7 +1,7 @@
 # Findings: team-adapters
 
 Retroactive QA, 2026-09-23, range `ffb6df9..e3bc6f3` (PRs #17-#19, 3.10.0 -> 3.11.1). Review document:
-`REVISION_PR_17-19_20260923.md` (repo root).
+`qa/REVISION_PR_17-19_20260923.md` (in this change; moved from the repo root by wave1-hardening E1.F12.T12).
 
 Source ids: `S-NN` = D1 security, `E-NN` = D2 code errors, `C-NN` = D3 consistency, `I-NN` = D4 impact,
 `N-NN` = D7 second opinion (intra-model fallback), `D6` = versioning (reviewed by the orchestrator).

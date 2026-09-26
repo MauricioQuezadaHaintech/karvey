@@ -1,0 +1,33 @@
+{
+  "project": "…",
+  "git_platform": "azure_devops",
+  "cloud": {
+    "provider": "azure"
+  },
+  "iac_tool": "bicep",
+  "knowledge_sync": "graphify",
+  "repos": [
+    "repo-a",
+    "repo-b"
+  ],
+  "spec_repo": "repo-a",
+  "branch_flow": {
+    "integration": "dev",
+    "production": "master",
+    "feature_prefix": "feature/"
+  },
+  "enforcement": {
+    "git_flow_hook": true,
+    "plan_gate_hook": false
+  },
+  "notes": "…",
+  "notifications": {
+    "channel": "google_chat",
+    "target": "spaces/AAAAfixture",
+    "via": "cli",
+    "events": [
+      "qa",
+      "deploy"
+    ]
+  }
+}

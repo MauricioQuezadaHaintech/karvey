@@ -1,6 +1,6 @@
 ---
 name: karvey-standards
-description: Uplift engineering standards (golden paths) from the team's ACTUAL system into the standards repo, following the engineering-standards template. Discovers real patterns per layer, drafts db/backend/frontend standards, and is re-runnable to refresh them. Triggers include "karvey standards", "levantamiento de estándares", "engineering standards", "golden path", "extraer estándares", "standards uplift", "definir cómo se hace un SP/servicio/componente", "actualizar estándares".
+description: Karvey support — golden-path standards per layer drawn from the team's real system into the standards repo; re-runnable. Triggers include "karvey standards", "levantamiento de estándares", "golden path", "standards uplift".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: [<layer>] [--bootstrap | --refresh] [--repo <git-url>] [-y]
 ---
@@ -12,7 +12,7 @@ argument-hint: [<layer>] [--bootstrap | --refresh] [--repo <git-url>] [-y]
 Populate and maintain the **engineering standards** (`standards/{layer}.md`) by reading the team's
 **real codebase**, not by inventing them. This is the skill the public method ships so that each team
 that installs Karvey can **lift its own standards** into the structure defined by
-`karvey/rules/engineering-standards.md`, and keep them fresh over time.
+`../karvey/rules/engineering-standards.md`, and keep them fresh over time.
 
 > **Two planes — read this first.** The Karvey **method** (this plugin) is generic and public; it MUST
 > NOT contain any team's concrete standards. The **standards themselves** are the team's data and live in
@@ -37,7 +37,7 @@ Resolve **where standards live and will be written**:
   org repo (e.g. Azure DevOps).
 
 If `standards` is not configured, ask the user where standards should live (local vs git repo) and write it
-back to `project.json` per `rules/project-config.md`. **Never** target the public plugin repo.
+back to `project.json` per `../karvey/rules/project-config.md`. **Never** target the public plugin repo.
 
 ### Step 2 — Decide scope (which layers/targets)
 
@@ -58,7 +58,7 @@ Also read each repo's `CLAUDE.md` / `CONTRIBUTING.md` / `README.md` / steering d
 
 ### Step 4 — Draft each `standards/{layer}.md`
 
-Follow the **fixed template** in `karvey/rules/engineering-standards.md` exactly:
+Follow the **fixed template** in `../karvey/rules/engineering-standards.md` exactly:
 `Status` · `Applies to targets`/`Repos` · `Source of truth` · `Golden path` (with real example) · `MUST` ·
 `MUST NOT` · `Gray zones` (decisions that must trigger design-mode questions) · `Migration` (if `migrating`).
 
@@ -83,8 +83,8 @@ In the resolved standards working copy (Step 1):
 - Write/update each `standards/{layer}.md`.
 - Update `standards/_index.md`: layer → file, maturity (`draft`/`active`), `applies-to` targets/repos, last-uplift date.
 - Update `project.json:standards.by_layer` if files were added.
-- **Git**: if the standards repo is versioned, work on a feature branch (respect `rules/deploy-workflow.md`),
-  commit with human + AI traceability (`rules/changelog-policy.md`). **Do not push without the user's OK.**
+- **Git**: if the standards repo is versioned, work on a feature branch (respect `../karvey/rules/deploy-workflow.md`),
+  commit with human + AI traceability (`../karvey/rules/changelog-policy.md`). **Do not push without the user's OK.**
 - **Never** write any of this into the public plugin repo.
 
 ### Step 7 — Output
@@ -108,8 +108,8 @@ Refresh anytime with: /karvey-standards --refresh
 - **Feeds** `karvey-architecture` (Step 4B gate) and `karvey-impl` (Step 4) — they read what this skill writes.
 - **Closes the loop** with `deviations.md`: at `--refresh`, review recurring deviations and promote the ones
   that should become the new norm into the standard (see `engineering-standards.md`).
-- **Not a pipeline phase**: it does not advance `spec.json:phase` (see `rules/support-skills.md`).
+- **Not a pipeline phase**: it does not advance `spec.json:phase` (see `../karvey/rules/support-skills.md`).
 - `karvey-init` may invoke this on first project setup to bootstrap standards for the declared `targets`.
 
 ---
-*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+*Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
