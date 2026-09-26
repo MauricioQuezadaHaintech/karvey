@@ -961,6 +961,44 @@ class L33(LintCase):
         self.assertFails("L-33", "table row BL-02")
 
 
+class L33Released(LintCase):
+    """@req REQ-W2-071 — a duplicate newer than the release line is an error."""
+
+    def setUp(self):
+        super().setUp()
+        import _gitrepo as g
+        g.isolate_git()
+        r = self.t.root
+        g.init(r)
+        g.commit_all(r, "fixture")
+        g.with_origin(r)
+
+    def test_duplicate_above_release_line_is_an_error(self):
+        text = self.t.read("docs/spec/decisions.md")
+        import re as _re
+        top = max(int(x) for x in _re.findall(r"D-(\d+)", text))
+        self.t.append("docs/spec/decisions.md", "\n## D-%02d — new\n\n## D-%02d — new again\n" % (top + 1, top + 1))
+        fs = self.assertFails("L-33", "newer than the release line")
+        self.assertIn("error", {f["severity"] for f in fs})
+
+    def test_old_duplicate_stays_a_warning(self):
+        self.t.append("docs/spec/decisions.md", "\n## D-02 — Allocated twice\n")
+        fs = self.assertFails("L-33", "duplicate heading D-02")
+        self.assertEqual({f["severity"] for f in fs}, {"warning"})
+
+
+class L45(LintCase):
+    """@req REQ-W2-071 — no bounded Epic range."""
+
+    def test_pass(self):
+        self.assertPasses("L-45")
+
+    def test_epic_range_in_a_skill_fails(self):
+        f = SKILLS + "/karvey-init/SKILL.md"
+        self.t.append(f, "\nEpic ids run from E{1..99}.\n")
+        self.assertFails("L-45", "E{1..99}", file=f)
+
+
 class L34(LintCase):
     def test_pass(self):
         self.assertPasses("L-34")

@@ -1714,11 +1714,38 @@ ID_HEADING_RE = re.compile(r"^#{1,6}\s+((?:D|C|BUG|BL)-\d+)\b")
 ID_ROW_RE = re.compile(r"^\|\s*((?:D|C|BUG|BL)-\d+)\s*\|")
 
 
-@check("L-33", "Duplicate D-NN, BUG-NN or BL-NN headings (advisory; §5 edge case)", reqs=(), severity="warning")
+def _released_floor(ctx, rel):
+    """``{kind: max number}`` of the IDs in ``rel`` on ``origin/{production}``, or None when that line is not
+    readable (no remote-tracking ref, not a git repository)."""
+    import subprocess
+    pj_data = ctx.json(ctx.root / "docs/spec/project.json")
+    bf = pj_data.get("branch_flow") if isinstance(pj_data, dict) and isinstance(pj_data.get("branch_flow"), dict) else {}
+    prod = bf.get("production") if isinstance(bf.get("production"), str) else "main"
+    if not re.match(r"^[A-Za-z0-9._/-]{1,100}$", prod):
+        return None
+    try:
+        cp = subprocess.run(["git", "--no-pager", "show", "origin/%s:%s" % (prod, rel)], cwd=str(ctx.root),
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if cp.returncode != 0:
+        return None
+    floor = {}
+    for m in re.finditer(r"\b(D|C|BUG|BL)-(\d+)\b", cp.stdout.decode("utf-8", "replace")):
+        floor[m.group(1)] = max(floor.get(m.group(1), 0), int(m.group(2)))
+    return floor
+
+
+@check("L-33", "Duplicate D-NN, BUG-NN or BL-NN headings: an error for an ID above what origin/{production} holds "
+               "(created after the release; the ID tool should have prevented it), a warning for older ones",
+       reqs=("W2-071",), severity="warning")
 def l33_duplicate_ids(ctx):
     for rel in ("docs/spec/decisions.md", "docs/bugs_dev_testing.md", "docs/spec/backlog.md",
                 "docs/spec/incidents-index.md"):
         path = ctx.root / rel
+        if not path.is_file():
+            continue
+        floor = None
         for kind, rx in (("heading", ID_HEADING_RE), ("table row", ID_ROW_RE)):
             seen = {}
             for n, line in enumerate(ctx.lines(path), 1):
@@ -1726,10 +1753,34 @@ def l33_duplicate_ids(ctx):
                 if not m:
                     continue
                 if m.group(1) in seen:
-                    yield (path, n, "duplicate %s %s (first at line %d): two branches allocated the same number?"
-                           % (kind, m.group(1), seen[m.group(1)]))
+                    if floor is None:
+                        floor = _released_floor(ctx, rel) or {}
+                    k, num = m.group(1).split("-")
+                    new = k in floor and int(num) > floor[k]
+                    msg = "duplicate %s %s (first at line %d): two branches allocated the same number?" % (
+                        kind, m.group(1), seen[m.group(1)])
+                    if new:
+                        yield (path, n, msg + " It is newer than the release line (up to %s-%d): take IDs from "
+                                              "karvey-id.py next %s" % (k, floor[k], k), "error")
+                    else:
+                        yield path, n, msg
                 else:
                     seen[m.group(1)] = n
+
+
+# --------------------------------------------------------------------------- L-45 (wave2-structural)
+EPIC_RANGE_RES = (re.compile(r"\bE\{\d+\.\.\d+\}"), re.compile(r"\bE\d+\s*\.\.\s*E?\d+\b"),
+                  re.compile(r"\bEpics?\b[^.\n]{0,40}?\b\d+\s*\.\.\s*\d+\b", re.I))
+
+
+@check("L-45", "No skill bounds Epic numbers to a fixed range (E{1..99}): IDs are unbounded (REQ-W2-071)",
+       reqs=("W2-071",))
+def l45_no_epic_range(ctx):
+    for name, path in ctx.skills().items():
+        for n, line in enumerate(ctx.lines(path), 1):
+            m = next((x for x in (r.search(line) for r in EPIC_RANGE_RES) if x), None)
+            if m:
+                yield path, n, "%s bounds Epic numbers (%s); Epic ids are unbounded" % (name, m.group(0))
 
 
 # --------------------------------------------------------------------------- L-34
