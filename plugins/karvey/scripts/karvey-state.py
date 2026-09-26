@@ -1455,6 +1455,52 @@ def _approve_prod_write_spec(args, root):
         args.change, source, rec.get("ref"))
 
 
+def _approve_prod_manifest(args, root, by, date, ref):
+    """``approve <change> prod --manifest``: the same human prod record for every change of the release
+    manifest (REQ-W2-047). Each change needs a valid prod-kind marker (its own scope or ``_project``); the
+    markers are consumed once, after every ledger write."""
+    from karvey_lib import manifest as mf
+    project, _ = pj.load_project_json(root)
+    _, _, production = pj.branch_flow(project or {})
+    base = args.base or "origin/%s" % (production or "main")
+    try:
+        man = mf.release_manifest(root, base, "HEAD")
+    except mf.ManifestError as exc:
+        raise Refused("cannot compute the release manifest (%s)" % exc, code="state.manifest")
+    ids = [c["id"] for c in man["changes"]]
+    if args.change not in ids:
+        ids.append(args.change)
+    markers, missing = {}, []
+    for cid in ids:
+        marker, scope, reasons = approval.find_valid(root, cid, kinds=("prod",), ttl_min=reviewed_ttl(root))
+        if marker is None:
+            missing.append(cid)
+        else:
+            markers[cid] = (marker, scope)
+    if missing:
+        raise Refused("production approval needs a prod-kind marker (the human's own words, D-10) covering every "
+                      "change of the manifest; none is valid for %s" % ", ".join(missing),
+                      code="state.no_prod_marker", result={"missing": missing, "manifest": ids})
+    written = []
+    for cid in ids:
+        marker, scope = markers[cid]
+        approval.record_prod(root, cid, {"by": by, "role": "human", "date": date, "ref": ref,
+                                         "evidence": approval.evidence(marker, scope)})
+        written.append(cid)
+    consumed = []
+    for scope in sorted({s for _, s in markers.values()}):
+        try:
+            if approval.consume(root, scope):
+                consumed.append(scope)
+        except (approval.ApprovalError, atomicio.AtomicIOError, OSError):
+            pass
+    res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "manifest": written,
+           "unmapped": len(man["unmapped"]), "consumed": consumed}
+    return kl.EXIT_OK, res, [], [], "prod approval recorded in the release ledger for %d change(s) of the " \
+        "manifest (%s), ref %s; marker(s) consumed: %s" % (len(written), ", ".join(written), ref,
+                                                            ", ".join(consumed) or "none")
+
+
 def cmd_approve(args, root):
     key = "prod" if args.phase in ("prod", "deployed") else _key_of(args.phase)
     if key is None:
@@ -1476,6 +1522,8 @@ def cmd_approve(args, root):
             raise Refused("production approval is never delegated", code="state.delegated")
         if not PROD_REF.match(ref):
             raise Refused("prod --ref must be a D-NN or a PR approval URL (got %r)" % ref, code="state.ref")
+        if getattr(args, "manifest", False):
+            return _approve_prod_manifest(args, root, by, date, ref)
         marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root))
         if marker is None:
             raise Refused("production approval needs a prod-kind approval marker: the human's own message must "
@@ -2012,6 +2060,9 @@ def build_parser():
     apv.add_argument("--ref")
     apv.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
     apv.add_argument("--write-spec", action="store_true", help="prod only: copy the ledger/D-NN approval into spec.json")
+    apv.add_argument("--manifest", action="store_true", help="prod only: record the approval for every change of "
+                     "the release manifest (origin/{production}..HEAD)")
+    apv.add_argument("--base", help="prod --manifest: the manifest base (default origin/{production})")
     ag = sub.add_parser("approve-gate", parents=[common], help="approve every phase a merged gate covers (one answer)")
     ag.add_argument("change")
     ag.add_argument("gate", choices=list(GATES))

@@ -1111,9 +1111,76 @@ def _evaluate_candidate(ctx, c, deadline):
         d = _pg_block(cid, ",".join(res.get("missing") or ["?"]), (res.get("reason") or "no production approval") + note)
         d.stdout = warn
         return d
+    # wave2 §1.10 C-11: the release manifest, after the Wave 1 allow decision
+    mblock, mlines = manifest_verdict(ctx, root, wc, base, head, cid, deadline)
+    if mblock is not None:
+        mblock.stdout = warn + mblock.stdout
+        return mblock
     rec = {"change": cid, "approver": res.get("by"), "ref": res.get("ref"), "branch": base, "reason": "approved"}
     return Decision.allow(stdout=warn + ["[karvey] prod-gate ALLOW change=%s by=%s ref=%s"
-                                         % (cid, res.get("by"), res.get("ref"))], record=rec, audit=True)
+                                         % (cid, res.get("by"), res.get("ref"))] + mlines, record=rec, audit=True)
+
+
+def manifest_mode(ctx, root, wc):
+    """``release.manifest``: the stricter of the working copy and the reviewed line (3.13 default ``warn``)."""
+    from . import modes
+    levels = modes.levels_of("release.manifest")
+    got = [modes.resolve(root, "release.manifest", project=wc or {})["mode"]]
+    rev, status = project_reviewed(ctx, root)
+    if status == "ok" and isinstance(rev, dict):
+        got.append(modes.resolve(root, "release.manifest", project=rev)["mode"])
+    return max(got, key=levels.index)
+
+
+def _manifest_head(ctx, root, head):
+    for ref in (head, "origin/%s" % head if head else None):
+        if ref and pj.git(["rev-parse", "--verify", "--quiet", ref + "^{commit}"], str(root))[0] == 0:
+            return ref
+    return None
+
+
+def manifest_verdict(ctx, root, wc, base, head, cid, deadline):
+    """``(block Decision | None, stdout lines)``: warn → allow + a line; blocking → block on a non-pass or
+    not computable manifest, and every manifest change must pass ``check_prod`` (REQ-W2-046, 047)."""
+    from . import manifest as mf
+    mode = manifest_mode(ctx, root, wc)
+    if mode not in ("warn", "blocking"):
+        return None, []
+    man, why = None, None
+    href = _manifest_head(ctx, root, head)
+    if href is None:
+        why = "head %s not found locally" % (head or "?")
+    elif time.monotonic() > deadline:
+        why = "time budget spent"
+    else:
+        try:
+            man = mf.release_manifest(root, "origin/%s" % base, href, mode=mode)
+        except mf.ManifestError as exc:
+            why = str(exc)[:160]
+    if man is None:
+        if mode == "blocking":
+            return _pg_block(cid, "manifest", "cannot verify the release manifest (%s)" % why), []
+        return None, ["[karvey] prod-gate MANIFEST not evaluated (%s)" % why]
+    unapproved = []
+    tool = state_tool()
+    for c in man["changes"]:
+        if c["id"] == cid:
+            continue
+        try:
+            if not tool.check_prod(root, c["id"])["ok"]:
+                unapproved.append(c["id"])
+        except Exception:
+            unapproved.append(c["id"])
+    without_qa = [c["id"] for c in man["changes"] if c["qa"] not in ("approved", "lane-skipped")]
+    if man["verdict"] == "pass" and not (mode == "blocking" and unapproved):
+        return None, []
+    line = "unmapped=%d without-qa=%s" % (len(man["unmapped"]), ",".join(without_qa) or "none")
+    if mode == "blocking":
+        detail = "; ".join(mf.problems_of(man) + ["%s: no human prod approval" % x for x in unapproved])
+        return _pg_block(cid, "manifest", "release manifest %s (%s): %s" % (
+            "fails" if man["verdict"] != "pass" else "carries unapproved changes", line, detail)), []
+    extra = (" without-prod-approval=%s" % ",".join(unapproved)) if unapproved else ""
+    return None, ["[karvey] prod-gate MANIFEST WARNING: %s%s" % (line, extra)]
 
 
 def prod_gate_enabled(ctx):

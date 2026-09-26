@@ -1,6 +1,6 @@
 """Merged human gates: approve-gate, the imported marker, gate mode (architecture §1.4, §1.8 of wave2-structural).
 
-@req REQ-W2-034 REQ-W2-036 REQ-W2-039 REQ-W2-080
+@req REQ-W2-034 REQ-W2-036 REQ-W2-039 REQ-W2-080 REQ-W2-047
 """
 import json
 import os
@@ -218,6 +218,55 @@ class Mode(Base):
         from _state import state
         self.assertEqual(state.gate_mode(self.root, project={}, version="4.0.0"), ("merged", "default 4.0"))
         self.assertEqual(state.gate_mode(self.root, project={}, version="3.13.0"), ("granular", "default 3.13"))
+
+
+class ProdManifest(Base):
+    """@req REQ-W2-047 — approve prod --manifest: every manifest change, one marker consumed once."""
+
+    def setUp(self):
+        super().setUp()
+        for cid in ("feat-a", "feat-c"):
+            g.write(self.root, "docs/spec/changes/%s/spec.json" % cid, {
+                "change_id": cid, "phase": "deploying", "lane": "standard",
+                "phase_history": hist("init", "deploying")})
+        g.write(self.root, "docs/spec/project.json", PROJECT)
+        (self.root / "docs/spec/decisions.md").write_text("## D-8 — prod OK\n")
+        g.commit_all(self.root, "base")
+        g.with_origin(self.root)
+        g.run(["checkout", "-q", "-b", "feature/feat-a"], self.root)
+        for cid in ("feat-a", "feat-c"):
+            g.write(self.root, "src/%s.py" % cid, "x\n")
+            g.commit_all(self.root, "feat: %s\n\nKarvey-Change: %s" % (cid, cid))
+        self.f = self.root / "docs/spec/changes/feat-a/spec.json"
+
+    def approve(self):
+        return self.st("approve", "feat-a", "prod", "--manifest", "--by", "owner", "--role", "human", "--ref", "D-8")
+
+    def test_project_marker_records_both_and_is_consumed_once(self):
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        c, env = self.approve()
+        self.assertEqual(c, 0, env)
+        self.assertEqual(env["result"]["manifest"], ["feat-a", "feat-c"])
+        for cid in ("feat-a", "feat-c"):
+            led, _ = ap.read_ledger(self.root, cid)
+            self.assertEqual((led["prod"]["by"], led["prod"]["ref"]), ("owner", "D-8"))
+        self.assertEqual(env["result"]["consumed"], ["_project"])
+        m, _ = ap.read_marker(self.root, "_project")
+        self.assertIsNotNone(m["consumed_at"])
+        self.assertNotIn("prod", self.read().get("approvals", {}))  # D-03
+
+    def test_marker_for_one_change_only_refused_and_nothing_written(self):
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
+        c, env = self.approve()
+        self.assertEqual(c, 3, env)
+        self.assertIn("feat-c", env["errors"][0]["message"])
+        self.assertIsNone(ap.read_ledger(self.root, "feat-a")[0])
+        self.assertIsNone(ap.read_marker(self.root, "feat-a")[0]["consumed_at"])
+
+    def test_auto_refused(self):
+        c, env = self.st("approve", "feat-a", "prod", "--manifest", "--by", "a", "--role", "auto", "--ref", "D-8")
+        self.assertEqual(c, 3)
+        self.assertIn("never automatic", env["errors"][0]["message"])
 
 
 if __name__ == "__main__":
