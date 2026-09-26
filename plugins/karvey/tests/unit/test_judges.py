@@ -239,6 +239,30 @@ class Collect(unittest.TestCase):
         code, r = self.collect()
         self.assertEqual((r["runs"][0]["model"], r["runs"][0]["intra_model"]), ("model-a", True))
 
+    def test_REQ_W3_032_a_risk_finding_is_proposed_as_a_risk(self):
+        self.result("security.json", {"lens": "security", "verdict": "concerns", "findings": [
+            {"severity": "Medium", "kind": "risk", "text": "provider may throttle at peak", "cite": self.ARCH + ":2"}]})
+        code, r = self.collect()
+        self.assertEqual(code, 0)
+        row = [ln for ln in self.findings().splitlines() if ln.startswith("| F-")][0]
+        self.assertIn("| emergent |", row)
+        self.assertTrue(row.rstrip().endswith("| open | proposed risk |"), row)
+
+    def test_REQ_W3_032_register_edit_dropped_and_reported(self):
+        reg = self.root / "docs/spec/changes/feat-a/risks.md"
+        reg.write_text("| ID | Risk |\n|----|------|\n| R-1 | kept |\n")
+        before = reg.read_bytes()
+        self.result("security.json", {"lens": "security", "verdict": "concerns", "register_edit": {"R-1": "closed"},
+                                      "findings": [{"severity": "Low", "text": "x", "cite": self.ARCH + ":1",
+                                                    "risks": [{"id": "R-2"}]}]})
+        code, r = self.collect()
+        self.assertEqual(code, 0)
+        text = " ".join(r["dropped"])
+        self.assertIn("dropped: register edit (register_edit)", text)
+        self.assertIn("dropped: register edit (risks)", text)
+        self.assertEqual(reg.read_bytes(), before)
+
+
 
 class Acceptance(unittest.TestCase):
     """@req REQ-W2-033 — accepted / rejected judge rows."""

@@ -90,6 +90,12 @@ When a pinned input (`spec.json:inputs.design|design_system|copy|legal`, format 
 2. If the resolved tracker is `external`, also mirror it there (`mirror_backlog`, at the backlog location of `management-adapters.md`) and record the tracker id.
 3. Never absorb emergent scope into the current change silently. It is captured, not done now.
 
+#### 3d · `proposed risk` (a judge row) → the risk register
+A judge row whose `routed to` reads `proposed risk` is a risk, not a defect (`../karvey/rules/risks.md`). Ask the
+router: accepted → add a row `R-N` to `docs/spec/changes/{change-id}/risks.md` (create the register if absent) with an
+owner, a trigger and the finding id in the Risk text, state `open`; then `routed to` = `accepted:emergent R-N`.
+Not a risk → `rejected: {reason}`. The judge never writes the register; only this step does.
+
 ### Step 4 — Update findings status
 
 For each routed finding, set `status: routed` and fill `routed to` (BUG-NN / spec-delta req / BL-NN) in `findings.md`. A finding becomes `closed` only when its destination resolves it (incident `RESUELTO`, requirement re-approved, or backlog item acknowledged).

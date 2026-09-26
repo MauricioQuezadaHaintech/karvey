@@ -156,6 +156,9 @@ def build_inputs(root, change, phase, extras=(), project=None, diff_path=None, p
 VERDICTS = ("pass", "concerns", "fail")
 SEVERITIES = ("Critical", "High", "Medium", "Low")
 TYPES = ("bug", "spec-gap", "emergent")
+# a judge only proposes risks; any output field that targets the register is dropped and reported (REQ-W3-032)
+REGISTER_KEYS = ("risks", "register_edit")
+PROPOSED_RISK = "proposed risk"
 FINDINGS_HEAD = "| ID | Date | Phase | Origin | Type | Severity | Finding | Status | Routed to |"
 _FENCE = re.compile(r"```.*?(```|\Z)", re.S)
 _PATCH_LINE = re.compile(r"^(diff --git|@@|\+\+\+|---|[+-])", re.M)
@@ -325,14 +328,23 @@ def collect(root, change, phase, results, allowed, model=None, intra_model=None,
             lines.append("%s: not run (invalid output)" % lens)
             continue
         discarded, counts = 0, {}
+        dropped = [k for k in REGISTER_KEYS if k in r]
         for f in r.get("findings", []):
+            dropped += [k for k in REGISTER_KEYS if k in f]
             if not resolve_cite(root, f.get("cite"), allowed):
                 discarded += 1
                 continue
             sev = f["severity"]
             counts[sev] = counts.get(sev, 0) + 1
+            if f.get("kind") == "risk":  # a risk, not a defect: proposed for iterate to accept (REQ-W3-032)
+                kept.append({"lens": r["lens"], "severity": sev, "type": "emergent", "routed": PROPOSED_RISK,
+                             "text": sanitise(f["text"]), "cite": f["cite"]})
+                continue
             kept.append({"lens": r["lens"], "severity": sev, "type": f.get("type_guess") if f.get("type_guess") in TYPES
                          else "emergent", "text": sanitise(f["text"]), "cite": f["cite"]})
+        for k in sorted(set(dropped)):
+            lines.append("%s: dropped: register edit (%s) — judges propose risks, they never write the register"
+                         % (r["lens"], k))
         m = r.get("model") or model or "unknown"
         im = r.get("intra_model") if isinstance(r.get("intra_model"), bool) else bool(intra_model)
         c = cost(r.get("usage"), chars_in, len(raw), m, runtime_usage.get(r["lens"]))
@@ -363,8 +375,9 @@ def append_findings(path, phase, kept, day):
         fid = "F-%02d" % nxt
         nxt += 1
         ids.append(fid)
-        rows.append("| %s | %s | %s | judge:%s | %s | %s | %s (%s) | open | — |" % (
-            fid, day, phase, k["lens"], k["type"], k["severity"], k["text"], k["cite"].replace("|", "\\|")))
+        rows.append("| %s | %s | %s | judge:%s | %s | %s | %s (%s) | open | %s |" % (
+            fid, day, phase, k["lens"], k["type"], k["severity"], k["text"], k["cite"].replace("|", "\\|"),
+            k.get("routed") or "—"))
     if rows:
         lines = text.rstrip("\n").split("\n")
         last = max((i for i, ln in enumerate(lines) if ln.startswith("|")), default=len(lines) - 1)

@@ -107,7 +107,8 @@ def cmd_collect(args):
     lines += inp["notes"]
     lines.append("next: karvey-state.py judge-run %s %s --from %s" % (args.change, args.phase, out_path))
     res = {"change": args.change, "phase": args.phase, "runs": runs, "appended": ids, "discarded": discarded,
-           "runs_file": str(out_path), "notes": inp["notes"]}
+           "runs_file": str(out_path), "notes": inp["notes"],
+           "dropped": [ln for ln in lines if "dropped: register edit" in ln]}
     return kl.EXIT_OK, res, "\n".join(lines)
 
 

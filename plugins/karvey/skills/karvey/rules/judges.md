@@ -55,6 +55,7 @@ Return exactly one JSON object and nothing else:
  "findings": [{"severity": "Critical|High|Medium|Low", "type_guess": "bug|spec-gap|emergent",
                "text": "one finding, at most 300 characters", "cite": "path:line"}]}
 Every finding cites a line of one of the inputs; a finding without a citation is discarded.
+A finding that is a risk rather than a defect adds "kind": "risk"; never write or edit the risk register.
 ```
 <!-- /judge-template -->
 
@@ -70,6 +71,10 @@ Every finding cites a line of one of the inputs; a finding without a citation is
   runtime`, tokens exact); a `usage` the judge wrote itself is `agent-reported` and `estimated: true`; otherwise it is
   estimated over the prompt template and every closed input (characters ÷ 4 × `defaults.json:judge_price_table`,
   `source: estimate`, `estimated: true`).
+
+A finding with `"kind": "risk"` is kept as an `emergent` row with `Routed to: proposed risk`; iterate accepts it into
+the change's risk register (`risks.md`, rules `risks.md`). Any output field that targets the register (`risks`,
+`register_edit`) is dropped and reported (`dropped: register edit`); `collect` never writes `risks.md` (REQ-W3-032).
 
 Kept findings are appended to the change's `findings.md` as `open` rows with origin `judge:{lens}`, the phase,
 the type guess and the severity. The per-judge run records (lens, model, `intra_model`, verdict, counts, tokens,
