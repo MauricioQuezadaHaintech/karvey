@@ -258,5 +258,28 @@ class L71(LintCase):
         self.assertEqual(len(fs), 2)
 
 
+
+class L72(LintCase):
+    """@req REQ-W3-060 — example actors are placeholders or roles."""
+    RULE = "plugins/karvey/skills/karvey/rules/sample-actors.md"
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-72")
+
+    def test_placeholders_and_roles_pass(self):
+        self.t.write(self.RULE, "Executor: {name / role}\n\n`karvey-state.py approve x qa --by \"{name}\" --role human`\n"
+                                "\nOwner: tech lead\n\n| 2026-06-17 | detected | {human} / {AI model} | found |\n")
+        self.assertPasses("L-72")
+
+    def test_REQ_W3_060_a_person_as_executor_and_a_model_id_as_by_fail(self):
+        self.t.write(self.RULE, "Executor: Jane Doe\n\n`karvey-state.py approve x qa --by \"claude-x\" --role human`\n"
+                                "\n| 2026-06-17 | detected | J. Doe / a model | found |\n")
+        fs = self.assertFails("L-72", file=self.RULE)
+        self.assertEqual(len(fs), 3)
+        msgs = " ".join(f["message"] for f in fs)
+        self.assertIn("person's name ('Jane Doe')", msgs)
+        self.assertIn("model id ('claude-x')", msgs)
+
+
 if __name__ == "__main__":
     unittest.main()

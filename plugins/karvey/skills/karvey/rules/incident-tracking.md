@@ -40,9 +40,9 @@ A `bug`-type finding (see `iteration-loop.md`) is promoted to a `BUG-NN` here by
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
-| 2026-06-17 14:02 | DETECTADO | M. Quezada / Opus 4.8 | found in test UT-BD-03 |
-| 2026-06-17 14:30 | DIAGNOSTICADO | M. Quezada / Opus 4.8 | karvey-investigate: missing ISNULL guard |
-| 2026-06-17 15:10 | EN FIX | M. Quezada / Opus 4.8 | patch on feature/add-claim-filter |
+| 2026-06-17 14:02 | DETECTADO | {human} / {AI model} | found in test UT-BD-03 |
+| 2026-06-17 14:30 | DIAGNOSTICADO | {human} / {AI model} | karvey-investigate: missing ISNULL guard |
+| 2026-06-17 15:10 | EN FIX | {human} / {AI model} | patch on feature/add-claim-filter |
 ```
 
 ## State machine

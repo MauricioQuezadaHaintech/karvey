@@ -2446,6 +2446,54 @@ def l71_no_fixed_country_time(ctx):
                                 "environment's, ISO 8601 with offset" % m.group(0))
 
 
+# --------------------------------------------------------------------------- L-72 (wave3-optimization)
+ACTOR_FIELD_RE = re.compile(r"(?:--by[ =]|\bExecutor:|\bOwner:|\bApproved by:?|\"by\":|(?:^|[\s|-])by:)\**\s*"
+                            r"[\"'`]?([^\"'`,;|)\n]*)", re.I)
+ROLE_WORDS = {"owner", "the owner", "sponsor", "approver", "executor", "human", "tech lead", "product owner",
+              "security officer", "method owner", "team", "reviewer", "role", "architect", "developer", "operator",
+              "maintainer", "qa", "auto", "ceo-delegate", "agent", "the team", "the human", "data owner", "dba"}
+MODEL_ID_RE = re.compile(r"\b(?:claude|gpt|gemini|llama|mistral)-[\w.-]+", re.I)
+INITIAL_NAME_RE = re.compile(r"\b[A-Z]\.\s?[A-Z][a-z]{2,}\b")
+
+
+def _actor_ok(value):
+    v = value.strip().strip("*").strip()
+    if not v or v[0] in "{<$[-(…." or v.startswith("..."):
+        return True
+    low = v.lower()
+    first = re.split(r"\s+(?:/|·|—|-|\()", low)[0].strip()
+    return low in ROLE_WORDS or first in ROLE_WORDS or low.split(" (")[0] in ROLE_WORDS
+
+
+@check("L-72", "Example actors in skills and rules are placeholders or roles, never a person's name or a model id "
+               "(REQ-W3-060)", reqs=("W3-060",))
+def l72_example_actors(ctx):
+    files = [p for _, p in sorted(ctx.skills().items())] + sorted(ctx.rules_dir.rglob("*.md"))
+    seen = set()
+    for path in files:
+        if path in seen:
+            continue
+        seen.add(path)
+        for n, line in enumerate(ctx.lines(path), 1):
+            if "Part of the Karvey" in line or "Created by" in line:
+                continue  # the authorship footer is attribution, not an example actor
+            m = MODEL_ID_RE.search(line)
+            if m and ACTOR_FIELD_RE.search(line) and m.group(0).lower() in line.lower().split("by", 1)[-1].lower():
+                yield (path, n, "a model id (%r) as an example actor: a model is never the actor" % m.group(0))
+                continue
+            m = INITIAL_NAME_RE.search(line)
+            if m and line.lstrip().startswith("|"):
+                yield (path, n, "a person's name (%r) in an example row: use a role or {placeholder}" % m.group(0))
+                continue
+            for a in ACTOR_FIELD_RE.finditer(line):
+                val = a.group(1)
+                if MODEL_ID_RE.search(val):
+                    yield (path, n, "a model id (%r) as an example actor: a model is never the actor" % val.strip())
+                elif not _actor_ok(val) and re.match(r"^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b", val.strip()):
+                    yield (path, n, "a person's name (%r) as an example actor: use a role or {placeholder}"
+                           % val.strip()[:40])
+
+
 # --------------------------------------------------------------------------- L-65 (wave3-optimization)
 RISK_STATES = ("open", "mitigated", "accepted", "closed", "moved")
 
