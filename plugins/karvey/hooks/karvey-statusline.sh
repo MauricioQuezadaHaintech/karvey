@@ -161,6 +161,42 @@ if HOURS is not None and h >= HOURS:
     light = '🔴'
     why = f'{why} + hours' if why else 'hours'
 
+# --- cost capture for the effort record (wave3 §1.9, REQ-W3-015): no model turn, no repository write ---
+# The session's cumulative US$ (the runtime's own figure) goes, atomically, into the machine-local state dir
+# ({git-common-dir}/karvey/cost/{sha256(session_id)[:16]}.json). The statusline owns that file and rewrites it
+# whole; `karvey-state.py effort` keeps what it already charged in a separate file. The session id is hashed.
+def _capture():
+    usd_v = cost.get('total_cost_usd')
+    sid = d.get('session_id')
+    if not isinstance(usd_v, (int, float)) or isinstance(usd_v, bool) or not isinstance(sid, str) or not sid:
+        return
+    import hashlib, tempfile
+    lib = os.path.join(os.path.dirname(os.environ.get('KARVEY_DEFAULTS_JSON') or ''), os.pardir)
+    if not os.path.isdir(os.path.join(lib, 'karvey_lib')):
+        return
+    sys.path.insert(0, os.path.abspath(lib))
+    from karvey_lib import project as pj
+    root = pj.find_root(start=cwd)
+    if root is None:
+        return
+    cdir = pj.state_dir(root) / 'cost'
+    cdir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    rec = {'root_key': hashlib.sha256(os.path.realpath(str(root)).encode('utf-8')).hexdigest()[:16],
+           'usd': float(usd_v), 'transcript': tp or None,
+           'context_pct': round(pct, 1) if isinstance(pct, (int, float)) else None,
+           'context_tokens': int(ctx) if ctx else None,
+           'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds')}
+    dest = cdir / (hashlib.sha256(sid.encode('utf-8')).hexdigest()[:16] + '.json')
+    fd, tmpf = tempfile.mkstemp(dir=str(cdir), prefix='.cap-')
+    with os.fdopen(fd, 'w', encoding='utf-8') as fh:
+        json.dump(rec, fh, sort_keys=True)
+    os.replace(tmpf, str(dest))
+
+try:
+    _capture()
+except Exception:
+    pass   # a failed capture never costs the statusline (effort then reads n/a)
+
 left = f'{light} ctx {k(ctx)}'
 if pct is not None:
     left += f' ({pct:.0f}%)'

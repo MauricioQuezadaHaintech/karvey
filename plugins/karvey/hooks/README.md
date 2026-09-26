@@ -73,6 +73,13 @@ It runs outside the turn (no model tokens) and shows context, account limits wit
 | `KARVEY_ROTATE_CTX_YELLOW` · `KARVEY_ROTATE_CTX_RED` | `context_tokens` in `../scripts/karvey_lib/defaults.json` | token thresholds, used only when the window size is unknown |
 | `KARVEY_ROTATE_HOURS` | `rotation_hours` in `../scripts/karvey_lib/defaults.json` (D-06) | session hours before red |
 
+**Cost capture (effort record).** Inside a Karvey project, when the runtime passes `cost.total_cost_usd`, the
+statusline also writes `{root_key, usd, transcript, context_pct, context_tokens, at}` — atomically, mode 600 — to
+the machine-local state dir (`<git-common-dir>/karvey/cost/<sha256(session id)[:16]>.json`), never to the
+repository and without a model turn. `karvey-state.py effort` reads it when a phase closes; what it already charged
+lives in a separate file only that command writes, so a statusline rewrite never resets it. Without the statusline
+the effort record reads `n/a — statusline not installed`. <!-- guard-case: sl-cost-01-capture-written-outside-the-tree -->
+
 **Why a context threshold:** a percentage scales with the window (200k or 1M). A turn at 588k of context costs **7×** one at 80k, and rotating costs ~40k to
 re-read the handoff.
 

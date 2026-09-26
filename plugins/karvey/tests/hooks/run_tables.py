@@ -34,7 +34,9 @@ Statusline cases (``"event": "statusline"``) run ``hooks/karvey-statusline.sh`` 
 ``given.script_copy: true`` runs a copy of the script from the case's temp dir, where
 ``defaults.json`` cannot be found (the ``rot?`` case, REQ-W1-049).
 
-Assertions: the decision (exit 0 allow, 2 block), the stdout/stderr substrings, ``marker_created``
+Assertions: the decision (exit 0 allow, 2 block), the stdout/stderr substrings, ``marker_created``,
+``files_exist`` / ``files_absent`` / ``file_contains`` / ``file_not_contains`` and ``tree_clean`` (``git status
+--porcelain`` of the case's repo is empty after the run),
 and a duration below 1 s per case unless tagged ``network`` or given ``max_s``. Cases tagged
 ``nopy`` run a second time with ``PATH`` stripped of every python interpreter, which exercises the
 dispatcher's bash-only fail modes (§3.2).
@@ -78,7 +80,7 @@ REPO_KEYS = {"branch", "remote_branches", "project_json", "spec", "ledger", "mar
 EXPECT_KEYS = {"decision", "stdout_contains", "stderr_contains", "stdout_not_contains", "stderr_not_contains",
                "stdout_empty", "stderr_empty", "marker_created", "max_s", "marker", "files_exist",
                "files_absent", "file_contains", "context_contains", "context_not_contains", "context_max_bytes",
-               "structured"}
+               "structured", "file_not_contains", "tree_clean"}
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 SESSION = "00000000-0000-0000-0000-000000000000"
 SESSION_HOOK = PLUGIN_ROOT / "hooks" / "karvey-session-context.sh"
@@ -336,6 +338,20 @@ def assert_files(expect, t, common):
         for x in _as_list(sub):
             if text is None or t.s(x) not in text:
                 problems.append("%s lacks %r" % (t.s(f), x))
+    for f, sub in (expect.get("file_not_contains") or {}).items():
+        try:
+            text = Path(t.s(f)).read_text(encoding="utf-8")
+        except OSError:
+            text = ""
+        for x in _as_list(sub):
+            if t.s(x) in text:
+                problems.append("%s contains %r" % (t.s(f), x))
+    if expect.get("tree_clean"):
+        st = subprocess.run(["git", "-C", t.s("{{root}}"), "status", "--porcelain"], stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, timeout=30)
+        dirty = st.stdout.decode("utf-8", "replace").strip()
+        if st.returncode != 0 or dirty:
+            problems.append("the repository tree changed: %s" % (dirty or "git status failed"))
     return problems
 
 
