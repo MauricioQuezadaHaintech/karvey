@@ -220,5 +220,60 @@ class Compare(unittest.TestCase):
         self.assertEqual(rc, 4)
 
 
+BASELINE = "docs/spec/retros/context-size-4.0.0.json"
+
+
+def git(repo, *args):
+    return subprocess.run(["git", "-C", str(repo)] + list(args), capture_output=True, text=True, timeout=30,
+                          check=True).stdout
+
+
+class Order(unittest.TestCase):
+    """@req REQ-W3-002 — the baseline commit precedes every reorganisation commit of the change."""
+
+    @unittest.skipUnless((_path.REPO_ROOT / BASELINE).is_file(), "not this repository")
+    def test_REQ_W3_002_baseline_precedes_moves(self):
+        shallow = subprocess.run(["git", "-C", str(_path.REPO_ROOT), "rev-parse", "--is-shallow-repository"],
+                                 capture_output=True, text=True).stdout.strip()
+        if shallow == "true":
+            self.skipTest("shallow clone: no history to order")
+        rc, out, err = run("order", "--baseline", BASELINE, "--change", "wave3-optimization", "--root",
+                           str(_path.REPO_ROOT), "--json")
+        res = json.loads(out)["result"]
+        self.assertTrue(res["baseline_commit"], "the baseline is not committed")
+        self.assertEqual(rc, 0, res["message"])
+
+    def test_the_stored_baseline_is_reproducible_at_its_commit(self):
+        path = _path.REPO_ROOT / BASELINE
+        if not path.is_file():
+            self.skipTest("not this repository")
+        snap = json.loads(path.read_text(encoding="utf-8"))["result"]
+        self.assertEqual(snap["method_version"], "4.0.0")
+        self.assertTrue(snap["date"])
+
+    def test_a_move_before_the_baseline_is_reported(self):
+        tmp = Path(tempfile.mkdtemp(prefix="karvey-budget-o-"))
+        try:
+            git(tmp, "init", "-q")
+            git(tmp, "config", "user.email", "dev@example.org")
+            git(tmp, "config", "user.name", "Developer")
+            sk = tmp / "plugins" / "karvey" / "skills" / "karvey-x"
+            sk.mkdir(parents=True)
+            (sk / "SKILL.md").write_text("x\n", encoding="utf-8")
+            git(tmp, "add", "-A")
+            git(tmp, "commit", "-q", "-m", "seed")
+            git(tmp, "mv", "plugins/karvey/skills/karvey-x/SKILL.md", "plugins/karvey/skills/karvey-x/OLD.md")
+            git(tmp, "commit", "-q", "-m", "move\n\nKarvey-Change: demo")
+            (tmp / "docs" / "spec" / "retros").mkdir(parents=True)
+            (tmp / BASELINE).write_text("{}\n", encoding="utf-8")
+            git(tmp, "add", "-A")
+            git(tmp, "commit", "-q", "-m", "baseline\n\nKarvey-Change: demo")
+            rc, out, err = run("order", "--baseline", BASELINE, "--change", "demo", "--root", str(tmp))
+            self.assertEqual(rc, 1)
+            self.assertIn("baseline missing or taken after the reorganisation", err)
+        finally:
+            shutil.rmtree(str(tmp), ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

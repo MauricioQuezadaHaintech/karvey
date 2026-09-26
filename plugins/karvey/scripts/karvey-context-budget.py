@@ -4,6 +4,7 @@
     karvey-context-budget.py measure [--label L] [--date YYYY-MM-DD] [--plugin DIR] [--json]
     karvey-context-budget.py compare BASE.json [AFTER.json | --live] [--target-median 40] [--warn-growth 10]
                                      [--reasons FILE] [--plugin DIR] [--json]
+    karvey-context-budget.py order --baseline docs/spec/retros/context-size-4.0.0.json --change ID [--root DIR]
 
 ``measure`` prints one row per phase skill of ``schemas/state-machine.json`` plus the orchestrator: the skill's own
 size, the rules it cites directly and the transitive closure (``closure_min`` / ``closure_max``, see
@@ -19,6 +20,10 @@ reduction of ``closure_max`` bytes, the median, and every phase below the target
 (``--reasons`` JSON ``{skill: text}``, default ``schemas/contracts.json:reasons``) or ``unexplained``. Without
 ``--warn-growth`` it exits 1 when the median misses ``--target-median`` (the test-phase gate of REQ-W3-010). With
 ``--warn-growth N`` it is the CI step (REQ-W3-011): one ``::warning::`` line per phase grown more than N%, exit 0.
+
+``order`` checks REQ-W3-002 in git history: the commit that added the baseline precedes (is an ancestor of, and is
+not) every commit carrying ``Karvey-Change: ID`` that renames or deletes a skill or rule file, or adds a
+``skills/*/references/`` or ``rules/adapters/`` file; else ``baseline missing or taken after the reorganisation``.
 
 Exit: 0 · 1 findings (missing load file, median below target) · 2 usage · 4 snapshot not found. Stdlib only.
 """
@@ -302,6 +307,54 @@ def cmd_compare(args):
     return code
 
 
+# --------------------------------------------------------------------------- order (REQ-W3-002)
+MOVE_PATHSPECS = (":(glob)plugins/karvey/skills/*/references/**", ":(glob)plugins/karvey/skills/karvey/rules/adapters/**")
+ORDER_MESSAGE = "baseline missing or taken after the reorganisation"
+
+
+def _git(root, *args):
+    try:
+        cp = subprocess.run(["git", "-C", str(root)] + list(args), capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return 1, ""
+    return cp.returncode, cp.stdout.strip()
+
+
+def reorg_commits(root, change):
+    """Commits of ``change`` (by trailer) that move skill or rule text, oldest first."""
+    grep = ["--grep", "Karvey-Change: %s" % change, "--format=%H", "--reverse"]
+    shas = []
+    for extra in (["--diff-filter=RD", "--", "plugins/karvey/skills"], ["--diff-filter=A", "--"] + list(MOVE_PATHSPECS)):
+        rc, out = _git(root, "log", *(grep + extra))
+        if rc == 0:
+            shas.extend(x for x in out.splitlines() if x and x not in shas)
+    return shas
+
+
+def baseline_order(root, baseline, change):
+    """``{baseline_commit, reorg_commits, ok, message}`` for REQ-W3-002."""
+    rc, out = _git(root, "log", "--diff-filter=A", "--format=%H", "--", baseline)
+    base = out.splitlines()[-1] if rc == 0 and out else None
+    moves = reorg_commits(root, change)
+    late = []
+    for sha in moves:
+        if base is None or sha == base or _git(root, "merge-base", "--is-ancestor", base, sha)[0] != 0:
+            late.append(sha)
+    ok = not late and (base is not None or not moves)
+    return {"baseline": baseline, "baseline_commit": base, "reorg_commits": moves, "late": late, "ok": ok,
+            "message": None if ok else "%s (%s)" % (ORDER_MESSAGE, ", ".join(s[:10] for s in late) or "no baseline")}
+
+
+def cmd_order(args):
+    root = Path(args.root) if args.root else Path.cwd()
+    res = baseline_order(root, args.baseline, args.change)
+    errors = [] if res["ok"] else [kl.issue("budget.order", res["message"], file=args.baseline)]
+    code = kl.EXIT_OK if res["ok"] else kl.EXIT_FINDINGS
+    human = "baseline %s at %s precedes %d reorganisation commit(s)" % (
+        args.baseline, (res["baseline_commit"] or "none")[:10], len(res["reorg_commits"])) if res["ok"] else None
+    return kl.emit(kl.envelope(TOOL, code, res, errors), args.json, human)
+
+
 # --------------------------------------------------------------------------- cli
 class _Parser(argparse.ArgumentParser):
     def error(self, message):
@@ -328,6 +381,11 @@ def build_parser():
     c.add_argument("--reasons", help="JSON {skill: reason} (default: schemas/contracts.json:reasons)")
     c.add_argument("--plugin", help="plugin directory (default: this plugin)")
     c.add_argument("--json", action="store_true")
+    o = sub.add_parser("order", help="the baseline commit precedes every reorganisation commit (REQ-W3-002)")
+    o.add_argument("--baseline", required=True, help="repo-relative path of the baseline snapshot")
+    o.add_argument("--change", required=True)
+    o.add_argument("--root", help="repository root (default: cwd)")
+    o.add_argument("--json", action="store_true")
     return p
 
 
@@ -337,6 +395,8 @@ def main(argv=None):
         return cmd_measure(args)
     if args.cmd == "compare":
         return cmd_compare(args)
+    if args.cmd == "order":
+        return cmd_order(args)
     build_parser().print_usage(sys.stderr)
     return kl.EXIT_USAGE
 

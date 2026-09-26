@@ -1,0 +1,1118 @@
+{
+  "errors": [],
+  "exit": 0,
+  "ok": true,
+  "result": {
+    "date": "2026-09-26",
+    "measure": "closure_max bytes",
+    "method_version": "4.0.0",
+    "plugin_files_sha": "ffa639aa315b8cf4c2a9dbb6539920c82de5cc9fbeab71a8c60e69a5175d8102",
+    "rows": [
+      {
+        "closure_max": {
+          "bytes": 170975,
+          "tokens_est": 42744,
+          "tokens_quality": "estimated",
+          "words": 24447
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/ears-format.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/judges/architecture.md",
+          "skills/karvey/rules/judges/qa.md",
+          "skills/karvey/rules/judges/requirements.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/support-skills.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/team.md",
+          "skills/karvey/rules/verification.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 170975,
+          "tokens_est": 42744,
+          "tokens_quality": "estimated",
+          "words": 24447
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/ears-format.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/judges/architecture.md",
+          "skills/karvey/rules/judges/qa.md",
+          "skills/karvey/rules/judges/requirements.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/support-skills.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/team.md",
+          "skills/karvey/rules/verification.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 129735,
+          "tokens_est": 32434,
+          "tokens_quality": "estimated",
+          "words": 18758
+        },
+        "direct_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/ears-format.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/support-skills.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/team.md",
+          "skills/karvey/rules/verification.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 24578,
+          "tokens_est": 6145,
+          "tokens_quality": "estimated",
+          "words": 3037
+        },
+        "phases": [],
+        "skill": "karvey"
+      },
+      {
+        "closure_max": {
+          "bytes": 132127,
+          "tokens_est": 33032,
+          "tokens_quality": "estimated",
+          "words": 19256
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/judges/architecture.md",
+          "skills/karvey/rules/judges/qa.md",
+          "skills/karvey/rules/judges/requirements.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 132127,
+          "tokens_est": 33032,
+          "tokens_quality": "estimated",
+          "words": 19256
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/judges/architecture.md",
+          "skills/karvey/rules/judges/qa.md",
+          "skills/karvey/rules/judges/requirements.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 26402,
+          "tokens_est": 6601,
+          "tokens_quality": "estimated",
+          "words": 3943
+        },
+        "direct_files": [
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 15598,
+          "tokens_est": 3900,
+          "tokens_quality": "estimated",
+          "words": 2230
+        },
+        "phases": [
+          "architecture"
+        ],
+        "skill": "karvey-architecture"
+      },
+      {
+        "closure_max": {
+          "bytes": 95938,
+          "tokens_est": 23985,
+          "tokens_quality": "estimated",
+          "words": 13646
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 95938,
+          "tokens_est": 23985,
+          "tokens_quality": "estimated",
+          "words": 13646
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 46946,
+          "tokens_est": 11737,
+          "tokens_quality": "estimated",
+          "words": 6819
+        },
+        "direct_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/state-machine.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 7973,
+          "tokens_est": 1994,
+          "tokens_quality": "estimated",
+          "words": 998
+        },
+        "phases": [
+          "archived"
+        ],
+        "skill": "karvey-archive"
+      },
+      {
+        "closure_max": {
+          "bytes": 128318,
+          "tokens_est": 32080,
+          "tokens_quality": "estimated",
+          "words": 18523
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 128318,
+          "tokens_est": 32080,
+          "tokens_quality": "estimated",
+          "words": 18523
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 64578,
+          "tokens_est": 16145,
+          "tokens_quality": "estimated",
+          "words": 9523
+        },
+        "direct_files": [
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 21412,
+          "tokens_est": 5353,
+          "tokens_quality": "estimated",
+          "words": 3006
+        },
+        "phases": [
+          "deploying",
+          "deployed"
+        ],
+        "skill": "karvey-deploy"
+      },
+      {
+        "closure_max": {
+          "bytes": 99645,
+          "tokens_est": 24912,
+          "tokens_quality": "estimated",
+          "words": 14456
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 99645,
+          "tokens_est": 24912,
+          "tokens_quality": "estimated",
+          "words": 14456
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 13380,
+          "tokens_est": 3345,
+          "tokens_quality": "estimated",
+          "words": 1975
+        },
+        "direct_files": [
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 17045,
+          "tokens_est": 4262,
+          "tokens_quality": "estimated",
+          "words": 2407
+        },
+        "phases": [
+          "design_graphic"
+        ],
+        "skill": "karvey-design-graphic"
+      },
+      {
+        "closure_max": {
+          "bytes": 116823,
+          "tokens_est": 29206,
+          "tokens_quality": "estimated",
+          "words": 16886
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 116823,
+          "tokens_est": 29206,
+          "tokens_quality": "estimated",
+          "words": 16886
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 49757,
+          "tokens_est": 12440,
+          "tokens_quality": "estimated",
+          "words": 7397
+        },
+        "direct_files": [
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 9917,
+          "tokens_est": 2480,
+          "tokens_quality": "estimated",
+          "words": 1369
+        },
+        "phases": [
+          "impl"
+        ],
+        "skill": "karvey-impl"
+      },
+      {
+        "closure_max": {
+          "bytes": 128534,
+          "tokens_est": 32134,
+          "tokens_quality": "estimated",
+          "words": 18471
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 128534,
+          "tokens_est": 32134,
+          "tokens_quality": "estimated",
+          "words": 18471
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 43083,
+          "tokens_est": 10771,
+          "tokens_quality": "estimated",
+          "words": 6236
+        },
+        "direct_files": [
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 19589,
+          "tokens_est": 4898,
+          "tokens_quality": "estimated",
+          "words": 2636
+        },
+        "phases": [
+          "infra"
+        ],
+        "skill": "karvey-infra"
+      },
+      {
+        "closure_max": {
+          "bytes": 130994,
+          "tokens_est": 32749,
+          "tokens_quality": "estimated",
+          "words": 18681
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 130994,
+          "tokens_est": 32749,
+          "tokens_quality": "estimated",
+          "words": 18681
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 71272,
+          "tokens_est": 17818,
+          "tokens_quality": "estimated",
+          "words": 10044
+        },
+        "direct_files": [
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 14504,
+          "tokens_est": 3626,
+          "tokens_quality": "estimated",
+          "words": 1940
+        },
+        "phases": [
+          "init"
+        ],
+        "skill": "karvey-init"
+      },
+      {
+        "closure_max": {
+          "bytes": 95911,
+          "tokens_est": 23978,
+          "tokens_quality": "estimated",
+          "words": 13902
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 95911,
+          "tokens_est": 23978,
+          "tokens_quality": "estimated",
+          "words": 13902
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 15709,
+          "tokens_est": 3928,
+          "tokens_quality": "estimated",
+          "words": 2356
+        },
+        "direct_files": [
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 13311,
+          "tokens_est": 3328,
+          "tokens_quality": "estimated",
+          "words": 1853
+        },
+        "phases": [
+          "mockup"
+        ],
+        "skill": "karvey-mockup"
+      },
+      {
+        "closure_max": {
+          "bytes": 128914,
+          "tokens_est": 32229,
+          "tokens_quality": "estimated",
+          "words": 18566
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 128914,
+          "tokens_est": 32229,
+          "tokens_quality": "estimated",
+          "words": 18566
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/project-config.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 60183,
+          "tokens_est": 15046,
+          "tokens_quality": "estimated",
+          "words": 9086
+        },
+        "direct_files": [
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 22008,
+          "tokens_est": 5502,
+          "tokens_quality": "estimated",
+          "words": 3049
+        },
+        "phases": [
+          "qa"
+        ],
+        "skill": "karvey-qa"
+      },
+      {
+        "closure_max": {
+          "bytes": 109114,
+          "tokens_est": 27279,
+          "tokens_quality": "estimated",
+          "words": 15690
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/ears-format.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/judges/architecture.md",
+          "skills/karvey/rules/judges/qa.md",
+          "skills/karvey/rules/judges/requirements.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 109114,
+          "tokens_est": 27279,
+          "tokens_quality": "estimated",
+          "words": 15690
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/ears-format.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/judges/architecture.md",
+          "skills/karvey/rules/judges/qa.md",
+          "skills/karvey/rules/judges/requirements.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 42858,
+          "tokens_est": 10715,
+          "tokens_quality": "estimated",
+          "words": 6130
+        },
+        "direct_files": [
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/ears-format.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/security-tiers.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 9452,
+          "tokens_est": 2363,
+          "tokens_quality": "estimated",
+          "words": 1241
+        },
+        "phases": [
+          "requirements"
+        ],
+        "skill": "karvey-requirements"
+      },
+      {
+        "closure_max": {
+          "bytes": 92550,
+          "tokens_est": 23138,
+          "tokens_quality": "estimated",
+          "words": 13403
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 92550,
+          "tokens_est": 23138,
+          "tokens_quality": "estimated",
+          "words": 13403
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 27018,
+          "tokens_est": 6755,
+          "tokens_quality": "estimated",
+          "words": 3998
+        },
+        "direct_files": [
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 12130,
+          "tokens_est": 3033,
+          "tokens_quality": "estimated",
+          "words": 1661
+        },
+        "phases": [
+          "tasks"
+        ],
+        "skill": "karvey-tasks"
+      },
+      {
+        "closure_max": {
+          "bytes": 99686,
+          "tokens_est": 24922,
+          "tokens_quality": "estimated",
+          "words": 14483
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 99686,
+          "tokens_est": 24922,
+          "tokens_quality": "estimated",
+          "words": 14483
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/clickup-protocol.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/enforcement.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/state-machine.md",
+          "skills/karvey/rules/targets.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 33270,
+          "tokens_est": 8318,
+          "tokens_quality": "estimated",
+          "words": 4975
+        },
+        "direct_files": [
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/incident-tracking.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/multi-agent.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "has_load_line": false,
+        "own": {
+          "bytes": 17086,
+          "tokens_est": 4272,
+          "tokens_quality": "estimated",
+          "words": 2434
+        },
+        "phases": [
+          "test"
+        ],
+        "skill": "karvey-test"
+      }
+    ],
+    "session_hook": {
+      "bytes": 879,
+      "lines": 27,
+      "sha256": "70d27c3159b260afa7bd9781c0de0867b9c8fa737704cbae3c25e8d9d2f98e6e"
+    }
+  },
+  "tool": "karvey-context-budget",
+  "version": "3.11.4",
+  "warnings": []
+}
