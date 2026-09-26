@@ -47,10 +47,10 @@ F11 rollout; **F12 last** (B-06).
 
 | Feature | Area | Requirements covered | Panel / sources | Status |
 |---------|------|----------------------|-----------------|--------|
-| F1 | Context measurement: size tool, baseline, CI | REQ-W3-001, 002, 010, 011, 071, 072 | R-15 · AG-04, H-34 · BL-18 | ⬜ |
+| F1 | Context measurement: size tool, baseline, CI | REQ-W3-001, 002, 010, 011, 071, 072 | R-15 · AG-04, H-34 · BL-18 | ✅ |
 | F2 | Context budget: core, load lists, adapters, references, routing-only orchestrator, contract coverage, generated lists, one phase per session | REQ-W3-003..009, 012, 013 | R-15 · AG-04 · BL-18, BL-39 | ⬜ |
-| F3 | Cost per change with a single agent | REQ-W3-014..019, 077 | R-25 · PM-08 · D-30 · BL-28, BL-37 | ⬜ |
-| F4 | Sponsor page, report, "your turn" events, deduplication | REQ-W3-020..027, 080 | R-19 · PM-07 · D-31 · BL-22, BL-43 | ⬜ |
+| F3 | Cost per change with a single agent | REQ-W3-014..019, 077 | R-25 · PM-08 · D-30 · BL-28, BL-37 | ✅ |
+| F4 | Sponsor page, report, "your turn" events, deduplication | REQ-W3-020..027, 080 | R-19 · PM-07 · D-31 · BL-22, BL-43 | ✅ |
 | F5 | Open questions Q-NN and risk register | REQ-W3-028..034 | R-24 · PM-11 · BL-27 | ✅ |
 | F6 | Project design system, design delta, contrast tool, design judge | REQ-W3-035..039, 076 | R-26 · DM-13, AG-12 · D-23, D-30 · BL-29 | ✅ |
 | F7 | One work breakdown (WBS) | REQ-W3-040..043 | R-27 · PM-10 · BL-30 | ✅ |
