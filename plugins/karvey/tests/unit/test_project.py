@@ -283,7 +283,7 @@ class LegacyStatusFlow(unittest.TestCase):
 
 
 class BranchMode(unittest.TestCase):
-    """@req REQ-W2-049"""
+    """@req REQ-W1-035 REQ-W2-049"""
 
     def test_REQ_W2_049_main_main_is_trunk(self):
         self.assertEqual(pj.branch_mode({"branch_flow": {"integration": "main", "production": "main"}}),

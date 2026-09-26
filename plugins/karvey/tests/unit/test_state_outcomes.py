@@ -1,6 +1,6 @@
 """Gate outcomes, generated_at and role auto (architecture §1.4 of wave2-structural).
 
-@req REQ-W2-001 REQ-W2-038 REQ-W2-040 REQ-W2-042
+@req REQ-W1-006 REQ-W2-001 REQ-W2-038 REQ-W2-040 REQ-W2-042
 """
 import json
 import os

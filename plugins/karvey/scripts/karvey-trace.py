@@ -12,7 +12,9 @@
 - **Commits**: ``base..HEAD`` commits whose ``Karvey-Change`` trailer is the change, linked to a requirement when
   the message cites its id or the id of a task that cites it; none → ``no commit``.
 - **Tests**: files matched by ``project.json:tests.globs`` (defaults below) carrying ``@req REQ-…-NNN`` or a
-  ``test_REQ_…_NNN`` name. A test file added by the change's commits with no reference is an ``unmapped test``.
+  ``test_REQ_…_NNN`` name; a JSON test table (``{"cases": [{"tags": [...]}]}``) references the ids in its cases'
+  tags. A Markdown script under a ``tests/manual/`` folder is a **manual exception** for the ids its title
+  names (reason: the script). A test file added by the change's commits with no reference is an ``unmapped test``.
 
 - **Last result** of each test file: from the JUnit XML files named in ``changes/{id}/evidence.jsonl`` (the
   newest file that has a test case of it), else from the newest evidence line whose command ran it (the file,
@@ -143,7 +145,35 @@ def test_files(root, globs):
     return [n for n in names if _match(n, globs) and not n.startswith("docs/")]
 
 
-def test_refs(text):
+def _json_table_refs(text):
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return set()
+    cases = data.get("cases") if isinstance(data, dict) else data
+    refs = set()
+    for c in cases if isinstance(cases, list) else []:
+        for t in (c.get("tags") or []) if isinstance(c, dict) else []:
+            if isinstance(t, str) and REQ_ID.fullmatch(t):
+                refs.add(t)
+    return refs
+
+
+def is_manual_script(rel):
+    return rel.endswith(".md") and "/tests/manual/" in "/" + rel
+
+
+def manual_script_refs(text):
+    """The ids a manual script's title names (its first heading)."""
+    for line in (text or "").splitlines():
+        if line.startswith("#"):
+            return set(REQ_ID.findall(line))
+    return set()
+
+
+def test_refs(text, rel=""):
+    if rel.endswith(".json"):
+        return _json_table_refs(text)
     refs = set()
     for m in _TAG.finditer(text):
         refs.update(REQ_ID.findall(m.group(1)))
@@ -291,9 +321,16 @@ def build(root, change, base=None, project=None):
     tasks = parse_tasks(_read(cdir / "tasks.md") or "")
     commits = change_commits(root, change, base)
     files = test_files(root, globs)
-    by_req, file_refs = {}, {}
+    by_req, file_refs, manual_scripts = {}, {}, {}
     for f in files:
-        refs = test_refs(_read(Path(root) / f) or "")
+        text = _read(Path(root) / f) or ""
+        if is_manual_script(f):
+            refs = manual_script_refs(text)
+            file_refs[f] = refs
+            for r in refs:
+                manual_scripts.setdefault(r, []).append(f)
+            continue
+        refs = test_refs(text, f)
         file_refs[f] = refs
         for r in refs:
             by_req.setdefault(r, []).append(f)
@@ -303,7 +340,7 @@ def build(root, change, base=None, project=None):
         test_tasks = [t for t in citing if tasks[t]["layer"].lower() == "test"]
         impl_tasks = [t for t in citing if t not in test_tasks]
         with_tests = [t for t in impl_tasks if tasks[t]["tests_added"]]
-        manual = [t for t, d in tasks.items() if rid in d["manual_reqs"]]
+        manual = [t for t, d in tasks.items() if rid in d["manual_reqs"]] + sorted(manual_scripts.get(rid, []))
         test_first = bool(test_tasks) and all(set(test_tasks) & _ancestors(tasks, t) for t in impl_tasks)
         if commits is None:
             linked = None
@@ -312,6 +349,8 @@ def build(root, change, base=None, project=None):
             linked = [c["sha"] for c in commits if any(k in c["message"] for k in keys)]
         status = "covered" if (test_tasks or with_tests or manual) else "uncovered"
         rows.append({"id": rid, "tasks": citing, "test_tasks": test_tasks, "manual": bool(manual),
+                     "manual_reasons": ["manual script %s" % m if "/" in m else "manual: line in %s" % m
+                                        for m in manual],
                      "test_first": test_first, "status": status, "tests": sorted(by_req.get(rid, [])),
                      "commits": linked, "commit_text": "no commit" if linked == [] else None})
     results = last_results(root, cdir, sorted({f for r in rows for f in r["tests"]}))
@@ -352,6 +391,9 @@ def render(res):
         cov = "green" if r["green"] else ("uncovered" if r["status"] == "uncovered" else "not green")
         out.append("| %s | %s | %s | %s | %s | %s |" % (r["id"], ", ".join(r["tasks"]) or "—", commits, tests,
                                                       result, cov))
+    manual = [(r["id"], r.get("manual_reasons") or []) for r in res["requirements"] if r["manual"]]
+    if manual:
+        out += ["", "## Manual exceptions", ""] + ["- %s — %s" % (rid, "; ".join(why)) for rid, why in manual]
     if res["unmapped_tests"]:
         out += ["", "## Unmapped tests", ""] + ["- `%s`" % f for f in res["unmapped_tests"]]
     return "\n".join(out) + "\n"

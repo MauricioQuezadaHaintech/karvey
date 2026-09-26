@@ -48,5 +48,15 @@
     "enabled": true,
     "mode": "advisory",
     "cross_model": "prefer"
+  },
+  "tests": {
+    "globs": [
+      "**/test_*",
+      "**/*_test.*",
+      "**/*.test.*",
+      "**/*.spec.*",
+      "plugins/karvey/tests/hooks/tables/*.json",
+      "plugins/karvey/tests/manual/*.md"
+    ]
   }
 }

@@ -201,6 +201,7 @@ Total estimated time: 94 min (9 tasks)
 **Requirements:** REQ-W2-020  
 **Tests added:** none (a delivered file); protect-paths tables already cover writes outside the repo  
 **Done when:** `git apply --check` is not run against any personal file; `grep -c '^[-+][^-+]' docs/spec/changes/wave2-structural/global-instructions.diff` ≥ 2 and `grep -ciE 'home/|@' docs/spec/changes/wave2-structural/global-instructions.diff` = 0
+manual: REQ-W2-020 — the deliverable is a diff file for the owner to apply by hand (E1.F13.T8); nothing in the plugin runs it, so no automated test can.
 
 ### E1.F2.T9 [Test] Integration `test_patch_lane_flow.py` (AC-2) — _Depends: E1.F2.T4, E1.F5.T3_
 
@@ -478,6 +479,8 @@ Total estimated time: 39 min (3 tasks)
 **Requirements:** REQ-W2-057, REQ-W2-059, REQ-W2-061, REQ-W2-063  
 **Tests added:** L-44 mutation: `docs/test_evidence.md` → error  
 **Done when:** `grep -rn 'docs/test_evidence.md\|docs/test_plan.md' plugins/karvey/skills` prints nothing and `python3 plugins/karvey/scripts/lint-plugin.py --only L-44` exits 0
+manual: REQ-W2-063 — QA running the suite or citing the exact CI run is agent behaviour, checked by the fiscal judge at this change's QA (`judges-gate.md`).
+manual: REQ-W2-059 — the test phase reading the coverage plan is agent behaviour, verified by this change's own test phase (`test_plan.md` lists every coverage-plan row executed or planned, not executed).
 
 
 ## Feature E1.F8: Deterministic security tools

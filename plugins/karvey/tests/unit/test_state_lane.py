@@ -1,6 +1,6 @@
 """Lane-aware next / advance (architecture §1.4 of wave2-structural).
 
-@req REQ-W2-014 REQ-W2-015 REQ-W2-016 REQ-W2-018 REQ-W2-019 REQ-W2-021
+@req REQ-W1-007 REQ-W2-014 REQ-W2-015 REQ-W2-016 REQ-W2-018 REQ-W2-019 REQ-W2-021
 """
 import json
 import os

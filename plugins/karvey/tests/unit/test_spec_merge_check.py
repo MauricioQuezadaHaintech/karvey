@@ -1,6 +1,6 @@
 """karvey-spec-merge.py --check (architecture §1.11 of wave2-structural).
 
-@req REQ-W2-054 REQ-W2-055 REQ-W2-056
+@req REQ-W1-067 REQ-W2-054 REQ-W2-055 REQ-W2-056
 """
 import unittest
 

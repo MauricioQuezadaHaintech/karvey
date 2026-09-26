@@ -172,7 +172,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F13.T3 [Test] Integration `test_wave2_flow.py`: init → lane → three `approve-gate` → trailer commits → `release-gate check` pass (AC-4, AC-5) — est: 12min (depends E1.F5.T3, E1.F5.T5, E1.F4.T2)
 - [x] E1.F13.T4 [Backend] This repo: `validate --fix --accept-proposed` on its own changes, `branch_flow.mode: trunk`, then `gates: merged` and `judges` (after the baseline, L-48) — est: 6min (depends E1.F1.T9, E1.F13.T1, E1.F4.T2, E1.F5.T7)
 - [x] E1.F13.T5 [Backend] Hand-off of the §7.4 upgrade steps for project-upgrade's catalogue (declarations only) — est: 8min (depends E1.F13.T1, E1.F5.T7)
-- [ ] E1.F13.T6 [Test] Whole-repo gate: lint 0 errors, every unit and regression suite, every table, `validate --all`, `karvey-trace.py wave2-structural --write --check`, manual scripts run headless (D-19) — est: 10min (depends every other agent task)
+- [x] E1.F13.T6 [Test] Whole-repo gate: lint 0 errors, every unit and regression suite, every table, `validate --all`, `karvey-trace.py wave2-structural --write --check`, manual scripts run headless (D-19) — est: 10min (depends every other agent task)
 - [ ] E1.F13.T7 [Backend] Release docs: `[Unreleased]` summary (modes table, the manual Upgrade list from the hand-off, the 3.13 → 4.0 note), no version or date — est: 6min (depends E1.F13.T6, E1.F13.T5)
 - [ ] E1.F13.T8 [human] Apply the `patch`-lane bullet to the owner's global instructions — executor: the owner (depends E1.F2.T8)
 - [ ] E1.F13.T9 [human] The prod OK for the release that ships this change (D-10) — executor: the owner — never delegated (depends E1.F13.T7)
@@ -249,7 +249,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F13.T3 [Test] | ✅ done | 12 | 12 | 0 | found F-06 (merged gates unreachable past one phase), fixed with regression tests in its own commit |
 | E1.F13.T4 [Backend] | ✅ done | 6 | 6 | 0 | archived team-layer gets `lane` only (its legacy approvals.deploy is kept as recorded history) |
 | E1.F13.T5 [Backend] | ✅ done | 8 | 5 | 0 |  |
-| E1.F13.T6 [Test] | ⬜ todo | 10 | — | — |  |
+| E1.F13.T6 [Test] | ✅ done | 10 | 20 | 0 | coverage 97/97 = 88 REQ-W2 + 9 MODIFIED REQ-W1 (F-07); manual scripts not run: owner task per D-19 (no session may write under the user config) |
 | E1.F13.T7 [Backend] | ⬜ todo | 6 | — | — |  |
 | E1.F13.T8 [human] | ⬜ todo | — | — | — | executor: the owner |
 | E1.F13.T9 [human] | ⬜ todo | — | — | — | executor: the owner — never delegated |

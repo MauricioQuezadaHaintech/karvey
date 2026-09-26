@@ -340,7 +340,7 @@ if __name__ == "__main__":
 
 
 class Wave2Migration(Base):
-    """@req REQ-W2-087 REQ-W2-051 — lane proposal, approvals.deploy retired, idempotent, never an approval."""
+    """@req REQ-W1-009 REQ-W2-087 REQ-W2-051 — lane proposal, approvals.deploy retired, idempotent, never an approval."""
 
     LEGACY = _path.UNIT_DIR.parent / "fixtures" / "legacy" / "spec" / "approvals-deploy-legacy.json"
 

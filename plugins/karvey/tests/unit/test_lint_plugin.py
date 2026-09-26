@@ -1000,7 +1000,7 @@ class L45(LintCase):
 
 
 class L46(LintCase):
-    """@req REQ-W2-079 — knowledge sync is optional."""
+    """@req REQ-W1-061 REQ-W2-079 — knowledge sync is optional."""
 
     def test_pass(self):
         self.assertPasses("L-46")
@@ -1043,7 +1043,7 @@ class L42(LintCase):
 
 
 class L43(LintCase):
-    """@req REQ-W2-048 — integration by PR, no local merge + push."""
+    """@req REQ-W1-034 REQ-W2-048 — integration by PR, no local merge + push."""
 
     def test_pass(self):
         self.assertPasses("L-43")
@@ -1116,7 +1116,7 @@ class L53(LintCase):
 
 
 class L54(LintCase):
-    """@req REQ-W2-082 — the statusline failure line is anchored to a table case."""
+    """@req REQ-W1-051 REQ-W2-082 — the statusline failure line is anchored to a table case."""
     README = "plugins/karvey/hooks/README.md"
     TABLE = "plugins/karvey/tests/hooks/tables/statusline.json"
     LINE = "- On a stdin it cannot read the script shows `karvey statusline down`.%s\n"
@@ -1312,7 +1312,7 @@ class L48(LintCase):
 
 
 class L50(LintCase):
-    """@req REQ-W2-007 — the log_time column and the impl fallback."""
+    """@req REQ-W1-042 REQ-W2-007 — the log_time column and the impl fallback."""
     ADAPTERS = RULES + "/management-adapters.md"
 
     def test_pass(self):

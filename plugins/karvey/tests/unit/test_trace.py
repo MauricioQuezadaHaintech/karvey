@@ -189,5 +189,24 @@ class WriteAndCheck(Base):
         self.assertEqual((self.root / "docs/spec/changes/feat-a/traceability.md").read_text(encoding="utf-8"), first)
 
 
+class TablesAndManualScripts(Base):
+    def test_json_table_case_tags_reference_requirements(self):
+        g.write(self.root, "tests/tables/guard.json", {"cases": [{"id": "c1", "tags": ["guard", "REQ-X-002"]}]})
+        g.commit_all(self.root, "table")
+        by = {r["id"]: r for r in tr.build(self.root, "feat-a", base="base")["requirements"]}
+        self.assertEqual(by["REQ-X-002"]["tests"], ["tests/tables/guard.json"])
+
+    def test_manual_script_title_is_a_manual_exception(self):
+        g.write(self.root, "tests/manual/walkthrough.md", "# Walk the page (REQ-X-002)\n\n## Expected:\n- ok\n")
+        g.commit_all(self.root, "manual")
+        res = tr.build(self.root, "feat-a", base="base")
+        by = {r["id"]: r for r in res["requirements"]}
+        self.assertTrue(by["REQ-X-002"]["manual"])
+        self.assertTrue(by["REQ-X-002"]["green"])
+        self.assertEqual(by["REQ-X-002"]["manual_reasons"], ["manual script tests/manual/walkthrough.md"])
+        self.assertEqual(by["REQ-X-002"]["tests"], [])
+        self.assertIn("## Manual exceptions", tr.render(res))
+
+
 if __name__ == "__main__":
     unittest.main()
