@@ -57,6 +57,58 @@ class Evidence(unittest.TestCase):
         self.assertIn("[karvey] evidence not recorded: no active change", p.stderr)
         self.assertFalse(self.ev.exists())
 
+    def test_secrets_in_argv_are_redacted(self):
+        """@req REQ-W2-073 — BUG-55 (F-16): secret values on the command line never reach evidence.jsonl; argv[0]
+        and ordinary arguments (test file names) stay intact."""
+        args = [sys.executable, "-c", "pass", "--password=pw111", "--api-key", "ak222", "--auth-token", "tk333",
+                "DB_SECRET=sv444", "https://user:up555@host.example/x", "tests/test_orders.py", "-p", "test_*.py",
+                "--verbose", "NAME=plain"]
+        p = run(self.t.path, *args)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        text = self.ev.read_text()
+        for s in ("pw111", "ak222", "tk333", "sv444", "up555"):
+            self.assertNotIn(s, text)
+        argv = json.loads(text.splitlines()[0])["argv"]
+        self.assertEqual(argv[0], sys.executable)
+        for keep in ("tests/test_orders.py", "-p", "test_*.py", "--verbose", "NAME=plain", "--api-key"):
+            self.assertIn(keep, argv)
+        self.assertIn("--password=***", argv)
+        self.assertIn("DB_SECRET=***", argv)
+        self.assertIn("https://***@host.example/x", argv)
+
+    def test_change_id_outside_changes_dir_refused(self):
+        """@req REQ-W2-073 — BUG-55 (F-16): --change must be a plain change id; a path never writes elsewhere."""
+        outside = g.TempDir()
+        try:
+            for bad in ("..", "../feat-a", str(outside.path)):
+                p = run(self.t.path, sys.executable, "-c", "print('ran')", change=bad)
+                self.assertEqual(p.returncode, 2, (bad, p.stderr))
+                self.assertIn("invalid change id", p.stderr)
+            self.assertFalse((self.t.path / "docs/spec/evidence.jsonl").exists())
+            self.assertFalse((outside.path / "evidence.jsonl").exists())
+        finally:
+            outside.cleanup()
+
+    def test_missing_trailing_newline_does_not_glue_records(self):
+        """@req REQ-W2-073 — BUG-55 (F-16): a file without a trailing newline gets a separator; the cited line is
+        the new record's."""
+        self.ev.write_text('{"exit": 0}', encoding="utf-8")
+        p = run(self.t.path, sys.executable, "-c", "pass")
+        lines = self.ev.read_text().splitlines()
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(json.loads(lines[1])["change"], "feat-a")
+        self.assertIn("evidence.jsonl:2 ", p.stderr)
+
+    def test_unstartable_command_is_127_not_a_traceback(self):
+        """BUG-55 (F-16): any OSError starting the command (e.g. exec format error) is reported, not raised."""
+        bad = self.t.path / "not-a-program"
+        bad.write_bytes(b"\x00\x01garbage")
+        bad.chmod(0o755)
+        p = run(self.t.path, str(bad))
+        self.assertEqual(p.returncode, 127, p.stderr)
+        self.assertNotIn("Traceback", p.stderr)
+        self.assertIn("cannot start", p.stderr)
+
     def test_missing_command_is_127(self):
         p = run(self.t.path, "no-such-command-karvey")
         self.assertEqual(p.returncode, 127)

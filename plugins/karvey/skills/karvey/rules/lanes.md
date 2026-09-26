@@ -64,7 +64,9 @@ The block below is generated from `lanes.json`; do not edit it by hand (lint L-4
 
 - **Raise freely.** `lane raise` records `{from, to, at, reason, by}` in `lane_history`; the phases the new lane
   requires and the old one skipped become pending (the change goes back to the first of them). Manual skips are
-  kept.
+  kept. A raise only adds process: every phase keeps at least its mode (mandatory stays mandatory, optional stays at
+  least optional). A lane that runs more phases but makes one optional (e.g. `docs` → `ops` makes QA optional) is
+  a lower.
 - **Lower only with the human.** `lane lower` refuses without `--by`, `--role human`, `--ref` and a valid human
   approval marker. A lower lane is less review: the human decides it, never the agent.
 - **The diff is checked against the lane.** QA (or QA-lite) measures the diff against the lane's criteria and

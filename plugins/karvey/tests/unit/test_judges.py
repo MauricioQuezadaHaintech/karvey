@@ -3,6 +3,7 @@
 @req REQ-W2-022 REQ-W2-023 REQ-W2-025 REQ-W2-033 REQ-W2-026 REQ-W2-029 REQ-W2-030 REQ-W2-031 REQ-W2-032
 """
 import json
+import os
 import unittest
 
 import _path  # noqa: F401
@@ -190,6 +191,90 @@ class Collect(unittest.TestCase):
         self.result("methods.json", {"lens": "methods", "verdict": "pass", "findings": []})
         code, r = self.collect()
         self.assertEqual((r["runs"][0]["model"], r["runs"][0]["intra_model"]), ("model-a", True))
+
+
+class Bug56(Collect):
+    """BUG-56 (finding F-17): the judge output filter — lens, cite, idempotence, the diff file.
+
+    @req REQ-W2-025 REQ-W2-026
+    """
+
+    def rows(self):
+        return [ln for ln in self.findings().splitlines() if ln.startswith("| F-")]
+
+    def test_BUG_56_lens_is_sanitised_in_the_row(self):
+        """BUG-56 a: a ``|`` or newline in the lens cannot forge a row or a cell."""
+        p = self.root / "docs/spec/changes/feat-a/findings.md"
+        jd.append_findings(p, "architecture", [{"lens": "methods | x\n| F-99 | forged", "severity": "Low",
+                                                "type": "bug", "text": "t", "cite": self.ARCH + ":1"}], "2026-09-26")
+        rows = self.rows()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(len(jd.read_rows(p)[0]), 9)
+        self.assertNotIn("F-99 |", rows[0].replace("\\|", ""))
+
+    def test_BUG_56_unexpected_lens_is_discarded_with_a_reason(self):
+        """BUG-56 a: a result whose lens is not one of the phase's lenses is not written."""
+        self.result("rogue.json", {"lens": "methods | x\n| F-99", "verdict": "fail", "findings": [
+            {"severity": "Critical", "text": "forged", "cite": self.ARCH + ":1"}]})
+        self.result("other.json", {"lens": "performance", "verdict": "fail", "findings": [
+            {"severity": "Critical", "text": "not this phase", "cite": self.ARCH + ":1"}]})
+        code, r = self.collect()
+        self.assertEqual(code, 0)
+        self.assertEqual(r["appended"], [])
+        self.assertEqual(r["runs"], [])
+        self.assertEqual(len(r["rejected"]), 2)
+        self.assertTrue(all("not a lens of this run" in x["reason"] for x in r["rejected"]))
+        self.assertFalse((self.root / "docs/spec/changes/feat-a/findings.md").exists()
+                         and self.rows())
+
+    def test_BUG_56_non_ascii_digit_cite_discards_only_that_finding(self):
+        """BUG-56 b: ``path:²`` is not a line number; it discards one finding, it does not crash."""
+        self.assertFalse(jd.resolve_cite(self.root, self.ARCH + ":\u00b2", [self.ARCH]))
+        self.assertFalse(jd.resolve_cite(self.root, self.ARCH + ":\u0661", [self.ARCH]))
+        self.result("methods.json", {"lens": "methods", "verdict": "concerns", "findings": [
+            {"severity": "High", "text": "kept", "cite": self.ARCH + ":2"},
+            {"severity": "High", "text": "bad cite", "cite": self.ARCH + ":\u00b2"}]})
+        code, r = self.collect()
+        self.assertEqual((code, r["discarded"], r["appended"]), (0, 1, ["F-01"]))
+
+    def test_BUG_56_collect_twice_is_idempotent(self):
+        """BUG-56 c: re-running collect over the same results appends nothing and says so."""
+        self.result("methods.json", {"lens": "methods", "verdict": "concerns", "findings": [
+            {"severity": "High", "text": "one | pipe", "cite": self.ARCH + ":1"},
+            {"severity": "Medium", "text": "two", "cite": self.ARCH + ":3"}]})
+        code, r = self.collect()
+        self.assertEqual(r["appended"], ["F-01", "F-02"])
+        code, r = self.collect()
+        self.assertEqual((code, r["appended"], r["duplicates"]), (0, [], 2))
+        self.assertEqual(len(self.rows()), 2)
+
+    def test_BUG_56_diff_file_is_deleted_by_collect(self):
+        """BUG-56 d: the qa diff written by ``inputs`` is announced and deleted by ``collect --diff``."""
+        import contextlib, io
+        g.run(["init", "-q", "-b", "main"], self.root)
+        g.commit_all(self.root, "base")
+        g.run(["tag", "b0"], self.root)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = self.cli.main(["inputs", "feat-a", "qa", "--base", "b0", "--root", str(self.root), "--json"])
+        res = json.loads(out.getvalue())["result"]
+        diff = res["diff"]
+        self.addCleanup(lambda: os.path.exists(diff) and os.unlink(diff))
+        self.assertTrue(os.path.isfile(diff))
+        self.assertIn("collect", res["diff_cleanup"])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.cli.main(["collect", "feat-a", "qa", "--results", str(self.results), "--diff", diff,
+                           "--root", str(self.root), "--json"])
+        self.assertFalse(os.path.exists(diff))
+        self.assertIn(diff, json.loads(out.getvalue())["result"]["deleted"])
+
+    def test_BUG_56_collect_never_deletes_a_foreign_diff(self):
+        """BUG-56 d: a --diff that ``inputs`` did not write is left alone."""
+        own = self.t.path / "mine.diff"
+        own.write_text("x\n")
+        self.collect("--diff", str(own))
+        self.assertTrue(own.is_file())
 
 
 class Acceptance(unittest.TestCase):

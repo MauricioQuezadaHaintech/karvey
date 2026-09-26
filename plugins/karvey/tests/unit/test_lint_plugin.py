@@ -1042,6 +1042,19 @@ class L42(LintCase):
         self.assertPasses("L-42")
 
 
+class L42ImplTrailer(LintCase):
+    """@req REQ-W2-043 — BUG-67 (F-27): the impl skill, which makes the change's commits, tells the agent to add
+    the Karvey-Change trailer."""
+
+    def test_pass(self):
+        self.assertPasses("L-42")
+
+    def test_impl_without_the_trailer_rule_fails(self):
+        f = SKILLS + "/karvey-impl/SKILL.md"
+        self.t.sub(f, r"[^\n]*Karvey-Change[^\n]*\n", "")
+        self.assertFails("L-42", "karvey-impl", file=f)
+
+
 class L43(LintCase):
     """@req REQ-W1-034 REQ-W2-048 — integration by PR, no local merge + push."""
 
@@ -1113,6 +1126,62 @@ class L53(LintCase):
     def test_prod_ok_not_in_pr_body_fails(self):
         self.t.replace(self.F, "At deploy its text is in the PR body;", "At deploy its text is in the PR;")
         self.assertFails("L-53", "PR body", file=self.F)
+
+    def test_rollback_question_limited_to_prod_fails(self):
+        """@req REQ-W2-078 — BUG-49 (F-10): a DEV regression also shows the rollback and asks."""
+        self.t.replace(self.F, "   - Show the contract's `rollback.command`",
+                       "   - DEV → stop before prod.\n   - PROD → show the contract's `rollback.command`")
+        self.assertFails("L-53", "every environment", file=self.F)
+
+    def test_regression_without_reserved_incident_fails(self):
+        """@req REQ-W2-078 — BUG-49 (F-10): the incident number is reserved, never counted."""
+        self.t.replace(self.F, "`karvey-id.py next BUG`", "the next row number")
+        self.assertFails("L-53", "karvey-id.py", file=self.F)
+
+    def test_no_regression_handling_fails(self):
+        """@req REQ-W2-078 — BUG-49 (F-10)."""
+        self.t.sub(self.F, r"4\. \*\*`regression`\*\*[^\n]*\n", "")
+        self.assertFails("L-53", "regression", file=self.F)
+
+
+class L47(LintCase):
+    """@req REQ-W2-083 REQ-W2-084 REQ-W2-085 — BUG-64 (F-25): the check-mode registry invariants (architecture §5)."""
+    F = "plugins/karvey/schemas/check-modes.json"
+    SCRIPT = "plugins/karvey/scripts/karvey-x.py"
+
+    def setUp(self):
+        super().setUp()
+        self.rows = [{"id": "schema.strict", "defaults": {"3.13": "warn", "4.0": "blocking"}},
+                     {"id": "lane.diff", "defaults": {"3.13": "warn", "4.0": "warn"}},
+                     {"id": "judges.mode", "defaults": {"3.13": "advisory", "4.0": "blocking"}, "decision": "D-9"}]
+        self.put()
+        self.t.write(self.SCRIPT, 'modes.resolve(root, "lane.diff")\nmodes.record_hit(root, c, "schema.strict", "x")\n')
+
+    def put(self):
+        import json as _j
+        self.t.write(self.F, _j.dumps({"version": 1, "checks": self.rows}))
+
+    def test_pass(self):
+        self.assertPasses("L-47")
+
+    def test_missing_line_default_fails(self):
+        del self.rows[1]["defaults"]["4.0"]
+        self.put()
+        self.assertFails("L-47", "4.0", file=self.F)
+
+    def test_313_blocking_fails(self):
+        self.rows[1]["defaults"]["3.13"] = "blocking"
+        self.put()
+        self.assertFails("L-47", "3.13", file=self.F)
+
+    def test_40_differs_without_decision_fails(self):
+        self.rows[1]["defaults"]["4.0"] = "blocking"
+        self.put()
+        self.assertFails("L-47", "lane.diff", file=self.F)
+
+    def test_unregistered_id_in_a_script_fails(self):
+        self.t.write(self.SCRIPT, 'modes.resolve(root, "lane.width")\n')
+        self.assertFails("L-47", "lane.width", file=self.SCRIPT)
 
 
 class L54(LintCase):
@@ -1379,6 +1448,7 @@ class ListAll(unittest.TestCase):
         self.assertEqual(ids[:36], ["L-%02d" % i for i in range(1, 37)])
         # wave2-structural checks start at L-40 (L-37..L-39 are reserved by project-upgrade)
         self.assertTrue(all(40 <= int(i[2:]) <= 54 for i in ids[36:]), ids[36:])
+        self.assertIn("L-47", ids)  # BUG-64: declared in the architecture, now implemented
 
 
 if __name__ == "__main__":

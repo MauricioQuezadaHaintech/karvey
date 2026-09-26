@@ -983,8 +983,11 @@ def gate_summary(rd, ctx):
                 res["omissions"].append("deviations.md: %s is not shown by this summary (no heading or table row)" % did)
         infra = rd.text(cdir / "infra.md")
         if infra is not None:
+            pd_gaps = _postdeploy_gaps(infra)
             gaps = [x for x in res["sections"].get("contract_gaps", []) if x != "none"]
-            gaps += _postdeploy_gaps(infra)
+            if not pd_gaps:  # BUG-65: a complete block in infra.md is the contract (and names the rollback)
+                gaps = [x for x in gaps if x not in ("post-deploy verification contract: missing", "rollback: missing")]
+            gaps += pd_gaps
             res["sections"]["contract_gaps"] = gaps or ["none"]
         if infra is not None and not re.search(r"security-scan", infra, re.I):
             # REQ-W2-068: the PR pipeline carries the same security-tool categories as QA

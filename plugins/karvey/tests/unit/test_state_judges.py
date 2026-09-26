@@ -114,6 +114,16 @@ class JudgeRun(Base):
         code, env = self.st("judge-run", "feat-a", "requirements", "--from", self.write([run_rec(usd="cheap")]))
         self.assertEqual(code, 3)
 
+    def test_nan_and_infinite_cost_refused(self):
+        """BUG-61 (F-22): NaN / Infinity would make spec.json non-standard JSON."""
+        for bad in (float("nan"), float("inf")):
+            self.put()
+            before = self.f.read_bytes() if hasattr(self, "f") else None
+            code, env = self.st("judge-run", "feat-a", "requirements", "--from", self.write([run_rec(usd=bad)]))
+            self.assertEqual(code, 3, env)
+            if before is not None:
+                self.assertEqual(self.f.read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()

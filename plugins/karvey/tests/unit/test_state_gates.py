@@ -309,5 +309,45 @@ class MergedGateAdvance(Base):
         self.refused(("advance", "feat-a", "tasks"), "architecture not approved or skipped")
 
 
+class MergedGateChangesRequested(Base):
+    """BUG-51 (F-12, REQ-W2-080 / REQ-W2-001): *Request changes* at a merged gate holds its phases — the generated
+    artifact is not passed inside the open gate until it is generated again after the request."""
+
+    MERGED = dict(PROJECT, gates="merged")
+
+    def spec(self):
+        return {"phase": "architecture", "skipped": {"mockup": "no UI", "design_graphic": "no UI"},
+                "approvals": {"requirements": ok(),
+                              "architecture": {"generated": True, "approved": False,
+                                               "generated_at": "2026-09-20T10:00:00+00:00"}},
+                "gate_outcomes": [{"outcome": "changes_requested", "kind": "gate", "gate": "how",
+                                   "phases": ["architecture", "infra", "tasks"], "by": "owner", "role": "human",
+                                   "ref": "D-2", "at": "2026-09-20T11:00:00+00:00", "reason": "cloud section"}],
+                "phase_history": hist("init", "requirements", "architecture")}
+
+    def test_next_names_the_phase_that_was_sent_back(self):
+        self.put(self.spec(), project=self.MERGED)
+        c, env = self.st("next", "feat-a")
+        self.assertIn("architecture not approved or skipped", env["result"]["blockers"], env)
+        self.refused(("advance", "feat-a", "infra"), "architecture not approved or skipped")
+
+    def test_generated_again_after_the_request_passes(self):
+        self.put(self.spec(), project=self.MERGED)
+        c, env = self.st("generated", "feat-a", "architecture")
+        self.assertEqual(c, 0, env)
+        ap = self.read()["approvals"]["architecture"]
+        self.assertEqual(ap["generated_at"], "2026-09-20T10:00:00+00:00")  # the approval wait keeps its start
+        self.assertIn("regenerated_at", ap)
+        c, env = self.st("next", "feat-a")
+        self.assertEqual(env["result"]["blockers"], [], env)
+
+    def test_request_on_an_earlier_generation_only(self):
+        spec = self.spec()
+        spec["approvals"]["architecture"]["regenerated_at"] = "2026-09-20T12:00:00+00:00"
+        self.put(spec, project=self.MERGED)
+        c, env = self.st("advance", "feat-a", "infra")
+        self.assertEqual(c, 0, env)
+
+
 if __name__ == "__main__":
     unittest.main()

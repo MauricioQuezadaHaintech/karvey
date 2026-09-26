@@ -11,6 +11,8 @@ Pure functions: no I/O, no wall clock. The caller (``karvey-context.py --metrics
 Every metric returns ``(value | None, reasons)``. Missing data is never zero (REQ-W2-004): a change without
 the data a metric needs is excluded from that metric only and listed in ``reasons`` as
 ``n/a — {reason} ({change-id})``. Durations are hours (lead time: days); floats are rounded to 2 decimals.
+Malformed shapes follow the same rule (BUG-57): a malformed entry is skipped with a reason, a metric that still
+fails is ``n/a — malformed data`` — the report never crashes and never shows a number built on bad data.
 """
 import re
 from datetime import date, datetime
@@ -20,6 +22,7 @@ from . import lanes
 NO_CHANGE = "n/a — no archived change in period"
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DT = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$")
+_DT_NO_ZONE = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$")
 
 
 # --------------------------------------------------------------------------- helpers
@@ -38,7 +41,7 @@ def parse_dt(value):
     v = value[:-1] + "+00:00" if value.endswith("Z") else value
     if "." in v:
         head, rest = v.split(".", 1)
-        digits = "".join(ch for ch in rest if ch.isdigit())
+        digits = re.match(r"\d*", rest).group(0)  # BUG-54: the fraction only, never the zone's digits
         v = head + "." + (digits + "000000")[:6] + rest[len(digits):]
     try:
         return datetime.fromisoformat(v)
@@ -78,6 +81,48 @@ def _list(spec, key):
     return [x for x in v if isinstance(x, dict)] if isinstance(v, list) else []
 
 
+def _rows(value):
+    """``(dict rows, malformed)`` of a list value; a non-list (other than None) is malformed (BUG-57)."""
+    if value is None:
+        return [], False
+    if not isinstance(value, list):
+        return [], True
+    return [x for x in value if isinstance(x, dict)], False
+
+
+def _text(value):
+    return value if isinstance(value, str) else ""
+
+
+def _add(reasons, reason):
+    if reason not in reasons:
+        reasons.append(reason)
+
+
+def _outcome_phases(o):
+    """The ``phases`` of a gate outcome as a list of strings, or None when malformed (BUG-57)."""
+    ph = o.get("phases")
+    if ph is None:
+        ph = []
+    if not isinstance(ph, list) or not all(isinstance(p, str) for p in ph):
+        return None
+    g = o.get("gate")
+    if g is not None and not isinstance(g, str):
+        return None
+    return ph
+
+
+def _outcomes(spec, cid, reasons):
+    """Well-formed ``gate_outcomes`` of a spec; a malformed entry is skipped with a reason (BUG-57)."""
+    out = []
+    for o in _list(spec, "gate_outcomes"):
+        if _outcome_phases(o) is None:
+            _add(reasons, na("malformed gate outcome", cid))
+            continue
+        out.append(o)
+    return out
+
+
 def weeks_between(frm, to):
     """Weeks in the closed period ``[frm, to]`` (dates as ``YYYY-MM-DD``), at least 1 day."""
     d0, d1 = date.fromisoformat(frm), date.fromisoformat(to)
@@ -104,6 +149,9 @@ def lead_time(changes):
         if a is None or b is None:
             reasons.append(na("approvals without time", c["id"]))
             continue
+        if b < a:  # BUG-57: a negative lead time is bad data, not a fast change
+            reasons.append(na("prod approval before creation", c["id"]))
+            continue
         vals.append(hours(a, b) / 24.0)
     return r2(mean(vals)), reasons
 
@@ -113,10 +161,15 @@ def cycle_time(changes):
     acc, reasons = {}, []
     for c in changes:
         hist = [e for e in _list(spec_of(c), "phase_history") if "phase" in e]
-        closed = [(e["phase"], parse_dt(e.get("entered_at")), parse_dt(e.get("exited_at"))) for e in hist]
+        bad = [e for e in hist if not isinstance(e["phase"], str)]
+        if bad:
+            reasons.append(na("malformed phase history", c["id"]))
+        closed = [(e["phase"], parse_dt(e.get("entered_at")), parse_dt(e.get("exited_at"))) for e in hist
+                  if isinstance(e["phase"], str)]
         closed = [(p, a, b) for p, a, b in closed if a and b]
         if not closed:
-            reasons.append(na("no timed phase history", c["id"]))
+            if not bad:
+                reasons.append(na("no timed phase history", c["id"]))
             continue
         for p, a, b in closed:
             acc.setdefault(p, []).append(hours(a, b))
@@ -128,16 +181,19 @@ def approval_wait(changes):
     acc, reasons = {}, []
     for c in changes:
         s = spec_of(c)
-        outcomes = _list(s, "gate_outcomes")
+        before = len(reasons)
+        outcomes = _outcomes(s, c["id"], reasons)
         aps = _approvals(s)
         timed = {k: parse_dt(v.get("generated_at")) for k, v in aps.items() if isinstance(v, dict)}
+        if not outcomes and len(reasons) > before:
+            continue
         if not outcomes or not any(timed.values()):
             reasons.append(na("approvals without time", c["id"]))
             continue
         used = False
         for o in outcomes:
             at = parse_dt(o.get("at"))
-            for p in o.get("phases") or []:
+            for p in _outcome_phases(o):
                 g = timed.get(p)
                 if g and at and at >= g:
                     acc.setdefault(p, []).append(hours(g, at))
@@ -183,10 +239,15 @@ def change_failure_rate(changes, frm=None, to=None):
 
 def time_to_restore(changes):
     """Mean hours from a regression deploy to the next ``pass`` deploy of the same change."""
-    vals = []
+    vals, reasons = [], []
     for c in changes:
-        deps = sorted((d for d in _list(spec_of(c), "deploys") if parse_dt(d.get("at"))),
-                      key=lambda d: parse_dt(d["at"]))
+        deps = _list(spec_of(c), "deploys")
+        untimed = [d.get("at") for d in deps if not parse_dt(d.get("at"))]
+        if untimed:  # BUG-57: order is unknown, so is the next pass — the change is out, with the real reason
+            zoneless = any(isinstance(v, str) and _DT_NO_ZONE.match(v) for v in untimed)
+            reasons.append(na("deploy time without zone" if zoneless else "deploy without time", c["id"]))
+            continue
+        deps = sorted(deps, key=lambda d: parse_dt(d["at"]))
         for i, d in enumerate(deps):
             if d.get("verification") != "regression":
                 continue
@@ -195,8 +256,8 @@ def time_to_restore(changes):
             if nxt:
                 vals.append(hours(parse_dt(d["at"]), parse_dt(nxt["at"])))
     if not vals:
-        return None, [na("no regression deploy")]
-    return r2(mean(vals)), []
+        return None, reasons or [na("no regression deploy")]
+    return r2(mean(vals)), reasons
 
 
 def spec_gap_rate(changes):
@@ -206,15 +267,24 @@ def spec_gap_rate(changes):
         if c.get("findings") is None:
             reasons.append(na("no findings.md", c["id"]))
             continue
-        counts.append(len([f for f in c["findings"] if f.get("type") == "spec-gap"]))
+        rows, bad = _rows(c["findings"])
+        if bad:
+            reasons.append(na("malformed findings", c["id"]))
+            continue
+        counts.append(len([f for f in rows if f.get("type") == "spec-gap"]))
     return r2(mean(counts)), reasons
 
 
 def ripple(changes):
     """``revision_history`` entries per change."""
-    vals = [len(spec_of(c).get("revision_history") or []) for c in changes
-            if isinstance(spec_of(c).get("revision_history", []), list)]
-    return r2(mean(vals)), []
+    vals, reasons = [], []
+    for c in changes:
+        rh = spec_of(c).get("revision_history")
+        if rh is not None and not isinstance(rh, list):
+            reasons.append(na("malformed revision history", c["id"]))
+            continue
+        vals.append(len(rh or []))
+    return r2(mean(vals)), reasons
 
 
 def _gate_key(o):
@@ -229,7 +299,10 @@ def gate_rejection_rate(changes):
     """``{gate: changes_requested / all outcomes}`` (plan exceptions are not gates)."""
     acc, reasons = {}, []
     for c in changes:
-        outs = [o for o in _list(spec_of(c), "gate_outcomes") if o.get("kind", "gate") == "gate"]
+        before = len(reasons)
+        outs = [o for o in _outcomes(spec_of(c), c["id"], reasons) if o.get("kind", "gate") == "gate"]
+        if not outs and len(reasons) > before:
+            continue
         if not outs:
             reasons.append(na("no gate outcomes", c["id"]))
             continue
@@ -242,7 +315,7 @@ def gate_rejection_rate(changes):
 
 
 def _num(v):
-    m = re.match(r"^\s*(\d+(?:\.\d+)?)\s*(?:min)?\s*$", v or "")
+    m = re.match(r"^\s*(\d+(?:\.\d+)?)\s*(?:min)?\s*$", _text(v))
     return float(m.group(1)) if m else None
 
 
@@ -251,10 +324,13 @@ def estimate_accuracy(changes):
     est = act = 0.0
     reasons = []
     for c in changes:
-        rows = c.get("plan_rows")
+        rows, bad = _rows(c.get("plan_rows"))
+        if bad:
+            reasons.append(na("malformed PLAN rows", c["id"]))
+            continue
         used = False
-        for r in rows or []:
-            if "[human]" in (r.get("task") or "").lower():
+        for r in rows:
+            if "[human]" in _text(r.get("task")).lower():
                 continue
             e, ai, rv = _num(r.get("estimate")), _num(r.get("actual_ai")), _num(r.get("actual_review"))
             if not e or ai is None:
@@ -273,13 +349,13 @@ def judge_acceptance(changes):
     """``{lens: routed / (routed + rejected)}`` over findings whose origin is ``judge:{lens}``."""
     acc, reasons = {}, []
     for c in changes:
-        rows = [f for f in (c.get("findings") or []) if str(f.get("origin") or "").startswith("judge:")]
+        rows = [f for f in _rows(c.get("findings"))[0] if _text(f.get("origin")).startswith("judge:")]
         if not rows:
             continue
         for f in rows:
             lens = f["origin"].split(":", 1)[1] or "unknown"
             a = acc.setdefault(lens, [0, 0])
-            st, to = f.get("status"), (f.get("routed_to") or "").strip()
+            st, to = f.get("status"), _text(f.get("routed_to")).strip()
             if to.startswith("accepted:") or (not to.startswith("rejected:") and st in ("routed", "accepted")):
                 a[0] += 1
                 a[1] += 1
@@ -293,21 +369,25 @@ def judge_acceptance(changes):
 
 def judge_cost(changes):
     """``{total, estimated, by_phase, by_change}`` in USD from ``judge_runs[]``."""
-    by_phase, by_change, total, estimated = {}, {}, 0.0, False
+    by_phase, by_change, total, estimated, reasons = {}, {}, 0.0, False, []
     for c in changes:
         for j in _list(spec_of(c), "judge_runs"):
             usd = j.get("usd")
             if not isinstance(usd, (int, float)) or isinstance(usd, bool):
+                _add(reasons, na("judge run without numeric usd", c["id"]))
+                continue
+            if j.get("phase") is not None and not isinstance(j.get("phase"), str):
+                _add(reasons, na("malformed judge run", c["id"]))
                 continue
             total += usd
             by_phase[j.get("phase") or "unknown"] = by_phase.get(j.get("phase") or "unknown", 0.0) + usd
             by_change[c["id"]] = by_change.get(c["id"], 0.0) + usd
             estimated = estimated or bool(j.get("estimated"))
     if not by_change:
-        return None, [na("no judge rows")]
+        return None, reasons + [na("no judge rows")]
     return {"total": r2(total), "estimated": estimated,
             "by_phase": {k: r2(v) for k, v in sorted(by_phase.items())},
-            "by_change": {k: r2(v) for k, v in sorted(by_change.items())}}, []
+            "by_change": {k: r2(v) for k, v in sorted(by_change.items())}}, reasons
 
 
 def automatic_approvals(changes):
@@ -352,7 +432,10 @@ def compute(changes, frm, to):
     }
     out = {}
     for m in METRICS:
-        v, reasons = fns[m]()
+        try:
+            v, reasons = fns[m]()
+        except Exception as exc:  # noqa: BLE001 - BUG-57: one metric on bad data is n/a, never a crashed report
+            v, reasons = None, [na("malformed data (%s)" % type(exc).__name__)]
         out[m] = {"value": v, "reasons": list(reasons)}
     return out
 
@@ -401,13 +484,13 @@ def readiness(records, check_ids):
                     if r["strict_errors"]:
                         hits += 1
                 continue
-            finds = {f.get("id"): f for f in (r.get("findings") or [])}
-            for h in r.get("hits") or []:
+            finds = {f.get("id"): f for f in _rows(r.get("findings"))[0] if isinstance(f.get("id"), str)}
+            for h in _rows(r.get("hits"))[0]:
                 if h.get("check") != cid or not h.get("would_refuse"):
                     continue
                 seen = True
                 hits += 1
-                f = finds.get(h.get("finding"))
+                f = finds.get(h.get("finding")) if isinstance(h.get("finding"), str) else None
                 if f and f.get("type") in ("bug", "spec-gap") and f.get("status") not in ("open", "rejected"):
                     confirmed += 1
         entry = {"would_refuse": hits, "confirmed": confirmed}

@@ -24,7 +24,11 @@
   a ``manual`` exception. Its mode is ``coverage.requirements`` (warn in 3.13): one ``checks.jsonl`` hit per
   uncovered requirement; ``blocking`` exits 1.
 
-Exit: 0 · 1 coverage gate refused (blocking) · 2 usage · 4 not found. Python >= 3.9, stdlib only.
+Malformed input (BUG-58): an ``evidence.jsonl`` line of the wrong shape is ignored with a warning; a malformed
+``project.json:tests`` is an ``trace.invalid_config`` error (exit 4); any other failure exits 5 — never 1.
+
+Exit: 0 · 1 coverage gate refused (blocking) · 2 usage · 4 not found / invalid config · 5 internal.
+Python >= 3.9, stdlib only.
 """
 import argparse
 import fnmatch
@@ -54,6 +58,25 @@ _MANUAL = re.compile(r"\bmanual:\s*\S")
 
 class NotFound(Exception):
     pass
+
+
+class InvalidConfig(Exception):
+    """BUG-58: ``project.json`` has a value of the wrong shape (exit 4, never the gate's 1)."""
+
+
+def test_globs(project):
+    """``project.json:tests.globs`` (default :data:`DEFAULT_GLOBS`); a wrong shape raises :class:`InvalidConfig`."""
+    tests = (project or {}).get("tests") if isinstance(project, dict) else None
+    if tests is None:
+        return list(DEFAULT_GLOBS)
+    if not isinstance(tests, dict):
+        raise InvalidConfig("project.json: tests must be an object (got %s)" % type(tests).__name__)
+    globs = tests.get("globs")
+    if globs is None or globs == []:
+        return list(DEFAULT_GLOBS)
+    if not isinstance(globs, list) or not all(isinstance(x, str) and x for x in globs):
+        raise InvalidConfig("project.json: tests.globs must be a list of non-empty strings (got %r)" % (globs,))
+    return list(globs)
 
 
 def _read(p):
@@ -196,16 +219,35 @@ TRACE_FILE = "traceability.md"
 JUNIT_MAX_BYTES = 20 * 1024 * 1024
 
 
-def evidence_records(cdir):
-    """The ``evidence.jsonl`` records of the change, oldest first (unreadable lines skipped)."""
+def _evidence_problem(rec):
+    """Why an evidence record has the wrong shape, or None (BUG-58)."""
+    if not isinstance(rec, dict):
+        return "not an object"
+    if rec.get("cwd_rel") is not None and not isinstance(rec["cwd_rel"], str):
+        return "cwd_rel is not a string"
+    if rec.get("junit") is not None and not isinstance(rec["junit"], str):
+        return "junit is not a string"
+    argv = rec.get("argv")
+    if argv is not None and not (isinstance(argv, list) and all(isinstance(a, str) for a in argv)):
+        return "argv is not a list of strings"
+    return None
+
+
+def evidence_records(cdir, warnings=None):
+    """The ``evidence.jsonl`` records of the change, oldest first (unreadable lines skipped; a line of the wrong
+    shape is skipped with a warning in ``warnings`` — BUG-58)."""
     out = []
-    for line in (_read(cdir / EVIDENCE_FILE) or "").splitlines():
+    for n, line in enumerate((_read(cdir / EVIDENCE_FILE) or "").splitlines(), 1):
         try:
             rec = json.loads(line)
         except ValueError:
             continue
-        if isinstance(rec, dict):
-            out.append(rec)
+        why = _evidence_problem(rec)
+        if why:
+            if warnings is not None:
+                warnings.append("%s line %d ignored: %s" % (EVIDENCE_FILE, n, why))
+            continue
+        out.append(rec)
     return out
 
 
@@ -270,9 +312,9 @@ def _argv_ran(rec, rel):
     return False
 
 
-def last_results(root, cdir, files):
+def last_results(root, cdir, files, warnings=None):
     """``{test_file: pass | fail | skipped | not run}`` from JUnit files named in evidence, else the evidence exit."""
-    recs = evidence_records(cdir)
+    recs = evidence_records(cdir, warnings)
     res = {}
     junits = []
     for rec in reversed(recs):
@@ -316,7 +358,7 @@ def build(root, change, base=None, project=None):
     if base is None:
         _, _, prod = pj.branch_flow(project or {})
         base = "origin/%s" % (prod or "main")
-    globs = list(((project or {}).get("tests") or {}).get("globs") or DEFAULT_GLOBS)
+    globs = test_globs(project)
     reqs = requirement_ids(cdir)
     tasks = parse_tasks(_read(cdir / "tasks.md") or "")
     commits = change_commits(root, change, base)
@@ -353,7 +395,8 @@ def build(root, change, base=None, project=None):
                                         for m in manual],
                      "test_first": test_first, "status": status, "tests": sorted(by_req.get(rid, [])),
                      "commits": linked, "commit_text": "no commit" if linked == [] else None})
-    results = last_results(root, cdir, sorted({f for r in rows for f in r["tests"]}))
+    warnings = []
+    results = last_results(root, cdir, sorted({f for r in rows for f in r["tests"]}), warnings)
     for r in rows:
         r["results"] = {f: results[f] for f in r["tests"]}
         r["result"] = _req_result(list(r["results"].values()))
@@ -364,7 +407,7 @@ def build(root, change, base=None, project=None):
             "uncovered": [r["id"] for r in rows if r["status"] == "uncovered"],
             "no_commit": [r["id"] for r in rows if r["commits"] == []],
             "commits_readable": commits is not None, "globs": globs,
-            "not_green": [r["id"] for r in rows if not r["green"]]}
+            "not_green": [r["id"] for r in rows if not r["green"]], "warnings": warnings}
 
 
 def render(res):
@@ -418,6 +461,10 @@ def check(root, res, project=None):
             hits += 1
         except (modes.ModeError, OSError):
             pass
+    if n == 0:  # BUG-53: nothing to cover is not "covered" — requirements.md holds no REQ-… id
+        return {"mode": m["mode"], "verdict": "not-evaluated",
+                "line": "coverage: not evaluated (no REQ-…-NNN id in requirements.md or spec-delta.md)",
+                "missing": [], "hits": 0, "warning": m["warning"]}
     if not missing:
         verdict = "pass"
     elif m["mode"] == "blocking":
@@ -450,16 +497,27 @@ def main(argv=None):
     try:
         if root is None:
             raise NotFound("not a Karvey project (no docs/spec)")
-        res = build(root, args.change, args.base)
+        return _run(root, args)
     except NotFound as exc:
         return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue("trace.not_found", str(exc))]), args.json)
+    except InvalidConfig as exc:
+        return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue("trace.invalid_config", str(exc))]),
+                       args.json)
+    except Exception as exc:  # BUG-58: last resort, exit 5 — a traceback must never read as "gate refused" (1)
+        return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL,
+                                   errors=[kl.issue("internal", "%s: %s" % (type(exc).__name__, exc))]), args.json)
+
+
+def _run(root, args):
+    res = build(root, args.change, args.base)
     n = len(res["requirements"])
     lines = ["%s: %d requirement(s), %d covered, %d uncovered, %d without commit, %d unmapped test(s)" % (
         args.change, n, n - len(res["uncovered"]), len(res["uncovered"]), len(res["no_commit"]),
         len(res["unmapped_tests"]))]
     lines += ["  uncovered %s" % r for r in res["uncovered"]]
     lines += ["  unmapped test %s" % f for f in res["unmapped_tests"]]
-    code, warnings, errors = kl.EXIT_OK, [], []
+    code, errors = kl.EXIT_OK, []
+    warnings = [kl.issue("trace.evidence_malformed", w, severity="warning") for w in res.get("warnings") or []]
     if args.write:
         path = write(root, res)
         res["written"] = os.path.relpath(str(path), str(root)).replace(os.sep, "/")

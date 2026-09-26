@@ -163,3 +163,24 @@ class NoInertSwitch(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CurrentCounts(unittest.TestCase):
+    """BUG-66 (F-05): the method page's current skill / support / rule counts match the plugin's files (L-11 does
+    not read the page)."""
+
+    def test_counts_match_the_files(self):
+        import re as _re
+        root = _path.PLUGIN_ROOT
+        page = (_path.REPO_ROOT / "docs" / "karvey.html").read_text(encoding="utf-8")
+        skills = [p for p in (root / "skills").iterdir() if (p / "SKILL.md").is_file()]
+        rules = list((root / "skills" / "karvey" / "rules").glob("*.md"))
+        m = _re.search(r"<b>(\d+)</b><span>skills = 1 orchestrator \+ (\d+) phases \+ (\d+) support</span>", page)
+        self.assertIsNotNone(m, "no skills summary on the page")
+        total, phases, support = map(int, m.groups())
+        self.assertEqual(total, len(skills))
+        self.assertEqual(support, len(skills) - phases - 1)
+        m2 = _re.search(r"· (\d+) skills · (\d+) rules ·", page)
+        self.assertIsNotNone(m2)
+        self.assertEqual((int(m2.group(1)), int(m2.group(2))), (len(skills), len(rules)))
+        self.assertIn("Support layer · %d support skills" % support, page)

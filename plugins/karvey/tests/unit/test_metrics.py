@@ -220,3 +220,132 @@ class Readiness(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RetroActionOwner(unittest.TestCase):
+    """@req REQ-W2-008 — BUG-50 (F-11): an agreed retro action's backlog row carries its owner, in the row itself
+    (the backlog table has no owner column, so the Origin cell holds it)."""
+
+    def read(self, rel):
+        return (_path.PLUGIN_ROOT / rel).read_text(encoding="utf-8")
+
+    def test_retro_skill_writes_owner_in_the_row(self):
+        self.assertIn("retro-{to} · owner: {owner}", self.read("skills/karvey-retro/SKILL.md"))
+
+    def test_backlog_rule_documents_the_owner_cell(self):
+        text = self.read("skills/karvey/rules/backlog.md")
+        self.assertIn("· owner: ", text)
+        self.assertRegex(text, r"\| BL-\d+ \| [0-9-]+ \| retro-[0-9-]+ · owner: [^|]+\| process \|")
+
+
+class FractionalSecondsKeepTheZone(unittest.TestCase):
+    """BUG-54 (F-15): a timestamp with fractional seconds keeps its zone (the zone's digits are not the fraction)."""
+
+    def test_metrics_parse_dt(self):
+        for v, off in (("2026-09-10T10:00:00.5Z", 0), ("2026-09-10T10:00:00.5-03:00", -3 * 3600),
+                       ("2026-09-10T10:00:00.123456+02:00", 2 * 3600)):
+            dt = M.parse_dt(v)
+            self.assertIsNotNone(dt, v)
+            self.assertEqual(dt.utcoffset().total_seconds(), off, v)
+        self.assertEqual(M.hours(M.parse_dt("2026-09-10T10:00:00.5-03:00"),
+                                 M.parse_dt("2026-09-10T14:00:00-03:00")), 3.9998611111111112)
+
+
+def _rec(cid, **spec):
+    base = {"change_id": cid, "lane": "standard", "created_at": "2026-09-01T09:00:00-03:00"}
+    base.update(spec)
+    return {"id": cid, "spec": base, "findings": [], "plan_rows": [], "archived_on": "2026-09-10"}
+
+
+class MalformedDataIsNa(unittest.TestCase):
+    """@req REQ-W2-004 — BUG-57 (F-18): a change with malformed data is left out of THAT metric with an
+    ``n/a — reason (change-id)``; the report never crashes and never shows a wrong number."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.recs = records()
+        cls.ref = M.compute_all(cls.recs, FRM, TO)["total"]
+
+    def compute(self, *extra):
+        return M.compute_all(self.recs + list(extra), FRM, TO)["total"]
+
+    def test_malformed_gate_outcome_phases_skipped_with_reason(self):
+        bad = _rec("bad", approvals={"requirements": {"generated_at": "2026-09-01T10:00:00-03:00"}},
+                   gate_outcomes=[{"gate": "phase", "at": "2026-09-01T11:00:00-03:00", "phases": 5},
+                                  {"gate": "phase", "at": "2026-09-01T11:00:00-03:00", "phases": {"x": 1}},
+                                  {"gate": ["what"], "at": "2026-09-01T11:00:00-03:00", "phases": ["qa"]}])
+        t = self.compute(bad)
+        for m in ("approval_wait_hours", "gate_rejection_rate"):
+            self.assertEqual(t[m]["value"], self.ref[m]["value"], m)
+            self.assertIn("n/a — malformed gate outcome (bad)", t[m]["reasons"], m)
+
+    def test_malformed_gate_outcome_via_cli_exits_0(self):
+        tmp = g.TempDir()
+        try:
+            root = tmp.path / "proj"
+            shutil.copytree(str(FIX), str(root))
+            p = root / "docs/spec/changes/archive/2026-09-10-alpha/spec.json"
+            spec = json.loads(p.read_text(encoding="utf-8"))
+            spec["gate_outcomes"][0]["phases"] = 7
+            p.write_text(json.dumps(spec), encoding="utf-8")
+            code, out = run_ctx("--root", str(root), "--metrics", "--from", FRM, "--to", TO, "--as-of", TO, "--json")
+            self.assertEqual(code, 0, out)
+            self.assertIn("n/a — malformed gate outcome (alpha)",
+                          json.loads(out)["result"]["total"]["gate_rejection_rate"]["reasons"])
+        finally:
+            tmp.cleanup()
+
+    def test_prod_approval_before_creation_is_na(self):
+        bad = _rec("early", created_at="2026-09-05T09:00:00-03:00",
+                   approvals={"prod": {"by": "owner", "date": "2026-09-04T09:00:00-03:00"}})
+        v, reasons = M.lead_time([bad])
+        self.assertIsNone(v)
+        self.assertEqual(reasons, ["n/a — prod approval before creation (early)"])
+        self.assertEqual(self.compute(bad)["lead_time_days"]["value"], self.ref["lead_time_days"]["value"])
+
+    def test_deploy_without_zone_is_reported_not_hidden(self):
+        bad = _rec("nozone", deploys=[{"env": "prod", "at": "2026-09-10T10:00:00", "verification": "regression"},
+                                      {"env": "prod", "at": "2026-09-10T12:00:00-03:00", "verification": "pass"}])
+        v, reasons = M.time_to_restore([bad])
+        self.assertIsNone(v)
+        self.assertEqual(reasons, ["n/a — deploy time without zone (nozone)"])
+        t = self.compute(bad)["time_to_restore_hours"]
+        self.assertEqual(t["value"], self.ref["time_to_restore_hours"]["value"])
+        self.assertIn("n/a — deploy time without zone (nozone)", t["reasons"])
+
+    def test_other_malformed_shapes_never_crash(self):
+        weird = [
+            dict(_rec("f1"), findings={"not": "a list"}),
+            dict(_rec("f2"), findings=["row", {"type": "spec-gap", "origin": "judge:x", "routed_to": 3}]),
+            dict(_rec("p1"), plan_rows="nope"),
+            dict(_rec("p2"), plan_rows=["row", {"task": 5, "estimate": [10], "actual_ai": {"x": 1}}]),
+            _rec("a1", approvals=["prod"]),
+            _rec("a2", approvals={"prod": "yes", "qa": 3}),
+            _rec("j1", judge_runs=[{"phase": "qa", "usd": "1.5"}, {"phase": ["qa"], "usd": 0.5}]),
+            _rec("h1", phase_history=[{"phase": ["x"], "entered_at": "2026-09-01T09:00:00-03:00",
+                                       "exited_at": "2026-09-01T10:00:00-03:00"}]),
+            _rec("d1", deploys=["prod", {"env": ["prod"], "at": 3}]),
+            _rec("r1", revision_history="many"),
+        ]
+        t = self.compute(*weird)  # must not raise
+        for m in ("lead_time_days", "deploy_frequency_per_week", "change_failure_rate", "time_to_restore_hours",
+                  "estimate_accuracy", "judge_acceptance"):
+            self.assertEqual(t[m]["value"], self.ref[m]["value"], m)
+        self.assertIn("n/a — malformed findings (f1)", t["spec_gap_rate"]["reasons"])
+        self.assertIn("n/a — malformed PLAN rows (p1)", t["estimate_accuracy"]["reasons"])
+        self.assertIn("n/a — judge run without numeric usd (j1)", t["judge_cost_usd"]["reasons"])
+        self.assertIn("n/a — malformed judge run (j1)", t["judge_cost_usd"]["reasons"])
+        self.assertIn("n/a — malformed phase history (h1)", t["cycle_time_hours"]["reasons"])
+        self.assertIn("n/a — malformed revision history (r1)", t["ripple"]["reasons"])
+        self.assertIn("n/a — deploy without time (d1)", t["time_to_restore_hours"]["reasons"])
+        self.assertEqual(t["cycle_time_hours"]["value"], self.ref["cycle_time_hours"]["value"])
+
+    def test_a_crashing_metric_is_na_not_a_crash(self):
+        orig = M.ripple
+        M.ripple = lambda changes: 1 / 0
+        try:
+            out = M.compute([_rec("x")], FRM, TO)
+        finally:
+            M.ripple = orig
+        self.assertIsNone(out["ripple"]["value"])
+        self.assertEqual(out["ripple"]["reasons"], ["n/a — malformed data (ZeroDivisionError)"])

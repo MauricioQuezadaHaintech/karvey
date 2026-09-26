@@ -115,6 +115,30 @@ class Verify(Base):
         self.assertEqual(r["rollback"]["command"], "platform rollback web --to previous")
         self.assertIn("--verification regression", r["deploy_record"])
 
+    def test_unreachable_service_is_never_pass(self):
+        """@req REQ-W2-076 — BUG-52 (F-13): a probe with no HTTP status (connection refused) counts as a server
+        error, so a contract whose only threshold is new_5xx cannot pass while the service is down."""
+        down = "http://127.0.0.1:1"
+        self.infra(contract(down, thresholds={"new_5xx": 0}, health=[down + "/health"],
+                            routes=[{"url": down + "/orders", "expect_status": 200}]))
+        code, env = self.probe_and_eval()
+        r = env["result"]
+        self.assertEqual(r["result"], "regression", r)
+        self.assertEqual(code, 1)
+
+    def test_probe_urls_are_redacted_in_the_evidence(self):
+        """@req REQ-W2-076 — BUG-52 (F-13): credentials and query values of a probe URL never reach the evidence."""
+        host = self.base.replace("http://", "")
+        secret = "http://user:s3cr3tpw@%s/health?token=abc123" % host
+        self.infra(contract(self.base, health=[secret], routes=[{"url": secret, "expect_status": 200}]))
+        self.probe_and_eval(error_rate_pct=0, p95_ms=100, baseline_p95_ms=100, new_5xx=0)
+        change = self.root / "docs/spec/changes/feat-a"
+        for f in ("deploy_evidence.md", "postdeploy_probe_dev.json"):
+            text = (change / f).read_text()
+            self.assertNotIn("s3cr3tpw", text, f)
+            self.assertNotIn("abc123", text, f)
+            self.assertIn("/health", text, f)
+
     def test_observed_error_rate_alone_is_regression(self):
         self.infra(contract(self.base))
         code, env = self.probe_and_eval(error_rate_pct=4.0, p95_ms=100, baseline_p95_ms=100)
@@ -165,6 +189,50 @@ class Verify(Base):
         self.assertEqual(text.count("## prod"), 1)
         self.probe_and_eval(error_rate_pct=0, p95_ms=100, baseline_p95_ms=100)
         self.assertEqual((self.root / "docs/spec/changes/feat-a/deploy_evidence.md").read_text().count("## dev"), 1)
+
+    def test_new_5xx_without_probe_or_observed_value_is_not_evaluated(self):
+        """@req REQ-W2-077 — BUG-52 (F-13): with no probe run and no observed new_5xx nothing was measured, so the
+        new_5xx threshold is a note, never a passing check."""
+        self.infra(contract(self.base, thresholds={"new_5xx": 0}))
+        code, env = self.cli("evaluate", "feat-a", "--env", "dev", "--observed", self.observed(p95_ms=100))
+        r = env["result"]
+        self.assertEqual((code, r["result"]), (0, "not-evaluated"), r)
+        self.assertEqual(r["checks"], [])
+        self.assertIn("new_5xx not evaluated (no probe, no observed value)", r["notes"])
+
+    def test_non_numeric_threshold_is_not_evaluated_not_a_crash(self):
+        """@req REQ-W2-075 — BUG-52 (F-13): a threshold that is not a number is a contract problem naming the key,
+        the verdict is not-evaluated and the exit is never 1 (1 means only regression)."""
+        self.infra(contract(self.base, thresholds={"error_rate_pct": "5", "new_5xx": 0}))
+        code, env = self.probe_and_eval(error_rate_pct=0, new_5xx=0)
+        r = env["result"]
+        self.assertEqual((code, r["result"]), (0, "not-evaluated"), env)
+        self.assertTrue(any("error_rate_pct" in n and "not a number" in n for n in r["notes"]), r["notes"])
+
+    def test_malformed_probe_file_counts_as_no_probes(self):
+        """@req REQ-W2-076 — BUG-52 (F-13): a probe file that is a JSON list, or holds non-dict rows, is read as
+        no probes with a note — never a traceback."""
+        self.infra(contract(self.base, thresholds={"new_5xx": 0}))
+        pp = self.root / "docs/spec/changes/feat-a/postdeploy_probe_dev.json"
+        for body in ("[1, 2]", json.dumps({"probes": ["x", 3]}), json.dumps({"probes": "nope"})):
+            pp.write_text(body, encoding="utf-8")
+            code, env = self.cli("evaluate", "feat-a", "--env", "dev", "--observed", self.observed(new_5xx=0))
+            self.assertEqual(code, 0, env)
+            r = env["result"]
+            self.assertTrue(any("probe file" in n for n in r["notes"]), (body, r["notes"]))
+            self.assertEqual(r["result"], "pass", r)  # the observed new_5xx is still a real measurement
+
+    def test_internal_error_is_an_error_envelope_not_exit_1(self):
+        """BUG-52 (F-13): an unexpected exception comes out as the tool's internal-error envelope (exit 5)."""
+        self.infra(contract(self.base))
+        orig = pd.evaluate
+        pd.evaluate = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+        try:
+            code, env = self.cli("evaluate", "feat-a", "--env", "dev")
+        finally:
+            pd.evaluate = orig
+        self.assertEqual(code, 5)
+        self.assertEqual(env["errors"][0]["code"], "internal")
 
     def test_infra_text_is_never_executed(self):
         src = (_path.SCRIPTS_DIR / "karvey-postdeploy.py").read_text()

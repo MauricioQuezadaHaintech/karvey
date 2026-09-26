@@ -1799,6 +1799,54 @@ def l46_knowledge_sync_optional(ctx):
             yield rule, 1, "rules/knowledge-sync.md must make `none` the default, also when the key is absent"
 
 
+# --------------------------------------------------------------------------- L-47 (wave2-structural)
+FOUR_ZERO_CHANGES = ("schema.strict", "gates.merged", "release.manifest")
+
+
+@check("L-47", "check-modes.json: every check has a 3.13 and a 4.0 default; no 3.13 default is blocking; 4.0 differs "
+               "from 3.13 only for schema.strict, gates.merged, release.manifest unless the row has a decision; "
+               "every mode-reading call in scripts names a registered id (REQ-W2-083, 084, 085)",
+       reqs=("W2-083", "W2-084", "W2-085"))
+def l47_check_modes(ctx):
+    path = ctx.plugin / "schemas" / "check-modes.json"
+    if not path.is_file():
+        return
+    try:
+        data = json.loads(ctx.read(path) or "")
+    except ValueError as exc:
+        yield path, 1, "check-modes.json is not valid JSON (%s)" % exc
+        return
+    rows = data.get("checks") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        yield path, 1, "check-modes.json has no checks list"
+        return
+    ids = set()
+    for r in rows:
+        cid = r.get("id") if isinstance(r, dict) else None
+        if not isinstance(cid, str):
+            yield path, 1, "a check-modes.json row has no id"
+            continue
+        ids.add(cid)
+        d = r.get("defaults") if isinstance(r.get("defaults"), dict) else {}
+        for line in ("3.13", "4.0"):
+            if not isinstance(d.get(line), str):
+                yield path, 1, "%s has no %s default" % (cid, line)
+        if d.get("3.13") == "blocking":
+            yield path, 1, "%s: the 3.13 default is blocking (3.13 is advisory / opt-in, D-24)" % cid
+        if isinstance(d.get("3.13"), str) and isinstance(d.get("4.0"), str) and d["3.13"] != d["4.0"] \
+                and cid not in FOUR_ZERO_CHANGES and not r.get("decision"):
+            yield path, 1, "%s: the 4.0 default differs from 3.13 without a decision ref" % cid
+    scripts = ctx.plugin / "scripts"
+    for f in sorted(list(scripts.glob("*.py")) + list((scripts / "karvey_lib").glob("*.py"))):
+        for n, ln_ in enumerate(ctx.lines(f), 1):
+            if "modes." not in ln_ and "resolve(" not in ln_:
+                continue
+            for m in re.finditer(r"modes\.(?:resolve|record_hit|default|levels_of|row)\(([^)]*)", ln_):
+                for lit in re.findall(r"[\"']([a-z]+\.[a-z_]+)[\"']", m.group(1)):
+                    if lit not in ids:
+                        yield f, n, "mode call names %r, which check-modes.json does not register" % lit
+
+
 # --------------------------------------------------------------------------- L-54 (wave2-structural)
 @check("L-54", "The hooks README's statusline failure-line sentence carries a guard-case anchor to a "
                "statusline.json case that asserts the line (REQ-W2-082)", reqs=("W2-082",))
@@ -1894,6 +1942,10 @@ def l42_commit_examples_trailer(ctx):
         for n, text in command_examples(ctx, path):
             if COMMIT_WITH_MSG_RE.search(text) and "Karvey-Change" not in text:
                 yield path, n, "git commit example without the Karvey-Change trailer: %s" % text[:80]
+    impl = ctx.skill("karvey-impl")
+    if impl is not None and "Karvey-Change: {change-id}" not in (ctx.read(impl) or ""):
+        # BUG-67: the skill that makes the change's commits must tell the agent to add the trailer
+        yield impl, 1, "karvey-impl does not tell the agent to end every commit with `Karvey-Change: {change-id}`"
 
 
 @check("L-43", "No instruction merges locally into the integration branch and then pushes it: integration goes "
@@ -1932,8 +1984,9 @@ TRAFFIC_RE = re.compile(r"traffic", re.I)
 
 @check("L-53", "Deploy text: the living-spec merge (2.4-bis) and the release gate (2.8-bis) come before the "
                "production PR; the prod OK is in the PR body at deploy and a D-NN at archive; the step is named "
-               "post-deploy verification ('canary' only where traffic is split) (REQ-W2-045, 052, 054, 076)",
-       reqs=("W2-045", "W2-052", "W2-054", "W2-076"))
+               "post-deploy verification ('canary' only where traffic is split); a regression shows the rollback "
+               "and asks in every environment and reserves the incident number (REQ-W2-045, 052, 054, 076, 078)",
+       reqs=("W2-045", "W2-052", "W2-054", "W2-076", "W2-078"))
 def l53_deploy_order_and_naming(ctx):
     deploy = ctx.skill("karvey-deploy")
     if deploy is None:
@@ -1960,10 +2013,33 @@ def l53_deploy_order_and_naming(ctx):
         yield deploy, 1, "karvey-deploy does not say the prod OK becomes a D-NN on chore/archive-{id} at archive"
     if "post-deploy verification" not in text:
         yield deploy, 1, "karvey-deploy does not name the step 'post-deploy verification'"
+    yield from _l53_regression(deploy, lines)
     for path in [deploy] + [x for x in (ctx.rule("deploy-workflow.md"),) if x is not None]:
         for n, ln_ in enumerate(ctx.lines(path), 1):
             if CANARY_RE.search(ln_) and not TRAFFIC_RE.search(ln_):
                 yield path, n, "'canary' outside traffic splitting; the step is 'post-deploy verification'"
+
+
+REGRESSION_HEAD_RE = re.compile(r"^\s*\d+\.\s+\*\*`regression`\*\*")
+BLOCK_END_RE = re.compile(r"^(?:\s*\d+\.\s|#)")
+PROD_ONLY_RE = re.compile(r"^\s*-\s*PROD\b")
+
+
+def _l53_regression(deploy, lines):
+    """BUG-49 (F-10, REQ-W2-078): the `regression` item shows the rollback and asks in every environment (not
+    only PROD) and reserves the incident number with karvey-id.py."""
+    head = next((n for n, ln_ in enumerate(lines) if REGRESSION_HEAD_RE.search(ln_)), None)
+    if head is None:
+        yield deploy, 1, "karvey-deploy has no `regression` item for the post-deploy verification (REQ-W2-078)"
+        return
+    end = next((n for n in range(head + 1, len(lines)) if BLOCK_END_RE.search(lines[n])), len(lines))
+    block = lines[head:end]
+    ask = [k for k, ln_ in enumerate(block) if "rollback.command" in ln_ and "AskUserQuestion" in ln_]
+    if not ask or any(PROD_ONLY_RE.search(block[k]) for k in ask):
+        yield deploy, head + 1, ("the regression item must show `rollback.command` and ask with AskUserQuestion in "
+                                 "every environment, not only PROD (REQ-W2-078)")
+    if not any("karvey-id.py" in ln_ and "next BUG" in ln_ for ln_ in block):
+        yield deploy, head + 1, "the regression item does not reserve the incident with `karvey-id.py next BUG`"
 
 
 # --------------------------------------------------------------------------- L-45 (wave2-structural)

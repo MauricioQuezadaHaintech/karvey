@@ -171,6 +171,24 @@ class WriteAndCheck(Base):
         self.assertEqual(len(hits), 2)
         self.assertEqual({h["check"] for h in hits}, {"coverage.requirements"})
 
+    def test_no_requirement_ids_is_not_evaluated_never_pass(self):
+        """@req REQ-W2-062 — BUG-53 (F-14): requirements without REQ ids give 0/0; that is never a pass."""
+        g.write(self.root, "docs/spec/changes/feat-a/requirements.md", "# Requirements\n\n### 1.1 First\ntext\n")
+        g.commit_all(self.root, "plain numbering")
+        res = tr.build(self.root, "feat-a", base="base")
+        gate = tr.check(self.root, res)
+        self.assertEqual(gate["verdict"], "not-evaluated", gate)
+        self.assertIn("no REQ-", gate["line"])
+
+    def test_requirements_template_heading_is_read_by_the_trace(self):
+        """@req REQ-W2-057 — BUG-53 (F-14): the heading the requirements skill tells the agent to write carries
+        the id the trace reads."""
+        skill = (_path.PLUGIN_ROOT / "skills/karvey-requirements/SKILL.md").read_text(encoding="utf-8")
+        heads = [ln for ln in skill.splitlines() if ln.startswith("### 1.1 ")]
+        self.assertTrue(heads, "no 1.1 heading in the template")
+        sample = heads[0].replace("{CAP}", "CAP").replace("{NNN}", "001")
+        self.assertTrue(tr._REQ_HEAD.search(sample), sample)
+
     def test_blocking_mode_fails_and_exits_1(self):
         g.write(self.root, "docs/spec/project.json", {"branch_flow": {"integration": "main", "production": "main"},
                                                       "checks": {"coverage.requirements": "blocking"}})
@@ -206,6 +224,60 @@ class TablesAndManualScripts(Base):
         self.assertEqual(by["REQ-X-002"]["manual_reasons"], ["manual script tests/manual/walkthrough.md"])
         self.assertEqual(by["REQ-X-002"]["tests"], [])
         self.assertIn("## Manual exceptions", tr.render(res))
+
+
+class MalformedInputNeverExits1(WriteAndCheck):
+    """BUG-58 (F-19): malformed input is a validation error or a skipped line, never a traceback exiting 1 (1 is
+    the documented "coverage gate refused" code)."""
+
+    def run_json(self, *extra):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = tr.main(["feat-a", "--base", "base", "--root", str(self.root), "--json"] + list(extra))
+        return code, json.loads(out.getvalue())
+
+    def project(self, **extra):
+        data = {"branch_flow": {"integration": "main", "production": "main"}}
+        data.update(extra)
+        g.write(self.root, "docs/spec/project.json", data)
+
+    def test_tests_config_as_list_is_invalid_config_not_1(self):
+        self.project(tests=["tests/**"])
+        code, env = self.run_json("--check")
+        self.assertEqual(code, 4, env)
+        self.assertEqual(env["errors"][0]["code"], "trace.invalid_config")
+        self.assertIn("tests", env["errors"][0]["message"])
+
+    def test_globs_not_a_list_of_strings_is_invalid_config(self):
+        for bad in ("tests/**", ["tests/**", 3], {"a": 1}):
+            self.project(tests={"globs": bad})
+            code, env = self.run_json()
+            self.assertEqual(code, 4, (bad, env))
+            self.assertEqual(env["errors"][0]["code"], "trace.invalid_config")
+
+    def test_evidence_line_with_non_string_cwd_is_ignored_with_warning(self):
+        self.evidence({"argv": ["python3", "-m", "unittest", "discover", "-s", "tests"], "cwd_rel": 3, "exit": 0,
+                       "junit": "out/j.xml"},
+                      {"argv": ["python3", "tests/test_first.py", 7], "cwd_rel": ".", "exit": 0},
+                      {"argv": "python3 tests/test_named.py", "exit": 0},
+                      {"argv": ["python3", "-p", 5, "tests"], "cwd_rel": ".", "exit": 0})
+        code, env = self.run_json()
+        self.assertEqual(code, 0, env)
+        by = {r["id"]: r for r in env["result"]["requirements"]}
+        self.assertEqual(by["REQ-X-001"]["result"], "not run")
+        msgs = [w["message"] for w in env["warnings"] if w["code"] == "trace.evidence_malformed"]
+        self.assertEqual(len(msgs), 4, env["warnings"])
+        self.assertIn("evidence.jsonl line 1", msgs[0])
+
+    def test_unexpected_error_exits_internal_never_1(self):
+        orig = tr.build
+        tr.build = lambda *a, **k: {}["boom"]
+        try:
+            code, env = self.run_json()
+        finally:
+            tr.build = orig
+        self.assertEqual(code, 5, env)
+        self.assertEqual(env["errors"][0]["code"], "internal")
 
 
 if __name__ == "__main__":

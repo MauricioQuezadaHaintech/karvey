@@ -9,15 +9,16 @@
 the ``Karvey-Change`` trailer (merge commits through their parents, spec bookkeeping by path) and lists each
 change with its version (the CHANGELOG block that names it), lane and QA state, plus the unmapped commits.
 Verdict: ``pass`` when nothing is unmapped and every change has QA approved or skipped by its lane; otherwise
-``warn`` (mode ``warn``, 3.13) or ``fail`` (mode ``blocking``, 4.0). A non-pass verdict appends one
-``checks.jsonl`` hit per active change of the manifest (``--no-record`` writes nothing). Git is read only.
+``warn`` (mode ``warn``, 3.13) or ``fail`` (mode ``blocking``, 4.0); the mode is the stricter of the working copy's
+``project.json`` and the reviewed line's (``origin/{production}``), as in the prod-gate hook. A non-pass verdict
+appends one ``checks.jsonl`` hit per active change of the manifest (``--no-record`` writes nothing). Git is read only.
 
 ``check`` is the deploy pre-check (REQ-W2-069): items ``qa_gate``, ``tests``, ``changelog``, ``version_match``,
 ``lane_triplet``, ``manifest``, ``spec_merged`` and ``pr_body``, each ``pass`` · ``warn`` (a failing check whose
 mode is ``warn``, 3.13) · ``fail`` · ``not-applicable`` with its detail; the verdict is ``fail`` when any item
 fails, else ``warn`` when any warns, else ``pass``. It writes nothing. ``release-branch`` is the read-only plan of
 a ``release/{version}`` branch from production holding only the approved changes' commits, oldest first
-(REQ-W2-050): it prints the commands and runs none.
+(REQ-W2-050): it prints the commands and runs none; ``--version`` must be semver-like (``X.Y.Z[-pre][+build]``).
 
 Exit: 0 pass or warn · 1 fail · 2 usage · 4 not found (no project, git cannot answer) · 5 internal.
 Python >= 3.9, stdlib only.
@@ -30,6 +31,7 @@ import subprocess
 import sys
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -40,6 +42,10 @@ TOOL = "karvey-release-gate"
 
 
 class NotFound(Exception):
+    pass
+
+
+class Usage(Exception):
     pass
 
 
@@ -56,6 +62,14 @@ def default_base(root):
     return "origin/%s" % (production or "main")
 
 
+def manifest_mode(root):
+    """``release.manifest`` mode: the stricter of the working copy and the reviewed line — the prod-gate rule,
+    through ``guards.manifest_mode`` itself (BUG-59)."""
+    from karvey_lib import guards
+    wc, _ = pj.load_project_json(root)
+    return guards.manifest_mode(SimpleNamespace(root=root, cache={}), root, wc if isinstance(wc, dict) else {})
+
+
 def record_hits(root, man):
     """One ``release.manifest`` hit per change of the manifest that has an active folder."""
     detail = "; ".join(mf.problems_of(man))
@@ -70,7 +84,7 @@ def record_hits(root, man):
 def cmd_manifest(args):
     root = _root(args)
     base = args.base or default_base(root)
-    mode = modes.resolve(root, "release.manifest")["mode"]
+    mode = manifest_mode(root)
     try:
         man = mf.release_manifest(root, base, args.head, mode=mode)
     except mf.ManifestError as exc:
@@ -124,7 +138,7 @@ def item_tests(root, change, base):
                      % change)
     last = recs[-1]
     run = "latest run %r exit %s (evidence.jsonl:%d)" % (last.get("label") or " ".join(last.get("argv") or [])[:60],
-                                                         last.get("exit"), len(recs))
+                                                         last.get("exit"), _last_record_line(cdir / tr.EVIDENCE_FILE))
     if last.get("exit") != 0:
         return _item("fail", run)
     try:
@@ -139,6 +153,23 @@ def item_tests(root, change, base):
     if missing and mode != "off":
         return _item("warn", "%s; %s (mode %s); not green: %s" % (run, cov, mode, _ids(missing)))
     return _item("pass", "%s; %s" % (run, cov))
+
+
+def _last_record_line(path):
+    """The physical line number (1-based) of the last JSON-object line of ``path`` — blank and invalid lines
+    count (BUG-59); 0 when there is none."""
+    try:
+        text = Path(path).read_text(encoding="utf-8-sig", errors="replace")
+    except OSError:
+        return 0
+    last = 0
+    for i, line in enumerate(text.splitlines(), 1):
+        try:
+            if isinstance(json.loads(line), dict):
+                last = i
+        except ValueError:
+            continue
+    return last
 
 
 def item_changelog(root, change):
@@ -218,7 +249,7 @@ def item_lane_triplet(root, spec_data):
 
 
 def item_manifest(root, change, base, head):
-    mode = modes.resolve(root, "release.manifest")["mode"]
+    mode = manifest_mode(root)
     try:
         man = mf.release_manifest(root, base, head, mode=mode)
     except mf.ManifestError as exc:
@@ -297,9 +328,11 @@ def cmd_check(args):
 
 # --------------------------------------------------------------------------- release-branch (REQ-W2-050)
 def cmd_release_branch(args):
+    if args.version is not None and not _VERSION.fullmatch(args.version):
+        raise Usage("--version %r is not a semver version (X.Y.Z, optional -pre or +build)" % args.version[:60])
     root = _root(args)
     base = args.base or default_base(root)
-    mode = modes.resolve(root, "release.manifest")["mode"]
+    mode = manifest_mode(root)
     try:
         m = mf.map_commits(root, base, args.head)
         man = mf.release_manifest(root, base, args.head, mode=mode)
@@ -363,6 +396,8 @@ def main(argv=None):
         return kl.EXIT_USAGE
     try:
         code, result, human = COMMANDS[args.command](args)
+    except Usage as exc:
+        return kl.emit(kl.envelope(TOOL, kl.EXIT_USAGE, errors=[kl.issue("usage", str(exc))]), args.json)
     except NotFound as exc:
         return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue("release.not_found", str(exc))]),
                        args.json)

@@ -3,14 +3,18 @@
 
     karvey-id.py next BUG|D|BL|F|Q [--change ID] [--qualified] [--root DIR] [--json]
 
-It takes ``<git-common-dir>/karvey/ids.lock`` (O_EXCL; stale after ``lock_stale_seconds``), scans the working
+It takes ``<git-common-dir>/karvey/ids.lock`` (O_EXCL, holding ``pid token``; stale after ``lock_stale_seconds``:
+the stale file is renamed aside atomically before a new lock is created, and a release deletes the lock only while
+it still holds this process's token), scans the working
 tree and every local and ``refs/remotes/*`` branch (``git grep``, read-only, no fetch) for the kind's IDs, takes
 ``max + 1`` above the clone-local reservations in ``<git-common-dir>/karvey/ids.json``, records it and prints it.
+``ids.json`` is a cache of this clone's reservations: when it is not ``{kind: [{"n": int, ...}]}`` it is kept aside
+as ``ids.json.corrupt-{time}`` and rebuilt from the scan, with a note in the result.
 
 Sources: BUG ``docs/bugs_dev_testing.md`` · D ``docs/spec/decisions.md`` and ``docs/spec/decisions/*.md`` ·
 BL ``docs/spec/backlog.md`` · F ``docs/spec/changes/{change}/findings.md`` (per change: ``--change`` required) ·
 Q ``docs/spec/questions.md`` and the change folders. ``--qualified`` prints ``KIND-NN@{repo}``
-(``project.json:repos[0]``).
+(``project.json:repos[0]``), validated before any number is reserved.
 
 Residual risk: two clones that have not pushed can still pick the same number; the remote scan narrows it.
 
@@ -22,6 +26,7 @@ import os
 import re
 import sys
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -86,7 +91,9 @@ def scan_refs(root, kind, change):
         if ref.endswith("/HEAD"):
             continue
         try:
-            out = gitlog.run(["grep", "-h", "-o", "-E", "%s-[0-9]+" % kind, gitlog.check_ref(ref), "--"] + pats, root)
+            # the boundary of id_re (not preceded by a letter, digit or hyphen): ``HEAD-977`` is not ``D-977``
+            out = gitlog.run(["grep", "-h", "-o", "-E", "(^|[^A-Za-z0-9-])%s-[0-9]+" % kind, gitlog.check_ref(ref),
+                              "--"] + pats, root)
         except gitlog.GitLogError:
             continue  # no match (exit 1) or an unreadable ref
         seen.append(ref)
@@ -104,21 +111,50 @@ def state_dir(root):
     return p
 
 
+def _read(path):
+    try:
+        return Path(path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
 class Lock:
+    """``O_EXCL`` lock file holding ``pid token``. Release deletes it only while it still holds our token; a stale
+    lock is renamed aside (atomic) and checked to be the one judged stale before a new lock is created (BUG-60)."""
+
     def __init__(self, path, stale_s):
         self.path, self.stale_s, self.fd = Path(path), stale_s, None
+        self.token = uuid.uuid4().hex
+
+    def _take_over_stale(self, seen):
+        """Move the stale lock whose content was ``seen`` out of the way; False when it was not that file."""
+        aside = self.path.with_name("%s.stale-%s" % (self.path.name, self.token))
+        try:
+            os.rename(str(self.path), str(aside))
+        except FileNotFoundError:
+            return False  # another waiter took it over first
+        if _read(aside) == seen:
+            os.unlink(str(aside))
+            return True
+        try:  # not the stale file we judged: a fresh lock of another process; put it back, never overwrite
+            os.link(str(aside), str(self.path))
+        except OSError:
+            pass
+        os.unlink(str(aside))
+        return False
 
     def __enter__(self):
         deadline = time.monotonic() + float(os.environ.get("KARVEY_ID_LOCK_WAIT_S", LOCK_WAIT_S))
         while True:
             try:
                 self.fd = os.open(str(self.path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-                os.write(self.fd, str(os.getpid()).encode())
+                os.write(self.fd, ("%d %s\n" % (os.getpid(), self.token)).encode())
                 return self
             except FileExistsError:
                 try:
-                    if time.time() - self.path.stat().st_mtime > self.stale_s:
-                        self.path.unlink()
+                    seen = _read(self.path)
+                    if seen is not None and time.time() - self.path.stat().st_mtime > self.stale_s:
+                        self._take_over_stale(seen)
                         continue
                 except FileNotFoundError:
                     continue
@@ -131,10 +167,12 @@ class Lock:
         try:
             os.close(self.fd)
         finally:
-            try:
-                self.path.unlink()
-            except FileNotFoundError:
-                pass
+            got = (_read(self.path) or "").split()
+            if len(got) == 2 and got[1] == self.token:
+                try:
+                    self.path.unlink()
+                except FileNotFoundError:
+                    pass
 
 
 def repo_slug(root):
@@ -151,6 +189,32 @@ def repo_slug(root):
     return slug
 
 
+def load_reservations(rpath):
+    """``(data, note)``: ``ids.json`` as ``{key: [{"n": int, ...}]}``; a corrupt file is kept aside and rebuilt."""
+    try:
+        text = rpath.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}, None
+    except OSError as exc:
+        return {}, "ids.json unreadable (%s): rebuilt from the scan" % exc
+    try:
+        data = json.loads(text)
+    except ValueError:
+        data = None
+    ok = isinstance(data, dict) and all(
+        isinstance(v, list) and all(isinstance(r, dict) and isinstance(r.get("n"), int)
+                                    and not isinstance(r.get("n"), bool) for r in v) for v in data.values())
+    if ok:
+        return data, None
+    aside = rpath.with_name("ids.json.corrupt-%s" % datetime.now().strftime("%Y%m%dT%H%M%S%f"))
+    try:
+        os.replace(str(rpath), str(aside))
+    except OSError:
+        aside = None
+    return {}, "ids.json is not {kind: [{\"n\": int}]}: rebuilt from the scan%s" % (
+        " (the old file is %s)" % aside.name if aside else "")
+
+
 def cmd_next(args):
     root = pj.find_root(start=os.getcwd(), root=args.root)
     if root is None:
@@ -160,16 +224,14 @@ def cmd_next(args):
         raise Refused("F-NN is per change: pass --change")
     if args.change and not re.match(r"^[a-z0-9][a-z0-9-]{1,62}$", args.change):
         raise Refused("invalid change id %r" % args.change)
+    slug = repo_slug(root) if args.qualified else None  # refuse before a number is reserved (BUG-60)
     sd = state_dir(root)
     stale = (kl.defaults() or {}).get("lock_stale_seconds", 30)
     with Lock(sd / "ids.lock", stale):
         tree = scan_tree(root, kind, args.change)
         refs, seen = scan_refs(root, kind, args.change)
         rpath = sd / "ids.json"
-        try:
-            res = json.loads(rpath.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            res = {}
+        res, note = load_reservations(rpath)
         key = kind if kind != "F" else "F:%s" % args.change
         held = [r for r in res.get(key, []) if isinstance(r, dict) and isinstance(r.get("n"), int)]
         reserved = max([r["n"] for r in held] or [0])
@@ -182,9 +244,9 @@ def cmd_next(args):
     width = 2
     ident = "%s-%0*d" % (kind, width, n)
     if args.qualified:
-        ident += "@%s" % repo_slug(root)
+        ident += "@%s" % slug
     result = {"kind": kind, "id": ident, "n": n, "max_tree": tree, "max_refs": refs, "max_reserved": reserved,
-              "refs_scanned": len(seen), "change": args.change}
+              "refs_scanned": len(seen), "change": args.change, "notes": [note] if note else []}
     return kl.EXIT_OK, result, ident
 
 

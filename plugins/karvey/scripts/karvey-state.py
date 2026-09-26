@@ -135,9 +135,8 @@ def parse_dt(value):
     v = value[:-1] + "+00:00" if value.endswith("Z") else value
     if "." in v:
         head, rest = v.split(".", 1)
-        digits = "".join(ch for ch in rest if ch.isdigit())
-        tail = rest[len(digits):]
-        v = head + "." + (digits + "000000")[:6] + tail
+        digits = re.match(r"\d*", rest).group(0)  # BUG-54: the fraction only, never the zone's digits
+        v = head + "." + (digits + "000000")[:6] + rest[len(digits):]
     try:
         return datetime.fromisoformat(v)
     except ValueError:
@@ -175,11 +174,18 @@ def kind_of(path):
 
 
 def schema_mode(root, override_strict=False):
+    """``strict`` from ``--strict``, ``project.json:schema_mode``, or the check-mode registry's ``schema.strict``
+    at ``blocking`` (``checks.schema.strict``, or the 4.0 default) — BUG-61: the registry was ignored."""
     if override_strict:
         return "strict"
     data, _ = pj.load_project_json(root)
     if isinstance(data, dict) and data.get("schema_mode") == "strict":
         return "strict"
+    try:
+        if modes.resolve(root, "schema.strict", project=data if isinstance(data, dict) else {})["mode"] == "blocking":
+            return "strict"
+    except (modes.ModeError, KeyError, OSError):
+        pass
     return "advisory"
 
 
@@ -260,7 +266,24 @@ def open_in_merged_gate(data, ph, to):
         return False
     aps = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
     ap = aps.get(pdef["approval"]) if pdef.get("approval") else None
-    return isinstance(ap, dict) and ap.get("generated") is True
+    return isinstance(ap, dict) and ap.get("generated") is True and not sent_back(data, ph, ap)
+
+
+def sent_back(data, ph, ap):
+    """BUG-51 (F-12): the latest gate outcome covering ``ph`` is ``changes_requested`` and the artifact was not
+    generated again after it — the phase is held where the human sent it back."""
+    outs = data.get("gate_outcomes") if isinstance(data.get("gate_outcomes"), list) else []
+    last = None
+    for o in outs:
+        if isinstance(o, dict) and o.get("kind", "gate") == "gate" and ph in (o.get("phases") or []):
+            last = o
+    if not last or last.get("outcome") != "changes_requested":
+        return False
+    asked = parse_dt(last.get("at"))
+    made = [t for t in (parse_dt(ap.get("regenerated_at")), parse_dt(ap.get("generated_at"))) if t is not None]
+    if asked is None or not made:
+        return True
+    return max(made) <= asked
 
 
 def gate_phases_before(index):
@@ -502,6 +525,10 @@ def validate_data(data, kind, strict, file=None):
     if kind == "spec":
         issues = _legacy_rewrite(issues, data, strict, file)
         issues += semantic_spec(data, strict, file)
+        if strict and "lane" not in data and data.get("phase") != "archived" and not is_archived_path(file):
+            # BUG-61: architecture §1.2 — a missing lane is an error under strict (4.0); `next` warns in advisory
+            issues.append(kl.issue("state.lane_missing", "no lane in spec.json: set one with lane set",
+                                   severity="error", file=file, path="$.lane"))
         issues = _downgrade_pre_312(issues, data, file)
     else:
         issues += semantic_project(data, strict, file)
@@ -992,12 +1019,12 @@ def cmd_next(args, root):
     res["file"] = name
     lane, source = ln.lane_of(loaded.data)
     res["lane"], res["lane_source"] = lane, source
-    if source != "spec" and mapped != "archived":
+    if source != "spec" and mapped != "archived" and not any(w.get("code") == "state.lane_missing" for w in warns):
         warns = warns + [kl.issue("state.lane_missing", "no lane in spec.json: %s (every phase mandatory unless "
                                   "recorded as skipped); set one with lane set" % (
                                       "the 3.12 pipeline applies" if source == "legacy" else
                                       "type %r gives lane %r for display only" % (loaded.data.get("type"), lane)),
-                                  severity="warning", file=name, path="$.lane")]
+                                  severity=_sev(strict), file=name, path="$.lane")]
     human = "%s: phase %s · %s · next %s%s" % (
         args.change, res["phase"], res["status"], res["next_phase"] or "—",
         (" (" + res["skill"] + ")") if res.get("skill") else "")
@@ -1318,6 +1345,8 @@ def cmd_generated(args, root):
         now = now_iso()
         if not cur.get("generated_at"):
             cur["generated_at"] = now  # first time only: the approval wait starts here (REQ-W2-001)
+        else:
+            cur["regenerated_at"] = now  # BUG-51: a rework after "Request changes" re-opens the merged gate
         if getattr(args, "imported", False):
             cur["imported"] = True  # brought in by karvey-import: its approval needs a human marker (REQ-W2-080)
         ap[key] = cur
@@ -1641,7 +1670,7 @@ def approval_record(old, by, role, date, ref, ev):
     old = old if isinstance(old, dict) else {}
     rec = {"generated": old.get("generated", True) if isinstance(old.get("generated"), bool) else True,
            "approved": True, "by": by, "role": role, "date": date, "ref": ref, "evidence": ev}
-    for k in ("generated_at", "imported"):
+    for k in ("generated_at", "regenerated_at", "imported"):
         if k in old:
             rec[k] = old[k]
     return rec
@@ -1681,11 +1710,20 @@ def append_outcome(data, entry):
     return entry
 
 
-def lane_rank(lane):
-    """How much process a lane runs: the phases it does not skip (``legacy`` = all)."""
+def _lane_modes(lane):
     if lane in (None, ln.LEGACY):
-        return len(phase_ids())
-    return len([p for p, r in ln.lane_def(lane)["phases"].items() if r != "s"])
+        return {p: "m" for p in phase_ids()}
+    return dict(ln.lane_def(lane)["phases"])
+
+
+_MODE_LEVEL = {"s": 0, "o": 1, "m": 2}
+
+
+def is_raise(frm, to):
+    """REQ-W2-016 (revision 1, BUG-62): a raise only adds process — every phase keeps at least the mode it had
+    (mandatory stays mandatory, optional stays at least optional). Anything else is a lower."""
+    a, b = _lane_modes(frm), _lane_modes(to)
+    return frm != to and all(_MODE_LEVEL.get(b.get(p, "s"), 0) >= _MODE_LEVEL.get(m, 0) for p, m in a.items())
 
 
 def _read_answers(path):
@@ -1739,10 +1777,12 @@ def cmd_lane(args, root):
         frm = cur or ln.LEGACY
         if frm == args.lane:
             raise Refused("%s is already in lane %s" % (args.change, args.lane), code="state.lane")
-        up = lane_rank(args.lane) > lane_rank(frm)
+        up = is_raise(frm, args.lane)
         if args.action == "raise" and not up:
-            raise Refused("%s → %s is not a raise (it runs fewer phases): use lane lower, which needs the human"
-                          % (frm, args.lane), code="state.lane_lower")
+            weaker = sorted(p for p, m in _lane_modes(frm).items()
+                            if _MODE_LEVEL.get(_lane_modes(args.lane).get(p, "s"), 0) < _MODE_LEVEL.get(m, 0))
+            raise Refused("%s → %s is not a raise (%s would become optional or skipped): use lane lower, which "
+                          "needs the human" % (frm, args.lane, ", ".join(weaker)), code="state.lane_lower")
         entry = {"from": frm, "to": args.lane, "at": now, "reason": args.reason.strip()}
         if args.by:
             entry["by"] = args.by.strip()
@@ -1838,7 +1878,9 @@ def cmd_judge_run(args, root):
             raise Refused("judge run record %d (%s) lacks %s: the model used and whether it was intra-model are "
                           "always recorded" % (i, r.get("lens"), ", ".join(missing)), code="state.judge_run")
         for k in ("usd", "tokens_in", "tokens_out"):
-            if k in r and (not isinstance(r[k], (int, float)) or isinstance(r[k], bool) or r[k] < 0):
+            v = r.get(k)
+            if k in r and (not isinstance(v, (int, float)) or isinstance(v, bool) or v != v  # BUG-61: NaN
+                           or v in (float("inf"), float("-inf")) or v < 0):
                 raise Refused("judge run record %d: %s must be a non-negative number (got %r)" % (i, k, r[k]),
                               code="state.judge_run")
         rec = {k: v for k, v in r.items() if k in ("lens", "model", "intra_model", "verdict", "findings", "discarded",

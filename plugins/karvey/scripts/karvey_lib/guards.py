@@ -767,7 +767,26 @@ def _commit_message(args, cwd):
     while i < len(args):
         a = args[i]
         val, kind = None, None
-        for short, long_, k in (("-m", "--message", "m"), ("-F", "--file", "F"), (None, "--trailer", "t")):
+        if a.startswith("-") and not a.startswith("--") and len(a) > 2 and a[1] not in "mF":
+            # BUG-63: a cluster of short flags (``-am msg``, ``-sF file``): m/F take the rest or the next arg
+            for j, ch in enumerate(a[1:], 1):
+                if ch in "mF":
+                    rest = a[j + 1:]
+                    val = rest if rest else (args[i + 1] if i + 1 < len(args) else None)
+                    kind = "m" if ch == "m" else "F"
+                    if not rest:
+                        i += 1
+                    break
+                if ch in "cCtuS":  # options that take a value: the cluster ends here
+                    break
+            i += 1
+            if val is None:
+                continue
+            args_consumed = True
+        else:
+            args_consumed = False
+        for short, long_, k in (() if args_consumed else
+                                (("-m", "--message", "m"), ("-F", "--file", "F"), (None, "--trailer", "t"))):
             if a == long_ or (short and a == short):
                 val, kind = (args[i + 1] if i + 1 < len(args) else None), k
                 i += 1
@@ -778,7 +797,8 @@ def _commit_message(args, cwd):
             if short and a.startswith(short) and len(a) > 2 and not a.startswith("--"):
                 val, kind = a[2:], k
                 break
-        i += 1
+        if not args_consumed:
+            i += 1
         if val is None:
             continue
         if kind == "m":

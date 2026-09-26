@@ -58,7 +58,8 @@ reported as `not found in backlog.md`, never dropped silently.
 
 Present the retro and agree the actions with the team. Each agreed action becomes one `docs/spec/backlog.md` row
 of type `process`, with the next free `BL-NN` (`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BL`), the retro as its origin and an **owner** (a role or a person the
-team names). An action without an owner is **asked for once**; if no owner is given, the action stays in the
+team names). The owner goes in the row itself: its Origin cell reads `retro-{to} · owner: {owner}` (the backlog table
+has no owner column), so the backlog says who carries the action, not only the retro file. An action without an owner is **asked for once**; if no owner is given, the action stays in the
 retro file as `unowned` and **no backlog row is written for it**.
 
 ### 5. Store the retro

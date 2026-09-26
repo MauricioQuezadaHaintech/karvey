@@ -21,7 +21,7 @@ baseline_p95_ms, new_5xx}``, gathered by the deploy skill from ``metrics_source`
 It writes the env's section of ``changes/{id}/deploy_evidence.md`` and prints the ``deploy-record`` command.
 Nothing in ``infra.md`` is ever executed: the rollback command is only shown.
 
-Exit: 0 pass or not-evaluated · 1 regression · 2 usage · 3 refused (unsafe URL) · 4 not found. Stdlib only.
+Exit: 0 pass or not-evaluated · 1 regression · 2 usage · 3 refused (unsafe URL) · 4 not found · 5 internal. Stdlib only.
 """
 import argparse
 import json
@@ -47,6 +47,7 @@ DEFAULT_SAMPLES = 5
 EVIDENCE_FILE = "deploy_evidence.md"
 _BLOCK = re.compile(r"^```karvey-postdeploy[ \t]*\n(.*?)^```[ \t]*$", re.M | re.S)
 _LOCAL = ("localhost", "127.0.0.1", "::1")
+THRESHOLD_KEYS = ("error_rate_pct", "p95_ms_vs_baseline_pct", "new_5xx")
 RECOMMEND = "add a post-deploy contract to infra.md (karvey-infra: health, routes, thresholds, rollback)"
 
 
@@ -84,6 +85,8 @@ def contract_problems(c):
         out.append("no rollback command")
     if not isinstance(c.get("metrics_source"), dict):
         out.append("no metrics source")
+    if isinstance(th, dict):
+        out += ["threshold %s is not a number" % k for k in bad_thresholds(th)]
     return out
 
 
@@ -171,13 +174,26 @@ def probe_targets(c, env):
     return out
 
 
+def redact_url(url):
+    """BUG-52 (F-13): the URL as the evidence shows it — no ``user:password@`` and no query values."""
+    try:
+        u = urllib.parse.urlsplit(str(url))
+    except ValueError:
+        return "(unparseable url)"
+    host = u.hostname or ""
+    if u.port:
+        host = "%s:%d" % (host, u.port)
+    query = "&".join("%s=…" % k for k, _ in urllib.parse.parse_qsl(u.query, keep_blank_values=True))
+    return urllib.parse.urlunsplit((u.scheme, host, u.path, query, ""))
+
+
 def run_probes(c, env, samples, interval_s):
     targets = probe_targets(c, env)  # every URL checked before the first request
     rows = []
     for i in range(samples):
         for t in targets:
             rec = fetch(t["url"], env)
-            rec.update(kind=t["kind"], expect_status=t["expect_status"], sample=i + 1)
+            rec.update(url=redact_url(t["url"]), kind=t["kind"], expect_status=t["expect_status"], sample=i + 1)
             rec["ok"] = rec["error"] is None and _status_ok(rec["status"], t["expect_status"])
             rows.append(rec)
         if i + 1 < samples and interval_s > 0:
@@ -205,6 +221,15 @@ def _p95(values):
     return v[max(0, int(math.ceil(0.95 * len(v))) - 1)]
 
 
+def _num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def bad_thresholds(th):
+    """BUG-52 (F-13): threshold keys whose value is not a number (``"5"``, ``null``, a list…)."""
+    return [k for k in THRESHOLD_KEYS if k in th and not _num(th[k])]
+
+
 def evaluate(contract, problems, probes, observed):
     """``{result, checks, notes}`` — pass · regression · not-evaluated (REQ-W2-076, 077)."""
     if contract is None:
@@ -212,8 +237,12 @@ def evaluate(contract, problems, probes, observed):
     th = contract.get("thresholds") if isinstance(contract.get("thresholds"), dict) else {}
     if not th:
         return {"result": "not-evaluated", "checks": [], "notes": ["the contract has no thresholds: " + RECOMMEND]}
+    bad = bad_thresholds(th)
+    if bad:
+        return {"result": "not-evaluated", "checks": [],
+                "notes": ["threshold %s is not a number: fix the contract in infra.md" % k for k in bad]}
     observed = observed if isinstance(observed, dict) else {}
-    probes = probes or []
+    probes = [p for p in probes or [] if isinstance(p, dict)]
     if not probes and not observed:
         return {"result": "not-evaluated", "checks": [], "notes": ["no probe ran and no metric was observed"]}
     checks, notes = [], []
@@ -241,11 +270,17 @@ def evaluate(contract, problems, probes, observed):
         else:
             notes.append("p95 vs baseline not evaluated (no production baseline observed)")
     if "new_5xx" in th:
-        probe_5xx = sum(1 for p in probes if isinstance(p.get("status"), int) and p["status"] >= 500)
+        # BUG-52: no HTTP status (connection refused, timeout) counts as a server error — a down service never passes
+        probe_5xx = sum(1 for p in probes if (isinstance(p.get("status"), int) and p["status"] >= 500)
+                        or (p.get("status") is None and not p.get("ok")))
         obs = observed.get("new_5xx")
-        v = max(probe_5xx, obs if isinstance(obs, int) else 0)
-        checks.append({"name": "new_5xx", "value": v, "threshold": th["new_5xx"], "ok": v <= th["new_5xx"],
-                       "source": "probes %d · observed %s" % (probe_5xx, _fmt(obs))})
+        obs = obs if _num(obs) else None
+        if probes or obs is not None:
+            v = max(probe_5xx, obs or 0)
+            checks.append({"name": "new_5xx", "value": v, "threshold": th["new_5xx"], "ok": v <= th["new_5xx"],
+                           "source": "probes %d · observed %s" % (probe_5xx, _fmt(obs))})
+        else:  # BUG-52: nothing measured is never a passing check
+            notes.append("new_5xx not evaluated (no probe, no observed value)")
     if not checks:
         return {"result": "not-evaluated", "checks": [], "notes": notes}
     if problems:
@@ -331,6 +366,21 @@ def cmd_probe(args):
         len(rows), bad, res["file"], ("\ncontract incomplete: " + "; ".join(problems)) if problems else "")
 
 
+def read_probes(path):
+    """``(rows, note)`` — BUG-52 (F-13): an unreadable or malformed probe file counts as no probes, with a note."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return [], "probe file %s unreadable, treated as no probes: %s" % (path.name, str(exc)[:120])
+    rows = data.get("probes") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        return [], "probe file %s malformed (no probes list), treated as no probes" % path.name
+    good = [r for r in rows if isinstance(r, dict)]
+    if len(good) != len(rows):
+        return good, "probe file %s: %d malformed row(s) ignored" % (path.name, len(rows) - len(good))
+    return good, None
+
+
 def cmd_evaluate(args):
     root = _root(args)
     c, problems, errors = load_contract(root, args.change, args.env, args.service)
@@ -340,16 +390,15 @@ def cmd_evaluate(args):
             observed = json.loads(Path(args.observed).read_text(encoding="utf-8-sig"))
         except (OSError, ValueError) as exc:
             raise NotFound("--observed %s is unreadable: %s" % (args.observed, exc))
-    probes = []
+    probes, probe_note = [], None
     pp = probe_path(root, args.change, args.env)
     if c is not None and pp.is_file():
-        try:
-            probes = json.loads(pp.read_text(encoding="utf-8")).get("probes") or []
-        except ValueError:
-            probes = []
+        probes, probe_note = read_probes(pp)
     verdict = evaluate(c, problems, probes, observed)
     if c is None:
         verdict["notes"] = errors + verdict["notes"]
+    if probe_note:
+        verdict["notes"].append(probe_note)
     path = write_evidence(root, args.change, args.env, render_section(args.env, c, verdict, probes))
     ev_rel = os.path.relpath(str(path), str(root)).replace(os.sep, "/")
     record = 'python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" deploy-record %s --env %s --version %s ' \
@@ -414,6 +463,9 @@ def main(argv=None):
     except Refused as exc:
         return kl.emit(kl.envelope(TOOL, kl.EXIT_REFUSED, errors=[kl.issue("postdeploy.refused", str(exc))]),
                        args.json)
+    except Exception as exc:  # BUG-52: exit 1 means only regression; anything unexpected is an internal error
+        return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL,
+                                   errors=[kl.issue("internal", "%s: %s" % (type(exc).__name__, exc))]), args.json)
     return kl.emit(kl.envelope(TOOL, code, result=result), args.json, human=human)
 
 

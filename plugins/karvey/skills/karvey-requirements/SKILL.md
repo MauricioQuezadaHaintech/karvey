@@ -60,7 +60,7 @@ Document structure:
 
 ## Requirement 1: {Functional area name}
 
-### 1.1 {Requirement name}
+### 1.1 REQ-{CAP}-001 — {Requirement name}
 WHEN {event},
 the {system} SHALL {observable behavior}.
 
@@ -76,7 +76,7 @@ GIVEN {precondition}
 WHEN {invalid action}
 THEN the system {specific error response}
 
-### 1.2 {Next requirement}
+### 1.2 REQ-{CAP}-002 — {Next requirement}
 ...
 
 ## Requirement 2: {Next area}
@@ -94,7 +94,7 @@ Check the draft:
 - [ ] Each requirement traces to a section or objective of the PRD
 - [ ] All PRD objectives are covered by at least one requirement
 - [ ] No requirement mentions implementation technology
-- [ ] The IDs are numeric (1.1, 1.2, 2.1...)
+- [ ] Each heading carries its number and its id, `### 1.1 REQ-{CAP}-001 — …` (`{CAP}` = the capability in capitals); `karvey-trace.py` and the coverage gate read the id, never the number
 - [ ] Each requirement has at least one success scenario and one error scenario
 - [ ] The explicit exclusions cover the most likely edges
 - [ ] The security requirements reflect the Security Tier declared in spec.json

@@ -65,7 +65,7 @@ Do the technical work: create/modify files per the File Structure Plan.
 **Branching rules (see `../karvey/rules/deploy-workflow.md`):**
 - Before starting: `git pull` and work on `feature/{change-id}` (the prefix is `karvey-config.py get branch_flow.feature_prefix --shell`). Create the branch if it does not exist.
 - NEVER commit directly to `dev` or `master`.
-- 1 commit per task on the feature branch, with a descriptive message following the project's git conventions.
+- 1 commit per task on the feature branch, with a descriptive message following the project's git conventions; every commit of the change ends with the trailer `Karvey-Change: {change-id}` (the release manifest, the trace and the trailer guard read it).
 - If the project is multi-repo (`project.json:repos`): apply the branching and the `CHANGELOG.md` entry in each repo that receives changes.
 
 **CHANGELOG, not the version:** each commit adds its line under `## [Unreleased]` in `CHANGELOG.md` (`../karvey/rules/changelog-policy.md`), in every repo it touches. Never bump the version here: the version moves once per release, at the release step of `/karvey-deploy` (`../karvey/rules/versioning.md`). The line MUST include:

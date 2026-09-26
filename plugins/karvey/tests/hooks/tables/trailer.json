@@ -403,6 +403,90 @@
     "trailer",
     "REQ-W2-044"
    ]
+  },
+  {
+   "id": "tr-11-combined-am-without-trailer-blocks",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -am 'feat: x'"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK trailer",
+     "Karvey-Change: feat-a"
+    ]
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044",
+    "BUG-63"
+   ]
+  },
+  {
+   "id": "tr-12-combined-am-with-trailer-silent",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -am 'feat: x' -m 'Karvey-Change: feat-a'"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "stderr_empty": true
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044",
+    "BUG-63"
+   ]
   }
  ]
 }

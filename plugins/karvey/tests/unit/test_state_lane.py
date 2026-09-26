@@ -195,6 +195,22 @@ class LaneChanges(GitBase):
         self.assertEqual(code, 0, env)
         self.assertEqual(self.read()["lane_history"][-1]["ref"], "D-1")
 
+    def test_REQ_W2_016_raise_that_makes_qa_optional_is_a_lower(self):
+        """REQ-W2-016 revision 1 — BUG-62 (F-23): docs → ops runs more phases but makes QA optional, so it is not
+        a raise; the agent cannot drop QA without the human."""
+        self.put(dict(at_requirements("docs")))
+        env = self.refused(("lane", "feat-a", "raise", "ops", "--reason", "more phases"), "not a raise")
+        self.assertIn("qa", env["errors"][0]["message"])
+
+    def test_REQ_W2_016_raise_keeps_every_mandatory_phase(self):
+        """REQ-W2-016 revision 1 — BUG-62: a raise keeps every mandatory phase mandatory (standard → feature-ui)."""
+        self.assertTrue(state.is_raise("standard", "feature-ui"))
+        self.assertTrue(state.is_raise("patch", "standard"))
+        self.assertTrue(state.is_raise("hotfix", "standard"))
+        self.assertFalse(state.is_raise("docs", "ops"))
+        self.assertFalse(state.is_raise("ops", "feature-ui"))  # infra mandatory → optional
+        self.assertFalse(state.is_raise("standard", "standard"))
+
     def test_unknown_lane_lists_valid(self):
         self.put(dict(at_requirements("standard")))
         self.refused(("lane", "feat-a", "raise", "express", "--reason", "x"), "feature-ui")

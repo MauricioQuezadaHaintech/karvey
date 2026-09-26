@@ -167,6 +167,20 @@ class GateSummary(unittest.TestCase):
         g_, _ = self.gate()
         self.assertEqual(g_["sections"]["contract_gaps"], ["post-deploy contract: no karvey-postdeploy block in infra.md"])
 
+    def test_complete_infra_contract_clears_the_architecture_gaps(self):
+        """@req REQ-W2-075 — BUG-65 (F-26): a complete karvey-postdeploy block in infra.md is the contract; the
+        gate does not also report it missing because architecture.md lacks the words."""
+        (self.d / "architecture.md").write_text("# Architecture\n\n## Decisions\n- A-01 keep it\n\n## Risks\n- R1\n")
+        block = {"service": "web", "env": "prod", "health": ["https://example.org/health"],
+                 "thresholds": {"error_rate_pct": 1}, "metrics_source": {"kind": "apm", "how": "x"},
+                 "rollback": {"command": "platform rollback web", "doc": "runbook"}}
+        (self.d / "infra.md").write_text("# Infra\nsecurity-scan\n\n```karvey-postdeploy\n%s\n```\n" % json.dumps(block))
+        g_, _ = self.gate()
+        self.assertEqual(g_["sections"]["contract_gaps"], ["none"])
+        (self.d / "infra.md").unlink()
+        g_, _ = self.gate()
+        self.assertIn("post-deploy verification contract: missing", g_["sections"]["contract_gaps"])
+
     def test_missing_source_named(self):
         (self.d / "tasks.md").unlink()
         g_, _ = self.gate()

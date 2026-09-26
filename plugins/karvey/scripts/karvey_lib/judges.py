@@ -161,6 +161,7 @@ _FENCE = re.compile(r"```.*?(```|\Z)", re.S)
 _PATCH_LINE = re.compile(r"^(diff --git|@@|\+\+\+|---|[+-])", re.M)
 _CTRL = re.compile(r"[\x00-\x1f\x7f]")
 _FID = re.compile(r"^\|\s*F-(\d+)\s*\|", re.M)
+_LINE_NO = re.compile(r"^[0-9]+$")  # ASCII digits only: str.isdigit() also takes '²' (BUG-56)
 
 
 def sanitise(text):
@@ -187,8 +188,8 @@ def resolve_cite(root, cite, allowed):
     if not isinstance(cite, str) or ":" not in cite:
         return False
     path, _, line = cite.rpartition(":")
-    path = path.strip()
-    if not line.strip().isdigit():
+    path, line = path.strip(), line.strip()
+    if not _LINE_NO.match(line):
         return False
     if path not in allowed:
         return False
@@ -225,16 +226,26 @@ def cost(usage, chars_in, chars_out, model):
     return ti, to, round((ti * pin + to * pout) / 1e6, 6), True
 
 
-def collect(root, change, phase, results, allowed, model=None, intra_model=None, at=None, chars_in=0):
-    """Filter the judge results (``[(name, raw_text)]``). Returns ``(runs, kept, lines)``; writes nothing."""
+def collect(root, change, phase, results, allowed, model=None, intra_model=None, at=None, chars_in=0,
+            lenses=None, rejected=None):
+    """Filter the judge results (``[(name, raw_text)]``). Returns ``(runs, kept, lines)``; writes nothing.
+
+    With ``lenses`` (the lenses of this run, from ``build_inputs``), a result naming any other lens is
+    discarded — no run record, no finding — and listed in ``rejected`` with its reason (BUG-56)."""
     runs, kept, lines = [], [], []
     for name, raw in results:
         try:
             r = json.loads(raw)
         except ValueError:
             r = None
+        lens = r.get("lens") if isinstance(r, dict) and isinstance(r.get("lens"), str) else Path(name).stem
+        if lenses is not None and lens not in lenses:
+            why = "lens %r is not a lens of this run (%s)" % (sanitise(lens)[:60], ", ".join(lenses) or "none")
+            if rejected is not None:
+                rejected.append({"file": sanitise(name)[:120], "lens": sanitise(lens)[:60], "reason": why})
+            lines.append("%s: discarded (%s)" % (sanitise(name)[:120], why))
+            continue
         if not _valid_result(r):
-            lens = r.get("lens") if isinstance(r, dict) and isinstance(r.get("lens"), str) else Path(name).stem
             rmodel = r.get("model") if isinstance(r, dict) and isinstance(r.get("model"), str) else None
             runs.append({"phase": phase, "lens": lens, "model": rmodel or model or "unknown",
                          "intra_model": bool(intra_model), "verdict": "not-run",
@@ -261,8 +272,15 @@ def collect(root, change, phase, results, allowed, model=None, intra_model=None,
     return runs, kept, lines
 
 
-def append_findings(path, phase, kept, day):
-    """Append the kept judge findings as ``open`` rows (origin ``judge:{lens}``); returns the new ids."""
+def _finding_cell(k):
+    return "%s (%s)" % (k["text"], str(k["cite"]).replace("|", "\\|"))
+
+
+def append_findings(path, phase, kept, day, skipped=None):
+    """Append the kept judge findings as ``open`` rows (origin ``judge:{lens}``); returns the new ids.
+
+    Idempotent (BUG-56): a finding whose lens, cite and text already have a row is not appended again; it is
+    added to ``skipped`` when a list is given. The lens is sanitised like the text."""
     from . import atomicio
     path = Path(path)
     exists = path.is_file()
@@ -271,13 +289,20 @@ def append_findings(path, phase, kept, day):
     expected = atomicio.file_sha256(path) if exists else None  # compare-and-swap under the writer's lock
     nums = [int(n) for n in _FID.findall(text)]
     nxt = max(nums) + 1 if nums else 1
+    have = {(r.get("origin"), r.get("finding")) for r in read_rows_text(text)}
     rows, ids = [], []
     for k in kept:
+        key = ("judge:%s" % sanitise(k["lens"]), _finding_cell(k).strip())
+        if key in have:
+            if skipped is not None:
+                skipped.append(k)
+            continue
+        have.add(key)
         fid = "F-%02d" % nxt
         nxt += 1
         ids.append(fid)
-        rows.append("| %s | %s | %s | judge:%s | %s | %s | %s (%s) | open | — |" % (
-            fid, day, phase, k["lens"], k["type"], k["severity"], k["text"], k["cite"].replace("|", "\\|")))
+        rows.append("| %s | %s | %s | %s | %s | %s | %s | open | — |" % (
+            fid, day, phase, key[0], k["type"], k["severity"], _finding_cell(k)))
     if rows:
         lines = text.rstrip("\n").split("\n")
         last = max((i for i, ln in enumerate(lines) if ln.startswith("|")), default=len(lines) - 1)

@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-22 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-22, BUG-48..BUG-67 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -97,6 +97,115 @@ INDEX = {
     "BUG-20": [("hooks", "state.json paths (BUG-20)")],
     "BUG-21": [("hooks", "worktrees (BUG-21)")],
     "BUG-22": [("hooks", "profile-only commits since the save (BUG-22)")],  # python and degraded paths
+    "BUG-48": [  # merged gates could not be walked past their first phase (wave2-structural F-06)
+        ("unit", "test_state_gates.py", "MergedGateAdvance.test_merged_advances_inside_the_gate_without_a_second_question"),
+        ("unit", "test_state_gates.py", "MergedGateAdvance.test_merged_leaving_the_gate_needs_the_gate_approval"),
+        ("unit", "test_state_gates.py", "MergedGateAdvance.test_merged_needs_the_artifact_generated"),
+        ("unit", "test_state_gates.py", "MergedGateAdvance.test_granular_keeps_the_per_phase_approval"),
+    ],
+    "BUG-49": [  # Deploy asked for the rollback only on PROD; a DEV regression neither a (F-10)
+        ('lint', 'L-53'),
+        ('unit', 'test_lint_plugin.py', 'L53.test_rollback_question_limited_to_prod_fails'),
+        ('unit', 'test_lint_plugin.py', 'L53.test_regression_without_reserved_incident_fails'),
+        ('unit', 'test_lint_plugin.py', 'L53.test_no_regression_handling_fails'),
+        ('manual', 'deploy-postdeploy.md'),
+    ],
+    "BUG-50": [  # A retro action's backlog row carried no owner (F-11)
+        ('unit', 'test_metrics.py', 'RetroActionOwner.test_retro_skill_writes_owner_in_the_row'),
+        ('unit', 'test_metrics.py', 'RetroActionOwner.test_backlog_rule_documents_the_owner_cell'),
+        ('manual', 'retro-from-metrics.md'),
+    ],
+    "BUG-51": [  # Merged gate: a phase sent back by Request changes was still passed ins (F-12)
+        ('unit', 'test_state_gates.py', 'MergedGateChangesRequested.test_next_names_the_phase_that_was_sent_back'),
+        ('unit', 'test_state_gates.py', 'MergedGateChangesRequested.test_generated_again_after_the_request_passes'),
+        ('unit', 'test_state_gates.py', 'MergedGateChangesRequested.test_request_on_an_earlier_generation_only'),
+        ('manual', 'import-through-gates.md'),
+    ],
+    "BUG-52": [  # Post-deploy verification could pass while the service was down, and le (F-13)
+        ('unit', 'test_postdeploy.py', 'Verify.test_unreachable_service_is_never_pass'),
+        ('unit', 'test_postdeploy.py', 'Verify.test_probe_urls_are_redacted_in_the_evidence'),
+        ('unit', 'test_postdeploy.py', 'Verify.test_new_5xx_without_probe_or_observed_value_is_not_evaluated'),
+        ('unit', 'test_postdeploy.py', 'Verify.test_non_numeric_threshold_is_not_evaluated_not_a_crash'),
+        ('unit', 'test_postdeploy.py', 'Verify.test_malformed_probe_file_counts_as_no_probes'),
+        ('unit', 'test_postdeploy.py', 'Verify.test_internal_error_is_an_error_envelope_not_exit_1'),
+    ],
+    "BUG-53": [  # Requirements written from the template gave coverage 0/0, read as a pa (F-14)
+        ('unit', 'test_trace.py', 'WriteAndCheck.test_no_requirement_ids_is_not_evaluated_never_pass'),
+        ('unit', 'test_trace.py', 'WriteAndCheck.test_requirements_template_heading_is_read_by_the_trace'),
+    ],
+    "BUG-54": [  # Timestamps with fractional seconds lost their zone (metrics crash, wro (F-15)
+        ('unit', 'test_metrics.py', 'FractionalSecondsKeepTheZone.test_metrics_parse_dt'),
+    ],
+    "BUG-55": [  # The evidence wrapper stored secrets from the command line and could wr (F-16)
+        ('unit', 'test_evidence.py', 'Evidence.test_secrets_in_argv_are_redacted'),
+        ('unit', 'test_evidence.py', 'Evidence.test_change_id_outside_changes_dir_refused'),
+        ('unit', 'test_evidence.py', 'Evidence.test_missing_trailing_newline_does_not_glue_records'),
+        ('unit', 'test_evidence.py', 'Evidence.test_unstartable_command_is_127_not_a_traceback'),
+    ],
+    "BUG-56": [  # Judge collect could forge findings rows and crash on a bad citation (F-17)
+        ('unit', 'test_judges.py', 'Bug56.test_BUG_56_lens_is_sanitised_in_the_row'),
+        ('unit', 'test_judges.py', 'Bug56.test_BUG_56_unexpected_lens_is_discarded_with_a_reason'),
+        ('unit', 'test_judges.py', 'Bug56.test_BUG_56_non_ascii_digit_cite_discards_only_that_finding'),
+        ('unit', 'test_judges.py', 'Bug56.test_BUG_56_collect_twice_is_idempotent'),
+        ('unit', 'test_judges.py', 'Bug56.test_BUG_56_diff_file_is_deleted_by_collect'),
+        ('unit', 'test_judges.py', 'Bug56.test_BUG_56_collect_never_deletes_a_foreign_diff'),
+    ],
+    "BUG-57": [  # One malformed archived change crashed or skewed the metrics report (F-18)
+        ('unit', 'test_metrics.py', 'MalformedDataIsNa.test_malformed_gate_outcome_phases_skipped_with_reason'),
+        ('unit', 'test_metrics.py', 'MalformedDataIsNa.test_prod_approval_before_creation_is_na'),
+        ('unit', 'test_metrics.py', 'MalformedDataIsNa.test_deploy_without_zone_is_reported_not_hidden'),
+        ('unit', 'test_metrics.py', 'MalformedDataIsNa.test_other_malformed_shapes_never_crash'),
+        ('unit', 'test_metrics.py', 'MalformedDataIsNa.test_a_crashing_metric_is_na_not_a_crash'),
+    ],
+    "BUG-58": [  # karvey-trace crashed with exit 1 (the coverage-refused code) on malfor (F-19)
+        ('unit', 'test_trace.py', 'MalformedInputNeverExits1.test_tests_config_as_list_is_invalid_config_not_1'),
+        ('unit', 'test_trace.py', 'MalformedInputNeverExits1.test_globs_not_a_list_of_strings_is_invalid_config'),
+        ('unit', 'test_trace.py', 'MalformedInputNeverExits1.test_evidence_line_with_non_string_cwd_is_ignored_with_warning'),
+        ('unit', 'test_trace.py', 'MalformedInputNeverExits1.test_unexpected_error_exits_internal_never_1'),
+    ],
+    "BUG-59": [  # Release gate cited the wrong evidence line and read the manifest mode  (F-20)
+        ('unit', 'test_release_gate.py', 'Bug59.test_BUG_59_evidence_cite_is_the_physical_line'),
+        ('unit', 'test_release_gate.py', 'Bug59.test_BUG_59_manifest_mode_is_the_stricter_of_working_copy_and_reviewed_line'),
+        ('unit', 'test_release_gate.py', 'Bug59.test_BUG_59_release_branch_refuses_a_non_semver_version'),
+    ],
+    "BUG-60": [  # karvey-id: inflated numbers from branch text, burnt numbers on refusal (F-21)
+        ('unit', 'test_id_tool.py', 'Bug60.test_BUG_60_branch_scan_applies_the_word_boundary'),
+        ('unit', 'test_id_tool.py', 'Bug60.test_BUG_60_qualified_refusal_burns_no_number'),
+        ('unit', 'test_id_tool.py', 'Bug60.test_BUG_60_corrupt_ids_json_is_rebuilt_not_exit_5'),
+        ('unit', 'test_id_tool.py', 'Bug60.test_BUG_60_release_deletes_only_its_own_lock'),
+        ('unit', 'test_id_tool.py', 'Bug60.test_BUG_60_stale_takeover_moves_the_stale_lock_aside'),
+        ('unit', 'test_id_tool.py', 'Bug60.test_BUG_60_takeover_does_not_steal_a_fresh_lock'),
+    ],
+    "BUG-61": [  # State validation ignored the check-mode registry, never refused a miss (F-22)
+        ('unit', 'test_state_validate.py', 'StrictModeFromRegistry.test_registry_blocking_is_strict_and_missing_lane_errors'),
+        ('unit', 'test_state_validate.py', 'StrictModeFromRegistry.test_advisory_keeps_validate_quiet_about_lane'),
+        ('unit', 'test_state_judges.py', 'JudgeRun.test_nan_and_infinite_cost_refused'),
+    ],
+    "BUG-62": [  # An agent could make QA optional by a lane "raise" (F-23)
+        ('unit', 'test_state_lane.py', 'LaneChanges.test_REQ_W2_016_raise_that_makes_qa_optional_is_a_lower'),
+        ('unit', 'test_state_lane.py', 'LaneChanges.test_REQ_W2_016_raise_keeps_every_mandatory_phase'),
+    ],
+    "BUG-63": [  # The trailer guard missed `git commit -am "msg"` (F-24)
+        ('table', 'trailer', 'tr-11-combined-am-without-trailer-blocks'),
+        ('table', 'trailer', 'tr-12-combined-am-with-trailer-silent'),
+    ],
+    "BUG-64": [  # Lint L-47 (check-mode registry invariants) was declared but not implem (F-25)
+        ('lint', 'L-47'),
+        ('unit', 'test_lint_plugin.py', 'L47.test_missing_line_default_fails'),
+        ('unit', 'test_lint_plugin.py', 'L47.test_313_blocking_fails'),
+        ('unit', 'test_lint_plugin.py', 'L47.test_40_differs_without_decision_fails'),
+        ('unit', 'test_lint_plugin.py', 'L47.test_unregistered_id_in_a_script_fails'),
+    ],
+    "BUG-65": [  # The how-gate summary reported the post-deploy contract missing althoug (F-26)
+        ('unit', 'test_context_gate.py', 'GateSummary.test_complete_infra_contract_clears_the_architecture_gaps'),
+    ],
+    "BUG-66": [  # The method page kept the old skill / support / rule counts (F-05)
+        ('unit', 'test_page_static.py', 'CurrentCounts.test_counts_match_the_files'),
+    ],
+    "BUG-67": [  # The impl skill never told the agent to add the Karvey-Change trailer (F-27)
+        ('lint', 'L-42'),
+        ('unit', 'test_lint_plugin.py', 'L42ImplTrailer.test_impl_without_the_trailer_rule_fails'),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 

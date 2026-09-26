@@ -26,6 +26,7 @@ A `spec-gap` does **not** go to the backlog — it re-opens `requirements` for t
 |----|------|--------|------|----------|-------|--------|---------|-----------------------|
 | BL-12 | 2026-06-17 | add-claim-filter / F-03 | feature | med | PDF export of the report | open | task xyz | — |
 | BL-13 | 2026-06-17 | retro add-claim-filter | tech-debt | low | extract claims helper | open | — | — |
+| BL-14 | 2026-06-30 | retro-2026-06-30 · owner: the reviewer role | process | med | Record the actual time of every task | open | — | — |
 
 ## BL-12 — PDF export of the report
 - **Origin:** change add-claim-filter, finding F-03 (browse, emergent)
@@ -33,6 +34,9 @@ A `spec-gap` does **not** go to the backlog — it re-opens `requirements` for t
 - **Rough scope:** new endpoint + front button; needs a PDF lib decision
 - **Status:** open
 ```
+
+A `process` item agreed at a retro carries its owner in the Origin cell (`retro-{date} · owner: {owner}`); an
+action without an owner gets no row (`karvey-retro` Step 4).
 
 `status`: `open` → `promoted` (a `change-id` was created from it) → `discarded` (with a reason).
 

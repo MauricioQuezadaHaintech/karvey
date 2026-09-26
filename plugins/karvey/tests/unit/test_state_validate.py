@@ -348,3 +348,19 @@ class Pre312History(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StrictModeFromRegistry(Base):
+    """BUG-61 (F-22): the check-mode registry's ``schema.strict`` makes validation strict, and under strict a missing
+    lane is an error (architecture §1.2); advisory mode keeps it out of ``validate``."""
+
+    def test_registry_blocking_is_strict_and_missing_lane_errors(self):
+        f = make_project(self.root, spec=spec(), project={"branch_flow": {"integration": "main", "production": "main"},
+                                                          "checks": {"schema.strict": "blocking"}})
+        code, env = run_json("validate", str(f), "--root", str(self.root))
+        self.assertIn(("state.lane_missing", "$.lane"), codes(env, "errors"), env)
+        self.assertNotEqual(code, 0)
+
+    def test_advisory_keeps_validate_quiet_about_lane(self):
+        code, env = self.validate(spec())
+        self.assertNotIn("state.lane_missing", [i["code"] for i in env["warnings"] + env["errors"]])

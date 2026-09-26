@@ -33,3 +33,9 @@ gh pr create --base "$P" --head "$INTEGRATION" --body-file "$PR_BODY"
 The prod OK is recorded as a D-NN and in the PR; it is never a commit on integration. At deploy its text is in the PR body; at archive the D-NN is written on `chore/archive-{change-id}`.
 
 Then the post-deploy verification against the contract in `infra.md`.
+
+4. **`regression`** (REQ-W2-078), in every environment:
+   - Show the contract's `rollback.command` and **ask the human** with `AskUserQuestion`; the rollback runs only after the answer.
+   - Open the incident with a reserved number: `karvey-id.py next BUG` (the id tool).
+
+### Step 3 — Hard rules

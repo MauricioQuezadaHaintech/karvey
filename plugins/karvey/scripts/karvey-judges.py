@@ -5,13 +5,15 @@
     karvey-judges.py collect <change> <phase> --results DIR [--out FILE] [--root DIR] [--json]
 
 ``inputs`` prints the closed input list of a judge run: the phase's artifacts and the artifacts it reads, the
-goal, the rubric and its lens sections; for ``qa`` also the change's diff (written to a temporary file). An extra
+goal, the rubric and its lens sections; for ``qa`` also the change's diff, written to a temporary file that the
+caller hands back to ``collect --diff``, which deletes it (it is deleted at once when no lens runs). An extra
 item is dropped and listed. It never starts a judge: the ``karvey-judges`` skill does, one clean-context
 subagent per lens, with only these paths.
 
 ``collect`` filters what the judges returned (schema, citations, sanitiser, cost), appends the kept findings to
-the change's ``findings.md`` and writes the run records for ``karvey-state.py judge-run``. It never routes a
-finding, edits an artifact or writes ``spec.json``.
+the change's ``findings.md`` and writes the run records for ``karvey-state.py judge-run``. A result whose lens
+is not a lens of the run is discarded and listed; a finding that already has a row is skipped (re-running is
+idempotent). It never routes a finding, edits an artifact or writes ``spec.json``.
 
 Exit: 0 ok · 2 usage · 3 refused · 4 not found · 5 internal. Python >= 3.9, stdlib only.
 """
@@ -29,6 +31,7 @@ import karvey_lib as kl  # noqa: E402
 from karvey_lib import gitlog, judges as jd, project as pj  # noqa: E402
 
 TOOL = "karvey-judges"
+DIFF_PREFIX = "karvey-judge-"
 
 
 class Usage(Exception):
@@ -50,17 +53,49 @@ def cmd_inputs(args):
             out = gitlog.run(["diff", "%s...HEAD" % gitlog.check_ref(args.base)], root)
         except gitlog.GitLogError as exc:
             raise jd.JudgeError("cannot read the diff: %s" % exc)
-        fd, diff_path = tempfile.mkstemp(prefix="karvey-judge-%s-" % args.change, suffix=".diff")
+        fd, diff_path = tempfile.mkstemp(prefix="%s%s-" % (DIFF_PREFIX, args.change), suffix=".diff")
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(out)
-    res = jd.build_inputs(root, args.change, args.phase, extras=args.extra or (), diff_path=diff_path)
+    try:
+        res = jd.build_inputs(root, args.change, args.phase, extras=args.extra or (), diff_path=diff_path)
+    except Exception:
+        _delete_own_diff(diff_path)
+        raise
+    res["diff"], res["diff_cleanup"] = None, None
+    if diff_path and not res["lenses"]:  # no judge will read it
+        _delete_own_diff(diff_path)
+        res["inputs"] = [p for p in res["inputs"] if p != diff_path]
+    elif diff_path:
+        res["diff"] = diff_path
+        res["diff_cleanup"] = "pass it to karvey-judges.py collect --diff, which deletes it"
     lines = ["%s %s (lane %s): %s" % (res["change"], res["phase"], res["lane"], res["status"])]
     for p in res["inputs"]:
         lines.append("  input  %s" % p)
     if res["rubric"]:
         lines.append("  rubric %s (lenses: %s)" % (res["rubric"], ", ".join(res["lenses"])))
     lines += ["  " + d for d in res["dropped"]] + ["  " + n for n in res["notes"]]
+    if res["diff"]:
+        lines.append("  diff   %s (%s)" % (res["diff"], res["diff_cleanup"]))
     return kl.EXIT_OK, res, "\n".join(lines)
+
+
+def _own_diff(path):
+    """True when ``path`` is a diff file ``inputs`` wrote (temp dir, our prefix): the only kind collect deletes."""
+    if not path:
+        return False
+    p = Path(path)
+    return (p.name.startswith(DIFF_PREFIX) and p.suffix == ".diff" and p.is_file()
+            and os.path.realpath(str(p.parent)) == os.path.realpath(tempfile.gettempdir()))
+
+
+def _delete_own_diff(path):
+    if not _own_diff(path):
+        return False
+    try:
+        os.unlink(path)
+    except OSError:
+        return False
+    return True
 
 
 def cmd_collect(args):
@@ -84,19 +119,28 @@ def cmd_collect(args):
             continue
         results.append((f.name, f.read_text(encoding="utf-8-sig", errors="replace")))
     at = datetime.now().astimezone().isoformat(timespec="seconds")
+    rejected, skipped = [], []
     runs, kept, lines = jd.collect(root, args.change, args.phase, results, allowed, model=args.model,
-                                   intra_model=args.intra_model, at=at, chars_in=chars_in)
-    ids = []
+                                   intra_model=args.intra_model, at=at, chars_in=chars_in,
+                                   lenses=inp["lenses"], rejected=rejected)
+    ids, deleted = [], []
     if not args.dry_run:
         fpath = Path(root) / pj.CHANGES_DIR / args.change / "findings.md"
-        ids = jd.append_findings(fpath, args.phase, kept, at[:10])
+        ids = jd.append_findings(fpath, args.phase, kept, at[:10], skipped=skipped)
         out_path.write_text(json.dumps(runs, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        if _delete_own_diff(args.diff):
+            deleted.append(args.diff)
     discarded = sum(r.get("discarded", 0) for r in runs)
-    lines.append("%d finding(s) appended to findings.md (%s) · %d discarded (no citation)%s" % (
-        len(ids), ", ".join(ids) or "none", discarded, " · dry run" if args.dry_run else ""))
+    lines.append("%d finding(s) appended to findings.md (%s) · %d discarded (no citation) · %d skipped (already "
+                 "a row)%s" % (len(ids), ", ".join(ids) or "none", discarded, len(skipped),
+                               " · dry run" if args.dry_run else ""))
+    if rejected:
+        lines.append("%d result(s) discarded: lens not in this run" % len(rejected))
+    lines += ["deleted the diff file %s" % d for d in deleted]
     lines += inp["notes"]
     lines.append("next: karvey-state.py judge-run %s %s --from %s" % (args.change, args.phase, out_path))
     res = {"change": args.change, "phase": args.phase, "runs": runs, "appended": ids, "discarded": discarded,
+           "duplicates": len(skipped), "rejected": rejected, "deleted": deleted,
            "runs_file": str(out_path), "notes": inp["notes"]}
     return kl.EXIT_OK, res, "\n".join(lines)
 

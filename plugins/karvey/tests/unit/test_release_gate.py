@@ -249,5 +249,51 @@ class ReleaseBranch(Base):
         self.assertEqual(branches.strip(), "")
 
 
+class Bug59(Base):
+    """BUG-59 (finding F-20): evidence line cite, the manifest mode of the reviewed line, the release version.
+
+    @req REQ-W2-046 REQ-W2-050 REQ-W2-069
+    """
+
+    def test_BUG_59_evidence_cite_is_the_physical_line(self):
+        """BUG-59 a: blank and invalid lines count in the ``evidence.jsonl:{line}`` citation."""
+        self.change("feat-a")
+        p = self.root / "docs/spec/changes/feat-a/evidence.jsonl"
+        good = json.dumps({"argv": ["python3"], "cwd_rel": ".", "exit": 0, "label": "unit"})
+        p.write_text(good + "\n\n{not json\n" + good + "\n\n", encoding="utf-8")
+        code, out = run("check", "feat-a", "--base", "base", "--root", str(self.root), "--json")
+        self.assertIn("(evidence.jsonl:4)", json.loads(out)["result"]["items"]["tests"]["detail"])
+
+    def reviewed_blocking_wc_off(self):
+        g.with_origin(self.root)
+        g.write(self.root, "docs/spec/project.json", dict(PROJECT, checks={"release.manifest": "blocking"}))
+        g.commit_all(self.root, "reviewed: manifest blocking")
+        g.run(["push", "-q", "origin", "main"], self.root)
+        g.run(["tag", "-f", "base"], self.root)
+        g.write(self.root, "docs/spec/project.json", dict(PROJECT, checks={"release.manifest": "off"}))
+
+    def test_BUG_59_manifest_mode_is_the_stricter_of_working_copy_and_reviewed_line(self):
+        """BUG-59 b: a working copy that relaxes the mode does not relax the release gate CLI."""
+        self.reviewed_blocking_wc_off()
+        self.change("feat-a", trailer=False)
+        code, env = self.manifest("--no-record")
+        self.assertEqual((code, env["result"]["mode"], env["result"]["verdict"]), (1, "blocking", "fail"))
+        code, out = run("check", "feat-a", "--base", "base", "--root", str(self.root), "--json")
+        self.assertEqual(json.loads(out)["result"]["items"]["manifest"]["status"], "fail")
+
+    def test_BUG_59_release_branch_refuses_a_non_semver_version(self):
+        """BUG-59 c: ``--version`` must be semver-like; nothing is printed to run."""
+        self.change("feat-a")
+        for bad in ("1.0; rm -rf ~", "1.0", "../x", "1.0.0 && true"):
+            code, out = run("release-branch", "--version", bad, "--base", "base", "--root", str(self.root), "--json")
+            env = json.loads(out)
+            self.assertEqual(code, 2, bad)
+            self.assertIn("not a semver", env["errors"][0]["message"])
+            self.assertNotIn("commands", env["result"] or {})
+        code, out = run("release-branch", "--version", "1.1.0-rc.1", "--base", "base", "--root", str(self.root),
+                        "--json")
+        self.assertEqual((code, json.loads(out)["result"]["branch"]), (0, "release/1.1.0-rc.1"))
+
+
 if __name__ == "__main__":
     unittest.main()

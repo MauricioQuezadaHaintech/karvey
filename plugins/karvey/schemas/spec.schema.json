@@ -533,6 +533,11 @@
           "type": "string",
           "x-karvey-format": "datetime-tz"
         },
+        "regenerated_at": {
+          "type": "string",
+          "x-karvey-format": "datetime-tz",
+          "$comment": "BUG-51: last generation after the first; a merged gate sent back by changes_requested re-opens only after it"
+        },
         "imported": {
           "type": "boolean"
         },

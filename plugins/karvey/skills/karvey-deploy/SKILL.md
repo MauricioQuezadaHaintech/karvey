@@ -105,7 +105,7 @@ gh pr checks "{pr}"                  # wait: green before the merge
 gh pr merge "{pr}" --merge           # ⇒ DEV pipeline (Azure Repos: az repos pr update --id "{pr}" --status completed)
 ```
 
-**2.6 — DEV post-deploy verification (Step 2-bis).** Wait for the green pipeline and run the post-deploy verification over the real DEV runtime with `--env dev`. No advance to prod unless it is `pass` (or `not-evaluated`, stated as such, when DEV has no contract). With a UI, DEV must show `-dev` of the version just released; anything else is a finding.
+**2.6 — DEV post-deploy verification (Step 2-bis).** Wait for the green pipeline and run the post-deploy verification over the real DEV runtime with `--env dev`. No advance to prod unless it is `pass` (or `not-evaluated`, stated as such, when DEV has no contract); a `regression` → the rollback path of Step 2-bis. With a UI, DEV must show `-dev` of the version just released; anything else is a finding.
 
 **2.7 — Pull production and draft the PR body.** The production PR carries **every change of the release manifest** (REQ-W2-045, 047), not only this one. Compute the manifest of `origin/$P..{head}` (`{head}` = `$I`, or the feature branch in trunk flow) and write the body to a file: one line per change with its id, version, lane and QA state, the unmapped commits (if any) named, and a line for the production OK, which is filled in 2.9.
 ```bash
@@ -190,10 +190,10 @@ python3 "$PD" evaluate "{change-id}" --env "{env}" --observed observed.json --ve
 1. The result is `pass`, `regression` or `not-evaluated` — **say it as the tool says it**. The probe table and the thresholds go to `docs/spec/changes/{change-id}/deploy_evidence.md`.
 2. **No contract, or no thresholds** → `not-evaluated`, with the recommendation to add the contract to `infra.md`; it is never reported as a pass.
 3. Record every result with the printed command: `python3 "$S" deploy-record "{change-id}" --env "{env}" --version "{version}" --verification {result} --evidence docs/spec/changes/{change-id}/deploy_evidence.md`.
-4. **`regression`** (REQ-W2-078):
-   - DEV → stop before prod.
-   - PROD → show the contract's `rollback.command` and **ask the human** with `AskUserQuestion` (*Roll back now (recommended)* / *Keep and investigate*). The rollback affects production: it runs only after that answer, through the plan gate, never on the agent's initiative. Then record it: `python3 "$S" deploy-record "{change-id}" --env prod --version "{version}" --verification regression --rollback "{what was run}" --evidence …`.
-   - Open the incident with a reserved number: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG`, then the `BUG-NN` row in `docs/bugs_dev_testing.md` and a finding in the change's `findings.md` (`../karvey/rules/incident-tracking.md`).
+4. **`regression`** (REQ-W2-078), in every environment — DEV and PROD alike:
+   - Show the contract's `rollback.command` and **ask the human** with `AskUserQuestion` (*Roll back now (recommended)* / *Keep and investigate*). The rollback runs only after that answer, through the plan gate, never on the agent's initiative. Record the answer with the result: `python3 "$S" deploy-record "{change-id}" --env "{env}" --version "{version}" --verification regression [--rollback "{what was run}"] --evidence …` (`--rollback` only when one ran).
+   - DEV → stop before prod, whatever the answer. PROD → the rollback affects production, so it is the answer, not the agent, that decides it.
+   - Open the incident right away with a reserved number: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG` (never by counting rows), then propose the `BUG-NN` row in `docs/bugs_dev_testing.md` and a finding in the change's `findings.md` (`../karvey/rules/incident-tracking.md`).
 
 ### Step 3 — Hard rules (NEVER skip)
 
@@ -208,7 +208,7 @@ python3 "$PD" evaluate "{change-id}" --env "{env}" --observed observed.json --ve
 - **`patch` / `hotfix` = fix + BUG-NN + finding + regression test in the same PR** (`lane_triplet`).
 - **One version bump per release**, from `[Unreleased]`, in Step 2.3.
 - **Branches:** absorbed → deleted; not absorbed → never deleted, reported.
-- **Zero downtime**: the post-deploy verification reinforces it; a prod regression → the rollback is proposed to the human, never run without the answer.
+- **Zero downtime**: the post-deploy verification reinforces it; a regression (DEV or PROD) → the rollback is proposed to the human, never run without the answer.
 - In multi-repo, the dependency order of `architecture.md`.
 
 ### Step 4 — Record in the tracker
@@ -234,7 +234,7 @@ Repos (dependency order):
 Checklist: verified · QA: OK (0 critical, 0 high) · Tests: PASS · Release: [Unreleased] → [x.y.z]
 Prod approval: {by} · {D-NN} · ledger ✅ (check-prod)   Type: {feature | ops | hotfix (BUG-NN)}
 Platform: {…} · Prod URL: {prod_url} · Pipeline run: {url}
-Post-deploy verification: DEV {pass / regression / not-evaluated} · PROD {pass / regression → rollback asked / not-evaluated} · deploy_evidence.md
+Post-deploy verification: DEV {pass / regression → rollback asked / not-evaluated} · PROD {pass / regression → rollback asked / not-evaluated} · deploy_evidence.md
 Branches: deleted {N} ({list}) · kept {N} ({branch}: not absorbed, PR #{n})
 {UI} Visible version: {yes / recommended}
 Management: {[Deploy] in {tool} → {status} | PLAN.md updated} · Notification: {channel → target | skipped}

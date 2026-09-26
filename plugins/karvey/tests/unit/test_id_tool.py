@@ -87,5 +87,80 @@ class Next(Base):
         self.assertEqual(c, 3)
 
 
+def load_id():
+    import importlib.util
+    spec_ = importlib.util.spec_from_file_location("karvey_id_mod", ID)
+    m = importlib.util.module_from_spec(spec_)
+    spec_.loader.exec_module(m)
+    return m
+
+
+class Bug60(Base):
+    """BUG-60 (finding F-21): branch scan boundary, --qualified burning a number, corrupt ids.json, lock race.
+
+    @req REQ-W2-070 REQ-W2-071
+    """
+
+    def test_BUG_60_branch_scan_applies_the_word_boundary(self):
+        """BUG-60 a: ``HEAD-977`` on a branch is not ``D-977``."""
+        g.write(self.root, "docs/spec/decisions.md", "## D-04 — x (see HEAD-977, XD-500)\n")
+        g.commit_all(self.root, "decisions")
+        c, env = run(self.root, "D")
+        self.assertEqual((c, env["result"]["id"], env["result"]["max_refs"]), (0, "D-05", 4))
+
+    def test_BUG_60_qualified_refusal_burns_no_number(self):
+        """BUG-60 b: an unsafe repo slug is refused before any number is reserved."""
+        g.write(self.root, "docs/spec/project.json", {"repos": ["bad slug!"], "spec_repo": "x"})
+        c, env = run(self.root, "BUG", "--qualified")
+        self.assertEqual(c, 3)
+        self.assertIn("not a safe repo slug", env["errors"][0]["message"])
+        c, env = run(self.root, "BUG")
+        self.assertEqual((c, env["result"]["id"]), (0, "BUG-08"))
+
+    def test_BUG_60_corrupt_ids_json_is_rebuilt_not_exit_5(self):
+        """BUG-60 c: a list, or a non-list/non-int under a kind, is corrupt: rebuilt from the scan, kept aside."""
+        sd = self.root / ".git/karvey"
+        sd.mkdir(parents=True, exist_ok=True)
+        for bad in ([1, 2], {"BUG": 5}, {"BUG": [{"n": "x"}, 3]}):
+            (sd / "ids.json").write_text(json.dumps(bad))
+            c, env = run(self.root, "BUG")
+            self.assertEqual(c, 0, env)
+            self.assertIn("ids.json", " ".join(env["result"]["notes"]))
+            data = json.loads((sd / "ids.json").read_text())
+            self.assertIsInstance(data, dict)
+        self.assertTrue(list(sd.glob("ids.json.corrupt-*")))
+
+    def test_BUG_60_release_deletes_only_its_own_lock(self):
+        """BUG-60 d: a lock taken over by another process is not deleted on release."""
+        m = load_id()
+        path = self.t.path / "ids.lock"
+        with m.Lock(path, 30):
+            self.assertIn(str(os.getpid()), path.read_text())
+            path.write_text("4242 other-token\n")  # another process took it over
+        self.assertEqual(path.read_text(), "4242 other-token\n")
+        with m.Lock(self.t.path / "own.lock", 30):
+            pass
+        self.assertFalse((self.t.path / "own.lock").exists())
+
+    def test_BUG_60_stale_takeover_moves_the_stale_lock_aside(self):
+        """BUG-60 d: a stale lock is renamed away atomically, then the new lock is ours."""
+        m = load_id()
+        path = self.t.path / "ids.lock"
+        path.write_text("999 old\n")
+        os.utime(str(path), (1, 1))
+        with m.Lock(path, 30) as lk:
+            self.assertEqual(path.read_text().split()[1], lk.token)
+        self.assertEqual(sorted(p.name for p in self.t.path.iterdir() if "lock" in p.name), [])
+
+    def test_BUG_60_takeover_does_not_steal_a_fresh_lock(self):
+        """BUG-60 d: if the file renamed aside is not the stale one judged, it is put back."""
+        m = load_id()
+        path = self.t.path / "ids.lock"
+        path.write_text("777 fresh\n")  # another waiter's new lock, created after we judged "999 old" stale
+        lk = m.Lock(path, 30)
+        self.assertFalse(lk._take_over_stale("999 old\n"))
+        self.assertEqual(path.read_text(), "777 fresh\n")
+
+
 if __name__ == "__main__":
     unittest.main()
