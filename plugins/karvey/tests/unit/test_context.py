@@ -449,5 +449,49 @@ class Tables(unittest.TestCase):
         self.assertEqual(t[0]["rows"][0]["c"], "")
 
 
+class Layout(unittest.TestCase):
+    """@req REQ-W3-048 — both spec layouts are found; with both, docs/spec/ is used."""
+
+    def setUp(self):
+        self.t = g.TempDir()
+        self.root = self.t.path / "repo"
+        self.root.mkdir()
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def put(self, base, cid, phase="impl", marker=False):
+        d = self.root / base / "changes" / cid
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "spec.json").write_text(json.dumps({"change_id": cid, "phase": phase}), encoding="utf-8")
+        if marker:
+            (d / "IMPLEMENTED").write_text("")
+
+    def overview(self):
+        code, out, _ = run("--root", str(self.root), "--section", "overview", "--now", NOW, "--json")
+        self.assertEqual(code, 0, out)
+        return json.loads(out)
+
+    def test_REQ_W3_048_a_spec_folder_is_found_and_marked(self):
+        (self.root / "spec").mkdir()
+        (self.root / "spec/project.json").write_text("{}\n", encoding="utf-8")
+        self.put("spec", "feat-a")
+        self.put("spec", "feat-b", marker=True)
+        self.put("spec/changes/archive", "2026-old")
+        env = self.overview()
+        ov = env["result"]["overview"]
+        self.assertEqual(ov["layout"], "spec/")
+        self.assertEqual([r["change"] for r in ov["active"]], ["feat-a"])
+
+    def test_REQ_W3_048_two_spec_roots_use_docs_spec(self):
+        self.put("docs/spec", "feat-a")
+        self.put("spec", "feat-z")
+        env = self.overview()
+        ov = env["result"]["overview"]
+        self.assertEqual((ov["layout"], ov["layout_note"]), ("docs/spec/", "two spec roots"))
+        self.assertEqual([r["change"] for r in ov["active"]], ["feat-a"])
+        self.assertIn("two spec roots", " ".join(w["message"] for w in env["warnings"]))
+
+
 if __name__ == "__main__":
     unittest.main()

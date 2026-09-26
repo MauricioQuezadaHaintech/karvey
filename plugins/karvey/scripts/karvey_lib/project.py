@@ -75,9 +75,36 @@ def current_branch(path):
     return out if rc == 0 and out else None
 
 
+ALT_SPEC_DIR = Path("spec")
+TWO_ROOTS = "two spec roots"
+
+
+def _has_spec(d, spec):
+    if spec == ALT_SPEC_DIR and d.name == "docs" and _has_spec(d.parent, SPEC_DIR):
+        return False  # the docs/ folder of a docs/spec project is not a spec/ project of its own
+    return (d / spec / "project.json").is_file() or (d / spec / "changes").is_dir()
+
+
+def spec_layout(directory):
+    """``(spec dir relative to the root, layout label, note)``: ``docs/spec/`` or ``spec/`` (REQ-W3-048). With both,
+    ``docs/spec/`` is used and the note is ``two spec roots``; with neither, ``docs/spec/`` and ``None`` label."""
+    d = Path(directory)
+    main, alt = _has_spec(d, SPEC_DIR), _has_spec(d, ALT_SPEC_DIR)
+    if main and alt:
+        return SPEC_DIR, "docs/spec/", TWO_ROOTS
+    if alt:
+        return ALT_SPEC_DIR, "spec/", None
+    return SPEC_DIR, "docs/spec/" if main else None, None
+
+
+def spec_dir(root):
+    """The absolute spec directory of a project root (``docs/spec`` or ``spec``)."""
+    return Path(root) / spec_layout(root)[0]
+
+
 def is_karvey_project(directory):
     d = Path(directory)
-    return (d / PROJECT_JSON).is_file() or (d / CHANGES_DIR).is_dir()
+    return _has_spec(d, SPEC_DIR) or _has_spec(d, ALT_SPEC_DIR)
 
 
 def find_root(start=None, root=None):
@@ -109,7 +136,7 @@ def find_root(start=None, root=None):
 
 def load_project_json(root):
     """``(data, error)``: data is None when the file is missing or unreadable."""
-    p = Path(root) / PROJECT_JSON
+    p = spec_dir(root) / "project.json"
     if not p.is_file():
         return None, "missing"
     try:
@@ -158,7 +185,7 @@ def list_changes(root):
 
     Each item: ``{id, dir, phase, implemented, spec_error}``.
     """
-    base = Path(root) / CHANGES_DIR
+    base = spec_dir(root) / "changes"
     out = []
     if not base.is_dir():
         return out

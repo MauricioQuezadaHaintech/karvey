@@ -121,15 +121,17 @@ def open_work_lines(root, today, active_ids, cap=None):
     """``(question lines, risk lines)`` for the open-work views: open questions of ``docs/spec/questions.md``
     (overdue first) and the open risks of the given active changes; ``cap`` bounds each list (REQ-W3-030)."""
     from . import questions as qs
+    from . import project as pj
     root = Path(root)
+    sdir = pj.spec_dir(root)
     try:
-        qrows = qs.parse((root / "docs" / "spec" / "questions.md").read_text(encoding="utf-8-sig"))
+        qrows = qs.parse((sdir / "questions.md").read_text(encoding="utf-8-sig"))
     except OSError:
         qrows = []
     ql = [qs.line(q) for q in qs.open_questions(qrows, today)]
     rl = []
     for cid in active_ids:
-        rl.extend(line(cid, r) for r in open_risks(read(root / "docs" / "spec" / "changes" / cid)))
+        rl.extend(line(cid, r) for r in open_risks(read(sdir / "changes" / cid)))
     if cap:
         return qs.capped(ql, cap), qs.capped(rl, cap)
     return ql, rl

@@ -74,6 +74,8 @@ class Reader:
 
     def __init__(self, root):
         self.root = Path(root)
+        rel_spec, self.layout, self.layout_note = pj.spec_layout(self.root)  # docs/spec/ or spec/ (REQ-W3-048)
+        self.spec = self.root / rel_spec
         self.unreadable = []   # [{"path", "reason"}]
         self.warnings = []
 
@@ -240,7 +242,7 @@ def settings(project):
 
 def load_changes(rd):
     """Every change directory (archive excluded) with its parsed spec.json (or None)."""
-    base = rd.root / pj.CHANGES_DIR
+    base = rd.spec / "changes"
     out = []
     if not base.is_dir():
         return out
@@ -326,7 +328,8 @@ def overview(rd, ctx):
         rows.append(row)
     wip = ctx["wip_limit"]
     stall_deployed = deployed_not_archived(changes, ctx)
-    res = {"deployed_not_archived": stall_deployed, "active": rows, "active_count": len(active),
+    res = {"layout": rd.layout, "layout_note": rd.layout_note,
+           "deployed_not_archived": stall_deployed, "active": rows, "active_count": len(active),
            "wip": {"count": len(active), "limit": wip, "exceeded": bool(wip and len(active) > wip)}}
     try:
         act = pj.active_change(rd.root, project=ctx["project"] or {})
@@ -388,7 +391,7 @@ def read_bugs(rd):
                 continue
             if section == "regression test" and line.strip() and not cur["regression"]:
                 cur["regression"] = line.strip()
-    t = rd.text(rd.root / pj.SPEC_DIR / "incidents-index.md")
+    t = rd.text(rd.spec / "incidents-index.md")
     if t is not None:
         tbl = find_table(parse_tables(t), "bug", "current state")
         for r in (tbl["rows"] if tbl else []):
@@ -461,7 +464,7 @@ def human_waiting(rows, plan_text):
 
 
 def read_backlog(rd):
-    t = rd.text(rd.root / pj.SPEC_DIR / "backlog.md")
+    t = rd.text(rd.spec / "backlog.md")
     if t is None:
         return None
     tbl = find_table(parse_tables(t), "id", "status")
@@ -521,7 +524,7 @@ def open_work(rd, ctx):
     res["backlog"] = read_backlog(rd) or []
     # open questions (owner, needed-by, overdue / date invalid) and open risks of active changes (REQ-W3-030)
     today = ctx["now"].date().isoformat()
-    qt = rd.text(rd.root / pj.SPEC_DIR / "questions.md")
+    qt = rd.text(rd.spec / "questions.md")
     res["questions"] = [{k: q[k] for k in ("id", "question", "owner", "needed_by", "overdue", "date_invalid")}
                         for q in qs.open_questions(qs.parse(qt or ""), today)]
     res["risks"] = []
@@ -735,7 +738,7 @@ def change_ratios(rows):
 def calibration(rd, ctx):
     cal = ctx["calibration"]
     thr, window = cal["threshold_pct"], cal["window"]
-    arch = rd.root / pj.CHANGES_DIR / pj.ARCHIVE_NAME
+    arch = rd.spec / "changes" / pj.ARCHIVE_NAME
     history = []
     if arch.is_dir():
         for d in sorted((x for x in arch.iterdir() if x.is_dir()), key=lambda x: x.name):
@@ -1081,6 +1084,8 @@ def render(result, ctx):
     ov = result.get("overview")
     if ov is not None:
         L.append("== OVERVIEW ==")
+        L.append("layout %s%s" % (ov.get("layout") or "docs/spec/",
+                                  " (%s: docs/spec/ used)" % ov["layout_note"] if ov.get("layout_note") else ""))
         if not ov["active"]:
             L.append("no active change")
         for r in ov["active"]:
@@ -1179,7 +1184,7 @@ def metric_period(args):
 
 def metric_records(rd, frm, to):
     """Change records (``karvey_lib.metrics``) of every change archived in ``[frm, to]``."""
-    arch = rd.root / pj.CHANGES_DIR / pj.ARCHIVE_NAME
+    arch = rd.spec / "changes" / pj.ARCHIVE_NAME
     out = []
     if not arch.is_dir():
         return out
@@ -1209,7 +1214,7 @@ def metrics_view(args, rd):
 
 def readiness_records(rd):
     """Every change (active and archived) with its hits and its ``validate --strict`` error count."""
-    base = rd.root / pj.CHANGES_DIR
+    base = rd.spec / "changes"
     dirs = []
     if base.is_dir():
         dirs = [d for d in sorted(base.iterdir(), key=lambda x: x.name) if d.is_dir() and d.name != pj.ARCHIVE_NAME
@@ -1250,7 +1255,7 @@ NO_CHANGES_FOR_CLIENT = "no changes for client"
 
 def _change_dirs(rd):
     """``[(dir, archived)]`` of every change folder, active first then archived, by name."""
-    base = rd.root / pj.CHANGES_DIR
+    base = rd.spec / "changes"
     out = []
     if not base.is_dir():
         return out
@@ -1315,7 +1320,7 @@ def report_view(args, rd):
                 res["open_risks"].append({"change": cid, "risk": spx.normalise(r.get("risk") or ""),
                                           "owner": (r.get("owner") or "").strip() or "no owner",
                                           "state": spx.word(W, "risk_states", "open", lang)})
-    qtext = rd.text(rd.root / pj.SPEC_DIR / "questions.md")
+    qtext = rd.text(rd.spec / "questions.md")
     for r in spx.read_rows_text(qtext or ""):
         if not re.match(r"^Q-\d+$", (r.get("id") or "").strip()):
             continue
@@ -1405,9 +1410,9 @@ def render_metrics(res):
 
 # --------------------------------------------------------------------------- CLI
 def build_context(args, rd):
-    project = rd.json(rd.root / pj.PROJECT_JSON)
+    project = rd.json(rd.spec / "project.json")
     if project is not None and not isinstance(project, dict):
-        rd._fail(rd.root / pj.PROJECT_JSON, "not a JSON object")
+        rd._fail(rd.spec / "project.json", "not a JSON object")
         project = None
     wip, stall, cal, warns = settings(project)
     changes = load_changes(rd)
@@ -1424,9 +1429,12 @@ def build_context(args, rd):
 
 def run(args):
     root = pj.find_root(start=os.getcwd(), root=args.root)
-    if root is None or not (Path(root) / pj.SPEC_DIR).is_dir():
-        raise NotFound("no docs/spec here (not a Karvey project): %s" % (args.root or os.getcwd()))
+    if root is None or not pj.spec_dir(root).is_dir():
+        raise NotFound("no docs/spec or spec here (not a Karvey project): %s" % (args.root or os.getcwd()))
     rd = Reader(root)
+    if rd.layout_note:
+        rd.warnings.append(kl.issue("context.layout", "%s: docs/spec/ and spec/ both hold a Karvey spec; docs/spec/ "
+                                    "is used" % rd.layout_note, severity="warning"))
     if args.readiness:
         res = readiness_view(args, rd)
         return kl.EXIT_OK, res, list(rd.warnings), render_readiness(res)

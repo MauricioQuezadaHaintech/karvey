@@ -1163,6 +1163,135 @@
     "session",
     "REQ-W3-030"
    ]
+  },
+  {
+   "id": "ss-25-spec-layout-found",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "spec/project.json": {
+       "git_platform": "github",
+       "repos": [
+        "repo"
+       ],
+       "spec_repo": "repo",
+       "branch_flow": {
+        "feature_prefix": "feature/",
+        "integration": "main",
+        "production": "main"
+       },
+       "notifications": {
+        "channel": "none"
+       },
+       "management": {
+        "tool": "markdown"
+       }
+      },
+      "spec/changes/feat-a/spec.json": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      },
+      "spec/changes/archive/2026-old/spec.json": {
+       "change_id": "old",
+       "phase": "archived"
+      },
+      "spec/changes/feat-b/spec.json": {
+       "change_id": "feat-b",
+       "phase": "impl"
+      },
+      "spec/changes/feat-b/IMPLEMENTED": ""
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "spec layout spec/",
+     "(active change: feat-a)"
+    ],
+    "context_not_contains": "feat-b"
+   },
+   "tags": [
+    "session",
+    "REQ-W3-048"
+   ]
+  },
+  {
+   "id": "ss-26-two-spec-roots",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "spec/project.json": {
+       "git_platform": "github",
+       "repos": [
+        "repo"
+       ],
+       "spec_repo": "repo",
+       "branch_flow": {
+        "feature_prefix": "feature/",
+        "integration": "main",
+        "production": "main"
+       },
+       "notifications": {
+        "channel": "none"
+       },
+       "management": {
+        "tool": "markdown"
+       }
+      },
+      "spec/changes/feat-z/spec.json": {
+       "change_id": "feat-z",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "two spec roots",
+     "(active change: feat-a)"
+    ],
+    "context_not_contains": "feat-z"
+   },
+   "tags": [
+    "session",
+    "REQ-W3-048"
+   ]
   }
  ]
 }

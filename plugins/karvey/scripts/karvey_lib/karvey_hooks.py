@@ -551,6 +551,16 @@ def _origin_head(root):
     return out[len("origin/"):] if rc == 0 and out.startswith("origin/") else None
 
 
+def layout_line(kroot):
+    """The spec layout when it is not the default (REQ-W3-048): ``spec/``, or ``two spec roots``."""
+    _, label, note = pj.spec_layout(kroot)
+    if note:
+        return "Karvey (info): %s — docs/spec/ and spec/ both hold a Karvey spec; docs/spec/ is used." % note
+    if label == "spec/":
+        return "Karvey (info): spec layout spec/ (specs under spec/, not docs/spec/)."
+    return None
+
+
 def open_work_block(kroot):
     """The bounded open-work lines of the session context: open questions (overdue first) and open risks of
     active changes, at most five lines per list plus ``+N more — karvey-context`` (F-50, REQ-W3-030); ``[]``
@@ -591,7 +601,8 @@ def session_text(mode, env):
         n = settings_notice(start, None, mode, env)
         kp = pj.find_root(start=start)
         ow = open_work_block(kp) if kp else []
-        return "\n".join(([n] if n else []) + ow).strip("\n")
+        lay = layout_line(kp) if kp else None
+        return "\n".join(([n] if n else []) + ([lay] if lay else []) + ow).strip("\n")
     rel = os.path.relpath(start, root) if start != root else ""
     top = rel.split(os.sep, 1)[0] if rel and not rel.startswith("..") else ""
     name, role, profile, board = resolve_profile(root, cfg, kind, top)
@@ -643,6 +654,9 @@ def session_text(mode, env):
     if n:
         out.append(n)
     if kroot:
+        lay = layout_line(kroot)
+        if lay:
+            out.append(lay)
         out.extend(open_work_block(kroot))
     out.append("")
     out.append("=== First action ===")
