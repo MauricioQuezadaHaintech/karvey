@@ -30,7 +30,7 @@ git checkout -b "chore/archive-{change-id}" "origin/$P"
 ### Step 1 — Verify completeness
 
 `python3 "$S" next "{change-id}" --json` must show the change in `deploying` with every gate before it approved or skipped (`invalid` → show the errors and stop). Also verify:
-- [ ] Tests executed: `docs/test_evidence.md` has entries for the change.
+- [ ] Tests executed: `docs/spec/changes/{change-id}/test_evidence.md` exists for the change (evidence lives inside the change).
 - [ ] QA review in `docs/spec/changes/{change-id}/qa/`, no pending critical or high finding.
 - [ ] `findings.md` converged: no `open`/`routed` `bug` or `spec-gap` (`../karvey/rules/iteration-loop.md`).
 - [ ] No Task or Feature of the change left in `review` in the tracker; list any that remain and stop until QA moves them.

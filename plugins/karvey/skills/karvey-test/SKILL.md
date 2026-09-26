@@ -9,7 +9,7 @@ argument-hint: <change-id> [--e2e-only] [--unit-only]
 
 ## Purpose
 
-Run the full post-implementation test plan: unit tests per layer and E2E tests of the complete flow. **The contract is §6 (test coverage plan) of `architecture.md`**: every case it lists is run or reported as not run, with the reason. Document evidence in `docs/test_evidence.md`.
+Run the full post-implementation test plan: unit tests per layer and E2E tests of the complete flow. **The contract is §6 (test coverage plan) of `architecture.md`**: every case it lists is run or reported as not run, with the reason. Plan and evidence live **inside the change** (`docs/spec/changes/{change-id}/test_plan.md` and `test_evidence.md`), never in a file shared across changes (REQ-W2-061).
 
 ## Execution steps
 
@@ -23,6 +23,8 @@ Read:
 - `docs/spec/changes/{change-id}/mockup/` if the change has one (to map E2E flows)
 - `docs/spec/changes/{change-id}/tasks.md`
 
+**Start from the coverage plan** (REQ-W2-059). List every row of `architecture.md` §"Test coverage plan" (its IDs or one line each) as the checklist of this phase; each row ends the phase as `executed` (with its evidence) or `planned, not executed` (with the reason) — none is dropped silently. A requirement the tasks left without a test task or a `manual:` line is listed as `uncovered` (`karvey-trace.py {change-id}`), not tested by surprise.
+
 Also read `docs/spec/project.json` and obtain the `targets` field (see `../karvey/rules/targets.md`). The actual runtime in which the E2E tests run depends on the declared target: browser (web), simulator/device (iOS/Android), terminal (CLI), HTTP client (API), hardware/emulator (embedded). **Do not assume "web" by default** — a project may have multiple targets.
 
 Detect stack: `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `Gemfile`, `Cargo.toml`, or other project configuration files. Identify:
@@ -35,7 +37,7 @@ Detect stack: `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `p
 
 ### Step 2 — Generate or update test_plan.md
 
-If `docs/test_plan.md` does not exist, create it. If it exists, add a section for this change-id.
+If `docs/spec/changes/{change-id}/test_plan.md` does not exist, create it; if it exists (a re-run), update it in place. Its rows are the coverage-plan rows of Step 1.
 
 **Test plan structure:**
 
@@ -100,7 +102,7 @@ For each SP / function, run it directly in the dev DB using the stack's syntax:
 -- Verify expected result
 ```
 
-Record the result in `docs/test_evidence.md`.
+Record the result in `docs/spec/changes/{change-id}/test_evidence.md`.
 
 #### Backend
 Use `curl`, the project's test runner, or the appropriate client per protocol:
@@ -164,7 +166,7 @@ For each E2E flow step, regardless of method, document:
 If the change has `[human]` or `[Infra]` tasks that grant permissions, or is an `ops` change (`../karvey/rules/multi-agent.md` §5–6), run the **read-only verification scripts** that `karvey-infra` produced (e.g. `infra/iam/{change-id}.verify.sh`) as infrastructure tests:
 - Assert the **binding itself** (member · role · resource), not only its effect — an end-to-end success can hide an over-granted role.
 - Also assert that no broader role was granted to the same member than the one declared (least privilege).
-- Record each check in `docs/test_evidence.md` (Infrastructure section) with the command, output and PASS/FAIL. A FAIL is a `bug` finding; if the human step was not executed yet, the task stays `awaiting-human` and the test is reported as **pending**, not FAIL.
+- Record each check in `docs/spec/changes/{change-id}/test_evidence.md` (Infrastructure section) with the command, output and PASS/FAIL. A FAIL is a `bug` finding; if the human step was not executed yet, the task stays `awaiting-human` and the test is reported as **pending**, not FAIL.
 - Where the CI has read-only credentials, add the verification to CI so drift (someone removing or widening the binding) is detected later.
 
 ### Step 4B — Performance benchmark (baseline)
@@ -175,7 +177,7 @@ Measure performance metrics **in the target's actual runtime**, to have a compar
 - **CLI** → command execution time, process startup time.
 - **API / backend** → response latency (p50/p95/p99), throughput.
 
-This measurement can be delegated to or related with the **`karvey-health`** skill (runtime health/performance check). Record the measured values in `docs/test_evidence.md` (Benchmark section) to compare against previous runs: if a key metric degrades relative to the previous baseline, flag it as a finding.
+This measurement can be delegated to or related with the **`karvey-health`** skill (runtime health/performance check). Record the measured values in `docs/spec/changes/{change-id}/test_evidence.md` (Benchmark section) to compare against previous runs: if a key metric degrades relative to the previous baseline, flag it as a finding.
 
 ### Step 4C — Automatic regression tests + incident logging
 
@@ -187,11 +189,24 @@ This measurement can be delegated to or related with the **`karvey-health`** ski
 - Name it traceably to the bug (e.g., `regression_{change-id}_{short-description}`).
 - The test must reproduce the input/scenario that caused the failure and assert the correct behavior.
 - Verify that the test passes against the fixed code (and, ideally, that it fails against the previous code).
-- Record the generated regression test in `docs/test_evidence.md` (Regression section), referencing the ID of the original failed test.
+- Record the generated regression test in `docs/spec/changes/{change-id}/test_evidence.md` (Regression section), referencing the ID of the original failed test.
 
 ### Step 5 — Document evidence
 
-Write or update `docs/test_evidence.md`:
+**Record every command run through the evidence wrapper** (REQ-W2-073), so each PASS/FAIL below cites a line, not a memory:
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-evidence.py" --change "{change-id}" --label unit -- {the test command}
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-evidence.py" --change "{change-id}" --label e2e --junit {report.xml} -- {the E2E command}
+```
+It appends a hashed line to `docs/spec/changes/{change-id}/evidence.jsonl` (no output text) and returns the command's own exit code; cite it as `evidence.jsonl:{line}`.
+
+**Close with the trace and the coverage gate** (REQ-W2-060, 062):
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-trace.py" "{change-id}" --write --check
+```
+It writes `docs/spec/changes/{change-id}/traceability.md` (requirement → tasks → commits or `no commit` → tests → last result) and prints `coverage: N/N`; the requirements not green are listed in the report (warn in 3.13).
+
+Write or update `docs/spec/changes/{change-id}/test_evidence.md`:
 
 ````markdown
 # Test Evidence: {change-id}
@@ -313,13 +328,16 @@ If all tests PASS:
 ```
 ✅ Testing complete
 
+Coverage plan: {executed}/{planned} executed · planned, not executed: {ID — reason, or none}
+Trace: coverage {N}/{N} · traceability.md written
+
 Results:
   DB: {N}/{N} PASS
   Backend: {N}/{N} PASS
   Frontend: {N}/{N} PASS
   E2E: {N}/{N} PASS
 
-Evidence: docs/test_evidence.md
+Evidence: docs/spec/changes/{change-id}/test_evidence.md · traceability.md
 
 Next step:
 /karvey-qa {change-id}

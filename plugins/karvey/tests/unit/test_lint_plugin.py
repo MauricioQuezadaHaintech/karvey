@@ -1064,6 +1064,23 @@ class L43(LintCase):
         self.assertPasses("L-43")
 
 
+class L44(LintCase):
+    """@req REQ-W2-061 — evidence lives inside the change."""
+
+    def test_pass(self):
+        self.assertPasses("L-44")
+
+    def test_shared_evidence_path_fails(self):
+        f = SKILLS + "/karvey-test/SKILL.md"
+        self.t.append(f, "\nRecord the result in `docs/test_evidence.md`.\n")
+        self.assertFails("L-44", "shared across changes", file=f)
+
+    def test_change_path_passes(self):
+        self.t.append(SKILLS + "/karvey-test/SKILL.md",
+                      "\nRecord it in `docs/spec/changes/{change-id}/test_evidence.md` and `test_plan.md`.\n")
+        self.assertPasses("L-44")
+
+
 class L53(LintCase):
     """@req REQ-W2-045 REQ-W2-052 REQ-W2-054 REQ-W2-076 — deploy order and naming."""
 

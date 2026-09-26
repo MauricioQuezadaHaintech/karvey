@@ -52,7 +52,9 @@ For each Feature identified in architecture.md, generate tasks per layer followi
 ```
 Tasks of the same layer within a Feature can be marked `(P)` if they are independent.
 
-**Valid layer labels:** `[DB/Backend/Frontend/Infra/human]`. `Infra`-type tasks are allowed for IaC/pipeline adjustments that come up during implementation (the base infra is already defined in `infra.md`).
+**Test first** (REQ-W2-057). For **each requirement** the task set covers, write a `[Test]` task that **precedes** its implementation task(s): the implementation task lists it in `_Depends:_`, and the test task states the **failing result expected before the implementation** (e.g. "`test_REQ_X_012_*` fails with 404 until F1.T2"). Its tests name the requirement (`@req REQ-…-NNN` or `test_REQ_…_NNN_*`). A requirement that cannot have an automated test gets a `manual: {reason}` line naming it instead (a UI walkthrough, a console-only check); a requirement with neither is listed as `uncovered` in the *how* gate summary (`karvey-trace.py {change-id}`).
+
+**Valid layer labels:** `[DB/Backend/Frontend/Infra/Test/human]`. `Infra`-type tasks are allowed for IaC/pipeline adjustments that come up during implementation (the base infra is already defined in `infra.md`).
 
 **`[human]` tasks** (see `../karvey/rules/multi-agent.md` §5): any step the agent must not or cannot execute — IAM grants, destructive deletions, console-only settings, registrar DNS without API, payments. The agent writes it so a person can run it without interpretation:
 ```markdown
@@ -82,7 +84,13 @@ Total estimated time: {sum}
 - Return {result structure}
 - Requirements: {N.N}
 
-### F1.T2 [Backend] {Description} — _Depends: F1.T1_
+### F1.T2 [Test] Failing tests for {N.N} — _Depends: F1.T1_
+**Estimate:** 10min
+**Artifact:** `{test_path}/test_{name}`
+**Done when:** the tests run and fail with {expected failure} before F1.T3 (they name `@req REQ-{…}-{NNN}`)
+- Requirements: {N.N}
+
+### F1.T3 [Backend] {Description} — _Depends: F1.T1, F1.T2_
 **Estimate:** 20min
 **Artifact:** `{backend_path}/{name}`
 **Done when:** the endpoint returns 200 with {structure} for a valid request, 401 without auth, 422 with invalid input
@@ -92,7 +100,7 @@ Total estimated time: {sum}
 - Handle errors without exposing the stack trace
 - Requirements: {N.N}
 
-### F1.T3 [Frontend] {Description} — _Depends: F1.T2_ (P)
+### F1.T4 [Frontend] {Description} — _Depends: F1.T3_ (P)
 **Estimate:** 25min
 **Artifact:** `{frontend_path}/{name}`
 **Done when:** the component renders data from the endpoint, handles loading/error/empty states
@@ -111,7 +119,7 @@ Verify before writing:
 - [ ] Every task has an observable done criterion
 - [ ] No task exceeds a 1h estimate
 - [ ] [DB] tasks do not modify application code and vice versa
-- [ ] Testing tasks are included (at least one per Feature)
+- [ ] Every requirement has a `[Test]` task that its implementation task depends on, or a `manual: {reason}` line naming it (`karvey-trace.py {change-id}` lists no `uncovered`)
 - [ ] Every step the agent must not execute is a `[human]` task with executor, command, verification and rollback — none is hidden inside an agent task
 
 If there are gaps: fix and re-verify. Maximum 2 iterations.

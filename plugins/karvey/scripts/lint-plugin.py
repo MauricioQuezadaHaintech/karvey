@@ -1911,6 +1911,20 @@ def l43_no_local_merge_push(ctx):
                                 "to {integration} (its CI is the DEV gate)")
 
 
+SHARED_EVIDENCE_RE = re.compile(r"(?<![\w/}.-])docs/test_(?:evidence|plan)\.md\b")
+
+
+@check("L-44", "Evidence and test-plan paths in skill and rule text are under changes/{id}/: no docs/test_evidence.md "
+               "or docs/test_plan.md shared across changes (REQ-W2-061)", reqs=("W2-061",))
+def l44_evidence_inside_change(ctx):
+    for path in ctx.text_files():
+        for n, line in enumerate(ctx.lines(path), 1):
+            m = SHARED_EVIDENCE_RE.search(line)
+            if m:
+                yield path, n, "%s is shared across changes; use docs/spec/changes/{change-id}/%s" % (
+                    m.group(0), m.group(0).split("/")[-1])
+
+
 PROD_PR_RE = re.compile(r"(?:\bpr\s+create\b|\bmr\s+create\b)[^\n]*(?:--base|--target-branch)\s+\"?\$\{?P\b")
 CANARY_RE = re.compile(r"\bcanary\b", re.I)
 TRAFFIC_RE = re.compile(r"traffic", re.I)

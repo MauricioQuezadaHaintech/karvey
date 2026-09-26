@@ -46,6 +46,21 @@ records one `lane.diff` hit in `docs/spec/changes/{change-id}/checks.jsonl`. In 
 the incident cannot reach `RESUELTO`. QA-lite (the `patch`, `hotfix` and `docs` lanes) runs this step, Dimension
 1 (security) and Dimension 6 (versioning) only.
 
+### Step 0C — Tests: run them or cite the exact run; coverage
+
+QA never writes "tests pass" or "the build passes" from memory (REQ-W2-063). For the **exact commit reviewed**
+(`git rev-parse "$SOURCE"`), either **run** the suite through the evidence wrapper and cite the line it prints —
+`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-evidence.py" --change "{change-id}" --label qa-suite -- {the test
+command}` → `evidence.jsonl:{line}` — or **cite the CI run of that commit** (its URL and status). With neither,
+the checklist line reads **`Tests: not evaluated`**, never "pass"; the fiscal flags any claim without one of them.
+Then the coverage gate (REQ-W2-062), read from the script and quoted, not recomputed:
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-trace.py" "{change-id}" --check
+```
+`coverage: N/N` goes into the review; each requirement without a green test or a `manual` exception is listed and
+the gate summary shows the warning (warn in 3.13, `coverage.requirements`). Plan and evidence of the test phase are
+read from `docs/spec/changes/{change-id}/` (`test_plan.md`, `test_evidence.md`, `traceability.md`).
+
 ### Step 1 — Analysis across 9 dimensions
 
 Dispatch parallel subagents for dimensions 1–4, run 5–6 and 9 in the main context. Dimensions 7 (second opinion cross-model) and 8 (visual audit) run at the end, once the preliminary findings are consolidated:
@@ -229,8 +244,9 @@ Structure:
 - [ ] Visual audit vs design-spec with no blocking deviations
 - [ ] Standards conformance verified for every layer the diff touches (or recorded as not evaluated)
 - [ ] Environment variables verified
-- [ ] Tests pass
-- [ ] Production build successful
+- [ ] Tests: {pass — evidence.jsonl:{line} | pass — CI run {url} of {sha} | not evaluated}
+- [ ] Coverage: {N}/{N} (karvey-trace.py --check){; not green: REQ-…}
+- [ ] Production build: {pass — evidence.jsonl:{line} or CI run {url} | not evaluated}
 
 ## Areas requiring manual testing
 - {area}: {reason}
