@@ -37,5 +37,40 @@ class Score(unittest.TestCase):
         self.assertIn("Effort", bk.score({"value": "2", "cod": "3", "effort": "XL"}, TODAY)["invalid"])
 
 
+BACKLOG = ("# Discovery Backlog\n\n| ID | Date | Origin | Type | Priority | Title | Status | Tracker | "
+           "Promoted to change-id | Value | Effort | CoD | Needed by | Client | Reviewed | Commit |\n"
+           "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n"
+           "| BL-01 | 2026-10-01 | retro | tech-debt | low | Tidy a helper | done-direct | — | — | 2 | 30 | — | — | — | "
+           "2026-10-10 | %s |\n")
+
+
+class DoneDirect(unittest.TestCase):
+    """@req REQ-W3-050"""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from _state import GOOD_SPEC, make_project
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-bl-"))
+        self.addCleanup(__import__("shutil").rmtree, str(self.tmp), True)
+        make_project(self.tmp, spec=dict(GOOD_SPEC))
+
+    def validate(self, commit):
+        from _state import run_json
+        (self.tmp / "docs/spec/backlog.md").write_text(BACKLOG % commit, encoding="utf-8")
+        return run_json("validate", "--all", "--root", str(self.tmp))
+
+    def test_REQ_W3_050_done_direct_with_a_commit_is_valid(self):
+        code, env = self.validate("abc1234")
+        self.assertEqual(code, 0, env["errors"])
+
+    def test_REQ_W3_050_done_direct_without_a_commit_is_refused_naming_the_row(self):
+        code, env = self.validate("—")
+        self.assertEqual(code, 1)
+        err = [e for e in env["errors"] if e["code"] == "backlog.done_direct"]
+        self.assertEqual(len(err), 1)
+        self.assertIn("BL-01: done-direct needs the commit", err[0]["message"])
+
+
 if __name__ == "__main__":
     unittest.main()

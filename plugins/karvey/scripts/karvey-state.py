@@ -48,6 +48,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import approval, atomicio, effort as ef, gitlog, judges as jd, lanes as ln, modes, project as pj  # noqa: E402
 from karvey_lib import questions as qs, risks as rk  # noqa: E402
+from karvey_lib import backlog as bl  # noqa: E402
 from karvey_lib import safe_values as sv  # noqa: E402
 from karvey_lib import schema_lite as sl  # noqa: E402
 
@@ -917,6 +918,10 @@ def cmd_validate(args, root):
             worst = kl.EXIT_FINDINGS
     if args.all:
         warnings += dangling_questions(root)
+        bl_errors = backlog_issues(root)  # REQ-W3-050: a state this change introduces, refused from the start
+        errors += bl_errors
+        if bl_errors and worst == kl.EXIT_OK:
+            worst = kl.EXIT_FINDINGS
     if refused:
         worst = kl.EXIT_REFUSED
     result = {"mode": strict_mode, "files": report}
@@ -965,6 +970,18 @@ def risk_register_issues(root, change_dir):
 
 DECISION_HEAD = re.compile(r"^#{2,4}\s+(D-\d+)\b")
 Q_REF = re.compile(r"\bQ-\d+\b")
+
+
+def backlog_issues(root):
+    """wave3 §1.21 (REQ-W3-050): a backlog item ``done-direct`` without the commit that did it is refused,
+    naming the row."""
+    p = Path(root) / pj.SPEC_DIR / "backlog.md"
+    try:
+        text = p.read_text(encoding="utf-8-sig")
+    except OSError:
+        return []
+    return [kl.issue("backlog.done_direct", msg, file=rel(root, p), path="line %d" % line, got=bid)
+            for bid, line, msg in bl.direct_problems(bl.parse(text))]
 
 
 def dangling_questions(root):
