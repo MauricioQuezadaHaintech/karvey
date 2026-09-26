@@ -2304,6 +2304,25 @@ def l63_no_cost_cap_text(ctx):
                 act.group(0).lower(), trig.group(0)))
 
 
+# --------------------------------------------------------------------------- L-64 (wave3-optimization)
+EXTERNAL_REQUEST_RES = (
+    ("a script or image source", re.compile(r"\bsrc\s*=\s*[\"']?\s*(?:https?:)?//", re.I)),
+    ("a stylesheet link", re.compile(r"<link\b[^>]*\bhref\s*=\s*[\"']?\s*(?:https?:)?//", re.I)),
+    ("an @import", re.compile(r"@import\b", re.I)),
+    ("a url()", re.compile(r"url\(\s*[\"']?\s*(?:https?:)?//", re.I)),
+)
+
+
+@check("L-64", "The sponsor template and the method page make no external request (src, link href, @import, url()) "
+               "(REQ-W3-024, 068)", reqs=("W3-024", "W3-068"))
+def l64_no_external_request(ctx):
+    for path in (ctx.plugin / "templates" / "sponsor.html", ctx.root / "docs" / "karvey.html"):
+        for n, line in enumerate(ctx.lines(path), 1):
+            for what, rx in EXTERNAL_REQUEST_RES:
+                if rx.search(line):
+                    yield (path, n, "%s makes an external request: the page must be self-contained" % what)
+
+
 # --------------------------------------------------------------------------- L-65 (wave3-optimization)
 RISK_STATES = ("open", "mitigated", "accepted", "closed", "moved")
 

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+<meta name="robots" content="noindex">
+<title>{{title}}</title>
+<!-- Karvey sponsor page (architecture §1.13, wave3-optimization). Self-contained: no script, no external request
+     (lint L-64). Tokens from design-spec.md; every value below is inserted escaped by karvey-sponsor.py. -->
+<style>
+:root{
+  --color-background:#f3eee3;--color-surface:#fbf8f2;--color-surface-2:#ebe3d2;
+  --color-text-primary:#1d2831;--color-text-secondary:#4a5560;
+  --color-border:#d3c6ad;--color-border-strong:#4a5560;
+  --color-primary:#2b4256;--color-primary-soft:#d6e0e8;
+  --color-accent:#8f5312;--color-accent-soft:#ecd3a4;
+  --color-semantic-success:#44632f;--color-semantic-success-soft:#dbe6cf;
+  --color-semantic-error:#973a1e;--color-semantic-error-soft:#f1d5c9;
+  --color-semantic-warning:#8f5312;--color-semantic-warning-soft:#ecd3a4;
+  --color-focus:#1c5d96;
+  --shadow-1:0 1px 0 rgba(40,30,10,.05),0 6px 18px -12px rgba(40,30,10,.25);
+  --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-cjk:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Apple SD Gothic Neo","Malgun Gothic","PingFang SC","Microsoft YaHei","Noto Sans CJK JP","Noto Sans CJK KR","Noto Sans CJK SC";
+  --text-xs:.75rem;--text-sm:.875rem;--text-base:1rem;--text-lg:1.125rem;--text-xl:1.25rem;--text-3xl:1.875rem;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-12:48px;
+  --radius-sm:4px;--radius-md:8px;--radius-lg:12px;--radius-full:9999px;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --color-background:#10161c;--color-surface:#17202a;--color-surface-2:#202b36;
+    --color-text-primary:#ebe5d8;--color-text-secondary:#a8b1ba;
+    --color-border:#34424f;--color-border-strong:#a8b1ba;
+    --color-primary:#a3bfd8;--color-primary-soft:#1f3244;
+    --color-accent:#e2ab5f;--color-accent-soft:#433018;
+    --color-semantic-success:#a1c487;--color-semantic-success-soft:#243420;
+    --color-semantic-error:#eb937a;--color-semantic-error-soft:#3f2219;
+    --color-semantic-warning:#e2ab5f;--color-semantic-warning-soft:#433018;
+    --color-focus:#7fb6ea;--shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--color-background);color:var(--color-text-primary);font-family:var(--font-sans);font-size:var(--text-base);line-height:1.6;overflow-wrap:anywhere}
+:lang(ja),:lang(ko),:lang(zh){font-family:var(--font-sans),var(--font-cjk);line-height:1.75}
+a{color:var(--color-primary);text-underline-offset:2px}
+:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px;border-radius:var(--radius-sm)}
+h1,h2,h3{line-height:1.25;margin:0 0 var(--space-2);letter-spacing:-.01em}
+h1{font-size:clamp(1.5rem,4vw,var(--text-3xl))}
+h2{font-size:var(--text-xl)}
+h3{font-size:var(--text-base)}
+p{margin:var(--space-1) 0 var(--space-3)}
+.muted{color:var(--color-text-secondary)}
+.small{font-size:var(--text-sm)}
+.xs{font-size:var(--text-xs)}
+.eyebrow{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent);margin:0 0 var(--space-1)}
+.sp{max-width:880px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
+.sp-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-4)}
+.status{display:inline-flex;align-items:center;gap:var(--space-2);font-weight:600;border-radius:var(--radius-full);padding:var(--space-1) var(--space-3);background:var(--color-accent-soft)}
+.status.done{background:var(--color-semantic-success-soft)}
+.dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;background:currentColor}
+.stamp{font-size:var(--text-xs);color:var(--color-text-secondary)}
+.toc{display:flex;flex-wrap:wrap;gap:var(--space-1) var(--space-3);font-size:var(--text-sm);padding:var(--space-2) 0 var(--space-4);border-bottom:1px solid var(--color-border);margin-bottom:var(--space-6)}
+.sp section{margin:0 0 var(--space-6)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:var(--space-3);margin:0 0 var(--space-6);padding:0;list-style:none}
+.facts li{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4)}
+.facts b{display:block;font-size:var(--text-lg)}
+.facts span{font-size:var(--text-xs);color:var(--color-text-secondary)}
+.card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-6);box-shadow:var(--shadow-1);min-width:0}
+.card.emph{border-color:var(--color-accent);border-width:2px}
+.grid2{display:grid;gap:var(--space-4);grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-2);list-style:none;padding:0;margin:var(--space-3) 0}
+.steps li{border-top:4px solid var(--color-border);padding-top:var(--space-2);font-size:var(--text-sm);min-width:0}
+.steps li.done{border-top-color:var(--color-semantic-success)}
+.steps li.now{border-top-color:var(--color-accent);font-weight:700}
+.steps small{display:block;color:var(--color-text-secondary);font-weight:400}
+.ask{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:flex-start;padding:var(--space-3) 0;border-top:1px solid var(--color-border)}
+.ask:first-of-type{border-top:0}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);padding:1px var(--space-2);border-radius:var(--radius-full);background:var(--color-surface-2);color:var(--color-text-primary);border:1px solid var(--color-border);white-space:nowrap}
+.tag.ok{background:var(--color-semantic-success-soft);border-color:transparent}
+.tag.err{background:var(--color-semantic-error-soft);border-color:transparent}
+.tag.warn{background:var(--color-semantic-warning-soft);border-color:transparent}
+table{border-collapse:collapse;width:100%;font-size:var(--text-sm)}
+th,td{text-align:left;padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--color-border);vertical-align:top}
+th{font-weight:600;color:var(--color-text-secondary);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.05em}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.table-scroll{overflow-x:auto;max-width:100%}
+details{border-top:1px solid var(--color-border);padding:var(--space-2) 0}
+summary{cursor:pointer;font-weight:600;min-height:32px;display:list-item}
+@media (max-width:520px){.steps{grid-template-columns:repeat(2,1fr)}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{
+  nav.toc{display:none!important}
+  body{background:#fff;color:#000}
+  .card,.facts li{box-shadow:none;break-inside:avoid}
+  details>*{display:block!important}
+  details>summary{list-style:none}
+  .table-scroll{overflow:visible}
+}
+</style>
+</head>
+<body>
+<main class="sp" id="top">
+  <header class="sp-head">
+    <div>
+      <p class="eyebrow">{{label_page_title}}</p>
+      <h1>{{title}}</h1>
+      <p class="muted small">{{change_line}}</p>
+      {{{language_note}}}
+    </div>
+    <div>
+      {{{status}}}
+      <p class="stamp">{{updated_line}}</p>
+    </div>
+  </header>
+  <nav class="toc" aria-label="{{label_sections}}">{{{toc}}}</nav>
+  <ul class="facts" aria-label="{{label_summary}}">{{{facts}}}</ul>
+  {{{section_waiting}}}
+  {{{section_scope}}}
+  {{{section_progress}}}
+  {{{section_cost}}}
+  {{{section_risks}}}
+  {{{section_released}}}
+  {{{section_history}}}
+  <footer class="xs muted">{{label_footer}}</footer>
+</main>
+</body>
+</html>

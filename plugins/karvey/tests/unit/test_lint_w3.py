@@ -125,5 +125,27 @@ class L65(LintCase):
         self.assertFails("L-65", "phase 'qa' has no wording in 'en'")
 
 
+TEMPLATE = "plugins/karvey/templates/sponsor.html"
+
+
+class L64(LintCase):
+    """@req REQ-W3-024 — no external request in the sponsor template or the method page."""
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(TEMPLATE, (_path.PLUGIN_ROOT / "templates" / "sponsor.html").read_text(encoding="utf-8"))
+
+    def test_shipped_template_passes(self):
+        self.assertPasses("L-64")
+
+    def test_REQ_W3_024_a_remote_font_fails(self):
+        self.t.replace(TEMPLATE, "<style>", "<style>\n@import url(\"https://fonts.example.org/css?family=Sample\");")
+        self.assertFails("L-64", "@import", file=TEMPLATE)
+
+    def test_a_remote_script_on_the_method_page_fails(self):
+        self.t.write("docs/karvey.html", "<html><script src=\"https://cdn.example.org/x.js\"></script></html>\n")
+        self.assertFails("L-64", "external request", file="docs/karvey.html")
+
+
 if __name__ == "__main__":
     unittest.main()
