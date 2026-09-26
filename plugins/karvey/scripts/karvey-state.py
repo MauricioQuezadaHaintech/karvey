@@ -44,6 +44,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import approval, atomicio, effort as ef, gitlog, judges as jd, lanes as ln, modes, project as pj  # noqa: E402
+from karvey_lib import questions as qs  # noqa: E402
 from karvey_lib import safe_values as sv  # noqa: E402
 from karvey_lib import schema_lite as sl  # noqa: E402
 
@@ -908,6 +909,8 @@ def cmd_validate(args, root):
         report.append(entry)
         if e and worst == kl.EXIT_OK:
             worst = kl.EXIT_FINDINGS
+    if args.all:
+        warnings += dangling_questions(root)
     if refused:
         worst = kl.EXIT_REFUSED
     result = {"mode": strict_mode, "files": report}
@@ -930,6 +933,43 @@ def cmd_validate(args, root):
     lines.append("mode: %s · %d files · %d errors · %d warnings" % (strict_mode, len(report), len(errors),
                                                                    len(warnings)))
     return worst, result, errors, warnings, "\n".join(lines)
+
+
+DECISION_HEAD = re.compile(r"^#{2,4}\s+(D-\d+)\b")
+Q_REF = re.compile(r"\bQ-\d+\b")
+
+
+def dangling_questions(root):
+    """wave3 §1.16 (REQ-W3-029): a ``D-NN`` of the decision log that cites a ``Q-NN`` absent from
+    ``docs/spec/questions.md`` → ``dangling reference Q-NN`` (a warning). Only once the register exists: a log
+    that predates it may cite questions kept elsewhere."""
+    spec_dir = Path(root) / pj.SPEC_DIR
+    qfile = spec_dir / "questions.md"
+    if not qfile.is_file():
+        return []
+    try:
+        known = {q["id"] for q in qs.parse(qfile.read_text(encoding="utf-8-sig"))}
+    except OSError:
+        return []
+    out = []
+    logs = [spec_dir / "decisions.md"] + sorted((spec_dir / "decisions").glob("*.md"))
+    for log in logs:
+        try:
+            lines = log.read_text(encoding="utf-8-sig").splitlines()
+        except OSError:
+            continue
+        cur = None
+        for n, line in enumerate(lines, 1):
+            m = DECISION_HEAD.match(line)
+            if m:
+                cur = m.group(1)
+            if cur is None:
+                continue
+            for q in sorted(set(Q_REF.findall(line)) - known):
+                out.append(kl.issue("questions.dangling", "dangling reference %s: %s cites a question absent from "
+                                    "docs/spec/questions.md" % (q, cur), severity="warning",
+                                    file=rel(root, log), path="line %d" % n, got=q))
+    return out
 
 
 def change_spec_path(root, change):
