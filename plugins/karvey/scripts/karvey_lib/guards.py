@@ -674,23 +674,58 @@ def flow_config(ctx, target_dir):
     return root, integ, prod
 
 
+# git push long options (git accepts a unique prefix of any of them, BUG-50); those that take a value
+PUSH_LONG = ("--all", "--branches", "--mirror", "--prune", "--dry-run", "--porcelain", "--delete", "--tags",
+             "--follow-tags", "--no-follow-tags", "--signed", "--no-signed", "--atomic", "--no-atomic",
+             "--push-option", "--receive-pack", "--exec", "--repo", "--force", "--no-force", "--force-with-lease",
+             "--no-force-with-lease", "--force-if-includes", "--no-force-if-includes", "--set-upstream",
+             "--no-set-upstream", "--thin", "--no-thin", "--quiet", "--verbose", "--progress", "--no-progress",
+             "--recurse-submodules", "--no-recurse-submodules", "--verify", "--no-verify", "--ipv4", "--ipv6",
+             "--no-ipv4", "--no-ipv6", "--help")
+PUSH_LONG_WITH_ARG = {"--repo", "--push-option", "--receive-pack", "--exec", "--recurse-submodules"}
+PUSH_SHORT_WITH_ARG = {"o"}
+UNKNOWN_FLAG = "?unknown"
+
+
+def _push_long(name):
+    """The canonical long option of ``name`` (an exact name or a unique prefix), else None."""
+    if name in PUSH_LONG:
+        return name
+    hits = [o for o in PUSH_LONG if o.startswith(name)]
+    return hits[0] if len(hits) == 1 else None
+
+
 def _push_parse(args):
-    """``(remote, refspecs, flags)`` of ``git push`` arguments."""
+    """``(remote, refspecs, flags)`` of ``git push`` arguments. Long options are canonicalised from a
+    unique prefix (``--mirro`` → ``--mirror``); an unknown one adds ``UNKNOWN_FLAG`` and its name.
+    In a short cluster, ``-o`` takes the rest as its value (``-on`` is push-option ``n``, not a dry
+    run); ``-n`` counts as a dry run only on its own (BUG-50)."""
     flags, pos = set(), []
-    with_arg = {"--repo", "-o", "--push-option", "--receive-pack", "--exec"}
     i = 0
     while i < len(args):
         a = args[i]
         if a == "--":
             pos += args[i + 1:]
             break
-        if a in with_arg:
-            i += 2
-            continue
         if a.startswith("--"):
-            flags.add(a.split("=", 1)[0])
+            name, has_val = a.split("=", 1)[0], "=" in a
+            canon = _push_long(name)
+            if canon is None:
+                flags.update((UNKNOWN_FLAG, name))
+            else:
+                flags.add(canon)
+                if canon in PUSH_LONG_WITH_ARG and not has_val:
+                    i += 1
         elif a.startswith("-") and len(a) > 1:
-            for ch in a[1:]:
+            cluster = a[1:]
+            for j, ch in enumerate(cluster):
+                if ch in PUSH_SHORT_WITH_ARG:
+                    flags.add("-" + ch)
+                    if j == len(cluster) - 1:
+                        i += 1  # the value is the next argument
+                    break
+                if ch == "n" and len(cluster) > 1:
+                    continue  # a dry run is trusted only as a bare -n
                 flags.add("-" + ch)
         else:
             pos.append(a)
@@ -1019,10 +1054,17 @@ def implicit_push_dests(ctx, t, head):
         return [], "push.default matching"
     if not head:
         return [], None
-    rc, up = t.git(ctx, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "%s@{push}" % head)
-    if rc == 0 and up and "/" in up:
-        return [(head, up.split("/", 1)[1], False, False)], None
-    return [], None
+    rc, up = t.git(ctx, "rev-parse", "--symbolic-full-name", "%s@{push}" % head)
+    if rc != 0 or not up:
+        return [], None  # nothing is pushed (git itself refuses such a push)
+    if up.startswith("refs/heads/"):  # a local remote path ("." remote)
+        return [(head, up[len("refs/heads/"):], False, False)], None
+    rc, names = t.git(ctx, "remote")
+    for r in sorted((names or "").split(), key=len, reverse=True):  # BUG-50: remote names may contain "/"
+        pre = "refs/remotes/%s/" % r
+        if up.startswith(pre):
+            return [(head, up[len(pre):], False, False)], None
+    return [], "a push destination that cannot be resolved (%s)" % up
 
 
 def prod_candidates(ctx):
@@ -1267,6 +1309,10 @@ def _evaluate_candidate(ctx, c, deadline):
         if not dests and "--tags" in flags:
             return None  # BUG-29: only tags are pushed, no branch
         bulk = None
+        if UNKNOWN_FLAG in flags:  # BUG-50: git may read it as an option the gate does not know
+            return _pg_block(None, "target", "cannot verify the production approval: unrecognised push option %s; "
+                                             "spell the options out in full"
+                             % ", ".join(sorted(f for f in flags if f.startswith("--") and _push_long(f) is None)))
         if "--mirror" in flags:
             bulk = "--mirror"
         elif "--all" in flags or "--branches" in flags:
@@ -1283,8 +1329,9 @@ def _evaluate_candidate(ctx, c, deadline):
             if dst == "":  # BUG-47: `git push origin :` pushes every matching branch
                 bulk = "a matching refspec (:)"
                 break
-            if "*" in dst:  # BUG-47: a wildcard refspec reaches every branch it matches
-                if any(fnmatch.fnmatchcase(p, dst) for p in prods):
+            if "*" in dst:  # BUG-47, BUG-50: a wildcard refspec reaches every ref it matches
+                full = dst if dst.startswith("refs/") else "refs/heads/" + dst
+                if any(fnmatch.fnmatchcase("refs/heads/" + p, full) for p in prods):
                     bulk = "a wildcard refspec (%s)" % dst
                     break
                 continue
@@ -1292,9 +1339,8 @@ def _evaluate_candidate(ctx, c, deadline):
                 hits.append((head_branch if src in ("HEAD", "") else src, dst,
                              None if delete else ("HEAD" if src in ("HEAD", "") else src)))
         if bulk is not None:  # D-35, BUG-47: which commit reaches production must be known
-            return _pg_block(None, "sha", "cannot verify the production approval: %s can push any branch into "
-                                          "production and names no single commit; push an explicit <commit>:<branch>"
-                             % bulk)
+            return _pg_block(None, "sha", "cannot verify the production approval: %s can reach production "
+                                          "without naming one commit; push an explicit <commit>:<branch>" % bulk)
         if not hits:
             return None
         head, base, title = hits[0][0], hits[0][1], ""

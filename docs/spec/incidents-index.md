@@ -57,6 +57,7 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | BUG-47 | karvey | high | prod-gate missed wildcard/matching/mirror/`push.default matching` pushes, a tag shadowing the branch and a second production destination | wave1-hardening / F-92 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-01..07 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-48 | karvey | medium | a deferred merge (`--auto`, auto-complete, glab) could land a later commit | wave1-hardening / F-93 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-08..12 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-49 | karvey | low | `reopen` superseded the ledger prod approval after writing spec.json | wave1-hardening / F-94 | RESUELTO | plugins/karvey/tests/unit/test_state_approve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-50 | karvey | high | prod-gate push parser missed `refs/*` wildcards, `-o` clusters, abbreviated long options and remote names with a slash | wave1-hardening / F-95 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-13..17 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 
 ## Summary by state
 
@@ -65,7 +66,7 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 49 | BUG-01 .. BUG-49 |
+| RESUELTO | 50 | BUG-01 .. BUG-50 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-50**.
+Next number: **BUG-51**.

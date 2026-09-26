@@ -5123,8 +5123,16 @@
    "tags": [
     "prod-gate",
     "REQ-W1-023",
-    "BUG-47"
-   ]
+    "BUG-47",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "python3 not available"
+    ]
+   }
   },
   {
    "id": "pg6-02-matching-colon-refspec",
@@ -5178,8 +5186,16 @@
    "tags": [
     "prod-gate",
     "REQ-W1-023",
-    "BUG-47"
-   ]
+    "BUG-47",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "python3 not available"
+    ]
+   }
   },
   {
    "id": "pg6-03-configured-mirror",
@@ -5768,6 +5784,283 @@
     "prod-gate",
     "REQ-W1-023",
     "BUG-48"
+   ]
+  },
+  {
+   "id": "pg6-13-refs-wildcard-refspec",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git branch -q wip && git checkout -q wip && git commit -q --allow-empty -m B && git checkout -q feature/feat-a && git branch -f main wip"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin 'refs/*:refs/*'"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "wildcard"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-50"
+   ]
+  },
+  {
+   "id": "pg6-14-push-option-cluster-is-not-a-dry-run",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git branch -q wip && git checkout -q wip && git commit -q --allow-empty -m B && git checkout -q feature/feat-a"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push -on origin wip:main"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "missing=sha",
+     "not the approved commit"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-50"
+   ]
+  },
+  {
+   "id": "pg6-15-abbreviated-mirror-option",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git branch -q wip && git checkout -q wip && git commit -q --allow-empty -m B && git checkout -q feature/feat-a && git branch -f main wip"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push --mirro origin"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "--mirror"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-50"
+   ]
+  },
+  {
+   "id": "pg6-16-unknown-long-option",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git branch -q wip && git checkout -q wip && git commit -q --allow-empty -m B && git checkout -q feature/feat-a"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push --frobnicate origin wip:main"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "option"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-50"
+   ]
+  },
+  {
+   "id": "pg6-17-remote-name-with-a-slash",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git branch -q wip && git checkout -q wip && git commit -q --allow-empty -m B && git checkout -q feature/feat-a && git remote add up/stream \"$(git remote get-url origin)\" && git fetch -q up/stream && git config branch.feature/feat-a.remote up/stream && git config branch.feature/feat-a.merge refs/heads/main && git config push.default upstream && git reset -q --hard wip"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "missing=sha",
+     "not the approved commit"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-50"
    ]
   }
  ]

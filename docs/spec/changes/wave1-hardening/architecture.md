@@ -1120,7 +1120,8 @@ it is not what gets approved (F-77). **Revision 4 (D-35):** the ledger stores th
 - a `git push` in every recognised form (explicit refspec, `@`, `HEAD`, implicit upstream or configured push
   refspec, aliases, `send-pack`): the source resolved with `git rev-parse --verify <src>^{commit}` in the
   target repository, a short name as `refs/heads/<name>` first (a tag of the same name never stands in for the
-  branch, BUG-47). `--all`, `--mirror`, a configured mirror, `push.default matching`, a matching (`:`) or
+  branch, BUG-47). Options are read as git reads them: a unique prefix of a long option counts, an unknown one
+  blocks, and `-o` in a short cluster takes the rest as its value (BUG-50). `--all`, `--mirror`, a configured mirror, `push.default matching`, a matching (`:`) or
   wildcard refspec that can reach production, and a delete name no single commit and block (BUG-47); every
   production destination of one push must receive the same commit;
 - a deferred merge (`gh pr merge --auto`, `az … --auto-complete`, `glab mr merge`, which merges when the
@@ -1131,8 +1132,10 @@ it is not what gets approved (F-77). **Revision 4 (D-35):** the ledger stores th
   resolves the commit before anything runs (`git branch -f X work && git push origin X:main`).
 
 A different commit or an expired approval blocks with the reason; a new commit needs a new OK. A `reopen`
-supersedes the ledger prod approval (D-36, §1.2). The no-python fallback keeps failing closed for every
-production merge or push and never reads the ledger (§3.2), so it needs nothing new.
+supersedes the ledger prod approval (D-36, §1.2). The no-python fallback keeps its documented fail-closed
+behaviour (§3.2): every PR merge blocks, and a push blocks when it names a production branch, has no refspec,
+or (BUG-47) has a wildcard or matching refspec. It never reads the ledger, so the commit and expiry checks do
+not apply there; `HEAD`/`@` on the production branch stays the known gap F-80 (BL-55).
 
 When several changes are `deploying`, the gate checks the resolved one and prints a warning listing the
 others without prod approval (H-21 stays Wave 2, D-02).
@@ -1934,4 +1937,4 @@ deliberately not run: this change moves the sync to archive only (REQ-W1-062), a
 | 1 | 2026-09-24 | D-19 · F-16..F-19, F-40, F-47..F-49 | §1.4 (profile-only commits), §1.2 `approve` (`--date` on retro records), §3.1 (exemptions, `other`, sprints, `..`, status `( )`, `"`), §6.5 (manual executor), §7.3 (option a; `[human]` T2) | Test-phase spec-gaps; reopened from `test` with `karvey-state.py reopen … architecture --ref D-19`. |
 | 2 | 2026-09-25 | D-33 · BUG-25 · F-52 | §1.3 (`hooks.json` `Agent\|Task` entry, `pre-agent` event, subagent-prompt contract), §3.2 (fail open), §6.1 (`subagent-prompt.json`) | The guard was added during impl to close BUG-25, outside the approved architecture; D-33 keeps it and records it here. |
 | 3 | 2026-09-26 | BUG-28, BUG-41, BUG-42 (QA) | §3.3 (prod marker scoped to the change and consumed; `si` only as the affirmative) | QA fixes that change documented behaviour; the prod-gate candidate forms added by BUG-28 are listed in `rules/enforcement.md` and the tables. |
-| 4 | 2026-09-26 | D-34, D-35, D-36 · F-76, F-77, F-79 (QA spec-gaps); BUG-47..49 (QA re-run) | §1.2 (`approve prod --sha`, `check-prod --sha`, `reopen`), §3.3 control 6 (the matching evidence = the approval hook's audit-log line), §3.4 (the ledger stores the approved head commit + expiry; the released commit is compared; reopen supersedes the prod approval) | The owner's decisions on the three open QA spec-gaps; tables pg5-01..11 and ap-40, tasks E1.F18. |
+| 4 | 2026-09-26 | D-34, D-35, D-36 · F-76, F-77, F-79 (QA spec-gaps); BUG-47..50 (QA re-run) | §1.2 (`approve prod --sha`, `check-prod --sha`, `reopen`), §3.3 control 6 (the matching evidence = the approval hook's audit-log line), §3.4 (the ledger stores the approved head commit + expiry; the released commit is compared; reopen supersedes the prod approval) | The owner's decisions on the three open QA spec-gaps; tables pg5-01..11 and ap-40, tasks E1.F18. |

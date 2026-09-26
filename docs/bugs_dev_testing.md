@@ -1436,7 +1436,7 @@ With a prod approval for commit A and local `main` moved to an unapproved B: `gi
 the destination was compared literally with the production set, so `*` and the empty `:` never matched; the implicit-push resolution read neither `remote.<r>.mirror` nor a persistent `push.default`; the source short name was resolved with `rev-parse`, which prefers a tag; the loop stopped at the first production destination.
 
 ### Fix
-wildcard destinations are matched with `fnmatch` against the production set, `:` is a matching push, a configured mirror and `push.default matching` count as bulk pushes, and all of them block; the source is resolved as `refs/heads/<name>` first (`resolve_push_source`); every production destination is resolved and more than one commit blocks.
+wildcard destinations are matched with `fnmatch` against the production set, `:` is a matching push, a configured mirror and `push.default matching` count as bulk pushes, and all of them block; the source is resolved as `refs/heads/<name>` first (`resolve_push_source`); every production destination is resolved and more than one commit blocks. Without python (`hooks/karvey-hook.sh`), a wildcard or matching refspec blocks (fail closed).
 
 ### Regression test
 `plugins/karvey/tests/hooks/tables/prod-gate.json` pg6-01-wildcard-refspec-into-main, pg6-02-matching-colon-refspec, pg6-03-configured-mirror, pg6-04-configured-push-default-matching, pg6-05-tag-shadows-the-pushed-branch, pg6-06-second-production-destination, pg6-07-configured-wildcard-push-refspec; red on 7e110f3. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
@@ -1507,3 +1507,33 @@ the supersede runs inside the reopen transaction, after the refusals and before 
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-94, karvey-qa re-run D7 second opinion (X-10) |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 7e110f3, green after |
+
+## BUG-50 — The prod-gate's push parser missed `refs/*` wildcards, `-o` clusters, abbreviated long options and remote names with a slash
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_push_parse`, `_evaluate_candidate`, `implicit_push_dests`)
+- **Change / origin:** wave1-hardening — finding F-95 (QA re-run, D7 second opinion re-check (N-1..N-4))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With a prod approval for commit A and `wip` at an unapproved B: `git branch -f main wip && git push origin 'refs/*:refs/*'`; `git push -on origin wip:main`; `git branch -f main wip && git push --mirro origin`; a remote `up/stream` as the upstream of the branch, tracking `main`, with `push.default=upstream`, then `git push`.
+
+### Actual vs expected
+- Actual: the gate allowed each one, and `origin/main` ended at B (`-on` only where the server accepts push options).
+- Expected: each push is resolved as git resolves it, or blocks.
+
+### Root cause
+the wildcard was matched against bare branch names, so `refs/*` never matched; short clusters were split letter by letter, so `-on` (push-option `n`) read as a dry run; long options were compared exactly while git accepts unique prefixes; the upstream name was split at its first `/`.
+
+### Fix
+wildcards are matched against full refs; in a cluster `-o` takes the rest as its value and `-n` counts only on its own; long options are canonicalised from a unique prefix and an unknown one blocks; the push destination comes from `rev-parse --symbolic-full-name <branch>@{push}` minus the longest known remote prefix, and an unparsable one blocks.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg6-13-refs-wildcard-refspec, pg6-14-push-option-cluster-is-not-a-dry-run, pg6-15-abbreviated-mirror-option, pg6-16-unknown-long-option, pg6-17-remote-name-with-a-slash; red on 0ce4a7b. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-95, karvey-qa re-run D7 second opinion re-check (N-1..N-4) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 0ce4a7b, green after |

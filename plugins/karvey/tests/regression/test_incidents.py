@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-49 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-50 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -235,6 +235,13 @@ INDEX = {
     "BUG-49": [  # F-94 (QA re-run D7 second opinion (X-10))
         ("unit", "test_state_approve.py", "ReopenSupersedesProd.test_ledger_failure_leaves_the_spec_unreopened"),
         ("unit", "test_state_approve.py", "ReopenSupersedesProd.test_refused_reopen_keeps_the_ledger"),
+    ],
+    "BUG-50": [  # F-95 (QA re-run D7 second opinion re-check (N-1..N-4))
+        ("table", "prod-gate", "pg6-13-refs-wildcard-refspec"),
+        ("table", "prod-gate", "pg6-14-push-option-cluster-is-not-a-dry-run"),
+        ("table", "prod-gate", "pg6-15-abbreviated-mirror-option"),
+        ("table", "prod-gate", "pg6-16-unknown-long-option"),
+        ("table", "prod-gate", "pg6-17-remote-name-with-a-slash"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

@@ -178,8 +178,8 @@ nopy_git_flow() {
 }
 
 # prod-gate without python (§3.2): fail closed. Any PR/MR merge is blocked (its base cannot be
-# resolved); a git push is blocked when it names master/main/the production branch or has no
-# refspec. Off only if prod_gate_hook is false in the working copy AND on origin/<production>.
+# resolved); a git push is blocked when it names master/main/the production branch, has no
+# refspec, or has a wildcard or matching (`:`) refspec (BUG-47). Off only if prod_gate_hook is false in the working copy AND on origin/<production>.
 nopy_prod_gate() {
   local root cmd pj prod kind rest n w
   root="$(karvey_root)"; [ -z "$root" ] && return 0
@@ -204,7 +204,14 @@ nopy_prod_gate() {
     return 2
   fi
   rest="${cmd#*push}"; rest="${rest%%[;&|]*}"; n=0
+  # BUG-47: a wildcard or a matching (`:`) refspec can reach production without naming it
+  if printf '%s' "$rest" | grep -Eq '\*|(^|[[:space:]])["'"'"']?\+?:["'"'"']?([[:space:]]|$)'; then
+    echo "[karvey] prod-gate BLOCK change=? missing=python reason=cannot verify the production approval: python3 not available (wildcard or matching refspec)" >&2
+    return 2
+  fi
+  set -f
   for w in $rest; do case "$w" in -*) ;; *) n=$((n+1)) ;; esac; done
+  set +f
   if [ "$n" -lt 2 ]; then
     echo "[karvey] prod-gate BLOCK change=? missing=python reason=cannot verify the production approval: python3 not available (push without a refspec)" >&2
     return 2
