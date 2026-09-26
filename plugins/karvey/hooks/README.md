@@ -80,7 +80,7 @@ re-read the handoff.
 
 - A statusline that vanishes looks like one that is off: on a stdin it cannot read, the script shows
   `karvey statusline down` and keeps the last stdin in `$TMPDIR/.karvey-statusline-last.<uid>.json`
-  (per user, mode 600).
+  (per user, mode 600). <!-- guard-case: sl-fail-01-unreadable-stdin-shows-down-line -->
 - `current_usage` changed from an integer to an object; both shapes are accepted.
 - Windows + WSL: `C:\...` transcript paths are translated to `/mnt/c/...`.
 - Writing these scripts through a PowerShell pipe can replace the emoji with `?`: copy the file and compare

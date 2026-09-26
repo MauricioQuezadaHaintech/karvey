@@ -1021,6 +1021,27 @@ class L46(LintCase):
         self.assertFails("L-46", "default", file=RULES + "/knowledge-sync.md")
 
 
+class L54(LintCase):
+    """@req REQ-W2-082 — the statusline failure line is anchored to a table case."""
+    README = "plugins/karvey/hooks/README.md"
+    TABLE = "plugins/karvey/tests/hooks/tables/statusline.json"
+    LINE = "- On a stdin it cannot read the script shows `karvey statusline down`.%s\n"
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(self.TABLE, {"table": "statusline", "cases": [
+            {"id": "sl-fail-01", "guard": "statusline", "event": "statusline", "input": {"stdin": [1]},
+             "expect": {"decision": "allow", "stdout_contains": "karvey statusline down (rc="}}]})
+
+    def test_anchored_passes(self):
+        self.t.write(self.README, "# Hooks\n\n" + self.LINE % " <!-- guard-case: sl-fail-01 -->")
+        self.assertPasses("L-54")
+
+    def test_sentence_without_anchor_fails(self):
+        self.t.write(self.README, "# Hooks\n\n" + self.LINE % "")
+        self.assertFails("L-54", "no guard-case anchor", file=self.README)
+
+
 class L34(LintCase):
     def test_pass(self):
         self.assertPasses("L-34")

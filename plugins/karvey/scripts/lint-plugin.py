@@ -1799,6 +1799,31 @@ def l46_knowledge_sync_optional(ctx):
             yield rule, 1, "rules/knowledge-sync.md must make `none` the default, also when the key is absent"
 
 
+# --------------------------------------------------------------------------- L-54 (wave2-structural)
+@check("L-54", "The hooks README's statusline failure-line sentence carries a guard-case anchor to a "
+               "statusline.json case that asserts the line (REQ-W2-082)", reqs=("W2-082",))
+def l54_statusline_failure_anchor(ctx):
+    readme = ctx.plugin / "hooks" / "README.md"
+    if not readme.is_file():
+        return
+    lines = ctx.lines(readme)
+    idx = [i for i, ln_ in enumerate(lines) if "statusline down" in ln_]
+    if not idx:
+        return
+    cases = {cid: c for cid, (c, _f) in table_cases(ctx).items()}
+    for i in idx:
+        # the sentence may wrap: look from its line to the end of the paragraph (the next blank or list item)
+        j, block = i, []
+        while j < len(lines) and lines[j].strip() and (j == i or not lines[j].lstrip().startswith("- ")):
+            block.append(lines[j])
+            j += 1
+        ids = [x.strip() for m in ANCHOR_RE.finditer(" ".join(block)) for x in m.group(1).split(",") if x.strip()]
+        good = [x for x in ids if x in cases and "statusline down" in json.dumps(cases[x].get("expect", {}))]
+        if not good:
+            yield (readme, i + 1, "the statusline failure line ('statusline down') has no guard-case anchor to a "
+                                  "statusline.json case that asserts it")
+
+
 # --------------------------------------------------------------------------- L-49 (wave2-structural)
 @check("L-49", "A change in deployed (not archived) has its spec-delta merged into the living spec "
                "(karvey-spec-merge.py --check = merged) (REQ-W2-056)", reqs=("W2-056",))
