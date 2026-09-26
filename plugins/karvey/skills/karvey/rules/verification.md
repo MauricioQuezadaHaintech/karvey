@@ -82,6 +82,12 @@ symptoms because that is how they show up — all of them passed a check that fe
 
 - **At every phase close:** the report cites the command and its output for each claim. A claim that
   cannot be verified is stated as unverified, **with the reason**, and never dropped.
+- **Evidence you can re-check:** run the verifying commands through
+  `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-evidence.py" --label "…" -- <cmd>`. It streams the output
+  unchanged, returns the command's own exit code and appends one line to `changes/{id}/evidence.jsonl` (argv,
+  exit, duration, sha256 of stdout and stderr — never the output text). A closing claim cites
+  `evidence.jsonl:{line}`; a claim without such a line or a CI run of the reviewed commit is what the QA fiscal
+  lists.
 - **`karvey-guard`** ships this list as a pre-report checklist (`--verify`).
 - **`karvey-qa`** treats an unverifiable claim in a deliverable as a Dimension-2 finding.
 - **Teams amplify all of it** (`team.md`): a false claim crossing between agents is acted on before
