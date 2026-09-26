@@ -6,6 +6,8 @@
 > Revision 3: the fiscal's re-check of revision 2 (F-72 .. F-81) — the missing runs recorded (`evidence.jsonl:44`–`48`),
 > the red run transcribed (`qa/red-run-2026-09-26.md`); `evidence.jsonl` stores hashes, not output, and no commit SHA
 > (F-32, deferred), so the counts quoted from a run are transcribed from its output.
+> Revision 4: Wave 1's later fixes merged (`edbce36`), D-37 implemented for F-61 (`9b19ef2`), D1 + D7 re-run on
+> `a675017..dff4e21` — see "Revision 4" at the end; **the security gate passes** (no High/Critical open).
 
 ## General Information
 - Repository: karvey (Karvey Method plugin)
@@ -29,7 +31,7 @@ that were red on the pre-QA scripts (`evidence.jsonl:30`, transcribed in `qa/red
 guard against over-matching) — 28 incidents, BUG-52 .. BUG-81 except BUG-66 and BUG-78 (the impl findings F-05, F-06). **One High stays open for the owner: F-61** (whether one project-wide
 production approval may cover every change of a release manifest, against the Wave 1 rule that a production
 approval is of one change). Sixteen emergent items are deferred as backlog candidates with their reasons.
-**Security gate: NOT passed while F-61 is open.** Second opinion: same model family (declared), FAIL on its first
+**Security gate: NOT passed while F-61 is open** (revision 3; passed in revision 4). Second opinion: same model family (declared), FAIL on its first
 pass (`qa/second-opinion-2026-09-26.md`).
 
 ## Findings by Dimension
@@ -66,7 +68,7 @@ none (`evidence.jsonl:32`). The search covers the plugin and the page; the respo
 | 3 | `scripts/karvey-state.py` (`lane raise`) | High | `docs` → `ops` counted as a raise, QA optional without the human (STRIDE-E) | fixed, REQ-W2-016 rev. 1 + BUG-62 |
 | 4 | `scripts/karvey_lib/judges.py` | High | forgeable `findings.md` rows through the lens (STRIDE-T) | fixed, BUG-56 |
 | 5 | `scripts/karvey-state.py` (`approve-gate … release`, `approve prod`) | High | a project-wide prod marker approved production of any change and stayed live | fixed, BUG-70 |
-| 6 | `scripts/karvey-state.py` (`approve prod --manifest`) | High | one project-wide prod marker records production for every change of the manifest | **open, F-61 — owner decision** |
+| 6 | `scripts/karvey-state.py` (`approve prod --manifest`) | High | one project-wide prod marker records production for every change of the manifest | fixed, D-37 (revision 4) |
 | 7 | `scripts/karvey-state.py` (`lane lower`) | Medium | project-wide plan marker lowered any lane, not consumed | fixed, BUG-74 |
 | 8 | `scripts/karvey-state.py` (manifest) | Medium | a failed marker consume was swallowed | fixed, BUG-73 |
 | 9 | `scripts/karvey_lib/judges.py` | Medium | a judge could declare itself cross-model | fixed, BUG-76 |
@@ -150,14 +152,14 @@ both intra-model, recorded in `spec.json:judge_runs` (US$ 2.50 for the change so
 | Severity | Found | Fixed | Deferred | Open |
 |-----------|---------|---------|---------|---------|
 | Critical | 0 | 0 | 0 | 0 |
-| High | 10 | 9 | 0 | 1 (F-61) |
+| High | 10 | 10 | 0 | 0 |
 | Medium | 23 | 18 | 5 | 0 |
 | Low | 13 | 2 | 11 | 0 |
 
 ## Pre-merge checklist
 - [x] All critical findings resolved (none)
-- [ ] All high findings resolved — **F-61 open** (owner decision)
-- [ ] Security gate passed — blocked by F-61
+- [x] All high findings resolved — F-61 closed by D-37 (revision 4)
+- [x] Security gate passed (revision 4)
 - [x] Second opinion executed and integrated (intra-model, declared)
 - [x] Visual audit: no deviation
 - [x] Standards conformance: not evaluated (no standards declared)
@@ -172,3 +174,39 @@ both intra-model, recorded in `spec.json:judge_runs` (US$ 2.50 for the change so
 - The seven agent-behaviour scripts: run headless, evidence under `qa/manual/`; two script fixtures need rework
   (F-29, F-30).
 - CI on the PR (ubuntu / macOS × 3.9 / 3.12, page, windows-advisory).
+
+## Revision 4 — merge of wave1-hardening, D-37, D1 + D7 re-run (2026-09-26)
+
+- **Reviewed range:** `a675017..dff4e21` — `ba50f39` (Wave 2's BUG-48..51 renumbered to BUG-78..81: Wave 1 took
+  those numbers), `edbce36` (merge of `origin/feature/wave1-hardening`: BUG-23..51, D-33..D-37, subagent-prompt
+  guard, prod approval bound to the hook's audit record + head SHA + 24 h, reopen invalidation; applied to Wave 2's
+  manifest path and to the merged release gate, `approve-gate release --sha`), `9b19ef2` (D-37), `dff4e21` (QA
+  micro-loop BUG-82, BUG-83).
+- **D-37 (F-61 closed):** on the release-manifest path only, `approve {id} prod --manifest --pr-body FILE --sha
+  {head}` records ONE human OK (the approving change's own prod marker, else the project-wide one) for every change
+  the manifest lists and the PR body names; consumed once; each record bound to the head SHA for 24 h and naming
+  the manifest; `check-prod` accepts a covered change only when its record lists it and matches the approving
+  change's own record. Every other prod path stays one OK per change. REQ-W2-052 revision 1 (in place,
+  `spec.json:revision_history`), architecture revision 1, E1.F5.T10. Red first: `qa/red-run-2026-09-26.md`
+  (D-37 section).
+- **Tools:** gitleaks 8.30.1 — 0 findings (`evidence.jsonl:49`); bandit 1.9.4 — medium 6 (unchanged), low 87
+  (+9: subprocess argv and a fixture token in unit tests, the accepted B404/B603/B607/B105 patterns;
+  `evidence.jsonl:50`); suppressions 8, 0 problems (`:52`); personal-data search of the added lines of
+  `plugins` and the page: 0 hits (`:61`).
+- **D1 (Security, subagent, OWASP + STRIDE): PASS** — no High/Critical. Checked holding: D-34 audit match
+  (scope, hash, session, time), the approving-record cross-check, D-36 before `spec.json`, `_project` only on
+  `--manifest`, no delegated or automatic prod, fail-closed on corrupt ledger / missing SHA / expiry / deferred
+  merge. Mediums: F-83 (manifest from the local branch) → **fixed, BUG-83**; F-84 (PR body is a local file, not
+  tied to the host's PR) → deferred. Lows: F-85 (consume after the writes; consume result ignored on the
+  per-change paths) → deferred.
+- **D7 (second opinion, same model family, clean context, declared): PASS** — every conflict resolution keeps
+  both sides' intent (code, tables — union by case id, compat re-derived with 9 new twins, trackers — exact union
+  81 = 52 + 51 − 22); no dangling reference of the renumbering. Medium F-82 (the approving change appended to the
+  manifest) → **fixed, BUG-82**; Medium PR-body binding = F-84; Lows (unmapped commits, `known` from the working
+  tree, partial writes, reopen wording) → F-86 deferred, wording fixed; PLAN range typo fixed.
+- **Suites on `dff4e21`:** unit OK (`evidence.jsonl:62`), regression OK (`:63`), guard tables 505 cases / 583
+  runs, 0 failed (`:64`), hook commands 68/68 (`:65`), page 22/22 (`:66`), lint 0 errors (`:67`), validate --all
+  0 errors (`:68`), trace coverage 97/97 (`:69`).
+- **Open:** Critical 0 · High 0 · Medium: F-84 deferred · Low: F-85, F-86 deferred. **Security gate: PASS. QA
+  ready for approval** (the change stays at `qa`, not approved; the owner's gate answer is still required).
+

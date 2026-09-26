@@ -1,6 +1,6 @@
 {
   "errors": [],
-  "generated_at": "2026-09-26T04:05:06Z",
+  "generated_at": "2026-09-26T14:06:36Z",
   "metrics": {
     "./plugins/karvey/scripts/karvey-config.py": {
       "CONFIDENCE.HIGH": 0,
@@ -11,7 +11,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 663,
+      "loc": 678,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -24,7 +24,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 1157,
+      "loc": 1159,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -141,7 +141,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 484,
+      "loc": 497,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -154,7 +154,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 1995,
+      "loc": 2107,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -193,7 +193,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 529,
+      "loc": 587,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -206,7 +206,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 175,
+      "loc": 204,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -245,7 +245,7 @@
       "SEVERITY.LOW": 3,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 1085,
+      "loc": 1513,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -258,7 +258,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 146,
+      "loc": 152,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -284,7 +284,7 @@
       "SEVERITY.LOW": 3,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 600,
+      "loc": 607,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -375,7 +375,7 @@
       "SEVERITY.LOW": 2,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 262,
+      "loc": 286,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -427,7 +427,7 @@
       "SEVERITY.LOW": 13,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 2185,
+      "loc": 2189,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -440,7 +440,7 @@
       "SEVERITY.LOW": 6,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 520,
+      "loc": 558,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -453,7 +453,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 367,
+      "loc": 518,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -557,7 +557,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 72,
+      "loc": 84,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -570,7 +570,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 141,
+      "loc": 177,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -609,7 +609,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 476,
+      "loc": 518,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -674,7 +674,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 85,
+      "loc": 99,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -746,13 +746,13 @@
     "./plugins/karvey/tests/unit/test_karvey_hooks.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
-      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.MEDIUM": 1,
       "CONFIDENCE.UNDEFINED": 0,
       "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
+      "SEVERITY.LOW": 1,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 91,
+      "loc": 107,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -778,7 +778,7 @@
       "SEVERITY.LOW": 3,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 1077,
+      "loc": 1090,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -804,7 +804,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 175,
+      "loc": 188,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -1016,6 +1016,19 @@
       "nosec": 0,
       "skipped_tests": 0
     },
+    "./plugins/karvey/tests/unit/test_skill_rules.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 87,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
     "./plugins/karvey/tests/unit/test_spec_merge.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
@@ -1025,7 +1038,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 196,
+      "loc": 224,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -1043,15 +1056,15 @@
       "skipped_tests": 0
     },
     "./plugins/karvey/tests/unit/test_state_approve.py": {
-      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.HIGH": 3,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
       "CONFIDENCE.UNDEFINED": 0,
       "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
+      "SEVERITY.LOW": 3,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 186,
+      "loc": 336,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -1077,20 +1090,20 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 339,
+      "loc": 360,
       "nosec": 0,
       "skipped_tests": 0
     },
     "./plugins/karvey/tests/unit/test_state_gates.py": {
-      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.HIGH": 3,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
       "CONFIDENCE.UNDEFINED": 0,
       "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
+      "SEVERITY.LOW": 3,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 321,
+      "loc": 436,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -1199,15 +1212,15 @@
       "skipped_tests": 0
     },
     "./plugins/karvey/tests/unit/test_state_validate.py": {
-      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.HIGH": 2,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
       "CONFIDENCE.UNDEFINED": 0,
       "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
+      "SEVERITY.LOW": 2,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 302,
+      "loc": 342,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -1238,15 +1251,15 @@
       "skipped_tests": 0
     },
     "_totals": {
-      "CONFIDENCE.HIGH": 70,
+      "CONFIDENCE.HIGH": 78,
       "CONFIDENCE.LOW": 0,
-      "CONFIDENCE.MEDIUM": 14,
+      "CONFIDENCE.MEDIUM": 15,
       "CONFIDENCE.UNDEFINED": 0,
       "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 78,
+      "SEVERITY.LOW": 87,
       "SEVERITY.MEDIUM": 6,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 24735,
+      "loc": 26209,
       "nosec": 0,
       "skipped_tests": 0
     }
@@ -1557,7 +1570,7 @@
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "28 import shlex\n29 import subprocess\n30 import time\n",
+      "code": "30 import shlex\n31 import subprocess\n32 import time\n",
       "col_offset": 0,
       "end_col_offset": 17,
       "filename": "./plugins/karvey/scripts/karvey_lib/guards.py",
@@ -1568,16 +1581,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Consider possible security implications associated with the subprocess module.",
-      "line_number": 29,
+      "line_number": 31,
       "line_range": [
-        29
+        31
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
       "test_id": "B404",
       "test_name": "blacklist"
     },
     {
-      "code": "958     try:\n959         cp = subprocess.run(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=budget)\n960     except FileNotFoundError:\n",
+      "code": "1249     try:\n1250         cp = subprocess.run(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=budget)\n1251     except FileNotFoundError:\n",
       "col_offset": 13,
       "end_col_offset": 106,
       "filename": "./plugins/karvey/scripts/karvey_lib/guards.py",
@@ -1588,16 +1601,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 959,
+      "line_number": 1250,
       "line_range": [
-        959
+        1250
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "1234         audit.append(pj.state_dir(root), record)\n1235     except Exception:\n1236         pass\n1237 \n",
+      "code": "1647         audit.append(pj.state_dir(root), record)\n1648     except Exception:\n1649         pass\n1650 \n",
       "col_offset": 4,
       "end_col_offset": 12,
       "filename": "./plugins/karvey/scripts/karvey_lib/guards.py",
@@ -1608,17 +1621,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 1235,
+      "line_number": 1648,
       "line_range": [
-        1235,
-        1236
+        1648,
+        1649
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "53 SELFTEST_ENV = \"KARVEY_HOOK_SELFTEST\"\n54 SELFTEST_TOKEN = \"KARVEY-SELFTEST-BLOCK\"\n55 \n",
+      "code": "54 SELFTEST_ENV = \"KARVEY_HOOK_SELFTEST\"\n55 SELFTEST_TOKEN = \"KARVEY-SELFTEST-BLOCK\"\n56 \n",
       "col_offset": 17,
       "end_col_offset": 40,
       "filename": "./plugins/karvey/scripts/karvey_lib/karvey_hooks.py",
@@ -1629,16 +1642,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Possible hardcoded password: 'KARVEY-SELFTEST-BLOCK'",
-      "line_number": 54,
+      "line_number": 55,
       "line_range": [
-        54
+        55
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
       "test_id": "B105",
       "test_name": "hardcoded_password_string"
     },
     {
-      "code": "226         audit.append(pj.state_dir(base), rec)\n227     except Exception:\n228         pass  # logging never changes a decision\n229 \n",
+      "code": "229         audit.append(pj.state_dir(base), rec)\n230     except Exception:\n231         pass  # logging never changes a decision\n232 \n",
       "col_offset": 4,
       "end_col_offset": 12,
       "filename": "./plugins/karvey/scripts/karvey_lib/karvey_hooks.py",
@@ -1649,17 +1662,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 227,
+      "line_number": 230,
       "line_range": [
-        227,
-        228
+        230,
+        231
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "238         audit.append(pj.state_dir(base), rec)\n239     except Exception:\n240         pass\n241 \n",
+      "code": "241         audit.append(pj.state_dir(base), rec)\n242     except Exception:\n243         pass\n244 \n",
       "col_offset": 4,
       "end_col_offset": 12,
       "filename": "./plugins/karvey/scripts/karvey_lib/karvey_hooks.py",
@@ -1670,10 +1683,10 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 239,
+      "line_number": 242,
       "line_range": [
-        239,
-        240
+        242,
+        243
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
@@ -1844,7 +1857,7 @@
       "test_name": "blacklist"
     },
     {
-      "code": "650 # --------------------------------------------------------------------------- L-14\n651 FILE_TOKEN = r\"`[^`\\s]*\\.(?:md|json|html|txt|yml|yaml|sh|py|csv|mjs|js)`\"\n652 TOOL_NEEDS = (\n",
+      "code": "655 # --------------------------------------------------------------------------- L-14\n656 FILE_TOKEN = r\"`[^`\\s]*\\.(?:md|json|html|txt|yml|yaml|sh|py|csv|mjs|js)`\"\n657 TOOL_NEEDS = (\n",
       "col_offset": 13,
       "end_col_offset": 73,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -1855,16 +1868,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Possible hardcoded password: '`[^`\\s]*\\.(?:md|json|html|txt|yml|yaml|sh|py|csv|mjs|js)`'",
-      "line_number": 651,
+      "line_number": 656,
       "line_range": [
-        651
+        656
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
       "test_id": "B105",
       "test_name": "hardcoded_password_string"
     },
     {
-      "code": "1721     readable (no remote-tracking ref, not a git repository).\"\"\"\n1722     import subprocess\n1723     pj_data = ctx.json(ctx.root / \"docs/spec/project.json\")\n",
+      "code": "1726     readable (no remote-tracking ref, not a git repository).\"\"\"\n1727     import subprocess\n1728     pj_data = ctx.json(ctx.root / \"docs/spec/project.json\")\n",
       "col_offset": 4,
       "end_col_offset": 21,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -1875,16 +1888,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Consider possible security implications associated with the subprocess module.",
-      "line_number": 1722,
+      "line_number": 1727,
       "line_range": [
-        1722
+        1727
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
       "test_id": "B404",
       "test_name": "blacklist"
     },
     {
-      "code": "1728     try:\n1729         cp = subprocess.run([\"git\", \"--no-pager\", \"show\", \"origin/%s:%s\" % (prod, rel)], cwd=str(ctx.root),\n1730                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10, check=False)\n1731     except (OSError, subprocess.TimeoutExpired):\n",
+      "code": "1733     try:\n1734         cp = subprocess.run([\"git\", \"--no-pager\", \"show\", \"origin/%s:%s\" % (prod, rel)], cwd=str(ctx.root),\n1735                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10, check=False)\n1736     except (OSError, subprocess.TimeoutExpired):\n",
       "col_offset": 13,
       "end_col_offset": 103,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -1895,17 +1908,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Starting a process with a partial executable path",
-      "line_number": 1729,
+      "line_number": 1734,
       "line_range": [
-        1729,
-        1730
+        1734,
+        1735
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html",
       "test_id": "B607",
       "test_name": "start_process_with_partial_path"
     },
     {
-      "code": "1728     try:\n1729         cp = subprocess.run([\"git\", \"--no-pager\", \"show\", \"origin/%s:%s\" % (prod, rel)], cwd=str(ctx.root),\n1730                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10, check=False)\n1731     except (OSError, subprocess.TimeoutExpired):\n",
+      "code": "1733     try:\n1734         cp = subprocess.run([\"git\", \"--no-pager\", \"show\", \"origin/%s:%s\" % (prod, rel)], cwd=str(ctx.root),\n1735                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10, check=False)\n1736     except (OSError, subprocess.TimeoutExpired):\n",
       "col_offset": 13,
       "end_col_offset": 103,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -1916,17 +1929,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 1729,
+      "line_number": 1734,
       "line_range": [
-        1729,
-        1730
+        1734,
+        1735
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "1878 def l49_deployed_spec_merged(ctx):\n1879     import subprocess\n1880     base = ctx.root / \"docs/spec/changes\"\n",
+      "code": "1883 def l49_deployed_spec_merged(ctx):\n1884     import subprocess\n1885     base = ctx.root / \"docs/spec/changes\"\n",
       "col_offset": 4,
       "end_col_offset": 21,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -1937,16 +1950,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Consider possible security implications associated with the subprocess module.",
-      "line_number": 1879,
+      "line_number": 1884,
       "line_range": [
-        1879
+        1884
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
       "test_id": "B404",
       "test_name": "blacklist"
     },
     {
-      "code": "1893         try:\n1894             cp = subprocess.run([sys.executable, str(script), d.name, \"--check\", \"--json\", \"--root\", str(ctx.root)],\n1895                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=30, check=False)\n1896             res = (json.loads(cp.stdout.decode(\"utf-8\", \"replace\")) or {}).get(\"result\") or {}\n",
+      "code": "1898         try:\n1899             cp = subprocess.run([sys.executable, str(script), d.name, \"--check\", \"--json\", \"--root\", str(ctx.root)],\n1900                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=30, check=False)\n1901             res = (json.loads(cp.stdout.decode(\"utf-8\", \"replace\")) or {}).get(\"result\") or {}\n",
       "col_offset": 17,
       "end_col_offset": 107,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -1957,17 +1970,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 1894,
+      "line_number": 1899,
       "line_range": [
-        1894,
-        1895
+        1899,
+        1900
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "2307     try:\n2308         log = subprocess.run([\"git\", \"log\", \"--reverse\", \"--format=%H %cs\", \"--\", \"docs/spec/project.json\"],\n2309                              cwd=str(root), capture_output=True, text=True, timeout=10)\n2310     except (OSError, subprocess.SubprocessError):\n",
+      "code": "2312     try:\n2313         log = subprocess.run([\"git\", \"log\", \"--reverse\", \"--format=%H %cs\", \"--\", \"docs/spec/project.json\"],\n2314                              cwd=str(root), capture_output=True, text=True, timeout=10)\n2315     except (OSError, subprocess.SubprocessError):\n",
       "col_offset": 14,
       "end_col_offset": 87,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -1978,17 +1991,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Starting a process with a partial executable path",
-      "line_number": 2308,
+      "line_number": 2313,
       "line_range": [
-        2308,
-        2309
+        2313,
+        2314
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html",
       "test_id": "B607",
       "test_name": "start_process_with_partial_path"
     },
     {
-      "code": "2307     try:\n2308         log = subprocess.run([\"git\", \"log\", \"--reverse\", \"--format=%H %cs\", \"--\", \"docs/spec/project.json\"],\n2309                              cwd=str(root), capture_output=True, text=True, timeout=10)\n2310     except (OSError, subprocess.SubprocessError):\n",
+      "code": "2312     try:\n2313         log = subprocess.run([\"git\", \"log\", \"--reverse\", \"--format=%H %cs\", \"--\", \"docs/spec/project.json\"],\n2314                              cwd=str(root), capture_output=True, text=True, timeout=10)\n2315     except (OSError, subprocess.SubprocessError):\n",
       "col_offset": 14,
       "end_col_offset": 87,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -1999,17 +2012,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 2308,
+      "line_number": 2313,
       "line_range": [
-        2308,
-        2309
+        2313,
+        2314
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "2316         try:\n2317             show = subprocess.run([\"git\", \"show\", \"%s:docs/spec/project.json\" % sha], cwd=str(root),\n2318                                   capture_output=True, text=True, timeout=10)\n2319             data = json.loads(show.stdout) if show.returncode == 0 else None\n",
+      "code": "2321         try:\n2322             show = subprocess.run([\"git\", \"show\", \"%s:docs/spec/project.json\" % sha], cwd=str(root),\n2323                                   capture_output=True, text=True, timeout=10)\n2324             data = json.loads(show.stdout) if show.returncode == 0 else None\n",
       "col_offset": 19,
       "end_col_offset": 77,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -2020,17 +2033,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Starting a process with a partial executable path",
-      "line_number": 2317,
+      "line_number": 2322,
       "line_range": [
-        2317,
-        2318
+        2322,
+        2323
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html",
       "test_id": "B607",
       "test_name": "start_process_with_partial_path"
     },
     {
-      "code": "2316         try:\n2317             show = subprocess.run([\"git\", \"show\", \"%s:docs/spec/project.json\" % sha], cwd=str(root),\n2318                                   capture_output=True, text=True, timeout=10)\n2319             data = json.loads(show.stdout) if show.returncode == 0 else None\n",
+      "code": "2321         try:\n2322             show = subprocess.run([\"git\", \"show\", \"%s:docs/spec/project.json\" % sha], cwd=str(root),\n2323                                   capture_output=True, text=True, timeout=10)\n2324             data = json.loads(show.stdout) if show.returncode == 0 else None\n",
       "col_offset": 19,
       "end_col_offset": 77,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -2041,17 +2054,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 2317,
+      "line_number": 2322,
       "line_range": [
-        2317,
-        2318
+        2322,
+        2323
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "2555     try:\n2556         out = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"], capture_output=True, text=True,\n2557                              timeout=5, check=False)\n2558         if out.returncode == 0 and out.stdout.strip():\n",
+      "code": "2560     try:\n2561         out = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"], capture_output=True, text=True,\n2562                              timeout=5, check=False)\n2563         if out.returncode == 0 and out.stdout.strip():\n",
       "col_offset": 14,
       "end_col_offset": 52,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -2062,17 +2075,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Starting a process with a partial executable path",
-      "line_number": 2556,
+      "line_number": 2561,
       "line_range": [
-        2556,
-        2557
+        2561,
+        2562
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html",
       "test_id": "B607",
       "test_name": "start_process_with_partial_path"
     },
     {
-      "code": "2555     try:\n2556         out = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"], capture_output=True, text=True,\n2557                              timeout=5, check=False)\n2558         if out.returncode == 0 and out.stdout.strip():\n",
+      "code": "2560     try:\n2561         out = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"], capture_output=True, text=True,\n2562                              timeout=5, check=False)\n2563         if out.returncode == 0 and out.stdout.strip():\n",
       "col_offset": 14,
       "end_col_offset": 52,
       "filename": "./plugins/karvey/scripts/lint-plugin.py",
@@ -2083,17 +2096,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 2556,
+      "line_number": 2561,
       "line_range": [
-        2556,
-        2557
+        2561,
+        2562
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "47 import shutil\n48 import subprocess\n49 import sys\n",
+      "code": "52 import shutil\n53 import subprocess\n54 import sys\n",
       "col_offset": 0,
       "end_col_offset": 17,
       "filename": "./plugins/karvey/tests/hooks/run_tables.py",
@@ -2104,16 +2117,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Consider possible security implications associated with the subprocess module.",
-      "line_number": 48,
+      "line_number": 53,
       "line_range": [
-        48
+        53
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
       "test_id": "B404",
       "test_name": "blacklist"
     },
     {
-      "code": "51 import time\n52 import xml.etree.ElementTree as ET\n53 from datetime import datetime, timedelta\n",
+      "code": "56 import time\n57 import xml.etree.ElementTree as ET\n58 from datetime import datetime, timedelta\n",
       "col_offset": 0,
       "end_col_offset": 34,
       "filename": "./plugins/karvey/tests/hooks/run_tables.py",
@@ -2124,16 +2137,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called.",
-      "line_number": 52,
+      "line_number": 57,
       "line_range": [
-        52
+        57
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b405-import-xml-etree",
       "test_id": "B405",
       "test_name": "blacklist"
     },
     {
-      "code": "92 def git(args, cwd, env):\n93     cp = subprocess.run([\"git\"] + args, cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)\n94     if cp.returncode != 0:\n",
+      "code": "98 def git(args, cwd, env):\n99     cp = subprocess.run([\"git\"] + args, cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)\n100     if cp.returncode != 0:\n",
       "col_offset": 9,
       "end_col_offset": 110,
       "filename": "./plugins/karvey/tests/hooks/run_tables.py",
@@ -2144,16 +2157,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 93,
+      "line_number": 99,
       "line_range": [
-        93
+        99
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "440         for cmd in _as_list(given.get(\"setup\")):\n441             sp = subprocess.run([BASH, \"-c\", t.s(cmd)], cwd=str(root), env=env, stdout=subprocess.PIPE,\n442                                 stderr=subprocess.PIPE, timeout=60)\n443             if sp.returncode != 0:\n",
+      "code": "478         for cmd in _as_list(given.get(\"setup\")):\n479             sp = subprocess.run([BASH, \"-c\", t.s(cmd)], cwd=str(root), env=env, stdout=subprocess.PIPE,\n480                                 stderr=subprocess.PIPE, timeout=60)\n481             if sp.returncode != 0:\n",
       "col_offset": 17,
       "end_col_offset": 67,
       "filename": "./plugins/karvey/tests/hooks/run_tables.py",
@@ -2164,17 +2177,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 441,
+      "line_number": 479,
       "line_range": [
-        441,
-        442
+        479,
+        480
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "469             argv = [BASH, str(DISPATCHER), event]\n470         cp = subprocess.run(argv, input=json.dumps(payload).encode(\"utf-8\"),\n471                             cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)\n472         duration = time.monotonic() - started\n",
+      "code": "507             argv = [BASH, str(DISPATCHER), event]\n508         cp = subprocess.run(argv, input=json.dumps(payload).encode(\"utf-8\"),\n509                             cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)\n510         duration = time.monotonic() - started\n",
       "col_offset": 13,
       "end_col_offset": 110,
       "filename": "./plugins/karvey/tests/hooks/run_tables.py",
@@ -2185,17 +2198,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 470,
+      "line_number": 508,
       "line_range": [
-        470,
-        471
+        508,
+        509
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "509                 env[\"SYSTEMROOT\"] = os.environ[\"SYSTEMROOT\"]\n510             cp = subprocess.run([BASH, str(STUBS / name), \"pr\", \"view\"], env=env,\n511                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)\n512             if cp.returncode != 3 or json.loads(cp.stdout.decode() or \"{}\").get(\"stub\") != name:\n",
+      "code": "547                 env[\"SYSTEMROOT\"] = os.environ[\"SYSTEMROOT\"]\n548             cp = subprocess.run([BASH, str(STUBS / name), \"pr\", \"view\"], env=env,\n549                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)\n550             if cp.returncode != 3 or json.loads(cp.stdout.decode() or \"{}\").get(\"stub\") != name:\n",
       "col_offset": 17,
       "end_col_offset": 91,
       "filename": "./plugins/karvey/tests/hooks/run_tables.py",
@@ -2206,10 +2219,10 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 510,
+      "line_number": 548,
       "line_range": [
-        510,
-        511
+        548,
+        549
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
@@ -2708,6 +2721,26 @@
       "test_name": "hardcoded_tmp_directory"
     },
     {
+      "code": "109         with mock.patch.object(os, \"getcwd\", side_effect=FileNotFoundError(\"deleted cwd\")):\n110             code, _, err = run(\"pre-bash\", p, env={\"PWD\": \"\", \"CLAUDE_PROJECT_DIR\": \"\"})\n111         self.assertIn(code, (0, 2))  # evaluated, never an uncaught exception\n",
+      "col_offset": 51,
+      "end_col_offset": 56,
+      "filename": "./plugins/karvey/tests/unit/test_karvey_hooks.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: ''",
+      "line_number": 110,
+      "line_range": [
+        110
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
       "code": "11 import shutil\n12 import subprocess\n13 import sys\n",
       "col_offset": 0,
       "end_col_offset": 17,
@@ -2748,7 +2781,7 @@
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "1375         for cmd in ([\"init\", \"-q\"], [\"add\", \"-A\"], [\"commit\", \"-q\", \"-m\", \"gates\"]):\n1376             subprocess.run([\"git\"] + cmd, cwd=str(self.t.root), env=env, check=True, capture_output=True)\n1377         self.t.write(\"docs/spec/retros/baseline-2026-09-25.json\", {\"result\": {}})\n",
+      "code": "1389         for cmd in ([\"init\", \"-q\"], [\"add\", \"-A\"], [\"commit\", \"-q\", \"-m\", \"gates\"]):\n1390             subprocess.run([\"git\"] + cmd, cwd=str(self.t.root), env=env, check=True, capture_output=True)\n1391         self.t.write(\"docs/spec/retros/baseline-2026-09-25.json\", {\"result\": {}})\n",
       "col_offset": 12,
       "end_col_offset": 105,
       "filename": "./plugins/karvey/tests/unit/test_lint_plugin.py",
@@ -2759,9 +2792,9 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 1376,
+      "line_number": 1390,
       "line_range": [
-        1376
+        1390
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
@@ -2949,6 +2982,171 @@
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b108_hardcoded_tmp_directory.html",
       "test_id": "B108",
       "test_name": "hardcoded_tmp_directory"
+    },
+    {
+      "code": "245 def head(root, rev=\"HEAD\"):\n246     import subprocess\n247     return subprocess.run([\"git\", \"rev-parse\", rev], cwd=str(root), stdout=subprocess.PIPE,\n",
+      "col_offset": 4,
+      "end_col_offset": 21,
+      "filename": "./plugins/karvey/tests/unit/test_state_approve.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with the subprocess module.",
+      "line_number": 246,
+      "line_range": [
+        246
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
+      "test_id": "B404",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "246     import subprocess\n247     return subprocess.run([\"git\", \"rev-parse\", rev], cwd=str(root), stdout=subprocess.PIPE,\n248                           check=True).stdout.decode().strip()\n249 \n",
+      "col_offset": 11,
+      "end_col_offset": 37,
+      "filename": "./plugins/karvey/tests/unit/test_state_approve.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Starting a process with a partial executable path",
+      "line_number": 247,
+      "line_range": [
+        247,
+        248
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html",
+      "test_id": "B607",
+      "test_name": "start_process_with_partial_path"
+    },
+    {
+      "code": "246     import subprocess\n247     return subprocess.run([\"git\", \"rev-parse\", rev], cwd=str(root), stdout=subprocess.PIPE,\n248                           check=True).stdout.decode().strip()\n249 \n",
+      "col_offset": 11,
+      "end_col_offset": 37,
+      "filename": "./plugins/karvey/tests/unit/test_state_approve.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 247,
+      "line_range": [
+        247,
+        248
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "269     def head(self):\n270         import subprocess\n271         return subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], cwd=str(self.root), stdout=subprocess.PIPE,\n",
+      "col_offset": 8,
+      "end_col_offset": 25,
+      "filename": "./plugins/karvey/tests/unit/test_state_gates.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with the subprocess module.",
+      "line_number": 270,
+      "line_range": [
+        270
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
+      "test_id": "B404",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "270         import subprocess\n271         return subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], cwd=str(self.root), stdout=subprocess.PIPE,\n272                               check=True).stdout.decode().strip()\n273 \n",
+      "col_offset": 15,
+      "end_col_offset": 41,
+      "filename": "./plugins/karvey/tests/unit/test_state_gates.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Starting a process with a partial executable path",
+      "line_number": 271,
+      "line_range": [
+        271,
+        272
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html",
+      "test_id": "B607",
+      "test_name": "start_process_with_partial_path"
+    },
+    {
+      "code": "270         import subprocess\n271         return subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], cwd=str(self.root), stdout=subprocess.PIPE,\n272                               check=True).stdout.decode().strip()\n273 \n",
+      "col_offset": 15,
+      "end_col_offset": 41,
+      "filename": "./plugins/karvey/tests/unit/test_state_gates.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 271,
+      "line_range": [
+        271,
+        272
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "391         self.assertIn(pj.active_change(self.root, branch=\"main\")[\"reason\"], (\"none\", \"single\", \"several\"))\n392         import subprocess, sys\n393         r = subprocess.run([sys.executable, str(_path.SCRIPTS_DIR / \"karvey-context.py\"), \"--root\", str(self.root)],\n",
+      "col_offset": 8,
+      "end_col_offset": 30,
+      "filename": "./plugins/karvey/tests/unit/test_state_validate.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with the subprocess module.",
+      "line_number": 392,
+      "line_range": [
+        392
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
+      "test_id": "B404",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "392         import subprocess, sys\n393         r = subprocess.run([sys.executable, str(_path.SCRIPTS_DIR / \"karvey-context.py\"), \"--root\", str(self.root)],\n394                            capture_output=True, text=True, timeout=60)\n395         self.assertNotIn(\"Traceback\", r.stderr)\n",
+      "col_offset": 12,
+      "end_col_offset": 70,
+      "filename": "./plugins/karvey/tests/unit/test_state_validate.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 393,
+      "line_range": [
+        393,
+        394
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
     },
     {
       "code": "105 \n106 JUNIT_PASS = ('<testsuite><testcase classname=\"test_first.T\" name=\"test_it\"/>'\n107               '<testcase classname=\"test_named.T\" name=\"test_REQ_X_003_page\"/></testsuite>')\n108 \n",
