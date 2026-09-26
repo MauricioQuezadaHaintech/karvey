@@ -1507,6 +1507,32 @@ def _require(args, fields):
                                                               ", ".join(missing)), code="state.fields")
 
 
+def _prod_evidence_scope(root, change, prod, ev):
+    """The marker scope a ledger prod record's evidence must name (D-34), or ``(None, why)``. A per-change
+    record names the change's own marker (BUG-41). A release-manifest record (D-37) names the one OK of the
+    manifest — the approving change's marker or the project-wide one — lists this change, and matches the
+    approving change's own record (same manifest, commit and marker)."""
+    if "manifest" not in prod:
+        return (change, None) if ev.get("marker") == approval.marker_rel(change) else (None, None)
+    man = prod.get("manifest")
+    ids = man.get("changes") if isinstance(man, dict) else None
+    via = man.get("approved_with") if isinstance(man, dict) else None
+    if not (isinstance(ids, list) and change in ids and isinstance(via, str) and via in ids):
+        return None, "its release-manifest approval does not list this change"
+    by_marker = {approval.marker_rel(via): via, approval.marker_rel(approval.SCOPE_PROJECT): approval.SCOPE_PROJECT}
+    scope = by_marker.get(ev.get("marker"))
+    if scope is None:
+        return None, "its release-manifest approval names no marker of the approving change or of the project"
+    if via != change:
+        led, status = approval.read_ledger(root, via)
+        own = led.get("prod") if status == "ok" and isinstance(led.get("prod"), dict) else None
+        oev = own.get("evidence") if own and isinstance(own.get("evidence"), dict) else {}
+        if not own or own.get("manifest") != man or own.get("head_sha") != prod.get("head_sha") or \
+                any(oev.get(k) != ev.get(k) for k in ("marker", "marker_created_at", "prompt_sha256", "session")):
+            return None, "the approving change %s holds no matching release-manifest approval" % via
+    return scope, None
+
+
 def check_prod(root, change, sha=None, now=None):
     """The prod-gate's question, in-process (§1.2 check-prod). Raises :class:`NotFound`.
 
@@ -1541,9 +1567,12 @@ def check_prod(root, change, sha=None, now=None):
         if not (isinstance(prod.get("ref"), str) and PROD_REF.match(prod["ref"])):
             res["missing"].append("ref")
         ev = prod.get("evidence") if isinstance(prod.get("evidence"), dict) else {}
-        if ev.get("marker") != approval.marker_rel(change):
+        scope, why = _prod_evidence_scope(root, change, prod, ev)
+        if scope is None:
             res["missing"].append("evidence")
-        elif not approval.audit_record_of(root, change, ev):  # D-34
+            if why:
+                reasons.append(why)
+        elif not approval.audit_record_of(root, scope, ev):  # D-34
             res["missing"].append("audit")
             reasons.append("no audit record of the approval hook matches its marker (prompt hash, session, time): "
                            "the approval was not given through the human's own message")
@@ -1620,11 +1649,24 @@ def _approve_prod_write_spec(args, root):
         args.change, source, rec.get("ref"))
 
 
+def _names_change(text, cid):
+    return re.search(r"(?<![a-z0-9-])%s(?![a-z0-9-])" % re.escape(cid), text) is not None
+
+
 def _approve_prod_manifest(args, root, by, date, ref, head_sha):
-    """``approve <change> prod --manifest``: the same human prod record for every change of the release
-    manifest (REQ-W2-047). Each change needs a valid prod-kind marker (its own scope or ``_project``); the
-    markers are consumed once, after every ledger write."""
+    """``approve <change> prod --manifest --pr-body FILE`` (D-37, REQ-W2-047/052): on the release-manifest path
+    only, ONE human prod OK covers every change the manifest of ``origin/{production}..head`` lists and the PR
+    body names. The OK is the approving change's own prod marker or the project-wide one; it is consumed once,
+    and every record is bound to the reviewed head commit for 24 h (D-35) and names the manifest it covers.
+    Every other production path stays one approval per change (BUG-41)."""
     from karvey_lib import manifest as mf
+    if not getattr(args, "pr_body", None):
+        raise Refused("--manifest needs --pr-body FILE: the production PR body the human approved lists the changes "
+                      "the one OK covers (D-37)", code="state.pr_body")
+    try:
+        body = open(args.pr_body, encoding="utf-8-sig").read()
+    except OSError as exc:
+        raise Refused("cannot read the PR body (%s)" % exc, code="state.pr_body")
     project, _ = pj.load_project_json(root)
     _, _, production = pj.branch_flow(project or {})
     base = args.base or "origin/%s" % (production or "main")
@@ -1635,36 +1677,40 @@ def _approve_prod_manifest(args, root, by, date, ref, head_sha):
     ids = [c["id"] for c in man["changes"]]
     if args.change not in ids:
         ids.append(args.change)
-    markers, missing = {}, []
-    for cid in ids:
-        marker, scope, reasons = approval.find_valid(root, cid, kinds=("prod",), ttl_min=reviewed_ttl(root))
-        if marker is None:
-            missing.append(cid)
-        else:
-            markers[cid] = (marker, scope)
-    if missing:
-        raise Refused("production approval needs a prod-kind marker (the human's own words, D-10) covering every "
-                      "change of the manifest; none is valid for %s" % ", ".join(missing),
-                      code="state.no_prod_marker", result={"missing": missing, "manifest": ids})
+    unlisted = [cid for cid in ids if not _names_change(body, cid)]
+    cdir = os.path.join(str(root), "docs", "spec", "changes")
+    known = sorted(d for d in (os.listdir(cdir) if os.path.isdir(cdir) else [])
+                   if d not in mf.NOT_A_CHANGE and mf.CHANGE_ID.match(d))
+    outside = [cid for cid in known if cid not in ids and _names_change(body, cid)]
+    if unlisted or outside:
+        raise Refused("the PR body the human approved and the release manifest differ (D-37): %s"
+                      % "; ".join((["not in the PR body: " + ", ".join(unlisted)] if unlisted else []) +
+                                  (["in the PR body but not in the manifest: " + ", ".join(outside)] if outside else [])),
+                      code="state.pr_body", result={"manifest": ids, "unlisted": unlisted, "outside": outside})
+    # D-37: the one OK — the approving change's own marker, else the project-wide one; never another change's
+    marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root))
+    if marker is None:
+        raise Refused("production approval needs a prod-kind marker (the human's own words, D-10) of %s or of the "
+                      "project, given on the manifest the PR body lists (%s); none is valid (%s)"
+                      % (args.change, ", ".join(ids), ", ".join("%s: %s" % kv for kv in sorted(reasons.items()))),
+                      code="state.no_prod_marker", result={"manifest": ids})
+    cover = {"changes": ids, "approved_with": args.change}
     written = []
-    for cid in ids:
-        marker, scope = markers[cid]
-        approval.record_prod(root, cid, approval.prod_record(marker, scope, by, ref, date, head_sha))  # D-34, D-35
+    for cid in [args.change] + [x for x in ids if x != args.change]:  # the approving record first
+        approval.record_prod(root, cid, approval.prod_record(marker, scope, by, ref, date, head_sha, manifest=cover))
         written.append(cid)
     consumed, warnings = [], []
-    by_scope = {s: m for m, s in markers.values()}
-    for scope in sorted(by_scope):
-        try:  # BUG-73 (F-62): bound to the marker that approved; a failure is reported, never swallowed
-            if approval.consume(root, scope, created_at=by_scope[scope].get("created_at")):
-                consumed.append(scope)
-        except (approval.ApprovalError, atomicio.AtomicIOError, OSError) as exc:
-            warnings.append(kl.issue("state.marker_not_consumed", "the prod marker of %s could not be consumed "
-                                     "(%s): it stays live until its TTL" % (scope, exc), severity="warning"))
-    res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "manifest": written,
-           "unmapped": len(man["unmapped"]), "consumed": consumed}
+    try:  # BUG-73 (F-62): bound to the marker that approved; a failure is reported, never swallowed
+        if approval.consume(root, scope, created_at=marker.get("created_at")):
+            consumed.append(scope)
+    except (approval.ApprovalError, atomicio.AtomicIOError, OSError) as exc:
+        warnings.append(kl.issue("state.marker_not_consumed", "the prod marker of %s could not be consumed "
+                                 "(%s): it stays live until its TTL" % (scope, exc), severity="warning"))
+    res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "manifest": ids,
+           "unmapped": len(man["unmapped"]), "consumed": consumed, "head_sha": head_sha}
     return kl.EXIT_OK, res, [], warnings, "prod approval recorded in the release ledger for %d change(s) of the " \
-        "manifest (%s), ref %s; marker(s) consumed: %s" % (len(written), ", ".join(written), ref,
-                                                            ", ".join(consumed) or "none")
+        "manifest (%s), ref %s, commit %s, one OK (%s) consumed: %s" % (
+            len(written), ", ".join(ids), ref, head_sha[:12], scope, ", ".join(consumed) or "none")
 
 
 def cmd_approve(args, root):
@@ -2264,9 +2310,11 @@ def build_parser():
     apv.add_argument("--ref")
     apv.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
     apv.add_argument("--write-spec", action="store_true", help="prod only: copy the ledger/D-NN approval into spec.json")
-    apv.add_argument("--manifest", action="store_true", help="prod only: record the approval for every change of "
-                     "the release manifest (origin/{production}..HEAD)")
+    apv.add_argument("--manifest", action="store_true", help="prod only: one OK for every change of the release "
+                     "manifest (origin/{production}..--sha), consumed once (D-37)")
     apv.add_argument("--base", help="prod --manifest: the manifest base (default origin/{production})")
+    apv.add_argument("--pr-body", dest="pr_body", help="prod --manifest: the production PR body the human approved; "
+                     "it must list exactly the manifest's changes (D-37)")
     ag = sub.add_parser("approve-gate", parents=[common], help="approve every phase a merged gate covers (one answer)")
     ag.add_argument("change")
     ag.add_argument("gate", choices=list(GATES))

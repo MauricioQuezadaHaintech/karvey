@@ -471,9 +471,17 @@ the change → `check_prod`, block when missing. After the Wave 1 allow decision
 - **`blocking` (4.0):** a non-pass verdict, or a manifest that cannot be computed, blocks. The message names the
   change or the commit. Every manifest change must also pass `check_prod`, so each one needs a human prod
   approval.
-- **Recording (REQ-W2-047).** `approve prod --manifest` records the same ledger record for every change in the
-  manifest, using one valid prod-kind marker whose scope is `_project` or names each change. The marker is
-  consumed once, after all the writes.
+- **Recording (REQ-W2-047, REQ-W2-052 rev. 1, D-37).** `approve {id} prod --manifest --pr-body FILE --sha {head}`
+  computes the manifest of `origin/{production}..{head}` and refuses when the PR body the human approved does not
+  name exactly its changes. One OK covers them: the approving change's own prod marker, else the `_project`
+  one — never another change's. Every record carries the Wave 1 binding (`head_sha`, `expires_at` = OK + 24 h,
+  evidence with the prompt hash, D-34/D-35) plus `manifest: {changes, approved_with}`; the approving change's
+  record is written first and the marker is consumed once, after all the writes (a failed consume is a warning,
+  BUG-73). `check_prod` accepts a covered change's record only when its manifest lists the change, its evidence
+  names the approving change's or the project marker with the hook's audit line, and the approving change's own
+  record matches (same manifest, commit and marker). A reopen supersedes the reopened change's record only
+  (D-36). Every other prod path — `approve prod` without `--manifest` and the merged release gate
+  (`approve-gate release --sha`) — stays one OK per change (BUG-41, BUG-70).
 
 ### 1.11 C-12, C-13 — Deploy flow and spec merge timing
 
@@ -1319,3 +1327,4 @@ skipped with the reason "no cloud; CI is the existing workflow".
 | Date | Rev | Change |
 |---|---|---|
 | 2026-09-25 | 0 | First draft for the *how* gate (architecture + infra skipped + tasks) |
+| 2026-09-26 | 1 | Merge of wave1-hardening (D-34..D-36 on the manifest and release-gate prod paths) and D-37 (F-61): §1.10 C-11 recording — one bound OK per release manifest, consumed once; every other prod path one OK per change |

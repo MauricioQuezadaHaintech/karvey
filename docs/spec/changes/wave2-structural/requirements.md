@@ -670,6 +670,22 @@ committed on `chore/archive-{id}`.
 **Scenario — error:** GIVEN a deploy step that commits the decision log on integration or production WHEN the guard
 runs THEN it is blocked.
 
+Revision 1 (2026-09-26, F-61, D-37, QA): the release-manifest path had no rule for how many human OKs it needs, and
+the tool let one project-wide prod marker approve every change of the manifest without a binding. ON the
+release-manifest path only, one production OK SHALL cover every change the release manifest of
+`origin/{production}..{head}` lists, and only when the production PR body the human approved names exactly those
+changes; that OK SHALL be the approving change's own prod marker or the project-wide one, SHALL be consumed once,
+and each change's release-ledger record SHALL be bound to the reviewed head commit for 24 h (D-35), name the
+manifest it covers, and match the approving change's own record. Every other production path SHALL stay one OK
+per change (BUG-41), and a reopen SHALL supersede the reopened change's record (D-36).
+
+**Scenario — success (revision 1):** GIVEN a manifest of two changes and a PR body that lists both WHEN the human
+gives one production OK and `approve prod --manifest` runs THEN both ledger records name the same head commit and
+manifest, the one marker is consumed, and `check-prod` passes for each at that commit.
+**Scenario — error (revision 1):** GIVEN a PR body that omits a change of the manifest, or names a change outside
+it, or a new commit after the OK WHEN the approval is recorded or the merge is checked THEN it is refused and names
+the difference or the commit.
+
 ### 5.11 REQ-W2-053 — Deployed without the local ledger
 WHERE the release ledger of the clone is absent, the state tool SHALL accept `advance {id} deployed` with a `D-NN`
 reference and a pipeline-run URL, and SHALL record the transition as attested rather than measured.

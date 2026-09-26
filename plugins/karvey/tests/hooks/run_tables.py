@@ -13,9 +13,10 @@ on stdin, inside a throw-away world built for that case:
 - ``given.ledger`` / ``given.marker``: machine-local state written under
   ``<git-common-dir>/karvey/`` (a marker may be ``{"@valid": "plan|prod", "age_min": N}``, a raw
   object or ``""`` for an empty ``touch`` file; a ledger entry may be ``{"@approved": {"by", "ref",
-  "sha"?, "age_h"?}}``: a prod marker written through the approval hook's code, so its audit line
+  "sha"?, "age_h"?, "scope"?, "manifest"?, "approved_with"?}}``: a prod marker written through the approval hook's code, so its audit line
   exists, then the ledger record of ``approve prod`` bound to ``sha`` (default ``HEAD`` when the ledger
-  is written, before ``commit_files``) and expiring 24 h after the marker, D-34/D-35);
+  is written, before ``commit_files``) and expiring 24 h after the marker, D-34/D-35; with ``manifest``
+  the record is a release-manifest one: one marker of ``scope`` for every listed change, D-37);
 - ``given.stubs``: canned output for the ``gh`` / ``az`` / ``glab`` stubs put first on ``PATH``;
 - an isolated ``HOME``, ``XDG_STATE_HOME`` and git config.
 
@@ -211,16 +212,25 @@ def _finish_repo(spec, root, tmp, env, t, default):
             argv += ["-m", t.s(part)]
         git(argv, root, env)
     t.head = git(["rev-parse", "HEAD"], root, env)
+    markers = {}
     for cid, data in (spec.get("ledger") or {}).items():
         if isinstance(data, dict) and "@approved" in data:
             a = data["@approved"]
             created = approval.now_dt() - timedelta(hours=float(a.get("age_h", 0)))
-            m = approval.write_marker(root, "prod", cid, a.get("prompt", "ok, merge a prod"), session_id=SESSION,
-                                      now=created, compat="")
+            scope = a.get("scope", cid)  # D-37: a manifest OK is one marker (the approving change or _project)
+            m = markers.get(scope)
+            if m is None:
+                m = approval.write_marker(root, "prod", scope, a.get("prompt", "ok, merge a prod"),
+                                          session_id=SESSION, now=created, compat="")
+                markers[scope] = m
             sha = git(["rev-parse", "--verify", a.get("sha", "HEAD") + "^{commit}"], root, env)
-            approval.record_prod(root, cid, approval.prod_record(m, cid, a.get("by", "Owner Name"),
-                                                                 a.get("ref", "D-08"), approval.iso(created), sha))
-            approval.consume(root, cid, created_at=m["created_at"])
+            manifest = None
+            if "manifest" in a:
+                manifest = {"changes": list(a["manifest"]), "approved_with": a.get("approved_with", scope)}
+            approval.record_prod(root, cid, approval.prod_record(m, scope, a.get("by", "Owner Name"),
+                                                                 a.get("ref", "D-08"), approval.iso(created), sha,
+                                                                 manifest=manifest))
+            approval.consume(root, scope, created_at=m["created_at"])
             continue
         d = common / "karvey" / "ledger"
         d.mkdir(parents=True, exist_ok=True, mode=0o700)

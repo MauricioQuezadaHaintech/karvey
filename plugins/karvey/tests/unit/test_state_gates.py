@@ -245,7 +245,8 @@ class Mode(Base):
 
 
 class ProdManifest(Base):
-    """@req REQ-W2-047 — approve prod --manifest: every manifest change, one marker consumed once."""
+    """@req REQ-W2-047 REQ-W2-052 — approve prod --manifest (D-37): one human prod OK covers every change the
+    manifest and the PR body list; it is consumed once and bound to the reviewed head commit for 24 h (D-35)."""
 
     def setUp(self):
         super().setUp()
@@ -262,9 +263,22 @@ class ProdManifest(Base):
             g.write(self.root, "src/%s.py" % cid, "x\n")
             g.commit_all(self.root, "feat: %s\n\nKarvey-Change: %s" % (cid, cid))
         self.f = self.root / "docs/spec/changes/feat-a/spec.json"
+        self.body = self.t.path / "pr-body.md"
+        self.body.write_text("- feat-a (standard, QA approved)\n- feat-c (standard, QA approved)\n", encoding="utf-8")
 
-    def approve(self):
-        return self.st("approve", "feat-a", "prod", "--manifest", "--by", "owner", "--role", "human", "--ref", "D-8")
+    def head(self):
+        import subprocess
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(self.root), stdout=subprocess.PIPE,
+                              check=True).stdout.decode().strip()
+
+    def approve(self, *extra, body=True):
+        argv = ["approve", "feat-a", "prod", "--manifest", "--by", "owner", "--role", "human", "--ref", "D-8"]
+        if body:
+            argv += ["--pr-body", str(self.body)]
+        return self.st(*(argv + list(extra)))
+
+    def check(self, cid, sha=None):
+        return self.st(*(["check-prod", cid] + (["--sha", sha] if sha else [])))
 
     def test_project_marker_records_both_and_is_consumed_once(self):
         ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
@@ -279,13 +293,124 @@ class ProdManifest(Base):
         self.assertIsNotNone(m["consumed_at"])
         self.assertNotIn("prod", self.read().get("approvals", {}))  # D-03
 
-    def test_marker_for_one_change_only_refused_and_nothing_written(self):
+    def test_D37_one_ok_covers_every_manifest_change_for_check_prod(self):
+        """D-37: the prod-gate's question passes for every change the one approval covered."""
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        c, env = self.approve()
+        self.assertEqual(c, 0, env)
+        for cid in ("feat-a", "feat-c"):
+            c, env = self.check(cid, self.head())
+            self.assertEqual((c, env["result"]["ok"]), (0, True), (cid, env))
+
+    def test_D37_the_approving_change_own_marker_covers_the_manifest(self):
+        """D-37: the OK the human gave while the deploying change was active covers the manifest it was shown."""
         ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
+        c, env = self.approve()
+        self.assertEqual(c, 0, env)
+        self.assertEqual(env["result"]["consumed"], ["feat-a"])
+        c, env = self.check("feat-c", self.head())
+        self.assertEqual((c, env["result"]["ok"]), (0, True), env)
+        led, _ = ap.read_ledger(self.root, "feat-c")
+        self.assertEqual(led["prod"]["manifest"]["changes"], ["feat-a", "feat-c"])
+        self.assertEqual(led["prod"]["manifest"]["approved_with"], "feat-a")
+
+    def test_D37_bound_to_the_reviewed_head_for_24_h(self):
+        m = ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        c, env = self.approve("--sha", self.head())
+        self.assertEqual(c, 0, env)
+        for cid in ("feat-a", "feat-c"):
+            p = ap.read_ledger(self.root, cid)[0]["prod"]
+            self.assertEqual(p["head_sha"], self.head())
+            self.assertEqual(ap.parse_dt(p["expires_at"]) - ap.parse_dt(m["created_at"]), ap.timedelta(hours=24))
+        first = self.head()
+        g.write(self.root, "src/late.py", "y\n")
+        g.commit_all(self.root, "feat: late\n\nKarvey-Change: feat-c")
+        c, env = self.check("feat-c", self.head())
+        self.assertEqual(c, 1, env)
+        self.assertIn("sha", env["result"]["missing"])
+        self.assertNotEqual(first, self.head())
+
+    def test_D37_consumed_once_a_second_manifest_approval_needs_a_new_ok(self):
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        self.assertEqual(self.approve()[0], 0)
+        c, env = self.approve()
+        self.assertEqual(c, 3, env)
+        self.assertIn("prod-kind marker", env["errors"][0]["message"])
+
+    def test_D37_marker_of_another_listed_change_is_not_the_manifest_ok(self):
+        """Only the approving change's own marker or the project-wide one is the manifest's one OK."""
+        ap.write_marker(self.root, "prod", "feat-c", "ok, merge a prod")
+        c, env = self.approve()
+        self.assertEqual(c, 3, env)
+        self.assertIsNone(ap.read_ledger(self.root, "feat-a")[0])
+        self.assertIsNone(ap.read_ledger(self.root, "feat-c")[0])
+        self.assertIsNone(ap.read_marker(self.root, "feat-c")[0]["consumed_at"])
+
+    def test_D37_pr_body_required(self):
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        c, env = self.approve(body=False)
+        self.assertEqual(c, 3, env)
+        self.assertIn("--pr-body", env["errors"][0]["message"])
+        self.assertIsNone(ap.read_marker(self.root, "_project")[0]["consumed_at"])
+
+    def test_D37_pr_body_missing_a_manifest_change_refused(self):
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        self.body.write_text("- feat-a (standard, QA approved)\n", encoding="utf-8")
         c, env = self.approve()
         self.assertEqual(c, 3, env)
         self.assertIn("feat-c", env["errors"][0]["message"])
         self.assertIsNone(ap.read_ledger(self.root, "feat-a")[0])
-        self.assertIsNone(ap.read_marker(self.root, "feat-a")[0]["consumed_at"])
+        self.assertIsNone(ap.read_marker(self.root, "_project")[0]["consumed_at"])
+
+    def test_D37_pr_body_listing_a_change_outside_the_manifest_refused(self):
+        g.write(self.root, "docs/spec/changes/feat-z/spec.json", {
+            "change_id": "feat-z", "phase": "deploying", "lane": "standard", "phase_history": hist("init", "deploying")})
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        self.body.write_text("- feat-a\n- feat-c\n- feat-z\n", encoding="utf-8")
+        c, env = self.approve()
+        self.assertEqual(c, 3, env)
+        self.assertIn("feat-z", env["errors"][0]["message"])
+        self.assertIsNone(ap.read_ledger(self.root, "feat-a")[0])
+
+    def test_D37_a_change_not_in_the_record_manifest_is_not_covered(self):
+        """A covered record names its manifest; a record whose manifest does not list the change is refused."""
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        self.assertEqual(self.approve()[0], 0)
+        led, _ = ap.read_ledger(self.root, "feat-c")
+        led["prod"]["manifest"]["changes"] = ["feat-a"]
+        ap.record_prod(self.root, "feat-c", led["prod"])
+        c, env = self.check("feat-c", self.head())
+        self.assertEqual(c, 1, env)
+        self.assertIn("evidence", env["result"]["missing"])
+
+    def test_D37_project_marker_still_refused_outside_the_manifest_path(self):
+        """BUG-41 stands on every other prod path: one approval per change."""
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        c, env = self.st("approve", "feat-c", "prod", "--by", "owner", "--role", "human", "--ref", "D-8")
+        self.assertEqual(c, 3, env)
+        self.assertIsNone(ap.read_marker(self.root, "_project")[0]["consumed_at"])
+
+    def test_D37_reopen_supersedes_the_reopened_change_only(self):
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        self.assertEqual(self.approve()[0], 0)
+        g.write(self.root, "docs/spec/changes/feat-c/spec.json", {
+            "change_id": "feat-c", "phase": "qa", "lane": "standard",
+            "phase_history": hist("init", "requirements", "architecture", "tasks", "impl", "test", "qa")})
+        c, env = self.st("reopen", "feat-c", "requirements", "--reason", "spec gap")
+        self.assertEqual(c, 0, env)
+        self.assertEqual(self.check("feat-c")[0], 1)
+        self.assertEqual(self.check("feat-a", self.head())[0], 0)
+
+    def test_D37_covered_record_needs_the_approving_change_record(self):
+        """A covered change's record must match the approving change's own record (same manifest, commit and
+        marker); a copied or orphaned record does not stand on its own."""
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        self.assertEqual(self.approve()[0], 0)
+        ap.supersede_prod(self.root, "feat-a", "2026-09-26T10:00:00-03:00", "reopen")
+        c, env = self.check("feat-c", self.head())
+        self.assertEqual(c, 1, env)
+        self.assertIn("evidence", env["result"]["missing"])
+        self.assertIn("approving change feat-a", env["result"]["reason"])
 
     def test_a_marker_that_cannot_be_consumed_is_reported(self):
         """BUG-73 (F-62): a failed consume after the ledger writes was swallowed, so the marker stayed live

@@ -374,12 +374,17 @@ def audit_record_of(root, scope, ev):
     return False
 
 
-def prod_record(marker, scope, by, ref, date, head_sha):
+def prod_record(marker, scope, by, ref, date, head_sha, manifest=None):
     """The ledger record of a human prod approval (D-03, D-34, D-35): who, when, evidence, the
-    approved head commit and ``expires_at`` = the human's OK (the marker) + 24 h."""
+    approved head commit and ``expires_at`` = the human's OK (the marker) + 24 h. ``manifest``
+    (D-37, release-manifest path only): ``{"changes": [ids], "approved_with": id}`` — the one OK that
+    covers every listed change."""
     created = parse_dt((marker or {}).get("created_at")) or now_dt()
-    return {"by": by, "role": "human", "date": date, "ref": ref, "head_sha": head_sha,
-            "expires_at": iso(created + timedelta(hours=PROD_VALID_H)), "evidence": evidence(marker, scope)}
+    rec = {"by": by, "role": "human", "date": date, "ref": ref, "head_sha": head_sha,
+           "expires_at": iso(created + timedelta(hours=PROD_VALID_H)), "evidence": evidence(marker, scope)}
+    if manifest is not None:
+        rec["manifest"] = {"changes": list(manifest["changes"]), "approved_with": manifest["approved_with"]}
+    return rec
 
 
 # --------------------------------------------------------------------------- notify confirmation (D-16)

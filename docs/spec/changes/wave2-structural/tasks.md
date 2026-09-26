@@ -418,6 +418,15 @@ Total estimated time: 104 min (9 tasks)
 
 - They are spec-only commits of `wave1-hardening` inherited from the base branch, and they leave this change's range once that change is merged to production. If they are still in the range at the release gate, the release gate is run with `--base` at the merge base and the mapping note is quoted in the PR body. No history is rewritten.
 
+### E1.F5.T10 [Backend] D-37 (F-61): one bound prod OK per release manifest — `approve prod --manifest --pr-body --sha`, `check_prod` manifest coverage, deploy step 2.9 — _Depends: E1.F5.T5_
+
+**Estimate:** 12 min  
+**Files:** `plugins/karvey/scripts/karvey-state.py`; `plugins/karvey/scripts/karvey_lib/approval.py`; `plugins/karvey/skills/karvey-deploy/SKILL.md`; `plugins/karvey/skills/karvey/rules/deploy-workflow.md`; `plugins/karvey/tests/unit/test_state_gates.py`; `plugins/karvey/tests/hooks/tables/prod-gate.json`; `plugins/karvey/tests/hooks/run_tables.py`  
+**Requirements:** REQ-W2-047, REQ-W2-052  
+**Tests added:** `ProdManifest` (D-37 cases: coverage, own marker, SHA + 24 h, consumed once, PR body required / missing / extra, record not listing the change, approving record required, reopen, BUG-41 elsewhere), red before the fix; table cases `pgm-09`..`pgm-12`  
+**Done when:** `python3 -m unittest test_state_gates` and `run_tables.py --only prod-gate` pass  
+**Executed:** 2026-09-26 · red on the merge commit, green after the fix
+
 
 ## Feature E1.F6: Living spec merged before production
 
@@ -764,7 +773,7 @@ Total estimated time: 62 min (9 tasks)
 | 049 | E1.F5.T7 |
 | 050 | E1.F5.T3, E1.F5.T6 |
 | 051 | E1.F1.T4, E1.F13.T1 |
-| 052 | E1.F5.T6, E1.F5.T8 |
+| 052 | E1.F5.T6, E1.F5.T8, E1.F5.T10 |
 | 053 | E1.F1.T4, E1.F5.T6 |
 | 054 | E1.F5.T6, E1.F5.T8, E1.F6.T1 |
 | 055 | E1.F6.T1, E1.F6.T2 |

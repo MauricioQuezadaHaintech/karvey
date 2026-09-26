@@ -9,7 +9,7 @@
     "Infra"
   ],
   "created_at": "2026-09-25T12:27:48+00:00",
-  "updated_at": "2026-09-26T04:16:19+00:00",
+  "updated_at": "2026-09-26T15:00:00+00:00",
   "language": "en",
   "management": "markdown",
   "security_tier": 2,
@@ -80,7 +80,22 @@
     "wave1_spec_delta": "karvey docs/spec/changes/wave1-hardening/spec-delta.md @62ffc6d"
   },
   "iteration_count": 0,
-  "revision_history": [],
+  "revision_history": [
+    {
+      "date": "2026-09-26",
+      "finding": "F-61",
+      "decision": "D-37",
+      "requirements": [
+        "REQ-W2-052"
+      ],
+      "in_place": true,
+      "reason": "release-manifest path: one production OK covers every change the manifest and the PR body list, consumed once, bound to the reviewed head commit for 24 h; every other production path stays one OK per change",
+      "ripple": [
+        "architecture",
+        "tasks"
+      ]
+    }
+  ],
   "seed_backlog_id": [
     "BL-11",
     "BL-12",

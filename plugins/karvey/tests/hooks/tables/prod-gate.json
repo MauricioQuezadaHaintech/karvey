@@ -6984,6 +6984,519 @@
     "REQ-W2-046",
     "REQ-W2-047"
    ]
+  },
+  {
+   "id": "pgm-09-manifest-one-project-ok-covers-both-allows",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      },
+      "checks": {
+       "release.manifest": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      },
+      "feat-c": {
+       "change_id": "feat-c",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08",
+        "scope": "_project",
+        "manifest": [
+         "feat-a",
+         "feat-c"
+        ],
+        "approved_with": "feat-a"
+       }
+      },
+      "feat-c": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08",
+        "scope": "_project",
+        "manifest": [
+         "feat-a",
+         "feat-c"
+        ],
+        "approved_with": "feat-a"
+       }
+      }
+     },
+     "branch_commits": [
+      {
+       "files": {
+        "a.txt": "x"
+       },
+       "message": [
+        "feat: a",
+        "Karvey-Change: feat-a"
+       ]
+      },
+      {
+       "files": {
+        "c.txt": "x"
+       },
+       "message": [
+        "feat: c",
+        "Karvey-Change: feat-c"
+       ]
+      }
+     ]
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "main",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12,
+       "headRefOid": "{{head}}"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 30 --merge"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": "prod-gate ALLOW change=feat-a",
+    "stdout_not_contains": "MANIFEST"
+   },
+   "tags": [
+    "prod-gate",
+    "manifest",
+    "D-37",
+    "REQ-W2-047",
+    "REQ-W2-052"
+   ]
+  },
+  {
+   "id": "pgm-10-manifest-ok-of-the-approving-change-covers-both-allows",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      },
+      "checks": {
+       "release.manifest": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      },
+      "feat-c": {
+       "change_id": "feat-c",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08",
+        "scope": "feat-a",
+        "manifest": [
+         "feat-a",
+         "feat-c"
+        ]
+       }
+      },
+      "feat-c": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08",
+        "scope": "feat-a",
+        "manifest": [
+         "feat-a",
+         "feat-c"
+        ]
+       }
+      }
+     },
+     "branch_commits": [
+      {
+       "files": {
+        "a.txt": "x"
+       },
+       "message": [
+        "feat: a",
+        "Karvey-Change: feat-a"
+       ]
+      },
+      {
+       "files": {
+        "c.txt": "x"
+       },
+       "message": [
+        "feat: c",
+        "Karvey-Change: feat-c"
+       ]
+      }
+     ]
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "main",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12,
+       "headRefOid": "{{head}}"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 30 --merge"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": "prod-gate ALLOW change=feat-a",
+    "stdout_not_contains": "MANIFEST"
+   },
+   "tags": [
+    "prod-gate",
+    "manifest",
+    "D-37",
+    "REQ-W2-047",
+    "REQ-W2-052"
+   ]
+  },
+  {
+   "id": "pgm-11-manifest-record-not-listing-the-change-blocks",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      },
+      "checks": {
+       "release.manifest": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      },
+      "feat-c": {
+       "change_id": "feat-c",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08",
+        "scope": "_project",
+        "manifest": [
+         "feat-a",
+         "feat-c"
+        ],
+        "approved_with": "feat-a"
+       }
+      },
+      "feat-c": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08",
+        "scope": "_project",
+        "manifest": [
+         "feat-a"
+        ],
+        "approved_with": "feat-a"
+       }
+      }
+     },
+     "branch_commits": [
+      {
+       "files": {
+        "a.txt": "x"
+       },
+       "message": [
+        "feat: a",
+        "Karvey-Change: feat-a"
+       ]
+      },
+      {
+       "files": {
+        "c.txt": "x"
+       },
+       "message": [
+        "feat: c",
+        "Karvey-Change: feat-c"
+       ]
+      }
+     ]
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "main",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12,
+       "headRefOid": "{{head}}"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 30 --merge"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "missing=manifest",
+     "feat-c: no human prod approval"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "manifest",
+    "D-37",
+    "REQ-W2-047",
+    "REQ-W2-052"
+   ]
+  },
+  {
+   "id": "pgm-12-manifest-ok-given-for-a-change-outside-the-manifest-blocks",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      },
+      "checks": {
+       "release.manifest": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      },
+      "feat-c": {
+       "change_id": "feat-c",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08",
+        "scope": "feat-z",
+        "manifest": [
+         "feat-a",
+         "feat-c"
+        ],
+        "approved_with": "feat-z"
+       }
+      },
+      "feat-c": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08",
+        "scope": "feat-z",
+        "manifest": [
+         "feat-a",
+         "feat-c"
+        ],
+        "approved_with": "feat-z"
+       }
+      }
+     },
+     "branch_commits": [
+      {
+       "files": {
+        "a.txt": "x"
+       },
+       "message": [
+        "feat: a",
+        "Karvey-Change: feat-a"
+       ]
+      },
+      {
+       "files": {
+        "c.txt": "x"
+       },
+       "message": [
+        "feat: c",
+        "Karvey-Change: feat-c"
+       ]
+      }
+     ]
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "main",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12,
+       "headRefOid": "{{head}}"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 30 --merge"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "prod-gate BLOCK change=feat-a",
+     "evidence"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "manifest",
+    "D-37",
+    "REQ-W2-047",
+    "REQ-W2-052"
+   ]
   }
  ]
 }
