@@ -1,0 +1,170 @@
+{
+  "$comment": "C-02 (architecture §1.4, REQ-W3-009): the hard contracts, their anchors and the baseline map phase -> contracts, built once from the 4.0 closure in docs/spec/retros/context-size-4.0.0.json (a contract applies to a phase when one of its source rules is in that phase's 4.0 closure; neutral-text has no source rule and applies to every phase). karvey-context-budget.py contracts checks every pair. reasons: phase -> why its reduction is below the 40% target (read by compare).",
+  "contracts": [
+    {
+      "id": "state-tool",
+      "anchor": "state-machine.md",
+      "sources": [
+        "state-machine.md"
+      ],
+      "summary": "phase, approvals, skips and logs change only through karvey-state.py"
+    },
+    {
+      "id": "gate",
+      "anchor": "gates.md",
+      "sources": [
+        "gates.md",
+        "phase-close.md"
+      ],
+      "summary": "one gate question per gate, the approval contract, -y = auto, never prod"
+    },
+    {
+      "id": "prod-gate",
+      "anchor": "enforcement.md",
+      "sources": [
+        "enforcement.md",
+        "deploy-workflow.md"
+      ],
+      "summary": "production needs the human's words + D-NN, never delegated or automatic"
+    },
+    {
+      "id": "branch-commit",
+      "anchor": "deploy-workflow.md",
+      "sources": [
+        "deploy-workflow.md",
+        "versioning.md"
+      ],
+      "summary": "feature branch, PR into integration, Karvey-Change trailer on every commit"
+    },
+    {
+      "id": "verification",
+      "anchor": "verification.md",
+      "sources": [
+        "verification.md"
+      ],
+      "summary": "the four verification failure modes, evidence before a closing claim"
+    },
+    {
+      "id": "finding-router",
+      "anchor": "iteration-loop.md",
+      "sources": [
+        "iteration-loop.md"
+      ],
+      "summary": "findings are appended, only iterate routes; who observes does not route"
+    },
+    {
+      "id": "neutral-text",
+      "anchor": null,
+      "sources": [],
+      "summary": "public text names no organisation, product, client, person, internal URL or path"
+    }
+  ],
+  "baseline": {
+    "karvey": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "verification",
+      "finding-router",
+      "neutral-text"
+    ],
+    "architecture": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "archive": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "deploy": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "design-graphic": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "impl": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "infra": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "init": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "mockup": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "qa": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "requirements": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "tasks": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ],
+    "test": [
+      "state-tool",
+      "gate",
+      "prod-gate",
+      "branch-commit",
+      "finding-router",
+      "neutral-text"
+    ]
+  },
+  "reasons": {}
+}

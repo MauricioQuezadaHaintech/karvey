@@ -85,6 +85,13 @@ class ContextSizeStep(unittest.TestCase):
         base = re.search(r"compare (\S+)", runs[size]).group(1)
         self.assertTrue((_path.REPO_ROOT / base).is_file(), base)
 
+    def test_contracts_step_runs_in_the_lint_job(self):
+        """@req REQ-W3-009 — the contract coverage check is a CI step after the linter."""
+        runs = re.findall(r"- run: (.*)", jobs()["lint"])
+        lint = next(i for i, r in enumerate(runs) if "lint-plugin.py" in r)
+        k = next(i for i, r in enumerate(runs) if "karvey-context-budget.py contracts" in r)
+        self.assertGreater(k, lint)
+
     def test_workflow_stays_read_only_and_pinned(self):
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("permissions:\n  contents: read", text)

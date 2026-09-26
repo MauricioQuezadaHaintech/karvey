@@ -5,6 +5,7 @@
     karvey-context-budget.py compare BASE.json [AFTER.json | --live] [--target-median 40] [--warn-growth 10]
                                      [--reasons FILE] [--plugin DIR] [--json]
     karvey-context-budget.py order --baseline docs/spec/retros/context-size-4.0.0.json --change ID [--root DIR]
+    karvey-context-budget.py contracts [--plugin DIR] [--json]
 
 ``measure`` prints one row per phase skill of ``schemas/state-machine.json`` plus the orchestrator: the skill's own
 size, the rules it cites directly and the transitive closure (``closure_min`` / ``closure_max``, see
@@ -24,6 +25,12 @@ reduction of ``closure_max`` bytes, the median, and every phase below the target
 ``order`` checks REQ-W3-002 in git history: the commit that added the baseline precedes (is an ancestor of, and is
 not) every commit carrying ``Karvey-Change: ID`` that renames or deletes a skill or rule file, or adds a
 ``skills/*/references/`` or ``rules/adapters/`` file; else ``baseline missing or taken after the reorganisation``.
+
+``contracts`` (C-02, REQ-W3-009) reads ``schemas/contracts.json``: for every ``(phase, contract)`` pair of its
+``baseline`` map the contract's ``anchor`` must still be reachable — an ``{#contract-<id>}`` heading anchor found in
+``rules/_core.md`` or in a file of the phase's current closure, or (before the core exists) an anchor naming a rule
+file that is in that closure. Otherwise ``{phase}: contract {id} not loaded``, exit 1. A contract whose anchor is
+``null`` is reported ``pending`` and does not fail (the core anchors it).
 
 Exit: 0 · 1 findings (missing load file, median below target) · 2 usage · 4 snapshot not found. Stdlib only.
 """
@@ -355,6 +362,90 @@ def cmd_order(args):
     return kl.emit(kl.envelope(TOOL, code, res, errors), args.json, human)
 
 
+# --------------------------------------------------------------------------- contracts (C-02, REQ-W3-009)
+CONTRACTS = Path("schemas") / "contracts.json"
+CORE = Path("skills") / "karvey" / "rules" / "_core.md"
+
+
+def phase_label(skill):
+    """``karvey-deploy`` → ``deploy``; the orchestrator stays ``karvey``."""
+    return skill[len("karvey-"):] if skill.startswith("karvey-") else skill
+
+
+def load_contracts(plugin_dir):
+    p = Path(plugin_dir) / CONTRACTS
+    try:
+        data = json.loads(p.read_text(encoding="utf-8-sig"))
+    except OSError:
+        raise NotFound("%s not found" % CONTRACTS.as_posix())
+    except ValueError as exc:
+        raise NotFound("%s is not JSON: %s" % (CONTRACTS.as_posix(), exc))
+    if not isinstance(data, dict) or not isinstance(data.get("contracts"), list) or \
+            not isinstance(data.get("baseline"), dict):
+        raise NotFound("%s needs contracts[] and baseline{}" % CONTRACTS.as_posix())
+    return data
+
+
+def closures(plugin_dir):
+    """``{phase label: [closure_max file, …]}`` of every phase skill (plugin-relative paths)."""
+    plugin_dir = Path(plugin_dir)
+    g = loadlist.graph(plugin_dir / "skills" / "karvey" / "rules")
+    out = {}
+    for skill in sorted(phase_skills(plugin_dir)):
+        md = plugin_dir / "skills" / skill / "SKILL.md"
+        if md.is_file():
+            row, _ = loadlist.measure_skill(plugin_dir, md, g)
+            out[phase_label(skill)] = row["closure_max_files"]
+    return out
+
+
+def _anchored(anchor, files, plugin_dir, core_text):
+    if anchor.startswith("#"):
+        mark = "{%s}" % anchor
+        if mark in core_text:
+            return True
+        return any(mark in loadlist.read_text(Path(plugin_dir) / f) for f in files)
+    return any(f == anchor or f.endswith("/rules/" + anchor) for f in files)
+
+
+def contract_coverage(plugin_dir, data=None):
+    """``{pairs, covered, missing[], pending[]}`` for every baseline ``(phase, contract)`` pair."""
+    plugin_dir = Path(plugin_dir)
+    data = data or load_contracts(plugin_dir)
+    anchors = {c.get("id"): c.get("anchor") for c in data["contracts"] if isinstance(c, dict)}
+    core_text = loadlist.read_text(plugin_dir / CORE)
+    now = closures(plugin_dir)
+    missing, pending, covered, pairs = [], [], 0, 0
+    for phase in sorted(data["baseline"]):
+        for cid in data["baseline"][phase]:
+            pairs += 1
+            if cid not in anchors:
+                missing.append({"phase": phase, "contract": cid,
+                                "message": "%s: contract %s is not declared in contracts[]" % (phase, cid)})
+            elif anchors[cid] is None:
+                pending.append({"phase": phase, "contract": cid})
+            elif phase in now and _anchored(anchors[cid], now[phase], plugin_dir, core_text):
+                covered += 1
+            else:
+                missing.append({"phase": phase, "contract": cid,
+                                "message": "%s: contract %s not loaded" % (phase, cid)})
+    return {"pairs": pairs, "covered": covered, "missing": missing, "pending": pending}
+
+
+def cmd_contracts(args):
+    plugin = Path(args.plugin) if args.plugin else kl.PLUGIN_ROOT
+    try:
+        res = contract_coverage(plugin)
+    except NotFound as exc:
+        return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue("budget.not_found", str(exc))]),
+                       args.json)
+    errors = [kl.issue("budget.contract", m["message"], got=m["contract"]) for m in res["missing"]]
+    code = kl.EXIT_FINDINGS if errors else kl.EXIT_OK
+    human = "contracts: %d of %d (phase, contract) pairs covered%s" % (
+        res["covered"], res["pairs"], ", %d pending" % len(res["pending"]) if res["pending"] else "")
+    return kl.emit(kl.envelope(TOOL, code, res, errors), args.json, human)
+
+
 # --------------------------------------------------------------------------- cli
 class _Parser(argparse.ArgumentParser):
     def error(self, message):
@@ -386,6 +477,9 @@ def build_parser():
     o.add_argument("--change", required=True)
     o.add_argument("--root", help="repository root (default: cwd)")
     o.add_argument("--json", action="store_true")
+    k = sub.add_parser("contracts", help="every baseline (phase, contract) pair is still loaded (REQ-W3-009)")
+    k.add_argument("--plugin", help="plugin directory (default: this plugin)")
+    k.add_argument("--json", action="store_true")
     return p
 
 
@@ -397,6 +491,8 @@ def main(argv=None):
         return cmd_compare(args)
     if args.cmd == "order":
         return cmd_order(args)
+    if args.cmd == "contracts":
+        return cmd_contracts(args)
     build_parser().print_usage(sys.stderr)
     return kl.EXIT_USAGE
 
