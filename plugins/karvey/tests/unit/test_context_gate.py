@@ -1,6 +1,6 @@
 """Dashboard lane column, lane skips and automatic approvals (architecture §1.6 of wave2-structural).
 
-@req REQ-W2-021 REQ-W2-040
+@req REQ-W2-021 REQ-W2-040 REQ-W2-027 REQ-W2-037
 """
 import contextlib
 import importlib.util
@@ -70,6 +70,92 @@ class Dashboard(unittest.TestCase):
         code, human = run("--root", str(self.t.path), "--now", NOW)
         self.assertIn("automatic approvals (role auto, not human): requirements", human)
         self.assertIn("lane standard", human)
+
+
+HEAD = ("| ID | Date | Phase | Origin | Type | Severity | Finding | Status | Routed to |\n"
+        "|----|------|-------|--------|------|----------|---------|--------|-----------|\n")
+
+
+def run_rec(lens, verdict, **over):
+    r = {"lens": lens, "phase": "architecture", "model": "model-a", "intra_model": True, "verdict": verdict,
+         "findings": {"High": 1} if verdict != "pass" else {}, "discarded": 0, "tokens_in": 10, "tokens_out": 5,
+         "usd": 0.5, "estimated": True, "at": T0}
+    r.update(over)
+    return r
+
+
+class GateSummary(unittest.TestCase):
+    def setUp(self):
+        self.t = g.TempDir()
+        spec = standard_at_architecture()
+        spec["phase"] = "tasks"
+        spec["skipped"]["infra"] = "no cloud"
+        spec["approvals"]["tasks"] = {"generated": True, "approved": False}
+        self.f = make_project(self.t.path, spec=spec)
+        self.d = self.f.parent
+        (self.d / "requirements.md").write_text("REQ-X-001 a\nREQ-X-002 b\n")
+        (self.d / "architecture.md").write_text(
+            "# A\n\n## 10. Decisions\n- A-01 keep it\n\n## 12. Risks\n- R1 slow\n\n## 13. Deploy\npost-deploy check, rollback by revert\n")
+        (self.d / "tasks.md").write_text("### E1.F1.T1 [Backend] x\n**Estimate:** 10 min\nREQ-X-001\n"
+                                         "### E1.F1.T2 [human] apply it\n")
+        (self.d / "findings.md").write_text(
+            "# F\n\n" + HEAD + "| F-01 | d | architecture | judge:security | bug | High | token in log | open | — |\n")
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def gate(self, name="how"):
+        code, out = run("--root", str(self.t.path), "--section", "gate", "--change", "feat-a", "--gate", name, "--json")
+        env = json.loads(out)
+        return env["result"]["gate"], env
+
+    def setruns(self, runs):
+        data = json.loads(self.f.read_text())
+        data["judge_runs"] = runs
+        self.f.write_text(json.dumps(data))
+
+    def test_REQ_W2_027_pass_and_concerns_disagreement_stated(self):
+        self.setruns([run_rec("security", "concerns"), run_rec("methods", "pass")])
+        g_, _ = self.gate()
+        lines = [j["line"] for j in g_["judges"]]
+        self.assertTrue(any("disagree" in x and "concerns vs pass" in x for x in lines), lines)
+        self.assertTrue(any("F-01 High judge:security" in x for x in lines), lines)
+        self.assertEqual(g_["judge_cost_usd"], 1.0)
+
+    def test_REQ_W2_027_missing_judge_not_run(self):
+        self.setruns([run_rec("security", "pass")])
+        g_, _ = self.gate()
+        self.assertIn("judge methods: not run (no run record)", [j["line"] for j in g_["judges"]])
+
+    def test_REQ_W2_037_how_sections(self):
+        g_, _ = self.gate()
+        s = g_["sections"]
+        self.assertEqual(s["decisions"], ["- A-01 keep it"])
+        self.assertEqual(s["risks"], ["- R1 slow"])
+        self.assertEqual(s["human_tasks"], ["E1.F1.T2 apply it"])
+        self.assertEqual(s["uncovered_requirements"], ["REQ-X-002"])
+        self.assertEqual(s["contract_gaps"], ["none"])
+        self.assertEqual([p["phase"] for p in g_["phases"]], ["architecture", "infra", "tasks"])
+
+    def test_REQ_W2_037_deviation_not_shown_is_an_omission(self):
+        (self.d / "deviations.md").write_text("# Deviations\n\n## DEV-01 — v2 grid\n\nalso see DEV-02 in a note\n")
+        g_, _ = self.gate()
+        self.assertEqual(g_["sections"]["deviations"], ["## DEV-01 — v2 grid"])
+        self.assertTrue(any("DEV-02" in o for o in g_["omissions"]), g_["omissions"])
+
+    def test_missing_source_named(self):
+        (self.d / "tasks.md").unlink()
+        g_, _ = self.gate()
+        self.assertIn("missing: docs/spec/changes/feat-a/tasks.md", g_["missing"])
+        code, human = run("--root", str(self.t.path), "--section", "gate", "--change", "feat-a", "--gate", "how")
+        self.assertIn("missing: docs/spec/changes/feat-a/tasks.md", human)
+
+    def test_patch_lane_says_none(self):
+        data = json.loads(self.f.read_text())
+        data["lane"] = "patch"
+        self.f.write_text(json.dumps(data))
+        g_, _ = self.gate("release")
+        self.assertIn("judges: none for lane patch", [j["line"] for j in g_["judges"]])
 
 
 if __name__ == "__main__":

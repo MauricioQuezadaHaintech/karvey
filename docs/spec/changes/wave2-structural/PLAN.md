@@ -107,7 +107,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 - [x] E1.F4.T1 [Backend] `state-machine.json:gate` per phase + `approve-gate what|how|release` + imported phases need the human marker (`generated --imported`) — est: 15min (depends E1.F3.T4)
 - [x] E1.F4.T2 [Backend] Gate mode resolution (`project.json:gates` via `gates.merged`), `--granular-gates`, invalid value refused — est: 6min (depends E1.F4.T1, E1.F1.T2)
-- [ ] E1.F4.T3 [Backend] `karvey-context.py --section gate --change --gate`: one-page summary (phases, lane, judges verdicts / disagreement / not run, decisions, risks, deviations, cost, `[human]` tasks, uncovered REQs, contract gaps, manifest) — est: 15min (depends E1.F4.T1, E1.F3.T4, E1.F2.T7)
+- [x] E1.F4.T3 [Backend] `karvey-context.py --section gate --change --gate`: one-page summary (phases, lane, judges verdicts / disagreement / not run, decisions, risks, deviations, cost, `[human]` tasks, uncovered REQs, contract gaps, manifest) — est: 15min (depends E1.F4.T1, E1.F3.T4, E1.F2.T7)
 - [ ] E1.F4.T4 [Backend] `rules/gates.md` (the one closing block, granular / merged, `-y` = `role: auto`, plan exceptions) + the 13 phase-skill closings + `rules/phase-close.md:45` — est: 15min (depends E1.F4.T2, E1.F3.T5)
 - [ ] E1.F4.T5 [Backend] L-41 (no second gate question; closings cite `rules/gates.md`) + L-52 (`-y` = auto, never prod) — est: 10min (depends E1.F4.T4)
 - [ ] E1.F4.T6 [Backend] Grill: batches ≤ 4, recommended first, stack inferred from lockfiles / CI and only confirmed + manual script — est: 6min (P)
@@ -211,7 +211,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F3.T7 [Test] | ✅ done | 5 | 3 | 0 |  |
 | E1.F4.T1 [Backend] | ✅ done | 15 | 9 | 0 |  |
 | E1.F4.T2 [Backend] | ✅ done | 6 | 5 | 0 | deviation: added the `gate` query command so the closing block is executable |
-| E1.F4.T3 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F4.T3 [Backend] | ✅ done | 15 | 10 | 0 |  |
 | E1.F4.T4 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F4.T5 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F4.T6 [Backend] | ⬜ todo | 6 | — | — |  |

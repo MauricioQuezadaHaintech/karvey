@@ -808,8 +808,171 @@ def _render_t2(result, L):
                                             o["reason"]))
 
 
+# --------------------------------------------------------------------------- gate summary (REQ-W2-027, 037)
+_DEV_ID = re.compile(r"\bDEV-\d+\b")
+_EST = re.compile(r"^\*\*Estimate:\*\*\s*(\d+(?:\.\d+)?)\s*min", re.M)
+_HUMAN_TASK = re.compile(r"^###\s+(\S+)\s+\[human\]\s*(.*)$", re.M)
+_REQ_ID = re.compile(r"\bREQ-[A-Z0-9]+-\d+\b")
+
+
+def _section_lines(text, rx, limit=12):
+    """Non-empty lines under the first heading matching ``rx`` (up to the next heading of that level)."""
+    lines = text.split("\n")
+    for i, ln in enumerate(lines):
+        m = re.match(r"^(#{2,4})\s+(.*)$", ln)
+        if m and re.search(rx, m.group(2), re.I):
+            level, out = len(m.group(1)), []
+            for x in lines[i + 1:]:
+                h = re.match(r"^(#{1,6})\s", x)
+                if h and len(h.group(1)) <= level:
+                    break
+                if x.strip() and not set(x.strip()) <= set("|-: "):
+                    out.append(x.strip())
+            return out[:limit]
+    return None
+
+
+def _judges_block(rd, c, phases, gate_res):
+    from karvey_lib import judges as jd
+    data = c["data"] or {}
+    runs = [r for r in (data.get("judge_runs") or []) if isinstance(r, dict)]
+    rows = jd.read_rows(c["dir"] / "findings.md")
+    out = []
+    for ph in phases:
+        if ph not in jd.PHASES_WITH_RUBRIC:
+            continue
+        try:
+            exp = jd.build_inputs(rd.root, c["id"], ph)
+        except Exception as exc:  # noqa: BLE001 - a summary line, never a crash
+            out.append({"phase": ph, "line": "judges: not run (%s)" % exc})
+            continue
+        if not exp["lenses"]:
+            out.append({"phase": ph, "line": exp["status"]})
+            continue
+        got = {}
+        for r in runs:
+            if r.get("phase", ph) == ph and r.get("lens") in exp["lenses"]:
+                got[r["lens"]] = r  # the last run of the lens counts
+        verdicts = set()
+        for lens in exp["lenses"]:
+            r = got.get(lens)
+            if r is None:
+                out.append({"phase": ph, "lens": lens, "line": "judge %s: not run (no run record)" % lens})
+                continue
+            verdicts.add(r.get("verdict"))
+            counts = r.get("findings") if isinstance(r.get("findings"), dict) else {}
+            out.append({"phase": ph, "lens": lens, "verdict": r.get("verdict"), "model": r.get("model"),
+                        "intra_model": r.get("intra_model"),
+                        "line": "judge %s: %s · %s · model %s%s" % (
+                            lens, r.get("verdict") or "?",
+                            ", ".join("%s %s" % (k, counts[k]) for k in jd.SEVERITIES if counts.get(k)) or "no findings",
+                            r.get("model") or "?", " (intra-model)" if r.get("intra_model") else "")})
+        if len(verdicts) > 1:
+            out.append({"phase": ph, "line": "judges disagree at %s: %s" % (ph, " vs ".join(sorted(v for v in verdicts if v)))})
+        for f in rows:
+            if (f.get("origin") or "").startswith("judge:") and f.get("phase") == ph \
+                    and f.get("severity") in ("Critical", "High"):
+                out.append({"phase": ph, "line": "  %s %s %s [%s]: %s" % (
+                    f.get("id") or f.get("#"), f.get("severity"), f.get("origin"), f.get("status"), f.get("finding"))})
+    return out
+
+
+def gate_summary(rd, ctx):
+    """One page per gate, built by the script so no section is silently omitted (REQ-W2-027, 037)."""
+    args = ctx["args"]
+    if not args.change or args.gate not in ("what", "how", "release"):
+        raise ValueError("--section gate needs --change and --gate what|how|release")
+    c = ctx["targets"][0]
+    data = c["data"] or {}
+    cdir, missing = c["dir"], []
+
+    def src(name):
+        t = rd.text(cdir / name)
+        if t is None:
+            missing.append("missing: %s" % rd.rel(cdir / name))
+        return t
+
+    lane = data.get("lane") or "legacy"
+    phases, arts = [], []
+    for pid in state.gate_phases(args.gate):
+        st = state.approval_state(data, pid)
+        lane_skip = st == "skipped" and state.lane_skips(data, pid)
+        phases.append({"phase": pid, "state": "skipped (lane)" if lane_skip else st})
+        if st == "skipped":
+            continue
+        for item in (state.phase_def(pid).get("produces") or []):
+            item = item.rstrip("?")
+            if any(ch in item for ch in "*["):
+                continue
+            arts.append("%s: %s" % (item, "present" if (cdir / item).exists() else "missing"))
+    res = {"change": c["id"], "gate": args.gate, "lane": lane, "phases": phases, "artifacts": arts,
+           "judges": _judges_block(rd, c, [p["phase"] for p in phases if p["state"] not in ("skipped", "skipped (lane)")], None),
+           "sections": {}, "omissions": [], "missing": missing}
+    cost = sum(float(r.get("usd") or 0) for r in (data.get("judge_runs") or []) if isinstance(r, dict))
+    res["judge_cost_usd"] = round(cost, 2)
+    if args.gate == "how":
+        arch = src("architecture.md")
+        if arch is not None:
+            for key, rx in (("decisions", r"decision"), ("risks", r"risk")):
+                lines = _section_lines(arch, rx)
+                res["sections"][key] = lines if lines is not None else ["missing: %s section in architecture.md" % key]
+            gaps = []
+            if not re.search(r"post-deploy", arch, re.I):
+                gaps.append("post-deploy verification contract: missing")
+            if not re.search(r"rollback", arch, re.I):
+                gaps.append("rollback: missing")
+            res["sections"]["contract_gaps"] = gaps or ["none"]
+        dev = rd.text(cdir / "deviations.md")
+        if dev is None:
+            res["sections"]["deviations"] = ["none (no deviations.md)"]
+        else:
+            entries = [ln.strip() for ln in dev.split("\n") if re.match(r"^(#{2,3}\s|\|\s*DEV-)", ln)
+                       and _DEV_ID.search(ln)]
+            res["sections"]["deviations"] = entries or ["none"]
+            shown = set(_DEV_ID.findall("\n".join(entries)))
+            for did in sorted(set(_DEV_ID.findall(dev)) - shown):
+                res["omissions"].append("deviations.md: %s is not shown by this summary (no heading or table row)" % did)
+        tasks = src("tasks.md")
+        if tasks is not None:
+            est = sum(float(x) for x in _EST.findall(tasks))
+            res["sections"]["estimated_cost"] = ["%g min over %d task(s) (tasks.md)" % (est, len(_EST.findall(tasks)))]
+            res["sections"]["human_tasks"] = ["%s %s" % m for m in _HUMAN_TASK.findall(tasks)] or ["none"]
+    if args.gate in ("how", "release"):
+        req, tasks_t = rd.text(cdir / "requirements.md"), rd.text(cdir / "tasks.md")
+        if req is None:
+            missing.append("missing: %s" % rd.rel(cdir / "requirements.md"))
+        elif tasks_t is not None:
+            unc = sorted(set(_REQ_ID.findall(req)) - set(_REQ_ID.findall(tasks_t)))
+            res["sections"]["uncovered_requirements"] = unc or ["none"]
+    if args.gate == "release":
+        hits = modes.read_hits(cdir / modes.HITS_FILE)
+        for key, check in (("lane_check", "lane.diff"), ("coverage", "coverage.requirements"),
+                           ("security", "security.tools"), ("manifest", "release.manifest")):
+            hs = [h for h in hits if h.get("check") == check]
+            res["sections"][key] = ["%s would refuse: %s" % (h.get("mode"), h.get("detail")) for h in hs] or \
+                ["no %s hit recorded" % check]
+    return res
+
+
+def _render_gate(g, L):
+    L.append("== GATE %s — %s (lane %s) ==" % (g["gate"], g["change"], g["lane"]))
+    L.append("phases: " + ", ".join("%s %s" % (p["phase"], p["state"]) for p in g["phases"]))
+    for a in g["artifacts"]:
+        L.append("  " + a)
+    for j in g["judges"]:
+        L.append(j["line"])
+    L.append("judge cost: %.2f USD" % g["judge_cost_usd"])
+    for k, v in g["sections"].items():
+        L.append("%s:" % k.replace("_", " "))
+        L.extend("  " + x for x in v)
+    for o in g["omissions"]:
+        L.append("OMISSION " + o)
+    L.extend(g["missing"])
+
+
 BUILDERS = {"overview": overview, "open-work": open_work, "approvals": approvals, "enforcement": enforcement,
-            "close-report": close_report, "calibration": calibration, "convergence": convergence}
+            "close-report": close_report, "calibration": calibration, "convergence": convergence,
+            "gate": gate_summary}
 
 
 # --------------------------------------------------------------------------- rendering
@@ -877,6 +1040,8 @@ def render(result, ctx):
         L.append("blocks     %s" % ("none recorded" if not b.get("total") else "%d (%s) · last %s" % (
             b["total"], ", ".join("%s %d" % kv for kv in b["by_guard"].items()), b.get("last") or "?")))
     _render_t2(result, L)
+    if result.get("gate") is not None:
+        _render_gate(result["gate"], L)
     for u in result.get("unreadable", []):
         L.append("unreadable: %s (%s)" % (u["path"], u["reason"]))
     return "\n".join(L)
@@ -1054,6 +1219,7 @@ def build_parser():
     p.add_argument("--lane", help="--metrics: only this lane")
     p.add_argument("--readiness", action="store_true",
                    help="4.0 readiness: measured changes and would-refuse / confirmed hits per check")
+    p.add_argument("--gate", choices=["what", "how", "release"], help="--section gate: which merged gate")
     p.add_argument("--json", action="store_true", help="print one JSON envelope")
     return p
 
