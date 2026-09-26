@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
+Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-67 RESUELTO; BUG-23..47 live on other branches, numbered by `karvey-id.py`). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -30,6 +30,26 @@ Last updated: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2
 | BUG-20 | karvey | medium | False NOT FOUND drift when state.json names the repo itself | team-layer / agente-kloketen | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.4 |
 | BUG-21 | karvey | medium | Git worktrees reported NOT FOUND in the live-state check | team-layer / wave1 F-01 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.4 |
 | BUG-22 | karvey | medium | Committing state.json after a save reported as drift | wave1-hardening / F-40 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh (profile-only commits, BUG-22) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-48 | karvey | high | Merged gates could not be walked past their first phase | wave2-structural / F-06 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py (MergedGateAdvance) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-49 | karvey | high | Deploy asked for the rollback only on PROD; a DEV regression neither asked nor opened the incident | wave2-structural / F-10 | RESUELTO | lint L-53; plugins/karvey/tests/unit/test_lint_plugin.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-50 | karvey | medium | A retro action's backlog row carried no owner | wave2-structural / F-11 | RESUELTO | plugins/karvey/tests/unit/test_metrics.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-51 | karvey | high | Merged gate: a phase sent back by Request changes was still passed inside its gate | wave2-structural / F-12 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-52 | karvey | high | Post-deploy verification could pass while the service was down, and leaked URL credentials | wave2-structural / F-13 | RESUELTO | plugins/karvey/tests/unit/test_postdeploy.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-53 | karvey | high | Requirements written from the template gave coverage 0/0, read as a pass | wave2-structural / F-14 | RESUELTO | plugins/karvey/tests/unit/test_trace.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-54 | karvey | high | Timestamps with fractional seconds lost their zone (metrics crash, wrong intervals) | wave2-structural / F-15 | RESUELTO | plugins/karvey/tests/unit/test_metrics.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-55 | karvey | high | The evidence wrapper stored secrets from the command line and could write outside the change | wave2-structural / F-16 | RESUELTO | plugins/karvey/tests/unit/test_evidence.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-56 | karvey | high | Judge collect could forge findings rows and crash on a bad citation | wave2-structural / F-17 | RESUELTO | plugins/karvey/tests/unit/test_judges.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-57 | karvey | medium | One malformed archived change crashed or skewed the metrics report | wave2-structural / F-18 | RESUELTO | plugins/karvey/tests/unit/test_metrics.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-58 | karvey | medium | karvey-trace crashed with exit 1 (the coverage-refused code) on malformed input | wave2-structural / F-19 | RESUELTO | plugins/karvey/tests/unit/test_trace.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-59 | karvey | medium | Release gate cited the wrong evidence line and read the manifest mode from the working copy only | wave2-structural / F-20 | RESUELTO | plugins/karvey/tests/unit/test_release_gate.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-60 | karvey | medium | karvey-id: inflated numbers from branch text, burnt numbers on refusal, unsafe stale-lock takeover | wave2-structural / F-21 | RESUELTO | plugins/karvey/tests/unit/test_id_tool.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-61 | karvey | medium | State validation ignored the check-mode registry, never refused a missing lane, accepted NaN costs | wave2-structural / F-22 | RESUELTO | plugins/karvey/tests/unit/test_state_judges.py; plugins/karvey/tests/unit/test_state_validate.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-62 | karvey | high | An agent could make QA optional by a lane "raise" | wave2-structural / F-23 | RESUELTO | plugins/karvey/tests/unit/test_state_lane.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-63 | karvey | medium | The trailer guard missed `git commit -am "msg"` | wave2-structural / F-24 | RESUELTO | plugins/karvey/tests/hooks/tables/trailer.json (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-64 | karvey | medium | Lint L-47 (check-mode registry invariants) was declared but not implemented | wave2-structural / F-25 | RESUELTO | lint L-47; plugins/karvey/tests/unit/test_lint_plugin.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-65 | karvey | low | The how-gate summary reported the post-deploy contract missing although infra.md held it | wave2-structural / F-26 | RESUELTO | plugins/karvey/tests/unit/test_context_gate.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-66 | karvey | low | The method page kept the old skill / support / rule counts | wave2-structural / F-05 | RESUELTO | plugins/karvey/tests/unit/test_page_static.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-67 | karvey | medium | The impl skill never told the agent to add the Karvey-Change trailer | wave2-structural / F-27 | RESUELTO | lint L-42; plugins/karvey/tests/unit/test_lint_plugin.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 
 ## Summary by state
 
@@ -38,7 +58,7 @@ Last updated: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 22 | BUG-01 .. BUG-22 |
+| RESUELTO | 42 | BUG-01 .. BUG-22, BUG-48 .. BUG-67 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-23**.
+Next number: from `karvey-id.py next BUG` (scans every branch); BUG-68 at this update.

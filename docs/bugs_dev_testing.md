@@ -690,3 +690,603 @@ Architecture §1.4 revision 1 (D-19): a changed commit matches when the recorded
 | 2026-09-24 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-40, first agente-karvey save (da3d70a → cb3946e) |
 | 2026-09-24 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-19): cause read in the hook's live-state block |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T1 (D-21): profile-only commits since the save match on both the python and the degraded path; case 1 red before the fix, cases 2-4 guard against over-matching |
+
+## BUG-48 — Merged gates could not be walked past their first phase
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`advance`, `next` in merged gate mode)
+- **Change / origin:** wave2-structural — finding F-06 (E1.F13.T3 `test_wave2_flow.py`)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`project.json` with `"gates": "merged"`; a change with `requirements` approved through `approve-gate … what`. Generate `architecture` (which does not close the *how* gate) and run `karvey-state.py advance {id} infra` or `next {id}`.
+
+### Actual vs expected
+- Actual: `advance` refuses `architecture not approved or skipped`; `next` lists it as a blocker. The *how* gate, which spans architecture → infra → tasks, can never reach its last phase, so its single question is never asked.
+- Expected: in merged mode a phase that does not close its gate is recorded `generated` and passed; only leaving the gate needs its `approve-gate` (`rules/gates.md`).
+
+### Root cause
+`compute_next` and `advance` applied the granular precondition (every earlier phase approved or skipped) regardless of the gate mode; the merged mode only changed which question the skills ask, not the preconditions the state tool enforces.
+
+### Fix
+Commit 4347636 (E1.F13.T3): `open_in_merged_gate` — in merged mode a generated phase that does not close its gate no longer blocks a target inside the same gate; leaving the gate still needs `approve-gate`, and an ungenerated phase still blocks.
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_gates.py` `MergedGateAdvance` (4 cases): advance inside the gate without a second question (red before the fix, run on 2026-09-26 against the pre-fix `karvey-state.py`), leaving the gate needs the gate approval, the artifact must be generated, granular mode keeps the per-phase approval. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-06, E1.F13.T3 end-to-end flow test |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | precondition check ignored the gate mode |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21): fix 4347636 with `MergedGateAdvance`; case 1 red on the pre-fix script, cases 2-4 guard against over-matching |
+
+## BUG-49 — Deploy asked for the rollback only on PROD; a DEV regression neither asked nor opened the incident
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/skills/karvey-deploy/SKILL.md (Step 2-bis, regression item)
+- **Change / origin:** wave2-structural — finding F-10 (manual script run)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Manual script deploy-postdeploy, run 1: DEV verification `regression`, `observed.json` as given.
+
+### Actual vs expected
+- Actual: "It's a DEV problem, so no rollback is needed"; the incident was only offered.
+- Expected (REQ-W2-078): every `regression` shows the contract's rollback command, asks the human, records the answer and opens a `BUG-NN` with a reserved number.
+
+### Root cause
+The regression item of Step 2-bis split by environment and put the rollback question under PROD only.
+
+### Fix
+The item now applies in every environment (DEV stops before prod whatever the answer), reserves the incident at once with `karvey-id.py next BUG`, and 2.6 / the hard rules / the final output say the same.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_lint_plugin.py`. lint L-53 (`test_lint_plugin.py` `L53`: rollback limited to PROD, no reserved incident, no regression item), red on the pre-fix skill; manual re-run PASS. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-10 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-50 — A retro action's backlog row carried no owner
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/skills/karvey-retro/SKILL.md (Step 4), plugins/karvey/skills/karvey/rules/backlog.md
+- **Change / origin:** wave2-structural — finding F-11 (manual script run)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Manual script retro-from-metrics, run 1: agree one action with an owner.
+
+### Actual vs expected
+- Actual: `| BL-03 | … | retro-2026-09-14 | process | … |` — the owner lived only in the retro file.
+- Expected (REQ-W2-008): the `process` row carries its owner.
+
+### Root cause
+The backlog table has no owner column and the skill did not say where the owner goes.
+
+### Fix
+The Origin cell holds it: `retro-{to} · owner: {owner}` (skill Step 4 and the backlog rule, with an example row).
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_metrics.py`. `test_metrics.py` `RetroActionOwner` (two cases), red before the text change; manual re-run PASS. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-11 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-51 — Merged gate: a phase sent back by Request changes was still passed inside its gate
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`open_in_merged_gate`, `generated`)
+- **Change / origin:** wave2-structural — finding F-12 (manual script run)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`gates: merged`; imported architecture generated; `outcome … how changes_requested`; `karvey-state.py next`.
+
+### Actual vs expected
+- Actual: `next infra` with no blocker.
+- Expected (REQ-W2-080 / REQ-W2-042): the change resumes at architecture until it is reworked.
+
+### Root cause
+The F-06 fix (BUG-48) passed any generated phase inside an open merged gate, without looking at the gate's outcomes.
+
+### Fix
+A phase whose latest gate outcome is `changes_requested` is held until it is generated again after the request (`generated` now writes `regenerated_at` on later calls; `generated_at` keeps the first time).
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_state_gates.py`. `test_state_gates.py` `MergedGateChangesRequested` (three cases; the first two red before the fix); manual re-run PASS. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-12 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-52 — Post-deploy verification could pass while the service was down, and leaked URL credentials
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-postdeploy.py
+- **Change / origin:** wave2-structural — finding F-13 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A contract whose only threshold is `new_5xx`, probing an unreachable URL; a probe URL with `user:password@` and `?token=`.
+
+### Actual vs expected
+- Actual: `pass` with every probe failed at connection level; credentials and query values written to `deploy_evidence.md` and the probe file; a missing `new_5xx` counted as 0; a string threshold or a malformed probe file crashed with exit 1 (= regression).
+- Expected (REQ-W2-076/077): never `pass` without a measurement, no secrets in evidence, exit 1 only for `regression`.
+
+### Root cause
+Connection failures had no status and were not counted; URLs were stored verbatim; defaults filled missing values; no input validation or catch-all.
+
+### Fix
+Connection failures count as server errors; URLs are redacted (`redact_url`); a check with nothing measured is a note, not a pass; thresholds and probe rows are validated; a catch-all gives the internal envelope (exit 5).
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_postdeploy.py`. `test_postdeploy.py` (six cases, each red before its fix). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-13 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-53 — Requirements written from the template gave coverage 0/0, read as a pass
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/skills/karvey-requirements/SKILL.md (template), plugins/karvey/scripts/karvey-trace.py (`check`)
+- **Change / origin:** wave2-structural — finding F-14 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A change whose `requirements.md` follows the template (`### 1.1 {name}`); `karvey-trace.py <change> --check`.
+
+### Actual vs expected
+- Actual: `coverage: 0/0 (pass)`; agents added ids by hand.
+- Expected (REQ-W2-057/062): the template's headings carry the id the trace reads, and no ids is never a pass.
+
+### Root cause
+The template asked for numeric ids only; the trace reads `REQ-…-NNN`; `check` treated an empty set as covered.
+
+### Fix
+Template heading `### 1.1 REQ-{CAP}-001 — {name}` and checklist line; `check` returns `not-evaluated` when there is no id.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_trace.py`. `test_trace.py` `WriteAndCheck` (two cases, red before the fix). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-14 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-54 — Timestamps with fractional seconds lost their zone (metrics crash, wrong intervals)
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py and karvey_lib/metrics.py (`parse_dt`)
+- **Change / origin:** wave2-structural — finding F-15 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`metrics.parse_dt('2026-09-10T10:00:00.5Z')`.
+
+### Actual vs expected
+- Actual: a naive datetime; subtracting it from an aware one raised `TypeError` in `--metrics`.
+- Expected: the zone is kept.
+
+### Root cause
+The fraction was built from every digit after the dot, including the offset's.
+
+### Fix
+Only the leading digits are the fraction (both copies); the new merged-gate check reuses `parse_dt`.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_metrics.py`. `test_metrics.py` `FractionalSecondsKeepTheZone`, red on the pre-fix module. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-15 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-55 — The evidence wrapper stored secrets from the command line and could write outside the change
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-evidence.py
+- **Change / origin:** wave2-structural — finding F-16 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`karvey-evidence.py --change c1 -- true --password=x`; `--change ../../x`; an `evidence.jsonl` without a final newline; an unstartable command.
+
+### Actual vs expected
+- Actual: the password in `evidence.jsonl`; files outside `docs/spec/changes`; two records glued on one line; a traceback.
+- Expected: hashes and argv without secrets, inside the change, one record per line, an error line.
+
+### Root cause
+argv was written verbatim; the change id was not validated; the line number was recounted after an unlocked append; only two OSError kinds were caught.
+
+### Fix
+`redact_argv` (secret flags, env-style assignments, URL user info); change id validated with the manifest's rule; `append_record` under the file lock with a separator; any start failure → exit 127 with a message.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_evidence.py`. `test_evidence.py` (four cases, each red before its fix). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-16 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-56 — Judge collect could forge findings rows and crash on a bad citation
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/judges.py, plugins/karvey/scripts/karvey-judges.py
+- **Change / origin:** wave2-structural — finding F-17 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A judge result whose `lens` holds `|` and a newline; a cite `requirements.md:²`; `collect` run twice.
+
+### Actual vs expected
+- Actual: a forged `F-99` row; exit 5 on the cite; every finding appended twice; the diff temp file never deleted.
+- Expected (REQ-W2-026/030): sanitised rows, bad cite discards one finding, idempotent collect, no leftover diff.
+
+### Root cause
+The lens was not sanitised or checked against the expected lenses; `isdigit()` accepts non-ASCII digits; no duplicate check; no cleanup.
+
+### Fix
+Lens sanitised and checked; ASCII-digit cites; duplicates skipped and counted; `collect --diff` deletes the diff `inputs` wrote.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_judges.py`. `test_judges.py` `Bug56` (six cases). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-17 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-57 — One malformed archived change crashed or skewed the metrics report
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/metrics.py
+- **Change / origin:** wave2-structural — finding F-18 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+An archived `spec.json` with `gate_outcomes[].phases: 5`; a prod approval before `created_at`; a deploy `at` without zone.
+
+### Actual vs expected
+- Actual: exit 5; a negative lead time; "no regression deploy" although one existed.
+- Expected (REQ-W2-004): that change is `n/a — reason (id)` for that metric only.
+
+### Root cause
+Shapes were assumed; negative intervals and unreadable times were not reported.
+
+### Fix
+Malformed entries skipped with a reason, negative intervals and zone-less times are `n/a` with the real reason, and a per-metric guard.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_metrics.py`. `test_metrics.py` `MalformedDataIsNa` (six cases). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-18 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-58 — karvey-trace crashed with exit 1 (the coverage-refused code) on malformed input
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-trace.py
+- **Change / origin:** wave2-structural — finding F-19 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`project.json` with `tests` as a list; an evidence line whose `cwd_rel` is a number.
+
+### Actual vs expected
+- Actual: a traceback and exit 1.
+- Expected: an invalid-config envelope (exit 4), a skipped evidence line with a warning, never exit 1 for a crash.
+
+### Root cause
+Only `NotFound` was caught.
+
+### Fix
+Shapes validated; malformed evidence lines ignored with `trace.evidence_malformed`; a catch-all exits 5.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_trace.py`. `test_trace.py` `MalformedInputNeverExits1` (four cases). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-19 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-59 — Release gate cited the wrong evidence line and read the manifest mode from the working copy only
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-release-gate.py
+- **Change / origin:** wave2-structural — finding F-20 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`evidence.jsonl` with a blank and an invalid line; `release.manifest: off` in the working copy only; `release-branch --version '1.0; rm -rf ~'`.
+
+### Actual vs expected
+- Actual: `evidence.jsonl:2` for line 4; mode `off`; the command printed with the injected text.
+- Expected: the physical line; the stricter of working copy and reviewed line (as the prod-gate hook); a semver-only version.
+
+### Root cause
+The citation counted parsed records; the CLI used `modes.resolve` on the working copy; no version validation.
+
+### Fix
+Physical line numbers; `guards.manifest_mode`; semver check with a usage error.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_release_gate.py`. `test_release_gate.py` `Bug59` (three cases, red before the fix). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-20 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-60 — karvey-id: inflated numbers from branch text, burnt numbers on refusal, unsafe stale-lock takeover
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-id.py
+- **Change / origin:** wave2-structural — finding F-21 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A committed `HEAD-977` next to `D-03`; `--qualified` with an invalid repo slug; `ids.json` holding a list; two waiters on a stale lock.
+
+### Actual vs expected
+- Actual: `D-978`; a refused call still reserved a number; exit 5; a waiter could delete another's fresh lock.
+- Expected: `D-04`, no reservation on refusal, a rebuilt file, a lock released only by its owner.
+
+### Root cause
+The branch scan lacked the word boundary; validation ran after the reservation; no shape check; the lock carried no owner token.
+
+### Fix
+Same boundary as the working-tree scan; slug checked first; corrupt file set aside and rebuilt; `pid token` lock, released only by its owner, stale lock moved aside atomically.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_id_tool.py`. `test_id_tool.py` `Bug60` (six cases). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-21 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-61 — State validation ignored the check-mode registry, never refused a missing lane, accepted NaN costs
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`schema_mode`, `validate_data`, `judge-run`)
+- **Change / origin:** wave2-structural — finding F-22 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`checks.schema.strict: blocking` with a spec without `lane`; `judge-run` with `usd: NaN`.
+
+### Actual vs expected
+- Actual: advisory validation, no lane error; `NaN` written into `spec.json`.
+- Expected (architecture §1.2, REQ-W2-019/083): strict under the registry, a missing lane an error under strict, finite numbers only.
+
+### Root cause
+`schema_mode` read only `project.json:schema_mode`; the lane check existed only as a `next` warning; NaN passes `< 0`.
+
+### Fix
+`schema_mode` also resolves `schema.strict`; `validate` errors on a missing lane under strict; `judge-run` refuses NaN / infinity.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_state_validate.py`, `plugins/karvey/tests/unit/test_state_judges.py`. `test_state_validate.py` `StrictModeFromRegistry`, `test_state_judges.py` `JudgeRun.test_nan_and_infinite_cost_refused`. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-22 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-62 — An agent could make QA optional by a lane "raise"
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`lane raise`)
+- **Change / origin:** wave2-structural — finding F-23 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`lane set docs` → `lane raise ops --reason x` → `skip qa`.
+
+### Actual vs expected
+- Actual: accepted (ops runs more phases).
+- Expected (REQ-W2-016 revision 1): a raise keeps every phase's mode; anything else is a lower, which needs the human.
+
+### Root cause
+Lanes were ranked by phase count; REQ-W2-016 did not define "raise" (spec-gap, requirements revised in place).
+
+### Fix
+`is_raise`: every phase keeps at least its mode; the refusal names the phases that would weaken; `lane_rank` removed.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_state_lane.py`. `test_state_lane.py` `LaneChanges` (two cases). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-23 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-63 — The trailer guard missed `git commit -am "msg"`
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_commit_message`)
+- **Change / origin:** wave2-structural — finding F-24 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`enforcement.trailer_guard: blocking`; `git commit -am 'feat: x'` without the trailer.
+
+### Actual vs expected
+- Actual: allowed (message unseen).
+- Expected (REQ-W2-044): blocked.
+
+### Root cause
+Clustered short flags were not parsed.
+
+### Fix
+A short-flag cluster is scanned: `m`/`F` take the rest of the cluster or the next argument.
+
+### Regression test
+Files: `plugins/karvey/tests/hooks/tables/trailer.json`. `tr-11`, `tr-12` (tr-11 red before the fix). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-24 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-64 — Lint L-47 (check-mode registry invariants) was declared but not implemented
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/lint-plugin.py
+- **Change / origin:** wave2-structural — finding F-25 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`lint-plugin.py --list` against architecture §5's table.
+
+### Actual vs expected
+- Actual: no L-47.
+- Expected: the registry invariants checked (REQ-W2-083/084/085).
+
+### Root cause
+The check was never written; tests covered part of it.
+
+### Fix
+L-47: both line defaults, no 3.13 `blocking`, 4.0 differs only for the three named checks or with a decision, every mode call names a registered id.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_lint_plugin.py`. lint L-47 (`test_lint_plugin.py` `L47`). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-25 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-65 — The how-gate summary reported the post-deploy contract missing although infra.md held it
+- **Priority:** low
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-context.py (`--section gate --gate how`)
+- **Change / origin:** wave2-structural — finding F-26 (QA (karvey-qa, 2026-09-26))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`architecture.md` without the words post-deploy / rollback; `infra.md` with a complete `karvey-postdeploy` block.
+
+### Actual vs expected
+- Actual: `post-deploy verification contract: missing`, `rollback: missing`.
+- Expected: `none`.
+
+### Root cause
+The architecture-text check was not cleared by a complete infra contract.
+
+### Fix
+A complete block in `infra.md` clears those two gaps.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_context_gate.py`. `test_context_gate.py` `test_complete_infra_contract_clears_the_architecture_gaps`, red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-26 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-66 — The method page kept the old skill / support / rule counts
+- **Priority:** low
+- **Detected:** 2026-09-26 · **Component:** docs/karvey.html
+- **Change / origin:** wave2-structural — finding F-05 (impl, E1.F13.T7)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Read the page's summary after the new skill and rules.
+
+### Actual vs expected
+- Actual: 32 skills / 18 support / 22 rules.
+- Expected: the files' counts.
+
+### Root cause
+L-11 does not read the page.
+
+### Fix
+Counts updated with the release docs (E1.F13.T7); a static test now compares the page with the files.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_page_static.py`. `test_page_static.py` `CurrentCounts`, red on the pre-fix page (32 / 18 / 22). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-05 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-67 — The impl skill never told the agent to add the Karvey-Change trailer
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/skills/karvey-impl/SKILL.md
+- **Change / origin:** wave2-structural — finding F-27 (manual script run)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Manual script merged-gates-three-questions: impl commits.
+
+### Actual vs expected
+- Actual: commits without the trailer; the agent rewrote them later for the trace.
+- Expected (REQ-W2-043): every commit of the change carries it.
+
+### Root cause
+Only deploy, archive and checkpoint mentioned the trailer.
+
+### Fix
+The impl commit rule names the trailer; lint L-42 checks the impl skill says it.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_lint_plugin.py`. lint L-42 (`test_lint_plugin.py` `L42ImplTrailer`), red before the check. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-27 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |

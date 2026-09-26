@@ -250,14 +250,21 @@ is refused; mockup is not auto-skipped.
 ### 2.6 REQ-W2-016 — Lane changes: up freely, down only by the human
 WHEN a change's lane is raised, the state tool SHALL record the old lane, the new lane, the time and the reason;
 IF a lane would be lowered, THEN it SHALL refuse unless the human's approval and a reason are given; the phases
-the new lane requires and the old one skipped SHALL become pending.
+the new lane requires and the old one skipped SHALL become pending. A change is a raise only when every phase keeps
+at least its mode in the new lane (mandatory stays mandatory, optional stays at least optional); any other change
+is a lowering, even when the new lane runs more phases.
 
-Traces to PRD: §6 S-2 · Sources: R-09 ("se puede subir de carril, pero nunca bajar sin registro"), DM-01 · BL-12
+Traces to PRD: §6 S-2 · Sources: R-09 ("se puede subir de carril, pero nunca bajar sin registro"), DM-01 · BL-12 ·
+Revision 1 (2026-09-26, F-23 / BUG-62, QA): "raise" was undefined and the tool ranked lanes by phase count, so
+`docs` → `ops` passed as a raise while making QA optional; rewritten in place with the recommended option (a raise
+keeps every phase's mode; alternative rejected: keep the phase-count order and add a QA-only exception).
 
 **Scenario — success:** GIVEN a `patch` change whose fix turns out to need a contract change WHEN the lane is
 raised to `standard` THEN `requirements` becomes the next pending phase and the change is recorded.
 **Scenario — error:** GIVEN a `standard` change WHEN the agent lowers it to `patch` without a human approval THEN
 the state tool refuses.
+**Scenario — error (revision 1):** GIVEN a `docs` change WHEN the agent "raises" it to `ops`, which makes QA optional,
+THEN the state tool refuses it as a raise and names `qa`.
 
 ### 2.7 REQ-W2-017 — The diff is checked against its lane
 WHEN QA (or QA-lite) runs, the method SHALL measure the change's diff against its lane's criteria and SHALL
