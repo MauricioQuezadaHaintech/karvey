@@ -457,6 +457,28 @@ def semantic_project(data, strict, file):
         out.append(kl.issue("state.branch_mode", contradiction + " (REQ-W2-049)", severity="error", file=file,
                             path="$.branch_flow.mode"))
     # safe_values (§3.1) joins here when karvey_lib/safe_values.py lands (E1.F7.T1).
+    for path in cost_cap_keys(data):
+        # wave3 §1.9 (REQ-W3-017, F-62): reported in every mode, never an error — a 4.0 project still passes
+        out.append(kl.issue("cost.cap_key", "%s is unsupported (D-30): cost is measured, never capped; the key is "
+                            "ignored and never removed by a tool" % path, severity="warning", file=file, path=path))
+    return out
+
+
+COST_CAP_KEY_RE = re.compile(r"^(cost_limit|budget|max_usd|max_tokens|spend_cap)$", re.IGNORECASE)
+
+
+def cost_cap_keys(node, path="$"):
+    """JSON paths of every cost-limit key in a project.json (the Wave 2 ``judges.budget`` included)."""
+    out = []
+    if isinstance(node, dict):
+        for k in sorted(node, key=str):
+            p = "%s.%s" % (path, k)
+            if isinstance(k, str) and COST_CAP_KEY_RE.match(k):
+                out.append(p)
+            out.extend(cost_cap_keys(node[k], p))
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            out.extend(cost_cap_keys(v, "%s[%d]" % (path, i)))
     return out
 
 

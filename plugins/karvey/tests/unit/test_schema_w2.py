@@ -138,8 +138,10 @@ class ProjectW2(unittest.TestCase):
             self.assertEqual([i["path"] for i in errs(PROJ.validate(p))], [path], path)
 
     def test_budget_is_a_warning(self):
+        # wave3 §1.9 (F-62): reported by the state tool as cost.cap_key, a warning even in strict mode
         p = dict(copy.deepcopy(BASE_PROJECT), judges={"budget": 5})
-        out = PROJ.validate(p)
+        self.assertEqual(errs(PROJ.validate(p, strict=True)), [])
+        out = state.validate_data(p, "project", True, "project.json")
         self.assertEqual(errs(out), [])
         self.assertTrue(any("D-30" in i["message"] for i in out))
 

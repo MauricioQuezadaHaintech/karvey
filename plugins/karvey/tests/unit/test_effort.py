@@ -191,5 +191,26 @@ class Command(unittest.TestCase):
         self.assertEqual(code, 0, env["errors"])
 
 
+class CostCap(unittest.TestCase):
+    """@req REQ-W3-017 REQ-W3-062 — cost-limit keys are reported, never enforced, never an error (F-62)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-effort-cap-"))
+
+    def tearDown(self):
+        shutil.rmtree(str(self.tmp), ignore_errors=True)
+
+    def test_REQ_W3_017_cap_keys_warn_citing_d30_and_exit_0_under_strict(self):
+        project = {"git_platform": "github", "repos": ["r"], "spec_repo": "r",
+                   "branch_flow": {"feature_prefix": "feature/", "integration": "main", "production": "main"},
+                   "judges": {"budget": 5}, "cost_limit": {"usd": 10}}
+        make_project(self.tmp, spec=dict(GOOD_SPEC), project=project)
+        code, env = run_json("validate", "--all", "--strict", "--root", str(self.tmp))
+        self.assertEqual(code, 0, env["errors"])
+        caps = [w for w in env["warnings"] if w["code"] == "cost.cap_key"]
+        self.assertEqual(sorted(w["path"] for w in caps), ["$.cost_limit", "$.judges.budget"])
+        self.assertTrue(all("unsupported (D-30)" in w["message"] for w in caps))
+
+
 if __name__ == "__main__":
     unittest.main()

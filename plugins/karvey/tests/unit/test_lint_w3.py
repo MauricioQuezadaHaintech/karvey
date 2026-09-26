@@ -73,5 +73,25 @@ class L47(LintCase):
         self.assertFails("L-47", "lane.diff: the 3.13 default", file=MODES)
 
 
+class L63(LintCase):
+    """@req REQ-W3-017 — no text stops, shortens, skips or asks because of cost."""
+    SKILL = SKILLS + "/karvey-qa/SKILL.md"
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-63")
+
+    def test_negated_statement_passes(self):
+        self.t.append(self.SKILL, "\nThe judge flow never stops when the cost exceeds an estimate: cost is measured.\n")
+        self.assertPasses("L-63")
+
+    def test_stop_when_the_cost_exceeds_fails(self):
+        self.t.append(self.SKILL, "\nStop when the cost exceeds the limit set in project.json.\n")
+        self.assertFails("L-63", "because of cost", file=self.SKILL)
+
+    def test_ask_to_confirm_over_budget_fails(self):
+        self.t.append(self.SKILL, "\nIf the run is over budget, ask to confirm before the next lens.\n")
+        self.assertFails("L-63", "ask to confirm", file=self.SKILL)
+
+
 if __name__ == "__main__":
     unittest.main()

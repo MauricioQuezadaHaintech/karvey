@@ -342,8 +342,7 @@
           ]
         },
         "budget": {
-          "x-karvey-severity": "warning",
-          "x-karvey-note": "ignored: measure only (D-30)"
+          "x-karvey-note": "ignored: measure only (D-30); karvey-state.py validate reports it as cost.cap_key, a warning in every mode, never an error (wave3-optimization §1.9, F-62)"
         }
       }
     },

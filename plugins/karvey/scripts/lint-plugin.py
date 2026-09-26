@@ -2280,6 +2280,30 @@ def l62_load_entries_exist(ctx):
             yield (path, line, "skill %s: Load: names %s, which does not exist" % (name, entry))
 
 
+# --------------------------------------------------------------------------- L-63 (wave3-optimization)
+COST_TRIGGER_RE = re.compile(
+    r"\b(?:cost|budget|spend|spending|usd|us\$|token count)\b[^.\n]{0,30}\b(?:exceeds?|is exceeded|goes over|"
+    r"reach(?:es)?|passes|limit|cap|threshold)\b|\bover (?:the )?budget\b|\bbecause of (?:the )?(?:cost|budget)\b|"
+    r"\b(?:cost|budget|spend) (?:limit|cap|ceiling)\b|\btoo (?:expensive|costly)\b", re.I)
+COST_ACTION_RE = re.compile(r"\b(?:stops?|halts?|aborts?|shortens?|skips?|pauses?|cuts? short|truncates?|"
+                            r"asks? (?:to|for) confirm(?:ation)?|confirms? before)\b", re.I)
+
+
+@check("L-63", "No skill or rule text stops, shortens, skips or asks to confirm because of cost: cost is measured, "
+               "never capped (D-30, REQ-W3-017)", reqs=("W3-017",))
+def l63_no_cost_cap_text(ctx):
+    for path in ctx.text_files():
+        for n, line, lang in iter_lines(ctx.lines(path)):
+            if lang is not None:
+                continue
+            trig = COST_TRIGGER_RE.search(line)
+            act = COST_ACTION_RE.search(line)
+            if not trig or not act or near_negation(line, act.start()):
+                continue
+            yield (path, n, "text %s because of cost (%r): cost is measured, never capped (D-30)" % (
+                act.group(0).lower(), trig.group(0)))
+
+
 # --------------------------------------------------------------------------- L-47 (wave2-structural), L-73 (wave3)
 MODE_CALL_RE = re.compile(r"modes\.(?:resolve|record_hit|default|row|levels_of)\(([^)]*)\)")
 CHECK_ID_LITERAL_RE = re.compile(r"[\"']([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)[\"']")
