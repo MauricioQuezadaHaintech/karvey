@@ -60,13 +60,19 @@ The production approval is never delegated: it needs a prod-kind marker from the
 ## prod-gate (PreToolUse on Bash, on by default, D-02)
 
 Merges and pushes into production need a human prod approval in the release ledger
-(`karvey-state.py approve {change-id} prod`, D-03).
+(`karvey-state.py approve {change-id} prod`, D-03). The approval counts only when the approval hook's audit
+line of its prod marker exists (prompt hash, session, time; D-34), for the head commit the human approved,
+and for 24 h after the OK (D-35). A `reopen` of the change supersedes it (D-36).
 
 - Blocks `gh pr merge`, `az repos pr update --status completed`, `glab mr merge` and `git push` into production without it. <!-- guard-case: pg1-01-gh-merge-admin-no-approval, pg1-18-az-complete-no-approval, pg1-22-glab-merge-no-approval, pg1-25-git-push-main-no-approval, pg3-03-pr-into-master-default-dev-gated, pg3-06-integration-named-main-still-gated -->
 - Allows the same command once the ledger holds the approval. <!-- guard-case: pg1-02-gh-merge-with-ledger, pg1-20-az-complete-with-ledger -->
 - A merge into the integration branch stays silent, also when the remote default branch is the integration branch (D-15); `main` and `master` are always gated. <!-- guard-case: pg1-06-gh-merge-into-dev-silent, pg3-01-pr-into-dev-default-dev-not-gated, pg3-02-merge-into-dev-default-dev-not-gated -->
 - Blocks when the change cannot be determined, the CLI fails or times out, or the files are corrupt (fails closed). <!-- guard-case: pg1-08-change-cannot-be-determined, pg1-12-gh-timeout-fails-closed, pg2-05-corrupt-spec-json, pg2-08-corrupt-ledger -->
 - A hand-edited `approvals.prod` without the ledger still blocks. <!-- guard-case: pg2-07-hand-edited-approvals-prod-without-ledger -->
+- A ledger entry without the approval hook's audit line of its marker blocks. <!-- guard-case: pg5-01-ledger-without-the-hook-audit-record -->
+- The released commit must be the approved one: a commit made after the OK, another branch pushed as the change, a PR head that moved, or an approval older than 24 h blocks. <!-- guard-case: pg5-02-commit-after-the-approval, pg5-03-other-commit-pushed-as-the-change, pg5-04-pr-head-is-not-the-approved-commit, pg5-11-az-pr-source-commit-differs, pg5-06-approval-older-than-24h -->
+- It blocks when it cannot tell which commit is released: a PR answer without its head commit, `--all`/`--mirror`/a delete, or an earlier command in the same call that can move the branch (run the merge or push on its own). <!-- guard-case: pg5-05-pr-answer-without-head-commit, pg5-09-push-all-cannot-name-the-commit, pg5-07-earlier-command-moves-the-released-branch, pg5-08-push-then-merge-in-one-call -->
+- Without python it blocks every production merge or push (fail closed, unchanged by D-35): it never reads the ledger. <!-- guard-case: pg5-02-commit-after-the-approval -->
 - The push destination comes from the repository too: aliases (`-c alias.X=push`, configured, shell), `-c` push settings, a configured upstream or push refspec, `send-pack` and `@` count, and a push or merge run through `xargs` or `find -exec` cannot be verified. <!-- guard-case: pg4-01-inline-alias-to-push-main, pg4-02-configured-alias-to-push-main, pg4-03-inline-remote-push-refspec, pg4-05-configured-upstream-bare-push, pg4-06-configured-remote-push-refspec, pg4-07-send-pack-into-main, pg4-08-xargs-git-push, pg4-19-push-at-sign-from-main, pg4-22-shell-alias-push-into-main -->
 - gh aliases and `gh api` writes to a production branch (the merges endpoint, `git/refs`, `mergeBranch`) are gated; a ref write to another branch is not. <!-- guard-case: pg4-10-gh-alias-to-pr-merge, pg4-11-gh-api-merges-endpoint-into-main, pg4-12-gh-api-ref-update-of-main, pg4-13-gh-api-graphql-merge-branch, pg4-14-gh-api-delete-feature-ref-allowed -->
 - `git push --tags` pushes no branch and is not gated. <!-- guard-case: pg4-17-push-tags-from-main-allowed -->

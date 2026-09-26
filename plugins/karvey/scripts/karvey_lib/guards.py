@@ -566,7 +566,7 @@ GIT_BUILTINS = frozenset({
 class GitTarget:
     """The repository one git segment acts on (§3.4 target resolution)."""
 
-    __slots__ = ("dir", "git_dir", "work_tree", "unresolved", "sub", "args", "via_alias", "config")
+    __slots__ = ("dir", "git_dir", "work_tree", "unresolved", "sub", "args", "via_alias", "config", "origin")
 
     def __init__(self, seg):
         g = seg.git or {}
@@ -577,6 +577,7 @@ class GitTarget:
                 self.unresolved = True
         self.sub, self.args, self.via_alias = g.get("sub"), list(g.get("args") or []), None
         self.config = [c for c in (g.get("config") or []) if isinstance(c, str)]
+        self.origin = None  # the alias segment this one was expanded from
 
     def prefix(self):
         a = []
@@ -652,6 +653,7 @@ def git_targets(ctx, parsed=None):
                 if s2.argv0 == "git" and s2.git:
                     t2 = GitTarget(s2)
                     t2.via_alias = t.via_alias
+                    t2.origin = seg
                     out.append((s2, t2))
             continue
         out.append((seg, t))
@@ -1090,19 +1092,24 @@ def pr_info(c, cwd, budget):
     """``({base, head, title}, error)`` of the PR/MR a candidate merges."""
     if c.kind == "gh":
         argv = ["gh", "pr", "view"] + ([c.selector] if c.selector else []) + \
-               (["-R", c.repo_arg] if c.repo_arg else []) + ["--json", "baseRefName,headRefName,title,number"]
+               (["-R", c.repo_arg] if c.repo_arg else []) + \
+            ["--json", "baseRefName,headRefName,headRefOid,title,number"]
         data, err = _run_cli(argv, cwd, budget)
         keys = ("baseRefName", "headRefName", "title")
+        sha = (data or {}).get("headRefOid")
     elif c.kind == "az":
         if not c.selector:
             return None, "az repos pr update without --id"
         data, err = _run_cli(["az", "repos", "pr", "show", "--id", c.selector, "--output", "json"], cwd, budget)
         keys = ("targetRefName", "sourceRefName", "title")
+        lm = (data or {}).get("lastMergeSourceCommit")
+        sha = lm.get("commitId") if isinstance(lm, dict) else None
     else:
         argv = ["glab", "mr", "view"] + ([c.selector] if c.selector else []) + \
                (["-R", c.repo_arg] if c.repo_arg else []) + ["--output", "json"]
         data, err = _run_cli(argv, cwd, budget)
         keys = ("target_branch", "source_branch", "title")
+        sha = (data or {}).get("sha")
     if err:
         return None, err
     base, head, title = (data.get(k) for k in keys)
@@ -1110,7 +1117,47 @@ def pr_info(c, cwd, budget):
         return None, "the %s answer has no %s" % (c.kind, keys[0])
     return {"base": _strip_heads(base.replace("refs/heads/", "")),
             "head": _strip_heads(head.replace("refs/heads/", "")) if isinstance(head, str) else None,
-            "title": title if isinstance(title, str) else ""}, None
+            "title": title if isinstance(title, str) else "",
+            "sha": sha.lower() if isinstance(sha, str) and _SHA.match(sha.lower()) else None}, None
+
+
+_SHA = re.compile(r"^[0-9a-f]{40}([0-9a-f]{24})?$")
+# D-35: commands that cannot move the commit a later push or merge in the same call releases
+READ_ONLY_GIT = frozenset({"status", "log", "show", "diff", "rev-parse", "describe", "ls-remote", "ls-files",
+                           "ls-tree", "cat-file", "show-ref", "for-each-ref", "rev-list", "merge-base", "shortlog",
+                           "name-rev", "var", "version", "blame", "grep", "help", "whatchanged", "range-diff"})
+READ_ONLY_HOST = {"gh": (("pr", "view"), ("pr", "list"), ("pr", "status"), ("pr", "checks"), ("pr", "diff"),
+                         ("run", "list"), ("run", "view"), ("auth", "status"), ("repo", "view")),
+                  "glab": (("mr", "view"), ("mr", "list"), ("ci", "status")),
+                  "az": (("repos", "pr", "show"), ("repos", "pr", "list"), ("account", "show"))}
+
+
+def _seg_index(segs, seg):
+    return next((i for i, x in enumerate(segs) if x is seg), None)
+
+
+def earlier_writer(ctx, c):
+    """D-35: an earlier command of the same call that can move the commit this candidate releases
+    (``git branch -f X work && git push origin X:main``, ``git push … && gh pr merge``): the gate
+    resolves the commit before anything runs, so such a call cannot be verified. Returns its name."""
+    segs = ctx.parsed.segments
+    anchor = (c.target.origin if c.target is not None and c.target.origin is not None else c.seg)
+    ai = _seg_index(segs, anchor)
+    if ai is None:
+        return None
+    for s2, t in git_targets(ctx):
+        if s2 is c.seg:
+            break
+        oi = _seg_index(segs, t.origin or s2)
+        if oi is None or oi > ai or (oi == ai and t.origin is None):
+            continue
+        if (t.sub or "") not in READ_ONLY_GIT:
+            return "git " + (t.via_alias or t.sub or "?")
+    for s in segs[:ai]:
+        ro = READ_ONLY_HOST.get(s.argv0)
+        if ro is not None and not any(tuple(s.argv[1:1 + len(w)]) == w for w in ro):
+            return " ".join(s.argv[:3])
+    return None
 
 
 def state_tool():
@@ -1203,21 +1250,34 @@ def _evaluate_candidate(ctx, c, deadline):
         if not dests and "--tags" in flags:
             return None  # BUG-29: only tags are pushed, no branch
         if "--all" in flags or "--mirror" in flags:
-            hit = (head_branch, sorted(prods)[0] if prods else "?")
+            hit = (head_branch, sorted(prods)[0] if prods else "?", None)
         elif not dests:
             dests = implicit_push_dests(ctx, t, head_branch) if t.sub == "push" else []
             if not dests and head_branch in prods:
-                hit = (head_branch, head_branch)
-        for src, dst, _f, _d in dests:
+                hit = (head_branch, head_branch, "HEAD")
+        for src, dst, _f, delete in dests:
             if "$" in dst or "`" in dst:
                 return _pg_block(None, "target", "cannot verify the production approval: the push destination "
                                                  "cannot be resolved; rewrite without variables")
             if dst in prods:
-                hit = (head_branch if src in ("HEAD", "") else src, dst)
+                hit = (head_branch if src in ("HEAD", "") else src, dst,
+                       None if delete else ("HEAD" if src in ("HEAD", "") else src))
                 break
         if hit is None:
             return None
         head, base, title = hit[0], hit[1], ""
+        if hit[2] is None:  # D-35: which commit reaches production must be known
+            return _pg_block(None, "sha", "cannot verify the production approval: a push with --all, --mirror or a "
+                                          "delete into %s names no single commit; push an explicit <commit>:%s"
+                             % (base, base))
+        if "$" in hit[2] or "`" in hit[2]:
+            return _pg_block(None, "sha", "cannot verify the production approval: the pushed commit cannot be "
+                                          "resolved; rewrite without variables")
+        rc, released = t.git(ctx, "rev-parse", "--verify", "--quiet", hit[2] + "^{commit}") \
+            if not hit[2].startswith("-") else (1, "")
+        if rc != 0 or not _SHA.match(released or ""):
+            return _pg_block(None, "sha", "cannot verify the production approval: %s does not resolve to a commit"
+                             % hit[2])
     else:
         budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
         info, err = pr_info(c, str(root), budget)
@@ -1227,6 +1287,12 @@ def _evaluate_candidate(ctx, c, deadline):
         if info["base"] not in prods:
             return None  # e.g. a PR into the integration branch: allow, silent
         head, base, title = info["head"], info["base"], info["title"]
+        released = info["sha"]  # None: checked after the change is known (D-35)
+    moved = earlier_writer(ctx, c)
+    if moved:  # D-35
+        return _pg_block(None, "sha", "cannot verify the production approval: an earlier command in this call "
+                                      "(%s) can move the commit it releases; run the release command on its own"
+                         % moved)
     cid, others = released_change(root, head, title, prefix)
     if cid is None:
         return _pg_block(None, "change", "cannot verify the production approval: cannot determine the change being "
@@ -1235,7 +1301,7 @@ def _evaluate_candidate(ctx, c, deadline):
                                          "switches the gate off with enforcement.prod_gate_hook: false, merged to "
                                          "%s" % (base, head or "?", prefix, note, base))  # BUG-30
     try:
-        res = state_tool().check_prod(root, cid)
+        res = state_tool().check_prod(root, cid, sha=released)
     except Exception as exc:
         return _pg_block(cid, "valid spec.json", "cannot verify the production approval: %s" % exc)
     warn = []
@@ -1251,17 +1317,22 @@ def _evaluate_candidate(ctx, c, deadline):
         if pending:
             warn.append("[karvey] prod-gate WARNING: other changes are deploying without a prod approval: %s"
                         % ", ".join(pending))
+    if released is None and res.get("ok"):  # D-35
+        res = dict(res, ok=False, missing=["sha"], reason="cannot verify the production approval: the %s answer "
+                                                          "has no head commit" % c.kind)
     if not res.get("ok"):
         how = (". To release: the human approves production in their own message (the hook prints '[karvey] approval "
                "recorded (prod, %s, …)'), then run: karvey-state.py approve %s prod --by \"<human>\" --role human "
-               "--ref <D-NN or PR URL>" % (cid, cid))  # BUG-30
+               "--ref <D-NN or PR URL> --sha <the head commit the human approved>; the approval covers that commit "
+               "for 24 h" % (cid, cid))  # BUG-30, D-35
         d = _pg_block(cid, ",".join(res.get("missing") or ["?"]),
                       (res.get("reason") or "no production approval") + note + how)
         d.stdout = warn
         return d
-    rec = {"change": cid, "approver": res.get("by"), "ref": res.get("ref"), "branch": base, "reason": "approved"}
-    return Decision.allow(stdout=warn + ["[karvey] prod-gate ALLOW change=%s by=%s ref=%s"
-                                         % (cid, res.get("by"), res.get("ref"))], record=rec, audit=True)
+    rec = {"change": cid, "approver": res.get("by"), "ref": res.get("ref"), "branch": base, "reason": "approved",
+           "sha": released}
+    return Decision.allow(stdout=warn + ["[karvey] prod-gate ALLOW change=%s by=%s ref=%s commit=%s"
+                                         % (cid, res.get("by"), res.get("ref"), released[:12])], record=rec, audit=True)
 
 
 def prod_gate_enabled(ctx):
