@@ -7,7 +7,7 @@ argument-hint: <change-id> [--capability <nombre>] | --settings
 
 # Karvey Init
 
-Load: _core.md, gates.md, project-config.md, management-adapters.md, adapters/{tool}.md, lanes.md
+Load: _core.md, gates.md, project-config.md, management-adapters.md, adapters/{tool}.md, lanes.md, references/team-settings.md?, references/settings.md?
 
 ## Purpose
 
@@ -19,11 +19,8 @@ Create a new change and register its Epic in the team's management tool (`../kar
 
 ### Step 0 — Settings-only mode (`--settings`) — STOP after it
 
-If invoked as `/karvey-init --settings` (or the user only asks to configure the team), run **Step 3.2 only**:
-pre-fill every question with the current values, merge the answers without dropping untouched keys
-(`events`, `location`, custom keys), write `project.json` on a docs branch (Step 3.3), print the `Settings:`
-line and **STOP**. No change-id, no `docs/spec/changes/…`, no `spec.json`, no tracker item. If `project.json`
-does not exist, say so and ask whether to create a minimal one (Step 3 fields) — nothing else.
+`--settings` given (or the user only asks to configure the team) → load `references/settings.md` and
+`references/team-settings.md`, follow them, and **STOP**: no change is created.
 
 ### Step 1 — Verify pre-spec context
 
@@ -38,7 +35,7 @@ If `$ARGUMENTS` includes the change-id, use it. If not, generate it from the des
 
 ### Step 3 — Project config (project.json)
 
-**If `docs/spec/project.json` exists** (in the working copy or on `origin/{integration}`: `git show "origin/$I:docs/spec/project.json"` with `I` from Step 3.3): reuse it. Step 3 does **not** re-ask any of its fields; Step 3.2 may still ask the team settings when their blocks are missing.
+**If `docs/spec/project.json` exists** (in the working copy or on `origin/{integration}`: `git show "origin/$I:docs/spec/project.json"`, `I` = `karvey-config.py get branch_flow.integration --shell`): reuse it. Step 3 does **not** re-ask any of its fields; Step 3.2 may still ask the team settings when their blocks are missing.
 
 **If it does not exist:** create it, pre-populated from the grill synthesis; ask for or infer the rest. Schema: `../karvey/rules/project-config.md`.
 
@@ -48,42 +45,10 @@ If `$ARGUMENTS` includes the change-id, use it. If not, generate it from the des
 - **`repos`**: MINIMUM 1 element. **`spec_repo`**: the one repo, or ask which holds `docs/spec/`.
 - **`branch_flow`**: recommend **trunk** — `{ "feature_prefix": "feature/", "integration": "main", "production": "main", "mode": "trunk" }`: each change reaches production through its own PR. `env-branches` (integration ≠ production, e.g. `dev` → `master`) only when the team deploys an integration environment from its own branch. Without `mode` it is derived (trunk when integration = production); a declared mode that contradicts the branches fails `validate`.
 
-### Step 3.2 — Team settings (first use, or `--settings`)
+### Step 3.2 — Team settings (first use)
 
-Run when `project.json` lacks `notifications` or `management`, or on `--settings`. Otherwise ask nothing.
-Ask with `AskUserQuestion`, one block at a time, with examples — never assume the answer:
-
-1. **Notifications** (`notifications`[^r-notifications]): `Google Chat` · `Slack` · `Microsoft Teams` ·
-   `E-mail` · `Webhook` · `None` · `Not now`. Then the **target** (space id, `#channel`, list, or the *name*
-   of the secret holding a webhook — never a URL), **via** (`mcp` · `cli` · `webhook` · `api`, checking what
-   is available) and **events** (default `qa`, `deploy`). **Not now** → write `notifications.deferred: true`
-   and say how to set it later (`/karvey-init --settings`); the question is not asked again.
-   If the project's `CLAUDE.md` holds a destination table (pre-3.10 setups), offer those values as the
-   pre-filled answer for the human to confirm; nothing is read from `CLAUDE.md` after that.
-2. **Task management** (`../karvey/rules/management-adapters.md`): `ClickUp` · `Jira` · `Linear` ·
-   `Azure Boards` · `GitHub Projects` · `Spreadsheet` · `Markdown (PLAN.md)` · `Other`, then **location** and **via**.
-3. **Status flow**: map the team's real statuses to `todo · in_progress · review · done · blocked`. For a
-   tracker, read the statuses from the tool and propose the map; the user confirms. For `Markdown` the
-   markers are fixed: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked · 🙋 awaiting-human (a blocked qualifier)`.
-
-4. **Branch mode** (`branch_flow.mode`): `trunk (recommended)` — integration = production, one PR per change ·
-   `env-branches` — an integration branch deployed to its own environment. Offer trunk first; keep an existing
-   `env-branches` project as it is unless the team asks to move.
-
-Credentials go to `.connections.json` (git-ignored) or the team's vault — never into `project.json`.
-
-### Step 3.3 — Write the settings as a reviewed change
-
-`project.json` changes travel on a docs branch and take effect **after merge** (the hooks read the reviewed
-line on `origin/{production}`). Never commit it on the integration or production branch:
-
-```bash
-I="$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get branch_flow.integration --shell)"
-git switch -c "docs/karvey-settings" "origin/$I"   # skip if already on a feature/docs branch
-```
-
-Print one line: `Settings: notifications slack #dev-releases (webhook) · management jira PAY (5 states mapped)`
-(or `notifications deferred`).
+`project.json` lacks `notifications` or `management` → load `references/team-settings.md` and ask the settings
+it lists, then write them as a reviewed change (it says how). Otherwise ask nothing and load nothing.
 
 ### Step 3.5 — Enforcement (hooks)
 
@@ -307,6 +272,5 @@ Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this 
 [^r-knowledge-sync]: ../karvey/rules/knowledge-sync.md — context only, not opened.
 [^r-living-specs]: ../karvey/rules/living-specs.md — context only, not opened.
 [^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.
-[^r-notifications]: ../karvey/rules/notifications.md — context only, not opened.
 [^r-security-tiers]: ../karvey/rules/security-tiers.md — context only, not opened.
 [^r-state-machine]: ../karvey/rules/state-machine.md — context only, not opened.

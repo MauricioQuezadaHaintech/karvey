@@ -143,8 +143,9 @@ def refs_of(text, rules_dir, base_dir=None, bindings=None):
     for e in declared(text) or []:
         alts = resolve(e, rules_dir, base_dir, bindings)
         if alts:
-            cond = e.endswith("?")
-            out[alts] = out.get(alts, cond) and cond
+            # a conditional Load: entry stays conditional even when the body names it: that mention is the
+            # pointer line that states its load condition (C-05)
+            out[alts] = e.endswith("?")
     return sorted(out.items(), key=lambda kv: ([str(p) for p in kv[0]], kv[1]))
 
 

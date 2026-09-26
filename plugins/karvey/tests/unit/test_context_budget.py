@@ -314,5 +314,22 @@ class ClosureEqualsLoadList(unittest.TestCase):
                              md.parent.name)
 
 
+class RareReferences(unittest.TestCase):
+    """@req REQ-W3-007 — a reference loads only on its path: out of closure_min, in closure_max."""
+
+    def row(self, skill):
+        plugin = _path.SCRIPTS_DIR.parent
+        row, issues = loadlist.measure_skill(plugin, plugin / "skills" / skill / "SKILL.md")
+        self.assertEqual(issues, [])
+        return row
+
+    def test_init_settings_references(self):
+        row = self.row("karvey-init")
+        refs = ["skills/karvey-init/references/team-settings.md", "skills/karvey-init/references/settings.md"]
+        for ref in refs:
+            self.assertNotIn(ref, row["closure_min_files"])
+            self.assertIn(ref, row["closure_max_files"])
+
+
 if __name__ == "__main__":
     unittest.main()
