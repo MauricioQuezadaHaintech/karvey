@@ -1768,6 +1768,40 @@ def l33_duplicate_ids(ctx):
                     seen[m.group(1)] = n
 
 
+# --------------------------------------------------------------------------- L-49 (wave2-structural)
+@check("L-49", "A change in deployed (not archived) has its spec-delta merged into the living spec "
+               "(karvey-spec-merge.py --check = merged) (REQ-W2-056)", reqs=("W2-056",))
+def l49_deployed_spec_merged(ctx):
+    import subprocess
+    base = ctx.root / "docs/spec/changes"
+    if not base.is_dir():
+        return
+    script = ctx.plugin / "scripts" / "karvey-spec-merge.py"
+    if not script.is_file():
+        script = Path(__file__).resolve().parent / "karvey-spec-merge.py"
+    for d in sorted(base.iterdir()):
+        spec = d / "spec.json"
+        if d.name == "archive" or not spec.is_file():
+            continue
+        data = ctx.json(spec)
+        if not isinstance(data, dict) or data.get("phase") != "deployed" or not (d / "spec-delta.md").is_file():
+            continue
+        try:
+            cp = subprocess.run([sys.executable, str(script), d.name, "--check", "--json", "--root", str(ctx.root)],
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=30, check=False)
+            res = (json.loads(cp.stdout.decode("utf-8", "replace")) or {}).get("result") or {}
+        except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+            yield spec, 1, "cannot check the living spec of deployed change %s: %s" % (d.name, exc)
+            continue
+        status = res.get("status")
+        if status != "merged":
+            ids = res.get("pending") or res.get("conflict_ids") or []
+            yield (spec, 1, "change %s is deployed but its spec-delta is %s in %s (%s): merge it before production "
+                            "(karvey-deploy 2.4-bis) or at archive" % (d.name, status or "not checkable",
+                                                                         res.get("target") or "the living spec",
+                                                                         ", ".join(ids[:5]) or "-"))
+
+
 # --------------------------------------------------------------------------- L-45 (wave2-structural)
 EPIC_RANGE_RES = (re.compile(r"\bE\{\d+\.\.\d+\}"), re.compile(r"\bE\d+\s*\.\.\s*E?\d+\b"),
                   re.compile(r"\bEpics?\b[^.\n]{0,40}?\b\d+\s*\.\.\s*\d+\b", re.I))

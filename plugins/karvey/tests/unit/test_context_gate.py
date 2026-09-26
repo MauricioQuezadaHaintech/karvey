@@ -1,6 +1,6 @@
 """Dashboard lane column, lane skips and automatic approvals (architecture §1.6 of wave2-structural).
 
-@req REQ-W2-021 REQ-W2-040 REQ-W2-027 REQ-W2-037
+@req REQ-W2-021 REQ-W2-040 REQ-W2-027 REQ-W2-037 REQ-W2-056
 """
 import contextlib
 import importlib.util
@@ -156,6 +156,34 @@ class GateSummary(unittest.TestCase):
         self.f.write_text(json.dumps(data))
         g_, _ = self.gate("release")
         self.assertIn("judges: none for lane patch", [j["line"] for j in g_["judges"]])
+
+
+class DeployedNotArchived(unittest.TestCase):
+    """@req REQ-W2-056"""
+
+    def setUp(self):
+        self.t = g.TempDir()
+        make_project(self.t.path, spec={"change_id": "feat-d", "phase": "deployed", "lane": "standard",
+                                        "phase_history": [{"phase": "init", "entered_at": "2026-09-01T10:00:00-03:00",
+                                                           "exited_at": "2026-09-16T10:00:00-03:00"},
+                                                          {"phase": "deployed",
+                                                           "entered_at": "2026-09-16T10:00:00-03:00"}]},
+                     change="feat-d")
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def test_REQ_W2_056_deployed_9_days_not_archived(self):
+        code, out = run("--root", str(self.t.path), "--now", NOW, "--json")
+        ov = json.loads(out)["result"]["overview"]
+        self.assertEqual(ov["deployed_not_archived"], [{"change": "feat-d", "days": 9,
+                                                        "text": "deployed 9 d, not archived"}])
+        code, human = run("--root", str(self.t.path), "--now", NOW)
+        self.assertIn("deployed 9 d, not archived", human)
+
+    def test_within_seven_days_silent(self):
+        code, out = run("--root", str(self.t.path), "--now", "2026-09-20T10:00:00-03:00", "--json")
+        self.assertEqual(json.loads(out)["result"]["overview"]["deployed_not_archived"], [])
 
 
 if __name__ == "__main__":

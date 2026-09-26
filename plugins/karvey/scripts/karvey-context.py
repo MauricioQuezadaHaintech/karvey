@@ -277,6 +277,33 @@ def age_of(c, now, stall_days):
             "since": at.isoformat(timespec="seconds")}
 
 
+def deployed_not_archived(changes, ctx):
+    """Changes in ``deployed`` for more than ``deployed_stall_days`` (REQ-W2-056): the deploy date is the
+    ``deployed`` entry of ``phase_history``, else the last production ``deploys[]`` record."""
+    limit = (ctx["project"] or {}).get("deployed_stall_days") if isinstance(ctx["project"], dict) else None
+    if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+        limit = kl.defaults().get("deployed_stall_days", 7)
+    out = []
+    for c in changes:
+        data = c["data"] or {}
+        if c["phase"] != "deployed":
+            continue
+        at = None
+        for e in reversed(data.get("phase_history") or []):
+            if isinstance(e, dict) and e.get("phase") == "deployed":
+                at = parse_dt(e.get("entered_at"))
+                break
+        if at is None:
+            prod = [d for d in (data.get("deploys") or []) if isinstance(d, dict) and d.get("env") == "prod"]
+            at = parse_dt(prod[-1].get("at")) if prod else None
+        if at is None:
+            continue
+        days = max(0, (ctx["now"] - at).days)
+        if days > limit:
+            out.append({"change": c["id"], "days": days, "text": "deployed %d d, not archived" % days})
+    return out
+
+
 def overview(rd, ctx):
     changes = ctx["changes"]
     active = [c for c in changes if is_active(c)]
@@ -295,7 +322,8 @@ def overview(rd, ctx):
                 row["next"] = None
         rows.append(row)
     wip = ctx["wip_limit"]
-    res = {"active": rows, "active_count": len(active),
+    stall_deployed = deployed_not_archived(changes, ctx)
+    res = {"deployed_not_archived": stall_deployed, "active": rows, "active_count": len(active),
            "wip": {"count": len(active), "limit": wip, "exceeded": bool(wip and len(active) > wip)}}
     try:
         act = pj.active_change(rd.root, project=ctx["project"] or {})
@@ -988,6 +1016,8 @@ def render(result, ctx):
             L.append("%-24s %-14s lane %-11s %-12s next: %s (%s)" % (
                 r["change"], r["phase"], r.get("lane") or "?", r["age"]["text"], nxt.get("phase") or "—",
                 nxt.get("status") or "?"))
+        for s in ov.get("deployed_not_archived") or []:
+            L.append("%-24s %s — run /karvey-archive" % (s["change"], s["text"]))
         w = ov["wip"]
         if w["limit"]:
             L.append(("WARNING WIP %d/%d" if w["exceeded"] else "WIP %d/%d") % (w["count"], w["limit"]))

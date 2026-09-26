@@ -1,6 +1,6 @@
 """karvey-spec-merge.py --check (architecture §1.11 of wave2-structural).
 
-@req REQ-W2-054 REQ-W2-055
+@req REQ-W2-054 REQ-W2-055 REQ-W2-056
 """
 import unittest
 
@@ -36,6 +36,30 @@ class Check(Base):
         code, out, _ = run("feat-x", "--root", str(self.root), "--check")
         self.assertEqual(code, 1)
         self.assertIn("unmerged into docs/spec/specs/demo/spec.md", out + _)
+
+
+class L49(Base):
+    """@req REQ-W2-056 — a deployed change with an unmerged delta is a lint error."""
+
+    def lint(self):
+        import importlib.util
+        import json as _json
+        import _path
+        spec = importlib.util.spec_from_file_location("lint_plugin_l49", str(_path.SCRIPTS_DIR / "lint-plugin.py"))
+        lp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(lp)
+        (self.cdir / "spec.json").write_text(_json.dumps({"change_id": "feat-x", "capability": "demo",
+                                                           "phase": "deployed"}), encoding="utf-8")
+        return lp.run_checks(lp.Ctx(self.root), only={"L-49"})
+
+    def test_REQ_W2_056_deployed_unmerged_is_an_error(self):
+        fs = self.lint()
+        self.assertEqual([f["severity"] for f in fs], ["error"])
+        self.assertIn("deployed but its spec-delta is unmerged", fs[0]["message"])
+
+    def test_deployed_merged_passes(self):
+        self.merge()
+        self.assertEqual(self.lint(), [])
 
 
 if __name__ == "__main__":
