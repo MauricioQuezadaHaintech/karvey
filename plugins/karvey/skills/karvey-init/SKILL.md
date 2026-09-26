@@ -177,7 +177,9 @@ Approvals are recorded later by each phase with `karvey-state.py approve … --b
 
 ### Step 8 — Create prd.md
 
-Write `docs/spec/changes/{change-id}/prd.md` (formal Product Requirements Document):
+Write `docs/spec/changes/{change-id}/prd.md` (formal Product Requirements Document). The Stakeholders section
+is pre-filled from `project.json:stakeholders` (a change may override a role in `spec.json:stakeholders`); with
+none declared it says so and lists who requests and approves:
 ```markdown
 # PRD: {change-id}
 
@@ -206,7 +208,8 @@ Write `docs/spec/changes/{change-id}/prd.md` (formal Product Requirements Docume
 - {what is NOT included and why}
 
 ## Stakeholders
-{who requests, who approves, who is impacted}
+{pre-filled from `project.json:stakeholders`: sponsor, approver, executor — role and display name, never a
+destination; then who else is impacted}
 
 ## Constraints
 - Security Tier: {N} — {justification}

@@ -330,6 +330,10 @@
         }
       }
     },
+    "stakeholders": {
+      "$ref": "karvey:project.schema.json#/$defs/stakeholders",
+      "x-karvey-note": "per-role override of project.json:stakeholders (wave3 §1.12)"
+    },
     "approvals": {
       "type": "object",
       "properties": {

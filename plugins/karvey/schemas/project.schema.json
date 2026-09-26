@@ -217,6 +217,23 @@
         }
       }
     },
+    "stakeholders": {
+      "$ref": "#/$defs/stakeholders"
+    },
+    "leak": {
+      "type": "object",
+      "properties": {
+        "deny_terms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          }
+        }
+      },
+      "x-karvey-note": "terms that must never appear on a sponsor page (other clients' names without a portfolio file, F-72)"
+    },
     "management": {
       "oneOf": [
         {
@@ -472,6 +489,61 @@
           "additionalProperties": false
         }
       ]
+    },
+    "stakeholder": {
+      "type": "object",
+      "required": [
+        "role"
+      ],
+      "x-karvey-note": "wave3 §1.12 (REQ-W3-020): name defaults to the role; the destination target goes through safe_values.check_target (a secret's name for webhook, never a URL)",
+      "properties": {
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "destination": {
+          "type": "object",
+          "required": [
+            "channel"
+          ],
+          "properties": {
+            "channel": {
+              "enum": [
+                "google-chat",
+                "slack",
+                "teams",
+                "email",
+                "webhook",
+                "none",
+                "google_chat"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "x-karvey-safe": "notifications.target"
+            }
+          }
+        }
+      }
+    },
+    "stakeholders": {
+      "type": "object",
+      "properties": {
+        "sponsor": {
+          "$ref": "#/$defs/stakeholder"
+        },
+        "approver": {
+          "$ref": "#/$defs/stakeholder"
+        },
+        "executor": {
+          "$ref": "#/$defs/stakeholder"
+        }
+      }
     }
   }
 }

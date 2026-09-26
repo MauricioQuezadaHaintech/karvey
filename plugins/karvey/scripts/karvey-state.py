@@ -44,6 +44,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import approval, atomicio, effort as ef, gitlog, judges as jd, lanes as ln, modes, project as pj  # noqa: E402
+from karvey_lib import safe_values as sv  # noqa: E402
 from karvey_lib import schema_lite as sl  # noqa: E402
 
 TOOL = "karvey-state"
@@ -447,6 +448,30 @@ def semantic_effort(data, file):
     return out
 
 
+def stakeholder_issues(data, file):
+    """wave3 §1.12 (REQ-W3-020): every stakeholder destination goes through ``safe_values.check_target`` — a
+    literal webhook URL (with or without its scheme) is refused and the secret's name asked for instead. A refusal
+    of input to a field this change introduces: an error in every mode (REQ-W3-061)."""
+    out = []
+    block = data.get("stakeholders")
+    if not isinstance(block, dict):
+        return out
+    for key in pj.STAKEHOLDER_ROLES:
+        st = block.get(key)
+        dest = st.get("destination") if isinstance(st, dict) else None
+        if not isinstance(dest, dict) or not isinstance(dest.get("channel"), str):
+            continue
+        path = "$.stakeholders.%s.destination.target" % key
+        try:
+            sv.check_target(dest["channel"], dest.get("target"), key="stakeholders.%s.destination.target" % key)
+        except sv.UnsafeValue as exc:
+            hint = (" — store the name of the secret that holds it (e.g. SPONSOR_WEBHOOK), never the URL"
+                    if dest["channel"] == "webhook" else "")
+            out.append(kl.issue("stakeholder.target", "%s destination refused: %s%s" % (key, exc.rule, hint),
+                                file=file, path=path))
+    return out
+
+
 def semantic_project(data, strict, file):
     out = []
     if isinstance(data.get("management"), str) and data["management"] == "none":
@@ -457,6 +482,7 @@ def semantic_project(data, strict, file):
         out.append(kl.issue("state.branch_mode", contradiction + " (REQ-W2-049)", severity="error", file=file,
                             path="$.branch_flow.mode"))
     # safe_values (§3.1) joins here when karvey_lib/safe_values.py lands (E1.F7.T1).
+    out += stakeholder_issues(data, file)
     for path in cost_cap_keys(data):
         # wave3 §1.9 (REQ-W3-017, F-62): reported in every mode, never an error — a 4.0 project still passes
         out.append(kl.issue("cost.cap_key", "%s is unsupported (D-30): cost is measured, never capped; the key is "
@@ -548,6 +574,7 @@ def validate_data(data, kind, strict, file=None):
         issues = _legacy_rewrite(issues, data, strict, file)
         issues += semantic_spec(data, strict, file)
         issues += semantic_effort(data, file)
+        issues += stakeholder_issues(data, file)
         issues = _downgrade_pre_312(issues, data, file)
     else:
         issues += semantic_project(data, strict, file)

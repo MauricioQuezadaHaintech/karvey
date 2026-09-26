@@ -319,3 +319,25 @@ def legacy_status_flow(mg):
         return None
     return dict(sf)
 
+
+
+# --------------------------------------------------------------------------- stakeholders (wave3 §1.12)
+STAKEHOLDER_ROLES = ("sponsor", "approver", "executor")
+
+
+def stakeholders(project, spec=None):
+    """``{role: {role, name, destination}}`` of the project, each role overridden by the change's own
+    ``spec.json:stakeholders`` entry (REQ-W3-020). ``name`` defaults to the stakeholder's ``role``."""
+    out = {}
+    for src in (project, spec):
+        block = src.get("stakeholders") if isinstance(src, dict) else None
+        if not isinstance(block, dict):
+            continue
+        for key in STAKEHOLDER_ROLES:
+            st = block.get(key)
+            if isinstance(st, dict) and isinstance(st.get("role"), str) and st["role"].strip():
+                entry = dict(st)
+                if not (isinstance(entry.get("name"), str) and entry["name"].strip()):
+                    entry["name"] = entry["role"]
+                out[key] = entry
+    return out
