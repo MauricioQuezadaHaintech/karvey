@@ -182,5 +182,21 @@ class L67(LintCase):
         self.assertFails("L-67", "self-assigned design score", file=DESIGN_SKILL)
 
 
+class L68(LintCase):
+    """@req REQ-W3-040 REQ-W3-041 — a phase is never mapped to a Feature."""
+    RULE = "plugins/karvey/skills/karvey/rules/sample-tracker.md"
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-68")
+
+    def test_the_new_text_passes(self):
+        self.t.write(self.RULE, "The pipeline phases are a checklist of the Epic, never Features.\n")
+        self.assertPasses("L-68")
+
+    def test_REQ_W3_040_each_pipeline_phase_maps_to_a_feature_fails(self):
+        self.t.write(self.RULE, "Each pipeline phase maps to a Feature of the Epic.\n")
+        self.assertFails("L-68", "pipeline phase mapped to a Feature", file=self.RULE)
+
+
 if __name__ == "__main__":
     unittest.main()

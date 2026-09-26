@@ -188,7 +188,7 @@ The one cascade is defined in `management-adapters.md` → *The cascade*; ClickU
 
 ### Phase-level status (not just leaf tasks)
 
-Each **pipeline phase** maps to a Feature (or a checklist item in the Epic). Closing a phase advances that item, so the ClickUp board reflects pipeline progress (`requirements → … → deploy`), not only leaf impl tasks. Run this at every phase close, per `phase-close.md`.
+The pipeline phases are a **checklist of the Epic** (a ClickUp checklist on the Epic task, one item per phase), never Features — Features are the change's functional areas (`management-adapters.md` → *One work breakdown*). Closing a phase ticks its item, so the board reflects pipeline progress (`requirements → … → deploy`), not only leaf impl tasks. QA and deploy items are the subtasks `E{n}.QA` and `E{n}.DEPLOY` of the Epic. Run this at every phase close, per `phase-close.md`.
 
 ### Incident & backlog mirroring
 - A `BUG-NN` (see `incident-tracking.md`) created during test/qa is mirrored to a ClickUp task; the `BUG-NN` records the task id and vice-versa.

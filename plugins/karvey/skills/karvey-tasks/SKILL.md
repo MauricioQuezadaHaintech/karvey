@@ -37,7 +37,7 @@ Determine sequential mode: if `--sequential`, do not use parallelism markers.
 
 ### Step 2 — Generate tasks.md draft
 
-For each Feature identified in architecture.md, generate tasks per layer following the File Structure Plan.
+For each Feature identified in architecture.md — a **functional area** of the change, never a pipeline phase or a layer alone (`../karvey/rules/management-adapters.md` → *One work breakdown*) — generate tasks per layer following the File Structure Plan. Every task sits under exactly one Feature; a requirement whose tasks span two Features carries a `Split: {reason}` line in the later Feature. The QA and deploy items are `E{n}.QA` / `E{n}.DEPLOY` under the Epic, not Features. Check the result with `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-trace.py" {change-id} --wbs`.
 
 **Granularity rules:**
 - 1 task = 1 unit of work executable by an AI agent

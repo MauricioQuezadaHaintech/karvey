@@ -213,7 +213,7 @@ python3 "$PD" evaluate "{change-id}" --env "{env}" --observed observed.json --ve
 
 ### Step 4 — Record in the tracker
 
-Resolve the tracker with `python3 "$C" resolve management --change "{change-id}" --json` (`../karvey/rules/management-adapters.md`, including its missing-map clause). If `external` is true: `create_task("[Deploy] {change-id}")` with the checklist as subtasks, `set_status(…, in_progress)` while it runs, `link(…, PR)`, `set_status(…, done)` on the PROD confirmation, `blocked` if the gate or the post-deploy verification stops it; a failed call goes to the outbox (`karvey-config.py outbox add`). Otherwise add to `PLAN.md` the deploy status per repo and environment:
+Resolve the tracker with `python3 "$C" resolve management --change "{change-id}" --json` (`../karvey/rules/management-adapters.md`, including its missing-map clause). If `external` is true: find or create **`E{n}.DEPLOY`** under the change's Epic, then `create_task("[Deploy] {change-id}")` as its child (never at the root of the list) with the checklist as subtasks, `set_status(…, in_progress)` while it runs, `link(…, PR)`, `set_status(…, done)` on the PROD confirmation, `blocked` if the gate or the post-deploy verification stops it; a failed call goes to the outbox (`karvey-config.py outbox add`). Otherwise add to `PLAN.md` the deploy status per repo and environment:
 
 ```markdown
 ## Deploy — {change-id}

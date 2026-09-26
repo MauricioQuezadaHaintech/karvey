@@ -2361,6 +2361,25 @@ def l67_no_design_self_score(ctx):
                             "design (rules/judges/design_graphic.md)")
 
 
+# --------------------------------------------------------------------------- L-68 (wave3-optimization)
+PHASE_AS_FEATURE_RE = re.compile(
+    r"\b(?:each|every|a|one)\s+(?:pipeline\s+)?phase\s+(?:maps|is mapped|becomes|is|corresponds)\s+(?:to\s+|as\s+)?"
+    r"(?:a|one|its own)\s+feature\b|\bphases?\s+(?:are|as)\s+features\b", re.I)
+
+
+@check("L-68", "No rule or skill maps a pipeline phase to a Feature: Features are functional areas, phases are an "
+               "Epic checklist (REQ-W3-040, 041)", reqs=("W3-040", "W3-041"))
+def l68_phase_is_not_a_feature(ctx):
+    for path in ctx.text_files():
+        for n, line, lang in iter_lines(ctx.lines(path)):
+            if lang is not None:
+                continue
+            m = PHASE_AS_FEATURE_RE.search(line)
+            if m and not near_negation(line, m.start()):
+                yield (path, n, "a pipeline phase mapped to a Feature (%r): Features are functional areas; phases are "
+                                "a checklist or field of the Epic (management-adapters.md)" % m.group(0))
+
+
 # --------------------------------------------------------------------------- L-65 (wave3-optimization)
 RISK_STATES = ("open", "mitigated", "accepted", "closed", "moved")
 

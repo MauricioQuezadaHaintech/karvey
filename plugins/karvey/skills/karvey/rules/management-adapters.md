@@ -75,7 +75,7 @@ as a precondition of its gate.
 | Operation | Used by | What it means |
 |---|---|---|
 | `create_epic(change)` | init | the unit that represents the change |
-| `create_feature(epic, capability/layer)` | requirements, tasks | grouping level (skip if `hierarchy` has none) |
+| `create_feature(epic, functional area)` | requirements, tasks | a functional area of the change (skip if `hierarchy` has none) |
 | `create_task(feature, E{n}.F{n}.T{n}, estimate_min)` | tasks | a 10–30 min AI task (`clickup-protocol.md` → Estimation) |
 | `set_status(item, logical_state)` | impl, qa, deploy, archive, phase-close | resolved via `statuses` |
 | `comment(item, text)` | phase-close, qa, deploy | factual close comment |
@@ -85,13 +85,32 @@ as a precondition of its gate.
 | `log_time(task, actual_min)` | impl | the actual time as the tool's own time object (the `log_time` column below); `none` → the task record's `actual_ai_min` / `actual_review_min` columns. The estimate is never touched |
 
 **Natural keys (find-or-create):** before creating, search for the item by its key — `E{n}`, `E{n}.F{n}`,
-`E{n}.F{n}.T{n}`, `F-NN`, `BUG-NN`, `[Deploy] {change-id}@{version}` — and reuse it; store the id in
+`E{n}.F{n}.T{n}`, `E{n}.QA`, `E{n}.DEPLOY`, `F-NN`, `BUG-NN`, `[Deploy] {change-id}@{version}` — and reuse it; store the id in
 `spec.json:clickup`. Two items with the same key → stop and ask which is canonical.
 
 **Outbox:** a failed operation is queued, not dropped:
 `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" outbox add {change-id} --op set_status --args '{…}' --key E1.F1.T1 --error "…"`.
 The next phase-close retries it. A child is never created under a parent missing in the tracker: queue it with
 `--parent-key`.
+
+## One work breakdown (the only statement of it)
+
+The tracker holds **one** hierarchy per change, the same in every tool (REQ-W3-040..042):
+
+- **Epic** `E{n}` = the change. **Feature** `E{n}.F{n}` = a **functional area** of the change (what it delivers —
+  never a pipeline phase, never a layer on its own). **Task** `E{n}.F{n}.T{n}` = a 10–30 min unit under exactly one
+  Feature.
+- **Pipeline phases** (`requirements → … → deploy`) are a **checklist or a field of the Epic**, ticked at each phase
+  close — they are never Features.
+- **QA and deploy** live under the Epic as the natural keys **`E{n}.QA`** (the QA review item; the fix tasks of a
+  review are its children) and **`E{n}.DEPLOY`** (the deploy item; `[Deploy] {change-id}@{version}` is its child) —
+  found or created once, never at the root of the list.
+- **Parent/child** carries the hierarchy (the tool's own parent link). **Dependencies only between siblings**: tasks
+  of one Feature, or Features of one Epic; a cross-area need is a dependency between the two Features.
+- A tool **without parent/child** (a flat list, a spreadsheet, some boards) records the parent key in a field or
+  label (`parent: E1.F2`) and the skill says so in its report.
+- Items in the 4.0 shape (a Feature per phase, QA or deploy items at the root) are **reported, never rewritten**:
+  `legacy shape` / `outside the hierarchy` (`phase-close.md`, `karvey-trace.py --wbs`).
 
 ## The cascade (the only statement of it)
 
