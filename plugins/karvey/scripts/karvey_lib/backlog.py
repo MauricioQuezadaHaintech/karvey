@@ -19,6 +19,7 @@ from datetime import date
 
 STATES = ("open", "promoted", "discarded", "done-direct")
 STALE_DAYS = 30
+REFINE_DAYS = 14
 EFFORT_SIZES = {"S": 1, "M": 2, "L": 3}
 _BL_ID = re.compile(r"^BL-\d+$")
 _NONE = ("", "—", "-", "–")
@@ -139,6 +140,17 @@ def stale(row, today, days=STALE_DAYS):
     r = _date(row.get("reviewed"))
     t = _date(today) if isinstance(today, str) else today
     return r is not None and (t - r).days > days
+
+
+def refinement(text, today, refine_days=REFINE_DAYS):
+    """``{date, days, state}`` of the ``Last refinement:`` line: state ``ok``, ``overdue`` (older than the cadence)
+    or ``never refined`` (no line) — REQ-W3-052."""
+    d = last_refinement(text)
+    if d is None:
+        return {"date": None, "days": None, "state": "never refined", "refine_days": refine_days}
+    t = _date(today) if isinstance(today, str) else today
+    days = (t - _date(d)).days
+    return {"date": d, "days": days, "state": "overdue" if days > refine_days else "ok", "refine_days": refine_days}
 
 
 def direct_problems(rows):

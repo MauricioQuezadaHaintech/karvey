@@ -229,6 +229,16 @@
       "minLength": 1,
       "x-karvey-note": "the client this project serves; every new change inherits it (wave3 §1.20, REQ-W3-044)"
     },
+    "backlog": {
+      "type": "object",
+      "properties": {
+        "refine_days": {
+          "type": "integer",
+          "minimum": 1,
+          "x-karvey-note": "backlog refinement cadence in days (default 14); the dashboard flags it overdue (wave3 §1.21, REQ-W3-052)"
+        }
+      }
+    },
     "stakeholders": {
       "$ref": "#/$defs/stakeholders"
     },

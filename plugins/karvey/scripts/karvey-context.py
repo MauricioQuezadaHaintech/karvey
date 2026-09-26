@@ -344,6 +344,12 @@ def overview(rd, ctx):
         res["current"] = None
     if res["wip"]["exceeded"]:
         ctx["warnings"].append(kl.issue("context.wip", "WIP %d/%d" % (len(active), wip), severity="warning"))
+    btext = rd.text(rd.spec / "backlog.md")
+    if btext is not None:  # the refinement cadence (REQ-W3-052)
+        bset = (ctx["project"] or {}).get("backlog") if isinstance((ctx["project"] or {}).get("backlog"), dict) else {}
+        rdays = bset.get("refine_days") if isinstance(bset.get("refine_days"), int) and bset["refine_days"] >= 1 \
+            else bkl.REFINE_DAYS
+        res["backlog_refinement"] = bkl.refinement(btext, ctx["now"].date(), rdays)
     return res
 
 
@@ -1106,6 +1112,12 @@ def render(result, ctx):
             L.append(("WARNING WIP %d/%d" if w["exceeded"] else "WIP %d/%d") % (w["count"], w["limit"]))
         else:
             L.append("WIP %d (no wip_limit)" % w["count"])
+        br = ov.get("backlog_refinement")
+        if br:
+            L.append("backlog refinement: %s" % ("never refined" if br["state"] == "never refined" else
+                                                 "%s (%d days ago%s)" % (br["date"], br["days"],
+                                                                         ", overdue: every %d days" % br["refine_days"]
+                                                                         if br["state"] == "overdue" else "")))
         cur = ov.get("current") or {}
         if cur.get("reason") == "several":
             L.append("several active: %s" % ", ".join(cur.get("candidates") or []))

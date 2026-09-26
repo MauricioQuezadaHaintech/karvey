@@ -143,5 +143,44 @@ class View(unittest.TestCase):
         self.assertEqual(st.stdout.strip(), "")
 
 
+class Cadence(unittest.TestCase):
+    """@req REQ-W3-052"""
+
+    def overview(self, header, project=None):
+        import contextlib
+        import importlib.util
+        import io
+        import json
+        import tempfile
+        from pathlib import Path
+        from _state import make_project
+        tmp = Path(tempfile.mkdtemp(prefix="karvey-bl-cad-"))
+        self.addCleanup(__import__("shutil").rmtree, str(tmp), True)
+        make_project(tmp, project=project or {"repos": ["r"]})
+        (tmp / "docs/spec/backlog.md").write_text("# Discovery Backlog\n\n%s\n| ID | Status |\n|---|---|\n" % header,
+                                                   encoding="utf-8")
+        m = importlib.util.spec_from_file_location("karvey_context_cad", str(_path.SCRIPTS_DIR / "karvey-context.py"))
+        mod = importlib.util.module_from_spec(m)
+        m.loader.exec_module(mod)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            mod.main(["--root", str(tmp), "--section", "overview", "--now", "2026-10-14T10:00:00-03:00"])
+        text = out.getvalue()
+        return [ln for ln in text.splitlines() if ln.startswith("backlog refinement")][0]
+
+    def test_REQ_W3_052_refined_5_days_ago_shows_the_date_without_a_flag(self):
+        self.assertEqual(self.overview("Last refinement: 2026-10-09"), "backlog refinement: 2026-10-09 (5 days ago)")
+
+    def test_20_days_is_overdue(self):
+        self.assertIn("overdue: every 14 days", self.overview("Last refinement: 2026-09-24"))
+
+    def test_REQ_W3_052_no_header_is_never_refined(self):
+        self.assertEqual(self.overview(""), "backlog refinement: never refined")
+
+    def test_the_cadence_is_configurable(self):
+        line = self.overview("Last refinement: 2026-09-24", {"repos": ["r"], "backlog": {"refine_days": 30}})
+        self.assertEqual(line, "backlog refinement: 2026-09-24 (20 days ago)")
+
+
 if __name__ == "__main__":
     unittest.main()
