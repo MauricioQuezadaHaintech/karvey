@@ -18,5 +18,6 @@
                         "qa": ["fiscal", "security"]},
              "always": {"qa": ["fiscal"]}, "cross_model": "prefer"},
   "judge_price_table": {"$comment": "US$ per 1M tokens, input/output: an ESTIMATE used only when the runtime does not report usage (the run is marked estimated: true). Never a budget (D-30).",
-                        "default": {"in": 3.0, "out": 15.0}}
+                        "default": {"in": 3.0, "out": 15.0}},
+  "health_weights": {"types": 0.30, "tests": 0.30, "lint": 0.25, "deadcode": 0.15}
 }

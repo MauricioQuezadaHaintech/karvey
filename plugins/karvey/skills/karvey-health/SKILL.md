@@ -47,6 +47,14 @@ Use reasonable timeouts and degrade gracefully: if a tool fails due to configura
 
 ### 3. Compute a weighted 0–10 score
 
+The score is computed by a script, never by hand, so two runs over the same results give the same number. Write the raw results to a temporary JSON (`types.errors`, `lint.errors_per_kloc` / `warnings_per_kloc`, `tests.passed` / `failed` / `coverage_pct`, `deadcode.items`; leave a dimension out when it had no tool) and run:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-health-score.py" --inputs "$TMP/health-inputs.json" --json
+```
+
+Relay its score, band, sub-scores and effective weights. The report time uses `KARVEY_TZ`; an invalid zone is reported as `fallback zone: …`, never silently. The table below is what the script implements (`defaults.json:health_weights`):
+
 Each dimension produces a 0–10 sub-score. Default weights (adjustable according to the tools present):
 
 | Dimension        | Weight | Sub-score 10 when… |
@@ -69,7 +77,7 @@ Save a **small history** (append-only) of the score and its breakdown, to be abl
 1. `docs/spec/health-history.json` (or `.jsonl`) inside the repo, if the method's `docs/spec/` structure exists.
 2. Otherwise, a repo metrics file: `.karvey/health-history.jsonl`.
 
-Each record includes: timestamp (Chile time), global score, sub-scores per dimension, raw counts (type errors, lint errors/warnings, tests pass/fail, coverage, dead-code), commit/branch if available, and the effective weights used. Append, never overwrite, to preserve the historical series.
+Each record includes: timestamp (the script's `at`, in `KARVEY_TZ`), global score, sub-scores per dimension, raw counts (type errors, lint errors/warnings, tests pass/fail, coverage, dead-code), commit/branch if available, and the effective weights used. Append, never overwrite, to preserve the historical series.
 
 ### 5. Report score + breakdown + trend + recommendations
 

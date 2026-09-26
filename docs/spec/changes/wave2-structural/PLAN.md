@@ -147,7 +147,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 - [x] E1.F9.T1 [Backend] `karvey-id.py next BUG|D|BL|F|Q` (lock, working tree + both decision-log shapes + `refs/remotes/*` scan, clone-local reservation, `--qualified`) + skills that mint IDs call it — est: 15min (P)
 - [x] E1.F9.T2 [Backend] L-45 (no bounded Epic range in any skill) + L-33 as an error for duplicate IDs created after the release — est: 6min (depends E1.F9.T1)
-- [ ] E1.F9.T3 [Backend] `karvey-health-score.py` (named sub-score functions, `health_weights`, `KARVEY_TZ` fallback line) + health skill calls it — est: 10min (P)
+- [x] E1.F9.T3 [Backend] `karvey-health-score.py` (named sub-score functions, `health_weights`, `KARVEY_TZ` fallback line) + health skill calls it — est: 10min (P)
 - [x] E1.F9.T4 [Backend] `karvey-evidence.py -- <cmd>` (argv, streamed, hashes only, own exit code, `--junit`) + `rules/verification.md` cites `evidence.jsonl` lines — est: 10min (P)
 
 ### Feature E1.F10: Post-deploy verification with thresholds
@@ -236,7 +236,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F8.T3 [Test] | ⬜ todo | 5 | — | — |  |
 | E1.F9.T1 [Backend] | ✅ done | 15 | 10 | 0 | investigate mints no ID in its text: not changed |
 | E1.F9.T2 [Backend] | ✅ done | 6 | 6 | 0 | L-33 "after the release" = above the max id of the file on origin/{production} |
-| E1.F9.T3 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F9.T3 [Backend] | ✅ done | 10 | 7 | 0 |  |
 | E1.F9.T4 [Backend] | ✅ done | 10 | 7 | 0 |  |
 | E1.F10.T1 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F10.T2 [Backend] | ⬜ todo | 8 | — | — |  |
