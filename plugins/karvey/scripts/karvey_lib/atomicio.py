@@ -163,7 +163,9 @@ def lock(path, wait_s=5.0, stale_s=None):
     token = ("%d %f %s\n" % (os.getpid(), time.time(), uuid.uuid4().hex)).encode()
     while True:
         try:
-            fd = os.open(str(lp), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            # O_BINARY: on Windows a text-mode fd turns the token's "\n" into "\r\n", and the owner check at
+            # release would never match (the lock would stay behind)
+            fd = os.open(str(lp), os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_BINARY", 0), 0o600)
             break
         except FileExistsError:
             try:

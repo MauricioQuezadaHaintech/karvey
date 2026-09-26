@@ -1145,6 +1145,8 @@ a stale lock is renamed aside (only one waiter can) and put back if it is not th
 | 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-66, karvey-qa D2 errors (E-6) |
 | 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+| 2026-09-26 | REABIERTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | CI windows-advisory on 72b460b: the lock stayed behind on Windows (text-mode fd wrote the token with CRLF, so the owner check at release never matched) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | the lock is opened with O_BINARY; the windows-advisory run of test_atomicio is the regression check |
 
 ## BUG-38 — spec-merge rewrote a BOM/CRLF living spec with LF and no BOM
 - **Priority:** low
