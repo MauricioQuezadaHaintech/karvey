@@ -52,7 +52,7 @@ Before asking anything that could be answered by exploring the codebase, **explo
 
 ### Step 2 — Interrogation tree
 
-Systematically walk through these branches, **one question at a time**:
+Systematically walk through these branches in **batches of at most four questions** — one `AskUserQuestion` call, whose limit is four — each question with its **recommended option first** (marked *(recommended)*). A batch stays within one branch; the next batch adapts to the answers:
 
 #### Branch A: The problem
 1. Who has the problem? (person/system/role)
@@ -73,7 +73,7 @@ Systematically walk through these branches, **one question at a time**:
 12. Are there performance or SLA constraints?
 
 #### Branch F: Technology stack
-> Before asking, explore the codebase: `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `Gemfile`, `Cargo.toml`, DB config files, etc. Only ask what can't be inferred.
+> **Infer first, then confirm once.** Before this branch, read the lockfiles and manifests (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `poetry.lock`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `Gemfile.lock`, `Cargo.lock`, DB config files) and the CI files (`.github/workflows/`, `azure-pipelines.yml`, `.gitlab-ci.yml`). Present the inferred stack as **one confirmation question** (*Confirm the detected stack (recommended)* · *Correct it*); ask the items below only for what could not be inferred or was corrected.
 
 13. What is the backend language and framework? (Node/Express, Python/FastAPI, Go, Java/Spring, Ruby/Rails, etc.)
 14. What database does it use and how does it access it? (PostgreSQL/ORM, MySQL/queries, MongoDB, Oracle/SPs, Redis, etc.)
@@ -106,9 +106,9 @@ Systematically walk through these branches, **one question at a time**:
 ### Step 3 — Format of each question
 
 ```
-**Question N/~27:** {clear and specific question}
-
-*My recommendation:* {your suggested answer based on what you already know about the context}
+**Batch N — {branch}** (at most four questions, one AskUserQuestion call)
+1. {clear and specific question} — options: {recommended option first, marked (recommended)} · {alternatives}
+2. …
 ```
 
 Adapt the questions based on the previous answers. If a branch is already clear, skip it.
@@ -184,8 +184,9 @@ When done, indicate:
 
 ## Interviewer rules
 
-- **One question at a time**. Never ask two questions in the same message.
-- **Always include a recommendation** in each question.
+- **At most four questions per batch** (one `AskUserQuestion` call). Never more than four in one message.
+- **Recommended option first** in each question, marked *(recommended)*.
+- **Infer before asking**: the stack comes from lockfiles, manifests and CI files, confirmed in one question.
 - **Explore the codebase** before asking something that can be discovered on your own.
 - **Don't assume** technology, scale, or users without confirming.
 - **Don't advance** to specification until the tree is covered.
