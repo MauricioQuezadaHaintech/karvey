@@ -7,6 +7,8 @@ argument-hint: [--capability <name>] [--change <change-id>]
 
 # Karvey Context
 
+Load: _core.md
+
 ## Purpose
 
 Quick, read-only view of the project: changes and their phase, open work, approvals, enforcement state,
@@ -52,7 +54,7 @@ PRODUCTION="$(python3 "$CFG" get branch_flow.production --shell)"
 git -C "$repo" log --oneline "$PRODUCTION..$INTEGRATION" 2>/dev/null | wc -l   # >0 ⇒ not yet released
 ```
 
-Live branches follow `../karvey/rules/deploy-workflow.md` → Branch hygiene: absorbed into production → report "should be
+Live branches follow `deploy-workflow`[^r-deploy-workflow] → Branch hygiene: absorbed into production → report "should be
 deleted"; not absorbed → report, never delete.
 
 ### 4. Active sprint (if the tracker has sprints)
@@ -63,3 +65,5 @@ applicable".
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-deploy-workflow]: ../karvey/rules/deploy-workflow.md — context only, not opened.

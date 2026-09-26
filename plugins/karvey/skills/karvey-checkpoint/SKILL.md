@@ -7,6 +7,8 @@ argument-hint: [save | restore] [<change-id>] [--handoff-only | --no-handoff]
 
 # Karvey Checkpoint
 
+Load: _core.md
+
 A **cross-cutting** skill of the Karvey Method: a support layer, **NOT a phase**. It does not advance or modify the change's lifecycle. In particular, it **does NOT touch `spec.json:phase`** nor any phase field.
 
 Inspired by `gstack /context-save` + `/context-restore`, its only job is to ensure that work in progress is not lost between sessions or in a handoff to another person.
@@ -30,7 +32,7 @@ This skill **complements, does not replace**, the living specs or `spec.json`. T
 
 **Both are written whether or not there is a team.** A single agent rotates too, and it is the case
 with the least safety net: nobody else holds the context. **A team changes only where the handoff
-lives and adds the roster around it** — never whether it exists. The team layer (`../karvey/rules/team.md`) is
+lives and adds the roster around it** — never whether it exists. The team layer (`team`[^r-team]) is
 optional; the handoff is not.
 
 **The handoff is produced, not composed.** Its state section is the output of commands; only judgment
@@ -48,7 +50,7 @@ session *competent* rather than merely informed:
 | **Who I am** | Role, the repos owned, **what is explicitly not mine**, who approves what. A session that does not know its boundaries either overreaches or stalls. |
 | **The manifest / standing rules** | The rules that govern how this agent works. **Referenced with its commit, not copied** — a copy ages and then two versions disagree. If a compact version exists, that is what a reload reinjects. |
 | **The board** | The open tasks with their state. A request that lives only in a session's context disappears when the next task arrives, and whoever asked has no way to know. |
-| **The closing checklist** | What must be true before this agent reports anything as done (`../karvey/rules/verification.md`). It travels with the agent, because it is the first thing a tired session skips. |
+| **The closing checklist** | What must be true before this agent reports anything as done (`verification`[^r-verification]). It travels with the agent, because it is the first thing a tired session skips. |
 | **Repo state** | Branch, last commit, uncommitted, unmerged — per owned repo, measured. |
 | **Scheduled tasks, with their full prompt** | They die with a context reset, silently. Without this they stop existing and nobody is told. |
 
@@ -82,7 +84,7 @@ The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`
 3. **Collect the human context** of the session: decisions made, why, what is left pending and what the concrete next step is to resume.
 4. **Write the checkpoint** to `docs/spec/changes/{change-id}/checkpoint.md`, or to a project-level checkpoint (`docs/spec/checkpoint.md`) if there is **no** active change. Use the "Checkpoint format" section.
 5. **Resolve the agent profile** — where this agent's own artifacts live:
-   - **Team configured** (`docs/spec/team.json`, or a legacy `.ceo-agentes`, searching upward): role from the working directory, artifacts under `{ops_repo}/agents/<role>/` and `{ops_repo}/board/<role>.md`. See `../karvey/rules/team.md`.
+   - **Team configured** (`docs/spec/team.json`, or a legacy `.ceo-agentes`, searching upward): role from the working directory, artifacts under `{ops_repo}/agents/<role>/` and `{ops_repo}/board/<role>.md`. See `team`[^r-team].
    - **No team** (the default): artifacts under `docs/spec/agent/` — `manifest.md`, `board.md`, `checklist.md`, `handoff.md`.
    - **Neither exists yet:** create `docs/spec/agent/` from the templates below, ask the three questions needed to fill the manifest (who this agent is, which repos it owns, what is not its call), and continue. **Bootstrapping is part of the save, not a prerequisite for it.**
 6. **Refresh the pieces before quoting them** — a handoff that cites a stale board is worse than one that cites nothing:
@@ -90,7 +92,7 @@ The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`
    - **Manifest / checklist:** verify they still describe how this agent works; if a rule changed, **correct the body** and note the change. Record their commit (`git log -1 --pretty=%h -- <path>`) in the handoff, so `restore` can detect drift.
 7. **Write the handoff** using the "Handoff format" section. Put measured output into section 0, not
    memory of it: for every claim of "done", run the check that measures it (the published version stamp,
-   the live resource, the API response) per `../karvey/rules/verification.md`, and list the scheduled
+   the live resource, the API response) per `verification`[^r-verification], and list the scheduled
    tasks of this session **with their full prompt**.
 8. **Commit the handoff by explicit path**, before the capture:
    ```bash
@@ -212,7 +214,7 @@ They die with the context reset, silently.
 {date · who · what changed since the previous handoff}
 ```
 
-**Rules for writing it** (each from a real failure — see `../karvey/rules/verification.md`):
+**Rules for writing it** (each from a real failure — see `verification`[^r-verification]):
 
 - **Correct the body; never append a revision at the end.** The next reader goes top-down and stops at the stale paragraph without reaching the note that closed it.
 - **Measured, not recalled.** Section 0 is command output. Anything claimed as done was checked in this session.
@@ -233,7 +235,7 @@ second handoff: if it and the prose disagree, **the prose is the one that aged**
 
 `docs/spec/agent/manifest.md` — who I am, the repos I own, **what is not my call**, who approves what,
 and how I communicate. `docs/spec/agent/board.md` — a table of `id · priority · task · state · updated
-· note`. `docs/spec/agent/state.json` — written by the capture script, never by hand. `docs/spec/agent/checklist.md` — the closing checks, starting from `../karvey/rules/verification.md` and
+· note`. `docs/spec/agent/state.json` — written by the capture script, never by hand. `docs/spec/agent/checklist.md` — the closing checks, starting from `verification[^r-verification]` and
 adding whatever this project has paid for once. `handoff.md` — the format above.
 
 With a team these same four files move to `{ops_repo}/agents/<role>/` and the board to
@@ -251,3 +253,6 @@ hook resolves the same two layouts; `karvey-team init` migrates them rather than
 - Rotation thresholds: `team.json:rotation` when there is a team, otherwise `rotation_hours`, `context_pct` (percent of the window, D-18; `context_tokens` when the window size is unknown) in `${CLAUDE_PLUGIN_ROOT}/scripts/karvey_lib/defaults.json` (D-06), or the close of a work block.
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-team]: ../karvey/rules/team.md — context only, not opened.
+[^r-verification]: ../karvey/rules/verification.md — context only, not opened.

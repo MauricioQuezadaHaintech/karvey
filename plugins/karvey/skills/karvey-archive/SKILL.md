@@ -7,9 +7,11 @@ argument-hint: <change-id>
 
 # Karvey Archive
 
+Load: _core.md, gates.md, living-specs.md, knowledge-sync.md, backlog.md, risks.md, management-adapters.md, adapters/{tool}.md
+
 ## Purpose
 
-PHASE 12, the last: after `/karvey-deploy`, close the change's lifecycle on its own docs branch — record the release in `spec.json`, check that the living specs already hold the spec-delta (merged before production; a legacy leftover is merged here), archive the change directory, close the Epic in the team's tracker (`../karvey/rules/management-adapters.md`) or in `PLAN.md`, and run the knowledge sync. Nothing is committed on the integration or production branch (`../karvey/rules/state-machine.md`, D-03).
+PHASE 12, the last: after `/karvey-deploy`, close the change's lifecycle on its own docs branch — record the release in `spec.json`, check that the living specs already hold the spec-delta (merged before production; a legacy leftover is merged here), archive the change directory, close the Epic in the team's tracker (`../karvey/rules/management-adapters.md`) or in `PLAN.md`, and run the knowledge sync. Nothing is committed on the integration or production branch (`state-machine`[^r-state-machine], D-03).
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
@@ -32,7 +34,7 @@ git checkout -b "chore/archive-{change-id}" "origin/$P"
 `python3 "$S" next "{change-id}" --json` must show the change in `deploying` with every gate before it approved or skipped (`invalid` → show the errors and stop). Also verify:
 - [ ] Tests executed: `docs/spec/changes/{change-id}/test_evidence.md` exists for the change (evidence lives inside the change).
 - [ ] QA review in `docs/spec/changes/{change-id}/qa/`, no pending critical or high finding.
-- [ ] `findings.md` converged: no `open`/`routed` `bug` or `spec-gap` (`../karvey/rules/iteration-loop.md`).
+- [ ] `findings.md` converged: no `open`/`routed` `bug` or `spec-gap` (`iteration-loop`[^r-iteration-loop]).
 - [ ] No Task or Feature of the change left in `review` in the tracker; list any that remain and stop until QA moves them.
 
 Blockers → report and stop.
@@ -115,12 +117,12 @@ The knowledge sync is optional and runs at archive and on demand, never per phas
 ### Step 7 — Close the loop (sweeps and optional steps)
 
 1. **Discovery backlog** (`../karvey/rules/backlog.md`): list the `open` items from this change; for each, with the user, **promote** (new change via `/karvey-grill` or `/karvey-init`, recording `seed_backlog_id`), **keep** or **discard** (with a reason); mirror the status to the tracker's backlog if there is one. Report the counts — never sweep silently.
-2. **Branch sweep** (`../karvey/rules/deploy-workflow.md` → *Branch hygiene*): absorbed non-protected branches are deleted; not absorbed ones are listed for the human. Report the counts.
+2. **Branch sweep** (`deploy-workflow`[^r-deploy-workflow] → *Branch hygiene*): absorbed non-protected branches are deleted; not absorbed ones are listed for the human. Report the counts.
 3. **Optional, recommended:** `/karvey-retro {change-id}` (velocity, test health, opportunities) and `/karvey-docs {change-id}` (user/project documentation — not the living specs, already merged). Ask with `AskUserQuestion`; not blocking.
 
 ### Step 8 — Docs-only PR
 
-Push `chore/archive-{change-id}` and open one PR through the docs-only lane (`../karvey/rules/multi-agent.md` §8): light CI, no version bump, no deploy.
+Push `chore/archive-{change-id}` and open one PR through the docs-only lane (`multi-agent`[^r-multi-agent] §8): light CI, no version bump, no deploy.
 
 ### Step 9 — Final output
 
@@ -143,3 +145,8 @@ Optional: 🔁 /karvey-retro {change-id} · 📚 /karvey-docs {change-id}
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-deploy-workflow]: ../karvey/rules/deploy-workflow.md — context only, not opened.
+[^r-iteration-loop]: ../karvey/rules/iteration-loop.md — context only, not opened.
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.
+[^r-state-machine]: ../karvey/rules/state-machine.md — context only, not opened.

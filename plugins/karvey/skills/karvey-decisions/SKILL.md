@@ -7,6 +7,8 @@ argument-hint: [log | cross | ask | show <D-NN>] [--series D|C] [--repo <ops_rep
 
 # Karvey Decisions
 
+Load: _core.md, multi-agent.md
+
 A **cross-cutting** skill of the Karvey Method. **NOT a phase**; it never moves `spec.json:phase`.
 
 In Karvey, a change cites the decisions it comes from (`spec.json:decisions: ["D-NN@repo"]`, see
@@ -59,7 +61,7 @@ one silently; the owner decides which entry stands and the other is superseded.
      model is routinely read as deleting the concept.
 3. If it supersedes an earlier decision, cite it **in both directions**: the new one names the old,
    and the old one gets a superseded-by line. **Correct the body of anything the decision invalidates**
-   — a decision appended at the end leaves the body lying (`../karvey/rules/verification.md`).
+   — a decision appended at the end leaves the body lying (`verification`[^r-verification]).
 4. **Record it before announcing it.** Whoever takes a decision writes it down first, so the person
    who goes looking for it finds it.
 
@@ -109,3 +111,5 @@ and by `karvey-checkpoint restore` before repeating an open question.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-verification]: ../karvey/rules/verification.md — context only, not opened.

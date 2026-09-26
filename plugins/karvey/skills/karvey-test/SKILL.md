@@ -7,6 +7,8 @@ argument-hint: <change-id> [--e2e-only] [--unit-only]
 
 # Karvey Test
 
+Load: _core.md, gates.md, targets.md, phase-close.md, iteration-loop.md
+
 ## Purpose
 
 Run the full post-implementation test plan: unit tests per layer and E2E tests of the complete flow. **The contract is §6 (test coverage plan) of `architecture.md`**: every case it lists is run or reported as not run, with the reason. Plan and evidence live **inside the change** (`docs/spec/changes/{change-id}/test_plan.md` and `test_evidence.md`), never in a file shared across changes (REQ-W2-061).
@@ -163,7 +165,7 @@ For each E2E flow step, regardless of method, document:
 
 ### Step 4-bis — Infrastructure tests (IAM bindings and ops steps)
 
-If the change has `[human]` or `[Infra]` tasks that grant permissions, or is an `ops` change (`../karvey/rules/multi-agent.md` §5–6), run the **read-only verification scripts** that `karvey-infra` produced (e.g. `infra/iam/{change-id}.verify.sh`) as infrastructure tests:
+If the change has `[human]` or `[Infra]` tasks that grant permissions, or is an `ops` change (`multi-agent`[^r-multi-agent] §5–6), run the **read-only verification scripts** that `karvey-infra` produced (e.g. `infra/iam/{change-id}.verify.sh`) as infrastructure tests:
 - Assert the **binding itself** (member · role · resource), not only its effect — an end-to-end success can hide an over-granted role.
 - Also assert that no broader role was granted to the same member than the one declared (least privilege).
 - Record each check in `docs/spec/changes/{change-id}/test_evidence.md` (Infrastructure section) with the command, output and PASS/FAIL. A FAIL is a `bug` finding; if the human step was not executed yet, the task stays `awaiting-human` and the test is reported as **pending**, not FAIL.
@@ -181,7 +183,7 @@ This measurement can be delegated to or related with the **`karvey-health`** ski
 
 ### Step 4C — Automatic regression tests + incident logging
 
-**Every time a test detects a bug**, log it in the incident tracker `docs/bugs_dev_testing.md` as a `BUG-NN` (the number comes from `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG` — never counted by hand), opening its **State history** at `DETECTADO` (see `../karvey/rules/incident-tracking.md`), and mirror it to `docs/spec/incidents-index.md`. The same bug is also recorded as a `bug`-type finding in `findings.md` (Step 5B).
+**Every time a test detects a bug**, log it in the incident tracker `docs/bugs_dev_testing.md` as a `BUG-NN` (the number comes from `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG` — never counted by hand), opening its **State history** at `DETECTADO` (see `incident-tracking`[^r-incident-tracking]), and mirror it to `docs/spec/incidents-index.md`. The same bug is also recorded as a `bug`-type finding in `findings.md` (Step 5B).
 
 **When it is fixed**, generate an automatic regression test that covers exactly that case, so it fails again if the bug reappears, and move the incident to `RESUELTO` (a regression test is required to reach `RESUELTO`). That is: for every fixed FAIL, a new test must remain in the suite.
 
@@ -320,7 +322,7 @@ You only **classify and append** here; routing is `karvey-iterate`'s job. If `fi
 
 ### Step 5C — Phase-close
 
-Run the phase-close ritual (`../karvey/rules/phase-close.md`): status in the team's tracker (`../karvey/rules/management-adapters.md`) or `PLAN.md`, findings and incidents recorded. The state was advanced in Step 1; nothing in `spec.json` is edited by hand.
+Run the phase-close ritual (`../karvey/rules/phase-close.md`): status in the team's tracker (`management-adapters`[^r-management-adapters]) or `PLAN.md`, findings and incidents recorded. The state was advanced in Step 1; nothing in `spec.json` is edited by hand.
 
 ### Step 6 — Report to the user
 
@@ -370,3 +372,7 @@ Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this 
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `../karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-incident-tracking]: ../karvey/rules/incident-tracking.md — context only, not opened.
+[^r-management-adapters]: ../karvey/rules/management-adapters.md — context only, not opened.
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.

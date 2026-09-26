@@ -7,6 +7,8 @@ argument-hint: <change-id> [--source <branch>] [--target <branch>]
 
 # Karvey QA
 
+Load: _core.md, gates.md, phase-close.md, iteration-loop.md, management-adapters.md, adapters/{tool}.md, versioning.md, notifications.md
+
 ## Purpose
 
 Code review across 9 dimensions, post-implementation. **QA observes; it never changes the code under review and never commits a fix.** Every defect becomes a finding in the change's `findings.md`, fixed later through `/karvey-iterate` → impl → test → qa. QA writes the review document, creates items in the team's tracker (`../karvey/rules/management-adapters.md`) or PLAN.md, and notifies the team's configured channel (`../karvey/rules/notifications.md`).
@@ -32,7 +34,7 @@ git log "$TARGET...$SOURCE" --oneline
 
 ### Step 0B — Lane check (QA and QA-lite)
 
-The lane check measures the diff against the change's lane (`../karvey/rules/lanes.md`) before the review:
+The lane check measures the diff against the change's lane (`lanes`[^r-lanes]) before the review:
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" lane-check "{change-id}" --base "$TARGET" --head "$SOURCE" --finding "{F-NN}"
@@ -138,7 +140,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-security-scan.py" validate-suppres
 - Variables with no fallback in some environment
 - Variables in `.env.example` but not used
 
-**Dimension 6: Versioning** (`../karvey/rules/versioning.md`, `../karvey/rules/changelog-policy.md`), for each repo with changes:
+**Dimension 6: Versioning** (`../karvey/rules/versioning.md`, `changelog-policy`[^r-changelog-policy]), for each repo with changes:
 - `unreleased-section`: `CHANGELOG.md` has a `## [Unreleased]` section with one line per commit of the change.
 - `one-bump-per-release`: the diff does not bump the version; the bump happens once, at the release step of `/karvey-deploy`.
 - `versions-agree`: the version files that exist (`package.json`, `pyproject.toml`, `VERSION`, manifests) agree with each other and with the top released CHANGELOG entry.
@@ -167,7 +169,7 @@ Audit the **already-built** UI in the target's actual runtime (not the mockup, n
 
 **Dimension 9: Standards conformance (golden path)**
 
-`karvey-impl` loads the engineering standards as a hard constraint and requires a Deviation Request before departing from them (`../karvey/rules/engineering-standards.md`). This dimension **verifies that it actually happened**. Without it the method only trusts: an implementation that skipped the golden path without raising the Deviation Request reaches production with nothing having checked.
+`karvey-impl` loads the engineering standards as a hard constraint and requires a Deviation Request before departing from them (`engineering-standards`[^r-engineering-standards]). This dimension **verifies that it actually happened**. Without it the method only trusts: an implementation that skipped the golden path without raising the Deviation Request reaches production with nothing having checked.
 
 Do not confuse it with Dimension 3: **Consistency** measures coherence *internal* to the module (patterns, naming, duplication); **conformance** measures agreement with the *documented standard*. A module can be impeccably consistent with itself and be entirely outside the golden path.
 
@@ -281,7 +283,7 @@ Add a "QA Review" section at the end of PLAN.md with the list of findings and pe
 ### Step 3D — Classify findings & route the iteration loop
 
 QA findings are not all the same kind. Append each to `docs/spec/changes/{change-id}/findings.md` classified by type (see `../karvey/rules/iteration-loop.md`), because each goes to a different edge:
-- `bug` — code defect against a correct spec (most security/error/consistency findings). → incident tracker `BUG-NN` (`incident-tracking.md`) + the QA micro-loop `impl→test→qa`.
+- `bug` — code defect against a correct spec (most security/error/consistency findings). → incident tracker `BUG-NN` (`incident-tracking`[^r-incident-tracking]) + the QA micro-loop `impl→test→qa`.
 - `spec-gap` — QA revealed the **spec was wrong/incomplete** (e.g. an impact finding that shows a requirement contradicts existing behavior, or a visual deviation because `design-spec` never specified that state). → re-open `requirements`.
 - `emergent` — a valid improvement that is **out of this change's scope**. → discovery backlog.
 
@@ -347,3 +349,8 @@ Close the phase per `../karvey/rules/gates.md` (phase `qa`, gate *release*): `ge
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `../karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-changelog-policy]: ../karvey/rules/changelog-policy.md — context only, not opened.
+[^r-engineering-standards]: ../karvey/rules/engineering-standards.md — context only, not opened.
+[^r-incident-tracking]: ../karvey/rules/incident-tracking.md — context only, not opened.
+[^r-lanes]: ../karvey/rules/lanes.md — context only, not opened.

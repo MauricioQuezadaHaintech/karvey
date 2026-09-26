@@ -7,6 +7,8 @@ argument-hint: <change-id> [--finding F-NN] [--auto]
 
 # Karvey Iterate — The Iteration Engine
 
+Load: _core.md, iteration-loop.md, incident-tracking.md, backlog.md, risks.md, management-adapters.md, notifications.md, phase-close.md
+
 > **Afán** = don't stop until the result is really achieved. This skill is where that lives: it takes
 > what testing/QA/real-runtime surfaced and sends each item back to where it belongs, instead of
 > letting it die at the end of a linear pipeline.
@@ -38,7 +40,7 @@ Read:
 - `docs/spec/changes/{change-id}/findings.md` (the inbox; if it doesn't exist, there's nothing to iterate — tell the user and stop)
 - `docs/spec/changes/{change-id}/requirements.md` and `spec-delta.md` (for spec-gap routing)
 - `docs/spec/project.json` (notifications, repos); the tracker through `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" resolve management --change "{change-id}" --json`
-- `spec.json:type`, `links` and `inputs` (hotfix lane, parent/child ripple and input drift — see `../karvey/rules/multi-agent.md`). A `spec-gap` in a **child** change that alters the parent's acceptance criteria is also reported to the parent change.
+- `spec.json:type`, `links` and `inputs` (hotfix lane, parent/child ripple and input drift — see `multi-agent`[^r-multi-agent]). A `spec-gap` in a **child** change that alters the parent's acceptance criteria is also reported to the parent change.
 
 If `--finding F-NN` is given, process only that finding. Otherwise process every `open` finding.
 
@@ -60,7 +62,7 @@ If a finding's type is ambiguous or its routing is irreversible (re-opening requ
 4. The fix itself runs through the existing micro-loop: `/karvey-impl {change-id}` (fix) → `/karvey-test {change-id}` (incl. its regression test, Step 4C) → `/karvey-qa {change-id}`. The incident reaches `RESUELTO` only once a regression test exists.
 5. If the resolved tracker is `external`, create/link the item there (`create_task` / `link`, see `management-adapters.md`) and record its id on the `BUG-NN`.
    If `project.json:notifications.events` includes `incident`, notify the team's channel when the `BUG-NN` reaches `DIAGNOSTICADO` or `REABIERTO` (`notifications.md`); otherwise skip.
-6. **Hotfix lane** (`spec.json:type = "hotfix"`, or a production defect that cannot wait — including one found **during an E2E run in production**), see `../karvey/rules/multi-agent.md` §7:
+6. **Hotfix lane** (`spec.json:type = "hotfix"`, or a production defect that cannot wait — including one found **during an E2E run in production**), see `multi-agent`[^r-multi-agent] §7:
    - **Rule: fix + `BUG-NN` + regression test in the same PR.** The PR that ships the fix also adds the tracker entry, the `findings.md` entry and a regression test that fails without the fix. A fix PR missing any of the three is not mergeable.
    - The Iron Law still holds: if the incident is live, the root cause may be written right after the fix, but the incident stays `EN FIX` until it is; `RESUELTO` only with the regression test green.
    - Each hotfix is its own release (rev bump + CHANGELOG). Chained hotfixes on the same day append one `revision_history` entry each: `{ "date", "finding": "F-NN", "bug": "BUG-NN", "release": "x.y.z", "reason" }`.
@@ -80,7 +82,7 @@ If a finding's type is ambiguous or its routing is irreversible (re-opening requ
 > Be surgical. The point of the ripple set is to avoid redoing the whole pipeline for a one-line spec fix.
 
 #### 3b-bis · Input drift → automatic ripple candidate
-When a pinned input (`spec.json:inputs.design|design_system|copy|legal`, format `{repo} {path} @{commit}`) is behind its source repo — reported by `karvey-health` or noticed by any agent — create a `spec-gap` candidate finding and handle it here (see `../karvey/rules/multi-agent.md` §3):
+When a pinned input (`spec.json:inputs.design|design_system|copy|legal`, format `{repo} {path} @{commit}`) is behind its source repo — reported by `karvey-health` or noticed by any agent — create a `spec-gap` candidate finding and handle it here (see `multi-agent`[^r-multi-agent] §3):
 1. Diff the input: `git -C {repo} diff {pinned}..{head} -- {path}`.
 2. No behavioral impact (typo, formatting) → re-pin, append `revision_history` `{ "date", "input": "{key}", "from": "{old}", "to": "{new}", "reason", "ripple": [] }`, close the finding.
 3. Impact → treat as a `spec-gap` (3b): re-pin, amend the affected requirement, and ripple by input type — `design`/`design_system` → design-graphic (+ impl of the touched components) · `copy` → impl of the touched texts · `legal` → requirements + impl, and QA re-checks the legal texts verbatim.
@@ -100,7 +102,7 @@ Not a risk → `rejected: {reason}`. The judge never writes the register; only t
 
 For each routed finding, set `status: routed` and fill `routed to` (BUG-NN / spec-delta req / BL-NN) in `findings.md`. A finding becomes `closed` only when its destination resolves it (incident `RESUELTO`, requirement re-approved, or backlog item acknowledged).
 
-**Judge rows** (origin `judge:{lens}`, `../karvey/rules/judges.md`) record the decision in `routed to` in one of two
+**Judge rows** (origin `judge:{lens}`, `judges`[^r-judges]) record the decision in `routed to` in one of two
 forms, so the acceptance rate per lens is computable (`karvey-context.py --metrics`, `judge_acceptance`):
 
 - `accepted:{bug|spec-gap|emergent} {ref}` — routed like any finding (e.g. `accepted:spec-gap REQ-W2-014`);
@@ -148,3 +150,6 @@ A change may proceed to `deploy`/`archive` only when `findings.md` has **no `ope
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+
+[^r-judges]: ../karvey/rules/judges.md — context only, not opened.
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.

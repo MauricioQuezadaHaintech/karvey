@@ -7,6 +7,8 @@ argument-hint: <change-id> [F{n}.T{n}] [--from F{n}.T{n}]
 
 # Karvey Impl
 
+Load: _core.md, gates.md, management-adapters.md, adapters/{tool}.md, engineering-standards.md, changelog-policy.md, phase-close.md
+
 ## Purpose
 
 Execute the implementation tasks in DB→Backend→Frontend order. Per-task cycle: read → execute → test → validate. Update the team's tracker (`../karvey/rules/management-adapters.md`) or `PLAN.md` in real time. States are logical (`todo | in_progress | review | done | blocked`), resolved through `project.json:management.statuses`.
@@ -21,7 +23,7 @@ Read:
 - `docs/spec/changes/{change-id}/architecture.md`
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/deviations.md` (if it exists — deviations already approved at design time)
-- Pinned inputs from other agents (`spec.json:inputs` — design, design system, copy, legal), read **at the pinned commit**. Copy and legal texts are implemented verbatim from that commit; if the source moved on, stop and route it through `/karvey-iterate` instead of silently taking the newer version (`../karvey/rules/multi-agent.md` §3).
+- Pinned inputs from other agents (`spec.json:inputs` — design, design system, copy, legal), read **at the pinned commit**. Copy and legal texts are implemented verbatim from that commit; if the source moved on, stop and route it through `/karvey-iterate` instead of silently taking the newer version (`multi-agent`[^r-multi-agent] §3).
 - **Engineering standards** for the layers being implemented: resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and read the relevant `standards/{layer}.md` (see `../karvey/rules/engineering-standards.md`). These are a **hard constraint** on the code you write.
 
 Enter the phase through the state tool; it refuses (and names the gate) when `tasks` is not approved:
@@ -40,7 +42,7 @@ Select from **one declared source** — the tracker when `karvey-config.py resol
 - Start a [Backend] task only when the [DB] tasks it depends on are at `review` or `done`
 - Start a [Frontend] task only when the [Backend] tasks it depends on are at `review` or `done`
 - Tasks marked `(P)` can be executed in parallel with subagents
-- **`[human]` tasks are never executed by the agent** (see `../karvey/rules/multi-agent.md` §5). When one is next:
+- **`[human]` tasks are never executed by the agent** (see `multi-agent`[^r-multi-agent] §5). When one is next:
   1. Present its command, verification and rollback to the executor exactly as written in `tasks.md`.
   2. Set it to **`awaiting-human`** — tracker: `comment(task, "🙋 AWAITING HUMAN: {executor} · {command}")` + the tool's tag/label `awaiting-human` (the logical state stays `todo`, or `blocked` if the team maps it so); Markdown: `🙋 awaiting-human` in `PLAN.md`.
   3. Skip to the next task that does **not** depend on it. Dependents stay blocked.
@@ -62,13 +64,13 @@ Do the technical work: create/modify files per the File Structure Plan.
 - Do not hardcode secrets or credentials
 - Validate the user context/authentication on every endpoint and data access, per the project's pattern
 
-**Branching rules (see `../karvey/rules/deploy-workflow.md`):**
+**Branching rules (see `deploy-workflow`[^r-deploy-workflow]):**
 - Before starting: `git pull` and work on `feature/{change-id}` (the prefix is `karvey-config.py get branch_flow.feature_prefix --shell`). Create the branch if it does not exist.
 - NEVER commit directly to `dev` or `master`.
 - 1 commit per task on the feature branch, with a descriptive message following the project's git conventions.
 - If the project is multi-repo (`project.json:repos`): apply the branching and the `CHANGELOG.md` entry in each repo that receives changes.
 
-**CHANGELOG, not the version:** each commit adds its line under `## [Unreleased]` in `CHANGELOG.md` (`../karvey/rules/changelog-policy.md`), in every repo it touches. Never bump the version here: the version moves once per release, at the release step of `/karvey-deploy` (`../karvey/rules/versioning.md`). The line MUST include:
+**CHANGELOG, not the version:** each commit adds its line under `## [Unreleased]` in `CHANGELOG.md` (`../karvey/rules/changelog-policy.md`), in every repo it touches. Never bump the version here: the version moves once per release, at the release step of `/karvey-deploy` (`versioning`[^r-versioning]). The line MUST include:
 - **Responsible human**: from `git config user.name` / `user.email`. Never empty, never the AI.
 - **AI model** used for the change.
 - **The why** of the change (motivation, not just the what).
@@ -145,3 +147,7 @@ Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this 
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-deploy-workflow]: ../karvey/rules/deploy-workflow.md — context only, not opened.
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.
+[^r-versioning]: ../karvey/rules/versioning.md — context only, not opened.

@@ -7,6 +7,8 @@ argument-hint: <change-id> <requirements|architecture|qa> [--base REF]
 
 # Karvey Judges — an independent verdict before the human gate
 
+Load: _core.md, judges.md, judges/{phase}.md
+
 ## Purpose
 
 **CROSS-CUTTING SKILL of the Karvey Method.** It is a support layer, **NOT a phase**: it never changes

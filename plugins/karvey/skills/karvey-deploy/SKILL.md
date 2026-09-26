@@ -7,11 +7,13 @@ argument-hint: <change-id>
 
 # Karvey Deploy
 
+Load: _core.md, gates.md, deploy-workflow.md, versioning.md, changelog-policy.md, notifications.md, management-adapters.md, adapters/{tool}.md
+
 ## Purpose
 
 PHASE 11 of the Karvey Method, between `karvey-qa` (PHASE 10) and `karvey-archive` (PHASE 12). It runs the **ordered deployment flow** (feature branch → living spec on the branch → PR to integration → release manifest and release gate → PR to production) by the team's hard rules: never commit directly on the integration or production branch, never deploy manually (the pipeline deploys), `pull` before starting and before each merge/PR, and **prod never without the human's explicit OK**.
 
-It runs **only after** `karvey-qa` passed with no open critical/high findings. The central rules are `../karvey/rules/deploy-workflow.md` and `../karvey/rules/state-machine.md`; follow them exactly.
+It runs **only after** `karvey-qa` passed with no open critical/high findings. The central rules are `../karvey/rules/deploy-workflow.md` and `state-machine`[^r-state-machine]; follow them exactly.
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
@@ -24,7 +26,7 @@ P="$(python3 "$C" get branch_flow.production --shell)"
 
 ### Step 0 — Pre-checks (release gate)
 
-BEFORE touching git, run `python3 "$S" next "{change-id}" --json` and read `docs/spec/project.json`. No `project.json` → stop and run `karvey-init` first (`../karvey/rules/project-config.md`). `next` must report `qa` approved; `invalid` → show its errors and stop.
+BEFORE touching git, run `python3 "$S" next "{change-id}" --json` and read `docs/spec/project.json`. No `project.json` → stop and run `karvey-init` first (`project-config`[^r-project-config]). `next` must report `qa` approved; `invalid` → show its errors and stop.
 
 If **anything below fails, STOP and report what is missing. Do not deploy.**
 
@@ -37,20 +39,20 @@ Items: `qa_gate` · `tests` · `changelog` · `version_match` · `lane_triplet` 
 1. **QA approved, no open critical/high** (`qa_gate`). Read the review from `docs/spec/changes/{change-id}/qa/` (`REVISION_PR_*.md`, the one QA wrote for this change — never the newest file at a repo root). Its security gate must show **0 critical and 0 unresolved high**.
 2. **Tests PASS** (`tests`): the latest run in `docs/spec/changes/{change-id}/evidence.jsonl` is green and the coverage line is shown; the evidence of the test phase is `docs/spec/changes/{change-id}/test_evidence.md`. No run → `not evaluated`, never "pass".
 3. **CHANGELOG `[Unreleased]`** in each affected repo (`changelog`, `../karvey/rules/changelog-policy.md`): one line per commit of the change, with the **responsible human** (never empty nor "AI"), the **AI model** and the **why**. It becomes the release entry in Step 2.3.
-4. **`patch` / `hotfix` lane** (`lane_triplet`, `spec.json:lane`, `../karvey/rules/lanes.md`): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three, recorded with `karvey-state.py lane-evidence`, the test green in CI. Missing any → stop.
+4. **`patch` / `hotfix` lane** (`lane_triplet`, `spec.json:lane`, `lanes`[^r-lanes]): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three, recorded with `karvey-state.py lane-evidence`, the test green in CI. Missing any → stop.
 5. **Parent/child** (`links`): a **child** deploys only its repo and reports to the parent; a **parent** has no deploy of its own — verify every child is deployed.
 
 ### Step 0-bis — Documentation-only PRs
 
-If the diff touches only docs/specs (`git diff --name-only "origin/$I"...HEAD`), it follows the **docs-only lane** (`../karvey/rules/multi-agent.md` §8): light CI only (the plugin linter / spec validation), merged by `project.json:docs_pr.merged_by`, no version bump, no deploy, no prod approval. If code sneaks in, it is not docs-only.
+If the diff touches only docs/specs (`git diff --name-only "origin/$I"...HEAD`), it follows the **docs-only lane** (`multi-agent`[^r-multi-agent] §8): light CI only (the plugin linter / spec validation), merged by `project.json:docs_pr.merged_by`, no version bump, no deploy, no prod approval. If code sneaks in, it is not docs-only.
 
 ### Step 1 — Repos, order, platform, git host
 
 - **Repos and order:** `project.json:repos`; honor the dependency order of `architecture.md` (e.g. **DB → backend → frontend**) and apply Step 2 per repo in that order.
-- **Deploy platform** (only to know **where to monitor**, never to deploy): use `project.json:deploy` (`platform`, `prod_url`, `dev_url`, `health_check`) or detect it from evidence — `fly.toml`, `render.yaml`, `vercel.json`, `netlify.toml`, `host.json` + pipeline, `.github/workflows/`, `azure-pipelines.yml`, `Dockerfile` + `k8s/`/`helm/`. Health: `/health`, `/healthz`, the root page, or the target's runtime equivalent (`../karvey/rules/targets.md`). Unknown URL → do not invent it; ask before the production post-deploy verification.
+- **Deploy platform** (only to know **where to monitor**, never to deploy): use `project.json:deploy` (`platform`, `prod_url`, `dev_url`, `health_check`) or detect it from evidence — `fly.toml`, `render.yaml`, `vercel.json`, `netlify.toml`, `host.json` + pipeline, `.github/workflows/`, `azure-pipelines.yml`, `Dockerfile` + `k8s/`/`helm/`. Health: `/health`, `/healthz`, the root page, or the target's runtime equivalent (`targets`[^r-targets]). Unknown URL → do not invent it; ask before the production post-deploy verification.
 - **Git host** (`project.json:git_platform`, else from `git remote get-url origin`): `github.com` → `gh pr` · `dev.azure.com`/`visualstudio.com` → `az repos pr` · `gitlab.com` → `glab mr` · other → ask. The remote wins over a stale config, and it is reported.
 
-Propose any detected value as a settings change on a docs branch (`project-config.md`); do not write `project.json` on the integration branch.
+Propose any detected value as a settings change on a docs branch (`project-config`[^r-project-config]); do not write `project.json` on the integration branch.
 
 ### Step 1.9 — 6-step pre-deploy checklist (before the first push)
 
@@ -193,7 +195,7 @@ python3 "$PD" evaluate "{change-id}" --env "{env}" --observed observed.json --ve
 4. **`regression`** (REQ-W2-078):
    - DEV → stop before prod.
    - PROD → show the contract's `rollback.command` and **ask the human** with `AskUserQuestion` (*Roll back now (recommended)* / *Keep and investigate*). The rollback affects production: it runs only after that answer, through the plan gate, never on the agent's initiative. Then record it: `python3 "$S" deploy-record "{change-id}" --env prod --version "{version}" --verification regression --rollback "{what was run}" --evidence …`.
-   - Open the incident with a reserved number: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG`, then the `BUG-NN` row in `docs/bugs_dev_testing.md` and a finding in the change's `findings.md` (`../karvey/rules/incident-tracking.md`).
+   - Open the incident with a reserved number: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG`, then the `BUG-NN` row in `docs/bugs_dev_testing.md` and a finding in the change's `findings.md` (`incident-tracking`[^r-incident-tracking]).
 
 ### Step 3 — Hard rules (NEVER skip)
 
@@ -249,3 +251,10 @@ Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this 
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-incident-tracking]: ../karvey/rules/incident-tracking.md — context only, not opened.
+[^r-lanes]: ../karvey/rules/lanes.md — context only, not opened.
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.
+[^r-project-config]: ../karvey/rules/project-config.md — context only, not opened.
+[^r-state-machine]: ../karvey/rules/state-machine.md — context only, not opened.
+[^r-targets]: ../karvey/rules/targets.md — context only, not opened.
