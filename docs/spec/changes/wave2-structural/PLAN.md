@@ -152,7 +152,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F10: Post-deploy verification with thresholds
 
-- [ ] E1.F10.T1 [Backend] `karvey-postdeploy.py probe|evaluate` (contract block parse, https-only probes, no cross-host redirect, thresholds, `deploy_evidence.md`, prints `deploy-record`) — est: 15min (depends E1.F1.T4) (P)
+- [x] E1.F10.T1 [Backend] `karvey-postdeploy.py probe|evaluate` (contract block parse, https-only probes, no cross-host redirect, thresholds, `deploy_evidence.md`, prints `deploy-record`) — est: 15min (depends E1.F1.T4) (P)
 - [ ] E1.F10.T2 [Backend] Infra contract text + deploy 2.6/2.10 "post-deploy verification", regression → rollback asked, `deploy-record --rollback`, `karvey-id next BUG` + manual script — est: 8min (depends E1.F10.T1, E1.F5.T6)
 
 ### Feature E1.F11: Knowledge sync optional
@@ -238,7 +238,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F9.T2 [Backend] | ✅ done | 6 | 6 | 0 | L-33 "after the release" = above the max id of the file on origin/{production} |
 | E1.F9.T3 [Backend] | ✅ done | 10 | 7 | 0 |  |
 | E1.F9.T4 [Backend] | ✅ done | 10 | 7 | 0 |  |
-| E1.F10.T1 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F10.T1 [Backend] | ✅ done | 15 | 9 | 0 |  |
 | E1.F10.T2 [Backend] | ⬜ todo | 8 | — | — |  |
 | E1.F11.T1 [Backend] | ✅ done | 8 | 7 | 0 |  |
 | E1.F12.T1 [Backend] | ✅ done | 6 | 4 | 0 |  |
