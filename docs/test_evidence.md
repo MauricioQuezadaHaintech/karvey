@@ -171,3 +171,7 @@ Paths are under `docs/spec/changes/wave1-hardening/`.
 
 BUG-22..26, each red first on its parent commit (`docs/bugs_dev_testing.md`): `test_incidents.py` index entries,
 `session.json`, `subagent-prompt.json` sp-01..07, unit tests in `test_karvey_hooks.py` and the config/adapter tests.
+
+### CI after QA (2026-09-26)
+- run 36211327222 @ `72b460b`: 6/7 green; `windows-advisory` red — the BUG-37 lock stayed behind on Windows (text-mode fd). Fixed in `9c6d3b7` (BUG-37 re-opened and resolved).
+- run 36211642274 @ `9c6d3b7`: `windows-advisory` green; `tests (macos-latest, 3.12)` red on one timing assertion (`nc-08` 1.43 s > 1 s limit, functionally green) → F-89. All other legs green.
