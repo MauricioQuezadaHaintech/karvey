@@ -578,10 +578,44 @@ def _fix_history(hist, accept_proposed, notes):
     return out
 
 
+def infer_lane(data):
+    """``(lane, why)`` proposed for a pre-3.13 spec.json without ``lane`` (REQ-W2-087): ``type: ops|hotfix|docs``
+    → that lane; a mockup generated or approved → ``feature-ui``; else ``standard`` (mockup and design skipped, or
+    no mockup recorded)."""
+    t = data.get("type")
+    if t in ("ops", "hotfix", "docs"):
+        return t, "type: %s" % t
+    aps = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
+    mk = aps.get("mockup") if isinstance(aps.get("mockup"), dict) else {}
+    skipped = data.get("skipped") if isinstance(data.get("skipped"), dict) else {}
+    if mk.get("approved") is True or (mk.get("generated") is True and "mockup" not in skipped):
+        return "feature-ui", "a mockup was generated"
+    if "mockup" in skipped and "design_graphic" in skipped:
+        return "standard", "mockup and design skipped"
+    return "standard", "no mockup recorded"
+
+
+def deploy_from_legacy(dep):
+    """A ``deploys[]`` record from a legacy ``approvals.deploy`` that holds data, else None (REQ-W2-051, 087).
+    Nothing is invented: an unknown version is ``unknown``, the verification ``not-evaluated``."""
+    if not isinstance(dep, dict) or not (dep.get("approved") is True or dep.get("date") or dep.get("at")):
+        return None
+    when = str(dep.get("at") or dep.get("date") or "")
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", when):
+        when += "T00:00:00Z"  # a date-only record: the time was never kept
+    rec = {"env": str(dep.get("env") or "prod"), "version": str(dep.get("version") or "unknown"), "at": when,
+           "verification": dep.get("verification") if dep.get("verification") in ("pass", "regression", "not-evaluated")
+           else ("pass" if dep.get("post_deploy_check") == "pass" else "not-evaluated"), "rollback": None}
+    who = ", ".join("%s %s" % (k, dep[k]) for k in ("by", "ref", "pipeline_run") if dep.get(k))
+    rec["evidence"] = ("migrated from approvals.deploy" + (" (%s)" % who if who else ""))[:300]
+    return rec
+
+
 def fix_spec(data, accept_proposed=False):
     """``(new_data, notes)`` for a spec.json. Raises :class:`Unmigratable`. Never creates or flips an
-    approval: only ``phase``, ``phase_history``, ``skipped``, ``approvals: null`` and
-    ``management: "none"`` change."""
+    approval: only ``phase``, ``phase_history``, ``skipped``, ``approvals: null``, ``management: "none"``,
+    the retired ``approvals.deploy`` (→ ``deploys[]`` when it holds data) and, in the proposed tier, ``lane``
+    change."""
     new = copy.deepcopy(data)
     notes = []
     phase = new.get("phase")
@@ -641,6 +675,25 @@ def fix_spec(data, accept_proposed=False):
             if ph not in skipped:
                 skipped[ph] = reason
                 notes.append("skipped.%s = %r" % (ph, reason))
+    aps = new.get("approvals") if isinstance(new.get("approvals"), dict) else None
+    if aps is not None and "deploy" in aps:
+        rec = deploy_from_legacy(aps.pop("deploy"))
+        if rec is None:
+            notes.append("approvals.deploy removed (it held no deploy)")
+        else:
+            deploys = new.get("deploys") if isinstance(new.get("deploys"), list) else []
+            if rec not in deploys:
+                deploys.append(rec)
+            new["deploys"] = deploys
+            notes.append("approvals.deploy → deploys[] (%s %s, verification %s)" % (rec["env"], rec["at"],
+                                                                                   rec["verification"]))
+    if not (isinstance(new.get("lane"), str) and new["lane"]):
+        lane, why = infer_lane(new)
+        if accept_proposed:
+            new["lane"] = lane
+            notes.append("lane: %r (proposed tier: %s), applied" % (lane, why))
+        else:
+            notes.append("lane: %r proposed (%s): proposed tier, re-run with --accept-proposed" % (lane, why))
     return new, notes
 
 

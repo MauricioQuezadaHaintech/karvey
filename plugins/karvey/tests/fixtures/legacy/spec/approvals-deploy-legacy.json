@@ -1,0 +1,10 @@
+{
+  "change_id": "fixture-58",
+  "phase": "deployed",
+  "management": "markdown",
+  "skipped": {"mockup": "…", "design_graphic": "…"},
+  "approvals": {
+    "requirements": {"generated": true, "approved": true, "by": "…", "role": "human", "date": "2026-09-01T10:00:00-03:00", "ref": "D-1"},
+    "deploy": {"generated": true, "approved": true, "by": "…", "date": "2026-09-02", "ref": "…"}
+  }
+}

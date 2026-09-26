@@ -264,9 +264,12 @@ class LegacyCatalogue(Base):
                     self.assertEqual(code2, code)
                     self.assertFalse(env2["result"]["files"][0].get("changed", False))
                     after = load(f)
-                    self.assertEqual(after.get("approvals"), before.get("approvals") or ({} if "approvals" in before
-                                                                                       else None))
-                    self.assertEqual(approved_values(after), approved_values(before))
+                    kept = dict(before.get("approvals") or {})
+                    kept.pop("deploy", None)  # the retired key moves to deploys[] (REQ-W2-051), never an approval
+                    self.assertEqual(after.get("approvals"), kept or ({} if "approvals" in before else None))
+                    was = approved_values(before)
+                    was.pop("deploy", None)
+                    self.assertEqual(approved_values(after), was)
 
     def test_phase_value_per_tier(self):
         for fixture in legacy_fixtures():
@@ -334,3 +337,68 @@ class LegacyCatalogue(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Wave2Migration(Base):
+    """@req REQ-W2-087 REQ-W2-051 — lane proposal, approvals.deploy retired, idempotent, never an approval."""
+
+    LEGACY = _path.UNIT_DIR.parent / "fixtures" / "legacy" / "spec" / "approvals-deploy-legacy.json"
+
+    def legacy(self):
+        return self.spec_file(json.loads(self.LEGACY.read_text(encoding="utf-8")))
+
+    def test_REQ_W2_087_skipped_mockup_and_design_propose_standard_with_diff(self):
+        f = self.legacy()
+        code, env = self.fix(f)
+        notes = " ".join(env["result"]["files"][0]["notes"])
+        self.assertIn("lane: 'standard' proposed (mockup and design skipped)", notes)
+        self.assertNotIn("lane", self.read(f))  # proposed tier: not written without the flag
+        code, env = self.fix(f, "--accept-proposed")
+        self.assertEqual(self.read(f)["lane"], "standard")
+        self.assertIn('+  "lane": "standard"', env["result"]["files"][0]["diff"])
+
+    def test_type_ops_proposes_ops(self):
+        f = self.spec_file({"change_id": "feat-a", "phase": "impl", "type": "ops", "phase_history": HIST})
+        self.fix(f, "--accept-proposed")
+        self.assertEqual(self.read(f)["lane"], "ops")
+
+    def test_mockup_generated_proposes_feature_ui(self):
+        f = self.spec_file({"change_id": "feat-a", "phase": "architecture", "phase_history": HIST,
+                            "approvals": {"mockup": {"generated": True, "approved": False}}})
+        self.fix(f, "--accept-proposed")
+        self.assertEqual(self.read(f)["lane"], "feature-ui")
+
+    def test_REQ_W2_051_approvals_deploy_with_data_moves_to_deploys(self):
+        f = self.legacy()
+        self.fix(f)
+        data = self.read(f)
+        self.assertNotIn("deploy", data["approvals"])
+        self.assertEqual(len(data["deploys"]), 1)
+        d = data["deploys"][0]
+        self.assertEqual((d["env"], d["version"], d["at"], d["verification"]),
+                         ("prod", "unknown", "2026-09-02T00:00:00Z", "not-evaluated"))
+        self.assertTrue(d["evidence"].startswith("migrated from approvals.deploy"))
+
+    def test_approvals_deploy_without_data_is_removed(self):
+        f = self.spec_file({"change_id": "feat-a", "phase": "impl", "lane": "standard", "phase_history": HIST,
+                            "approvals": {"deploy": {"generated": False, "approved": False}}})
+        code, env = self.fix(f)
+        data = self.read(f)
+        self.assertNotIn("deploy", data["approvals"])
+        self.assertNotIn("deploys", data)
+
+    def test_REQ_W2_087_second_run_changes_nothing(self):
+        f = self.legacy()
+        self.fix(f, "--accept-proposed")
+        first = f.read_bytes()
+        code, env = self.fix(f, "--accept-proposed")
+        self.assertEqual(f.read_bytes(), first)
+        self.assertFalse(env["result"]["files"][0]["written"])
+
+    def test_no_approval_created_or_flipped(self):
+        f = self.legacy()
+        before = approved_values(self.read(f))
+        self.fix(f, "--accept-proposed")
+        after = approved_values(self.read(f))
+        before.pop("deploy")
+        self.assertEqual(after, before)
