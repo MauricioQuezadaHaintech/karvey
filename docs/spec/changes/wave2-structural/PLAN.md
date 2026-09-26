@@ -111,7 +111,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F4.T4 [Backend] `rules/gates.md` (the one closing block, granular / merged, `-y` = `role: auto`, plan exceptions) + the 13 phase-skill closings + `rules/phase-close.md:45` — est: 15min (depends E1.F4.T2, E1.F3.T5)
 - [x] E1.F4.T5 [Backend] L-41 (no second gate question; closings cite `rules/gates.md`) + L-52 (`-y` = auto, never prod) — est: 10min (depends E1.F4.T4)
 - [x] E1.F4.T6 [Backend] Grill: batches ≤ 4, recommended first, stack inferred from lockfiles / CI and only confirmed + manual script — est: 6min (P)
-- [ ] E1.F4.T7 [Test] Manual script `merged-gates-three-questions.md` (AC-4: count the gate questions of a real `standard` run) — est: 5min (depends E1.F4.T4) (P)
+- [x] E1.F4.T7 [Test] Manual script `merged-gates-three-questions.md` (AC-4: count the gate questions of a real `standard` run) — est: 5min (depends E1.F4.T4) (P)
 
 ### Feature E1.F5: Release per change
 
@@ -215,7 +215,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F4.T4 [Backend] | ✅ done | 15 | 9 | 0 |  |
 | E1.F4.T5 [Backend] | ✅ done | 10 | 6 | 0 |  |
 | E1.F4.T6 [Backend] | ✅ done | 6 | 4 | 0 |  |
-| E1.F4.T7 [Test] | ⬜ todo | 5 | — | — |  |
+| E1.F4.T7 [Test] | ✅ done | 5 | 3 | 0 |  |
 | E1.F5.T1 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F5.T2 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F5.T3 [Backend] | ⬜ todo | 15 | — | — |  |
