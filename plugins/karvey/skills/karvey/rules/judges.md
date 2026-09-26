@@ -66,8 +66,10 @@ Every finding cites a line of one of the inputs; a finding without a citation is
 - a `cite` that does not resolve to an input file and a line within its length is discarded and counted;
 - text is capped at 300 characters, `|`, control characters and newlines are escaped, code blocks and patches
   are stripped;
-- cost is measured when the runtime reports usage, otherwise estimated (characters ÷ 4 ×
-  `defaults.json:judge_price_table`) and marked `estimated: true`.
+- cost is measured when the session transcript records the subagent's usage (`--transcript auto`: `source:
+  runtime`, tokens exact); a `usage` the judge wrote itself is `agent-reported` and `estimated: true`; otherwise it is
+  estimated over the prompt template and every closed input (characters ÷ 4 × `defaults.json:judge_price_table`,
+  `source: estimate`, `estimated: true`).
 
 Kept findings are appended to the change's `findings.md` as `open` rows with origin `judge:{lens}`, the phase,
 the type guess and the severity. The per-judge run records (lens, model, `intra_model`, verdict, counts, tokens,

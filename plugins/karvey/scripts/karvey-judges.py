@@ -2,7 +2,7 @@
 """karvey-judges.py — the deterministic half of the judges (architecture §1.7, wave2-structural).
 
     karvey-judges.py inputs <change> <phase> [--extra ITEM…] [--base REF] [--root DIR] [--json]
-    karvey-judges.py collect <change> <phase> --results DIR [--out FILE] [--root DIR] [--json]
+    karvey-judges.py collect <change> <phase> --results DIR [--out FILE] [--transcript auto|FILE] [--root DIR] [--json]
 
 ``inputs`` prints the closed input list of a judge run: the phase's artifacts and the artifacts it reads, the
 goal, the rubric and its lens sections; for ``qa`` also the change's diff (written to a temporary file). An extra
@@ -10,7 +10,10 @@ item is dropped and listed. It never starts a judge: the ``karvey-judges`` skill
 subagent per lens, with only these paths.
 
 ``collect`` filters what the judges returned (schema, citations, sanitiser, cost), appends the kept findings to
-the change's ``findings.md`` and writes the run records for ``karvey-state.py judge-run``. It never routes a
+the change's ``findings.md`` and writes the run records for ``karvey-state.py judge-run``. The cost comes from the
+session transcript when ``--transcript`` names one (``auto``: the transcript of this repository's latest statusline
+capture) — ``source: runtime``, exact; a usage the model wrote is kept as ``agent-reported``, estimated; without
+either, characters ÷ 4 over the prompt template and every closed input (wave3 §1.10, REQ-W3-077). It never routes a
 finding, edits an artifact or writes ``spec.json``.
 
 Exit: 0 ok · 2 usage · 3 refused · 4 not found · 5 internal. Python >= 3.9, stdlib only.
@@ -26,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import gitlog, judges as jd, project as pj  # noqa: E402
+from karvey_lib import effort as ef, gitlog, judges as jd, project as pj  # noqa: E402
 
 TOOL = "karvey-judges"
 
@@ -70,7 +73,8 @@ def cmd_collect(args):
         raise jd.JudgeError("--results %s is not a directory" % rdir)
     inp = jd.build_inputs(root, args.change, args.phase, diff_path=args.diff)
     allowed = list(inp["inputs"])
-    chars_in = 0
+    rules_dir = Path(inp["rubric"]).parent.parent if inp["rubric"] else kl.PLUGIN_ROOT / "skills" / "karvey" / "rules"
+    chars_in = jd.prompt_template_chars(rules_dir)
     for p in allowed + ([inp["rubric"]] if inp["rubric"] else []):
         q = Path(p) if os.path.isabs(p) else Path(root) / p
         try:
@@ -84,8 +88,14 @@ def cmd_collect(args):
             continue
         results.append((f.name, f.read_text(encoding="utf-8-sig", errors="replace")))
     at = datetime.now().astimezone().isoformat(timespec="seconds")
+    transcript = args.transcript
+    if transcript == "auto":
+        caps, _ = ef.read_captures(pj.state_dir(root, create=False) / ef.CAPTURE_DIR, ef.root_key(root))
+        _, rec, _, _ = ef.pick_capture(caps)
+        transcript = rec.get("transcript") if rec else None
+    usage = jd.transcript_judge_usage(transcript) if transcript else {}
     runs, kept, lines = jd.collect(root, args.change, args.phase, results, allowed, model=args.model,
-                                   intra_model=args.intra_model, at=at, chars_in=chars_in)
+                                   intra_model=args.intra_model, at=at, chars_in=chars_in, runtime_usage=usage)
     ids = []
     if not args.dry_run:
         fpath = Path(root) / pj.CHANGES_DIR / args.change / "findings.md"
@@ -122,6 +132,8 @@ def build_parser():
     c.add_argument("--intra-model", dest="intra_model", action="store_true",
                    help="the judges ran on the author's model family")
     c.add_argument("--dry-run", action="store_true", help="filter only; append and write nothing")
+    c.add_argument("--transcript", help="session transcript with the judges' runtime usage ('auto': the latest "
+                                        "statusline capture of this repository)")
     return p
 
 

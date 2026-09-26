@@ -179,12 +179,60 @@ class Collect(unittest.TestCase):
         self.assertGreaterEqual(run["usd"], 0)
         self.assertIn("judges.budget: ignored (measure only, D-30)", r["notes"])
 
-    def test_REQ_W2_030_usage_is_measured(self):
+    def test_REQ_W3_077_model_written_usage_is_agent_reported_estimated(self):
+        # MODIFIES REQ-W2-030: a usage the model copied into its reply is kept, but never counted as exact
         self.result("methods.json", {"lens": "methods", "verdict": "pass", "findings": [],
                                      "usage": {"tokens_in": 1000, "tokens_out": 100}})
         code, r = self.collect()
-        self.assertFalse(r["runs"][0]["estimated"])
-        self.assertEqual(r["runs"][0]["tokens_in"], 1000)
+        run = r["runs"][0]
+        self.assertEqual((run["source"], run["estimated"], run["tokens_in"]), ("agent-reported", True, 1000))
+
+    def transcript(self, total=12345, lens="methods"):
+        p = self.t.path / "session.jsonl"
+        lines = [
+            {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "toolu_1", "name": "Agent",
+             "input": {"prompt": "You are an independent reviewer of one phase of a software change, reading it "
+                                 "through one lens: %s.\nRubric for this lens:" % lens}}]}},
+            {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "toolu_1",
+                                                      "content": "{}"}]},
+             "toolUseResult": {"totalTokens": total, "usage": {"input_tokens": 1, "output_tokens": 2}}}]
+        p.write_text("\n".join(json.dumps(x) for x in lines) + "\n")
+        return str(p)
+
+    def test_REQ_W3_077_transcript_usage_is_runtime_exact(self):
+        self.result("methods.json", {"lens": "methods", "verdict": "pass", "findings": [],
+                                     "usage": {"total_tokens": 999}})
+        code, r = self.collect("--transcript", self.transcript())
+        run = r["runs"][0]
+        self.assertEqual((run["source"], run["estimated"], run["tokens_total"]), ("runtime", False, 12345))
+        self.assertTrue(run["usd_estimated"])
+
+    def test_REQ_W3_077_transcript_of_another_lens_does_not_match(self):
+        self.result("methods.json", {"lens": "methods", "verdict": "pass", "findings": []})
+        code, r = self.collect("--transcript", self.transcript(lens="security"))
+        self.assertEqual(r["runs"][0]["source"], "estimate")
+
+    def test_REQ_W3_077_estimate_counts_the_prompt_and_every_closed_input(self):
+        (self.root / "docs/spec/changes/feat-a/architecture.md").write_text("x" * 4000)
+        self.result("methods.json", {"lens": "methods", "verdict": "pass", "findings": []})
+        code, r = self.collect()
+        run = r["runs"][0]
+        rules = _path.PLUGIN_ROOT / "skills" / "karvey" / "rules"
+        prompt_only = jd.prompt_template_chars(rules) // 4
+        self.assertGreater(prompt_only, 0)
+        self.assertEqual(run["source"], "estimate")
+        self.assertGreater(run["tokens_in"], prompt_only + 1000 - 1)
+
+    def test_REQ_W3_077_judge_run_records_the_new_fields(self):
+        self.result("methods.json", {"lens": "methods", "verdict": "pass", "findings": []})
+        code, r = self.collect("--transcript", self.transcript())
+        from _state import run_json
+        code, env = run_json("judge-run", "feat-a", "architecture", "--from", str(self.results / "runs.json"),
+                             "--root", str(self.root))
+        self.assertEqual(code, 0, env)
+        data = json.loads((self.root / "docs/spec/changes/feat-a/spec.json").read_text())
+        rec = data["judge_runs"][-1]
+        self.assertEqual((rec["tokens_total"], rec["source"], rec["usd_estimated"]), (12345, "runtime", True))
 
     def test_REQ_W2_029_model_and_intra_model_recorded(self):
         self.result("methods.json", {"lens": "methods", "verdict": "pass", "findings": []})

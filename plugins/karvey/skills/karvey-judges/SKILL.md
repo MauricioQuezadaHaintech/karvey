@@ -45,17 +45,20 @@ Model: when `cross_model` is `prefer` and another model family's CLI is availabl
 intra-model in step 3. Say which, in one line.
 
 Write each subagent's reply, as returned, to `{tmp}/{lens}.json` (a temporary directory outside the repo).
+Do not copy the token count the runtime shows for a subagent into that file: `collect --transcript auto` reads it
+from the session transcript itself (`source: runtime`); a `usage` the reply carries is kept only as
+`agent-reported`, estimated.
 
 ### 3. Collect: filter, append findings, write the run records
 
 ```bash
 python3 "$S/karvey-judges.py" collect "{change-id}" "{phase}" --results "{tmp}" --model "{model}" \
-  [--intra-model] [--diff "{diff file from step 1}"] --json
+  --transcript auto [--intra-model] [--diff "{diff file from step 1}"] --json
 python3 "$S/karvey-state.py" judge-run "{change-id}" "{phase}" --from "{tmp}/runs.json"
 ```
 
-`collect` discards findings without a resolvable citation, sanitises the text, estimates the cost when the
-runtime gave no usage, and adds the kept findings to `findings.md` as `open` rows with origin
+`collect` discards findings without a resolvable citation, sanitises the text, takes each judge's tokens from the
+session transcript (exact) or else estimates them over the prompt and every closed input, and adds the kept findings to `findings.md` as `open` rows with origin
 `judge:{lens}`. `judge-run` is the only `spec.json` write of the flow (the cost log). An invalid reply is
 reported as `not run (invalid output)`; it is not retried silently.
 

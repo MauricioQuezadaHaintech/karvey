@@ -212,21 +212,104 @@ def price(model):
     return float(p.get("in", 0.0)), float(p.get("out", 0.0))
 
 
-def cost(usage, chars_in, chars_out, model):
-    """``(tokens_in, tokens_out, usd, estimated)``: measured when ``usage`` has tokens, else chars ÷ 4."""
+def cost(usage, chars_in, chars_out, model, runtime_total=None):
+    """The cost of one judge run (wave3 §1.10, REQ-W3-077, MODIFIES REQ-W2-030) as a dict:
+    ``{tokens_in, tokens_out, tokens_total, usd, estimated, usd_estimated, source}``.
+
+    - ``runtime_total`` (the subagent's token total read from the session transcript) → ``source: runtime``,
+      tokens exact; the US$ uses the input price and is ``usd_estimated`` (the in/out split is unknown);
+    - else a ``usage`` the model wrote into its reply (``tokens_in``/``tokens_out`` or ``total_tokens``) →
+      ``source: agent-reported``, kept but ``estimated`` (F-45, F-78: a number the model copies is not a measure);
+    - else characters ÷ 4 over the prompt and every closed input → ``source: estimate``, ``estimated``."""
     pin, pout = price(model)
-    if isinstance(usage, dict) and isinstance(usage.get("tokens_in"), int) and isinstance(usage.get("tokens_out"), int):
-        ti, to = usage["tokens_in"], usage["tokens_out"]
-        usd = usage.get("usd")
-        if not isinstance(usd, (int, float)) or isinstance(usd, bool):
-            usd = (ti * pin + to * pout) / 1e6
-        return ti, to, round(float(usd), 6), False
+    if isinstance(runtime_total, int) and not isinstance(runtime_total, bool) and runtime_total >= 0:
+        return {"tokens_total": runtime_total, "usd": round(runtime_total * pin / 1e6, 6), "estimated": False,
+                "usd_estimated": True, "source": "runtime"}
+    if isinstance(usage, dict):
+        ti, to, tt = usage.get("tokens_in"), usage.get("tokens_out"), usage.get("total_tokens")
+        if isinstance(ti, int) and isinstance(to, int):
+            usd = usage.get("usd")
+            if not isinstance(usd, (int, float)) or isinstance(usd, bool):
+                usd = (ti * pin + to * pout) / 1e6
+            return {"tokens_in": ti, "tokens_out": to, "tokens_total": ti + to, "usd": round(float(usd), 6),
+                    "estimated": True, "usd_estimated": not isinstance(usage.get("usd"), (int, float)),
+                    "source": "agent-reported"}
+        if isinstance(tt, int) and not isinstance(tt, bool):
+            return {"tokens_total": tt, "usd": round(tt * pin / 1e6, 6), "estimated": True, "usd_estimated": True,
+                    "source": "agent-reported"}
     ti, to = chars_in // 4, chars_out // 4
-    return ti, to, round((ti * pin + to * pout) / 1e6, 6), True
+    return {"tokens_in": ti, "tokens_out": to, "tokens_total": ti + to, "usd": round((ti * pin + to * pout) / 1e6, 6),
+            "estimated": True, "usd_estimated": True, "source": "estimate"}
 
 
-def collect(root, change, phase, results, allowed, model=None, intra_model=None, at=None, chars_in=0):
-    """Filter the judge results (``[(name, raw_text)]``). Returns ``(runs, kept, lines)``; writes nothing."""
+LENS_LINE_RE = re.compile(r"through one lens:\s*([A-Za-z0-9_-]+)")
+SUBAGENT_TOOLS = ("Agent", "Task")
+
+
+def _usage_total(u):
+    if not isinstance(u, dict):
+        return None
+    if isinstance(u.get("total_tokens"), int):
+        return u["total_tokens"]
+    keys = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
+    vals = [u.get(k) for k in keys if isinstance(u.get(k), int)]
+    return sum(vals) if vals else None
+
+
+def transcript_judge_usage(path):
+    """``{lens: tokens_total}`` of the judge subagents a session transcript records (the runtime's own figure).
+
+    A subagent call is an ``Agent``/``Task`` ``tool_use`` whose prompt carries the template's lens line; its
+    result is the ``tool_result`` with the same id, whose ``toolUseResult.totalTokens`` (or ``usage``) the runtime
+    wrote. The last run of a lens wins. An unreadable transcript → ``{}``."""
+    calls, out = {}, {}
+    try:
+        fh = open(path, encoding="utf-8", errors="replace")
+    except (OSError, TypeError):
+        return out
+    with fh:
+        for line in fh:
+            try:
+                o = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(o, dict):
+                continue
+            msg = o.get("message") if isinstance(o.get("message"), dict) else {}
+            content = msg.get("content") if isinstance(msg.get("content"), list) else []
+            for b in content:
+                if not isinstance(b, dict):
+                    continue
+                if b.get("type") == "tool_use" and b.get("name") in SUBAGENT_TOOLS:
+                    prompt = (b.get("input") or {}).get("prompt") or ""
+                    m = LENS_LINE_RE.search(prompt if isinstance(prompt, str) else "")
+                    if m and b.get("id"):
+                        calls[b["id"]] = m.group(1)
+                elif b.get("type") == "tool_result" and b.get("tool_use_id") in calls:
+                    tur = o.get("toolUseResult") if isinstance(o.get("toolUseResult"), dict) else {}
+                    total = tur.get("totalTokens") if isinstance(tur.get("totalTokens"), int) else None
+                    if total is None:
+                        total = _usage_total(tur.get("usage")) or _usage_total(b.get("usage"))
+                    if isinstance(total, int):
+                        out[calls[b["tool_use_id"]]] = total
+    return out
+
+
+def prompt_template_chars(rules_dir):
+    """Characters of the judge prompt template (``rules/judges.md``), part of every judge's input."""
+    try:
+        text = (Path(rules_dir) / "judges.md").read_text(encoding="utf-8-sig")
+    except OSError:
+        return 0
+    m = re.search(r"<!-- judge-template -->(.*?)<!-- /judge-template -->", text, re.S)
+    return len(m.group(1)) if m else 0
+
+
+def collect(root, change, phase, results, allowed, model=None, intra_model=None, at=None, chars_in=0,
+            runtime_usage=None):
+    """Filter the judge results (``[(name, raw_text)]``). Returns ``(runs, kept, lines)``; writes nothing.
+    ``runtime_usage`` = ``{lens: tokens_total}`` read from the session transcript (``transcript_judge_usage``)."""
+    runtime_usage = runtime_usage or {}
     runs, kept, lines = [], [], []
     for name, raw in results:
         try:
@@ -252,12 +335,16 @@ def collect(root, change, phase, results, allowed, model=None, intra_model=None,
                          else "emergent", "text": sanitise(f["text"]), "cite": f["cite"]})
         m = r.get("model") or model or "unknown"
         im = r.get("intra_model") if isinstance(r.get("intra_model"), bool) else bool(intra_model)
-        ti, to, usd, est = cost(r.get("usage"), chars_in, len(raw), m)
-        runs.append({"phase": phase, "lens": r["lens"], "model": m, "intra_model": im, "verdict": r["verdict"],
-                     "findings": counts, "discarded": discarded, "tokens_in": ti, "tokens_out": to, "usd": usd,
-                     "estimated": est, "at": at})
-        lines.append("%s: %s · %d kept · %d discarded (no citation) · %s%s" % (
-            r["lens"], r["verdict"], sum(counts.values()), discarded, m, " (intra-model)" if im else ""))
+        c = cost(r.get("usage"), chars_in, len(raw), m, runtime_usage.get(r["lens"]))
+        run = {"phase": phase, "lens": r["lens"], "model": m, "intra_model": im, "verdict": r["verdict"],
+               "findings": counts, "discarded": discarded, "at": at}
+        run.update(c)
+        runs.append(run)
+        agent = cost(r.get("usage"), 0, 0, m) if c["source"] == "runtime" else None
+        side = (" (agent-reported %d)" % agent["tokens_total"]) if agent and agent["source"] == "agent-reported" else ""
+        lines.append("%s: %s · %d kept · %d discarded (no citation) · %s%s · %d tokens %s%s" % (
+            r["lens"], r["verdict"], sum(counts.values()), discarded, m, " (intra-model)" if im else "",
+            c["tokens_total"], c["source"], side))
     return runs, kept, lines
 
 

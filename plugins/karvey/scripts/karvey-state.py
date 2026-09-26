@@ -1883,12 +1883,13 @@ def cmd_judge_run(args, root):
         if missing:
             raise Refused("judge run record %d (%s) lacks %s: the model used and whether it was intra-model are "
                           "always recorded" % (i, r.get("lens"), ", ".join(missing)), code="state.judge_run")
-        for k in ("usd", "tokens_in", "tokens_out"):
+        for k in ("usd", "tokens_in", "tokens_out", "tokens_total"):
             if k in r and (not isinstance(r[k], (int, float)) or isinstance(r[k], bool) or r[k] < 0):
                 raise Refused("judge run record %d: %s must be a non-negative number (got %r)" % (i, k, r[k]),
                               code="state.judge_run")
         rec = {k: v for k, v in r.items() if k in ("lens", "model", "intra_model", "verdict", "findings", "discarded",
-                                                   "tokens_in", "tokens_out", "usd", "estimated", "at")}
+                                                   "tokens_in", "tokens_out", "tokens_total", "usd", "estimated",
+                                                   "usd_estimated", "source", "at")}
         rec["phase"] = args.phase
         rec.setdefault("at", now)
         if not rec["at"]:
