@@ -212,7 +212,9 @@ same project lookup and the same shell segmentation.
       { "matcher": "Bash",
         "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-bash", "timeout": 15 }] },
       { "matcher": "Edit|Write|MultiEdit|NotebookEdit",
-        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-edit", "timeout": 5 }] }
+        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-edit", "timeout": 5 }] },
+      { "matcher": "Agent|Task",
+        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-agent", "timeout": 5 }] }
     ],
     "PostToolUse": [
       { "matcher": "Edit|Write|MultiEdit|NotebookEdit",
@@ -236,6 +238,7 @@ The `SessionStart` split passes `startup` or `resume` as an **argument taken fro
 |---|---|---|---|
 | `pre-bash` → **protect-paths** → **prod-gate** → **git-flow** → **plan-gate** | 018 · 023..027, 035 · 020..022, 035 · 014..016 | protect-paths always on · prod-gate **on** (D-02) · git-flow off · plan-gate off | protect-paths closed · prod-gate **closed** · git-flow closed when enabled · plan-gate closed when enabled |
 | `pre-edit` → **protect-paths** → **plan-gate** | 018 · 016 | as above | as above |
+| `pre-agent` → **subagent-prompt** (revision 2, D-33) | 081 | on in Karvey projects | open |
 | `post-edit` → **spec-write validator** (`docs/spec/**/spec.json` and `project.json`) → **pending-sync recorder** (`docs/spec/**`) | 028 · 063 | on in Karvey projects | open, with one warning line |
 | `prompt` → **approval hook** | 017, 019 | on in Karvey projects | open: no marker is created, which is the safe side |
 
@@ -255,6 +258,7 @@ The `SessionStart` split passes `startup` or `resume` as an **argument taken fro
 | plan-gate | Bash segments, or Edit/Write | Command-class classification (§3.4). Allows if a valid marker exists for (repo, change) or (repo, `_project`), newer than the TTL, not consumed and not corrupt. | exit 2: `[karvey] BLOCK plan-gate: <class>. Present the plan and wait for the human's approval; the approval hook records it.` Nothing tells the agent to create anything. |
 | spec-write validator | `tool_input.file_path` (A-3) | If the path matches, runs `karvey-state.py validate <file>` in-process. | violations: exit 2, with the list on stderr (A-4: in PostToolUse this feeds the reason back to the session) · valid: silent |
 | pending-sync | same | Appends the repo-relative path to `docs/spec/.graph-pending` (dedupe, sorted, LF), except the pending file itself and `graphify-out/**`. | silent |
+| subagent-prompt (revision 2, D-33, BUG-25) | `tool_input.prompt` of an `Agent`/`Task` call | Inert outside a Karvey project, or when the prompt already carries the ban line ("do not write `docs/spec/project.json`" and its variants). Otherwise it splits the prompt into sentences and blocks on the first one that names the settings (`project.json`, settings, a status map) with a write/persist/authorise verb not negated just before it. It reads only the prompt text; it never reads or writes files. | exit 2: `[karvey] BLOCK subagent-prompt: … Re-send the prompt without that permission and with this line: <ban line>` (the quoted sentence is cut to 160 characters) · otherwise silent |
 | approval hook | prompt text (A-2) | §3.3 and §3.6. | silent. When it records a marker it prints one stdout line, `[karvey] approval recorded (<kind>, <scope>, expires hh:mm)`, so the human sees it. |
 
 **Legacy templates.** `skills/karvey/hooks/git-flow-guard.sh` and `plan-gate.sh` stay for 3.12.x as shims
@@ -989,6 +993,7 @@ or a cloned template, so they are untrusted input. Three rules apply:
 | **git-flow** (opt-in) | python missing · target repo unresolvable (`git -C $X`, unexpanded variable) · unparsable command | When enabled: **block** `git commit\|push\|merge\|cherry-pick\|revert\|am` segments with "cannot resolve the target repository; rewrite without variables". When disabled: nothing. | The project asked for it. The block names the rewrite that passes. |
 | **plan-gate** (opt-in) | python missing · unparsable command | When enabled: **block** with the reason, keeping today's semantics (no marker → block the classes). Unparsable commands fall back to a conservative regex over the raw string. | The project asked for it. Wrongly allowing a destructive command is worse than a retry. |
 | **approval hook** | anything | **Open**: no marker is created and the prompt is never blocked (exit 0). The failure is recorded in `audit.log` (`approval-hook error`). | Failing open here means *not approving*, which is the safe side. The human sees no `[karvey] approval recorded` line and can repeat the approval. |
+| **subagent-prompt** (revision 2) | python missing · crash | **Open**: the call goes through (the bash fallback has no classifier for it). | A backstop for REQ-W1-081, whose primary control is the rule text every subagent-composing skill carries. A false block costs a re-sent prompt; failing closed would block every subagent on a machine without python. |
 | **spec-write validator** | python missing · crash | **Open** with one line: `[karvey] spec.json not validated: <reason>`. | The write already happened, and PostToolUse cannot undo it. CI (L-18) is the backstop. |
 | **pending-sync** | anything | **Open**, silent. | Archive recomputes pending paths from `git diff` since the last sync anyway (§5). |
 | **session hook** | python missing | **Open**; the degraded settings line is still printed (REQ-W1-050). | It informs; it never gates. |
@@ -1444,6 +1449,7 @@ before the tables are frozen.
 | `approval.json` | ≥ 7 approvals, ≥ 7 negations/questions, ≥ 3 quoted/pasted, prod kind (4), scope (4), non-Karvey (1), long prompt (2) | **REQ-W1-019** minimums (5/5/2): "aprobado, ejecuta" · "ok" · "dale" · "approved, go ahead" · "lgtm" / "no apruebo todavía" · "¿está aprobado?" · "no, espera" · "don't proceed yet" · "ok pero antes revisa X" / a code fence with `status: approved` · `> approved by QA` · `el log dice "approved"`. Prod: "ok, merge a prod" → kind prod; "aprobado" → kind plan. The recorded excerpt is 80 characters. |
 | `protect-paths.json` | touch/echo/cp/mv/python with literal path (6), Write/Edit on the marker (3), plugin root edit (2), compat marker (2) | REQ-W1-018 error scenario; active with plan-gate **off**. |
 | `notify-confirm.json` | human phrase recorded (2), negation / quoted (2), agent alone (1), human then `--confirm` (1), other destination (1), other project (1), expired (1), protect-paths on the confirmation and the notify record (3) | D-16 / F-15, REQ-W1-097. |
+| `subagent-prompt.json` (revision 2) | blocked (3: persist settings, persist a status map, `Task` tool name), allowed (4: ban line present, no settings talk, negated sentence, outside a Karvey project) | BUG-25 rerun prompt → block; sp-01 also in the `nopy` pass, where it is allowed (fail open). |
 | `spec-write.json` | valid (2), enum violation (2), prod ref missing (1), non-spec file (2), outside docs/spec (1), invalid JSON (1), nopy (1) | REQ-W1-028: `phase: "qa-approved"` reported. |
 | `session.json` | active selection (5), manifest (3), bounds (4), settings notice (8), structured output (2), worktree (1) | REQ-W1-045..047, 050 incl. `"notifications": {}` on startup → 1 line, on resume → none; bare `docs/spec/openapi.yaml` under a Karvey parent above the git top level → none; settings only on `origin/main` → none (REQ-W1-083); no python → degraded line; `.git` file (worktree) → measured. |
 | `statusline.json` | TZ (3), windows (3), rotation default (2) | BUG-08 `(TZ?)`, BUG-09 separators, `rot?` when defaults.json is missing. |
@@ -1892,3 +1898,4 @@ deliberately not run: this change moves the sync to archive only (REQ-W1-062), a
 | Rev | Date | Ref | Sections | Why |
 |---|---|---|---|---|
 | 1 | 2026-09-24 | D-19 · F-16..F-19, F-40, F-47..F-49 | §1.4 (profile-only commits), §1.2 `approve` (`--date` on retro records), §3.1 (exemptions, `other`, sprints, `..`, status `( )`, `"`), §6.5 (manual executor), §7.3 (option a; `[human]` T2) | Test-phase spec-gaps; reopened from `test` with `karvey-state.py reopen … architecture --ref D-19`. |
+| 2 | 2026-09-25 | D-33 · BUG-25 · F-52 | §1.3 (`hooks.json` `Agent\|Task` entry, `pre-agent` event, subagent-prompt contract), §3.2 (fail open), §6.1 (`subagent-prompt.json`) | The guard was added during impl to close BUG-25, outside the approved architecture; D-33 keeps it and records it here. |

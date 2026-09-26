@@ -96,3 +96,70 @@ No test failed in this run, so no new regression test was generated. The BUG-05.
 | Integration | 2 | 2 | 0 | — |
 | E2E | 5 | 3 | 0 | 2 (deploy, archive) |
 | Manual scripts | 10 | — | — | 10 |
+
+## Test phase 2 (2026-09-25)
+
+**Date:** 2026-09-25 (run 2026-09-26 01:30 UTC) · **Environment:** local (Linux, Python 3, node) + GitHub Actions
+**Commit under test:** `07e964c` + architecture revision 2 (docs only) · **Targets:** `cli`
+
+### Full suite
+
+| ID | Command | Output (tail) | Result |
+|----|---------|---------------|--------|
+| UT-BE-01 | `python3 -m unittest discover -s plugins/karvey/tests/unit` | `Ran 711 tests` · `OK` | ✅ PASS |
+| UT-BE-02 | `python3 -m unittest discover -s plugins/karvey/tests/regression` | `Ran 10 tests` · `OK` (BUG-05..26 index) | ✅ PASS |
+| UT-BE-03 | `bash plugins/karvey/hooks/tests/test-hooks.sh` | `result: 68 passed, 0 failed` | ✅ PASS |
+| UT-BE-04 | `python3 plugins/karvey/tests/hooks/run_tables.py` | `321 cases, 390 runs (69 nopy), 390 passed, 0 failed` (incl. `subagent-prompt.json` 7 + 1 nopy) | ✅ PASS |
+| UT-FE-01 | `node --test plugins/karvey/tests/page/` | `# pass 22` · `# fail 0` | ✅ PASS |
+| UT-LINT-01 | `python3 plugins/karvey/scripts/lint-plugin.py` | `0 errors, 3 warnings (36 checks)` (L-18 advisory counts) | ✅ PASS |
+| IT-01 | `karvey-state.py validate --all --root .` | `4 files · 0 errors · 33 warnings` | ✅ PASS |
+
+### Manual agent-behaviour scripts (AC-7): 10/10 PASS
+
+| Script | REQ | First run | Re-run after fix | Evidence |
+|--------|-----|-----------|------------------|----------|
+| find-or-create | 089 | PASS | — | `qa/manual/find-or-create-2026-09-25.md` |
+| impl-resume | 085 (BUG-05) | PASS | — | `qa/manual/impl-resume-2026-09-25.md` |
+| init-not-now | 095 | PASS | — | `qa/manual/init-not-now-2026-09-25.md` |
+| missing-status-map | 080 | PASS | — | `qa/manual/missing-status-map-2026-09-25.md` |
+| qa-review-to-done | 084 | PASS | — | `qa/manual/qa-review-to-done-2026-09-25.md` |
+| settings-merge | 096 (BUG-01) | PASS | — | `qa/manual/settings-merge-2026-09-25.md` |
+| settings-docs-branch | 083 | FAIL → BUG-23 | PASS | `qa/manual/settings-docs-branch-2026-09-25{,-rerun}.md` |
+| visible-version | 041 | FAIL → BUG-24 | PASS | `qa/manual/visible-version-2026-09-25{,-rerun}.md` |
+| no-human-no-mapping | 081 | FAIL → BUG-25 | PASS (tracker lines by the regression tests) | `qa/manual/no-human-no-mapping-2026-09-25{,-rerun}.md` |
+| per-level-maps | 082 | FAIL → BUG-26 | PASS (tracker lines by the regression tests) | `qa/manual/per-level-maps-2026-09-25{,-rerun}.md` |
+
+Paths are under `docs/spec/changes/wave1-hardening/`.
+
+### PASS/FAIL per requirement area
+
+| Area (requirements.md) | Evidence | Result |
+|------------------------|----------|--------|
+| R1 State machine (001..013) | unit (`test_state_*`, schemas), IT-01, E2E-01 | ✅ PASS |
+| R2 Guards (014..030) + subagent-prompt (081, D-33) | tables (390 runs), test-hooks, E2E-02/03, CI | ✅ PASS |
+| R3 Deploy/archive off integration (031..035) | unit + prod-gate table; E2E-04/05 in deploy/archive | ✅ PASS (E2E pending) |
+| R4 One versioning moment (036..041) | unit, lint; visible-version manual | ✅ PASS |
+| R5 Estimates preserved (042..044) | unit, lint | ✅ PASS |
+| R6 Session hook (045..051) | session table, test-hooks, BUG-22/23 regressions | ✅ PASS |
+| R7 Plugin as code (052..) | lint 0 errors, CI | ✅ PASS |
+| R8 Graphify / tracker ritual off the hot path | unit, pending-sync table | ✅ PASS |
+| R9 Spec-delta merge tool | unit (`test_spec_merge*`) | ✅ PASS |
+| R10 Dashboard | unit (`test_context*`) | ✅ PASS |
+| R11 QA observes only | lint, qa-review-to-done manual | ✅ PASS |
+| R12 Short descriptions | lint | ✅ PASS |
+| R13 Tracker adapters (080..096) | 8 manual scripts, unit, BUG-25/26 regressions | ✅ PASS |
+| R14 Notifications | notify-confirm table, unit | ✅ PASS |
+| R15 Statusline and method page | statusline table, page tests | ✅ PASS |
+| R16 Convergence and dogfooding | this repo's own state (IT-01), regression index BUG-01..26 RESUELTO | ✅ PASS (archive pending) |
+
+### Benchmark (BM-02)
+
+| Metric | This run (median / p95) | Previous baseline | Delta | Status |
+|--------|-------------------------|-------------------|-------|--------|
+| `karvey-hook.sh pre-bash` (`ls 2>/dev/null`), n=20 | 128 ms / 156 ms (second sample; first 148 / 177) | 88 / 92 ms | +40 ms | ⚠️ slower, far under the 15 s timeout; host load average 3.3 during the run → F-55 |
+| `karvey-hook.sh pre-agent` (plain prompt), n=20 | 138 ms / 151 ms | — (new) | — | ✅ under the 5 s timeout |
+
+### Regression tests added since phase 1
+
+BUG-22..26, each red first on its parent commit (`docs/bugs_dev_testing.md`): `test_incidents.py` index entries,
+`session.json`, `subagent-prompt.json` sp-01..07, unit tests in `test_karvey_hooks.py` and the config/adapter tests.

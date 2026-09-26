@@ -46,3 +46,17 @@ throw-away repo; several need a tracker test list, a DEV front with the browser 
 
 Median and p95 wall-clock of the hook dispatcher (`pre-bash`), the session hook (`startup`), `karvey-state.py next`
 and `karvey-context.py`, run locally with the plugin as the hooks call it.
+
+## Test phase 2 (2026-09-25)
+
+Second pass after the architecture revision (D-19, revision 1), the E1.F17 fixes (BUG-22..26) and the
+`subagent-prompt` guard kept by D-33 (architecture revision 2). Same rows as above, plus:
+
+| ID | Suite | Command | Covers (§6) |
+|----|-------|---------|-------------|
+| UT-BE-04b | `subagent-prompt.json` table (7 cases, sp-01 also `nopy`) | `python3 plugins/karvey/tests/hooks/run_tables.py` | §6.1 (revision 2) |
+| MAN-01..10 | The 10 manual scripts, run by the owner with the agent, one throw-away repo each; four re-run after their fixes | evidence under `docs/spec/changes/wave1-hardening/qa/manual/` | §6.5 (revision 1) |
+| IT-02b | CI on the pushed head of `feature/wave1-hardening` | `gh run list -b feature/wave1-hardening -L 1` | §1.11 |
+| BM-02 | Dispatcher latency: `pre-bash` again, `pre-agent` new | as in the benchmark row above, n=20 | baseline comparison |
+
+E2E-04 (release PR through the prod-gate) and E2E-05 (archive) stay in `karvey-deploy` and `karvey-archive`.
