@@ -1,0 +1,12 @@
+{
+  "git_platform": "github",
+  "repos": ["sample-repo"],
+  "spec_repo": "sample-repo",
+  "branch_flow": {"feature_prefix": "feature/", "integration": "main", "production": "main"},
+  "notifications": {"channel": "none"},
+  "management": {"tool": "markdown"},
+  "stakeholders": {
+    "sponsor": {"role": "sponsor", "name": "Area lead", "destination": {"channel": "email", "target": "sponsor@example.org"}},
+    "approver": {"role": "approver", "name": "Area Lead"}
+  }
+}
