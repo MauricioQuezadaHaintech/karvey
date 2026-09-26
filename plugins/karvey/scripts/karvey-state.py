@@ -252,6 +252,17 @@ def lane_reason(data):
     return "lane:%s" % data.get("lane")
 
 
+def open_in_merged_gate(data, ph, to):
+    """F-06: in merged mode a phase that does not close its gate is generated and passed without its own approval —
+    ``approve-gate`` approves it with the rest of the gate. It stays pending only for a target in the same gate."""
+    pdef, tdef = phase_def(ph), phase_def(to)
+    if not pdef or not tdef or not pdef.get("gate") or pdef.get("gate") != tdef.get("gate"):
+        return False
+    aps = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
+    ap = aps.get(pdef["approval"]) if pdef.get("approval") else None
+    return isinstance(ap, dict) and ap.get("generated") is True
+
+
 def gate_phases_before(index):
     """Approvable phases strictly before ``index`` that are preconditions (deploy and prod are not)."""
     out = []
@@ -902,8 +913,8 @@ def release_evidence(ledger):
     return missing
 
 
-def compute_next(data, ledger=None, ledger_known=False):
-    """The next-phase record of §1.2 for a parsed, valid spec.json."""
+def compute_next(data, ledger=None, ledger_known=False, merged=False):
+    """The next-phase record of §1.2 for a parsed, valid spec.json (``merged``: the gate mode is merged, F-06)."""
     raw = data.get("phase")
     mapped, tier = map_phase(raw)
     idx = phase_index(mapped)
@@ -918,6 +929,8 @@ def compute_next(data, ledger=None, ledger_known=False):
         return res
     for ph in gate_phases_before(phase_index(nxt)):
         st = approval_state(data, ph)
+        if st == "pending" and merged and open_in_merged_gate(data, ph, nxt):
+            st = "in open gate"
         res["preconditions"].append({"phase": ph, "state": st})
         if st == "pending":
             res["blockers"].append("%s not approved or skipped" % ph)
@@ -935,14 +948,15 @@ def compute_next(data, ledger=None, ledger_known=False):
     elif key and key not in ("deploy", "prod"):
         st = approval_state(data, mapped)
         ap = (data.get("approvals") or {}).get(key) if isinstance(data.get("approvals"), dict) else None
-        if st in ("approved", "skipped"):
+        in_gate = merged and open_in_merged_gate(data, mapped, nxt)
+        if st in ("approved", "skipped") or in_gate:
             satisfied = True
         elif isinstance(ap, dict) and ap.get("generated") is True:
             res["status"] = "awaiting-approval"
             satisfied = False
         else:
             satisfied = False
-        if st == "pending":
+        if st == "pending" and not in_gate:
             res["blockers"].append("%s not approved or skipped" % mapped)
     else:
         satisfied = False  # no approval: the phase's own skill says when it is done
@@ -970,7 +984,11 @@ def cmd_next(args, root):
                "skill": None, "preconditions": [], "blockers": ["%s fails validation" % name], "file": name}
         return kl.EXIT_FINDINGS, res, errs, warns, "%s: invalid — fix the validation errors first" % args.change
     ledger, known = read_ledger_safe(root, args.change)
-    res = compute_next(loaded.data, ledger, known)
+    try:
+        merged = gate_mode(root)[0] == "merged"
+    except Refused:
+        merged = False
+    res = compute_next(loaded.data, ledger, known, merged=merged)
     res["file"] = name
     lane, source = ln.lane_of(loaded.data)
     res["lane"], res["lane_source"] = lane, source
@@ -1135,8 +1153,9 @@ def cmd_advance(args, root):
             raise Refused("%s is already in %s" % (args.change, to), code="state.edge")
         if ti < ci:
             raise Refused("edge not in the graph: %s → %s (backward: use reopen)" % (cur, to), code="state.edge")
+        merged = info.setdefault("merged", gate_mode(root)[0] == "merged")
         for ph in gate_phases_before(ti):
-            if approval_state(data, ph) == "pending":
+            if approval_state(data, ph) == "pending" and not (merged and open_in_merged_gate(data, ph, to)):
                 raise Refused("%s not approved or skipped" % ph, code="state.precondition")
         for p in machine()["phases"][ci + 1:ti]:
             if is_skipped(data, p["id"]) or (p["approval"] and approval_state(data, p["id"]) == "approved"):

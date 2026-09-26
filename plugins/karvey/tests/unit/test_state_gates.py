@@ -269,5 +269,45 @@ class ProdManifest(Base):
         self.assertIn("never automatic", env["errors"][0]["message"])
 
 
+class MergedGateAdvance(Base):
+    """F-06 regression: in merged mode a phase that does not close its gate is passed once generated; the gate's
+    single approval comes at its last phase (REQ-W2-034)."""
+
+    MERGED = dict(PROJECT, gates="merged")
+
+    def at_architecture(self, generated=True):
+        return {"phase": "architecture", "skipped": {"infra": "no cloud"},
+                "approvals": {"requirements": ok(), "architecture": {"generated": generated, "approved": False}},
+                "phase_history": hist("init", "requirements", "architecture")}
+
+    def test_merged_advances_inside_the_gate_without_a_second_question(self):
+        self.put(self.at_architecture(), project=self.MERGED)
+        c, env = self.st("next", "feat-a")
+        self.assertEqual((env["result"]["next_phase"], env["result"]["blockers"]), ("tasks", []), env)
+        c, env = self.st("advance", "feat-a", "tasks")
+        self.assertEqual(c, 0, env)
+        self.assertFalse(self.read()["approvals"]["architecture"]["approved"])  # approved by approve-gate later
+
+    def test_merged_leaving_the_gate_needs_the_gate_approval(self):
+        spec = self.at_architecture()
+        spec["phase"] = "tasks"
+        spec["approvals"]["tasks"] = {"generated": True, "approved": False}
+        spec["phase_history"] = hist("init", "requirements", "architecture", "tasks")
+        self.put(spec, project=self.MERGED)
+        self.refused(("advance", "feat-a", "impl"), "architecture not approved or skipped")
+        c, env = self.gate("how")
+        self.assertEqual(c, 0, env)
+        c, env = self.st("advance", "feat-a", "impl")
+        self.assertEqual(c, 0, env)
+
+    def test_merged_needs_the_artifact_generated(self):
+        self.put(self.at_architecture(generated=False), project=self.MERGED)
+        self.refused(("advance", "feat-a", "tasks"), "architecture not approved or skipped")
+
+    def test_granular_keeps_the_per_phase_approval(self):
+        self.put(self.at_architecture())
+        self.refused(("advance", "feat-a", "tasks"), "architecture not approved or skipped")
+
+
 if __name__ == "__main__":
     unittest.main()
