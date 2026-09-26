@@ -7,6 +7,8 @@ argument-hint: <change-id>
 
 # Karvey Design Graphic
 
+Load: _core.md, gates.md, targets.md, judges.md
+
 ## Purpose
 
 With the approved mockup as the structural wireframe, apply the **project design system** (`docs/spec/design-system.md`) to the change and record only what the change adds or modifies — its **design delta**. Contrast is computed by a tool, and the design score comes from a clean-context **design judge**, never from this phase (REQ-W3-035..039). Update the mockup HTML with the visual system.
@@ -24,7 +26,7 @@ Check the precondition: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
 
 **Read the project design system** `docs/spec/design-system.md` (tokens per scheme with `Changed by`, the component inventory, the pairs table with each pair's WCAG level). It is not redefined here: this phase maps it onto the change and declares only its delta. **No design system yet** → this is the first UI change: propose creating it — from this change's work (the delta becomes the seed at archive) or by importing a pinned `inputs.design_system` — and say which. Check whether a `PRODUCT.md` or `DESIGN.md` exists to understand the existing brand.
 
-**Design produced by another agent or repo** (see `../karvey/rules/multi-agent.md` §3): if `spec.json:inputs.design` or `inputs.design_system` is set, read them **at the pinned commit** (`git -C {repo} show {commit}:{path}`). The design system is a hard input: tokens, type and components come from it and are not re-invented here — this phase maps them onto the change and declares its delta. If a designer agent delivers a new version, update the pin (`inputs.design = "{repo} {path} @{new-commit}"`) and record the re-pin in `revision_history`; `karvey-iterate` decides the ripple. When **this** phase is the one producing the design for other repos, finish by giving the consumers the reference to pin: `{repo} docs/spec/changes/{change-id}/design-spec.md @{commit}`.
+**Design produced by another agent or repo** (see `multi-agent`[^r-multi-agent] §3): if `spec.json:inputs.design` or `inputs.design_system` is set, read them **at the pinned commit** (`git -C {repo} show {commit}:{path}`). The design system is a hard input: tokens, type and components come from it and are not re-invented here — this phase maps them onto the change and declares its delta. If a designer agent delivers a new version, update the pin (`inputs.design = "{repo} {path} @{new-commit}"`) and record the re-pin in `revision_history`; `karvey-iterate` decides the ripple. When **this** phase is the one producing the design for other repos, finish by giving the consumers the reference to pin: `{repo} docs/spec/changes/{change-id}/design-spec.md @{commit}`.
 
 ### Step 2 — Identify the design register
 
@@ -351,7 +353,7 @@ Only include sections that the change actually has (drop E if there is no second
 
 ### Step 9C — Design judge before the gate
 
-The design score comes from a clean-context judge (lens `design`, `../karvey/rules/judges/design_graphic.md`), never
+The design score comes from a clean-context judge (lens `design`, `judges/design_graphic`[^r-judges-design-graphic]), never
 from this phase. Build its closed inputs — the delta, the "Applies to" mockups (≤ 200 KB each) and `contrast.json` —
 run it as `../karvey/rules/judges.md` describes, and collect it:
 ```bash
@@ -394,3 +396,6 @@ Close the phase per `../karvey/rules/gates.md` (phase `design_graphic`, gate *wh
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-judges-design-graphic]: ../karvey/rules/judges/design_graphic.md — context only, not opened.
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.

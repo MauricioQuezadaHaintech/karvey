@@ -7,6 +7,8 @@ argument-hint: <change-id> [-y]
 
 # Karvey Architecture
 
+Load: _core.md, gates.md, engineering-standards.md, security-tiers.md, judges.md
+
 ## Purpose
 
 Generate the enterprise architecture technical design: components, boundaries, integrations, security controls per tier, observability, and a concrete file structure per layer.
@@ -25,7 +27,7 @@ Read in parallel:
 - **Engineering standards for the change's layers/targets**: resolve `project.json:standards` (or `docs/spec/standards/_index.md`) and read the relevant `standards/{layer}.md`. These are a **hard constraint** on this design, not a suggestion. If no standard exists for a layer, announce it and treat every non-trivial pattern choice for that layer as a gray zone to ask (never silently pick one).
 - Project steering: `product.md`, `tech.md` or equivalents if they exist
 
-Check the precondition with the state tool: every earlier phase **approved or skipped** (`../karvey/rules/state-machine.md`):
+Check the precondition with the state tool: every earlier phase **approved or skipped** (`state-machine`[^r-state-machine]):
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
@@ -318,3 +320,5 @@ Close the phase per `../karvey/rules/gates.md` (phase `architecture`, gate *how*
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*
+
+[^r-state-machine]: ../karvey/rules/state-machine.md — context only, not opened.

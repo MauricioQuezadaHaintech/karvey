@@ -7,6 +7,8 @@ argument-hint: <change-id> [--iteration N] [--shotgun | --variants N]
 
 # Karvey Mockup — Navigable HTML Prototype
 
+Load: _core.md, gates.md, targets.md
+
 ## Purpose
 
 Generate a navigable HTML file with **3–4 levels of depth** before defining the graphic design. The engineer navigates the mockup in the browser, gives feedback, and it's iterated until approval. Crucially, the mockup is then **validated against the requirements** (Step 5B) to surface spec-gaps while they are still cheap to fix — before design, architecture and impl. Only afterward does it advance to graphic design and architecture.
@@ -47,7 +49,7 @@ Read:
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/prd.md`
 
-Check the precondition with the state tool (`../karvey/rules/state-machine.md`):
+Check the precondition with the state tool (`state-machine`[^r-state-machine]):
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
@@ -170,7 +172,7 @@ For each requirement, check:
 - Does the mockup imply a behavior/state/field that **no requirement covers**? (screen → no requirement = a likely **spec-gap**: the requirement is incomplete)
 - Are the Level-4 states (errors, confirmations, empty, multi-step) actually specified, or did the mockup just invent them?
 
-Record each mismatch. Then route per `../karvey/rules/iteration-loop.md`:
+Record each mismatch. Then route per `iteration-loop`[^r-iteration-loop]:
 - If `requirements` is **still in this change's scope and not yet locked downstream**, the cheapest path is to fix the requirement now: note it and update `requirements.md` + `spec-delta.md` directly (you're still pre-design), keeping PRD traceability.
 - If the gap is bigger or contested, append it to `docs/spec/changes/{change-id}/findings.md` as a `spec-gap` and run `/karvey-iterate {change-id}` to route it formally.
 
@@ -237,3 +239,6 @@ Close the phase per `../karvey/rules/gates.md` (phase `mockup`, gate *what*): `g
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+
+[^r-iteration-loop]: ../karvey/rules/iteration-loop.md — context only, not opened.
+[^r-state-machine]: ../karvey/rules/state-machine.md — context only, not opened.

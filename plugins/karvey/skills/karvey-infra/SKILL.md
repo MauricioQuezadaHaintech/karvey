@@ -7,6 +7,8 @@ argument-hint: <change-id> [-y]
 
 # Karvey Infra
 
+Load: _core.md, gates.md, deploy-workflow.md, security-tiers.md, targets.md
+
 ## Purpose
 
 Generate and configure the **cloud infrastructure (IaC)** and the **CI/CD pipelines** from the "Cloud Infrastructure" section of the change's `architecture.md`. This is **PHASE 6** of the Karvey Method, between `karvey-architecture` (PHASE 5) and `karvey-tasks` (PHASE 7).
@@ -21,10 +23,10 @@ Read in parallel:
 - `docs/spec/changes/{change-id}/spec.json` (especially `security_tier`, `layers`, `management`)
 - `docs/spec/changes/{change-id}/architecture.md` (especially the **"## Cloud Infrastructure"** section: which services from which cloud)
 - `docs/spec/project.json` (fields `git_platform`, `cloud.provider`, `iac_tool`, `repos`, `spec_repo`, `branch_flow`)
-- Shared rules: `../karvey/rules/project-config.md`, `../karvey/rules/deploy-workflow.md`, `../karvey/rules/changelog-policy.md`, `../karvey/rules/security-tiers.md`
+- The rules on the `Load:` line: `../karvey/rules/deploy-workflow.md`, `../karvey/rules/security-tiers.md`, `../karvey/rules/targets.md` (project settings[^r-project-config] and the changelog policy[^r-changelog-policy] are context only)
 
 Entry checks:
-- If `docs/spec/project.json` **does not exist** → **stop** and indicate to run `karvey-init` first (see `project-config.md`).
+- If `docs/spec/project.json` **does not exist** → **stop** and indicate to run `karvey-init` first (see `project-config`[^r-project-config]).
 - `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" next "{change-id}" --json`: architecture must be approved; relay the blockers and **stop** if not. Then `advance "{change-id}" infra`.
 - **No cloud resources to create or change** → do not run this phase: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" skip "{change-id}" infra --reason "…"` and go to karvey-tasks.
   - Exception: **`ops` changes** (`spec.json:type = "ops"`) come straight from lite requirements; architecture is required only if the plan changes trust boundaries. See Step 5-bis.
@@ -185,7 +187,7 @@ Checklist format:
 
 ### Step 5-bis — Operations plan (`ops` changes) and human-executed IAM
 
-For changes **without application code** (IAM, DNS, secrets rotation, quotas, console configuration — `spec.json:type = "ops"`, see `../karvey/rules/multi-agent.md` §6), this phase produces a **command plan** instead of (or besides) IaC. Its lifecycle is **plan → execution → verification → archive**:
+For changes **without application code** (IAM, DNS, secrets rotation, quotas, console configuration — `spec.json:type = "ops"`, see `multi-agent`[^r-multi-agent] §6), this phase produces a **command plan** instead of (or besides) IaC. Its lifecycle is **plan → execution → verification → archive**:
 
 1. **Plan** — in `infra.md`, an ordered table: step · exact command (or console path) · executor (agent / `[human]`) · read-only verification + expected output · rollback. Prefer IaC; when a step can only be done by a person (IAM grants on a production project, registrar DNS, destructive deletions), it becomes a `[human]` task in `karvey-tasks`.
 2. **Versioned script** — every IAM/permission change a human runs lives as a script in the repo (e.g. `infra/iam/{change-id}.sh`, idempotent, with its rollback counterpart). The human runs **that** script, not an ad-hoc command, so what was executed is reviewable in git.
@@ -203,13 +205,13 @@ The infra security review (Step 5) applies to the plan too: least privilege per 
 
 ### Step 7 — CHANGELOG
 
-Any IaC/pipeline generated or modified **must record an entry** in the `CHANGELOG.md` of the corresponding repo, per `changelog-policy.md`:
+Any IaC/pipeline generated or modified **must record an entry** in the `CHANGELOG.md` of the corresponding repo, per `changelog-policy`[^r-changelog-policy]:
 - At the root of **each repo** in `project.json:repos` that received infra/pipeline changes.
 - *Keep a Changelog* format + a traceability block with the **responsible human** (from `git config user.*`), the **AI model**, the "why" (not just the what), the `change-id` and `Karvey phase: infra`.
 
 ### Step 8 — Management
 
-Record in the project's management, reading `management` from `spec.json` (settings in `project.json:management`, `../karvey/rules/management-adapters.md`):
+Record in the project's management, reading `management` from `spec.json` (settings in `project.json:management`, `management-adapters`[^r-management-adapters]):
 - Team's tracker → `create_task` with the `[Infra]` prefix per relevant resource/pipeline (state `todo`).
 - Markdown (`PLAN.md`) → add entries in `PLAN.md` with the status of the infra and pipelines per repo/environment.
 
@@ -259,3 +261,8 @@ Close the phase per `../karvey/rules/gates.md` (phase `infra`, gate *how*): `gen
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-changelog-policy]: ../karvey/rules/changelog-policy.md — context only, not opened.
+[^r-management-adapters]: ../karvey/rules/management-adapters.md — context only, not opened.
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.
+[^r-project-config]: ../karvey/rules/project-config.md — context only, not opened.

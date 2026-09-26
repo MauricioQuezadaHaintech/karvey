@@ -7,6 +7,8 @@ argument-hint: <change-id> [--capability <nombre>] | --settings
 
 # Karvey Init
 
+Load: _core.md, gates.md, project-config.md, management-adapters.md, adapters/{tool}.md, lanes.md
+
 ## Purpose
 
 Create a new change and register its Epic in the team's management tool (`../karvey/rules/management-adapters.md`). The first time Karvey is used in a project it also asks the **team settings** — notification channel, task tool and status flow — because a plugin cannot run anything at install time (Step 3.2).
@@ -42,7 +44,7 @@ If `$ARGUMENTS` includes the change-id, use it. If not, generate it from the des
 
 - **`git_platform`**: `github` | `azure_devops`.
 - **`cloud.provider`**: `azure` | `gcp` | `aws` | `mixed` | `none`. **`iac_tool`**: `terraform` | `bicep` | `pulumi` | `none`.
-- **`knowledge_sync`** (`../karvey/rules/knowledge-sync.md`), optional, default `none`: offer `obsidian` (an Obsidian MCP is in the session) or `graphify` (installed) only when one is available, and write it only if the team wants a graph. It runs only at archive or on demand.
+- **`knowledge_sync`** (`knowledge-sync`[^r-knowledge-sync]), optional, default `none`: offer `obsidian` (an Obsidian MCP is in the session) or `graphify` (installed) only when one is available, and write it only if the team wants a graph. It runs only at archive or on demand.
 - **`repos`**: MINIMUM 1 element. **`spec_repo`**: the one repo, or ask which holds `docs/spec/`.
 - **`branch_flow`**: recommend **trunk** — `{ "feature_prefix": "feature/", "integration": "main", "production": "main", "mode": "trunk" }`: each change reaches production through its own PR. `env-branches` (integration ≠ production, e.g. `dev` → `master`) only when the team deploys an integration environment from its own branch. Without `mode` it is derived (trunk when integration = production); a declared mode that contradicts the branches fails `validate`.
 
@@ -51,7 +53,7 @@ If `$ARGUMENTS` includes the change-id, use it. If not, generate it from the des
 Run when `project.json` lacks `notifications` or `management`, or on `--settings`. Otherwise ask nothing.
 Ask with `AskUserQuestion`, one block at a time, with examples — never assume the answer:
 
-1. **Notifications** (`../karvey/rules/notifications.md`): `Google Chat` · `Slack` · `Microsoft Teams` ·
+1. **Notifications** (`notifications`[^r-notifications]): `Google Chat` · `Slack` · `Microsoft Teams` ·
    `E-mail` · `Webhook` · `None` · `Not now`. Then the **target** (space id, `#channel`, list, or the *name*
    of the secret holding a webhook — never a URL), **via** (`mcp` · `cli` · `webhook` · `api`, checking what
    is available) and **events** (default `qa`, `deploy`). **Not now** → write `notifications.deferred: true`
@@ -85,7 +87,7 @@ Print one line: `Settings: notifications slack #dev-releases (webhook) · manage
 
 ### Step 3.5 — Enforcement (hooks)
 
-The plugin's hooks read `project.json:enforcement` (`../karvey/rules/enforcement.md`); nothing is copied into
+The plugin's hooks read `project.json:enforcement` (`enforcement`[^r-enforcement]); nothing is copied into
 `settings.json`. `prod-gate` is on by default. Ask whether to turn on the opt-in ones:
 
 ```
@@ -116,7 +118,7 @@ project default; then write the override into `spec.json:management`.
 Ask (or infer from the pre-spec context):
 
 1. **Capability**: the functional domain (e.g., `call-management`). Created in `docs/spec/specs/` if new.
-2. **Security Tier**: 1-4 (`../karvey/rules/security-tiers.md`).
+2. **Security Tier**: 1-4 (`security-tiers`[^r-security-tiers]).
 3. **Layers**: DB / Backend / Frontend / Infra (can be multiple).
 4. **Brief description**: 1-2 lines of the problem it solves.
 5. **Goal (north star)**: the observable, verifiable result that defines success. Save it verbatim in `spec.json:goal` and as a highlighted section of `prd.md`. Every phase re-reads it on start.
@@ -128,7 +130,7 @@ Ask (or infer from the pre-spec context):
    code → `ops`; a production defect that cannot wait → `hotfix`; documentation only → `docs`. An unknown answer
    proposes `standard` and says which answer was unknown. The lane is recorded in Step 7, after `init`.
 7. **Multi-repo links** (only if `project.json:repos` has several repos): `links.parent` / `links.children`
-   as `{change-id}@{repo}`, business `decisions`, and pinned `inputs` (`"{repo} {path} @{commit}"`), per `../karvey/rules/multi-agent.md`.
+   as `{change-id}@{repo}`, business `decisions`, and pinned `inputs` (`"{repo} {path} @{commit}"`), per `multi-agent`[^r-multi-agent].
 
 ### Step 6 — Directories and living spec
 
@@ -140,7 +142,7 @@ If `docs/spec/specs/{capability}/spec.md` doesn't exist, create it with `# Spec:
 
 ### Step 7 — Create spec.json
 
-Write the descriptive fields to `docs/spec/changes/{change-id}/spec.json` (schema in `../karvey/rules/living-specs.md`; omit keys that don't apply):
+Write the descriptive fields to `docs/spec/changes/{change-id}/spec.json` (schema in `living-specs`[^r-living-specs]; omit keys that don't apply):
 ```json
 {
   "change_id": "{change-id}",
@@ -177,7 +179,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" lane "{change-id}" set "
 
 A lane is raised later with `lane raise` (freely, with a reason) and lowered only by the human (`lane lower`).
 
-Approvals are recorded later by each phase with `karvey-state.py approve … --by --role --ref` (`../karvey/rules/state-machine.md`).
+Approvals are recorded later by each phase with `karvey-state.py approve … --by --role --ref` (`state-machine`[^r-state-machine]).
 
 ### Step 8 — Create prd.md
 
@@ -300,3 +302,11 @@ Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this 
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+
+[^r-enforcement]: ../karvey/rules/enforcement.md — context only, not opened.
+[^r-knowledge-sync]: ../karvey/rules/knowledge-sync.md — context only, not opened.
+[^r-living-specs]: ../karvey/rules/living-specs.md — context only, not opened.
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.
+[^r-notifications]: ../karvey/rules/notifications.md — context only, not opened.
+[^r-security-tiers]: ../karvey/rules/security-tiers.md — context only, not opened.
+[^r-state-machine]: ../karvey/rules/state-machine.md — context only, not opened.

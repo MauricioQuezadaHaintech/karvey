@@ -7,6 +7,8 @@ argument-hint: <change-id> [-y]
 
 # Karvey Requirements
 
+Load: _core.md, gates.md, ears-format.md, living-specs.md, security-tiers.md, management-adapters.md, adapters/{tool}.md, judges.md
+
 ## Purpose
 
 Generate requirements in EARS format for the change, produce the spec-delta with ADDED/MODIFIED/REMOVED operations, and register the Features in the team's tracker (`../karvey/rules/management-adapters.md`) or PLAN.md.
@@ -30,7 +32,7 @@ Read:
 
 The requirements must derive from the PRD and cover its objectives and acceptance criteria.
 
-**Multi-agent / multi-repo context** (see `../karvey/rules/multi-agent.md`):
+**Multi-agent / multi-repo context** (see `multi-agent`[^r-multi-agent]):
 - If `links.parent` is set, also read the **parent change's** `prd.md` and acceptance criteria in its repo: this child's requirements trace to the parent PRD.
 - For each `decisions` entry (`D-NN@{repo}`), read the decision in the operations repo's decision log.
 - For each `inputs.*` entry (`design`, `design_system`, `copy`, `legal`), read the file **at the pinned commit** (`git -C {repo} show {commit}:{path}`), not the working copy. If an input the requirements need is missing or unpinned, ask for it — never assume "the latest version".
@@ -153,7 +155,7 @@ Do you approve the requirements to continue?
 
 `-y` records the answer with `--role auto` and continues (`../karvey/rules/gates.md`); it never records production.
 
-When the user approves, record it (`ref` = the `D-NN` or URL where the OK lives; `../karvey/rules/multi-agent.md` §4):
+When the user approves, record it (`ref` = the `D-NN` or URL where the OK lives; `multi-agent`[^r-multi-agent] §4):
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" approve "{change-id}" requirements \
   --by "{name}" --role human --ref "D-NN"
@@ -217,3 +219,5 @@ Close the phase per `../karvey/rules/gates.md` (phase `requirements`, gate *what
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
+
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.

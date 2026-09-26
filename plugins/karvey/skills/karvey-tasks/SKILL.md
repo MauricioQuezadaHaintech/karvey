@@ -7,6 +7,8 @@ argument-hint: <change-id> [-y] [--sequential]
 
 # Karvey Tasks
 
+Load: _core.md, gates.md, management-adapters.md, adapters/{tool}.md
+
 ## Purpose
 
 Generate the implementation task plan from the approved architecture. Record it in the team's tracker (Epic > Feature > Tasks with dependencies — `../karvey/rules/management-adapters.md`) or in a PLAN.md checklist. Target size: 10–30 minutes per task (AI timings).
@@ -56,7 +58,7 @@ Tasks of the same layer within a Feature can be marked `(P)` if they are indepen
 
 **Valid layer labels:** `[DB/Backend/Frontend/Infra/Test/human]`. `Infra`-type tasks are allowed for IaC/pipeline adjustments that come up during implementation (the base infra is already defined in `infra.md`).
 
-**`[human]` tasks** (see `../karvey/rules/multi-agent.md` §5): any step the agent must not or cannot execute — IAM grants, destructive deletions, console-only settings, registrar DNS without API, payments. The agent writes it so a person can run it without interpretation:
+**`[human]` tasks** (see `multi-agent`[^r-multi-agent] §5): any step the agent must not or cannot execute — IAM grants, destructive deletions, console-only settings, registrar DNS without API, payments. The agent writes it so a person can run it without interpretation:
 ```markdown
 ### F2.T3 [human] {Description} — _Depends: F2.T2_
 **Executor:** {name / role}
@@ -247,3 +249,5 @@ Close the phase per `../karvey/rules/gates.md` (phase `tasks`, gate *how*): `gen
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
+
+[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.
