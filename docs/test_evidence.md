@@ -114,6 +114,14 @@ No test failed in this run, so no new regression test was generated. The BUG-05.
 | UT-LINT-01 | `python3 plugins/karvey/scripts/lint-plugin.py` | `0 errors, 3 warnings (36 checks)` (L-18 advisory counts) | ✅ PASS |
 | IT-01 | `karvey-state.py validate --all --root .` | `4 files · 0 errors · 33 warnings` | ✅ PASS |
 
+### IT-02b: CI on the pushed head
+**Result: ✅ PASS** — run 36208915488 @ `4c9b7c0` (`gh run list -b feature/wave1-hardening -L 1`)
+```
+windows-advisory success 29s · page success 9s · lint success 6s
+tests (ubuntu-latest, 3.9) success 108s · tests (ubuntu-latest, 3.12) success 95s
+tests (macos-latest, 3.9) success 192s · tests (macos-latest, 3.12) success 280s
+```
+
 ### Manual agent-behaviour scripts (AC-7): 10/10 PASS
 
 | Script | REQ | First run | Re-run after fix | Evidence |

@@ -324,3 +324,14 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-25 | impl | E1.F17.T8 done and E1.F17.T3 ✅ (D-21): the four failing manual scripts re-run headless in throw-away repos: settings-docs-branch PASS (B silent), visible-version PASS (deployed commit's VERSION read, `DEV 2.10.4` accepted, no mismatch with a later bump, no-version = recommendation), no-human-no-mapping PASS (subagent run failed after the text fix, passed after the subagent-prompt guard), per-level-maps PASS for the lines without a tracker (`.connections.json` looked up first); total 10/10 PASS. F-54 → BL-52 routed to wave2-structural; BL-51 names the statusline stable-launcher item without an F-number. Estimate 30 min vs actual 25 min (AI), 0 review. |
 | 2026-09-25 | architecture | Revision 2 (D-33): §1.3, §3.2, §6.1 describe the `subagent-prompt` guard added for BUG-25 (commit 55561c4). |
 | 2026-09-25 | test | Test phase 2 (`advance … test`). Unit 711 · regression 10 · test-hooks 68 · tables 321 cases / 390 runs · page 22 — all green; lint 0 errors; `validate --all` 0 errors; manual scripts 10/10 PASS (four after re-run); every requirement area PASS (E2E release/archive still in deploy/archive). Benchmark: pre-bash slower than baseline under load (F-55, emergent). Evidence `docs/test_evidence.md` § Test phase 2. |
+| 2026-09-25 | qa | QA entered (`advance … qa`); 9 dimensions over `origin/main...4c9b7c0` (D1–D4 and D7 by review subagents, D7 intra-model). 20 bugs fixed in the micro-loop (BUG-27..46, each red on 4c9b7c0); 13 spec-gap/emergent F-76..F-88: F-76, F-77, F-79 open for the owner (prod approval evidence and binding), 10 deferred to BL-53..BL-61. Security gate FAIL on F-76/F-77; QA not approved. Review `qa/REVISION_PR_24_20260925.md`. After the fixes: unit 735 · regression 10 · test-hooks 68 · tables 363 cases / 438 runs · page 22 · lint 0 errors · validate 0 errors. |
+
+## QA Review (2026-09-25)
+
+Document: `docs/spec/changes/wave1-hardening/qa/REVISION_PR_24_20260925.md`. Not approved.
+
+Pending actions:
+- [ ] Owner decision on F-76 (what evidence the prod-gate verifies), F-77 (bind the prod approval to the released commits, with an expiry) and F-79 (prod approval across a reopen); then `/karvey-iterate wave1-hardening` routes them (architecture revision) and QA re-runs D1.
+- [ ] Manual areas: prod approval end to end (E2E-04), method page rendering in a browser, a real legacy project after upgrade.
+- [x] BUG-27..46 fixed with regression tests (RESUELTO).
+- [x] Deferred: BL-53..BL-61.
