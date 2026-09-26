@@ -1,6 +1,6 @@
 """karvey-security-scan.py: fixed catalogue, first tool on PATH, not evaluated / not applicable (C-15).
 
-@req REQ-W2-064 REQ-W2-065 REQ-W2-067
+@req REQ-W2-064 REQ-W2-065 REQ-W2-066 REQ-W2-067
 """
 import contextlib
 import importlib.util
@@ -139,6 +139,36 @@ class Run(Base):
     def test_unknown_category_refused(self):
         code, _, _ = self.scan("--categories", "dast")
         self.assertEqual(code, 3)
+
+
+class Suppressions(Base):
+    def validate(self, entries):
+        p = self.root / "docs/spec/changes/feat-a/qa"
+        p.mkdir(parents=True, exist_ok=True)
+        (p / "suppressions.json").write_text(json.dumps(entries), encoding="utf-8")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = ss.main(["validate-suppressions", "feat-a", "--root", str(self.root), "--json"])
+        return code, json.loads(out.getvalue())["result"]
+
+    def test_REQ_W2_066_fixture_key_suppressed_with_file_and_reason(self):
+        code, r = self.validate([{"tool": "gitleaks", "rule": "generic-api-key", "path": "tests/fixtures/key.pem",
+                                  "reason": "test fixture key, never deployed", "scope": "this file"}])
+        self.assertEqual((code, r["problems"]), (0, []))
+
+    def test_REQ_W2_066_suppression_without_reason_or_scope_reported(self):
+        code, r = self.validate([{"tool": "gitleaks", "rule": "r", "path": "a.py", "reason": " ", "scope": "file"},
+                                 {"tool": "bandit", "rule": "B101", "path": "b.py", "reason": "assert in tests"}])
+        self.assertEqual(code, 1)
+        self.assertEqual(len(r["problems"]), 2)
+        self.assertIn("no reason", r["problems"][0])
+        self.assertIn("no scope", r["problems"][1])
+
+    def test_no_file_is_fine(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = ss.main(["validate-suppressions", "feat-a", "--root", str(self.root)])
+        self.assertEqual(code, 0)
 
 
 if __name__ == "__main__":

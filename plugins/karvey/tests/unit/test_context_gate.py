@@ -1,6 +1,6 @@
 """Dashboard lane column, lane skips and automatic approvals (architecture §1.6 of wave2-structural).
 
-@req REQ-W2-021 REQ-W2-040 REQ-W2-027 REQ-W2-037 REQ-W2-056
+@req REQ-W2-021 REQ-W2-040 REQ-W2-027 REQ-W2-037 REQ-W2-056 REQ-W2-068
 """
 import contextlib
 import importlib.util
@@ -142,6 +142,15 @@ class GateSummary(unittest.TestCase):
         g_, _ = self.gate()
         self.assertEqual(g_["sections"]["deviations"], ["## DEV-01 — v2 grid"])
         self.assertTrue(any("DEV-02" in o for o in g_["omissions"]), g_["omissions"])
+
+    def test_REQ_W2_068_pipeline_without_security_scan_is_a_deviation(self):
+        (self.d / "infra.md").write_text("# Infra\n\n## CI/CD\n- build, test, deploy\n")
+        g_, _ = self.gate()
+        self.assertEqual(g_["sections"]["deviations"],
+                         ["pipeline without a security-scan stage (infra.md; REQ-W2-068)"])
+        (self.d / "infra.md").write_text("# Infra\n\n## CI/CD\n- build, test, security-scan, deploy\n")
+        g_, _ = self.gate()
+        self.assertEqual(g_["sections"]["deviations"], ["none (no deviations.md)"])
 
     def test_missing_source_named(self):
         (self.d / "tasks.md").unlink()

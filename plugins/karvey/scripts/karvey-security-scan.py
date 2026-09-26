@@ -2,6 +2,7 @@
 """karvey-security-scan.py — the deterministic security tools of QA Dimension 1 (architecture §1.13 C-15).
 
     karvey-security-scan.py run <change> [--categories secrets,sast,sca,iac] [--root DIR] [--json]
+    karvey-security-scan.py validate-suppressions <change> [--root DIR] [--json]
 
 ``run``, per category of the fixed catalogue ``karvey_lib/security_tools.json``:
 
@@ -16,7 +17,10 @@
    ``changes/{id}/evidence.jsonl`` (the same record ``karvey-evidence.py`` writes); a category that applies
    and was not evaluated records a ``security.tools`` hit in ``checks.jsonl``.
 
-Exit: 0 · 2 usage · 3 refused (unsafe project value) · 4 not found. Stdlib only.
+``validate-suppressions`` reads ``changes/{id}/qa/suppressions.json`` (``[{tool, rule, path, reason, scope}]``)
+and reports every entry without a reason or a scope (REQ-W2-066).
+
+Exit: 0 · 1 invalid suppressions · 2 usage · 3 refused (unsafe project value) · 4 not found. Stdlib only.
 """
 import argparse
 import fnmatch
@@ -310,7 +314,42 @@ def cmd_run(args):
         "\n".join(lines)
 
 
-COMMANDS = {"run": cmd_run}
+SUPPRESSION_KEYS = ("tool", "rule", "path", "reason", "scope")
+
+
+def validate_suppressions(entries):
+    """Problems of ``suppressions.json``: every entry needs tool, rule, path, a reason and a scope."""
+    if not isinstance(entries, list):
+        return ["suppressions.json must be a list of {tool, rule, path, reason, scope}"]
+    out = []
+    for i, e in enumerate(entries):
+        if not isinstance(e, dict):
+            out.append("entry %d is not an object" % i)
+            continue
+        missing = [k for k in SUPPRESSION_KEYS if not (isinstance(e.get(k), str) and e[k].strip())]
+        if missing:
+            out.append("entry %d (%s %s): no %s" % (i, e.get("tool", "?"), e.get("rule", "?"), ", ".join(missing)))
+    return out
+
+
+def cmd_validate_suppressions(args):
+    root = _root(args)
+    p = Path(root) / pj.CHANGES_DIR / args.change / "qa" / "suppressions.json"
+    if not p.is_file():
+        return kl.EXIT_OK, {"change": args.change, "entries": 0, "problems": []}, "no suppressions.json"
+    try:
+        entries = json.loads(p.read_text(encoding="utf-8-sig"))
+    except ValueError as exc:
+        return kl.EXIT_FINDINGS, {"change": args.change, "problems": ["unreadable: %s" % exc]}, \
+            "suppressions.json unreadable: %s" % exc
+    problems = validate_suppressions(entries)
+    n = len(entries) if isinstance(entries, list) else 0
+    human = "%d suppression(s), %d problem(s)" % (n, len(problems)) + "".join("\n  " + x for x in problems)
+    return (kl.EXIT_FINDINGS if problems else kl.EXIT_OK), \
+        {"change": args.change, "entries": n, "problems": problems}, human
+
+
+COMMANDS = {"run": cmd_run, "validate-suppressions": cmd_validate_suppressions}
 
 
 def build_parser():
@@ -322,6 +361,8 @@ def build_parser():
     r = sub.add_parser("run", parents=[common])
     r.add_argument("change")
     r.add_argument("--categories", help="comma list of secrets, sast, sca, iac (default: all)")
+    v = sub.add_parser("validate-suppressions", parents=[common])
+    v.add_argument("change")
     return p
 
 

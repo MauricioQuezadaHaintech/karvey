@@ -51,6 +51,24 @@ the incident cannot reach `RESUELTO`. QA-lite (the `patch`, `hotfix` and `docs` 
 Dispatch parallel subagents for dimensions 1–4, run 5–6 and 9 in the main context. Dimensions 7 (second opinion cross-model) and 8 (visual audit) run at the end, once the preliminary findings are consolidated:
 
 **Dimension 1: Security**
+
+*Tools first (deterministic, REQ-W2-064..067).* Before reading the code, run the fixed catalogue of security tools
+and cite each category's line as the tool printed it — never a verdict of your own for a category:
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-security-scan.py" run "{change-id}" --json
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-security-scan.py" validate-suppressions "{change-id}" --json
+```
+- Per category (secrets, sast, sca, iac) cite: tool, version, command, findings by severity and the
+  `evidence.jsonl:{line}` it recorded. `not evaluated (no tool)` and `not evaluated (tool error)` are written
+  as such in the review and counted on the dashboard — **never** turned into "pass" by reading the code;
+  `not applicable` (no file of that kind) is stated as such.
+- Tool findings are triaged: a real one is a QA finding with its severity; a false positive is recorded in
+  `changes/{change-id}/qa/suppressions.json` as `{tool, rule, path, reason, scope}` — `validate-suppressions`
+  reports an entry without a reason or a scope, and QA is not approved with one.
+- Then review **what the tools cannot see**, and say so in the review: authorisation per object (IDOR), tenant
+  and user isolation, and business-logic abuse. The checklists below cover them.
+
+*Model review (what the tools miss):*
 - Hardcoded credentials (tokens, API keys, passwords)
 - XSS: raw HTML injection of unsanitized input
 - Auth only in the frontend with no backend enforcement

@@ -960,6 +960,11 @@ def gate_summary(rd, ctx):
             shown = set(_DEV_ID.findall("\n".join(entries)))
             for did in sorted(set(_DEV_ID.findall(dev)) - shown):
                 res["omissions"].append("deviations.md: %s is not shown by this summary (no heading or table row)" % did)
+        infra = rd.text(cdir / "infra.md")
+        if infra is not None and not re.search(r"security-scan", infra, re.I):
+            # REQ-W2-068: the PR pipeline carries the same security-tool categories as QA
+            devs = [x for x in res["sections"]["deviations"] if not x.startswith("none")]
+            res["sections"]["deviations"] = devs + ["pipeline without a security-scan stage (infra.md; REQ-W2-068)"]
         tasks = src("tasks.md")
         if tasks is not None:
             est = sum(float(x) for x in _EST.findall(tasks))

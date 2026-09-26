@@ -93,6 +93,8 @@ Generate per `git_platform` from `project.json`:
 
 The pipeline must include, as applicable: IaC validation/lint (`terraform validate`/`fmt`, `bicep build`), plan in PR, apply on push to the environment's branch, and the application deploy. The actual `apply` is run by the pipeline, **not** by hand (see Restrictions).
 
+**`security-scan` stage (REQ-W2-068).** The PR pipeline MUST carry a stage named `security-scan` that runs the same four categories QA runs — secrets, static analysis, dependency vulnerabilities, infrastructure-as-code — with the tools of the fixed catalogue (`${CLAUDE_PLUGIN_ROOT}/scripts/karvey_lib/security_tools.json`), so the security verdict belongs to CI rather than to a session. Name the stage `security-scan` in `infra.md` and in the pipeline file; a category with no file of its kind is noted `not applicable`. A pipeline without the stage is listed as a deviation by the *how* gate summary (`karvey-context.py --section gate --gate how`) — add the stage or record why in `deviations.md`.
+
 ### Step 4b — Auto-detection and one-time configuration of the deploy platform
 
 **Goal:** automatically detect the project's deployment platform and leave it configured/documented **one single time**, so that later phases (especially `karvey-deploy`, PHASE 11) do not have to re-discover it. Inspired by gstack's `/setup-deploy` flow.
@@ -204,7 +206,7 @@ docs/spec/changes/{change-id}/infra.md
 
 `infra.md` documents:
 - **Resources** created/modified/compliant (per provider and environment).
-- **CI/CD pipelines** generated and their mapping to `branch_flow` (dev/prod).
+- **CI/CD pipelines** generated and their mapping to `branch_flow` (dev/prod), including the `security-scan` stage and its four categories.
 - **Deploy platform** (the block from Step 4b: detected platform, production URL, health check, deploy commands and release channel per target).
 - **Security review** (the checklist from Step 5 with findings and resolutions).
 - Idempotency notes (what was reused) and, if `iac_tool = none`, the manual-infra note.
