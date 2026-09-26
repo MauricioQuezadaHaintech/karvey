@@ -48,6 +48,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import outbox as obx  # noqa: E402
 from karvey_lib import approval, audit, metrics as mx, modes, project as pj  # noqa: E402
+from karvey_lib import sponsor as spx  # noqa: E402
 
 TOOL = "karvey-context"
 SECTIONS = ("overview", "open-work", "approvals", "enforcement", "close-report", "calibration", "convergence")
@@ -1197,6 +1198,125 @@ def render_readiness(res):
     return "\n".join(L)
 
 
+# --------------------------------------------------------------------------- report (wave3 §1.14)
+NO_CHANGES_FOR_CLIENT = "no changes for client"
+
+
+def _change_dirs(rd):
+    """``[(dir, archived)]`` of every change folder, active first then archived, by name."""
+    base = rd.root / pj.CHANGES_DIR
+    out = []
+    if not base.is_dir():
+        return out
+    for d in sorted(base.iterdir(), key=lambda x: x.name):
+        if d.is_dir() and d.name != pj.ARCHIVE_NAME and not d.name.startswith("."):
+            out.append((d, False))
+    arch = base / pj.ARCHIVE_NAME
+    if arch.is_dir():
+        out += [(d, True) for d in sorted(arch.iterdir(), key=lambda x: x.name) if d.is_dir()]
+    return out
+
+
+def _days_between(a, b):
+    try:
+        return (datetime.strptime(b, "%Y-%m-%d") - datetime.strptime(a, "%Y-%m-%d")).days
+    except (TypeError, ValueError):
+        return None
+
+
+def report_view(args, rd):
+    """The business-language status (REQ-W3-025): released in the period, in progress with phase and age, blocked
+    and who unblocks, open risks, decisions awaited per stakeholder. Read-only."""
+    frm, to, as_of = metric_period(args)
+    W = spx.wording()
+    lang = "en"
+    client = (args.client or "").strip()
+    res = {"period": {"from": frm, "to": to, "as_of": as_of}, "client": client or None, "released": [],
+           "in_progress": [], "blocked": [], "open_risks": [], "decisions_awaited": {}, "note": None}
+    ids = set()
+    for d, archived in _change_dirs(rd):
+        spec = rd.json(d / "spec.json")
+        if not isinstance(spec, dict):
+            continue
+        if client and mx.client_of(spec).lower() != client.lower():
+            continue
+        cid = spec.get("change_id") if isinstance(spec.get("change_id"), str) else d.name
+        ids.add(cid)
+        for dep in spec.get("deploys") or []:
+            day = spx._day(dep.get("at")) if isinstance(dep, dict) else None
+            if dep.get("env") == "prod" and day and frm <= day <= to:
+                res["released"].append({"change": cid, "version": str(dep.get("version") or ""), "date": day})
+        phase = spec.get("phase")
+        if archived or phase in ("deployed", "archived"):
+            continue
+        hist = [h for h in spec.get("phase_history") or [] if isinstance(h, dict)]
+        start = spx._day(spec.get("created_at")) or (spx._day(hist[0].get("entered_at")) if hist else None)
+        since = spx._day(hist[-1].get("entered_at")) if hist else None
+        res["in_progress"].append({"change": cid, "phase": spx.word(W, "phases", phase, lang),
+                                   "age_days": _days_between(start, as_of), "in_phase_days": _days_between(since, as_of)})
+        rows, plan = read_plan_rows(rd, d)
+        for r in rows or []:
+            blob = " ".join((r["status"], r["notes"]))
+            if "⛔" in blob or "blocked" in r["status"].lower():
+                res["blocked"].append({"change": cid, "task": r["task"], "unblocks": "the team"})
+        for h in human_waiting(rows, plan):
+            ex = h["executor"] if h["executor"] != "unknown" else "no executor declared"
+            res["blocked"].append({"change": cid, "task": h["task"], "unblocks": ex})
+        rtext = rd.text(d / "risks.md")
+        for r in spx.read_rows_text(rtext or ""):
+            if re.match(r"^R-\d+$", (r.get("id") or "").strip()) and \
+                    (r.get("state") or "open").strip().lower().startswith("open"):
+                res["open_risks"].append({"change": cid, "risk": spx.normalise(r.get("risk") or ""),
+                                          "owner": (r.get("owner") or "").strip() or "no owner",
+                                          "state": spx.word(W, "risk_states", "open", lang)})
+    qtext = rd.text(rd.root / pj.SPEC_DIR / "questions.md")
+    for r in spx.read_rows_text(qtext or ""):
+        if not re.match(r"^Q-\d+$", (r.get("id") or "").strip()):
+            continue
+        if (r.get("state") or "open").strip().lower() not in ("", "open"):
+            continue
+        chs = [c for c in re.split(r"[\s,;]+", r.get("changes") or "") if c and c != "—"]
+        if client and not (set(chs) & ids):
+            continue
+        owner = (r.get("owner") or "").strip() or "no owner"
+        res["decisions_awaited"].setdefault(owner, []).append(
+            {"question": spx.normalise(r.get("question") or ""), "needed_by": spx._day((r.get("needed by") or "").strip()),
+             "changes": chs})
+    res["released"].sort(key=lambda x: (x["date"], x["change"]))
+    if client and not ids:
+        res["note"] = "%s %s" % (NO_CHANGES_FOR_CLIENT, client)
+    res["unreadable"] = list(rd.unreadable)
+    return res
+
+
+def render_report(res):
+    p = res["period"]
+    L = ["== REPORT %s .. %s (as of %s)%s ==" % (p["from"], p["to"], p["as_of"],
+                                                  " client " + res["client"] if res.get("client") else "")]
+    if res.get("note"):
+        L.append(res["note"])
+        return "\n".join(L)
+    L.append("Released:")
+    L += ["  %s — version %s on %s" % (r["change"], r["version"] or "?", r["date"]) for r in res["released"]] or \
+        ["  nothing reached production in the period"]
+    L.append("In progress:")
+    L += ["  %s — %s · %s days (%s in this step)" % (c["change"], c["phase"], c["age_days"] if c["age_days"] is not None
+                                                     else "?", c["in_phase_days"] if c["in_phase_days"] is not None
+                                                     else "?") for c in res["in_progress"]] or ["  nothing"]
+    L.append("Blocked:")
+    L += ["  %s — %s · unblocks: %s" % (b["change"], b["task"], b["unblocks"]) for b in res["blocked"]] or ["  nothing"]
+    L.append("Open risks:")
+    L += ["  %s — %s · watched by %s" % (r["change"], r["risk"], r["owner"]) for r in res["open_risks"]] or ["  none"]
+    L.append("Decisions awaited:")
+    if res["decisions_awaited"]:
+        for owner, qs in sorted(res["decisions_awaited"].items()):
+            L.append("  %s:" % owner)
+            L += ["    %s%s" % (q["question"], (" (needed by %s)" % q["needed_by"]) if q["needed_by"] else "") for q in qs]
+    else:
+        L.append("  none")
+    return "\n".join(L)
+
+
 def _fmt_value(v):
     if v is None:
         return "n/a"
@@ -1267,6 +1387,9 @@ def run(args):
     if args.metrics:
         res = metrics_view(args, rd)
         return kl.EXIT_OK, res, list(rd.warnings), render_metrics(res)
+    if args.report:
+        res = report_view(args, rd)
+        return kl.EXIT_OK, res, list(rd.warnings), render_report(res)
     ctx = build_context(args, rd)
     sections = [args.section] if args.section else list(DEFAULT_SECTIONS)
     result = {"root": str(root), "sections": sections}
@@ -1295,6 +1418,9 @@ def build_parser():
     p.add_argument("--readiness", action="store_true",
                    help="4.0 readiness: measured changes and would-refuse / confirmed hits per check")
     p.add_argument("--gate", choices=["what", "how", "release"], help="--section gate: which merged gate")
+    p.add_argument("--report", action="store_true",
+                   help="business-language status for a period (released, in progress, blocked, risks, decisions)")
+    p.add_argument("--client", help="--report: only this client's changes")
     p.add_argument("--json", action="store_true", help="print one JSON envelope")
     return p
 
@@ -1321,7 +1447,7 @@ def main(argv=None):
         return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL,
                                    errors=[kl.issue("internal", "%s: %s" % (type(exc).__name__, exc))]), args.json)
     env = kl.envelope(TOOL, code, result=result, warnings=warnings)
-    if args.json and (args.metrics or args.readiness):  # byte-identical output: sorted keys, no wall clock, no absolute path
+    if args.json and (args.metrics or args.readiness or args.report):  # byte-identical output: sorted keys, no wall clock, no absolute path
         sys.stdout.write(json.dumps(env, ensure_ascii=False, sort_keys=True) + "\n")
         return code
     return kl.emit(env, args.json, human=human)
