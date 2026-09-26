@@ -260,3 +260,8 @@ corrected, not annotated at the end.
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «HainTech completo, solo Claude Code (Recomendado)»
 - **What:** one portfolio over every Karvey repo of the organisation; R-30 stays a portability guide without official support for other runtimes.
+
+## D-33 — Keep the `subagent-prompt` guard added for BUG-25 (wave1, outside the approved architecture)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «Mantenerlo (Recomendado)» — to: keep the new `subagent-prompt` guard (blocks, in a Karvey project, an Agent/Task call whose prompt lets the subagent write `project.json` without the ban line; allows the call when python is missing)?
+- **What:** the guard ships in 3.12.0; `architecture.md` gets revision 2 describing it, and QA reviews it.
