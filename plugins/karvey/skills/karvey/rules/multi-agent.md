@@ -84,13 +84,13 @@ A step the agent must not or cannot execute (IAM grants, destructive deletions, 
 ## 6. Change type `ops`
 
 An `ops` change (IAM, DNS, secrets rotation, quota, console configuration: no application code) is the `ops`
-**lane**: its phases, gates and evidence are rows of the lane table, stated once in `lanes.md`. A `spec.json` with
+**lane**: its phases, gates and evidence are rows of the lane table, stated once in `lanes`[^r-lanes]. A `spec.json` with
 `"type": "ops"` and no `lane` is read as that lane; `lane set ops` records it.
 
 ## 7. Hotfix lane
 
 A production defect that must be fixed now (including one found during an E2E run in production) is the
-`hotfix` **lane** (`lanes.md`): fast, **not** unrecorded — the same PR carries the fix, the `BUG-NN` and the
+`hotfix` **lane** (`lanes`[^r-lanes]): fast, **not** unrecorded — the same PR carries the fix, the `BUG-NN` and the
 regression test, impl starts without a tasks approval only once `lane-evidence` records them, and the prod gate
 (`approvals.prod`) still applies. A small bug that is not urgent takes the `patch` lane instead.
 
@@ -110,4 +110,7 @@ Each agent environment (a lab server, a laptop, a CI runner, a remote sandbox) m
 
 ## Outside the method — user hooks
 
-Approval markers with an expiry (e.g. a plan-gate marker valid for 2 h that agents cannot renew) belong to the **user's own hooks**, not to Karvey. How a human delegates approvals to a coordinating agent, or extends a marker's validity, is defined in the user's environment. Karvey only records the resulting approval (`approvals.<phase>.role` + `ref: D-NN`). See the note in `enforcement.md`.
+Approval markers with an expiry (e.g. a plan-gate marker valid for 2 h that agents cannot renew) belong to the **user's own hooks**, not to Karvey. How a human delegates approvals to a coordinating agent, or extends a marker's validity, is defined in the user's environment. Karvey only records the resulting approval (`approvals.<phase>.role` + `ref: D-NN`). See the note in `enforcement`[^r-enforcement].
+
+[^r-enforcement]: enforcement.md — context only, not opened.
+[^r-lanes]: lanes.md — context only, not opened.

@@ -2318,6 +2318,28 @@ def l55_core_contracts(ctx):
             yield (reg_path, 1, "contract %s: anchor must be #contract-%s (got %r)" % (cid, cid, c.get("anchor")))
 
 
+# --------------------------------------------------------------------------- L-57 (wave3-optimization)
+LOAD_VERB_RE = re.compile(r"\b(?:load|read|open|see first|consult)\b", re.I)
+
+
+@check("L-57", "A rule names another rule only inside a footnote: rules do not load each other (REQ-W3-005)",
+       reqs=("W3-005",))
+def l57_rules_cite_rules_in_footnotes(ctx):
+    rules_dir = ctx.rules_dir
+    if not rules_dir.is_dir():
+        return
+    for path in sorted(rules_dir.rglob("*.md")):
+        text = ctx.read(path) or ""
+        for n, line in loadlist.prose_lines(text):
+            for tok in loadlist.TOKEN_RE.findall(line):
+                alts = loadlist.resolve(tok, rules_dir, path.parent)
+                if not alts or all(a.resolve() == path.resolve() for a in alts):
+                    continue
+                kind = "a load instruction" if LOAD_VERB_RE.search(line) else "a citation"
+                yield (path, n, "%s of rule %s outside a footnote: rules do not load each other; make it a footnote "
+                                "(`[^r-x]: x.md — context only`)" % (kind, tok))
+
+
 # --------------------------------------------------------------------------- L-58 (wave3-optimization)
 TRACKER_API_RE = re.compile(r"api\.clickup\.com|\bclickup_[a-z]\w*|\bjira issue\b|\baz boards\b|\bgh project\b|"
                             r"linear\.app|api\.linear\b|/rest/api/\d", re.I)

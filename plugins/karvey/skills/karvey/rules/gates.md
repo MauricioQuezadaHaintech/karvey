@@ -2,7 +2,7 @@
 
 Every phase skill ends with **this block** (it cites this rule as its closing), and asks no
 other question about advancing. There is **one gate question** per gate, never a second "shall we advance?" after
-an approval. The phase-close actions 1–4 (`phase-close.md`) run **before** the gate question.
+an approval. The phase-close actions 1–4 (`phase-close`[^r-phase-close]) run **before** the gate question.
 
 ## The three gates
 
@@ -74,3 +74,5 @@ automatic`). Production stays the human's own words (prod-kind marker, D-10), th
 
 A question about an action outside the approved plan, or a change to production data, is asked on its own when
 it arises, recorded with `outcome … --kind plan-exception`, and is not counted as a gate.
+
+[^r-phase-close]: phase-close.md — context only, not opened.

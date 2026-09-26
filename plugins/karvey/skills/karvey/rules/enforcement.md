@@ -51,7 +51,7 @@ the phase it approved closes.
 - `karvey-config.py notify-check --confirm` without that confirmation (the agent alone), or with one for another destination or project, or an expired one, prints `NOT CONFIRMED` with the phrase to type and returns status 10; the destination stays unconfirmed. <!-- guard-case: nc-05-agent-alone-cannot-confirm, nc-07-marker-for-another-destination-does-not-count, nc-08-marker-for-another-project-does-not-count, nc-09-expired-marker-does-not-count -->
 
 Approval delegation (multi-agent): a coordinating agent may record a non-prod phase approval with
-`karvey-state.py approve … --role ceo-delegate --ref D-NN` when the human delegated it (`multi-agent.md` §4).
+`karvey-state.py approve … --role ceo-delegate --ref D-NN` when the human delegated it (`multi-agent`[^r-multi-agent] §4).
 The production approval is never delegated: it needs a prod-kind marker from the human's own prompt.
 
 ## prod-gate (PreToolUse on Bash, on by default, D-02)
@@ -100,3 +100,5 @@ templates into `settings.json`; they call the dispatcher, so they enforce the sa
 
 - The git-flow shim blocks a commit on the production branch. <!-- guard-case: shim-01-git-flow-commit-on-master-blocks -->
 - The plan-gate shim blocks a write without a marker. <!-- guard-case: shim-03-plan-gate-write-without-marker-blocks -->
+
+[^r-multi-agent]: multi-agent.md — context only, not opened.

@@ -25,9 +25,9 @@ Every finding observed in `test`, `qa` or `browse` is classified into exactly on
 
 | Finding type | Meaning | Edge (where it goes) |
 |--------------|---------|----------------------|
-| `bug` | The code does not do what the (correct) spec says. | Incident tracker (`BUG-NN`, see `incident-tracking.md`) → QA micro-loop `impl→test→qa`. |
+| `bug` | The code does not do what the (correct) spec says. | Incident tracker (`BUG-NN`, see `incident-tracking`[^r-incident-tracking]) → QA micro-loop `impl→test→qa`. |
 | `spec-gap` | The spec itself is wrong, incomplete or was misunderstood. The code may be "correct" against a wrong spec. | **Re-open `requirements`**: amend `spec-delta.md`, re-trace to the PRD, ripple forward only the affected phases. |
-| `emergent` | Valid new scope / idea, but **out of this change's scope**. | **Backlog** (see `backlog.md`) → becomes a future `change-id`. Never silently absorbed into the current change. |
+| `emergent` | Valid new scope / idea, but **out of this change's scope**. | **Backlog** (see `backlog`[^r-backlog]) → becomes a future `change-id`. Never silently absorbed into the current change. |
 
 > Litmus test to classify:
 > - "The spec is right, the code is wrong" → `bug`.
@@ -83,3 +83,6 @@ A change is **done** (eligible for `deploy`/`archive`) only when:
 - **Router** (one brain): `karvey-iterate`. It reads `findings.md`, confirms/corrects each type, and dispatches to the right edge (incident tracker, spec-revision, or backlog), updating `status` and `routed to`.
 
 Separating observation from routing keeps the loop logic in one place and the phase skills simple.
+
+[^r-backlog]: backlog.md — context only, not opened.
+[^r-incident-tracking]: incident-tracking.md — context only, not opened.

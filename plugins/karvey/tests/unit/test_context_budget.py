@@ -294,5 +294,25 @@ class AdapterBinding(unittest.TestCase):
         self.assertEqual(len(refs[0][0]), 7)
 
 
+class ClosureEqualsLoadList(unittest.TestCase):
+    """@req REQ-W3-005 — on the shipped plugin a phase's closure is its Load: list (the core first on it)."""
+
+    def test_every_phase_closure_is_its_load_list(self):
+        plugin = _path.SCRIPTS_DIR.parent
+        rules = plugin / "skills" / "karvey" / "rules"
+        g = loadlist.graph(rules)
+        for md in sorted((plugin / "skills").glob("karvey-*/SKILL.md")):
+            text = md.read_text(encoding="utf-8")
+            entries = loadlist.declared(text)
+            if entries is None:
+                continue
+            self.assertEqual(entries[0], "_core.md", md.parent.name)
+            load = [ref for e in entries for ref in [(loadlist.resolve(e, rules, md.parent), e.endswith("?"))] if ref[0]]
+            expected = sorted({loadlist.pick(r, "max") for r in load}, key=str)
+            got = loadlist.closure(loadlist.refs_of(text, rules, md.parent), g, "max")
+            self.assertEqual([loadlist.rel(f, plugin) for f in got], [loadlist.rel(f, plugin) for f in expected],
+                             md.parent.name)
+
+
 if __name__ == "__main__":
     unittest.main()

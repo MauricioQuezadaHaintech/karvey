@@ -90,5 +90,7 @@ symptoms because that is how they show up — all of them passed a check that fe
   lists.
 - **`karvey-guard`** ships this list as a pre-report checklist (`--verify`).
 - **`karvey-qa`** treats an unverifiable claim in a deliverable as a Dimension-2 finding.
-- **Teams amplify all of it** (`team.md`): a false claim crossing between agents is acted on before
+- **Teams amplify all of it** (`team`[^r-team]): a false claim crossing between agents is acted on before
   it is corrected, so the correction arrives after the damage.
+
+[^r-team]: team.md — context only, not opened.

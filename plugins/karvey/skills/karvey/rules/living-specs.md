@@ -28,13 +28,13 @@ docs/spec/
             └── (same files as the change)
 ```
 
-> The per-repo incident tracker `docs/bugs_dev_testing.md` lives in **each repo** (not under `docs/spec/`); `incidents-index.md` aggregates them. See `incident-tracking.md`.
+> The per-repo incident tracker `docs/bugs_dev_testing.md` lives in **each repo** (not under `docs/spec/`); `incidents-index.md` aggregates them. See `incident-tracking`[^r-incident-tracking].
 
 ## spec.json — structure
 
 Machine-readable contract: `${CLAUDE_PLUGIN_ROOT}/schemas/spec.schema.json`. The state fields — `phase`,
 `phase_history`, `approvals`, `skipped` — are written **only** by `karvey-state.py` (`init`, `generated`,
-`approve`, `advance`, `skip`, `reopen`; see `state-machine.md`); skills never edit them by hand. The rest is
+`approve`, `advance`, `skip`, `reopen`; see `state-machine`[^r-state-machine]); skills never edit them by hand. The rest is
 descriptive metadata the skills fill in.
 
 ```json
@@ -74,15 +74,15 @@ descriptive metadata the skills fill in.
 }
 ```
 
-### Tracker fields (see `management-adapters.md`)
+### Tracker fields (see `management-adapters`[^r-management-adapters])
 
 - `management` — the tracker **tool** of this change, or an override `{tool, location, statuses, sprints}` that
-  wins over `project.json:management` (resolution order in `management-adapters.md`). `none` is a legacy
+  wins over `project.json:management` (resolution order in `management-adapters`[^r-management-adapters]). `none` is a legacy
   alias of `markdown`.
 - `clickup` — the change's **tracker ids** (`epic_id`, `feature_ids`, `task_ids`, `backlog_list_id`,
   `client_tag`). The key keeps its historical name; it holds the ids of whichever tracker the team uses.
 
-### Multi-agent / multi-repo fields (see `multi-agent.md`)
+### Multi-agent / multi-repo fields (see `multi-agent`[^r-multi-agent])
 
 - `type` — `feature` (default) · `ops` (no application code: IAM, DNS, secrets, console config — short pipeline) · `hotfix` (fast lane: fix + `BUG-NN` + regression test in the same PR).
 - `links.parent` / `links.children` — `"{change-id}@{repo}"` references between a parent change (operations repo) and its per-repo children.
@@ -104,7 +104,7 @@ descriptive metadata the skills fill in.
 
 - `iteration_count` — how many times this change went through a feedback loop (incremented by `karvey-iterate` on a `spec-gap` re-open). A high count is a signal the spec was weak — useful for the retro.
 - `revision_history` — append-only log of spec-revision sub-cycles: `[{ "date", "finding": "F-NN", "reason", "ripple": ["mockup","tasks"] }]`. Records *why* requirements were re-opened and which downstream phases were rippled. Hotfix entries also carry `"bug": "BUG-NN"` and `"release": "x.y.z"`; an input re-pin carries `"input": "design"` and the old/new commit.
-- `seed_backlog_id` — if this change was promoted from a discovery backlog item (`BL-NN`), its id, for traceability (see `backlog.md`).
+- `seed_backlog_id` — if this change was promoted from a discovery backlog item (`BL-NN`), its id, for traceability (see `backlog`[^r-backlog]).
 
 > `karvey-iterate` re-opens a phase with `karvey-state.py reopen`, which moves the approvals of the affected phases to `revision_history`.
 
@@ -150,3 +150,9 @@ the work lands through a docs-only PR.
 Capabilities represent functional domains of the product, not individual features.
 Valid examples: `authentication`, `call-management`, `contact-search`, `notifications`, `tenant-config`
 Avoid: `fix-bug-123`, `add-button`, `update-sp` (too granular)
+
+[^r-backlog]: backlog.md — context only, not opened.
+[^r-incident-tracking]: incident-tracking.md — context only, not opened.
+[^r-management-adapters]: management-adapters.md — context only, not opened.
+[^r-multi-agent]: multi-agent.md — context only, not opened.
+[^r-state-machine]: state-machine.md — context only, not opened.

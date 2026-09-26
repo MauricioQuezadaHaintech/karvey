@@ -20,12 +20,12 @@ the gate summary.
 
 Default lenses (`defaults.json:judges.lenses`, one section each in the phase's rubric):
 
-- `requirements`: `domain`, `methods` — `judges/requirements.md`
-- `design_graphic`: `design` — `judges/design_graphic.md`. Its closed inputs are `design-delta.md`, the mockups the
+- `requirements`: `domain`, `methods` — `judges/requirements`[^r-judges-requirements]
+- `design_graphic`: `design` — `judges/design_graphic`[^r-judges-design-graphic]. Its closed inputs are `design-delta.md`, the mockups the
   design-spec's "Applies to" line names (each ≤ 200 KB; a larger one is `dropped:`) and `contrast.json` from
   `karvey-contrast-check.py --delta` — the deterministic sub-score; design-graphic never scores itself (REQ-W3-039).
-- `architecture`: `security`, `methods`, `agents-cost` — `judges/architecture.md`
-- `qa`: `fiscal`, `security` — `judges/qa.md`. The **fiscal** always runs at `qa`, whatever the lane count.
+- `architecture`: `security`, `methods`, `agents-cost` — `judges/architecture`[^r-judges-architecture]
+- `qa`: `fiscal`, `security` — `judges/qa`[^r-judges-qa]. The **fiscal** always runs at `qa`, whatever the lane count.
 
 ## Closed inputs
 
@@ -76,11 +76,17 @@ A finding that is a risk rather than a defect adds "kind": "risk"; never write o
   `source: estimate`, `estimated: true`).
 
 A finding with `"kind": "risk"` is kept as an `emergent` row with `Routed to: proposed risk`; iterate accepts it into
-the change's risk register (`risks.md`, rules `risks.md`). Any output field that targets the register (`risks`,
-`register_edit`) is dropped and reported (`dropped: register edit`); `collect` never writes `risks.md` (REQ-W3-032).
+the change's risk register (`changes/{id}/risks.md`; its format is the risks rule[^r-risks]). Any output field that targets the register (`risks`,
+`register_edit`) is dropped and reported (`dropped: register edit`); `collect` never writes `changes/{id}/risks.md` (REQ-W3-032).
 
 Kept findings are appended to the change's `findings.md` as `open` rows with origin `judge:{lens}`, the phase,
 the type guess and the severity. The per-judge run records (lens, model, `intra_model`, verdict, counts, tokens,
 US$, `estimated`, discarded) go to `spec.json:judge_runs[]` through `karvey-state.py judge-run`, the only
 `spec.json` write of the judge flow. `karvey-iterate` routes the rows like any other finding and records
 `accepted:{type} {ref}` or `rejected: {reason}`, so the acceptance rate per lens is computable.
+
+[^r-judges-architecture]: judges/architecture.md — context only, not opened.
+[^r-judges-design-graphic]: judges/design_graphic.md — context only, not opened.
+[^r-judges-qa]: judges/qa.md — context only, not opened.
+[^r-judges-requirements]: judges/requirements.md — context only, not opened.
+[^r-risks]: risks.md — context only, not opened.

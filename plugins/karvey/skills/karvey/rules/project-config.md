@@ -85,19 +85,19 @@ Machine-readable contract: `${CLAUDE_PLUGIN_ROOT}/schemas/project.schema.json` (
 - **`git_platform`**: determines which pipelines `karvey-infra` generates (GitHub Actions vs Azure Pipelines) **and which CLI `karvey-deploy` uses to open, verify and merge the PR** (`gh pr` vs `az repos pr` vs `glab mr`) — they are not interchangeable. If a repo's remote contradicts it, the remote wins and the config is stale.
 - **`cloud.provider`**: `mixed` means services from more than one cloud are used; the detail of which service from which cloud is specified in the "Cloud Infrastructure" section of `architecture.md` for each change.
 - **`iac_tool`**: `none` means infra is managed manually; `karvey-infra` still generates/validates the CI/CD pipelines.
-- **`knowledge_sync`**: `none` (the default when no graphify/Obsidian is detected) or the tool; it runs at archive and on demand only — see `knowledge-sync.md`.
-- **`targets`**: the project's platforms (at least 1). Defines how each phase verifies/designs. See `targets.md`. Stack-agnostic: never assume `web` by default.
-- **`branch_flow`**: branch convention; respected by `karvey-impl`, `karvey-qa` and `karvey-deploy`. Default: `feature/*` → `dev` → `master`. `protected_branches` (optional, globs) lists long-lived branches besides `integration`/`production` that the branch-hygiene cleanup never deletes (see `deploy-workflow.md` → *Branch hygiene*).
-- **`standards`**: engineering golden paths per layer (see `engineering-standards.md`). Two source modes:
+- **`knowledge_sync`**: `none` (the default when no graphify/Obsidian is detected) or the tool; it runs at archive and on demand only — see `knowledge-sync`[^r-knowledge-sync].
+- **`targets`**: the project's platforms (at least 1). Defines how each phase verifies/designs. See `targets`[^r-targets]. Stack-agnostic: never assume `web` by default.
+- **`branch_flow`**: branch convention; respected by `karvey-impl`, `karvey-qa` and `karvey-deploy`. Default: `feature/*` → `dev` → `master`. `protected_branches` (optional, globs) lists long-lived branches besides `integration`/`production` that the branch-hygiene cleanup never deletes (see `deploy-workflow`[^r-deploy-workflow] → *Branch hygiene*).
+- **`standards`**: engineering golden paths per layer (see `engineering-standards`[^r-engineering-standards]). Two source modes:
   - `source: "local"` → standards live in `dir` inside the `spec_repo` (single-repo / simplest case).
   - `source: "git"` → standards live in a **separate, team-owned repo** (e.g. a private Azure DevOps repo) given by `repo` + `ref` + `path`. Phases resolve it by cloning/pulling a shallow working copy into a cache (`.karvey/standards/`) and reading from there. This keeps the **method** (public plugin) and the **standards** (org's private data) decoupled and independently installable/versioned.
   - `by_layer` maps a layer to its standard file. Loaded as a **hard constraint** by `karvey-architecture` and `karvey-impl`; populated/refreshed by `karvey-standards`. The standards repo is **never** the public plugin repo. Optional but recommended; if absent, those phases fall back to `standards/_index.md` and, failing that, treat non-trivial pattern choices as gray zones to ask (never silently picked).
-- **`ops_repo`** (optional, multi-agent/multi-repo): the repo that holds the business decision log (`D-NN`) and the **parent** changes. Defaults to `spec_repo`. See `multi-agent.md`.
+- **`ops_repo`** (optional, multi-agent/multi-repo): the repo that holds the business decision log (`D-NN`) and the **parent** changes. Defaults to `spec_repo`. See `multi-agent`[^r-multi-agent].
 - **`karvey_version`** (optional): the Karvey version the project expects every agent environment to have installed; checked by `karvey-health` (method readiness).
-- **`docs_pr`** (optional): the documentation-only PR lane — `ci` is the light job that runs (spec lint) and `merged_by` who merges them. See `multi-agent.md` §8.
-- **`notifications`** (team setting, asked by `karvey-init` on first use or with `--settings`): the team's channel for QA/deploy notices. `none` is valid; `deferred: true` records a "not now"; `detail` is `counts` (default) or `full`. A `target` with `://` is refused — reference the secret. See `notifications.md`.
-- **`management`** (team setting, same moment): the team's tracker (`tool`, `location`, `via`, optional `sprints`) and its **status flow mapped to the 5 logical states**, flat or per level/list, `null` for a state the tool cannot represent. Resolution order, the missing-map clause and `none` (alias of `markdown`): `management-adapters.md`.
-- **`enforcement`**: switches of the hooks in `enforcement.md`, managed by `karvey-guard`. `git_flow_hook`, `plan_gate_hook` default `false` (opt-in); `prod_gate_hook` defaults to `true` (D-02) and is off only when `false` in the working copy **and** on `origin/{production}`. `plan_marker_ttl_min` (5..1440, default 120) and `approval_vocabulary` tune the approval hook.
+- **`docs_pr`** (optional): the documentation-only PR lane — `ci` is the light job that runs (spec lint) and `merged_by` who merges them. See `multi-agent`[^r-multi-agent] §8.
+- **`notifications`** (team setting, asked by `karvey-init` on first use or with `--settings`): the team's channel for QA/deploy notices. `none` is valid; `deferred: true` records a "not now"; `detail` is `counts` (default) or `full`. A `target` with `://` is refused — reference the secret. See `notifications`[^r-notifications].
+- **`management`** (team setting, same moment): the team's tracker (`tool`, `location`, `via`, optional `sprints`) and its **status flow mapped to the 5 logical states**, flat or per level/list, `null` for a state the tool cannot represent. Resolution order, the missing-map clause and `none` (alias of `markdown`): `management-adapters`[^r-management-adapters].
+- **`enforcement`**: switches of the hooks in `enforcement`[^r-enforcement], managed by `karvey-guard`. `git_flow_hook`, `plan_gate_hook` default `false` (opt-in); `prod_gate_hook` defaults to `true` (D-02) and is off only when `false` in the working copy **and** on `origin/{production}`. `plan_marker_ttl_min` (5..1440, default 120) and `approval_vocabulary` tune the approval hook.
 - **`wip_limit`**, **`stall_days`** (default 7), **`calibration`** (`threshold_pct` 30, `window` 3): read by `karvey-context.py` (open work, stalled items, estimate calibration). Defaults live in `karvey_lib/defaults.json`.
 - **`schema_mode`**: `advisory` (default: legacy shapes are warnings) or `strict` (they are errors).
 - Settings are persisted on a feature or docs branch and take effect after merge; subagents never write this file.
@@ -110,3 +110,12 @@ Machine-readable contract: `${CLAUDE_PLUGIN_ROOT}/schemas/project.schema.json` (
 - **Reads**: all phases. In particular `karvey-architecture` (cloud, **standards**), `karvey-impl` (**standards**, branch_flow), `karvey-infra` (git_platform, cloud, iac_tool, repos), `karvey-deploy` (branch_flow, repos, git_platform), and `karvey-archive`, which runs the knowledge sync (`knowledge_sync`).
 
 If a phase needs `project.json` and it does not exist, stop and indicate to run `karvey-init` first.
+
+[^r-deploy-workflow]: deploy-workflow.md — context only, not opened.
+[^r-enforcement]: enforcement.md — context only, not opened.
+[^r-engineering-standards]: engineering-standards.md — context only, not opened.
+[^r-knowledge-sync]: knowledge-sync.md — context only, not opened.
+[^r-management-adapters]: management-adapters.md — context only, not opened.
+[^r-multi-agent]: multi-agent.md — context only, not opened.
+[^r-notifications]: notifications.md — context only, not opened.
+[^r-targets]: targets.md — context only, not opened.

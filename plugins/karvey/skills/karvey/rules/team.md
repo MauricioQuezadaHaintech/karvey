@@ -143,10 +143,13 @@ paths and ignores the rest of the index. Pull with `--rebase --autostash` before
 
 ## Relation to the rest of the method
 
-- `multi-agent.md` covers the **work** side of several agents (parent/child changes, pinned inputs,
+- `multi-agent`[^r-multi-agent] covers the **work** side of several agents (parent/child changes, pinned inputs,
   `[human]` tasks, approvals). **This rule covers the agents themselves.** They are complementary and
   independent: multi-repo work does not require this layer.
 - `karvey-team` manages the layer (`init`, `census`, `relay`, `cost`).
 - `karvey-checkpoint` writes and restores the handoff — **independently of this layer**; here it only changes path and gains the roster.
 - `karvey-decisions` keeps the decision log the whole team cites.
-- `verification.md` holds the verification rules that a team violates faster than one agent does.
+- `verification`[^r-verification] holds the verification rules that a team violates faster than one agent does.
+
+[^r-multi-agent]: multi-agent.md — context only, not opened.
+[^r-verification]: verification.md — context only, not opened.

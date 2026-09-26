@@ -7,7 +7,7 @@ Defines the ordered deployment flow the method uses. It is applied by `karvey-im
 1. **Never commit directly to `dev` or `master`.** Always a feature branch.
 2. **Never deploy manually.** The deploy is triggered by the pipeline: push to `dev` → deploy dev; merge to `master` → deploy prod. Manual `func azure functionapp publish` or equivalents are forbidden.
 3. **`pull` before starting and `pull` before each merge/PR.** Avoid working on a stale base.
-4. **Prod requires explicit human OK, recorded without a commit (D-03).** Where it lives, in order (REQ-W2-052): **at deploy**, its text (who, when, the words verbatim, the reserved `D-NN`) is in the production PR body or the PR approval, and it is written to the release ledger with `karvey-state.py approve {change-id} prod --by … --role human --ref D-NN` (`--manifest`: the same record for every change of the release manifest); prod-gate reads that ledger before the merge (`enforcement.md`). **At archive**, the `D-NN` is written into the decision log on `chore/archive-{change-id}` and copied into `spec.json:approvals.prod` (`--write-spec`). The approval is never a commit on the integration or production branch. A clone without the ledger records the deploy as attested: `advance {change-id} deployed --attested --ref D-NN --pipeline-run URL` (REQ-W2-053).
+4. **Prod requires explicit human OK, recorded without a commit (D-03).** Where it lives, in order (REQ-W2-052): **at deploy**, its text (who, when, the words verbatim, the reserved `D-NN`) is in the production PR body or the PR approval, and it is written to the release ledger with `karvey-state.py approve {change-id} prod --by … --role human --ref D-NN` (`--manifest`: the same record for every change of the release manifest); prod-gate reads that ledger before the merge (`enforcement`[^r-enforcement]). **At archive**, the `D-NN` is written into the decision log on `chore/archive-{change-id}` and copied into `spec.json:approvals.prod` (`--write-spec`). The approval is never a commit on the integration or production branch. A clone without the ledger records the deploy as attested: `advance {change-id} deployed --attested --ref D-NN --pipeline-run URL` (REQ-W2-053).
 5. **The PR's gates are verified before requesting that OK.** CI and branch policies (build validation,
    required reviewers, status checks) are not the same as the release gate: they run on this PR, over the
    merge commit, and catch what the local pre-check could not see. Never ask a human to approve over a red
@@ -32,7 +32,7 @@ P="$(python3 "$C" get branch_flow.production --shell)"
 **6-step checklist — before the first push:**
 
 1. Am I on a feature branch (not `$I`/`$P`)?
-2. Does `CHANGELOG.md` carry this change's lines under `## [Unreleased]`? (`changelog-policy.md`)
+2. Does `CHANGELOG.md` carry this change's lines under `## [Unreleased]`? (`changelog-policy`[^r-changelog-policy])
 3. Is everything committed?
 4. Is the branch pushed?
 5. Is the PR to `$I` open and its CI green (the DEV gate)?
@@ -56,7 +56,7 @@ git pull origin "$P"                       # 6. before the production PR
 #                                           10. delete the absorbed branches (Branch hygiene)
 ```
 
-The release step (one per release, `versioning.md`) turns `[Unreleased]` into `[x.y.z]` and bumps the version
+The release step (one per release, `versioning`[^r-versioning]) turns `[Unreleased]` into `[x.y.z]` and bumps the version
 once, on the feature branch, before step 3.
 
 **Trunk flow** (`branch_flow.mode: trunk`, the recommended flow; derived when `integration == production`): one PR
@@ -99,15 +99,21 @@ Report the counts explicitly — deleted / kept (with reason) — never clean si
 
 ## Multi-repo
 
-If the change touches several repos, apply the flow in **each one**, respecting the dependency order declared in `architecture.md` (e.g. DB before backend before frontend). Record the progress per repo in the team's tracker (`management-adapters.md`) or `PLAN.md`.
+If the change touches several repos, apply the flow in **each one**, respecting the dependency order declared in `architecture.md` (e.g. DB before backend before frontend). Record the progress per repo in the team's tracker (`management-adapters`[^r-management-adapters]) or `PLAN.md`.
 
 ## Hotfixes and documentation-only PRs
 
-- **Hotfix:** same flow, faster — but the PR must carry the fix + `BUG-NN` + regression test together (`multi-agent.md` §7).
-- **Docs-only PR** (only `docs/**`, `*.md`, `spec.json`): light CI (spec lint) instead of build/test/deploy; merged by `project.json:docs_pr.merged_by`; never triggers a deploy (`multi-agent.md` §8).
+- **Hotfix:** same flow, faster — but the PR must carry the fix + `BUG-NN` + regression test together (`multi-agent`[^r-multi-agent] §7).
+- **Docs-only PR** (only `docs/**`, `*.md`, `spec.json`): light CI (spec lint) instead of build/test/deploy; merged by `project.json:docs_pr.merged_by`; never triggers a deploy (`multi-agent`[^r-multi-agent] §8).
 
 ## Management
 
 `karvey-deploy` records the deployment in the project's management tool:
-- Team's tracker (`management-adapters.md`): task `[Deploy] {change-id}` with the 6-step checklist as subtasks/comment, `set_status(…, done)` once prod is confirmed.
+- Team's tracker (`management-adapters`[^r-management-adapters]): task `[Deploy] {change-id}` with the 6-step checklist as subtasks/comment, `set_status(…, done)` once prod is confirmed.
 - Markdown: entry in `PLAN.md` with the deploy status per repo and environment.
+
+[^r-changelog-policy]: changelog-policy.md — context only, not opened.
+[^r-enforcement]: enforcement.md — context only, not opened.
+[^r-management-adapters]: management-adapters.md — context only, not opened.
+[^r-multi-agent]: multi-agent.md — context only, not opened.
+[^r-versioning]: versioning.md — context only, not opened.

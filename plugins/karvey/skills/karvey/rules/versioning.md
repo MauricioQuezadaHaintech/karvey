@@ -1,6 +1,6 @@
 # Rule: Semantic versioning and changelog on deployment
 
-Defines how Karvey versions and documents each change. It is applied by `karvey-impl` (during development) and `karvey-deploy` (PHASE 11), and verified by `karvey-qa` (Dimension 6). Complements `changelog-policy.md`.
+Defines how Karvey versions and documents each change. It is applied by `karvey-impl` (during development) and `karvey-deploy` (PHASE 11), and verified by `karvey-qa` (Dimension 6). Complements `changelog-policy`[^r-changelog-policy].
 
 ## Semantic versioning — `major.minor.rev`
 
@@ -24,7 +24,7 @@ The version file depends on the stack (detect it): `package.json`, `pyproject.to
 - **Per repository:** each repo of `project.json:repos` with changes carries its own `CHANGELOG.md`.
 - **Per component:** if a repo contains several deployable components (e.g. multiple Azure Functions, microservices, packages), each component carries its changelog entry/section with its own version.
 
-Each entry follows the format of `changelog-policy.md` (human owner + AI model + the **why**, not just the what) and indicates the semver segment that was incremented and why.
+Each entry follows the format of `changelog-policy`[^r-changelog-policy] (human owner + AI model + the **why**, not just the what) and indicates the semver segment that was incremented and why.
 
 ## Version visible in the frontend (recommendation) — DEV shows the dev version, PROD the release
 
@@ -44,10 +44,10 @@ How to build it:
 
 ## In the step-by-step deployment (`karvey-deploy`)
 
-At the release step, before the first push (part of the 6-step checklist of `deploy-workflow.md`):
+At the release step, before the first push (part of the 6-step checklist of `deploy-workflow`[^r-deploy-workflow]):
 1. Determine the segment (major/minor/rev) from the `[Unreleased]` lines.
 2. Bump the version once in each affected component/repo.
-3. Rename `## [Unreleased]` to `## [x.y.z] - date`, with its **Why** (`changelog-policy.md`).
+3. Rename `## [Unreleased]` to `## [x.y.z] - date`, with its **Why** (`changelog-policy`[^r-changelog-policy]).
 4. (If there is a front) verify/recommend a visible version in the UI — dev version in DEV, release version in PROD — and check it in the canary.
 
 ## QA items (`karvey-qa` Dimension 6)
@@ -58,3 +58,6 @@ QA verifies each item by its key:
 - `one-bump-per-release` — no commit of the change bumps a version file outside the release step. <!-- qa-item: one-bump-per-release -->
 - `versions-agree` — the version files, the plugin/package manifests and the top CHANGELOG release agree. <!-- qa-item: versions-agree -->
 - `changelog-why` — each entry says why, with the human owner and the AI model. <!-- qa-item: changelog-why -->
+
+[^r-changelog-policy]: changelog-policy.md — context only, not opened.
+[^r-deploy-workflow]: deploy-workflow.md — context only, not opened.

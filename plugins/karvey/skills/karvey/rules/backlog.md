@@ -2,18 +2,18 @@
 
 > Emergent ideas and out-of-scope discoveries (mid-cycle or post-archive) must land **somewhere
 > concrete** and become future `change-id`s. This rule defines a **dual** backlog: a Markdown source
-> of truth **mirrored** into the team's tracker (`management-adapters.md` → `mirror_backlog`) when one is configured.
+> of truth **mirrored** into the team's tracker (`management-adapters`[^r-management-adapters] → `mirror_backlog`) when one is configured.
 
 ## Storage — both (mirror)
 
 - **Always:** `docs/spec/backlog.md` in the `spec_repo` — the source of truth, versioned with the specs.
-- **If the team uses a tracker** (`karvey-config.py resolve management` reports `external: true`): each item is **also** created in the tracker's backlog (`mirror_backlog`, find-or-create by its `BL-NN` key; see `management-adapters.md`) in the resolved `location`. The Markdown item records the tracker id; the two are reconciled at the phase-close ritual.
+- **If the team uses a tracker** (`karvey-config.py resolve management` reports `external: true`): each item is **also** created in the tracker's backlog (`mirror_backlog`, find-or-create by its `BL-NN` key; see `management-adapters`[^r-management-adapters]) in the resolved `location`. The Markdown item records the tracker id; the two are reconciled at the phase-close ritual.
 
 If the resolved `location` is empty, ask the user for it once and store it on a docs branch; never pick one.
 
 ## What lands here
 
-Findings classified as **`emergent`** (see `iteration-loop.md`): valid new scope/ideas that are NOT this change's job. Also: opportunities surfaced by `karvey-retro`, tech debt noted during impl/qa, and any "we should also…" that would otherwise be lost.
+Findings classified as **`emergent`** (see `iteration-loop`[^r-iteration-loop]): valid new scope/ideas that are NOT this change's job. Also: opportunities surfaced by `karvey-retro`, tech debt noted during impl/qa, and any "we should also…" that would otherwise be lost.
 
 A `spec-gap` does **not** go to the backlog — it re-opens `requirements` for the current change. Only genuinely out-of-scope work goes to the backlog.
 
@@ -74,3 +74,6 @@ When an item is promoted, set its `status: promoted` and fill `Promoted to chang
 ## Sweep is not silent
 
 When a sweep drops or defers items, **say so** to the user (count of open/deferred). Silent truncation reads as "everything is captured" when it isn't.
+
+[^r-iteration-loop]: iteration-loop.md — context only, not opened.
+[^r-management-adapters]: management-adapters.md — context only, not opened.

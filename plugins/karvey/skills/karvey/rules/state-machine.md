@@ -65,4 +65,6 @@ The table below is generated from `state-machine.json`; do not edit it by hand (
 | `deployed`, `archived` | `chore/archive-{change-id}`, cut from production | `advance … deployed` with the pipeline evidence, `approve … prod --write-spec`, `advance … archived` |
 
 Nothing is ever committed on the integration or production branch directly: those receive merges only
-(`deploy-workflow.md`).
+(`deploy-workflow`[^r-deploy-workflow]).
+
+[^r-deploy-workflow]: deploy-workflow.md — context only, not opened.

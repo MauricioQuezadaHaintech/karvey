@@ -40,7 +40,7 @@ standards/
 └── {layer-or-target}.md
 ```
 
-They are resolved from `project.json:standards` (see `project-config.md`):
+They are resolved from `project.json:standards` (see `project-config`[^r-project-config]):
 - `source: "local"` → `docs/spec/standards/` inside the `spec_repo` (simplest, single-repo case).
 - `source: "git"` → a **separate team-owned repo** (`repo` + `ref` + `path`), e.g. a private Azure DevOps
   repo the whole team installs; phases read a cached shallow checkout (`.karvey/standards/`).
@@ -156,7 +156,7 @@ changes), review `deviations.md`:
 - If the deviation should become the new norm → **update the standard** (the golden path was wrong/outdated).
 - If it was a one-off → leave it logged as a justified exception.
 
-This mirrors the iteration loop (`iteration-loop.md`): a `spec-gap` re-opens requirements; a recurring
+This mirrors the iteration loop (`iteration-loop`[^r-iteration-loop]): a `spec-gap` re-opens requirements; a recurring
 deviation re-opens the **standard**. Standards are living, like specs.
 
 ## Bootstrapping & refreshing standards — `karvey-standards`
@@ -181,7 +181,7 @@ picking one.
 No hook enforces the standards in this release: conformance is checked by `karvey-architecture` (Step 4B)
 and by `karvey-qa` (Dimension 9), which report every `MUST NOT` pattern, or `deprecated` pattern under
 `migrating`, touched without a matching approved entry in `deviations.md`. A standards check at edit time is
-not shipped (see `enforcement.md` for what is).
+not shipped (see `enforcement`[^r-enforcement] for what is).
 
 ## project.json reference
 
@@ -198,7 +198,7 @@ The applicable standards are declared at project level so phases know what to lo
 ```
 
 (Use `"source": "local"` + `"dir": "docs/spec/standards"` for the single-repo case.)
-See `project-config.md`. If `standards` is absent, phases fall back to `standards/_index.md`,
+See `project-config`[^r-project-config]. If `standards` is absent, phases fall back to `standards/_index.md`,
 and if that is missing too, to the "no standard found → ask" behavior above.
 
 ## Who writes / who reads
@@ -212,3 +212,7 @@ and if that is missing too, to the "no standard found → ask" behavior above.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0.*
+
+[^r-enforcement]: enforcement.md — context only, not opened.
+[^r-iteration-loop]: iteration-loop.md — context only, not opened.
+[^r-project-config]: project-config.md — context only, not opened.

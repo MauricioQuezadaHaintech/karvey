@@ -338,5 +338,24 @@ class L58(LintCase):
         self.assertFails("L-58", "clickup_update_task")
 
 
+class L57(LintCase):
+    """@req REQ-W3-005 — rules cite rules only in footnotes."""
+    RULE = SKILLS + "/karvey/rules/phase-close.md"
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-57")
+
+    def test_REQ_W3_005_a_load_instruction_in_a_rule_fails(self):
+        self.t.write(SKILLS + "/karvey/rules/gates.md", "# Gates\n")
+        self.t.append(self.RULE, "\nLoad `rules/gates.md` before continuing.\n")
+        fs = self.assertFails("L-57", "a load instruction of rule rules/gates.md", file=self.RULE)
+        self.assertEqual(len(fs), 1)
+
+    def test_a_footnote_citation_passes(self):
+        self.t.write(SKILLS + "/karvey/rules/gates.md", "# Gates\n")
+        self.t.append(self.RULE, "\nThe gate question[^r-g] comes last.\n\n[^r-g]: gates.md — context only.\n")
+        self.assertPasses("L-57")
+
+
 if __name__ == "__main__":
     unittest.main()
