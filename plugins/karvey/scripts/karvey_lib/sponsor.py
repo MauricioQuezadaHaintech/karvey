@@ -304,3 +304,159 @@ def build_model(root, change, today=None, project=None):
         "as_of": today,
     }
     return model
+
+
+# --------------------------------------------------------------------------- render
+TEMPLATE_FILE = SCHEMAS_DIR.parent / "templates" / "sponsor.html"
+
+
+def _e(v):
+    import html as _html
+    return _html.escape("" if v is None else str(v), quote=True)
+
+
+def _money(v):
+    return "US$ %.2f" % v
+
+
+def _minutes(m, lang):
+    m = int(round(m or 0))
+    h, mm = divmod(m, 60)
+    return ("%d h %02d min" % (h, mm)) if h else ("%d min" % mm)
+
+
+def render(model, template=None):
+    """The page HTML: every value escaped, sections in the design-spec order (waiting first)."""
+    tpl = template if template is not None else TEMPLATE_FILE.read_text(encoding="utf-8")
+    W = wording()
+    lang = model.get("language") or "en"
+
+    def L(key):
+        return word(W, "labels", key, lang)
+
+    prog, cost, risks, waiting = model["progress"], model["cost"], model["risks"], model["waiting"]
+    released = model["released"]["items"]
+    n_wait = len(waiting["questions"]) + len(waiting["gates"])
+    sponsor = model.get("sponsor") or {}
+    if released:
+        status = '<span class="status done"><span class="dot" aria-hidden="true"></span>%s</span>' % _e(
+            word(W, "phases", "deployed", lang))
+    elif prog.get("changes_requested"):
+        status = '<span class="status"><span class="dot" aria-hidden="true"></span>%s</span>' % _e(
+            L("changes_requested"))
+    else:
+        status = '<span class="status"><span class="dot" aria-hidden="true"></span>%s</span>' % _e(prog["phase"])
+    sections = [("waiting", L("waiting")), ("scope", L("scope")), ("progress", L("progress")), ("cost", L("cost")),
+                ("risks", L("risks")), ("released", L("released")), ("history", L("history"))]
+    toc = "".join('<a href="#%s">%s</a>' % (k, _e(t)) for k, t in sections)
+    cost_fact = _money(cost["usd"]) if cost.get("measured") else L("not_measured")
+    facts = "".join("<li><span>%s</span><b>%s</b></li>" % (_e(a), _e(b)) for a, b in (
+        (L("step"), prog["phase"]), (L("cost_to_date"), cost_fact),
+        (L("open_risks"), risks["open"] or L("none")), (L("waiting"), n_wait or L("none"))))
+    # waiting
+    if n_wait:
+        items = []
+        for g in waiting["gates"]:
+            items.append('<div class="ask"><span class="tag">%s</span><div><strong>%s</strong></div></div>' % (
+                _e(L("your_approval")), _e(g["step"])))
+        for q in waiting["questions"]:
+            when = ""
+            if q["needed_by"]:
+                cls, lab = ("err", L("overdue_since")) if q["overdue"] else ("warn", L("needed_by"))
+                when = '<span class="tag %s">%s %s</span>' % (cls, _e(lab), _e(q["needed_by"]))
+            ctx = ('<details><summary>%s</summary><p class="small">%s</p></details>' % (
+                _e(L("options")), _e(q["context"]))) if q["context"] else ""
+            items.append('<div class="ask">%s<div><strong>%s</strong>%s</div></div>' % (when, _e(q["question"]), ctx))
+        waiting_html = ('<section id="waiting" class="card emph"><h2>%s</h2><p class="muted small">%s</p>%s'
+                        '<p class="stamp">%s %s</p></section>' % (_e(L("waiting")), _e(L("waiting_intro")),
+                                                                  "".join(items), _e(L("as_of")),
+                                                                  _e(waiting["as_of"])))
+    else:
+        waiting_html = '<section id="waiting" class="card"><h2>%s</h2><p>%s</p></section>' % (
+            _e(L("waiting")), _e(L("nothing_waiting")))
+    # scope
+    sc = model["scope"]
+    lists = ""
+    if sc["included"] or sc["excluded"]:
+        lists = '<div class="grid2"><div><h3>%s</h3><ul class="small">%s</ul></div><div><h3>%s</h3><ul class="small">' \
+                '%s</ul></div></div>' % (_e(L("included")), "".join("<li>%s</li>" % _e(x) for x in sc["included"]),
+                                        _e(L("not_included")), "".join("<li>%s</li>" % _e(x) for x in sc["excluded"]))
+    areas = ('<ul class="small">%s</ul>' % "".join("<li>%s</li>" % _e(a) for a in sc["areas"])) if sc["areas"] else ""
+    scope_html = '<section id="scope"><h2>%s</h2><p>%s</p>%s%s<p class="stamp">%s %s</p></section>' % (
+        _e(L("scope")), _e(sc["summary"]), lists, areas, _e(L("as_of")), _e(sc["as_of"]))
+    # progress
+    steps = "".join('<li class="%s">%s<small>%s</small></li>' % (
+        s["state"] if s["state"] in ("done", "now") else "", _e(s["step"]),
+        _e(("%s %s" % (L("since") if s["state"] == "now" else "", s["date"])).strip() if s["date"] else L("planned")))
+        for s in prog["steps"])
+    progress_html = ('<section id="progress"><h2>%s</h2><ol class="steps">%s</ol><p class="small">%s: <strong>%s'
+                     '</strong></p><p class="stamp">%s %s</p></section>' % (
+                         _e(L("progress")), steps, _e(L("work_size")), _e(prog["lane"]), _e(L("as_of")),
+                         _e(prog["as_of"])))
+    # cost
+    if cost.get("measured"):
+        rows = "".join('<tr><td>%s</td><td class="num">%.2f</td><td class="num">%s</td><td><span class="tag %s">%s'
+                       '</span></td></tr>' % (_e(r["step"]), r["usd"], _e(_minutes(r["review_min"], lang)),
+                                              "ok" if r["quality"] == "exact" else "warn", _e(r["quality"]))
+                       for r in cost["by_phase"])
+        cost_html = ('<section id="cost"><h2>%s</h2><p><strong>%s</strong> %s · <strong>%s</strong> %s · %s %s '
+                     '<span class="tag">%d%% %s</span></p><p class="small muted">%s: %s</p><details><summary>%s'
+                     '</summary><div class="table-scroll"><table><thead><tr><th>%s</th><th class="num">US$</th>'
+                     '<th class="num">%s</th><th>%s</th></tr></thead><tbody>%s</tbody></table></div><p class="xs '
+                     'muted">%s</p></details></section>' % (
+                         _e(L("cost")), _e(_money(cost["usd"])), _e(L("ai_work")),
+                         _e(_minutes(cost["review_min"], lang)), _e(L("review_time")), _e(L("as_of")),
+                         _e(cost["as_of"]), int(round(cost["estimated_share"] * 100)), _e(L("estimated_share")),
+                         _e(L("judges_apart")), _e(_money(cost["judge_usd"])), _e(L("by_step")), _e(L("step")),
+                         _e(L("review_time_col")), _e(L("how_measured")), rows, _e(L("cost_note"))))
+    else:
+        cost_html = '<section id="cost"><h2>%s</h2><p><strong>%s</strong></p></section>' % (
+            _e(L("cost")), _e(cost["text"]))
+    # risks
+    if risks["items"]:
+        rows = "".join('<tr><td>%s%s</td><td>%s / %s</td><td>%s</td><td><span class="tag %s">%s</span><br><span '
+                       'class="xs muted">%s %s</span></td></tr>' % (
+                           _e(r["description"]),
+                           ('<details><summary class="small">%s</summary><p class="small">%s</p></details>' % (
+                               _e(L("set_off_by")), _e(r["trigger"]))) if r["trigger"] else "",
+                           _e(r["likelihood"]), _e(r["impact"]), _e(r["owner"]),
+                           "warn" if r["state_id"] == "open" else "ok", _e(r["state"]), _e(L("last_review")),
+                           _e(r["last_review"] or "—")) for r in risks["items"])
+        risks_html = ('<section id="risks"><h2>%s</h2><div class="table-scroll"><table><thead><tr><th>%s</th><th>'
+                      '%s</th><th>%s</th><th>%s</th></tr></thead><tbody>%s</tbody></table></div></section>' % (
+                          _e(L("risks")), _e(L("risk")), _e(L("likelihood_impact")), _e(L("who_watches")),
+                          _e(L("state")), rows))
+    else:
+        risks_html = '<section id="risks"><h2>%s</h2><p>%s</p></section>' % (_e(L("risks")), _e(L("no_open_risks")))
+    # released
+    if released:
+        rel = "".join("<li>%s %s %s</li>" % (_e(r["version"]), _e(L("reached_production")), _e(r["date"]))
+                      for r in released)
+        released_html = '<section id="released"><h2>%s</h2><ul>%s</ul></section>' % (_e(L("released")), rel)
+    else:
+        released_html = '<section id="released"><h2>%s</h2><p class="muted">%s</p></section>' % (
+            _e(L("released")), _e(L("nothing_released")))
+    hist = "".join("<li>%s — %s: %s</li>" % (_e(h["date"]), _e(h["gate"]), _e(L(h["outcome"])))
+                   for h in model.get("history") or [])
+    history_html = '<section id="history"><h2>%s</h2><p class="small muted">%s</p>%s</section>' % (
+        _e(L("history")), _e(L("history_intro")), ('<ul class="small">%s</ul>' % hist) if hist else "")
+    note = ('<p class="xs muted">%s</p>' % _e(model["language_note"])) if model.get("language_note") else ""
+    slots = {
+        "lang": lang, "title": model["title"], "label_page_title": L("page_title"),
+        "change_line": "%s · %s: %s" % (model["change"], L("prepared_for"), sponsor.get("name") or sponsor.get("role")
+                                        or "—"),
+        "updated_line": "%s %s" % (L("updated"), model["as_of"]), "label_sections": L("progress"),
+        "label_summary": L("step"), "label_footer": L("footer"),
+    }
+    raw = {"language_note": note, "status": status, "toc": toc, "facts": facts, "section_waiting": waiting_html,
+           "section_scope": scope_html, "section_progress": progress_html, "section_cost": cost_html,
+           "section_risks": risks_html, "section_released": released_html, "section_history": history_html}
+    out = tpl
+    for k, v in raw.items():
+        out = out.replace("{{{%s}}}" % k, v)
+    for k, v in slots.items():
+        out = out.replace("{{%s}}" % k, _e(v))
+    left = re.findall(r"\{\{\{?[a-z_]+\}?\}\}", out)
+    if left:
+        raise ValueError("template slots not filled: %s" % ", ".join(sorted(set(left))))
+    return out

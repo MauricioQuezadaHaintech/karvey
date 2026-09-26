@@ -287,6 +287,30 @@
     "language_note": {
       "en": "This page is shown in English: the change's language has no wording table yet.",
       "es": "Esta página se muestra en español."
+    },
+    "included": {
+      "en": "Included",
+      "es": "Incluido"
+    },
+    "not_included": {
+      "en": "Not included",
+      "es": "No incluido"
+    },
+    "likelihood_impact": {
+      "en": "Likelihood / impact",
+      "es": "Probabilidad / impacto"
+    },
+    "how_measured": {
+      "en": "How measured",
+      "es": "Cómo se midió"
+    },
+    "review_time_col": {
+      "en": "Review time",
+      "es": "Tiempo de revisión"
+    },
+    "by_step": {
+      "en": "By step",
+      "es": "Por paso"
     }
   }
 }

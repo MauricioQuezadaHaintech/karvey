@@ -10,8 +10,26 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import contextlib
+import hashlib
+import importlib.util
+import io
+from unittest import mock
+
 import _path
 from karvey_lib import sponsor
+
+_SPEC = importlib.util.spec_from_file_location("karvey_sponsor", str(_path.SCRIPTS_DIR / "karvey-sponsor.py"))
+cli = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(cli)
+CONN = "Server=db.example;Database=sales;" + "Pass" + "word=" + "y" * 12
+
+
+def run(*argv):
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = cli.main(list(argv))
+    return code, out.getvalue(), err.getvalue()
 
 FIX = _path.UNIT_DIR / "fixtures" / "sponsor"
 CHANGE = "sample-change"
@@ -108,6 +126,95 @@ class Model(unittest.TestCase):
         m = self.model()
         self.assertEqual(m["language"], "en")
         self.assertTrue(m["language_note"])
+
+
+class Cli(unittest.TestCase):
+    """@req REQ-W3-022 REQ-W3-023 — ``karvey-sponsor.py build|deliver``."""
+
+    def setUp(self):
+        self.t = Tree()
+        self.page = self.t.cdir / "sponsor.html"
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def build(self, gate="how"):
+        return run("build", CHANGE, "--gate", gate, "--root", str(self.t.root))
+
+    def lines(self, name):
+        p = self.t.cdir / name
+        return [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines()] if p.is_file() else []
+
+    def test_REQ_W3_022_clean_change_writes_the_page_and_a_history_line(self):
+        code, out, _ = self.build()
+        self.assertEqual(code, 0, out)
+        self.assertIn("leak check PASS", out)
+        h = self.lines("sponsor-history.jsonl")
+        self.assertEqual((h[0]["gate"], h[0]["outcome"]), ("how", "approved"))
+        self.assertEqual(h[0]["sha256"], hashlib.sha256(self.page.read_bytes()).hexdigest())
+        html = self.page.read_text(encoding="utf-8")
+        self.assertIn("Waiting for you", html)
+        self.assertEqual(html.count("<table>"), html.count('<div class="table-scroll"><table>'))
+
+    def test_REQ_W3_023_a_leaked_connection_string_refuses_and_keeps_the_last_page(self):
+        self.build()
+        before = self.page.read_bytes()
+        risks = self.t.cdir / "risks.md"
+        risks.write_text(risks.read_text(encoding="utf-8").replace("Sign-in records kept longer than allowed",
+                                                                   "The job reads " + CONN), encoding="utf-8")
+        code, out, err = self.build()
+        self.assertEqual(code, 3)
+        self.assertEqual(self.page.read_bytes(), before)
+        self.assertIn("risks.items[1].description", err)
+        ref = self.lines("sponsor-refusals.jsonl")
+        self.assertIn({"field": "risks.items[1].description", "rule": "secret"},
+                      [{"field": r["field"], "rule": r["rule"]} for r in ref])
+        self.assertNotIn("y" * 12, (self.t.cdir / "sponsor-refusals.jsonl").read_text(encoding="utf-8") + out + err)
+        self.assertEqual(len(self.lines("sponsor-history.jsonl")), 1)
+
+    def test_no_page_written_on_a_first_refusal(self):
+        risks = self.t.cdir / "risks.md"
+        risks.write_text(risks.read_text(encoding="utf-8") + "| R-3 | served from reports.internal | Low | Low "
+                         "| owner | t | m | open | 2026-10-13 |\n", encoding="utf-8")
+        code, _, err = self.build()
+        self.assertEqual(code, 3)
+        self.assertFalse(self.page.exists())
+        self.assertIn("rule: host", err)
+
+    def test_a_path_in_free_text_is_removed_by_the_normaliser_before_the_check(self):
+        risks = self.t.cdir / "risks.md"
+        risks.write_text(risks.read_text(encoding="utf-8") + "| R-3 | kept in " + "/" + "srv/data/x.db | Low | Low "
+                         "| owner | t | m | open | 2026-10-13 |\n", encoding="utf-8")
+        code, _, _ = self.build()
+        self.assertEqual(code, 0)
+        self.assertNotIn("srv/data", self.page.read_text(encoding="utf-8"))
+
+    def test_REQ_W3_022_no_sponsor_is_said_once_per_change(self):
+        pj = self.t.root / "docs/spec/project.json"
+        data = json.loads(pj.read_text(encoding="utf-8"))
+        del data["stakeholders"]
+        pj.write_text(json.dumps(data), encoding="utf-8")
+        code1, out1, _ = self.build("what")
+        code2, out2, _ = self.build("how")
+        self.assertEqual((code1, code2), (0, 0))
+        self.assertEqual((out1 + out2).count("no sponsor declared"), 1)
+        self.assertFalse(self.page.exists())
+
+    def test_deliver_prints_the_checked_payload(self):
+        code, out, _ = run("deliver", CHANGE, "--root", str(self.t.root), "--json")
+        res = json.loads(out)["result"]
+        self.assertEqual(code, 0)
+        self.assertEqual(res["payload"]["attachment"], "docs/spec/changes/sample-change/sponsor.html")
+        self.assertEqual(res["destination"], {"channel": "email", "target": "sponsor@example.org"})
+        self.assertNotIn("://", out)
+
+    def test_F74_a_payload_with_a_leaked_value_is_not_printed(self):
+        leaky = ({"channel": "email", "change": CHANGE, "subject": "s", "summary": "see " + CONN}, {"channel": "email"})
+        with mock.patch.object(cli, "payload_of", return_value=leaky):
+            code, out, err = run("deliver", CHANGE, "--root", str(self.t.root))
+        self.assertEqual(code, 3)
+        self.assertNotIn("y" * 12, out + err)
+        self.assertNotIn("summary", out)
 
 
 if __name__ == "__main__":
