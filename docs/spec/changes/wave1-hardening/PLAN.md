@@ -180,7 +180,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F16: Release 3.12.0 (one versioning moment) and deploy-phase human steps
 
-- [ ] E1.F16.T1 [Backend] Release docs and the single version bump to 3.12.0 — est: 30min (depends E1.F13.T2, E1.F14.T2, E1.F14.T4)
+- [x] E1.F16.T1 [Backend] Release docs and the single version bump to 3.12.0 — est: 30min (depends E1.F13.T2, E1.F14.T2, E1.F14.T4)
 - [ ] E1.F16.T2 [human] Prepare the owner's global-config diffs from architecture §7.3 (D-01, D-11) — executor: owner (revision 1, F-49) (depends E1.F5.T2) (P)
 - [ ] E1.F16.T3 [human] Branch protection on `main`: require the CI checks (Q-A8, D-09) — executor: owner (depends E1.F13.T2)
 - [ ] E1.F16.T4 [Backend] Release PR ready; `advance deploying` on the feature branch; the unapproved merge is blocked (E2E evidence) — est: 20min (depends E1.F16.T1, E1.F16.T3)
@@ -280,7 +280,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F15.T1 [Backend] | ✅ done | 20 | 4 | 0 | `--fix` dry-run: only wave1-hardening changes (3 legacy `{from,to,at}` history rows → `{phase, entered_at, exited_at}`); team-adapters and team-layer nothing to fix (team-layer kept as history, D-14); applied to wave1-hardening; second `--fix --dry-run` empty; `validate --all`: 3 errors, all `team-adapters approvals.prod` (F15.T3) |
 | E1.F15.T2 [human] | ✅ done | — | — | — | [human] owner typed «ok, registra la aprobación de prod de team-adapters con D-08» 2026-09-24 18:39 -03; hook: `approval recorded (prod, team-adapters, expires 23:39)` |
 | E1.F15.T3 [Backend] | ✅ done | 15 | 3 | 0 | `approve team-adapters prod --by … --role human --ref D-08 --write-spec`: approvals.prod gains role, ISO date, ref `D-08` (the retroactive detail stays in D-08 and `qa_note`); approvals.qa stays false (REQ-W1-108); `validate --all` 0 errors / 35 warnings, rc 0; lint 3 → 0 errors, 3 warnings |
-| E1.F16.T1 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F16.T1 [Backend] | ✅ done | 30 | 15 | 0 | `[Unreleased]` → `[3.12.0] - 2026-09-26` (Why, behaviour change, compatibility, 3.10.0 correction); plugin/marketplace/project.json 3.12.0; `pre_3_12_history.released_on`; method page 3.12.0 current in 5 languages; lint 0 errors |
 | E1.F16.T2 [human] | ⬜ todo | — | — | — | [human] revision 1 (F-49): auto mode refuses the agent's copy of the live files |
 | E1.F16.T3 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F16.T4 [Backend] | ⬜ todo | 20 | — | — |  |

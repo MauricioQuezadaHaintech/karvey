@@ -4,6 +4,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+## [3.12.0] - 2026-09-26
+
+### Why
+Wave 1 of the method's hardening: everything the method claims to guarantee is now either enforced by a script or hook with a test, or stated as a recommendation. Phase state moves through one tool (`karvey-state.py`) over a schema-checked `spec.json`; approvals are recorded from the human's own words by a hook instead of a hand-made marker file; production merges pass a prod-gate that reads a release ledger bound to the approved head commit; the linter checks the plugin's own text against its files. The QA review of this release found and fixed 25 bugs (BUG-27..51), each with a regression test that failed first.
+
+### Behaviour change
+- **The prod-gate is ON by default.** A merge or push to the production branch (`gh pr merge`, `gh api` merge endpoints, `az repos pr update --status completed`, `glab mr merge`, direct pushes in their many forms) is blocked unless the release ledger holds a human prod approval for the PR's current head commit, recorded within the last 24 h (`karvey-state.py approve <change> prod --by … --role human --ref D-NN --sha <head>`). A new push, or a reopen of the change, needs a new approval.
+- **How to switch it off:** set `enforcement.prod_gate_hook` to `false` in `docs/spec/project.json` **and** get that change reviewed onto the production branch. A working-copy-only `false`, a missing key or any other value keeps the gate on; while off, every session prints `[karvey] prod-gate DISABLED for this project (project.json)`.
+- The hook-recorded approval replaces the hand-made marker file; a compatibility marker path can be set through the `KARVEY_COMPAT_MARKER` environment variable for setups that still read it.
+
+### Compatibility
+- **Notification destinations now come only from `project.json`.** Projects that took their notification channel or space from tables in a `CLAUDE.md` file must declare it under `notifications` in `docs/spec/project.json`; until they do, QA and deploy skip the notice and say so. The team-settings step can propose a destination seen in the session and writes it only after the human confirms.
+- Existing `spec.json` files are validated, not rewritten: `karvey-state.py validate --all` reports; `--fix --dry-run` shows the migration before `--fix` applies it. Approval-format errors in archived changes whose approvals all predate this release are warnings (recorded history is never back-filled).
+
+### Corrections to earlier notes
+- The 3.10.0 notes said no skill assumed a tool or status name any more and that a project without a status map "keeps working". That held only in part: several skills still changed statuses without resolving a missing map. From 3.12.0 every skill that creates tracker items or changes a status applies the one missing-map clause (resolve the location, read its real statuses, confirm the map with the human, persist it) and asks instead of picking a location.
+
 ### Added
 - E1.F1.T1 — real hook payloads captured headless from CLI 2.1.281 into `plugins/karvey/tests/fixtures/payloads/` (9 sanitised fixtures); F-02 closed with a result per assumption A-1..A-10, A-8 nuance logged as F-04. Why: freeze the parser and guard tables on the real contract, not on docs.
 - E1.F2.T1 — `karvey_lib` package: exit codes, `--json` envelope and `defaults.json` (8 h rotation, 120 min marker, 7 days stalled, ±30 % over 3 changes). Why: one contract and one place for the D-06/D-07 values (REQ-W1-049).
