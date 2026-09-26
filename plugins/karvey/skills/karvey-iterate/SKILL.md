@@ -54,7 +54,7 @@ If a finding's type is ambiguous or its routing is irreversible (re-opening requ
 ### Step 3 — Route by type
 
 #### 3a · `bug` → incident tracker + QA micro-loop
-1. Promote to a `BUG-NN` in the repo's `docs/bugs_dev_testing.md` (continue the incremental counter — read the file first). Fill priority, detection, component, reproduction, actual vs expected, and open the **State history** at `DETECTADO` (see `incident-tracking.md`).
+1. Promote to a `BUG-NN` in the repo's `docs/bugs_dev_testing.md` (the number comes from `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG`, which scans every branch under a lock — never counted by hand). Fill priority, detection, component, reproduction, actual vs expected, and open the **State history** at `DETECTADO` (see `incident-tracking.md`).
 2. Mirror to the global index `docs/spec/incidents-index.md`.
 3. If the cause is unclear → recommend/invoke `/karvey-investigate` (Iron Law: no fix without investigating); paste its result as Root cause and move the incident to `DIAGNOSTICADO`.
 4. The fix itself runs through the existing micro-loop: `/karvey-impl {change-id}` (fix) → `/karvey-test {change-id}` (incl. its regression test, Step 4C) → `/karvey-qa {change-id}`. The incident reaches `RESUELTO` only once a regression test exists.
@@ -86,7 +86,7 @@ When a pinned input (`spec.json:inputs.design|design_system|copy|legal`, format 
 3. Impact → treat as a `spec-gap` (3b): re-pin, amend the affected requirement, and ripple by input type — `design`/`design_system` → design-graphic (+ impl of the touched components) · `copy` → impl of the touched texts · `legal` → requirements + impl, and QA re-checks the legal texts verbatim.
 
 #### 3c · `emergent` → discovery backlog
-1. Add to `docs/spec/backlog.md` as `BL-NN` (origin = this change + finding id, rough scope, priority). See `backlog.md`.
+1. Add to `docs/spec/backlog.md` as `BL-NN` — number from `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BL` — (origin = this change + finding id, rough scope, priority). See `backlog.md`.
 2. If the resolved tracker is `external`, also mirror it there (`mirror_backlog`, at the backlog location of `management-adapters.md`) and record the tracker id.
 3. Never absorb emergent scope into the current change silently. It is captured, not done now.
 

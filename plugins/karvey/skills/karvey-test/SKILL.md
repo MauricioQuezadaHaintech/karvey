@@ -179,7 +179,7 @@ This measurement can be delegated to or related with the **`karvey-health`** ski
 
 ### Step 4C — Automatic regression tests + incident logging
 
-**Every time a test detects a bug**, log it in the incident tracker `docs/bugs_dev_testing.md` as a `BUG-NN` (continue the incremental counter — read the file first), opening its **State history** at `DETECTADO` (see `../karvey/rules/incident-tracking.md`), and mirror it to `docs/spec/incidents-index.md`. The same bug is also recorded as a `bug`-type finding in `findings.md` (Step 5B).
+**Every time a test detects a bug**, log it in the incident tracker `docs/bugs_dev_testing.md` as a `BUG-NN` (the number comes from `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG` — never counted by hand), opening its **State history** at `DETECTADO` (see `../karvey/rules/incident-tracking.md`), and mirror it to `docs/spec/incidents-index.md`. The same bug is also recorded as a `bug`-type finding in `findings.md` (Step 5B).
 
 **When it is fixed**, generate an automatic regression test that covers exactly that case, so it fails again if the bug reappears, and move the incident to `RESUELTO` (a regression test is required to reach `RESUELTO`). That is: for every fixed FAIL, a new test must remain in the suite.
 

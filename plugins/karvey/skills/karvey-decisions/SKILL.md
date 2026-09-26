@@ -37,7 +37,7 @@ it, never edited into something else.
 ### `log` — record a decision
 
 1. Resolve the ops repo (`project.json:ops_repo`, else `spec_repo`) and the next free number in the
-   series. **Scan the whole log**, not just its last entries.
+   series from `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next D` — it scans the whole log, the per-period files and every branch.
 2. Write the entry with four fields, all mandatory:
    - **What** was decided, in one sentence that survives out of context.
    - **Who** decided it and **when** — quoting their own words when they exist. A paraphrase of an
