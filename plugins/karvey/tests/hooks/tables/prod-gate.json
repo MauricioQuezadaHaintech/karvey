@@ -6451,13 +6451,16 @@
      "gh": {
       "stdout": {
        "baseRefName": "main",
-       "headRefName": "feature/gone",
+       "headRefName": "feature/feat-a",
        "title": "Deploy",
        "number": 12,
        "headRefOid": "{{head}}"
       }
      }
-    }
+    },
+    "setup": [
+     "git update-ref -d refs/remotes/origin/main"
+    ]
    },
    "input": {
     "tool_name": "Bash",
@@ -6731,13 +6734,16 @@
      "gh": {
       "stdout": {
        "baseRefName": "main",
-       "headRefName": "feature/gone",
+       "headRefName": "feature/feat-a",
        "title": "Deploy",
        "number": 12,
        "headRefOid": "{{head}}"
       }
      }
-    }
+    },
+    "setup": [
+     "git update-ref -d refs/remotes/origin/main"
+    ]
    },
    "input": {
     "tool_name": "Bash",
@@ -7496,6 +7502,121 @@
     "D-37",
     "REQ-W2-047",
     "REQ-W2-052"
+   ]
+  },
+  {
+   "id": "pgm-13-manifest-computed-at-the-released-commit-not-the-local-branch",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      },
+      "checks": {
+       "release.manifest": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      },
+      "feat-c": {
+       "change_id": "feat-c",
+       "phase": "deploying",
+       "approvals": {
+        "qa": {
+         "generated": true,
+         "approved": true,
+         "by": "Owner Name",
+         "role": "human",
+         "date": "2026-09-25T10:00:00-03:00",
+         "ref": "D-08"
+        }
+       }
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     },
+     "branch_commits": [
+      {
+       "files": {
+        "a.txt": "x"
+       },
+       "message": [
+        "feat: a",
+        "Karvey-Change: feat-a"
+       ]
+      },
+      {
+       "files": {
+        "c.txt": "x"
+       },
+       "message": [
+        "feat: c",
+        "Karvey-Change: feat-c"
+       ]
+      }
+     ]
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "main",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12,
+       "headRefOid": "{{head}}"
+      }
+     }
+    },
+    "setup": [
+     "git checkout -q -b elsewhere && git branch -f feature/feat-a HEAD~1"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 30 --merge"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "carries unapproved changes",
+     "feat-c: no human prod approval"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "manifest",
+    "D-35",
+    "D-37",
+    "REQ-W2-046"
    ]
   }
  ]

@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-81 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-83 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -271,6 +271,12 @@ INDEX = {
         ('unit', 'test_state_gates.py', 'MergedGateChangesRequested.test_generated_again_after_the_request_passes'),
         ('unit', 'test_state_gates.py', 'MergedGateChangesRequested.test_request_on_an_earlier_generation_only'),
         ('manual', 'import-through-gates.md'),
+    ],
+    "BUG-82": [  # approve prod --manifest approved a change the manifest does not carry (F-82)
+        ("unit", "test_state_gates.py", "ProdManifest.test_D37_approving_change_outside_the_manifest_refused"),
+    ],
+    "BUG-83": [  # prod-gate manifest from the local branch, not the released commit (F-83)
+        ("table", "prod-gate", "pgm-13-manifest-computed-at-the-released-commit-not-the-local-branch"),
     ],
     "BUG-52": [  # Post-deploy verification could pass while the service was down, and le (F-13)
         ('unit', 'test_postdeploy.py', 'Verify.test_unreachable_service_is_never_pass'),

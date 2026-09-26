@@ -2467,3 +2467,63 @@ Files: `plugins/karvey/tests/unit/test_state_gates.py`. `test_state_gates.py` `M
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-12 |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-82 — `approve prod --manifest` approved a change the manifest does not carry
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`_approve_prod_manifest`)
+- **Change / origin:** wave2-structural — finding F-82 (QA revision 4, D7 second opinion / D1)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A change with no commit in `origin/{production}..{head}`; a project-wide prod marker; `approve {id} prod --manifest --pr-body F`.
+
+### Actual vs expected
+- Actual: the change was appended to the covered set and the project-wide marker approved that one change.
+- Expected: D-37 covers only the changes the manifest lists; a one-change approval is the per-change path (BUG-41).
+
+### Root cause
+The pre-D-37 manifest code appended the approving change to the manifest's ids, kept by D-37.
+
+### Fix
+Refused when the approving change is not in the manifest (also an empty manifest), before any write or consume.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_state_gates.py` `ProdManifest.test_D37_approving_change_outside_the_manifest_refused` (red before the fix). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-82 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (QA micro-loop) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-83 — Prod-gate computed the release manifest from the local branch, not the released commit
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`manifest_verdict`)
+- **Change / origin:** wave2-structural — finding F-83 (QA revision 4, D7 second opinion / D1)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`release.manifest: blocking`; the PR head is commit C with an unapproved change; the local branch named like the PR head is moved to an older commit; `gh pr merge`.
+
+### Actual vs expected
+- Actual: the manifest was built from the moved local branch, missed the unapproved change and the merge was allowed.
+- Expected: the manifest of the commit being released (the PR head the approval is bound to, D-35).
+
+### Root cause
+`manifest_verdict` resolved the head by branch name (`_manifest_head`).
+
+### Fix
+The manifest is computed at the released SHA; when that commit is not available locally the manifest is not computable (blocking: block; warn: not evaluated).
+
+### Regression test
+Files: `plugins/karvey/tests/hooks/tables/prod-gate.json` `pgm-13-manifest-computed-at-the-released-commit-not-the-local-branch` (red before the fix); `pgm-03`/`pgm-06` now make the manifest not computable by removing the base ref. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-83 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (QA micro-loop) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |

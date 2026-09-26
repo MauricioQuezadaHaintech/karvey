@@ -479,8 +479,10 @@ the change → `check_prod`, block when missing. After the Wave 1 allow decision
   record is written first and the marker is consumed once, after all the writes (a failed consume is a warning,
   BUG-73). `check_prod` accepts a covered change's record only when its manifest lists the change, its evidence
   names the approving change's or the project marker with the hook's audit line, and the approving change's own
-  record matches (same manifest, commit and marker). A reopen supersedes the reopened change's record only
-  (D-36). Every other prod path — `approve prod` without `--manifest` and the merged release gate
+  record matches (same manifest, commit and marker). A reopen supersedes the reopened change's record
+  (D-36); reopening the approving change also ends the coverage of every change it covered (fails closed). The
+  approving change must be in the manifest (BUG-82), and the prod-gate computes the manifest at the released
+  commit (BUG-83). Every other prod path — `approve prod` without `--manifest` and the merged release gate
   (`approve-gate release --sha`) — stays one OK per change (BUG-41, BUG-70).
 
 ### 1.11 C-12, C-13 — Deploy flow and spec merge timing

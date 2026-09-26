@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-26 (merge of wave1-hardening into wave2-structural: wave1 keeps BUG-23 .. BUG-51; wave2-structural's BUG-48 .. BUG-51 renumbered to BUG-78 .. BUG-81). Before: 2026-09-26 (wave2-structural test/QA: BUG-52 .. BUG-81 RESUELTO). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3). Before: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimension review and the second opinion, all RESUELTO with a regression test red on 4c9b7c0).
+Last updated: 2026-09-26 (wave2-structural QA revision 4: BUG-82, BUG-83 RESUELTO). Before: 2026-09-26 (merge of wave1-hardening into wave2-structural: wave1 keeps BUG-23 .. BUG-51; wave2-structural's BUG-48 .. BUG-51 renumbered to BUG-78 .. BUG-81). Before: 2026-09-26 (wave2-structural test/QA: BUG-52 .. BUG-81 RESUELTO). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3). Before: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimension review and the second opinion, all RESUELTO with a regression test red on 4c9b7c0).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -89,6 +89,8 @@ Last updated: 2026-09-26 (merge of wave1-hardening into wave2-structural: wave1 
 | BUG-79 | karvey | high | Deploy asked for the rollback only on PROD; a DEV regression neither asked nor opened the incident | wave2-structural / F-10 | RESUELTO | lint L-53; plugins/karvey/tests/unit/test_lint_plugin.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-80 | karvey | medium | A retro action's backlog row carried no owner | wave2-structural / F-11 | RESUELTO | plugins/karvey/tests/unit/test_metrics.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-81 | karvey | high | Merged gate: a phase sent back by Request changes was still passed inside its gate | wave2-structural / F-12 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-82 | karvey | medium | `approve prod --manifest` approved a change the manifest does not carry | wave2-structural / F-82 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-83 | karvey | medium | Prod-gate computed the release manifest from the local branch, not the released commit | wave2-structural / F-83 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 
 ## Summary by state
 
@@ -97,7 +99,7 @@ Last updated: 2026-09-26 (merge of wave1-hardening into wave2-structural: wave1 
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 81 | BUG-01 .. BUG-81 |
+| RESUELTO | 83 | BUG-01 .. BUG-83 |
 | REABIERTO | 0 | — |
 
-Next number: from `karvey-id.py next BUG` (scans every branch); BUG-82 at this update.
+Next number: from `karvey-id.py next BUG` (scans every branch); BUG-84 at this update.

@@ -1579,9 +1579,12 @@ def manifest_verdict(ctx, root, wc, base, head, cid, deadline, released=None):
     if mode not in ("warn", "blocking"):
         return None, []
     man, why = None, None
-    href = _manifest_head(ctx, root, head)
+    # QA r4 (D-35): the manifest of the commit being released, never of a local branch that may have moved
+    href = released if released and pj.git(["cat-file", "-e", released + "^{commit}"], str(root))[0] == 0 else None
+    if released is None:
+        href = _manifest_head(ctx, root, head)
     if href is None:
-        why = "head %s not found locally" % (head or "?")
+        why = "released commit %s not found locally" % ((released or head or "?")[:12])
     elif time.monotonic() > deadline:
         why = "time budget spent"
     else:

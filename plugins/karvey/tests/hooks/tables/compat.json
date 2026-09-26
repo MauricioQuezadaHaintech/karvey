@@ -1653,13 +1653,16 @@
      "gh": {
       "stdout": {
        "baseRefName": "main",
-       "headRefName": "feature/gone",
+       "headRefName": "feature/feat-a",
        "title": "Deploy",
        "number": 12,
        "headRefOid": "{{head}}"
       }
      }
-    }
+    },
+    "setup": [
+     "git update-ref -d refs/remotes/origin/main"
+    ]
    },
    "input": {
     "tool_name": "Bash",

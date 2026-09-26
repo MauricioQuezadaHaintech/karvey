@@ -401,6 +401,20 @@ class ProdManifest(Base):
         self.assertEqual(self.check("feat-c")[0], 1)
         self.assertEqual(self.check("feat-a", self.head())[0], 0)
 
+    def test_D37_approving_change_outside_the_manifest_refused(self):
+        """Second opinion (QA r4): a change the manifest does not carry cannot use --manifest, or the project-wide
+        marker would approve that one change off the manifest path (BUG-41)."""
+        g.write(self.root, "docs/spec/changes/feat-z/spec.json", {
+            "change_id": "feat-z", "phase": "deploying", "lane": "standard", "phase_history": hist("init", "deploying")})
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        self.body.write_text("- feat-a\n- feat-c\n- feat-z\n", encoding="utf-8")
+        c, env = self.st("approve", "feat-z", "prod", "--manifest", "--by", "owner", "--role", "human", "--ref", "D-8",
+                         "--pr-body", str(self.body))
+        self.assertEqual(c, 3, env)
+        self.assertIn("not in the release manifest", env["errors"][0]["message"])
+        self.assertIsNone(ap.read_ledger(self.root, "feat-z")[0])
+        self.assertIsNone(ap.read_marker(self.root, "_project")[0]["consumed_at"])
+
     def test_D37_covered_record_needs_the_approving_change_record(self):
         """A covered change's record must match the approving change's own record (same manifest, commit and
         marker); a copied or orphaned record does not stand on its own."""

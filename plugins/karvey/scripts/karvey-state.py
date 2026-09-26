@@ -1675,8 +1675,11 @@ def _approve_prod_manifest(args, root, by, date, ref, head_sha):
     except mf.ManifestError as exc:
         raise Refused("cannot compute the release manifest (%s)" % exc, code="state.manifest")
     ids = [c["id"] for c in man["changes"]]
-    if args.change not in ids:
-        ids.append(args.change)
+    if args.change not in ids:  # QA r4: never a one-change approval through the manifest path (BUG-41)
+        raise Refused("%s is not in the release manifest of %s..%s (%s): the manifest path covers the changes it "
+                      "lists; approve this change on its own" % (args.change, base, head_sha[:12],
+                                                                 ", ".join(ids) or "empty"),
+                      code="state.manifest", result={"manifest": ids})
     unlisted = [cid for cid in ids if not _names_change(body, cid)]
     cdir = os.path.join(str(root), "docs", "spec", "changes")
     known = sorted(d for d in (os.listdir(cdir) if os.path.isdir(cdir) else [])

@@ -677,7 +677,8 @@ release-manifest path only, one production OK SHALL cover every change the relea
 changes; that OK SHALL be the approving change's own prod marker or the project-wide one, SHALL be consumed once,
 and each change's release-ledger record SHALL be bound to the reviewed head commit for 24 h (D-35), name the
 manifest it covers, and match the approving change's own record. Every other production path SHALL stay one OK
-per change (BUG-41), and a reopen SHALL supersede the reopened change's record (D-36).
+per change (BUG-41), and a reopen SHALL supersede the reopened change's record (D-36) — a reopen of the approving change ends the
+coverage of every change it covered.
 
 **Scenario — success (revision 1):** GIVEN a manifest of two changes and a PR body that lists both WHEN the human
 gives one production OK and `approve prod --manifest` runs THEN both ledger records name the same head commit and

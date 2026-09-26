@@ -48,16 +48,16 @@ Coverage: 97/97 requirements with a green test or a `manual` exception · 9 unco
 | REQ-W2-040 | E1.F1.T3, E1.F2.T7, E1.F4.T4, E1.F4.T5 | `c2ca23b`, `038501e`, `d649ba7`, `16f25ec` | `plugins/karvey/tests/unit/test_context_gate.py`, `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_metrics.py`, `plugins/karvey/tests/unit/test_schema_w2.py`, `plugins/karvey/tests/unit/test_state_gates.py`, `plugins/karvey/tests/unit/test_state_outcomes.py` | pass | green |
 | REQ-W2-041 | E1.F4.T6 | `b89d85e` | — | no test · manual | green |
 | REQ-W2-042 | E1.F1.T3, E1.F4.T4 | `038501e`, `16f25ec` | `plugins/karvey/tests/unit/test_state_outcomes.py` | pass | green |
-| REQ-W2-043 | E1.F5.T1, E1.F5.T8 | `8898a6a`, `fd4fe31` | `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_manifest.py` | pass | green |
+| REQ-W2-043 | E1.F5.T1, E1.F5.T8 | `9b19ef2`, `8898a6a`, `fd4fe31` | `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_manifest.py` | pass | green |
 | REQ-W2-044 | E1.F5.T4 | `0471556` | `plugins/karvey/tests/hooks/tables/trailer.json` | pass | green |
-| REQ-W2-045 | E1.F5.T1, E1.F5.T2, E1.F5.T6, E1.F13.T3 | `09fde15`, `7082bba`, `90620bf`, `fd4fe31` | `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_manifest.py`, `plugins/karvey/tests/unit/test_release_gate.py`, `plugins/karvey/tests/unit/test_wave2_flow.py` | pass | green |
+| REQ-W2-045 | E1.F5.T1, E1.F5.T2, E1.F5.T6, E1.F13.T3 | `9b19ef2`, `09fde15`, `7082bba`, `90620bf`, `fd4fe31` | `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_manifest.py`, `plugins/karvey/tests/unit/test_release_gate.py`, `plugins/karvey/tests/unit/test_wave2_flow.py` | pass | green |
 | REQ-W2-046 | E1.F5.T2, E1.F5.T5, E1.F13.T3 | `09fde15`, `641b3cb`, `90620bf` | `plugins/karvey/tests/hooks/tables/prod-gate.json`, `plugins/karvey/tests/unit/test_release_gate.py`, `plugins/karvey/tests/unit/test_wave2_flow.py` | pass | green |
-| REQ-W2-047 | E1.F5.T3, E1.F5.T5, E1.F5.T10, E1.F13.T9 | `11dc9f9`, `641b3cb` | `plugins/karvey/tests/hooks/tables/prod-gate.json`, `plugins/karvey/tests/unit/test_release_gate.py`, `plugins/karvey/tests/unit/test_state_gates.py` | pass | green |
+| REQ-W2-047 | E1.F5.T3, E1.F5.T5, E1.F5.T10, E1.F13.T9 | `9b19ef2`, `11dc9f9`, `641b3cb` | `plugins/karvey/tests/hooks/tables/prod-gate.json`, `plugins/karvey/tests/unit/test_release_gate.py`, `plugins/karvey/tests/unit/test_state_gates.py` | pass | green |
 | REQ-W2-048 | E1.F5.T6, E1.F5.T8 | `8898a6a`, `7082bba` | `plugins/karvey/tests/unit/test_lint_plugin.py` | pass | green |
 | REQ-W2-049 | E1.F5.T7 | `8056544` | `plugins/karvey/tests/unit/test_project.py` | pass | green |
 | REQ-W2-050 | E1.F5.T3, E1.F5.T6 | `7082bba`, `11dc9f9` | `plugins/karvey/tests/unit/test_release_gate.py` | pass | green |
 | REQ-W2-051 | E1.F1.T4, E1.F13.T1 | `d9ad380`, `f177322` | `plugins/karvey/tests/unit/test_state_deploys.py`, `plugins/karvey/tests/unit/test_state_fix.py` | pass | green |
-| REQ-W2-052 | E1.F5.T6, E1.F5.T8, E1.F5.T10 | `aec40dc`, `8898a6a`, `7082bba` | `plugins/karvey/tests/hooks/tables/prod-gate.json`, `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_state_gates.py` | pass | green |
+| REQ-W2-052 | E1.F5.T6, E1.F5.T8, E1.F5.T10 | `9b19ef2`, `aec40dc`, `8898a6a`, `7082bba` | `plugins/karvey/tests/hooks/tables/prod-gate.json`, `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_state_gates.py` | pass | green |
 | REQ-W2-053 | E1.F1.T4, E1.F5.T6 | `7082bba`, `f177322` | `plugins/karvey/tests/unit/test_state_deploys.py` | pass | green |
 | REQ-W2-054 | E1.F5.T6, E1.F5.T8, E1.F6.T1 | `8898a6a`, `7082bba`, `c410075` | `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_spec_merge_check.py` | pass | green |
 | REQ-W2-055 | E1.F6.T1, E1.F6.T2 | `8005adb`, `c410075` | `plugins/karvey/tests/unit/test_spec_merge_check.py` | pass | green |
@@ -93,7 +93,7 @@ Coverage: 97/97 requirements with a green test or a `manual` exception · 9 unco
 | REQ-W2-085 | E1.F1.T2, E1.F13.T7 | `ad68671`, `6ed7082` | `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_modes.py` | pass | green |
 | REQ-W2-086 | E1.F1.T8, E1.F13.T7 | `ad68671`, `675b758` | `plugins/karvey/tests/unit/test_metrics.py` | pass | green |
 | REQ-W2-087 | E1.F13.T1, E1.F13.T5 | `b1461bc`, `d9ad380` | `plugins/karvey/tests/unit/test_state_fix.py` | pass | green |
-| REQ-W2-088 | E1.F1.T9, E1.F5.T1, E1.F5.T9, E1.F13.T4, E1.F13.T6, E1.F13.T9 | `0473126`, `de885f8`, `becc373`, `fd4fe31`, `69dd87c` | `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_manifest.py` | pass | green |
+| REQ-W2-088 | E1.F1.T9, E1.F5.T1, E1.F5.T9, E1.F13.T4, E1.F13.T6, E1.F13.T9 | `9b19ef2`, `0473126`, `de885f8`, `becc373`, `fd4fe31`, `69dd87c` | `plugins/karvey/tests/unit/test_lint_plugin.py`, `plugins/karvey/tests/unit/test_manifest.py` | pass | green |
 | REQ-W1-006 | — | no commit | `plugins/karvey/tests/unit/test_state_outcomes.py` | pass | green |
 | REQ-W1-007 | — | no commit | `plugins/karvey/tests/unit/test_state_lane.py` | pass | green |
 | REQ-W1-009 | — | no commit | `plugins/karvey/tests/unit/test_state_fix.py` | pass | green |
