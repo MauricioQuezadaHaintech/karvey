@@ -141,7 +141,7 @@ Report to the user with the specific blocker and wait for it to be unblocked.
 
 ## Advance to the next phase
 
-At the end of the phase, **ask the user**: "Shall we advance to the Testing phase now?" On their OK, run `/karvey-test {change-id}` (it advances the state). Otherwise wait. In a new session, `karvey-state.py next "{change-id}"` says where the change is.
+Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this phase has no approval of its own; state the next step — `/karvey-test`, as `karvey-state.py next {change-id}` names it — and continue into it only when the user's request already covered the chain. In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

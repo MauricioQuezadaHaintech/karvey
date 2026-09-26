@@ -296,7 +296,7 @@ Run `/karvey-judges {change-id} architecture` (`../karvey/rules/judges.md`: lens
 
 ### Step 7 — Present for approval
 
-Present a summary and ask for approval (`-y` only skips the question when the human's own invocation already approved it; the approval is still theirs).
+Present a summary and ask for approval (`-y` records the answer with `--role auto` and continues (`../karvey/rules/gates.md`); it never records production).
 
 On the human's OK: `python3 "$S" approve "{change-id}" architecture --by "{name}" --role human --ref D-NN`.
 
@@ -310,10 +310,7 @@ Next step:
 
 ## Advance to the next phase
 
-When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the next phase now?" (the one `next` names; a change without cloud resources records `python3 "$S" skip "{change-id}" infra --reason "…"` and goes to tasks).
-- If they confirm → run the skill `next` names.
-- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
-- If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
+Close the phase per `../karvey/rules/gates.md` (phase `architecture`, gate *how*): `generated`, then `karvey-state.py gate {change-id} architecture` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; *Approve and advance* runs the skill `next` names with no second question. A change without cloud resources records `python3 "$S" skip "{change-id}" infra --reason "…"` and goes to tasks. In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `karvey/TRADEMARK.md`.*

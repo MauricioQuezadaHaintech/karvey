@@ -308,7 +308,7 @@ Next step (if converged — no open bug/spec-gap, security gate passed):
 
 ## Advance to the next phase
 
-When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items (or the security gate is unresolved), the next step is `/karvey-iterate {change-id}`, not Deploy. Once converged and approved, **ask the user**: "Shall we advance to the Deploy phase now?" On their OK, run `/karvey-deploy {change-id}`; otherwise wait. In a new session, `karvey-state.py next "{change-id}"` says where the change is.
+Close the phase per `../karvey/rules/gates.md` (phase `qa`, gate *release*): `generated`, then `karvey-state.py gate {change-id} qa` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; *Approve and advance* runs the skill `next` names with no second question. First check convergence: with open `bug`/`spec-gap` items in `findings.md` (or the security gate unresolved), the next step is `/karvey-iterate {change-id}`, not the gate. The fiscal runs before the gate question (Step 3C). In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `../karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

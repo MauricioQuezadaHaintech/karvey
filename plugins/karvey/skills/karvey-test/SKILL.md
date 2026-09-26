@@ -348,7 +348,7 @@ Next step:
 
 ## Advance to the next phase
 
-When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items, the next step is `/karvey-iterate {change-id}` (route them), not QA. Once routed or clear, **ask the user**: "Shall we advance to the QA phase now?" On their OK, run `/karvey-qa {change-id}`; otherwise wait. In a new session, `karvey-state.py next "{change-id}"` says where the change is.
+Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this phase has no approval of its own; state the next step — `/karvey-qa` (after `/karvey-iterate` when `findings.md` has open `bug`/`spec-gap` items), as `karvey-state.py next {change-id}` names it — and continue into it only when the user's request already covered the chain. In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `../karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

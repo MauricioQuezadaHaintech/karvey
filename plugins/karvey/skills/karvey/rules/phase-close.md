@@ -42,7 +42,7 @@ Markdown: a history row in `PLAN.md`.
 
 ## Gate before advancing
 
-Do not ask "Shall we advance to the next phase?" until actions 1–4 are done. If a tracker update failed (API
+Do not ask the gate question (`gates.md`) until actions 1–4 are done. If a tracker update failed (API
 error, missing location, unmapped status), **say so** and leave it in the outbox — do not pretend the phase
 closed cleanly.
 

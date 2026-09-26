@@ -233,10 +233,7 @@ Next step:
 
 ## Advance to the next phase
 
-When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Graphic Design phase now?"
-- If they confirm → run `/karvey-design-graphic {change-id}`.
-- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (a gate of the method).
-- If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
+Close the phase per `../karvey/rules/gates.md` (phase `mockup`, gate *what*): `generated`, then `karvey-state.py gate {change-id} mockup` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; *Approve and advance* runs the skill `next` names with no second question. In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

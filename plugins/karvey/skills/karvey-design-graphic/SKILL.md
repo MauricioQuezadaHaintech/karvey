@@ -371,10 +371,7 @@ Record the artifact: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" ge
 
 ## Advance to the next phase
 
-When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Architecture phase now?"
-- If they confirm → run `/karvey-architecture {change-id}`.
-- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (the method's gate).
-- If you resume in another session, `/karvey {change-id}` shows which phase you are in and which one is next.
+Close the phase per `../karvey/rules/gates.md` (phase `design_graphic`, gate *what*): `generated`, then `karvey-state.py gate {change-id} design_graphic` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; *Approve and advance* runs the skill `next` names with no second question. In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

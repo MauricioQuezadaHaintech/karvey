@@ -151,7 +151,7 @@ Judges: {one line per lens: verdict · findings by severity · model} | {none fo
 Do you approve the requirements to continue?
 ```
 
-`-y` skips the question only; the approval is still recorded with who gave it.
+`-y` records the answer with `--role auto` and continues (`../karvey/rules/gates.md`); it never records production.
 
 When the user approves, record it (`ref` = the `D-NN` or URL where the OK lives; `../karvey/rules/multi-agent.md` §4):
 ```bash
@@ -213,10 +213,7 @@ Next step:
 
 ## Advance to the next phase
 
-When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the next phase now?" — the next skill is the one `karvey-state.py next {change-id}` names (mockup, or architecture when mockup and design-graphic are skipped for a no-UI change).
-- If they confirm → run that skill.
-- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (a gate of the method).
-- If you resume in another session, `karvey-state.py next {change-id}` (or `/karvey {change-id}`) says where the change is.
+Close the phase per `../karvey/rules/gates.md` (phase `requirements`, gate *what*): `generated`, then `karvey-state.py gate {change-id} requirements` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; *Approve and advance* runs the skill `next` names with no second question. The next skill is the one `karvey-state.py next {change-id}` names (mockup, or architecture when the lane skips mockup and design-graphic). In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

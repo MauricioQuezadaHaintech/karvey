@@ -192,7 +192,7 @@ Next step: /karvey-archive {change-id}
 
 ## Advance to the next phase
 
-Ask the user: "Shall we advance to the Archive (closure) phase now?" Confirm → `/karvey-archive {change-id}`; otherwise wait. In another session, `/karvey {change-id}` (it calls `karvey-state.py next`) says where the change is.
+Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this phase has no approval of its own; state the next step — `/karvey-archive`, as `karvey-state.py next {change-id}` names it — and continue into it only when the user's request already covered the chain. In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

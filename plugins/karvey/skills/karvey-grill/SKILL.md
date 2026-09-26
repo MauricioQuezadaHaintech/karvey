@@ -194,10 +194,7 @@ When done, indicate:
 
 ## Advance to the next phase
 
-When you finish this phase and have the corresponding approval, **actively ask the user**: "Shall we advance to the Init phase (create the change) now?"
-- If they confirm → run `/karvey-init {change-id}`.
-- If they prefer to review or adjust first → wait. Advancing is always with the user's OK (a gate of the method).
-- If you resume in another session, `/karvey {change-id}` indicates which phase you're on and which one comes next.
+Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this phase has no approval of its own; state the next step — `/karvey-init`, as `karvey-state.py next {change-id}` names it — and continue into it only when the user's request already covered the chain. In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*
