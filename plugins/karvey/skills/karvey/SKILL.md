@@ -179,7 +179,7 @@ Unit + E2E in the target's **real runtime**, performance benchmark, regression t
 **Rules:** `changelog-policy.md`, `versioning.md`, `iteration-loop.md`, `phase-close.md`, `management-adapters.md`, `notifications.md`
 
 ### PHASE 11: /karvey-deploy
-Orderly per-repo flow: pull → feature → pull → merge dev (DEV pipeline) → canary → pull → PR dev→master → verify the PR's gates (CI + branch policies) → PROD with human OK → canary → **branch hygiene** (delete absorbed branches, report the rest). Detects the git host (`gh` / `az repos` / `glab`). Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended): **dev version in DEV** (`x.y.z-dev.N+sha`), **release version in PROD**, checked by the canary. Never deploy manually. Notifies the team's channel (event `deploy`).
+Orderly per-repo flow: pull → feature → pull → merge dev (DEV pipeline) → canary → pull → PR dev→master → verify the PR's gates (CI + branch policies) → PROD with human OK → canary → **branch hygiene** (delete absorbed branches, report the rest). Detects the git host (`gh` / `az repos` / `glab`). Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended): **dev version in DEV** (`x.y.z-dev.N+sha`), **release version in PROD**, checked by the canary against the deployed commit's version file (any unmistakable DEV mark passes). Never deploy manually. Notifies the team's channel (event `deploy`).
 **Rules:** `deploy-workflow.md`, `versioning.md`, `changelog-policy.md`, `project-config.md`, `management-adapters.md`, `notifications.md`
 
 ### PHASE 12: /karvey-archive

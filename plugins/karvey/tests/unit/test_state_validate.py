@@ -346,5 +346,55 @@ class Pre312History(Base):
             self.assertTrue(all(i["path"].startswith("$.approvals.prod") for i in env["errors"]))
 
 
+class LegacyRealShapesAreWarnings(Base):
+    """BUG-33: two shapes found in real projects were schema errors in advisory mode, so the prod-gate blocked
+    with "valid spec.json" and ``validate --all`` failed (REQ-W1-003, architecture §2.7)."""
+
+    def test_repos_as_objects_is_a_warning(self):
+        data = json.loads((_path.FIXTURES_DIR / "legacy/project/repos-objects.json").read_text(encoding="utf-8"))
+        make_project(self.root, spec=spec(), project=data)
+        code, env = run_json("validate", str(self.root / "docs/spec/project.json"), "--root", str(self.root))
+        self.assertEqual(env["errors"], [])
+        self.assertTrue(any(i["path"].startswith("$.repos") for i in env["warnings"]), env["warnings"])
+        self.assertEqual(code, 0)
+
+    def test_generated_as_a_date_is_a_warning(self):
+        data = json.loads((_path.FIXTURES_DIR / "legacy/spec/approval-generated-date.json").read_text(encoding="utf-8"))
+        code, env = self.validate(data)
+        self.assertEqual(env["errors"], [])
+        self.assertTrue(any("generated" in i["path"] for i in env["warnings"]), env["warnings"])
+
+    def test_strict_mode_still_reports_them(self):
+        data = json.loads((_path.FIXTURES_DIR / "legacy/spec/approval-generated-date.json").read_text(encoding="utf-8"))
+        code, env = self.validate(data, "--strict")
+        self.assertTrue(any("generated" in i["path"] for i in env["errors"]), env["errors"])
+
+
+class NonStringPhase(Base):
+    """BUG-35: a ``phase`` (or a history entry's ``phase``) that is a list or an object crashed validate, next,
+    the active-change rule and the dashboard with ``TypeError: unhashable type`` (exit 5)."""
+
+    def test_list_phase_is_a_validation_error(self):
+        code, env = self.validate(spec(phase=["init"]))
+        self.assertNotEqual(code, 5, env)
+        self.assertTrue(any(i["path"] == "$.phase" for i in env["errors"]), env["errors"])
+
+    def test_list_phase_in_history_is_a_validation_error(self):
+        data = spec()
+        data["phase_history"] = [dict(data["phase_history"][0], phase={"x": 1})] + data["phase_history"][1:]
+        code, env = self.validate(data)
+        self.assertNotEqual(code, 5, env)
+
+    def test_active_change_and_dashboard_survive(self):
+        from karvey_lib import project as pj
+        make_project(self.root, spec=spec(phase=["init"]))
+        self.assertIn(pj.active_change(self.root, branch="main")["reason"], ("none", "single", "several"))
+        import subprocess, sys
+        r = subprocess.run([sys.executable, str(_path.SCRIPTS_DIR / "karvey-context.py"), "--root", str(self.root)],
+                           capture_output=True, text=True, timeout=60)
+        self.assertNotIn("Traceback", r.stderr)
+        self.assertNotEqual(r.returncode, 5, r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

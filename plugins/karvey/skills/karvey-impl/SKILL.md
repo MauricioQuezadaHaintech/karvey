@@ -48,7 +48,7 @@ Select from **one declared source** — the tracker when `karvey-config.py resol
 
 ### Step 3 — Start the task in management
 
-**In the team's tracker** (`../karvey/rules/management-adapters.md`): `set_status(task, in_progress)`, plus the tool's timer if it has one. **Markdown:** edit `PLAN.md`, `⬜ todo` → `🔄 in_progress`.
+**In the team's tracker** (`../karvey/rules/management-adapters.md`): `set_status(task, in_progress)`, plus the tool's timer if it has one. The credential comes from the lookup of `management-adapters.md` rule 2 — `.connections.json` at the project root first, then the environment, then the vault or MCP session; never report the tracker unreachable after checking only the environment. **Markdown:** edit `PLAN.md`, `⬜ todo` → `🔄 in_progress`.
 
 ### Step 4 — Execute the task
 
@@ -103,7 +103,7 @@ A task is not done until its record is updated (`../karvey/rules/phase-close.md`
 
 Repeat steps 2–6 until no task is selectable (all are `review` or `done`, or wait on an `awaiting-human` or `blocked` task).
 
-If there are `(P)` tasks: dispatch parallel subagents to execute them simultaneously.
+If there are `(P)` tasks: dispatch parallel subagents to execute them simultaneously. Each subagent prompt carries the line of `management-adapters.md` rule 5 verbatim — "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed values to me and change no tracker status that needs them." — also when the user asked to persist settings; the orchestrating session persists them with the human.
 
 ### Step 8 — Complete the Epic
 
@@ -133,7 +133,7 @@ Next step:
 
 If a task cannot be completed:
 
-- **Tracker:** `comment(task, "BLOCKED: {blocker} · I need: {what unblocks it}")` + `set_status(task, blocked)`; stop the timer.
+- **Tracker:** `comment(task, "BLOCKED: {blocker} · I need: {what unblocks it}")` + `set_status(task, blocked)`; stop the timer. When `blocked` maps to `null` (the tracker cannot show it), keep the tracker status and post the comment alone. The credential comes from `.connections.json` first (rule 2 of `management-adapters.md`); the comment goes to the outbox only when every place of that rule is empty.
 - **Markdown:** `⛔ blocked` + a note in `PLAN.md`.
 
 Report to the user with the specific blocker and wait for it to be unblocked.

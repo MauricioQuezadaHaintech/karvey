@@ -250,12 +250,13 @@ minutes THEN it is blocked.
 ### 2.4 REQ-W1-017 — The approval hook creates the marker from the human's words
 WHEN the human submits a prompt that matches the project's approval vocabulary and contains none of its
 negation terms, the approval hook SHALL create the approval marker and record the time and the first 80
-characters of that prompt beside it.
+characters of that prompt beside it, and SHALL write an audit record of that marker carrying the prompt's
+hash, the session and the marker's creation time (revision 4, D-34).
 
-Traces to PRD: §6 S-2, O-2 · Sources: R-02 (tensión con la regla global), H-11 · Decision: D-01 · BL-05
+Traces to PRD: §6 S-2, O-2 · Sources: R-02 (tensión con la regla global), H-11, F-76 · Decision: D-01, D-34 · BL-05
 
 **Scenario — success:** GIVEN a plan was presented WHEN the human writes "aprobado, ejecuta" THEN the marker
-exists and names that prompt.
+exists and names that prompt, and the audit log holds its record with the prompt hash, session and time.
 **Scenario — error:** GIVEN the human writes "no apruebo todavía" or "¿está aprobado?" WHEN the prompt is
 submitted THEN no marker is created.
 
@@ -317,16 +318,28 @@ runs THEN it fails.
 
 ### 2.10 REQ-W1-023 — Merge to production requires a human approval
 WHEN a command would merge into the production branch (`gh pr merge`, including `--admin`;
-`az repos pr update --status completed`; `glab mr merge`; a `git push` to production), the prod gate SHALL
-allow it only if the state tool confirms, for the change being released, `approvals.prod.by` set,
-`role: human` and `ref` non-empty; otherwise it SHALL block and name the missing field.
+`az repos pr update --status completed`; `glab mr merge`; a `git push` to production, in every form the
+prod gate recognises), the prod gate SHALL allow it only if the state tool confirms, for the change being
+released, a production approval with `by` set, `role: human` and `ref` non-empty, whose evidence is the
+approval hook's audit record of the prod marker it names (prompt hash, session and time, D-34), which names
+the head commit the human approved and is less than 24 hours old (D-35), and only if the commit being
+released is that commit; otherwise it SHALL block and name the missing field. The prod gate SHALL also block
+when it cannot tell which single commit reaches production. WHEN a change is reopened, the state tool SHALL
+supersede its production approval, so the human gives it again after the rework (D-36).
 
-Traces to PRD: §6 S-2, O-3, AC-3 · Sources: R-02, H-12 (`gh pr merge 12 --merge --admin` → rc=0), H-15 ·
-Decision: D-02, D-03 · BL-05
+Traces to PRD: §6 S-2, O-3, AC-3 · Sources: R-02, H-12 (`gh pr merge 12 --merge --admin` → rc=0), H-15,
+F-76, F-77, F-79 · Decision: D-02, D-03, D-34, D-35, D-36 · BL-05
 
-**Scenario — success:** GIVEN `approvals.prod = {by, role: human, date, ref: D-07}` WHEN
-`gh pr merge 30 --merge` runs THEN it is allowed.
+**Scenario — success:** GIVEN a production approval recorded from the human's own message for head `abc123`,
+1 hour ago, with its audit record WHEN `gh pr merge 30 --merge` runs on a PR whose head is `abc123` THEN it
+is allowed.
 **Scenario — error:** GIVEN `approvals.prod.by` empty WHEN `gh pr merge 30 --merge --admin` runs THEN it is
+blocked.
+**Scenario — error (other commit):** GIVEN an approval for head `abc123` WHEN a new commit is pushed to the
+PR, or another branch is pushed to production as the change, THEN the merge or push is blocked with
+"not the approved commit".
+**Scenario — error (evidence, expiry, reopen):** GIVEN a ledger entry with no matching audit record, or an
+approval older than 24 hours, or a change reopened after its approval WHEN the merge runs THEN it is
 blocked.
 
 ### 2.11 REQ-W1-024 — The prod gate fails closed
@@ -1334,3 +1347,9 @@ reports the gap.
   (REQ-W1-010); running it in each repo belongs to each repo's own docs PR.
 - **Behaviour that does not change:** the bug/spec-gap/emergent router, the Iron Law, "prod never delegated",
   the logical states and adapters, EARS + PRD traceability, and every item of the panel's §5 "do not change".
+
+## Revision history
+
+| Rev | Date | Ref | Requirements | Why |
+|---|---|---|---|---|
+| 1 | 2026-09-26 | D-34, D-35, D-36 · F-76, F-77, F-79 (QA spec-gaps) | REQ-W1-017 (audit record of the marker), REQ-W1-023 (evidence = the hook's audit record; approval bound to the approved head commit, valid 24 h; reopen supersedes it) | QA of PR #24 found that the prod gate accepted any `approvals/…` string as evidence, that one approval released any later commit forever, and that a reopen left the prod approval standing. Rewritten in place; ripple: spec-delta, architecture revision 4 (§3.3, §3.4), tasks E1.F18. Done without a state `reopen` because the change stays in `qa` and the owner decided the three gaps directly (D-21 standing instruction). |

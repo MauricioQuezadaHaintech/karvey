@@ -27,7 +27,8 @@
 ## Resolution order (one, cited by every skill)
 
 1. The change's `spec.json:management` override `{tool, location, statuses, sprints}`.
-2. `project.json:management` (working copy, then `origin/{integration}` before declaring it missing).
+2. `project.json:management` (working copy, then `origin/{integration}`, then `origin/{production}` before
+   declaring it missing).
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" resolve management --change "{change-id}" --json
@@ -116,7 +117,16 @@ The next phase-close retries it. A child is never created under a parent missing
 ## Rules
 
 1. **Never assume the tool or a status name.** Resolve it; if missing, run `karvey-init --settings` or ask.
-2. **Credentials never in the repo** — `.connections.json` (git-ignored), env vars or a vault.
+2. **Credentials never in the repo** — `.connections.json` (git-ignored), env vars or a vault. To use one,
+   look in this order: `.connections.json` at the project root first (the tool's key, e.g. `clickup.api_key`
+   in `clickup-protocol.md`), then the environment, then the team's vault or the tool's MCP session. Report
+   "no credential" and queue the operation in the outbox only after all three came back empty, and say
+   where you looked.
 3. **A failed tracker update is reported** and queued in the outbox (phase-close gate).
 4. **`PLAN.md` is always a valid fallback** when the tracker is unreachable — say so and keep going.
-5. **Subagents never write `project.json`**; settings travel as a reviewed change.
+5. **Subagents never write `project.json`**; settings travel as a reviewed change. Every subagent prompt an
+   agent composes (impl's `(P)` tasks, a delegated task, any `Agent` call) carries this line verbatim:
+   "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed
+   values to me and change no tracker status that needs them." When the user asked for settings to be
+   persisted, that request is answered by the orchestrating session with the human (the Missing map clause,
+   on a docs branch) and is never passed on to a subagent as an authorisation.

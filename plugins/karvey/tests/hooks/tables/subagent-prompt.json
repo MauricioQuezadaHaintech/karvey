@@ -1,0 +1,623 @@
+{
+ "table": "subagent-prompt",
+ "description": "BUG-25 / F-52, REQ-W1-081: PreToolUse on Agent|Task (event pre-agent). In a Karvey project, a subagent prompt that lets the subagent write the project settings (a sentence with a write/persist/authorise verb and settings / project.json / status map, not negated) and lacks the ban line is blocked with the line to add; the ban line, prompts that do not touch settings, negated sentences and non-Karvey directories pass. Fail open: without python it allows.",
+ "cases": [
+  {
+   "id": "sp-01-rerun-prompt-persist-settings-blocked",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Your job: implement the next pending task of fixture-02 following the karvey-impl skill.\n2. Check the tracker configuration (team settings, e.g. a karvey settings file). If the skill needs tracker settings that are missing, persist them in the project's settings file the skill expects. The user explicitly authorized persisting tracker settings.\n3. Implement the task in src/ with tests in tests/.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK subagent-prompt",
+     "Subagents never write docs/spec/project.json",
+     "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed values to me and change no tracker status that needs them."
+    ]
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-25",
+    "nopy"
+   ],
+   "expect_nopy": {
+    "decision": "allow"
+   },
+   "note": "F-52 rerun: the orchestrator composed this before loading any skill; fail open without python (the text rule still applies)"
+  },
+  {
+   "id": "sp-02-first-run-prompt-persist-map-blocked",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Tracker context: docs/spec/project.json has management.tool=clickup but no `management.statuses` map. If every Karvey status the skill needs maps to exactly one real ClickUp status with no ambiguity, persist the map to project.json as the skill specifies and then apply the tracker updates.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK subagent-prompt",
+     "Subagents never write docs/spec/project.json",
+     "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed values to me and change no tracker status that needs them."
+    ]
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-25"
+   ],
+   "note": "F-52 first run (2026-09-25 evidence)"
+  },
+  {
+   "id": "sp-03-ban-line-present-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Your job: implement the next pending task of fixture-02 following the karvey-impl skill.\n2. Check the tracker configuration (team settings, e.g. a karvey settings file). If the skill needs tracker settings that are missing, persist them in the project's settings file the skill expects. The user explicitly authorized persisting tracker settings.\n3. Implement the task in src/ with tests in tests/.\nDo not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed values to me and change no tracker status that needs them.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-25"
+   ]
+  },
+  {
+   "id": "sp-04-no-settings-talk-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Implement task E1.F1.T2 of fixture-02: add farewell(name) to src/greet.py with a unit test; commit on the feature branch.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-25"
+   ]
+  },
+  {
+   "id": "sp-05-negated-settings-sentence-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Implement E1.F1.T2. Never change the tracker settings; report any missing status map back to me.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-25"
+   ]
+  },
+  {
+   "id": "sp-06-outside-a-karvey-project-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "dir": "plain"
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Your job: implement the next pending task of fixture-02 following the karvey-impl skill.\n2. Check the tracker configuration (team settings, e.g. a karvey settings file). If the skill needs tracker settings that are missing, persist them in the project's settings file the skill expects. The user explicitly authorized persisting tracker settings.\n3. Implement the task in src/ with tests in tests/.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stderr_empty": true
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-25"
+   ]
+  },
+  {
+   "id": "sp-07-task-tool-name-blocked",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Task",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Tracker context: docs/spec/project.json has management.tool=clickup but no `management.statuses` map. If every Karvey status the skill needs maps to exactly one real ClickUp status with no ambiguity, persist the map to project.json as the skill specifies and then apply the tracker updates.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK subagent-prompt",
+     "Subagents never write docs/spec/project.json",
+     "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed values to me and change no tracker status that needs them."
+    ]
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-25"
+   ],
+   "note": "older harnesses name the tool Task"
+  },
+  {
+   "id": "sp-08-settings-page-component-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Update the settings page component in src/views/Settings.vue to add a dark-mode toggle.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-09-editor-settings-file-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Update .vscode/settings.json to set the formatter to black.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-10-tests-for-a-status-mapping-function-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Write unit tests for the tracker status mapping function in src/tracker.py.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-11-typographic-apostrophe-ban-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Implement E1.F1.T2. Don’t write docs/spec/project.json; if a status map is missing, return the proposed values to me.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-12-another-tools-project-json-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Update apps/web/project.json to add a lint target for the web app.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-13-ban-like-sentence-does-not-excuse-a-write-blocked",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Do not edit project.json by hand. Use a python script to write the management settings into docs/spec/project.json.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK subagent-prompt"
+    ]
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  }
+ ]
+}

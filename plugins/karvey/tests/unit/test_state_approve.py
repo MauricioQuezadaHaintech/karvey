@@ -32,6 +32,7 @@ class Base(unittest.TestCase):
                               for p in ("init", "requirements", "architecture", "tasks", "impl", "test")]
             + [{"phase": "qa", "entered_at": T0}]})
         (self.root / "docs/spec/decisions.md").write_text("| D-20 | 2026-09-24 | D | prod OK |\n\n## D-21 — x\n")
+        g.commit_all(self.root, "fixture")  # D-35: a prod approval is bound to a commit
 
     def tearDown(self):
         self.envp.stop()
@@ -80,7 +81,8 @@ class NonProd(Base):
         self.assertEqual(env["warnings"], [])
         ev = self.read()["approvals"]["qa"]["evidence"]
         self.assertEqual(ev, {"marker": "approvals/feat-a.json", "marker_created_at": m["created_at"],
-                              "prompt_excerpt": "aprobado, ejecuta", "session": "s1"})
+                              "prompt_excerpt": "aprobado, ejecuta", "session": "s1",
+                              "prompt_sha256": m["prompt_sha256"]})
 
 
 class Prod(Base):
@@ -142,7 +144,8 @@ class CheckProd(Base):
         c, env = self.st("check-prod", "feat-a")
         self.assertEqual(c, 0)
         r = env["result"]
-        self.assertEqual(sorted(r), sorted(["ok", "change", "by", "role", "ref", "date", "source", "missing"]))
+        self.assertEqual(sorted(r), sorted(["ok", "change", "by", "role", "ref", "date", "source", "missing",
+                                            "head_sha", "expires_at"]))
         self.assertEqual((r["ok"], r["by"], r["role"], r["ref"], r["source"], r["missing"]),
                          (True, "M", "human", "D-20", "ledger", []))
 
@@ -202,6 +205,199 @@ class Consumption(Base):
         c, env = self.st("advance", "feat-a", "deploying")
         self.assertEqual(env["result"]["consumed"], [])
         self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
+
+class ProdMarkerScope(Base):
+    """BUG-41: one project-wide prod marker ("aprobado, pasa a prod" with no single active change) approved
+    production for every change, and ``approve prod`` left it live for the next change."""
+
+    def test_project_wide_prod_marker_is_not_a_prod_approval_of_a_change(self):
+        ap.write_marker(self.root, "prod", "_project", "aprobado, pasa a prod")
+        self.refused(("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20"),
+                     "prod-kind approval marker")
+
+    def test_prod_marker_is_consumed_by_the_approval(self):
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
+        c, env = self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        self.assertEqual(c, 0, env)
+        m, status = ap.read_marker(self.root, "feat-a")
+        self.assertEqual(status, "ok")
+        self.assertIsNotNone(m["consumed_at"])
+
+
+class ConsumeOnlyWhatClosed(Base):
+    """BUG-43: advance consumed the change's latest marker of any kind when a phase with no approval closed,
+    so a prod approval typed during impl/test was lost."""
+
+    def test_prod_marker_survives_a_phase_without_approval(self):
+        d = self.read()
+        d["phase"] = "test"
+        d["phase_history"] = d["phase_history"][:-2] + [{"phase": "test", "entered_at": T0}]
+        self.f.write_text(json.dumps(d), encoding="utf-8")
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
+        c, env = self.st("advance", "feat-a", "qa")
+        self.assertEqual(c, 0, env)
+        self.assertNotIn("feat-a", env["result"].get("consumed") or [])
+        m, _ = ap.read_marker(self.root, "feat-a")
+        self.assertIsNone(m["consumed_at"])
+
+
+def head(root, rev="HEAD"):
+    import subprocess
+    return subprocess.run(["git", "rev-parse", rev], cwd=str(root), stdout=subprocess.PIPE,
+                          check=True).stdout.decode().strip()
+
+
+class ProdEvidence(Base):
+    """D-34 (F-76): the prod approval counts only with the approval hook's audit record of its marker
+    (prompt hash, session, time), not with any string that starts with ``approvals/``."""
+
+    def approve(self, session="s9"):
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod", session_id=session)
+        c, env = self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        self.assertEqual(c, 0, env)
+        return ap.read_ledger(self.root, "feat-a")[0]
+
+    def tamper(self, **ev):
+        led, _ = ap.read_ledger(self.root, "feat-a")
+        led["prod"]["evidence"].update(ev)
+        ap.record_prod(self.root, "feat-a", led["prod"])
+
+    def test_evidence_carries_the_prompt_hash(self):
+        led = self.approve()
+        self.assertEqual(led["prod"]["evidence"]["prompt_sha256"], ap.prompt_hash("ok, merge a prod"))
+        self.assertEqual(led["prod"]["evidence"]["session"], "s9")
+        c, env = self.st("check-prod", "feat-a")
+        self.assertEqual((c, env["result"]["ok"]), (0, True), env)
+
+    def test_hand_written_ledger_without_audit_record_is_refused(self):
+        rec = {"by": "M", "role": "human", "date": T0, "ref": "D-20", "head_sha": head(self.root),
+               "expires_at": "2999-01-01T00:00:00+00:00",
+               "evidence": {"marker": "approvals/feat-a.json", "marker_created_at": T0, "session": "s9",
+                            "prompt_excerpt": "ok, merge a prod", "prompt_sha256": ap.prompt_hash("ok, merge a prod")}}
+        ap.record_prod(self.root, "feat-a", rec)
+        c, env = self.st("check-prod", "feat-a")
+        self.assertEqual(c, 1)
+        self.assertIn("audit", env["result"]["missing"])
+        self.assertIn("audit record", env["result"]["reason"])
+
+    def test_session_hash_or_time_mismatch_is_refused(self):
+        for field, value in (("session", "other"), ("prompt_sha256", "0" * 64),
+                             ("marker_created_at", "2026-01-01T00:00:00+00:00")):
+            with self.subTest(field=field):
+                self.approve()
+                self.tamper(**{field: value})
+                c, env = self.st("check-prod", "feat-a")
+                self.assertEqual(c, 1, field)
+                self.assertIn("audit", env["result"]["missing"])
+
+    def test_marker_of_another_change_is_refused(self):
+        self.approve()
+        self.tamper(marker="approvals/other.json")
+        c, env = self.st("check-prod", "feat-a")
+        self.assertEqual(c, 1)
+        self.assertIn("evidence", env["result"]["missing"])
+
+
+class ProdShaBinding(Base):
+    """D-35 (F-77): the prod approval names the approved head commit and expires 24 h after the OK."""
+
+    def approve(self, *extra):
+        m = ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod", session_id="s9")
+        c, env = self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20", *extra)
+        self.assertEqual(c, 0, env)
+        return m, ap.read_ledger(self.root, "feat-a")[0]["prod"]
+
+    def test_records_head_and_expiry(self):
+        m, p = self.approve()
+        self.assertEqual(p["head_sha"], head(self.root))
+        self.assertEqual(ap.parse_dt(p["expires_at"]) - ap.parse_dt(m["created_at"]), ap.timedelta(hours=24))
+
+    def test_sha_option_names_another_commit(self):
+        first = head(self.root)
+        g.commit_all(self.root, "second")
+        _, p = self.approve("--sha", first[:10])
+        self.assertEqual(p["head_sha"], first)
+
+    def test_unresolvable_sha_refused(self):
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
+        self.refused(("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20",
+                      "--sha", "no-such-rev"), "commit")
+        self.assertEqual(ap.read_ledger(self.root, "feat-a"), (None, "missing"))
+
+    def test_check_prod_compares_the_released_sha(self):
+        self.approve()
+        c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
+        self.assertEqual((c, env["result"]["ok"]), (0, True), env)
+        g.commit_all(self.root, "unapproved")
+        c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
+        self.assertEqual(c, 1)
+        self.assertIn("sha", env["result"]["missing"])
+        self.assertIn("not the approved commit", env["result"]["reason"])
+
+    def test_expired_approval_refused(self):
+        self.approve()
+        led, _ = ap.read_ledger(self.root, "feat-a")
+        led["prod"]["expires_at"] = "2020-01-01T00:00:00+00:00"
+        ap.record_prod(self.root, "feat-a", led["prod"])
+        c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
+        self.assertEqual(c, 1)
+        self.assertIn("expired", env["result"]["missing"])
+        self.assertIn("expired", env["result"]["reason"])
+
+    def test_ledger_without_sha_or_expiry_refused(self):
+        self.approve()
+        led, _ = ap.read_ledger(self.root, "feat-a")
+        del led["prod"]["head_sha"], led["prod"]["expires_at"]
+        ap.record_prod(self.root, "feat-a", led["prod"])
+        c, env = self.st("check-prod", "feat-a")
+        self.assertEqual(c, 1)
+        self.assertTrue({"sha", "expired"} <= set(env["result"]["missing"]), env["result"])
+
+
+class ReopenSupersedesProd(Base):
+    """D-36 (F-79): a reopen supersedes the release-ledger prod approval as well."""
+
+    def test_reopen_moves_the_ledger_prod_approval(self):
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod", session_id="s9")
+        self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        prod = ap.read_ledger(self.root, "feat-a")[0]["prod"]
+        c, env = self.st("reopen", "feat-a", "requirements", "--reason", "spec-gap F-9", "--ref", "F-9")
+        self.assertEqual(c, 0, env)
+        self.assertIn("prod", env["result"]["superseded"])
+        led, _ = ap.read_ledger(self.root, "feat-a")
+        self.assertNotIn("prod", led)
+        self.assertEqual(led["superseded"][-1]["prod"], prod)
+        self.assertEqual(led["superseded"][-1]["ref"], "F-9")
+        rh = self.read()["revision_history"][-1]
+        self.assertEqual(rh["superseded_approvals"]["prod"], prod)
+        c, env = self.st("check-prod", "feat-a")
+        self.assertEqual(c, 1)
+
+    def test_ledger_failure_leaves_the_spec_unreopened(self):
+        """BUG-49: the spec was written before the ledger, so a failure in between reopened the change
+        and left the prod approval live."""
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod", session_id="s9")
+        self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        before = self.f.read_bytes()
+        with mock.patch.object(ap, "supersede_prod", side_effect=ap.ApprovalError("disk full")):
+            c, env = self.st("reopen", "feat-a", "requirements", "--reason", "spec-gap F-9")
+        self.assertNotEqual(c, 0, env)
+        self.assertEqual(self.f.read_bytes(), before)
+        self.assertIn("prod", ap.read_ledger(self.root, "feat-a")[0])
+
+    def test_refused_reopen_keeps_the_ledger(self):
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod", session_id="s9")
+        self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        c, env = self.st("reopen", "feat-a", "deploying", "--reason", "x")
+        self.assertEqual(c, 3, env)
+        self.assertIn("prod", ap.read_ledger(self.root, "feat-a")[0])
+
+    def test_reopen_without_ledger_is_unchanged(self):
+        c, env = self.st("reopen", "feat-a", "requirements", "--reason", "spec-gap F-9")
+        self.assertEqual(c, 0, env)
+        self.assertNotIn("prod", env["result"]["superseded"])
+        self.assertEqual(ap.read_ledger(self.root, "feat-a"), (None, "missing"))
+
 
 if __name__ == "__main__":
     unittest.main()

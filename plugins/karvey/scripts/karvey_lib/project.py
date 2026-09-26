@@ -21,7 +21,7 @@ import subprocess
 from pathlib import Path
 
 from .atomicio import ReadError, read_json
-from .safe_values import LOGICAL_STATES
+from .safe_values import LOGICAL_STATES, UnsafeValue, check_branch
 
 SPEC_DIR = Path("docs") / "spec"
 PROJECT_JSON = SPEC_DIR / "project.json"
@@ -149,6 +149,8 @@ def list_changes(root):
             try:
                 data = read_json(spec).data
                 phase = data.get("phase") if isinstance(data, dict) else None
+                if phase is not None and not isinstance(phase, str):  # BUG-35: validate reports it
+                    phase, err = None, "phase is not a string"
             except ReadError as exc:
                 err = str(exc)
         else:
@@ -181,6 +183,30 @@ def active_change(root, branch=None, project=None):
     if len(cands) == 1:
         return {"change": cands[0], "reason": "single", "candidates": cands}
     return {"change": None, "reason": "several" if cands else "none", "candidates": cands}
+
+
+def settings_lines(project, root=None):
+    """The remote branches whose ``project.json`` counts before settings are declared missing
+    (REQ-W1-083, BUG-23): ``origin/{integration}``, then ``origin/{production}``, then ``origin/HEAD``
+    when ``root`` is given; deduplicated, each a safe branch name. Settings reach production through
+    integration, but a docs branch can also be merged straight to production, and a readable
+    integration line without them must not end the lookup."""
+    _, integ, prod = branch_flow(project or {})
+    names = [integ or "main", prod]
+    if root is not None:
+        rc, out = git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], root)
+        if rc == 0 and out.startswith("origin/"):
+            names.append(out[len("origin/"):])
+    seen = []
+    for n in names:
+        if not n or n in seen:
+            continue
+        try:
+            check_branch(n, key="branch_flow", use_git=False)
+        except UnsafeValue:
+            continue
+        seen.append(n)
+    return seen
 
 
 def read_reviewed_project_json(root, production=None):

@@ -247,6 +247,8 @@ def load_changes(rd):
             rd._fail(d / "spec.json", "not a JSON object")
             data = None
         raw = data.get("phase") if data else None
+        if raw is not None and not isinstance(raw, str):  # BUG-35: shown, never hashed
+            raw = json.dumps(raw)
         mapped, tier = state.map_phase(raw)
         out.append({"id": d.name, "dir": d, "data": data, "phase": mapped or raw, "phase_raw": raw,
                     "phase_tier": tier, "implemented": (d / pj.IMPLEMENTED_MARKER).exists()})

@@ -91,5 +91,21 @@ class Scope(unittest.TestCase):
         self.assertEqual(a.scope_for("ok feat-abc", ids), "_project")
 
 
+class ConditionalSi(unittest.TestCase):
+    """BUG-42: accents are stripped before matching, so the conditional "si" ("if/whether") matched the
+    approval "sí": "revisa si el merge a main rompió algo" recorded a production approval."""
+
+    def test_conditional_si_is_not_an_approval(self):
+        for text in ("revisa si el merge a main rompió algo", "fijate si alpha quedó en produccion",
+                     "dime si el test pasa"):
+            with self.subTest(text=text):
+                self.assertFalse(a.classify(text)["approved"])
+
+    def test_affirmative_si_still_approves(self):
+        for text in ("sí", "Sí, dale", "si.", "si", "sí, adelante con el plan"):
+            with self.subTest(text=text):
+                self.assertTrue(a.classify(text)["approved"], text)
+
+
 if __name__ == "__main__":
     unittest.main()

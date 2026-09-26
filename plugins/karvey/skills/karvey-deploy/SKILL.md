@@ -85,7 +85,7 @@ git merge "feature/{change-id}"
 git push origin "$I"               # ⇒ DEV pipeline
 ```
 
-**2.6 — DEV canary (Step 2-bis).** Wait for the green pipeline and run the canary over the real DEV runtime. No advance to prod if DEV is unhealthy. With a UI, DEV must show `-dev` of the version just released; anything else is a finding.
+**2.6 — DEV canary (Step 2-bis).** Wait for the green pipeline and run the canary over the real DEV runtime. No advance to prod if DEV is unhealthy. With a UI, check the visible version against the commit DEV actually runs: take the deployed commit (the source commit of the green DEV run; the one pushed in 2.5 if the run does not name it) and read its version file with `git show "<deployed-sha>:<version file>"` — not the tip of `$I`, which another change may have bumped since. The check passes when DEV shows that version with an unmistakable DEV mark, in any format (`DEV 2.10.4`, `2.10.4-dev.42+74571ae`, a `DEV` badge beside `2.10.4`). Another version, or no DEV mark, is a finding; a UI with no visible version at all is the 2.4 recommendation, not a finding and not a blocker.
 
 **2.7 — Pull production and open the PR** (integration → production; trunk: feature → production). Use the host from Step 1:
 ```bash
@@ -111,15 +111,21 @@ az repos pr policy list --id "{pr}" -o table   # Azure Repos
 
 Bypassing a policy is the human's call and responsibility — never the agent's initiative to unblock itself.
 
-**2.9 — Prod OK from the human ⇒ merge ⇒ PROD pipeline.** Ask with `AskUserQuestion`; the human answers in their own words, with an approval word **and** a production word (D-10), so the approval hook records a prod marker. Then:
+**2.9 — Prod OK from the human ⇒ merge ⇒ PROD pipeline.** First read the PR head SHA and show it in the question:
+```bash
+gh pr view "{pr}" --json headRefOid -q .headRefOid                                    # GitHub
+az repos pr show --id "{pr}" --query lastMergeSourceCommit.commitId -o tsv            # Azure Repos
+```
+Ask with `AskUserQuestion`; the human answers in their own words, with an approval word **and** a production word (D-10), so the approval hook records a prod marker and its audit line. Then:
 1. Allocate the decision `D-NN` and put its text (who, when, the words verbatim) in the PR body or a PR comment. It is written into `docs/spec/decisions.md` at archive, on `chore/archive-{change-id}` (D-03).
 2. Record it in the release ledger — never in a commit on the integration branch:
    ```bash
-   python3 "$S" approve "{change-id}" prod --by "{human name}" --role human --ref "D-NN"
-   python3 "$S" check-prod "{change-id}"      # what the prod-gate reads
+   python3 "$S" approve "{change-id}" prod --by "{human name}" --role human --ref "D-NN" --sha "{pr head}"
+   python3 "$S" check-prod "{change-id}" --sha "{pr head}"   # what the prod-gate reads
    ```
    Refused (no prod marker, missing `--by`/`--ref`) → do not merge; ask the human again. The prod approval is never delegated (`role` is always `human`).
-3. Merge (the prod-gate hook lets it through only with the ledger entry):
+   The approval covers **that SHA only, for 24 h** (D-35): a new push to the PR, or a merge the next day, needs a new OK. A `reopen` of the change supersedes it (D-36).
+3. Merge (the prod-gate hook lets it through only with the ledger entry for the PR's current head), as its own command — not chained after a push or a branch move:
    ```bash
    gh pr merge "{pr}" --merge                          # GitHub      ⇒ PROD pipeline
    az repos pr update --id "{pr}" --status completed   # Azure Repos ⇒ PROD pipeline

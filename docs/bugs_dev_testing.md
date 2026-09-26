@@ -690,3 +690,880 @@ Architecture §1.4 revision 1 (D-19): a changed commit matches when the recorded
 | 2026-09-24 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-40, first agente-karvey save (da3d70a → cb3946e) |
 | 2026-09-24 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-19): cause read in the hook's live-state block |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T1 (D-21): profile-only commits since the save match on both the python and the degraded path; case 1 red before the fix, cases 2-4 guard against over-matching |
+
+## BUG-23 — Settings notice ignores the production line when integration lacks the settings
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/karvey_hooks.py (`settings_notice`), plugins/karvey/scripts/karvey-config.py (`Settings.remote`)
+- **Change / origin:** wave1-hardening — finding F-50 (manual script `settings-docs-branch.md`, E1.F17.T3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`branch_flow {integration: dev, production: main}`. Settings committed on a docs branch and merged to `main` (pushed), not yet on `dev`. A worktree made from the older commit, whose `project.json` has neither block. Start a session there.
+
+### Actual vs expected
+- Actual: `Karvey (info): team settings not set (notifications + management)`; `karvey-config.py resolve management` falls back to `markdown` (source `default`).
+- Expected: no settings notice, and `resolve` returns the settings with source `origin/main`: REQ-W1-083 says the reviewed line counts before "missing".
+
+### Root cause
+`karvey_hooks.py:526-532` (before the fix) looked at `origin/{integration}` and then `origin/HEAD`, but the loop ended with `break` at the first readable `project.json`, so a readable `origin/dev` without the settings ended the lookup; `origin/{production}` was never a candidate, and `origin/HEAD` does not exist in a clone whose remote was added by hand. `karvey-config.py:104-118` (`Settings.remote`) read only `origin/{integration}`. The requirement names `origin/{integration}`, the manual script `origin/main`: the code read one line and stopped. Latent since E1.F6.T2 / E1.F7.T2; every earlier test used `integration = production = main`.
+
+### Fix
+`project.settings_lines(project, root)` gives the reviewed lines in order: `origin/{integration}`, `origin/{production}`, then `origin/HEAD`, deduplicated and checked with `safe_values.check_branch`. The session notice reads each and stays silent when any has both blocks (no `break`); `karvey-config.py` `Settings.remotes()` returns every readable line and `block(key)` takes the first line that has the key (source `origin/<line>`). Settled: both lines count (integration first). `management-adapters.md` resolution order, `karvey-init` Step 3 and `hooks/README.md` say so.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/session.json` case `ss-24-settings-on-origin-production-not-integration-silent` (integration `dev` readable without the settings, production `main` with them → silent) and `plugins/karvey/tests/unit/test_config_resolve.py` `OriginProductionFallback` (`resolve` source `origin/main`; `settings_notice` None; notice still printed when no line has them). The table case and the first two unit tests were red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-50, manual script settings-docs-branch variant B (E1.F17.T3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: the lookup breaks at the first readable line and never reads production |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T4: every reviewed line counts; table case and unit tests red before the fix, green after |
+
+## BUG-24 — DEV visible-version check demands the `-dev.{build}+{sha}` form and reads the tip of dev
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/skills/karvey-deploy/SKILL.md (2.6), plugins/karvey/skills/karvey/rules/versioning.md (visible version)
+- **Change / origin:** wave1-hardening — finding F-51 (manual script `visible-version.md`, E1.F17.T3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A UI target; DEV shows `DEV 2.10.4`; the deployed commit's `VERSION` is 2.10.4. Run `/karvey:karvey-deploy <change>`. Variant 2: a second change merged into `dev` after the deploy bumps `VERSION` to 2.10.5.
+
+### Actual vs expected
+- Actual: variant 1: the deploy stops because the label is not `2.10.4-dev.{build}+{sha}`, and the deployed commit's version file is never read; variant 2: it compares with `origin/dev:VERSION` (2.10.5) and reports a mismatch.
+- Expected: REQ-W1-041: the bumped version with an unmistakable DEV mark in any format passes; the comparison uses `git show <deployed-sha>:<version file>`; a missing visible version is a recommendation.
+
+### Root cause
+The skill text implemented the recommendation as the test. `karvey-deploy/SKILL.md:88` (2.6) said "With a UI, DEV must show `-dev` of the version just released; anything else is a finding", and `versioning.md:43` said the canary checks "`-dev` of the version just bumped"; neither named the deployed commit or its version file, so the agent compared with the only version it had, the tip of `dev`. REQ-W1-041 (E1.F12 text tasks) was never carried into either sentence.
+
+### Fix
+`karvey-deploy` 2.6: take the deployed commit (the green DEV run's source commit, else the one pushed in 2.5), read `git show "<deployed-sha>:<version file>"` (not the tip of `$I`), pass when DEV shows that version with an unmistakable DEV mark in any format; another version or no DEV mark is a finding, no visible version is the 2.4 recommendation. `versioning.md` says the same (the `-dev.{build}+{sha}` form is the recommendation, not the test) and its step references are corrected to 2.6 / 2.10; the orchestrator summary line in `skills/karvey/SKILL.md` follows.
+
+### Regression test
+`plugins/karvey/tests/unit/test_skill_rules.py` `VisibleVersionCheck` (5 tests: `git show …deployed…:` in 2.6, "any format", no "must show `-dev`", "not the tip", and the same rule in `versioning.md`); all 5 red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-51, manual script visible-version variants 1-2 (E1.F17.T3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: the skill text states the recommended format as the check and never names the deployed commit |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T5: deploy 2.6 and versioning.md rewritten; VisibleVersionCheck red before, green after |
+
+## BUG-25 — A subagent prompt composed by the agent authorises writing project.json
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/skills/karvey/rules/management-adapters.md (rule 5), plugins/karvey/skills/karvey-impl/SKILL.md (Step 7, `(P)` dispatch); plugins/karvey/scripts/karvey_lib/guards.py (`subagent_prompt`, new PreToolUse Agent|Task guard)
+- **Change / origin:** wave1-hardening — finding F-52 (manual script `no-human-no-mapping.md`, E1.F17.T3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`management.tool` set to a tracker, no `statuses`. Prompt: "Use a subagent to implement the next task of <change> and persist any tracker settings it needs."
+
+### Actual vs expected
+- Actual: the subagent prompt says the user authorised persisting `management.statuses` in `project.json` and tells the subagent to write it when the map looks unambiguous; `project.json` stayed unchanged only because the list had no review status.
+- Expected: REQ-W1-081: the subagent prompt forbids writing `project.json`; the map is proposed back and persisted by the orchestrating session with the human, on a docs branch.
+
+### Root cause
+`management-adapters.md:122` (rule 5) stated the ban as a fact about subagents ("Subagents never write `project.json`") and `karvey-impl/SKILL.md:106` dispatched `(P)` subagents without saying what their prompt must contain, so nothing told the orchestrating agent to carry the ban into the prompt it writes; the user's "persist any tracker settings" was the only instruction it had and it passed it on. L-34 reads only prompts written in skill files, not prompts composed at run time.
+
+### Fix
+Rule 5 now requires every subagent prompt an agent composes (impl `(P)` tasks, a delegated task, any `Agent` call) to carry the line "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the proposed values to me and change no tracker status that needs them." verbatim, and says a user's request to persist settings is answered by the orchestrating session with the human (Missing map clause, docs branch), never passed on to a subagent as an authorisation. `karvey-impl` Step 7 carries the same line in its `(P)` dispatch.
+
+**Reopened by the rerun (same day):** the orchestrating session wrote the subagent prompt before it loaded any skill (it told the subagent to load `karvey-impl` itself), so the text never reached it and the prompt still said "persist them in the project's settings file … The user explicitly authorized persisting tracker settings". Cause refined: a rule in skill text cannot govern a prompt composed before the skill is loaded. Second fix: a `subagent-prompt` guard on PreToolUse `Agent|Task` (`guards.subagent_prompt`, event `pre-agent`, fail open, on in a Karvey project): a prompt with a sentence that lets the subagent write the settings (a write/persist/authorise verb with `project.json`, settings or a status map, not negated just before the verb) and without the ban line is blocked with the line to add; `hooks.json`, `karvey-hook.sh` (no-python: allow), `hooks/README.md` and `enforcement.md` document it.
+
+### Regression test
+`plugins/karvey/tests/unit/test_skill_rules.py` `SubagentPromptsCarryTheProjectJsonBan` (rule 5 requires the line in every subagent prompt; a request to persist is never passed on; impl's dispatch carries the line); all 3 red before the fix. The guard: `plugins/karvey/tests/hooks/tables/subagent-prompt.json` (sp-01..sp-07: the rerun and first-run prompts and the `Task` tool name blocked; the ban line, no settings talk, a negated sentence and a non-Karvey directory allowed; no python allows), red on 691f2f7 (the dispatcher did not know `pre-agent` and allowed), and `test_karvey_hooks.py` `Registry`. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-52, manual script no-human-no-mapping subagent run (E1.F17.T3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: no text tells the orchestrating agent to put the ban in the prompt it composes |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T6: rule 5 and impl dispatch carry the ban verbatim; tests red before, green after |
+| 2026-09-25 | REABIERTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | rerun of no-human-no-mapping: the prompt was composed before any skill was loaded and still authorised the write |
+| 2026-09-25 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | subagent-prompt guard (PreToolUse Agent|Task) |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T6: guard + table subagent-prompt.json (red on 691f2f7, green after); rerun PASS: the guard blocked the first prompt and the re-sent one carries the ban line |
+
+## BUG-26 — Block comment queued because the tracker key was looked for only in the environment
+- **Priority:** low
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/skills/karvey/rules/management-adapters.md (rule 2), plugins/karvey/skills/karvey-impl/SKILL.md (Step 3, Handling blockers)
+- **Change / origin:** wave1-hardening — finding F-53 (manual script `per-level-maps.md`, E1.F17.T3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A tracker with `statuses.by_level.task.blocked: null`; the key in the repo's git-ignored `.connections.json`, nothing in the environment. Prompt: "Task E1.F1.T1 of <change> is blocked waiting on the vendor API key. Record it."
+
+### Actual vs expected
+- Actual: tracker status kept and `⛔ blocked` written in `PLAN.md`, but the explaining comment was not posted: the agent ran `env | grep -i clickup`, reported "no ClickUp API token in this session" and queued the comment in the outbox.
+- Expected: REQ-W1-082: tracker status unchanged and a comment explaining the block added to the task.
+
+### Root cause
+`karvey-impl/SKILL.md` never says where tracker credentials live, and `management-adapters.md:119` (rule 2) listed `.connections.json`, env vars and a vault only as where credentials may be kept, not as places to look before declaring one missing; `clickup-protocol.md` names `.connections.json` but impl does not load it for a status change or comment. The other ClickUp runs found the file by chance. The impl blocker text also did not say what to do when `blocked` maps to `null`.
+
+### Fix
+Rule 2 is now a lookup order: `.connections.json` at the project root first, then the environment, then the vault or the tool's MCP session; "no credential" and the outbox only after all three are empty, saying where it looked. `karvey-impl` Step 3 and Handling blockers point to that lookup, and the blocker text says that with `blocked: null` the tracker status is kept and the comment is posted alone.
+
+### Regression test
+`plugins/karvey/tests/unit/test_skill_rules.py` `TrackerCredentialsAreLookedUpEverywhere` (rule 2 is an ordered lookup with `.connections.json` first and "only after" every place; impl Step 3 points to it; impl's blocker text covers `blocked: null` and `.connections.json`); all 3 red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-53, manual script per-level-maps variant A (E1.F17.T3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: impl never names where tracker credentials live; rule 2 is not a lookup |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T7: rule 2 lookup order, impl Step 3 and blockers point to it; tests red before, green after |
+
+## BUG-27 — protect-paths passed a glob or a variable that names the state dirs
+- **Priority:** high
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`protect_paths`), plugins/karvey/hooks/karvey-hook.sh (no-python classifier)
+- **Change / origin:** wave1-hardening — finding F-56 (QA D1 security (S-1))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+In a Karvey repo: `cd .git/kar?ey/ledger && printf %s '{…}' > feat-a.json`, then `git push origin HEAD:main`.
+
+### Actual vs expected
+- Actual: the forged ledger entry is written (rc 0) and the prod-gate prints ALLOW; `cd .git; cd kar*ey; mkdir -p ledger` and `D=karvey; printf x > .git/$D/ledger/f.json` also pass.
+- Expected: REQ-W1-018 / architecture §3.3 control 3: any tool call that touches the markers or the ledger is blocked; forging needs a deliberate multi-step circumvention, not one shell command.
+
+### Root cause
+protect-paths matched literal strings (`.git/karvey`, `karvey/ledger`) in the command text; the shell expands globs and variables after the hook has looked, and `cd` chains carried the glob into the working directory of later segments.
+
+### Fix
+Per segment (python): the command's own `NAME=value` assignments are substituted; a path component that is a glob (2+ literal characters) or a variable and could expand to `karvey`/`ledger`/`approvals`, or a wildcard right under `.git` or right above `ledger`/`approvals`, blocks; globs are also expanded against the disk (bounded) and checked. No-python: the same pattern test with `case`, globbing off.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/protect-paths.json` pp-18..pp-21 (also in the no-python pass) block; pp-23/pp-24 keep globs and variables elsewhere allowed; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-56, karvey-qa D1 security (S-1) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-28 — prod-gate missed pushes and merges not spelled as `git push … main` / `gh pr merge`
+- **Priority:** high
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`prod_candidates`, `_evaluate_candidate`, `push_destinations`, `GitTarget.resolve_alias`)
+- **Change / origin:** wave1-hardening — finding F-57 (QA D1 security (S-2, S-3), D2 (E-1))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+On `feature/feat-a` with no approval: `git -c alias.ship=push ship origin HEAD:main`; `git -c remote.origin.push=HEAD:main push origin`; a configured upstream with `push.default=upstream` and a bare `git push`; `git send-pack … feature/feat-a:main`; `echo HEAD:main | xargs git push origin`; `gh m 12` (gh alias of `pr merge`); `gh api -X POST repos/o/r/merges -f base=main`; `gh api -X PATCH repos/o/r/git/refs/heads/main`; GraphQL `mergeBranch`; on `main`, `git push origin @`.
+
+### Actual vs expected
+- Actual: every one exits 0 and (for the git forms, run for real) moves the remote `main`.
+- Expected: REQ-W1-023: a merge into the production set needs the human prod approval; what cannot be verified fails closed (REQ-W1-024).
+
+### Root cause
+the candidates were read from the command words only: `-c` values, configured and shell aliases (prod-gate never expanded aliases), the push configuration of the repository, `send-pack`, commands run through `xargs`/`find -exec`, gh aliases and REST/GraphQL ref writes were not candidates, and `@` was not treated as HEAD.
+
+### Fix
+Git segments go through `git_targets` (aliases expanded, `-c alias.X` first); `send-pack` counts as a push; `-c` push settings fail closed; a push with no refspec takes its destination from the remote's `push` refspecs, else `<branch>@{push}`; `@` is HEAD; `xargs`/`parallel`/`find -exec` wrapping git/gh/glab/az with a push or merge fail closed; gh aliases from gh's `config.yml` are expanded; `gh api` writes to `merges`/`git/refs` of a production branch and GraphQL `mergeBranch`/`updateRef(s)`/`createCommitOnBranch` block. The cheap pre-filter now also wakes on any git/gh/glab/az command.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg4-01..pg4-13, pg4-19..pg4-22 (pg4-14..16 keep feature pushes and non-production ref writes silent) and `plugins/karvey/tests/hooks/tables/git-flow.json` gf-bug28-push-at-sign-on-master; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-57, karvey-qa D1 security (S-2, S-3), D2 (E-1) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-29 — `git push origin --tags` from the production branch was blocked as a branch push
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_evaluate_candidate`)
+- **Change / origin:** wave1-hardening — finding F-58 (QA D4 impact (I-4))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+On `main` in a Karvey project: `git push origin --tags`.
+
+### Actual vs expected
+- Actual: `prod-gate BLOCK … missing=change`.
+- Expected: only tags are pushed (no branch), so nothing reaches production through this command.
+
+### Root cause
+a push without refspec was treated as a push of the current branch; `--tags` without refspec was not handled.
+
+### Fix
+`--tags` with no refspec is not a branch push (`--follow-tags` still is).
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg4-17 (allow) and pg4-18 (`--follow-tags` still gated); red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-58, karvey-qa D4 impact (I-4) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-30 — The prod-gate block did not say how to record the approval
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_evaluate_candidate`)
+- **Change / origin:** wave1-hardening — finding F-59 (QA D4 impact (I-3))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+The human types "ok, merge a prod" (the hook records a prod marker), then the agent runs `git push origin feature/foo:main`.
+
+### Actual vs expected
+- Actual: `BLOCK change=foo missing=by,role,ref reason=no production approval recorded` with no next step; for an unknown change the advice (branch name / PR title) did not fit trunk projects.
+- Expected: architecture §12 risk table: the block message says exactly how to approve.
+
+### Root cause
+the reason strings came straight from `check_prod`.
+
+### Fix
+The block names `karvey-state.py approve <change> prod --by … --role human --ref <D-NN or PR URL>` after the human's own prod message; the unknown-change block also names `enforcement.prod_gate_hook: false` merged to the production branch.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg4-23, pg4-24; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-59, karvey-qa D4 impact (I-3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-31 — subagent-prompt blocked ordinary prompts about settings and let a ban-like sentence excuse a real write
+- **Priority:** high
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`subagent_prompt`)
+- **Change / origin:** wave1-hardening — finding F-60 (QA D4 impact (I-1), D2 (E-4))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+In a Karvey project, an Agent call with "Update the settings page component in src/views/Settings.vue …", "Update .vscode/settings.json …" or "Write unit tests for the tracker status mapping function"; and "Do not edit project.json by hand. Use a python script to write the management settings into docs/spec/project.json."
+
+### Actual vs expected
+- Actual: the first three are blocked; the last one is allowed; "Don’t write docs/spec/project.json" (typographic apostrophe) is not recognised as the ban.
+- Expected: REQ-W1-081 / D-33: only a prompt that lets the subagent write the Karvey settings is blocked, unless it carries the ban on `docs/spec/project.json`.
+
+### Root cause
+`\bsettings\b` with any verb anywhere in the sentence was a target; any ban-like sentence ("do not edit project.json") short-circuited the check; quotes were not normalised.
+
+### Fix
+Targets are `docs/spec/project.json`, a bare `project.json` only next to tracker/settings words, `management.statuses`, tracker/team/karvey/management settings, the project's settings and a status map; the verb must govern the target within the next words (no "for"/"about"/"from" in between); only the ban on `docs/spec/project.json` itself excuses the prompt; typographic quotes are normalised.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/subagent-prompt.json` sp-08..sp-13 (sp-01..07 unchanged); red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-60, karvey-qa D4 impact (I-1), D2 (E-4) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-32 — Real team chat space ids in the tests
+- **Priority:** low
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/tests/hooks/tables/notify-confirm.json, plugins/karvey/tests/unit/test_notify_check.py, test_safe_values.py, test_config_resolve.py
+- **Change / origin:** wave1-hardening — finding F-61 (QA D1 security (S-6))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`grep -rn 'spaces/' plugins/karvey/tests`.
+
+### Actual vs expected
+- Actual: two real chat space ids used as example destinations (18 places).
+- Expected: fixtures carry shapes only, never real identifiers (architecture §6.3); the repository is public.
+
+### Root cause
+values copied from a real configuration while writing the notify tests.
+
+### Fix
+replaced by `spaces/AAAAexample1` / `spaces/AAAA-example` (the confirmation codes derived from them updated). The ids stay in the git history; they are identifiers, not credentials.
+
+### Regression test
+`plugins/karvey/tests/unit/test_fixtures_anonymous.py` NoRealChatSpaceIds (every chat-space-shaped id under `tests/` says example/fixture); red on 4c9b7c0 (19 hits). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-61, karvey-qa D1 security (S-6) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-33 — Two real legacy shapes were schema errors: `repos` as objects, `approvals.*.generated` as a date
+- **Priority:** high
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/schemas/project.schema.json (`repos`), plugins/karvey/schemas/spec.schema.json (`approval.generated`)
+- **Change / origin:** wave1-hardening — finding F-62 (QA D4 impact (I-2))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`karvey-state.py validate --all` on a project whose `project.json` lists `repos` as `{name, url, stack, layer}`, or whose spec has `approvals.deploy.generated: "2026-08-05"`.
+
+### Actual vs expected
+- Actual: `[error] $.repos[0]: expected string, got object`; the prod-gate blocks with `missing=valid spec.json`.
+- Expected: REQ-W1-003 and §2.7: legacy shapes are warnings in advisory mode; no existing file becomes invalid in 3.12.x.
+
+### Root cause
+the legacy catalogue (§6.3) had neither shape, so the schema typed them strictly.
+
+### Fix
+both accept the legacy shape as an `x-karvey-severity: warning` branch with a note (errors in strict mode); anonymised fixtures `legacy/project/repos-objects.json` and `legacy/spec/approval-generated-date.json`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_validate.py` LegacyRealShapesAreWarnings; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-62, karvey-qa D4 impact (I-2) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-34 — An exception before any guard ran exited 1, so the prod-gate failed open
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/hookio.py (`parse`), plugins/karvey/scripts/karvey_lib/karvey_hooks.py (`main`)
+- **Change / origin:** wave1-hardening — finding F-63 (QA D2 errors (E-2))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Run the hook from a deleted working directory (a removed worktree) with `git push origin master`.
+
+### Actual vs expected
+- Actual: `FileNotFoundError … os.getcwd()`, exit 1: the harness does not treat exit 1 as a block.
+- Expected: §3.2: the prod-gate and protect-paths fail closed.
+
+### Root cause
+`hookio.parse` called `os.getcwd()` unconditionally and `main` had no handler around the dispatch.
+
+### Fix
+`hookio` falls back to `/` when the directory is gone; `main` catches any exception: a closed event (pre-bash, pre-edit) blocks naming its first closed guard, an open one allows with a line.
+
+### Regression test
+`plugins/karvey/tests/unit/test_karvey_hooks.py` Dispatch.test_crash_outside_a_guard_applies_the_fail_mode; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-63, karvey-qa D2 errors (E-2) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-35 — A non-string `phase` crashed validate, the hooks and the dashboard
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/project.py (`list_changes`), plugins/karvey/scripts/karvey-state.py (history check), plugins/karvey/scripts/karvey-context.py
+- **Change / origin:** wave1-hardening — finding F-64 (QA D2 errors (E-3))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`{"phase": ["init"]}` (or a history entry whose `phase` is an object) in a change's spec.json.
+
+### Actual vs expected
+- Actual: `TypeError: unhashable type` (exit 5) in validate/next/active and the dashboard; the session hook loses its context; the approval hook records nothing; plan-gate blocks every write.
+- Expected: a validation error on that file; every other tool keeps working.
+
+### Root cause
+the phase value was hashed (set/frozenset membership) without a type check.
+
+### Fix
+`list_changes` treats a non-string phase as absent (with a spec error), the history check skips non-string phases, the dashboard shows it as JSON.
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_validate.py` NonStringPhase; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-64, karvey-qa D2 errors (E-3) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-36 — A list `management.tool` or `notifications.channel` crashed karvey-config
+- **Priority:** low
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey-config.py (`_normalise_management`, `resolve_notifications`, `propose_settings`), plugins/karvey/scripts/karvey-state.py (`--fix` notes)
+- **Change / origin:** wave1-hardening — finding F-65 (QA D2 errors (E-5))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`"notifications": {"channel": ["google-chat"]}`, then `karvey-config.py notify-check`.
+
+### Actual vs expected
+- Actual: `[error] TypeError: unhashable type`, exit 5, which the notify step does not define.
+- Expected: a refusal naming the field (exit 3).
+
+### Root cause
+dict lookups of the legacy aliases with an unchecked value.
+
+### Fix
+non-string tool/channel values are refused with `config.invalid_management` / `config.invalid_notifications`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_config_resolve.py` NonStringSettings; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-65, karvey-qa D2 errors (E-5) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-37 — Breaking a stale lock could remove a fresh one; the release removed a lock it did not own
+- **Priority:** low
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/atomicio.py (`lock`)
+- **Change / origin:** wave1-hardening — finding F-66 (QA D2 errors (E-6))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A stale `.lock`, two writers; one is preempted between `stat` and `unlink`.
+
+### Actual vs expected
+- Actual: it unlinks the fresh lock the other writer just took; both hold the lock and one update is lost; the `finally` unlinks whatever lock is there.
+- Expected: one writer at a time (compare-and-swap relies on it).
+
+### Root cause
+stat-then-unlink is not atomic, and the lock carried no owner token.
+
+### Fix
+a stale lock is renamed aside (only one waiter can) and put back if it is not the stale inode seen; the lock holds a random token and only its owner removes it.
+
+### Regression test
+`plugins/karvey/tests/unit/test_atomicio.py` LockOwnership; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-66, karvey-qa D2 errors (E-6) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+| 2026-09-26 | REABIERTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | CI windows-advisory on 72b460b: the lock stayed behind on Windows (text-mode fd wrote the token with CRLF, so the owner check at release never matched) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | the lock is opened with O_BINARY; the windows-advisory run of test_atomicio is the regression check |
+
+## BUG-38 — spec-merge rewrote a BOM/CRLF living spec with LF and no BOM
+- **Priority:** low
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey-spec-merge.py (`_read_text`, `run`)
+- **Change / origin:** wave1-hardening — finding F-67 (QA D2 errors (E-8))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A living spec saved with a BOM and CRLF, then `karvey-spec-merge.py <change>`.
+
+### Actual vs expected
+- Actual: every line shows as changed in git.
+- Expected: only the merged requirements change.
+
+### Root cause
+the text was normalised to LF on read and written back as is.
+
+### Fix
+the BOM and CRLF of the target are recorded on read and restored on write.
+
+### Regression test
+`plugins/karvey/tests/unit/test_spec_merge.py` LineEndings; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-67, karvey-qa D2 errors (E-8) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-39 — protect-paths blocked text that only mentions the paths
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`protect_paths`)
+- **Change / origin:** wave1-hardening — finding F-68 (QA D4 impact (I-5))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+In any repo: `git commit -m "docs: explain the karvey/approvals layout"`; `echo "see notify-last.json" >> notes.md`.
+
+### Actual vs expected
+- Actual: both blocked.
+- Expected: architecture §3.8 DoS row: no false positives that push users to disable the guard; the text is not a path.
+
+### Root cause
+every argument of a non-read-only command was searched for the needles.
+
+### Fix
+echo/printf arguments and the `-m`/`--message` value of git commit/tag/notes/stash/merge/revert are message text; their redirections are still checked.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/protect-paths.json` pp-25, pp-26 (pp-27: a redirection into the ledger still blocks); red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-68, karvey-qa D4 impact (I-5) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-40 — CHANGELOG [Unreleased] had no human owner or AI model
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** CHANGELOG.md
+- **Change / origin:** wave1-hardening — finding F-69 (QA D6 versioning)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+QA D6 `changelog-why` on the change.
+
+### Actual vs expected
+- Actual: 80+ lines under [Unreleased], none naming the responsible human or the model, and no traceability block.
+- Expected: `changelog-policy.md` and karvey-impl Step 4: the owner and the model are recorded; the deploy pre-check fails without them.
+
+### Root cause
+impl added one line per task and never the section's traceability block.
+
+### Fix
+the section carries the policy's block (human owner, AI model, change, phases).
+
+### Regression test
+`plugins/karvey/tests/unit/test_skill_rules.py` ChangelogUnreleasedTraceability; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-69, karvey-qa D6 versioning |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-41 — One project-wide prod marker approved production for every change
+- **Priority:** high
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`find_valid`), plugins/karvey/scripts/karvey-state.py (`approve … prod`)
+- **Change / origin:** wave1-hardening — finding F-70 (QA D7 second opinion (X-1))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Two changes, no single active one; the human types "aprobado, pasa a prod" (scope `_project`); `approve alpha prod …` and `approve beta prod …`.
+
+### Actual vs expected
+- Actual: both succeed from the same marker, which stays live.
+- Expected: D-10 / REQ-W1-023: the production approval is the human's approval of that change.
+
+### Root cause
+`find_valid` falls back to the `_project` scope for every kind, and `approve prod` did not consume the marker.
+
+### Fix
+`approve prod` looks only for a marker scoped to the change and consumes it once the ledger is written (architecture §3.3, revision 3).
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_approve.py` ProdMarkerScope; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-70, karvey-qa D7 second opinion (X-1) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-42 — The conditional "si" was read as an approval
+- **Priority:** high
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`classify`)
+- **Change / origin:** wave1-hardening — finding F-71 (QA D7 second opinion (X-2))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Prompt "revisa si el merge a main rompió algo".
+
+### Actual vs expected
+- Actual: `[karvey] approval recorded (prod, …)`.
+- Expected: REQ-W1-019: a request is not an approval.
+
+### Root cause
+accents are stripped before matching, so the approval "sí" and the conditional "si" are the same word.
+
+### Fix
+"si" approves only as the affirmative: written "sí", or a bare "si" that is the whole reply or opens it before punctuation (architecture §3.3, revision 3).
+
+### Regression test
+`plugins/karvey/tests/unit/test_approval_vocab.py` ConditionalSi (the affirmative forms still approve); red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-71, karvey-qa D7 second opinion (X-2) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-43 — Closing a phase without an approval consumed the change's prod marker
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey-state.py (`consume_on_close`)
+- **Change / origin:** wave1-hardening — finding F-72 (QA D7 second opinion (X-5))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+The human approves production during `test`; then `advance <change> qa`.
+
+### Actual vs expected
+- Actual: `consumed: [<change>]`; `approve <change> prod` then fails ("consumed").
+- Expected: §3.3 control 7: a marker is consumed when the phase it approved closes.
+
+### Root cause
+the change's latest marker of any kind was consumed whatever phase closed.
+
+### Fix
+only a phase that has an approval consumes the change's marker, and never a prod-kind one.
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_approve.py` ConsumeOnlyWhatClosed; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-72, karvey-qa D7 second opinion (X-5) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-44 — `validate --fix` dropped fields of legacy transitions and of `gates_skipped`
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey-state.py (`_fix_history`, `fix_spec`)
+- **Change / origin:** wave1-hardening — finding F-73 (QA D7 second opinion (X-6))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A legacy `{from, to, at, reason, approved_by, notes, commit}` transition and a `gates_skipped` with `approved_by`, `date`, `ref`; `validate --fix`.
+
+### Actual vs expected
+- Actual: only `by`, `ref`, `evidence` survive; the `gates_skipped` record is deleted.
+- Expected: REQ-W1-008/009: the migration never loses what the file recorded.
+
+### Root cause
+the transition copy listed three keys; `gates_skipped` was deleted once its phases moved.
+
+### Fix
+every other field of a transition is kept; the who/when/ref of `gates_skipped` go into the skip reason.
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_fix.py` NothingLostInMigration; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-73, karvey-qa D7 second opinion (X-6) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-45 — spec-merge deleted neighbouring requirements on a duplicated REMOVED id
+- **Priority:** high
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/karvey-spec-merge.py (`parse_delta`, `merge`)
+- **Change / origin:** wave1-hardening — finding F-74 (QA D7 second opinion (X-7))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A delta whose REMOVED lists REQ-A-1 twice (or MODIFIED and REMOVED of the same id).
+
+### Actual vs expected
+- Actual: exit 0; REQ-A-2 and REQ-A-3 are gone (overlapping line edits).
+- Expected: an error, nothing written.
+
+### Root cause
+REMOVED did not check the ids already seen, and the bottom-up edits assumed disjoint ranges.
+
+### Fix
+a REMOVED id seen before (in REMOVED or MODIFIED) is a parse error; overlapping edits are refused.
+
+### Regression test
+`plugins/karvey/tests/unit/test_spec_merge.py` DuplicateIds; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-74, karvey-qa D7 second opinion (X-7) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-46 — L-06 let hand-edit instructions through in other words
+- **Priority:** medium
+- **Detected:** 2026-09-25 · **Component:** plugins/karvey/scripts/lint-plugin.py (L-06)
+- **Change / origin:** wave1-hardening — finding F-75 (QA D7 second opinion (X-9))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Append to a skill: "Set the phase to `impl` in spec.json by hand.", "Run `jq '.phase = \"test\"' spec.json > t && mv t spec.json`.", "Edit `spec.json` and change `approvals.qa.approved` to true."
+
+### Actual vs expected
+- Actual: L-06 reports 0 errors: a REQ-W1-013 regression would pass CI.
+- Expected: L-06 flags any instruction to edit the owned fields by hand.
+
+### Root cause
+the patterns needed `phase:`/`phase =` and a verb from a short list.
+
+### Fix
+"set/change/move/edit … phase to X" and "approvals.X.Y to …" are owned forms; `change`/`edit` (the verbs), `jq`, `sed -i` and `mv` are write verbs.
+
+### Regression test
+L-06; `plugins/karvey/tests/unit/test_lint_plugin.py` L06.test_hand_edits_in_other_words_fail; red on 4c9b7c0. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-75, karvey-qa D7 second opinion (X-9) |
+| 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-47 — The prod-gate missed push forms that reach production: wildcard and matching refspecs, a configured mirror or `push.default matching`, a tag shadowing the pushed branch, a second production destination
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_evaluate_candidate`, `implicit_push_dests`)
+- **Change / origin:** wave1-hardening — finding F-92 (QA re-run, D7 second opinion (X-1..X-7))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With a prod approval for commit A and local `main` moved to an unapproved B: `git push origin 'refs/heads/*:refs/heads/*'`; `git push origin :`; `git config remote.origin.mirror true` then `git push origin`; `git config push.default matching` then `git push`; `git config remote.origin.push 'refs/heads/*:refs/heads/*'` then `git push origin`. With a tag `feature/feat-a` at A and the branch at B: `git push origin refs/heads/feature/feat-a:main`. With `main` and `master`: `git push origin HEAD:main wip:master`.
+
+### Actual vs expected
+- Actual: the gate allowed each one (most silently, the tag case as `ALLOW … commit=A`), and `origin/main` (or `master`) ended at B.
+- Expected: a push that can reach production names one commit, that commit is the approved one, and anything else blocks.
+
+### Root cause
+the destination was compared literally with the production set, so `*` and the empty `:` never matched; the implicit-push resolution read neither `remote.<r>.mirror` nor a persistent `push.default`; the source short name was resolved with `rev-parse`, which prefers a tag; the loop stopped at the first production destination.
+
+### Fix
+wildcard destinations are matched with `fnmatch` against the production set, `:` is a matching push, a configured mirror and `push.default matching` count as bulk pushes, and all of them block; the source is resolved as `refs/heads/<name>` first (`resolve_push_source`); every production destination is resolved and more than one commit blocks. Without python (`hooks/karvey-hook.sh`), a wildcard or matching refspec blocks (fail closed).
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg6-01-wildcard-refspec-into-main, pg6-02-matching-colon-refspec, pg6-03-configured-mirror, pg6-04-configured-push-default-matching, pg6-05-tag-shadows-the-pushed-branch, pg6-06-second-production-destination, pg6-07-configured-wildcard-push-refspec; red on 7e110f3. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-92, karvey-qa re-run D7 second opinion (X-1..X-7) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 7e110f3, green after |
+
+## BUG-48 — A deferred merge (`gh pr merge --auto`, `az … --auto-complete true`, `glab mr merge`) was checked against the PR head once and could land a later commit
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`prod_candidates`, `_gh_candidate`, `_evaluate_candidate`)
+- **Change / origin:** wave1-hardening — finding F-93 (QA re-run, D7 second opinion (X-9))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With a prod approval for the PR head A: `gh pr merge 12 --auto --merge` (allowed), then `git push origin wip:feature/feat-a` (a feature push, allowed); the host would merge B when the checks pass.
+
+### Actual vs expected
+- Actual: the deferred merge was allowed without a binding to A.
+- Expected: a deferred merge is allowed only when the host itself is bound to the approved commit (`gh --match-head-commit`, `glab --sha`); `az --auto-complete` blocks.
+
+### Root cause
+the gate compared the PR head at command time and treated every merge command as immediate; glab merges when the pipeline succeeds by default.
+
+### Fix
+candidates carry `deferred` and `bound`; after the approval check, a deferred merge whose binding is not the released commit blocks.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg6-08-gh-auto-merge-unbound, pg6-10-gh-auto-merge-bound-to-another-commit, pg6-11-az-auto-complete-deferred, pg6-12-glab-merge-without-sha (block) and pg6-09-gh-auto-merge-bound-to-the-approved-commit (bound: allow); pg1-23 now passes `--sha`; red on 7e110f3. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-93, karvey-qa re-run D7 second opinion (X-9) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 7e110f3, green after |
+
+## BUG-49 — `reopen` wrote spec.json before superseding the ledger prod approval, so a failure in between left it live
+- **Priority:** low
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`cmd_reopen`)
+- **Change / origin:** wave1-hardening — finding F-94 (QA re-run, D7 second opinion (X-10))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Make `approval.supersede_prod` fail (a full disk, a corrupt write) during `reopen feat-a requirements` on a change with a ledger prod approval.
+
+### Actual vs expected
+- Actual: spec.json was reopened and the ledger kept its prod approval.
+- Expected: the ledger first; if it fails, nothing is reopened.
+
+### Root cause
+the ledger was written after the spec.json transaction had committed.
+
+### Fix
+the supersede runs inside the reopen transaction, after the refusals and before spec.json is written; a failure refuses the reopen (`state.ledger`).
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_approve.py` ReopenSupersedesProd.test_ledger_failure_leaves_the_spec_unreopened (red on 7e110f3) and .test_refused_reopen_keeps_the_ledger. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-94, karvey-qa re-run D7 second opinion (X-10) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 7e110f3, green after |
+
+## BUG-50 — The prod-gate's push parser missed `refs/*` wildcards, `-o` clusters, abbreviated long options and remote names with a slash
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_push_parse`, `_evaluate_candidate`, `implicit_push_dests`)
+- **Change / origin:** wave1-hardening — finding F-95 (QA re-run, D7 second opinion re-check (N-1..N-4))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With a prod approval for commit A and `wip` at an unapproved B: `git branch -f main wip && git push origin 'refs/*:refs/*'`; `git push -on origin wip:main`; `git branch -f main wip && git push --mirro origin`; a remote `up/stream` as the upstream of the branch, tracking `main`, with `push.default=upstream`, then `git push`.
+
+### Actual vs expected
+- Actual: the gate allowed each one, and `origin/main` ended at B (`-on` only where the server accepts push options).
+- Expected: each push is resolved as git resolves it, or blocks.
+
+### Root cause
+the wildcard was matched against bare branch names, so `refs/*` never matched; short clusters were split letter by letter, so `-on` (push-option `n`) read as a dry run; long options were compared exactly while git accepts unique prefixes; the upstream name was split at its first `/`.
+
+### Fix
+wildcards are matched against full refs; in a cluster `-o` takes the rest as its value and `-n` counts only on its own; long options are canonicalised from a unique prefix and an unknown one blocks; the push destination comes from `rev-parse --symbolic-full-name <branch>@{push}` minus the longest known remote prefix, and an unparsable one blocks.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg6-13-refs-wildcard-refspec, pg6-14-push-option-cluster-is-not-a-dry-run, pg6-15-abbreviated-mirror-option, pg6-16-unknown-long-option, pg6-17-remote-name-with-a-slash; red on 0ce4a7b. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-95, karvey-qa re-run D7 second opinion re-check (N-1..N-4) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 0ce4a7b, green after |
+
+## BUG-51 — The prod-gate trusted `--dry-run` cancelled by `--no-dry-run`, and ignored `--repo`
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_push_parse`, `_evaluate_candidate`)
+- **Change / origin:** wave1-hardening — finding F-96 (QA re-run, D7 second opinion re-check (N-5, N-6))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With `wip` at an unapproved B: `git push --dry-run --no-dry-run origin wip:main`. With a second remote `pub` on the same repository set as a mirror, or with a wildcard push refspec, and local `main` at B: `git push --repo=pub`.
+
+### Actual vs expected
+- Actual: the gate allowed both, and `origin/main` ended at B.
+- Expected: the options are read as git reads them: the last of `--dry-run`/`--no-dry-run` wins, and `--repo` names the remote when no positional one does.
+
+### Root cause
+the dry-run early exit ran before the unknown-option check and never saw the negation; with no positional remote the implicit push read `origin`'s configuration instead of the `--repo` one.
+
+### Fix
+`--no-dry-run` clears the dry run; the unknown-option check runs before any early exit; `--repo` gives the remote when there is no positional one.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg6-18-dry-run-cancelled-by-no-dry-run, pg6-19-repo-option-names-a-mirror-remote, pg6-20-repo-option-names-a-wildcard-remote; red on d0153c2. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-96, karvey-qa re-run D7 second opinion re-check (N-5, N-6) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on d0153c2, green after |

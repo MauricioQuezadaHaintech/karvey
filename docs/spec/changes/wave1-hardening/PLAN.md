@@ -180,7 +180,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 ### Feature E1.F16: Release 3.12.0 (one versioning moment) and deploy-phase human steps
 
-- [ ] E1.F16.T1 [Backend] Release docs and the single version bump to 3.12.0 — est: 30min (depends E1.F13.T2, E1.F14.T2, E1.F14.T4)
+- [x] E1.F16.T1 [Backend] Release docs and the single version bump to 3.12.0 — est: 30min (depends E1.F13.T2, E1.F14.T2, E1.F14.T4)
 - [ ] E1.F16.T2 [human] Prepare the owner's global-config diffs from architecture §7.3 (D-01, D-11) — executor: owner (revision 1, F-49) (depends E1.F5.T2) (P)
 - [ ] E1.F16.T3 [human] Branch protection on `main`: require the CI checks (Q-A8, D-09) — executor: owner (depends E1.F13.T2)
 - [ ] E1.F16.T4 [Backend] Release PR ready; `advance deploying` on the feature branch; the unapproved merge is blocked (E2E evidence) — est: 20min (depends E1.F16.T1, E1.F16.T3)
@@ -192,7 +192,20 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 
 - [x] E1.F17.T1 [Backend] BUG-22: profile-only commits after a save are not drift — est: 30min (depends E1.F6.T1)
 - [x] E1.F17.T2 [Backend] Status names may contain `( )` (F-19) — est: 20min (depends E1.F7.T1)
-- [ ] E1.F17.T3 [human] Run the 10 manual agent-behaviour scripts with the agent (F-47) — executor: owner (depends E1.F14.T4, E1.F17.T1, E1.F17.T2)
+- [x] E1.F17.T3 [human] Run the 10 manual agent-behaviour scripts with the agent (F-47) — executor: owner (depends E1.F14.T4, E1.F17.T1, E1.F17.T2) — run 2026-09-25: 6 PASS / 4 FAIL; rerun after T4..T7: 10/10 PASS
+- [x] E1.F17.T4 [Backend] BUG-23 (F-50): the settings lookup reads integration and production — est: 20min
+- [x] E1.F17.T5 [Backend] BUG-24 (F-51): visible-version check against the deployed commit, any DEV mark — est: 20min
+- [x] E1.F17.T6 [Backend] BUG-25 (F-52): composed subagent prompts carry the project.json ban — est: 15min
+- [x] E1.F17.T7 [Backend] BUG-26 (F-53): tracker credentials looked up in `.connections.json` first — est: 15min
+- [x] E1.F17.T8 [Test] Rerun the four failing manual scripts; route F-54 (BL-52); fix the BL-51 id collision — est: 30min
+
+### Feature E1.F18: QA spec-gaps on the production approval (revision 4, D-34..D-36)
+
+- [x] E1.F18.T1 [Backend] D-34: the prod approval's evidence is the approval hook's audit record — est: 30min
+- [x] E1.F18.T2 [Backend] D-35: prod approval bound to the approved head commit, valid 24 h — est: 50min
+- [x] E1.F18.T3 [Backend] D-36: `reopen` supersedes the ledger prod approval — est: 20min
+- [x] E1.F18.T4 [Backend] Spec revision and docs of the prod approval flow — est: 35min
+- [x] E1.F18.T5 [Test] QA re-run: D1 and D7 on the diff since 13170b1 — est: 30min
 
 ---
 
@@ -267,16 +280,26 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F15.T1 [Backend] | ✅ done | 20 | 4 | 0 | `--fix` dry-run: only wave1-hardening changes (3 legacy `{from,to,at}` history rows → `{phase, entered_at, exited_at}`); team-adapters and team-layer nothing to fix (team-layer kept as history, D-14); applied to wave1-hardening; second `--fix --dry-run` empty; `validate --all`: 3 errors, all `team-adapters approvals.prod` (F15.T3) |
 | E1.F15.T2 [human] | ✅ done | — | — | — | [human] owner typed «ok, registra la aprobación de prod de team-adapters con D-08» 2026-09-24 18:39 -03; hook: `approval recorded (prod, team-adapters, expires 23:39)` |
 | E1.F15.T3 [Backend] | ✅ done | 15 | 3 | 0 | `approve team-adapters prod --by … --role human --ref D-08 --write-spec`: approvals.prod gains role, ISO date, ref `D-08` (the retroactive detail stays in D-08 and `qa_note`); approvals.qa stays false (REQ-W1-108); `validate --all` 0 errors / 35 warnings, rc 0; lint 3 → 0 errors, 3 warnings |
-| E1.F16.T1 [Backend] | ⬜ todo | 30 | — | — |  |
+| E1.F16.T1 [Backend] | ✅ done | 30 | 15 | 0 | `[Unreleased]` → `[3.12.0] - 2026-09-26` (Why, behaviour change, compatibility, 3.10.0 correction); plugin/marketplace/project.json 3.12.0; `pre_3_12_history.released_on`; method page 3.12.0 current in 5 languages; lint 0 errors |
 | E1.F16.T2 [human] | ⬜ todo | — | — | — | [human] revision 1 (F-49): auto mode refuses the agent's copy of the live files |
 | E1.F16.T3 [human] | ⬜ todo | — | — | — | [human] |
-| E1.F16.T4 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F16.T4 [Backend] | 👀 review | 20 | — | — | `advance … deploying`; PR #24 out of draft; blocked-merge evidence and CI result in the PR body; required checks await the owner's branch protection (T3) |
 | E1.F16.T5 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F16.T6 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F16.T7 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F17.T1 [Backend] | ✅ done | 30 | 6 | 0 | BUG-22 RESUELTO: `livestate.profile_only_since` (python path) + the same rule in the degraded bash block; test-hooks.sh 4 cases × 2 paths (case 1 red before the fix, 2-4 over-matching guards); regression index BUG-22 |
 | E1.F17.T2 [Backend] | ✅ done | 20 | 3 | 0 | F-19: `KIND_EXEMPTIONS["status"] = ( )`; test_safe_values.py: accepted by `check_status` and `get … --shell`, `a$(b)` / backtick / `"` / `;` refused, exemption per kind (red before the fix) |
-| E1.F17.T3 [human] | ⬜ todo | — | — | — | [human] |
+| E1.F17.T3 [human] | ✅ done | — | — | — | [human] run headless by the maintainer agent (D-19/D-28): 6 PASS / 4 FAIL; rerun 2026-09-25 after E1.F17.T4..T7: the 4 FAIL scripts PASS → **10/10 PASS** (tracker lines of no-human-no-mapping and per-level-maps not re-run, covered by regression tests; evidence qa/manual/*-2026-09-25-rerun.md); first run: FAIL → F-50 (settings notice ignores the reviewed line), F-51 (visible-version), F-52 (subagent prompt allows project.json), F-53 (block comment not posted); F-54 spec-gap; evidence qa/manual/*-2026-09-25.md |
+| E1.F17.T4 [Backend] | ✅ done | 20 | 8 | 0 | BUG-23 RESUELTO: `project.settings_lines` (integration, production, origin/HEAD) used by the session notice and `karvey-config.py Settings.remotes`; table ss-24 + `OriginProductionFallback` red before the fix; regression index BUG-23 |
+| E1.F17.T5 [Backend] | ✅ done | 20 | 6 | 0 | BUG-24 RESUELTO: deploy 2.6 + versioning.md read `git show <deployed-sha>:<version file>`, any DEV mark format; test_skill_rules.py VisibleVersionCheck (5 tests) red before the fix; regression index BUG-24 |
+| E1.F17.T6 [Backend] | ✅ done | 15 | 25 | 0 | BUG-25 RESUELTO: management-adapters rule 5 + impl `(P)` dispatch carry the ban verbatim (test_skill_rules.py, 3 tests); reopened by the rerun (prompt composed before any skill loads) → `subagent-prompt` guard on PreToolUse Agent|Task, table subagent-prompt.json (7 cases, red on 691f2f7); regression index BUG-25 |
+| E1.F17.T7 [Backend] | ✅ done | 15 | 5 | 0 | BUG-26 RESUELTO: management-adapters rule 2 is an ordered lookup (`.connections.json`, env, vault/MCP); impl Step 3 and blockers point to it, `blocked: null` → comment only; test_skill_rules.py TrackerCredentialsAreLookedUpEverywhere (3 tests) red before the fix; regression index BUG-26 |
+| E1.F18.T1 [Backend] | ✅ done | 30 | 10 | 0 | F-76/D-34: marker audit line with hash/session/time; `check_prod` requires it (`missing=audit`); red on c4d81cf |
+| E1.F18.T2 [Backend] | ✅ done | 50 | 30 | 0 | F-77/D-35: `head_sha` + `expires_at`; `approve prod --sha`, `check-prod --sha`; prod-gate compares the released commit in every form; pg5-02..11 red on c4d81cf |
+| E1.F18.T3 [Backend] | ✅ done | 20 | 5 | 0 | F-79/D-36: `reopen` → ledger `superseded[]` + `revision_history` |
+| E1.F18.T4 [Backend] | ✅ done | 35 | 20 | 0 | requirements rev 1 (017, 023), spec-delta, architecture rev 4, tasks E1.F18, docs (enforcement, hooks README, deploy 2.9, state-machine, iterate) |
+| E1.F18.T5 [Test] | ✅ done | 30 | 90 | 0 | D1 + D7 (4 passes) over 13170b1..HEAD; BUG-47..51 fixed in the micro-loop; security gate PASS |
+| E1.F17.T8 [Test] | ✅ done | 30 | 25 | 0 | reruns PASS: settings-docs-branch (A, B), visible-version (1, 2, 3), no-human-no-mapping (headless, subagent after the guard; tracker line by tests), per-level-maps (A without tracker; comment and B by tests); F-54 → BL-52 (wave2-structural); BL-51 reworded |
 
 ---
 
@@ -305,3 +328,24 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-24 | test | Test phase entered (`advance … test`). Unit 694 · regression 10 · test-hooks 58 · tables 313 cases / 381 runs · page 22 — all green; lint 0 errors / 3 warnings; `validate --all` 0 errors; CI run 36063032643 7/7 green; E2E in the live session: state edges refused/allowed, plan and prod approval markers, protect-paths block. Benchmark baseline: hooks and CLI 72–92 ms median. Not run: 10 manual scripts (F-47); E2E release/archive belong to deploy/archive. E1.F16.T2 refused by the auto-mode classifier (F-49). New findings F-47..F-49 (spec-gap). Evidence `docs/test_evidence.md`, plan `docs/test_plan.md`. |
 | 2026-09-25 | impl | E1.F17.T1 done (D-21): BUG-22 — commits since the save touching only the profile files (`state.json`, `handoff.md`, `board.md`, `manifest.md`, `checklist.md`) on a descendant of the recorded commit match, lower-or-equal uncommitted count too; both the python session path and the degraded bash block; 4 cases in test-hooks.sh on both paths; BUG-22 RESUELTO in the tracker and incidents index. Estimate 30 min vs actual 6 min (AI), 0 review. |
 | 2026-09-25 | impl | E1.F17.T2 done (D-21): F-19 — status names may contain `( )` (`KIND_EXEMPTIONS["status"]`, `check_status` passes the exemption); 3 tests in test_safe_values.py (accepted via `check_status` and `get --shell`, refusals kept, per-kind only). Estimate 20 min vs actual 3 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T3 run (D-19/D-28): the 10 manual agent-behaviour scripts run headless by the maintainer agent, each in its own throw-away repo under $SCRATCH, ClickUp scripts against a throw-away sandbox list, visible-version against a local fixture page. 6 PASS (find-or-create, impl-resume, init-not-now, missing-status-map, qa-review-to-done, settings-merge) / 4 FAIL (settings-docs-branch B, visible-version 1–2, no-human-no-mapping subagent, per-level-maps A). New findings F-50..F-53 (bug), F-54 (spec-gap). Evidence `qa/manual/*-2026-09-25.md`. Task stays 🔄 until the FAILs are routed and re-run. |
+| 2026-09-25 | impl | E1.F17.T4 done (D-21): BUG-23 / F-50 — the settings notice and `resolve` read `origin/{integration}` and `origin/{production}` (and `origin/HEAD` for the notice) before "missing"; the lookup no longer stops at the first readable line; table case ss-24 and 3 unit tests; BUG-23 RESUELTO in the tracker and incidents index. Estimate 20 min vs actual 8 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T5 done (D-21): BUG-24 / F-51 — `karvey-deploy` 2.6 and `versioning.md` implement REQ-W1-041: compare with the deployed commit's version file, accept any unmistakable DEV mark, a missing version is a recommendation; new `tests/unit/test_skill_rules.py`; BUG-24 RESUELTO. Estimate 20 min vs actual 6 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T6 done (D-21): BUG-25 / F-52 — rule 5 of `management-adapters.md` and `karvey-impl` Step 7 make every composed subagent prompt carry "Do not write `docs/spec/project.json` …"; a user's request to persist settings stays with the orchestrating session and the human; 3 tests; BUG-25 RESUELTO. Estimate 15 min vs actual 5 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T7 done (D-21): BUG-26 / F-53 — rule 2 of `management-adapters.md` is a lookup order with `.connections.json` first; `karvey-impl` Step 3 and Handling blockers point to it; `blocked: null` keeps the status and posts the comment; 3 tests; BUG-26 RESUELTO. Estimate 15 min vs actual 5 min (AI), 0 review. |
+| 2026-09-25 | impl | E1.F17.T6 reopened by its rerun: the orchestrating session wrote the subagent prompt before loading any skill, so the rule 5 text never reached it. Added the `subagent-prompt` guard (PreToolUse `Agent|Task`, fail open) and table subagent-prompt.json; rerun PASS (first prompt blocked, re-sent prompt carries the ban). Estimate 15 min vs actual 25 min (AI) for the task, 0 review. |
+| 2026-09-25 | impl | E1.F17.T8 done and E1.F17.T3 ✅ (D-21): the four failing manual scripts re-run headless in throw-away repos: settings-docs-branch PASS (B silent), visible-version PASS (deployed commit's VERSION read, `DEV 2.10.4` accepted, no mismatch with a later bump, no-version = recommendation), no-human-no-mapping PASS (subagent run failed after the text fix, passed after the subagent-prompt guard), per-level-maps PASS for the lines without a tracker (`.connections.json` looked up first); total 10/10 PASS. F-54 → BL-52 routed to wave2-structural; BL-51 names the statusline stable-launcher item without an F-number. Estimate 30 min vs actual 25 min (AI), 0 review. |
+| 2026-09-25 | architecture | Revision 2 (D-33): §1.3, §3.2, §6.1 describe the `subagent-prompt` guard added for BUG-25 (commit 55561c4). |
+| 2026-09-25 | test | Test phase 2 (`advance … test`). Unit 711 · regression 10 · test-hooks 68 · tables 321 cases / 390 runs · page 22 — all green; lint 0 errors; `validate --all` 0 errors; manual scripts 10/10 PASS (four after re-run); every requirement area PASS (E2E release/archive still in deploy/archive). Benchmark: pre-bash slower than baseline under load (F-55, emergent). Evidence `docs/test_evidence.md` § Test phase 2. |
+| 2026-09-25 | qa | QA entered (`advance … qa`); 9 dimensions over `origin/main...4c9b7c0` (D1–D4 and D7 by review subagents, D7 intra-model). 20 bugs fixed in the micro-loop (BUG-27..46, each red on 4c9b7c0); 13 spec-gap/emergent F-76..F-88: F-76, F-77, F-79 open for the owner (prod approval evidence and binding), 10 deferred to BL-53..BL-61. Security gate FAIL on F-76/F-77; QA not approved. Review `qa/REVISION_PR_24_20260925.md`. After the fixes: unit 735 · regression 10 · test-hooks 68 · tables 363 cases / 438 runs · page 22 · lint 0 errors · validate 0 errors. |
+| 2026-09-26 | qa | karvey-iterate for D-34..D-36: spec revision (REQ-W1-017/023, architecture rev 4, E1.F18) and implementation, tests red first on c4d81cf; QA re-run D1 + D7 (4 passes) found BUG-47..51 (prod-gate push forms, deferred merges, reopen ordering), all RESUELTO; F-90 → BL-62, F-91 → BL-63; security gate PASS, QA ready for approval (not recorded). |
+
+## QA Review (2026-09-25)
+
+Document: `docs/spec/changes/wave1-hardening/qa/REVISION_PR_24_20260925.md`. Not approved.
+
+Pending actions:
+- [x] Owner decision on F-76 (what evidence the prod-gate verifies), F-77 (bind the prod approval to the released commits, with an expiry) and F-79 (prod approval across a reopen) — D-34, D-35, D-36; routed by `/karvey-iterate` to E1.F18 (2026-09-26); then `/karvey-iterate wave1-hardening` routes them (architecture revision) and QA re-runs D1.
+- [ ] Manual areas: prod approval end to end (E2E-04), method page rendering in a browser, a real legacy project after upgrade.
+- [x] BUG-27..46 fixed with regression tests (RESUELTO).
+- [x] Deferred: BL-53..BL-61.

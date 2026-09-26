@@ -167,5 +167,48 @@ class CompareAndSwap(Base):
         self.assertEqual(h, atomicio.file_sha256(self.f))
 
 
+class LockOwnership(unittest.TestCase):
+    """BUG-37: breaking a stale lock raced between stat and unlink (a waiter could remove the fresh lock another
+    waiter had just taken, and both held it), and the release removed the lock even when it was not its own."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        self.d = tempfile.TemporaryDirectory()
+        self.path = Path(self.d.name) / "spec.json"
+        self.path.write_text("{}", encoding="utf-8")
+
+    def tearDown(self):
+        self.d.cleanup()
+
+    def test_release_keeps_a_lock_that_is_not_ours(self):
+        with atomicio.lock(self.path) as lp:
+            lp.write_bytes(b"another owner\n")
+        self.assertTrue(lp.exists())
+        self.assertEqual(lp.read_bytes(), b"another owner\n")
+
+    def test_breaking_does_not_remove_a_fresh_lock_taken_meanwhile(self):
+        import os
+        lp = self.path.with_name(self.path.name + ".lock")
+        lp.write_bytes(b"stale\n")
+        old = os.stat(lp)
+        os.utime(lp, (old.st_atime - 100, old.st_mtime - 100))
+        seen = os.stat(lp).st_ino
+        os.rename(lp, str(lp) + ".held")  # another waiter broke it (the old inode stays alive) ...
+        lp.write_bytes(b"fresh owner\n")  # ... and took a fresh lock
+        self.assertFalse(atomicio._break_stale(lp, seen, 30))
+        self.assertEqual(lp.read_bytes(), b"fresh owner\n")
+
+    def test_a_stale_lock_is_still_broken(self):
+        import os
+        lp = self.path.with_name(self.path.name + ".lock")
+        lp.write_bytes(b"stale\n")
+        old = os.stat(lp)
+        os.utime(lp, (old.st_atime - 100, old.st_mtime - 100))
+        with atomicio.lock(self.path, wait_s=1.0):
+            pass
+        self.assertFalse(lp.exists())
+
+
 if __name__ == "__main__":
     unittest.main()

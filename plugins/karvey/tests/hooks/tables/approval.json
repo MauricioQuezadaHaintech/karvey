@@ -1475,6 +1475,52 @@
    ],
    "limitation": true,
    "note": "§3.3 step 2 drops any line longer than 200 characters as pasted material, so a long single-line approval records nothing (the safe side; finding F-11)"
+  },
+  {
+   "id": "ap-40-prod-marker-audit-line-carries-hash-session-time",
+   "guard": "approval",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "prompt": "ok, merge a prod feat-a"
+   },
+   "expect": {
+    "decision": "allow",
+    "marker_created": true,
+    "stdout_contains": "[karvey] approval recorded (prod, feat-a, expires ",
+    "marker": {
+     "scope": "feat-a",
+     "kind": "prod"
+    },
+    "file_contains": {
+     "{{repo}}/karvey/audit.log": [
+      "\"prompt_sha256\":\"",
+      "\"session_id\":\"00000000-0000-0000-0000-000000000000\"",
+      "\"created_at\":\""
+     ]
+    }
+   },
+   "tags": [
+    "approval",
+    "REQ-W1-017",
+    "D-34",
+    "F-76"
+   ]
   }
  ]
 }

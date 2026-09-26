@@ -31,6 +31,8 @@ LEGACY_KEYS = {
     # project.json legacy extras
     "backlog_list_id", "status_flow", "location_name", "via", "client_tag", "wbs_note", "workspace_id", "hierarchy",
     "space", "channel",
+    # project.json `repos` as objects (BUG-33)
+    "name", "url", "stack", "layer",
 }
 KEY_PATTERNS = (re.compile(r"^E\d+\.F\d+\.T\d+$"), re.compile(r"^[DC]-\d+$"))
 DIGIT_RUN = re.compile(r"\d{6,}")
@@ -148,6 +150,23 @@ class AnonymousUpgrade(unittest.TestCase):
             if f.suffix == ".sh":
                 with self.subTest(fixture=str(f.relative_to(UPGRADE))):
                     self.assertEqual(f.read_bytes(), (shipped / f.name).read_bytes())
+
+
+class NoRealChatSpaceIds(unittest.TestCase):
+    """BUG-32: the tests carried a real team chat space id. Every chat-space-shaped id in the plugin's tests
+    (``spaces/`` plus 11 id characters, the real format) is a placeholder that says so."""
+
+    SPACE_ID = re.compile(r"spaces/([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])")
+
+    def test_space_ids_are_placeholders(self):
+        for f in sorted(_path.TESTS_DIR.rglob("*")):
+            if not f.is_file() or f.suffix not in (".py", ".json", ".md", ".sh", ".mjs"):
+                continue
+            text = f.read_text(encoding="utf-8", errors="replace")
+            for m in self.SPACE_ID.finditer(text):
+                with self.subTest(file=str(f.relative_to(_path.TESTS_DIR)), id=m.group(0)):
+                    self.assertRegex(m.group(1).lower(), "example|fixture",
+                                     "real-looking chat space id; use a placeholder such as spaces/AAAAexample1")
 
 
 if __name__ == "__main__":

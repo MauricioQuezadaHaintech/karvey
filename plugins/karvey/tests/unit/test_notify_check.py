@@ -12,7 +12,7 @@ import _config as C
 import _gitrepo as g
 from karvey_lib import approval, karvey_hooks as kh
 
-GCHAT = {"channel": "google-chat", "target": "spaces/AAAAQCj0Cjc", "via": "cli", "events": ["qa", "deploy"]}
+GCHAT = {"channel": "google-chat", "target": "spaces/AAAAexample1", "via": "cli", "events": ["qa", "deploy"]}
 
 
 class Base(unittest.TestCase):
@@ -77,10 +77,10 @@ class NotifyCheck(Base):
         self.assertEqual(code, 10)
         self.assertIn("CONFIRMATION REQUIRED", out)
         self.assertIn("spaces/EVILSPACE", out)
-        self.assertIn("spaces/AAAAQCj0Cjc", out)  # the previous one, for comparison
+        self.assertIn("spaces/AAAAexample1", out)  # the previous one, for comparison
         code, env = self.check()
         self.assertEqual(env["result"]["destination"]["target"], "spaces/EVILSPACE")
-        self.assertEqual(env["result"]["last"]["destination"]["target"], "spaces/AAAAQCj0Cjc")
+        self.assertEqual(env["result"]["last"]["destination"]["target"], "spaces/AAAAexample1")
 
     def test_changed_channel_or_events_is_10(self):
         self.set_notifications(GCHAT)
@@ -100,7 +100,7 @@ class NotifyCheck(Base):
         rec = json.loads(files[0].read_text(encoding="utf-8"))
         entry = list(rec["entries"].values())[0]
         self.assertEqual(entry["hash"], env["result"]["hash"])
-        self.assertEqual(entry["destination"]["target"], "spaces/AAAAQCj0Cjc")
+        self.assertEqual(entry["destination"]["target"], "spaces/AAAAexample1")
         self.assertIn("confirmed_at", entry)
         self.assertEqual(stat.S_IMODE(files[0].stat().st_mode), 0o600)
 
