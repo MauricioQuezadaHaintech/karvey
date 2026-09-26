@@ -69,6 +69,21 @@ print(' + '.join(k for k in ('notifications','management') if not isinstance(d.g
   [ -n "$missing" ] && printf 'Karvey (info): team settings not set (%s). To set them, the user can run `/karvey:karvey-init --settings` — settings only, it creates no change and nothing in any tracker.\n' "$missing"
 }
 
+# Without python the spec/ layout detection and the settings-invalid check do not run (F-85, D-21): say so once,
+# on startup, inside a Karvey project of either layout; this path reads docs/spec/ only.
+python_notice() {
+  [ "$MODE" = "startup" ] || return 0
+  local d="$START"
+  while [ -n "$d" ] && [ "$d" != "/" ]; do
+    if [ -f "$d/docs/spec/project.json" ] || [ -d "$d/docs/spec/changes" ] || [ -f "$d/spec/project.json" ] || [ -d "$d/spec/changes" ]; then
+      printf 'Karvey (info): python 3 not found — the spec/ folder detection and the settings-invalid check need python; this session reads docs/spec/ only.\n'
+      return 0
+    fi
+    d=$(dirname "$d")
+  done
+}
+python_notice
+
 [ -z "$ROOT" ] && { settings_nudge; exit 0; }
 
 REL="${START#"$ROOT"/}"; [ "$REL" = "$START" ] && REL=""

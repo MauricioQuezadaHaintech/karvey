@@ -7,6 +7,9 @@ Every behaviour below is pinned by a guard-table case (`../tests/hooks/tables/*.
 **Requirements:** `bash` and **python ≥ 3.9**. The dispatcher `karvey-hook.sh` finds `python3`, then
 `python` (major 3), then `py -3`. Without python it falls back to a bash-only classifier: each guard keeps
 its fail mode (closed guards stay closed, open ones let the call through).
+The session hook's no-python path is **not extended** (F-85): it reads `docs/spec/` only and, on startup inside
+a Karvey project, adds one line saying that the `spec/` folder detection and the settings-invalid check need
+python. Both run only on the python path.
 
 ## What ships
 

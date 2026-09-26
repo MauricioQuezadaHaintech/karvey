@@ -89,6 +89,15 @@ for ev in prompt post-edit pre-edit session; do
 done
 out=$(disp "$NOPY" "" "" nosuch);             [[ "$out" == *"unknown hook event"*"rc=0" ]] && ok "no python: unknown event is not blocking" || bad "nopy unknown" "$out"
 
+echo "session-context: no python — one line, the fallback is not extended (F-85)"
+nopyctx() { env -i HOME="$T" PATH="$NOPY" CLAUDE_PROJECT_DIR="$1" "$BASHBIN" "$H/karvey-session-context.sh" startup 2>&1; }
+mkdir -p "$T/nopy-docs/docs/spec/changes" "$T/nopy-spec/spec/changes"
+out=$(nopyctx "$T/nopy-docs"); [[ "$out" == *"spec/ folder detection and the settings-invalid check need python"* ]] && ok "no python, docs/spec project: the limitation line" || bad "nopy docs/spec line" "$out"
+[ "$(printf '%s\n' "$out" | grep -c 'need python')" = 1 ] && ok "no python: the limitation is one line" || bad "nopy one line" "$out"
+out=$(nopyctx "$T/nopy-spec"); [[ "$out" == *"need python"* && "$out" != *"team settings not set"* ]] && ok "no python, spec/ layout: the line, no detection (not extended)" || bad "nopy spec/ layout" "$out"
+out=$(nopyctx "$T/plain"); [ -z "$out" ] && ok "no python, outside a Karvey project → silent" || bad "nopy plain" "$out"
+out2=$(ctx "$T/nopy-docs"); [[ "$out2" != *"need python"* ]] && ok "with python: no limitation line" || bad "python no line" "$out2"
+
 echo "session-context: team.json inside the repo (BUG-19)"
 R="$T/myrepo"; mkdir -p "$R/docs/spec/agents/ceo" "$R/docs/spec/board"
 echo '{"ops_repo":"myrepo","roles":{"myrepo":"ceo"},"display_names":{"ceo":"agente-x"}}' > "$R/docs/spec/team.json"

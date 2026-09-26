@@ -10,6 +10,10 @@ docs/spec/project.json
 
 `docs/spec/` lives in the project's **main repo** (`spec_repo`). A project has **1 or more repos, never zero**. If there is a single repo, that one is the `spec_repo`. If there are several, the main/orchestrator repo is designated.
 
+A project may keep its spec folder at `spec/` instead of `docs/spec/`; the scripts and the session hook read both
+(`docs/spec/` wins when both exist). **Both that detection and the `settings invalid (…)` check need python 3**: the
+session hook's no-python path reads `docs/spec/` only and prints one line saying so (F-85; not extended by design).
+
 ## Schema
 
 Machine-readable contract: `${CLAUDE_PLUGIN_ROOT}/schemas/project.schema.json` (validated by
