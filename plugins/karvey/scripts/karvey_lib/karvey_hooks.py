@@ -2,7 +2,7 @@
 
     python3 karvey_hooks.py <event> [--only <guard>[,<guard>…]] [--force-enabled]
 
-Events: ``prompt`` (UserPromptSubmit) · ``pre-bash`` / ``pre-edit`` (PreToolUse) ·
+Events: ``prompt`` (UserPromptSubmit) · ``pre-bash`` / ``pre-edit`` / ``pre-agent`` (PreToolUse) ·
 ``post-edit`` (PostToolUse) · ``session`` (SessionStart, E1.F6.T1).
 
 One process per event: the payload is parsed once (``hookio``), the command is segmented once
@@ -14,6 +14,7 @@ Guard registry (order, fail mode — §3.2):
 
     pre-bash   protect-paths (closed) → prod-gate (closed) → git-flow (closed) → plan-gate (closed)
     pre-edit   protect-paths (closed) → plan-gate (closed)
+    pre-agent  subagent-prompt (open; BUG-25)
     post-edit  spec-write (open) → pending-sync (open)
     prompt     approval (open)
 
@@ -46,9 +47,9 @@ else:
     from . import HOOK_ALLOW, HOOK_BLOCK, atomicio, audit, defaults, guards, hookio, livestate, shellparse
     from . import project as pj
 
-EVENTS = ("prompt", "pre-bash", "pre-edit", "post-edit", "session")
-# hooks.json timeouts: prompt 5 s · pre-bash 15 s · pre-edit 5 s · post-edit 10 s · session 10 s
-BUDGET_S = {"prompt": 4.0, "pre-bash": 12.0, "pre-edit": 4.0, "post-edit": 8.0, "session": 8.0}
+EVENTS = ("prompt", "pre-bash", "pre-edit", "pre-agent", "post-edit", "session")
+# hooks.json timeouts: prompt 5 s · pre-bash 15 s · pre-edit 5 s · pre-agent 5 s · post-edit 10 s · session 10 s
+BUDGET_S = {"prompt": 4.0, "pre-bash": 12.0, "pre-edit": 4.0, "pre-agent": 4.0, "post-edit": 8.0, "session": 8.0}
 STDIN_MAX = 4 * 1024 * 1024
 SELFTEST_ENV = "KARVEY_HOOK_SELFTEST"
 SELFTEST_TOKEN = "KARVEY-SELFTEST-BLOCK"
@@ -201,6 +202,8 @@ REGISTRY = [
           enabled=guards.plan_gate_enabled),                            # E1.F5.T3
     Guard("trailer", ("pre-bash",), "open", False, wired=True, run=guards.trailer,
           enabled=guards.trailer_enabled),                              # wave2 E1.F5.T4
+    Guard("subagent-prompt", ("pre-agent",), "open", True, wired=True,
+          run=guards.subagent_prompt),                                  # BUG-25
     Guard("spec-write", ("post-edit",), "open", True, wired=True, run=spec_write),      # E1.F5.T7
     Guard("pending-sync", ("post-edit",), "open", True, wired=True, run=pending_sync),  # E1.F5.T7
     Guard("approval", ("prompt",), "open", True, wired=True, run=guards.approval_hook),  # E1.F5.T2
@@ -507,7 +510,8 @@ def settings_notice(start, team_root, mode, env):
 
     Only on ``startup``; only in a Karvey project found by walking up no further than the git
     top level; the settings count as present when the working copy **or** ``project.json`` on
-    ``origin/{integration}`` (local ref, no fetch) has them."""
+    ``origin/{integration}``, ``origin/{production}`` or ``origin/HEAD`` (local refs, no fetch) has
+    them."""
     if mode != "startup":
         return None
     kp = pj.find_root(start=start)  # REQ-W1-050: walk up no further than the git top level
@@ -524,14 +528,14 @@ def settings_notice(start, team_root, mode, env):
     else:
         missing, legacy = _settings_gaps(data)
     if missing:
-        _, integ, _ = pj.branch_flow(data or {})
-        for ref in [x for x in (integ, _origin_head(kp)) if x]:
+        # every reviewed line counts (BUG-23): a readable origin/{integration} without the settings
+        # does not end the lookup before origin/{production} and origin/HEAD
+        for ref in pj.settings_lines(data, kp):
             rdata, status = pj.read_reviewed_project_json(kp, production=ref)
             if status == "ok":
                 rmissing, rlegacy = _settings_gaps(rdata)
                 if not rmissing:
                     return None if not rlegacy else _legacy_line(rlegacy, " on origin/%s" % ref)
-                break
     if missing:
         return ("Karvey (info): team settings not set (%s). To set them, the user can run "
                 "`/karvey:karvey-init --settings` \u2014 settings only, it creates no change and nothing in any "
@@ -544,11 +548,6 @@ def settings_notice(start, team_root, mode, env):
 def _legacy_line(legacy, where):
     return ("Karvey (info): team settings in a legacy shape (%s)%s \u2014 run `karvey-state.py validate --fix` "
             "to migrate them." % (", ".join(legacy), where))
-
-
-def _origin_head(root):
-    rc, out = pj.git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], root)
-    return out[len("origin/"):] if rc == 0 and out.startswith("origin/") else None
 
 
 def session_text(mode, env):
@@ -671,6 +670,14 @@ def main(argv=None):
     try:
         data = sys.stdin.buffer.read(STDIN_MAX) if hasattr(sys.stdin, "buffer") else sys.stdin.read(STDIN_MAX)
         code = _dispatch_watched(watchdog, args.event, data, only, args.force_enabled)
+    except Exception as exc:  # BUG-34: an uncaught exception exits 1, which the harness treats as allow
+        if closed:
+            sys.stderr.write("[karvey] BLOCK %s: hook error before the guards ran: %s: %s (fail closed)\n"
+                             % (closed[0].name, type(exc).__name__, exc))
+            code = HOOK_BLOCK
+        else:
+            sys.stderr.write("[karvey] hook error (not blocking): %s: %s\n" % (type(exc).__name__, exc))
+            code = HOOK_ALLOW
     finally:
         watchdog.cancel()
     sys.stdout.flush()

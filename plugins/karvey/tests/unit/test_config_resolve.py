@@ -294,7 +294,7 @@ class OnlyProjectJson(Base):
 
     def test_instruction_file_ignored(self):
         self.project({"project": "x"})
-        (self.root / "CLAUDE.md").write_text("| Soporte | `spaces/AAAA-xSW3Rg` |\n", encoding="utf-8")
+        (self.root / "CLAUDE.md").write_text("| Soporte | `spaces/AAAA-example` |\n", encoding="utf-8")
         r = C.run_json("resolve", "notifications", "--root", self.root)[1]["result"]
         self.assertEqual((r["channel"], r["target"]), ("none", ""))
 
@@ -332,6 +332,43 @@ class OriginIntegrationFallback(Base):
         g.write(self.root, "docs/spec/project.json", {"branch_flow": {"integration": "main"},
                                                        "management": "markdown"})
         self.assertEqual(self.resolve()[1]["result"]["tool"], "markdown")
+
+
+class OriginProductionFallback(Base):
+    """BUG-23 / F-50: integration and production differ; the settings reached origin/{production} only.
+
+    A readable origin/{integration} without the settings must not end the lookup."""
+
+    def setUp(self):
+        super().setUp()
+        g.isolate_git()
+        g.init(self.root)
+        flow = {"branch_flow": {"integration": "dev", "production": "main"}}
+        g.write(self.root, "docs/spec/project.json", flow)
+        g.commit_all(self.root, "base")
+        g.run(["branch", "dev"], self.root)
+        g.write(self.root, "docs/spec/project.json",
+                dict(flow, notifications={"channel": "google-chat", "target": "spaces/AAA"},
+                     management={"tool": "jira", "location": "PAY"}))
+        g.commit_all(self.root, "settings")
+        bare = g.with_origin(self.root)
+        g.run(["push", "-q", str(bare), "dev"], self.root)
+        g.run(["fetch", "-q", "origin"], self.root)
+        g.run(["checkout", "-q", "dev"], self.root)  # the working copy predates the settings
+
+    def test_resolve_reads_production_after_integration(self):
+        r = self.resolve()[1]["result"]
+        self.assertEqual((r["tool"], r["location"], r["source"]), ("jira", "PAY", "origin/main"))
+
+    def test_session_notice_silent(self):
+        from karvey_lib import karvey_hooks as kh
+        self.assertIsNone(kh.settings_notice(str(self.root), None, "startup", {}))
+
+    def test_session_notice_when_no_line_has_them(self):
+        from karvey_lib import karvey_hooks as kh
+        g.run(["push", "-q", "-f", "origin", "dev:main"], self.root)
+        g.run(["fetch", "-q", "origin"], self.root)
+        self.assertIn("team settings not set", kh.settings_notice(str(self.root), None, "startup", {}) or "")
 
 
 class Outbox(Base):
@@ -426,6 +463,7 @@ EXPECTED_MANAGEMENT = {  # fixture → (tool, location, external, missing, warni
     "notifications-google_chat.json": ("markdown", None, False, [], "config.no_management"),
     "notifications-none.json": ("markdown", None, False, [], "config.no_management"),
     "trunk.json": ("markdown", None, False, [], "config.no_management"),
+    "repos-objects.json": ("markdown", None, False, [], "config.legacy_management"),  # BUG-33
 }
 
 # F-38: a legacy management.status_flow keyed by the logical states is proposed as statuses
@@ -567,6 +605,20 @@ class LegacyProjectFixtures(Base):
         for key in ("branch_flow.integration", "branch_flow.production"):
             code, out, _ = C.run("get", key, "--shell", "--root", self.root)
             self.assertEqual((code, out.strip()), (0, "main"))
+
+class NonStringSettings(Base):
+    """BUG-36: a list or an object where ``management.tool`` or ``notifications.channel`` expects a name
+    crashed resolve / notify-check / propose-settings with ``TypeError: unhashable type`` (exit 5)."""
+
+    def test_list_channel_and_tool_are_refused_not_crashes(self):
+        self.project({"notifications": {"channel": ["google-chat"]}, "management": {"tool": ["clickup"]}})
+        for argv in (("resolve", "management"), ("resolve", "notifications"), ("notify-check",),
+                     ("propose-settings",)):
+            with self.subTest(argv=argv):
+                code, env = C.run_json(*argv, "--root", self.root)
+                self.assertNotEqual(code, 5, env)
+                self.assertFalse([e for e in env["errors"] if e["code"] == "internal"], env["errors"])
+
 
 if __name__ == "__main__":
     unittest.main()

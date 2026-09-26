@@ -514,6 +514,10 @@
         },
         "session": {
           "type": "string"
+        },
+        "prompt_sha256": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{64})?$"
         }
       }
     },
@@ -521,7 +525,16 @@
       "type": "object",
       "properties": {
         "generated": {
-          "type": "boolean"
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "x-karvey-severity": "warning",
+              "x-karvey-note": "legacy date in generated: the state tool writes true (BUG-33)"
+            }
+          ]
         },
         "approved": {
           "type": [
@@ -595,6 +608,15 @@
         },
         "ref": {
           "type": "string"
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$",
+          "x-karvey-note": "the head commit the human approved (D-35)"
+        },
+        "expires_at": {
+          "type": "string",
+          "x-karvey-note": "the OK + 24 h (D-35)"
         },
         "evidence": {
           "$ref": "#/$defs/evidence"

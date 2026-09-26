@@ -335,6 +335,31 @@ class LegacyCatalogue(Base):
         self.fix(f)
         self.assertEqual(load(f), before)
 
+class NothingLostInMigration(Base):
+    """BUG-44: ``--fix`` kept only by/ref/evidence of a legacy transition (reason, approved_by, notes and commit
+    were dropped) and deleted ``gates_skipped`` with its approved_by/date/ref."""
+
+    def test_transition_keeps_every_other_field(self):
+        f = self.spec_file({"change_id": "feat-a", "phase": "architecture", "phase_history": [
+            {"phase": "requirements", "entered_at": "2026-09-01T10:00:00-03:00"},
+            {"from": "requirements", "to": "architecture", "at": "2026-09-02T10:00:00-03:00",
+             "reason": "approved in review", "approved_by": "Owner", "notes": "n", "commit": "abc123"}]})
+        self.fix(f)
+        e = self.read(f)["phase_history"][-1]
+        self.assertEqual(e["phase"], "architecture")
+        for k, v in (("reason", "approved in review"), ("approved_by", "Owner"), ("notes", "n"), ("commit", "abc123")):
+            self.assertEqual(e.get(k), v, k)
+
+    def test_gates_skipped_record_is_kept_in_the_reason(self):
+        f = self.spec_file({"change_id": "feat-a", "phase": "requirements",
+                            "gates_skipped": {"phases": ["mockup"], "reason": "no UI", "approved_by": "Owner",
+                                              "date": "2026-09-01", "ref": "D-04"}})
+        self.fix(f)
+        reason = self.read(f)["skipped"]["mockup"]
+        for part in ("no UI", "Owner", "D-04", "2026-09-01"):
+            self.assertIn(part, reason)
+
+
 if __name__ == "__main__":
     unittest.main()
 

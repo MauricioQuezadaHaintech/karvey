@@ -36,7 +36,7 @@ If `$ARGUMENTS` includes the change-id, use it. If not, generate it from the des
 
 ### Step 3 — Project config (project.json)
 
-**If `docs/spec/project.json` exists** (in the working copy or on `origin/{integration}`: `git show "origin/$I:docs/spec/project.json"` with `I` from Step 3.3): reuse it. Step 3 does **not** re-ask any of its fields; Step 3.2 may still ask the team settings when their blocks are missing.
+**If `docs/spec/project.json` exists** (in the working copy, or on `origin/{integration}` or `origin/{production}`: `git show "origin/$I:docs/spec/project.json"` with `I` from Step 3.3, then the same on the production branch): reuse it. Step 3 does **not** re-ask any of its fields; Step 3.2 may still ask the team settings when their blocks are missing.
 
 **If it does not exist:** create it, pre-populated from the grill synthesis; ask for or infer the rest. Schema: `../karvey/rules/project-config.md`.
 

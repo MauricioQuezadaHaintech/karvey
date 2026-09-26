@@ -17,11 +17,13 @@ Commands:
   generated <change> <phase>            approvals.<phase>.generated = true
   skip <change> <phase> --reason R      skipped[phase] = R (skippable phases only)
   reopen <change> <phase> --reason R [--ref]   backward edge for karvey-iterate (spec-gap)
-  outcome <change> <phase|gate> changes_requested --by --role --ref [--reason] [--kind plan-exception]
-  approve <change> <phase> --by --role human|ceo-delegate|auto --ref [--date] [--write-spec]
+  approve <change> <phase> --by --role human|ceo-delegate|auto --ref [--date] [--write-spec] [--sha REV]
+                                        [--manifest [--base REF] [--pr-body FILE]]  (prod: D-37)
                                         prod → the release ledger (D-03), never spec.json
-                                        unless --write-spec (archive branch, REQ-W1-032)
-  check-prod <change>                   the prod-gate's question (REQ-W1-023)
+                                        unless --write-spec (archive branch, REQ-W1-032);
+                                        bound to the approved head commit, valid 24 h (D-35)
+  check-prod <change> [--sha SHA]       the prod-gate's question (REQ-W1-023; D-34, D-35)
+  outcome <change> <phase|gate> changes_requested --by --role --ref [--reason] [--kind plan-exception]
   lane <change> set|raise|lower <lane> [--answers F] [--reason R] [--by --role human --ref]   (lower: the human)
   judge-run <change> <phase> --from FILE    judge_runs[] (model and intra_model required)
   lane-check <change> --base REF [--head REF] [--finding F-NN]   (lane.diff hits → changes/{id}/checks.jsonl)
@@ -433,7 +435,7 @@ def semantic_spec(data, strict, file):
             out.append(kl.issue("state.history_missing", "no phase_history (legacy file)", severity=sev,
                                 file=file, path="$.phase_history", expected="entries up to %r" % mapped))
     else:
-        seen = {e.get("phase") for e in entries}
+        seen = {e.get("phase") for e in entries if isinstance(e.get("phase"), str)}  # BUG-35
         seen |= {map_phase(e.get("to"))[0] for e in hist if _is_legacy_transition(e)}
         seen |= {map_phase(e.get("from"))[0] for e in hist if _is_legacy_transition(e)}
         for p in machine()["phases"][:idx + 1]:
@@ -600,9 +602,9 @@ def _fix_history(hist, accept_proposed, notes):
             else:
                 notes.append("phase_history: no open %r entry for the transition to %r" % (e.get("from"), to))
             new = {"phase": to, "entered_at": at}
-            for k in ("by", "ref", "evidence"):
-                if k in e:
-                    new[k] = e[k]
+            for k, v in e.items():  # BUG-44: every other field of the transition is kept
+                if k not in ("from", "to", "at", "phase", "entered_at", "exited_at"):
+                    new[k] = v
             out.append(new)
             notes.append("phase_history: {from: %r, to: %r} → {phase: %r, entered_at}" % (e.get("from"),
                                                                                          e.get("to"), to))
@@ -689,6 +691,10 @@ def fix_spec(data, accept_proposed=False):
     if isinstance(gs, dict):
         phases = gs.get("phases") if isinstance(gs.get("phases"), list) else []
         reason = gs.get("reason") if isinstance(gs.get("reason"), str) and gs["reason"].strip() else SKIP_REASON_NONE
+        record = ", ".join("%s %s" % (k, gs[k]) for k in sorted(gs)
+                           if k not in ("phases", "reason") and isinstance(gs[k], (str, int, float)))
+        if record:  # BUG-44: who/when/ref of the legacy skip survive in the reason
+            reason = "%s (%s)" % (reason, record)
         rest = []
         for ph in phases:
             name = _norm_phase_name(ph)
@@ -745,7 +751,7 @@ def fix_project(data, accept_proposed=False):
     new = copy.deepcopy(data)
     notes = []
     nt = new.get("notifications")
-    if isinstance(nt, dict) and nt.get("channel") in pj.LEGACY_CHANNELS:
+    if isinstance(nt, dict) and isinstance(nt.get("channel"), str) and nt.get("channel") in pj.LEGACY_CHANNELS:
         notes.append("notifications.channel %r → %r" % (nt["channel"], pj.LEGACY_CHANNELS[nt["channel"]]))
         nt["channel"] = pj.LEGACY_CHANNELS[nt["channel"]]
     if "management" in new:
@@ -1153,7 +1159,9 @@ def consume_on_close(root, change, data, closing):
                 entered = parse_dt(e.get("entered_at"))
                 break
         m, status = approval.read_marker(root, change)
-        if change not in consumed and status == "ok" and m.get("consumed_at") is None:
+        # BUG-43: only a phase that has an approval consumes the change's marker, never a prod one
+        if key and change not in consumed and status == "ok" and m.get("consumed_at") is None \
+                and m.get("kind") != "prod":
             created = parse_dt(m.get("created_at"))
             if created is not None and (entered is None or created >= entered):
                 if approval.consume(root, change):
@@ -1401,6 +1409,8 @@ def cmd_reopen(args, root):
     if not reason:
         raise Refused("a reopen needs a non-empty --reason", code="state.reason")
     now = now_iso()
+    ledger, lstatus = approval.read_ledger(root, args.change) if approval.valid_scope(args.change) else (None, "")
+    ledger_prod = ledger.get("prod") if lstatus == "ok" and isinstance(ledger.get("prod"), dict) else None
 
     def mutate(data):
         cur = _normalise_owned(data)
@@ -1417,6 +1427,14 @@ def cmd_reopen(args, root):
             if key and key != "prod" and isinstance(ap.get(key), dict):
                 superseded[key] = copy.deepcopy(ap[key])
                 ap[key] = {"generated": ap[key].get("generated", False) is True, "approved": False}
+        if ledger_prod is not None:  # D-36: the release-ledger prod approval is superseded too
+            superseded["prod"] = copy.deepcopy(ledger_prod)
+            # BUG-49: the ledger first, under the change lock; if it fails, spec.json is not reopened
+            try:
+                approval.supersede_prod(root, args.change, now, "reopen %s: %s" % (args.phase, reason), args.ref)
+            except (approval.ApprovalError, atomicio.AtomicIOError, OSError) as exc:
+                raise Refused("cannot supersede the release-ledger prod approval (%s); nothing reopened" % exc,
+                              code="state.ledger")
         rh = data.get("revision_history")
         if not isinstance(rh, list):
             rh = []
@@ -1439,6 +1457,17 @@ def cmd_reopen(args, root):
 
 # --------------------------------------------------------------------------- approvals (§1.2, D-03, D-10)
 PROD_REF = re.compile(r"^(D-\d+|https://\S+)$")
+SHA_RE = re.compile(r"^[0-9a-f]{40}([0-9a-f]{24})?$")
+
+
+def resolve_commit(root, rev):
+    """The full SHA of ``rev`` in the repository of ``root`` (D-35), or None."""
+    if not isinstance(rev, str) or not rev.strip() or rev.strip().startswith("-"):
+        return None
+    rc, out = pj.git(["rev-parse", "--verify", "--quiet", rev.strip() + "^{commit}"], root)
+    return out if rc == 0 and SHA_RE.match(out or "") else None
+
+
 ROLES = ("human", "ceo-delegate", "auto")
 OUTCOMES = ("changes_requested",)
 GATES = ("what", "how", "release")
@@ -1478,12 +1507,16 @@ def _require(args, fields):
                                                               ", ".join(missing)), code="state.fields")
 
 
-def check_prod(root, change):
-    """The prod-gate's question, in-process (§1.2 check-prod). Raises :class:`NotFound`."""
+def check_prod(root, change, sha=None, now=None):
+    """The prod-gate's question, in-process (§1.2 check-prod). Raises :class:`NotFound`.
+
+    A ledger approval counts only when its evidence names this change's marker and the approval
+    hook's audit line of that marker exists (D-34), it names the approved head commit and has not
+    expired (D-35), and — when ``sha`` is given — ``sha`` is that commit."""
     path, loaded = load_change(root, change)
     name = rel(root, path)
     res = {"ok": False, "change": change, "by": None, "role": None, "ref": None, "date": None,
-           "source": None, "missing": []}
+           "source": None, "missing": [], "head_sha": None, "expires_at": None}
     errs = [i for i in validate_data(loaded.data, "spec", False, name) if i["severity"] == "error"]
     if errs:
         res["missing"].append("valid spec.json")
@@ -1498,7 +1531,9 @@ def check_prod(root, change):
         return res
     if prod:
         res.update({"by": prod.get("by"), "role": prod.get("role"), "ref": prod.get("ref"),
-                    "date": prod.get("date"), "source": "ledger"})
+                    "date": prod.get("date"), "source": "ledger", "head_sha": prod.get("head_sha"),
+                    "expires_at": prod.get("expires_at")})
+        reasons = []
         if not (isinstance(prod.get("by"), str) and prod["by"].strip()):
             res["missing"].append("by")
         if prod.get("role") != "human":
@@ -1506,11 +1541,31 @@ def check_prod(root, change):
         if not (isinstance(prod.get("ref"), str) and PROD_REF.match(prod["ref"])):
             res["missing"].append("ref")
         ev = prod.get("evidence") if isinstance(prod.get("evidence"), dict) else {}
-        if not (isinstance(ev.get("marker"), str) and ev["marker"].startswith("approvals/")):
+        if ev.get("marker") != approval.marker_rel(change):
             res["missing"].append("evidence")
+        elif not approval.audit_record_of(root, change, ev):  # D-34
+            res["missing"].append("audit")
+            reasons.append("no audit record of the approval hook matches its marker (prompt hash, session, time): "
+                           "the approval was not given through the human's own message")
+        head = prod.get("head_sha")
+        if not (isinstance(head, str) and SHA_RE.match(head)):  # D-35
+            res["missing"].append("sha")
+            reasons.append("it names no approved commit")
+        elif sha is not None and sha != head:
+            res["missing"].append("sha")
+            reasons.append("the released commit %s is not the approved commit %s; a new commit needs a new OK"
+                           % (str(sha)[:12], head[:12]))
+        exp = approval.parse_dt(prod.get("expires_at"))
+        if exp is None:
+            res["missing"].append("expired")
+            reasons.append("it has no expiry")
+        elif (now or approval.now_dt()) > exp:
+            res["missing"].append("expired")
+            reasons.append("it expired at %s (valid %d h after the OK); the human approves again"
+                           % (prod["expires_at"], approval.PROD_VALID_H))
         res["ok"] = not res["missing"]
         if not res["ok"]:
-            res["reason"] = "release ledger prod approval incomplete"
+            res["reason"] = "release ledger prod approval incomplete" + (": " + "; ".join(reasons) if reasons else "")
         return res
     sp = (loaded.data.get("approvals") or {}).get("prod") if isinstance(loaded.data.get("approvals"), dict) else None
     if isinstance(sp, dict) and isinstance(sp.get("by"), str) and sp["by"].strip():
@@ -1524,7 +1579,10 @@ def check_prod(root, change):
 
 
 def cmd_check_prod(args, root):
-    res = check_prod(root, args.change)
+    sha = None
+    if args.sha:
+        sha = resolve_commit(root, args.sha) or args.sha.strip()
+    res = check_prod(root, args.change, sha=sha)
     human = ("prod approval OK: %s by %s ref %s (%s)" % (args.change, res["by"], res["ref"], res["source"])
              if res["ok"] else "prod approval MISSING for %s: %s (%s)" % (
                  args.change, ", ".join(res["missing"]), res.get("reason", "")))
@@ -1535,7 +1593,8 @@ def _approve_prod_write_spec(args, root):
     ledger, status = approval.read_ledger(root, args.change)
     prod = ledger.get("prod") if ledger and isinstance(ledger.get("prod"), dict) else None
     if prod:
-        rec = {k: prod[k] for k in ("by", "role", "date", "ref", "evidence") if k in prod}
+        rec = {k: prod[k] for k in ("by", "role", "date", "ref", "evidence", "head_sha", "expires_at")
+               if k in prod}
         source = "ledger"
     else:
         _require(args, ("by", "role", "ref"))
@@ -1561,7 +1620,7 @@ def _approve_prod_write_spec(args, root):
         args.change, source, rec.get("ref"))
 
 
-def _approve_prod_manifest(args, root, by, date, ref):
+def _approve_prod_manifest(args, root, by, date, ref, head_sha):
     """``approve <change> prod --manifest``: the same human prod record for every change of the release
     manifest (REQ-W2-047). Each change needs a valid prod-kind marker (its own scope or ``_project``); the
     markers are consumed once, after every ledger write."""
@@ -1570,7 +1629,7 @@ def _approve_prod_manifest(args, root, by, date, ref):
     _, _, production = pj.branch_flow(project or {})
     base = args.base or "origin/%s" % (production or "main")
     try:
-        man = mf.release_manifest(root, base, "HEAD")
+        man = mf.release_manifest(root, base, head_sha)
     except mf.ManifestError as exc:
         raise Refused("cannot compute the release manifest (%s)" % exc, code="state.manifest")
     ids = [c["id"] for c in man["changes"]]
@@ -1590,8 +1649,7 @@ def _approve_prod_manifest(args, root, by, date, ref):
     written = []
     for cid in ids:
         marker, scope = markers[cid]
-        approval.record_prod(root, cid, {"by": by, "role": "human", "date": date, "ref": ref,
-                                         "evidence": approval.evidence(marker, scope)})
+        approval.record_prod(root, cid, approval.prod_record(marker, scope, by, ref, date, head_sha))  # D-34, D-35
         written.append(cid)
     consumed, warnings = [], []
     by_scope = {s: m for m, s in markers.values()}
@@ -1615,6 +1673,8 @@ def cmd_approve(args, root):
         raise Refused("unknown phase %r" % args.phase, code="state.unknown_phase")
     if args.write_spec and key != "prod":
         raise Usage("--write-spec is only for prod")
+    if args.sha and key != "prod":
+        raise Usage("--sha is only for prod")
     change_spec_path(root, args.change)  # exit 4 if the change does not exist
     if key == "prod" and args.write_spec:
         return _approve_prod_write_spec(args, root)
@@ -1630,8 +1690,13 @@ def cmd_approve(args, root):
             raise Refused("production approval is never delegated", code="state.delegated")
         if not PROD_REF.match(ref):
             raise Refused("prod --ref must be a D-NN or a PR approval URL (got %r)" % ref, code="state.ref")
+        head_sha = resolve_commit(root, args.sha or "HEAD")  # D-35
+        if head_sha is None:
+            raise Refused("cannot bind the production approval to a commit: %r is not a commit of this repository "
+                          "(D-35; pass --sha with the head the human approved)" % (args.sha or "HEAD"),
+                          code="state.prod_sha")
         if getattr(args, "manifest", False):
-            return _approve_prod_manifest(args, root, by, date, ref)
+            return _approve_prod_manifest(args, root, by, date, ref, head_sha)
         marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root),
                                                      project_scope=False)  # BUG-41
         if marker is None:
@@ -1639,12 +1704,13 @@ def cmd_approve(args, root):
                           "contain an approval word and a production word (D-10); none is valid for %s (%s)"
                           % (args.change, ", ".join("%s: %s" % kv for kv in sorted(reasons.items()))),
                           code="state.no_prod_marker")
-        rec = {"by": by, "role": "human", "date": date, "ref": ref, "evidence": approval.evidence(marker, scope)}
+        rec = approval.prod_record(marker, scope, by, ref, date, head_sha)
         approval.record_prod(root, args.change, rec)
         approval.consume(root, scope, created_at=marker.get("created_at"))  # BUG-41: one approval, one change
         res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
-        return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s); spec.json " \
-                                        "untouched (D-03)" % (args.change, ref)
+        return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s, commit %s, " \
+                                        "expires %s); spec.json untouched (D-03)" % (args.change, ref, head_sha[:12],
+                                                                                     rec["expires_at"])
     refuse_judge_blocking(root, args.change, [key])
     marker, scope, _ = approval.find_valid(root, args.change, kinds=("plan", "prod"), ttl_min=reviewed_ttl(root))
     _, loaded = load_change(root, args.change)
@@ -2042,6 +2108,13 @@ def cmd_approve_gate(args, root):
                                  path="$.approvals"))
     ev = approval.evidence(marker, scope)
     write_prod = prod_in_gate and pmarker is not None and args.role == "human" and bool(PROD_REF.match(ref))
+    head_sha = None
+    if write_prod:  # D-35: the release gate binds prod to the approved head commit, like approve prod
+        head_sha = resolve_commit(root, getattr(args, "sha", None) or "HEAD")
+        if head_sha is None:
+            raise Refused("cannot bind the production approval to a commit: %r is not a commit of this repository "
+                          "(D-35; pass --sha with the head the human approved)" % (args.sha or "HEAD"),
+                          code="state.prod_sha")
     res_prod = "not in this gate"
     if prod_in_gate:
         res_prod = "recorded in the release ledger" if write_prod else \
@@ -2059,8 +2132,8 @@ def cmd_approve_gate(args, root):
 
     path, _, _ = transact(root, args.change, mutate)
     if write_prod:  # after the spec.json write: the ledger never runs ahead of the phases it closes
-        approval.record_prod(root, args.change, {"by": by, "role": "human", "date": date, "ref": ref,
-                                                 "evidence": approval.evidence(pmarker, pscope)})
+        approval.record_prod(root, args.change,
+                             approval.prod_record(pmarker, pscope, by, ref, date, head_sha))  # D-34, D-35
         approval.consume(root, pscope, created_at=pmarker.get("created_at"))  # BUG-70: one approval, one change
     res = {"change": args.change, "gate": args.gate, "approved": covered, "already_approved": already,
            "skipped": passed, "prod": res_prod, "file": rel(root, path)}
@@ -2201,6 +2274,7 @@ def build_parser():
     ag.add_argument("--role")
     ag.add_argument("--ref")
     ag.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
+    ag.add_argument("--sha", help="release gate with prod: the head commit the human approved (default HEAD; D-35)")
     gm = sub.add_parser("gate", parents=[common], help="gate mode and whether a phase closes its gate")
     gm.add_argument("change")
     gm.add_argument("phase")
@@ -2246,8 +2320,10 @@ def build_parser():
     dr.add_argument("--rollback", help="the rollback taken, if any")
     dr.add_argument("--evidence", help="path of the deploy evidence (e.g. deploy_evidence.md)")
     dr.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
+    apv.add_argument("--sha", help="prod only: the head commit the human approved (default HEAD; D-35)")
     cp = sub.add_parser("check-prod", parents=[common], help="is a human prod approval recorded? (prod-gate)")
     cp.add_argument("change")
+    cp.add_argument("--sha", help="the commit being released; it must be the approved one (D-35)")
     return p
 
 

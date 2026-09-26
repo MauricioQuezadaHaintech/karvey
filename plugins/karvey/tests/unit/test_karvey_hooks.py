@@ -25,10 +25,11 @@ class Registry(unittest.TestCase):
         self.assertEqual(names("pre-edit"), ["protect-paths", "plan-gate"])
         self.assertEqual(names("post-edit"), ["spec-write", "pending-sync"])
         self.assertEqual(names("prompt"), ["approval"])
+        self.assertEqual(names("pre-agent"), ["subagent-prompt"])  # BUG-25
         fail = {g.name: g.fail for g in kh.REGISTRY}
         self.assertEqual(fail, {"selftest": "closed", "protect-paths": "closed", "prod-gate": "closed",
                                 "git-flow": "closed", "plan-gate": "closed", "trailer": "open", "spec-write": "open",
-                                "pending-sync": "open", "approval": "open"})
+                                "pending-sync": "open", "approval": "open", "subagent-prompt": "open"})
         default = {g.name: g.default_on for g in kh.REGISTRY}
         self.assertTrue(default["prod-gate"])        # D-02
         self.assertFalse(default["git-flow"])        # opt-in
@@ -36,7 +37,7 @@ class Registry(unittest.TestCase):
         self.assertFalse(default["trailer"])         # opt-in, fails open (wave2 §1.10)
 
     def test_wired_guards(self):
-        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths", "prod-gate", "git-flow", "plan-gate", "trailer", "spec-write", "pending-sync", "approval"])
+        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths", "prod-gate", "git-flow", "plan-gate", "trailer", "subagent-prompt", "spec-write", "pending-sync", "approval"])
 
     def test_only_filter(self):
         self.assertEqual([g.name for g in kh.guards_for("pre-bash", ["git-flow"])], ["git-flow"])
@@ -53,7 +54,7 @@ class Registry(unittest.TestCase):
                         ev = cmd.rsplit(" ", 1)[-1]
                         seen.add(ev)
                         self.assertLess(kh.BUDGET_S[ev], h["timeout"], ev)
-        self.assertEqual(seen, {"prompt", "pre-bash", "pre-edit", "post-edit"})
+        self.assertEqual(seen, {"prompt", "pre-bash", "pre-edit", "pre-agent", "post-edit"})
 
 
 class Dispatch(unittest.TestCase):
@@ -98,6 +99,22 @@ class Dispatch(unittest.TestCase):
         finally:
             kh.REGISTRY.remove(boom)
             kh.REGISTRY.remove(soft)
+
+    def test_crash_outside_a_guard_applies_the_fail_mode(self):
+        """BUG-34: an exception before any guard runs (e.g. ``os.getcwd()`` in a deleted directory) made the
+        interpreter exit 1, which the harness does not treat as a block: prod-gate failed open."""
+        import os
+        from unittest import mock
+        p = {"tool_name": "Bash", "tool_input": {"command": "git push origin master"}}
+        with mock.patch.object(os, "getcwd", side_effect=FileNotFoundError("deleted cwd")):
+            code, _, err = run("pre-bash", p, env={"PWD": "", "CLAUDE_PROJECT_DIR": ""})
+        self.assertIn(code, (0, 2))  # evaluated, never an uncaught exception
+        with mock.patch.object(kh, "dispatch", side_effect=RuntimeError("boom")):
+            with mock.patch("sys.stdin", io.StringIO(json.dumps(p))), mock.patch("sys.stderr", io.StringIO()) as e:
+                self.assertEqual(kh.main(["pre-bash"]), 2)
+                self.assertIn("hook error", e.getvalue())
+            with mock.patch("sys.stdin", io.StringIO("{}")), mock.patch("sys.stderr", io.StringIO()):
+                self.assertEqual(kh.main(["prompt"]), 0)
 
     def test_main_unknown_event_and_session_are_not_blocking(self):
         self.assertEqual(kh.main(["nosuch"]), 0)

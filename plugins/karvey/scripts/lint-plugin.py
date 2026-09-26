@@ -425,12 +425,17 @@ def l05_phase_literals(ctx):
 OWNED_RES = (
     re.compile(r"\bphase\b[`\"']?\s*(?::|=(?!=))\s*[`\"']?[A-Za-z{]"),
     re.compile(r"\bapprovals\.[\w]+\.(approved|generated|by|role|date|ref)\b[`\"']?\s*(?::|=(?!=))"),
+    # BUG-46: "set the phase to X", "change approvals.qa.approved to true"
+    re.compile(r"\b(set|sets|change|changes|move|moves|edit|edits)\b[^.;]{0,20}\bphase\b[`\"']?\s+to\s+[`\"']?[a-z]",
+               re.I),
+    re.compile(r"\bapprovals\.[\w]+\.(approved|generated|by|role|date|ref)\b[`\"']?\s+to\s+\S", re.I),
     re.compile(r"[\"']approvals[\"']\s*:\s*\{"),
     re.compile(r"\bskipped\b[`\"']?\s*(?::|=(?!=))\s*[{`\"']"),
     re.compile(r"\bphase_history\b"),
 )
 WRITE_VERB_RE = re.compile(r"\b(set|sets|update|updates|write|writes|mark|marks|record|records|flip|put|"
-                           r"add|append|appends|on approval|becomes)\b|→", re.I)
+                           r"add|append|appends|on approval|becomes|jq|mv)\b|\b(change|edit)\b(?!-)|"
+                           r"\bsed\s+-i|→", re.I)  # BUG-46: change/edit (the verbs), jq, sed -i, mv
 PRECONDITION_RE = re.compile(r"^\s*(?:[-*]\s*(?:\[[ x]\]\s*)?)?\**(verify|check|requires?|must be)\b", re.I)
 
 

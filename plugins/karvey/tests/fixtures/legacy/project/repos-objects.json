@@ -1,0 +1,25 @@
+{
+  "project": "…",
+  "git_platform": "azure_devops",
+  "repos": [
+    {
+      "name": "repo-a",
+      "url": "…",
+      "stack": "vue",
+      "layer": "frontend"
+    },
+    {
+      "name": "repo-b",
+      "url": "…",
+      "stack": "python",
+      "layer": "backend"
+    }
+  ],
+  "spec_repo": "repo-a",
+  "branch_flow": {
+    "integration": "dev",
+    "production": "master",
+    "feature_prefix": "feature/"
+  },
+  "management": "markdown"
+}

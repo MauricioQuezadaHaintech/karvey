@@ -105,7 +105,7 @@ gh pr checks "{pr}"                  # wait: green before the merge
 gh pr merge "{pr}" --merge           # ⇒ DEV pipeline (Azure Repos: az repos pr update --id "{pr}" --status completed)
 ```
 
-**2.6 — DEV post-deploy verification (Step 2-bis).** Wait for the green pipeline and run the post-deploy verification over the real DEV runtime with `--env dev`. No advance to prod unless it is `pass` (or `not-evaluated`, stated as such, when DEV has no contract); a `regression` → the rollback path of Step 2-bis. With a UI, DEV must show `-dev` of the version just released; anything else is a finding.
+**2.6 — DEV post-deploy verification (Step 2-bis).** Wait for the green pipeline and run the post-deploy verification over the real DEV runtime with `--env dev`. No advance to prod unless it is `pass` (or `not-evaluated`, stated as such, when DEV has no contract); a `regression` → the rollback path of Step 2-bis. With a UI, check the visible version against the commit DEV actually runs: take the deployed commit (the source commit of the green DEV run; the one merged in 2.5 if the run does not name it) and read its version file with `git show "<deployed-sha>:<version file>"` — not the tip of `$I`, which another change may have bumped since. The check passes when DEV shows that version with an unmistakable DEV mark, in any format (`DEV 2.10.4`, `2.10.4-dev.42+74571ae`, a `DEV` badge beside `2.10.4`). Another version, or no DEV mark, is a finding; a UI with no visible version at all is the 2.4 recommendation, not a finding and not a blocker.
 
 **2.7 — Pull production and draft the PR body.** The production PR carries **every change of the release manifest** (REQ-W2-045, 047), not only this one. Compute the manifest of `origin/$P..{head}` (`{head}` = `$I`, or the feature branch in trunk flow) and write the body to a file: one line per change with its id, version, lane and QA state, the unmapped commits (if any) named, and a line for the production OK, which is filled in 2.9.
 ```bash
@@ -133,7 +133,7 @@ gh pr create --base "$P" --head "{head}" --title "[Deploy] {version}" --body-fil
 az repos pr create --source-branch "{head}" --target-branch "$P" --title "[Deploy] {version}" \
   --description "$(cat "$PR_BODY")"
 ```
-CI, required reviewers and branch policies run on this PR's merge commit and can fail for reasons Step 0 could not see. CI, required reviewers and branch policies run on this PR's merge commit and can fail for reasons Step 0 could not see. Wait for them to settle:
+CI, required reviewers and branch policies run on this PR's merge commit and can fail for reasons Step 0 could not see. Wait for them to settle:
 ```bash
 gh pr checks "{pr}"                            # GitHub
 az repos pr policy list --id "{pr}" -o table   # Azure Repos
@@ -148,16 +148,23 @@ az repos pr policy list --id "{pr}" -o table   # Azure Repos
 
 Bypassing a policy is the human's call and responsibility — never the agent's initiative to unblock itself.
 
-**2.9 — Prod OK from the human ⇒ merge ⇒ PROD pipeline.** Ask with `AskUserQuestion`; the human answers in their own words, with an approval word **and** a production word (D-10), so the approval hook records a prod marker. The production OK lives, in this order (REQ-W2-052):
-1. **At deploy — in the PR.** Reserve the decision number with `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next D` and put its text (who, when, the words verbatim) in the PR body or the PR approval. Nothing is committed on the integration or production branch for it.
-2. **At deploy — in the release ledger**, for every change of the manifest (`--manifest` records the same record for each one with the one prod marker):
+**2.9 — Prod OK from the human ⇒ merge ⇒ PROD pipeline.** First read the PR head SHA and show it in the question:
+```bash
+gh pr view "{pr}" --json headRefOid -q .headRefOid                                    # GitHub
+az repos pr show --id "{pr}" --query lastMergeSourceCommit.commitId -o tsv            # Azure Repos
+```
+Ask with `AskUserQuestion`, naming every change of the manifest and the head SHA; the human answers in their own words, with an approval word **and** a production word (D-10), so the approval hook records a prod marker and its audit line (D-34). The production OK lives, in this order (REQ-W2-052):
+1. **At deploy — in the PR.** Reserve the decision number with `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next D` and put its text (who, when, the words verbatim, the head SHA) in the PR body or the PR approval. Nothing is committed on the integration or production branch for it.
+2. **At deploy — in the release ledger** — never in a commit on the integration branch. On the release-manifest path, one OK covers every change the manifest and the PR body list (D-37): `--manifest` consumes the one prod marker once and records the same approval, bound to the head SHA, for each of them. Every other path is one OK per change:
    ```bash
-   python3 "$S" approve "{change-id}" prod --by "{human name}" --role human --ref "D-NN" --manifest
-   python3 "$S" check-prod "{change-id}"      # what the prod-gate reads
+   python3 "$S" approve "{change-id}" prod --by "{human name}" --role human --ref "D-NN" --sha "{pr head}" \
+     --manifest --pr-body "$PR_BODY"
+   python3 "$S" check-prod "{change-id}" --sha "{pr head}"   # what the prod-gate reads
    ```
+   Refused (no prod marker, no audit line, missing `--by`/`--ref`/`--sha`, a listed change the manifest does not carry) → do not merge; ask the human again. The prod approval is never delegated (`role` is always `human`).
+   The approval covers **that SHA only, for 24 h** (D-35): a new push to the PR, or a merge the next day, needs a new OK. A `reopen` of any change of the manifest supersedes its approval (D-36).
 3. **At archive — in the decision log.** `karvey-archive` writes the `D-NN` into `docs/spec/decisions.md` on `chore/archive-{change-id}` and `approve … prod --write-spec` copies it into `spec.json:approvals.prod` (D-03).
-   Refused (no prod marker, missing `--by`/`--ref`) → do not merge; ask the human again. The prod approval is never delegated (`role` is always `human`).
-3. Merge (the prod-gate hook lets it through only with the ledger entry):
+4. Merge (the prod-gate hook lets it through only with the ledger entry for the PR's current head), as its own command — not chained after a push or a branch move:
    ```bash
    gh pr merge "{pr}" --merge                          # GitHub      ⇒ PROD pipeline
    az repos pr update --id "{pr}" --status completed   # Azure Repos ⇒ PROD pipeline

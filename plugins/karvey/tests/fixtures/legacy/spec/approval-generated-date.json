@@ -1,0 +1,14 @@
+{
+  "change_id": "fixture-58",
+  "phase": "impl",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "deploy": {
+      "generated": "2026-08-05",
+      "approved": false
+    }
+  }
+}

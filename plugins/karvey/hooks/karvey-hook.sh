@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Karvey hook dispatcher (architecture §1.3, wave1-hardening). bash 3.2 compatible.
 #
-#   karvey-hook.sh <prompt|pre-bash|pre-edit|post-edit|session> [--only <guard>] [--force-enabled]
+#   karvey-hook.sh <prompt|pre-bash|pre-edit|pre-agent|post-edit|session> [--only <guard>] [--force-enabled]
 #
 # 1. Finds the interpreter: python3, then python if it is major version 3, then `py -3` (Windows).
 # 2. With one: exec python "$ROOT/scripts/karvey_lib/karvey_hooks.py" <event> "$@" (stdin passes through).
@@ -41,6 +41,7 @@ guards_for() {
   case "$1" in
     pre-bash)  echo "selftest protect-paths prod-gate git-flow plan-gate" ;;
     pre-edit)  echo "selftest protect-paths plan-gate" ;;
+    pre-agent) echo "subagent-prompt" ;;
     post-edit) echo "spec-write pending-sync" ;;
     prompt)    echo "approval" ;;
     session)   echo "" ;;
@@ -71,6 +72,9 @@ json_field() {
 
 # protect-paths without python (§3.2): block any Bash command or Edit path naming the Karvey state
 # dirs or the compat marker; an Edit under the plugin root.
+nopy_protect_block() {
+  echo "[karvey] BLOCK protect-paths: approval comes only from the human's message (D-01) (no python)" >&2
+}
 nopy_protect_paths() {
   local subject needles n base
   if [ "$EVENT" = "pre-edit" ]; then subject="$(json_field file_path)"; [ -z "$subject" ] && subject="$(json_field notebook_path)"
@@ -84,6 +88,25 @@ nopy_protect_paths() {
       return 2 ;;
     esac
   done
+  # BUG-27: a glob or a variable that could expand to a protected directory name ("kar?ey", ".git/*/ledger",
+  # ".git/$D/…"); a glob word needs 2+ literal characters, so a plain `*` is not enough
+  if [ "$EVENT" = "pre-bash" ]; then
+    local w lit hit=0
+    set -f  # the words are patterns here, never expanded against the disk
+    for w in $(printf '%s' "$subject" | tr ';&|<>()"'"'"'/' '          '); do
+      case "$w" in *[*?[]*) ;; *) continue ;; esac
+      lit="$(printf '%s' "$w" | tr -d '*?[]')"
+      [ "${#lit}" -lt 2 ] && continue
+      case karvey in $w) hit=1 ;; esac
+      case ledger in $w) hit=1 ;; esac
+      case approvals in $w) hit=1 ;; esac
+    done
+    set +f
+    if [ "$hit" = 1 ]; then nopy_protect_block; return 2; fi
+    if printf '%s' "$subject" | grep -Eq '\.git/(\$|\*/|\?)|/(\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?|\*)/(ledger|approvals)(/|$| )'; then
+      nopy_protect_block; return 2
+    fi
+  fi
   if [ "$EVENT" = "pre-edit" ]; then
     for base in "$ROOT" "${CLAUDE_PLUGIN_ROOT:-}"; do
       [ -z "$base" ] && continue
@@ -155,8 +178,8 @@ nopy_git_flow() {
 }
 
 # prod-gate without python (§3.2): fail closed. Any PR/MR merge is blocked (its base cannot be
-# resolved); a git push is blocked when it names master/main/the production branch or has no
-# refspec. Off only if prod_gate_hook is false in the working copy AND on origin/<production>.
+# resolved); a git push is blocked when it names master/main/the production branch, has no
+# refspec, or has a wildcard or matching (`:`) refspec (BUG-47). Off only if prod_gate_hook is false in the working copy AND on origin/<production>.
 nopy_prod_gate() {
   local root cmd pj prod kind rest n w
   root="$(karvey_root)"; [ -z "$root" ] && return 0
@@ -181,7 +204,14 @@ nopy_prod_gate() {
     return 2
   fi
   rest="${cmd#*push}"; rest="${rest%%[;&|]*}"; n=0
+  # BUG-47: a wildcard or a matching (`:`) refspec can reach production without naming it
+  if printf '%s' "$rest" | grep -Eq '\*|(^|[[:space:]])["'"'"']?\+?:["'"'"']?([[:space:]]|$)'; then
+    echo "[karvey] prod-gate BLOCK change=? missing=python reason=cannot verify the production approval: python3 not available (wildcard or matching refspec)" >&2
+    return 2
+  fi
+  set -f
   for w in $rest; do case "$w" in -*) ;; *) n=$((n+1)) ;; esac; done
+  set +f
   if [ "$n" -lt 2 ]; then
     echo "[karvey] prod-gate BLOCK change=? missing=python reason=cannot verify the production approval: python3 not available (push without a refspec)" >&2
     return 2

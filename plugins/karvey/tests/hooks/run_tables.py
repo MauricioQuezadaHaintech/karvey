@@ -8,10 +8,14 @@ on stdin, inside a throw-away world built for that case:
 
 - ``given.repo``: a ``git init`` repository with a **bare origin** (so ``origin/*`` refs are real,
   ``origin/HEAD`` included), ``docs/spec/project.json``, change ``spec.json`` files, extra files,
-  branches pushed to the origin, and the checked-out branch;
+  branches pushed to the origin, the checked-out branch and ``branch_commits`` (``[{"files", "message"}]``,
+  committed on that branch before the ledger is written);
 - ``given.ledger`` / ``given.marker``: machine-local state written under
   ``<git-common-dir>/karvey/`` (a marker may be ``{"@valid": "plan|prod", "age_min": N}``, a raw
-  object or ``""`` for an empty ``touch`` file);
+  object or ``""`` for an empty ``touch`` file; a ledger entry may be ``{"@approved": {"by", "ref",
+  "sha"?, "age_h"?}}``: a prod marker written through the approval hook's code, so its audit line
+  exists, then the ledger record of ``approve prod`` bound to ``sha`` (default ``HEAD`` when the ledger
+  is written, before ``commit_files``) and expiring 24 h after the marker, D-34/D-35);
 - ``given.stubs``: canned output for the ``gh`` / ``az`` / ``glab`` stubs put first on ``PATH``;
 - an isolated ``HOME``, ``XDG_STATE_HOME`` and git config.
 
@@ -26,7 +30,7 @@ Case format (§6.1)::
      "expect_nopy"?: {…}, "tags": […], "limitation"?: true}
 
 Strings may use ``{{root}}`` (the case's repo), ``{{repo}}`` (its git common dir), ``{{home}}``,
-``{{plugin}}`` (the plugin root under test),
+``{{plugin}}`` (the plugin root under test), ``{{head}}`` (the case repo's HEAD commit after it is built),
 ``{{now}}`` and ``{{now-121m}}``-style offsets.
 
 Statusline cases (``"event": "statusline"``) run ``hooks/karvey-statusline.sh`` instead, with
@@ -74,7 +78,8 @@ CASE_KEYS = {"id", "guard", "given", "input", "event", "expect", "expect_nopy", 
              "command"}
 GIVEN_KEYS = {"repo", "cwd", "env", "stubs", "dir", "outer_files", "no_python", "setup", "script_copy"}
 REPO_KEYS = {"branch", "remote_branches", "project_json", "spec", "ledger", "marker", "files", "default_branch",
-             "wc_files", "origin_files", "git_config", "at", "worktree", "no_origin", "commit_files"}
+             "wc_files", "origin_files", "git_config", "at", "worktree", "no_origin", "commit_files",
+             "branch_commits"}
 EXPECT_KEYS = {"decision", "stdout_contains", "stderr_contains", "stdout_not_contains", "stderr_not_contains",
                "stdout_empty", "stderr_empty", "marker_created", "max_s", "marker", "files_exist",
                "files_absent", "file_contains", "context_contains", "context_not_contains", "context_max_bytes",
@@ -113,6 +118,7 @@ class Templ:
     def __init__(self, root=None, repo=None, home=None):
         self.root, self.repo, self.home = root, repo, home
         self.plugin = PLUGIN_ROOT
+        self.head = None
         self.tmp = None
         self.python = sys.executable  # for setup commands, also in the nopy pass
         self.now = datetime.now().astimezone()
@@ -127,7 +133,7 @@ class Templ:
             return (self.now + delta if sign == "+" else self.now - delta).isoformat(timespec="seconds")
         text = re.sub(r"\{\{now([+-])(\d+)([mh])\}\}", now, text)
         text = text.replace("{{now}}", self.now.isoformat(timespec="seconds"))
-        for k in ("root", "repo", "home", "plugin", "tmp", "python"):
+        for k in ("root", "repo", "home", "plugin", "tmp", "python", "head"):
             v = getattr(self, k)
             if v is not None:
                 text = text.replace("{{%s}}" % k, str(v))
@@ -196,7 +202,26 @@ def _finish_repo(spec, root, tmp, env, t, default):
         git(["checkout", "-q", "-b", branch], root, env)
     common = Path(os.path.realpath(str(root / ".git")))
     t.repo = common
+    for bc in spec.get("branch_commits") or []:  # commits on the branch, before the ledger binds HEAD (D-35)
+        for rel, content in (bc.get("files") or {}).items():
+            write_file(root / rel, t.deep(content))
+        git(["add", "-A"], root, env)
+        argv = ["commit", "-q", "--allow-empty"]
+        for part in _as_list(bc.get("message") or "branch commit"):
+            argv += ["-m", t.s(part)]
+        git(argv, root, env)
+    t.head = git(["rev-parse", "HEAD"], root, env)
     for cid, data in (spec.get("ledger") or {}).items():
+        if isinstance(data, dict) and "@approved" in data:
+            a = data["@approved"]
+            created = approval.now_dt() - timedelta(hours=float(a.get("age_h", 0)))
+            m = approval.write_marker(root, "prod", cid, a.get("prompt", "ok, merge a prod"), session_id=SESSION,
+                                      now=created, compat="")
+            sha = git(["rev-parse", "--verify", a.get("sha", "HEAD") + "^{commit}"], root, env)
+            approval.record_prod(root, cid, approval.prod_record(m, cid, a.get("by", "Owner Name"),
+                                                                 a.get("ref", "D-08"), approval.iso(created), sha))
+            approval.consume(root, cid, created_at=m["created_at"])
+            continue
         d = common / "karvey" / "ledger"
         d.mkdir(parents=True, exist_ok=True, mode=0o700)
         write_file(d / (cid + ".json"), t.deep(data))
@@ -219,6 +244,7 @@ def _finish_repo(spec, root, tmp, env, t, default):
     if spec.get("worktree"):
         wt = tmp / spec["worktree"]
         git(["worktree", "add", "-q", "-b", "wt-" + spec["worktree"], str(wt)], root, env)
+    t.head = git(["rev-parse", "HEAD"], root, env)
     return root, common, t
 
 
@@ -295,6 +321,8 @@ def event_of(case):
         return "pre-bash"
     if inp.get("tool_name") in EDIT_TOOLS:
         return "pre-edit"
+    if inp.get("tool_name") in ("Agent", "Task"):
+        return "pre-agent"
     raise CaseError("cannot infer the event (set 'event')")
 
 
@@ -425,7 +453,7 @@ def run_case(case, nopy=False, keep=False):
                 if k in spec:
                     v = spec[k]
                     (stub_data / ("%s.%s" % (name, k))).write_text(
-                        t.s(v) if isinstance(v, str) else (json.dumps(v) if k in ("stdout", "stderr") else str(v)),
+                        t.s(v) if isinstance(v, str) else (json.dumps(t.deep(v)) if k in ("stdout", "stderr") else str(v)),
                         encoding="utf-8")
         env["PATH"] = nopy_path(tmp, STUBS) if nopy else os.pathsep.join((str(STUBS), env["PATH"]))
         env.update({"CLAUDE_PLUGIN_ROOT": str(PLUGIN_ROOT), "CLAUDE_PROJECT_DIR": str(cwd),

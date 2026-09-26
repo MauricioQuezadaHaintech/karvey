@@ -67,7 +67,7 @@ If a finding's type is ambiguous or its routing is irreversible (re-opening requ
    - If the E2E run that found it is still in progress, record the run as interrupted in `test_evidence.md` and re-run it in full after the hotfix deploys — never resume it from the middle.
 
 #### 3b · `spec-gap` → re-open requirements (spec-revision sub-cycle)
-1. Reopen through the state tool (never by hand); it moves the approvals of the reopened phase and every later one to `revision_history`:
+1. Reopen through the state tool (never by hand); it moves the approvals of the reopened phase and every later one to `revision_history`, and supersedes a prod approval already in the release ledger:
    ```bash
    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" reopen "{change-id}" requirements --reason "{why}" --ref "F-NN"
    ```

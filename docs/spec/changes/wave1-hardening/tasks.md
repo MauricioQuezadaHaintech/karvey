@@ -7,10 +7,10 @@
 
 | Item | Value |
 |---|---|
-| Features | 17 |
-| Tasks | 76 (59 Backend, 1 Frontend, 2 Infra, 7 Test, 7 human) — revision 1 (D-19): +E1.F17.T1..T3, E1.F16.T2 → `[human]` |
-| Agent tasks / `[human]` tasks | 69 / 7 (E1.F1.T2 is conditional: only if T-0 cannot run headless) |
-| Total estimate (agent tasks, AI + human review) | **2150 min** (35.8 h); revision 1: +50 (E1.F17) −15 (E1.F16.T2 to `[human]`) = **2185 min** |
+| Features | 18 (D-34..D-36: +E1.F18) |
+| Tasks | 81 (63 Backend, 1 Frontend, 2 Infra, 8 Test, 7 human) — revision 1 (D-19): +E1.F17.T1..T3, E1.F16.T2 → `[human]`; D-21: +E1.F17.T4..T8 (manual-script findings F-50..F-54); D-34..D-36: +E1.F18.T1..T5 (QA spec-gaps F-76, F-77, F-79) → 86 (67 Backend, 9 Test) |
+| Agent tasks / `[human]` tasks | 79 / 7 (E1.F1.T2 is conditional: only if T-0 cannot run headless) |
+| Total estimate (agent tasks, AI + human review) | **2150 min** (35.8 h); revision 1: +50 (E1.F17) −15 (E1.F16.T2 to `[human]`) = **2185 min**; D-21: +100 (E1.F17.T4..T8) = **2285 min**; D-34..D-36: +165 (E1.F18) = **2450 min** |
 | Critical path (agent minutes; `[human]` waits not counted) | **550 min** (9.2 h), 18 tasks |
 | REQ-W1 coverage | 109/109 |
 | Largest task | 50 min (cap 60) |
@@ -812,9 +812,9 @@ Total estimated time: 85 min (7 tasks)
 
 ## Feature E1.F17: Test-phase iteration (revision 1, D-19)
 
-Findings of the first test phase: BUG-22 (F-40), status names with parentheses (F-19), the manual scripts' executor (F-47).  
-Requirements covered: 048, 085, 093, 107, AC-7  
-Total estimated time: 50 min (2 agent tasks + 1 human)
+Findings of the first test phase: BUG-22 (F-40), status names with parentheses (F-19), the manual scripts' executor (F-47); then the manual scripts' own findings F-50..F-54 (BUG-23..26, BL-52; D-21).  
+Requirements covered: 041, 048, 081, 082, 083, 085, 093, 107, AC-7  
+Total estimated time: 150 min (7 agent tasks + 1 human)
 
 ### E1.F17.T1 [Backend] BUG-22: profile-only commits after a save are not drift — _Depends: E1.F6.T1_
 
@@ -841,7 +841,93 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 **Verification:** one `docs/spec/changes/wave1-hardening/qa/manual/<script>-<date>.md` per script with PASS / FAIL / not run (reason); every FAIL logged as a finding.  
 **Rollback:** delete the throw-away repos.  
 **Requirements:** REQ-W1-080..085, 089, 095, 096 (AC-7)  
-**Executed:** (filled when done: name · YYYY-MM-DD HH:MM · evidence)
+**Executed:** maintainer agent, headless under D-19/D-28 · 2026-09-25 13:01 UTC · qa/manual/ — 6 PASS / 4 FAIL (FAIL: settings-docs-branch, visible-version, no-human-no-mapping, per-level-maps → F-50..F-53; F-54 spec-gap observed). **Rerun** 2026-09-25 after E1.F17.T4..T7 (E1.F17.T8): the 4 FAIL scripts PASS (`qa/manual/*-2026-09-25-rerun.md`); the tracker lines of no-human-no-mapping and per-level-maps not re-run by instruction, covered by the regression tests → 10/10 PASS
+
+### E1.F17.T4 [Backend] BUG-23 (F-50): the settings lookup reads integration and production — _Depends: E1.F17.T3_
+
+**Estimate:** 20 min · **Actual:** 8 min (AI)  
+**Files:** `plugins/karvey/scripts/karvey_lib/project.py` (`settings_lines`), `karvey_lib/karvey_hooks.py` (`settings_notice`), `scripts/karvey-config.py` (`Settings.remotes`); `tests/hooks/tables/session.json` (ss-24), `tests/unit/test_config_resolve.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
+**Requirements:** REQ-W1-083, REQ-W1-107  
+**Tests added:** integration `dev` readable without the settings and production `main` with them → no notice, `resolve` source `origin/main`; no line with them → notice. Red before the fix.  
+**Done when:** the table case and unit tests pass; BUG-23 RESUELTO; the settings-docs-branch rerun passes variant B.
+
+### E1.F17.T5 [Backend] BUG-24 (F-51): visible-version check against the deployed commit, any DEV mark — _Depends: E1.F17.T3_
+
+**Estimate:** 20 min · **Actual:** 6 min (AI)  
+**Files:** `plugins/karvey/skills/karvey-deploy/SKILL.md` (2.6), `skills/karvey/rules/versioning.md`, `skills/karvey/SKILL.md` (summary line); `tests/unit/test_skill_rules.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
+**Requirements:** REQ-W1-041, REQ-W1-107  
+**Tests added:** `VisibleVersionCheck`: 2.6 names `git show …deployed…:`, "any format", not "must show `-dev`", "not the tip"; `versioning.md` the same. Red before the fix.  
+**Done when:** the tests pass; BUG-24 RESUELTO; the visible-version rerun passes variants 1-3.
+
+### E1.F17.T6 [Backend] BUG-25 (F-52): composed subagent prompts carry the project.json ban — _Depends: E1.F17.T3_
+
+**Estimate:** 15 min · **Actual:** 25 min (AI; 5 text + 20 guard after the rerun reopened it)  
+**Files:** `plugins/karvey/skills/karvey/rules/management-adapters.md` (rule 5), `skills/karvey-impl/SKILL.md` (Step 7); `scripts/karvey_lib/guards.py` (`subagent_prompt`), `karvey_lib/karvey_hooks.py` (event `pre-agent`), `hooks/hooks.json`, `hooks/karvey-hook.sh`, `hooks/README.md`, `skills/karvey/rules/enforcement.md`; `tests/hooks/tables/subagent-prompt.json`, `tests/hooks/run_tables.py`, `tests/unit/test_karvey_hooks.py`; `tests/unit/test_skill_rules.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
+**Requirements:** REQ-W1-081, REQ-W1-107  
+**Tests added:** `SubagentPromptsCarryTheProjectJsonBan`: rule 5 names every subagent prompt and the verbatim line; a request to persist is never passed on; impl's dispatch carries the line. Red before the fix. After the rerun: `subagent-prompt.json` sp-01..sp-07 (block the rerun and first-run prompts and the `Task` name; allow the ban line, no settings talk, a negated sentence, a non-Karvey dir; no python allows), red on 691f2f7.  
+**Done when:** the tests pass, L-34 stays at 0 errors; BUG-25 RESUELTO; the no-human-no-mapping subagent rerun shows the ban in the prompt.
+
+### E1.F17.T7 [Backend] BUG-26 (F-53): tracker credentials looked up in `.connections.json` first — _Depends: E1.F17.T3_
+
+**Estimate:** 15 min · **Actual:** 5 min (AI)  
+**Files:** `plugins/karvey/skills/karvey/rules/management-adapters.md` (rule 2), `skills/karvey-impl/SKILL.md` (Step 3, Handling blockers); `tests/unit/test_skill_rules.py`; `docs/bugs_dev_testing.md`, `docs/spec/incidents-index.md`, `tests/regression/test_incidents.py`  
+**Requirements:** REQ-W1-082, REQ-W1-107  
+**Tests added:** `TrackerCredentialsAreLookedUpEverywhere`: rule 2 ordered with `.connections.json` first and "only after" every place; impl Step 3 names it; impl blockers cover `blocked: null`. Red before the fix.  
+**Done when:** the tests pass; BUG-26 RESUELTO; the per-level-maps rerun (parts without the tracker) passes, the tracker part rests on the tests.
+
+### E1.F17.T8 [Test] Rerun the four failing manual scripts; route F-54; fix the BL-51 id collision — _Depends: E1.F17.T4, E1.F17.T5, E1.F17.T6, E1.F17.T7_
+
+**Estimate:** 30 min · **Actual:** 25 min (AI)  
+**Files:** `docs/spec/changes/wave1-hardening/qa/manual/{settings-docs-branch,visible-version,no-human-no-mapping,per-level-maps}-2026-09-25-rerun.md`; `docs/spec/backlog.md` (BL-52, BL-51 wording); `findings.md`  
+**Requirements:** REQ-W1-041, REQ-W1-081, REQ-W1-082, REQ-W1-083 (AC-7)  
+**Tests added:** — (evidence runs: headless `claude -p` per script in throw-away repos, as the first run; the tracker parts of no-human-no-mapping and per-level-maps not re-run, covered by the regression tests)  
+**Done when:** every rerun Expected line run is PASS; F-54 is BL-52 routed to `wave2-structural`; BL-51 names the statusline stable-launcher item without an F-number; the throw-away repos and their session transcripts are deleted.
+
+## Feature E1.F18: QA spec-gaps on the production approval (revision 4, D-34..D-36)
+
+Findings of the QA of PR #24 that needed the owner's decision: F-76 (what evidence the prod-gate verifies), F-77 (the approval is tied to a change id, not to the commits, and never expires), F-79 (a reopen leaves the prod approval standing).  
+Requirements covered: 017, 023  
+Total estimated time: 165 min (5 agent tasks)
+
+### E1.F18.T1 [Backend] D-34: the prod approval's evidence is the approval hook's audit record — _Depends: E1.F5.T2, E1.F3.T6_
+
+**Estimate:** 30 min · **Actual:** 10 min (AI)  
+**Files:** `plugins/karvey/scripts/karvey_lib/approval.py` (`write_marker` audit line, `evidence`, `audit_record_of`), `scripts/karvey-state.py` (`check_prod`), `schemas/spec.schema.json` (`evidence.prompt_sha256`); `tests/unit/test_marker.py` (`AuditRecord`), `tests/unit/test_state_approve.py` (`ProdEvidence`), `tests/hooks/tables/prod-gate.json` (pg5-01), `tests/hooks/tables/approval.json` (ap-40), `tests/hooks/run_tables.py` (`@approved` ledger fixture)  
+**Requirements:** REQ-W1-017, REQ-W1-023  
+**Tests added:** the marker's audit line carries hash, session, time; a hand-written ledger, a session/hash/time mismatch and a marker of another change are refused; pg5-01 blocks `missing=audit`. Red on c4d81cf.  
+**Done when:** check-prod refuses a ledger entry without the matching audit line and the tables pass.
+
+### E1.F18.T2 [Backend] D-35: prod approval bound to the approved head commit, valid 24 h — _Depends: E1.F18.T1, E1.F5.T5_
+
+**Estimate:** 50 min · **Actual:** 30 min (AI)  
+**Files:** `scripts/karvey_lib/approval.py` (`prod_record`, `PROD_VALID_H`), `scripts/karvey-state.py` (`approve prod --sha`, `check-prod --sha`, `resolve_commit`), `scripts/karvey_lib/guards.py` (`pr_info` head commit, push source resolution, `earlier_writer`, `--all`/`--mirror`/delete), `schemas/spec.schema.json` (`head_sha`, `expires_at`); `tests/unit/test_state_approve.py` (`ProdShaBinding`), `tests/hooks/tables/prod-gate.json` (pg5-02..11, existing allow cases on `@approved` + head commit)  
+**Requirements:** REQ-W1-023, REQ-W1-024  
+**Tests added:** head and expiry recorded; `--sha` resolves; an unresolvable rev refused; check-prod compares `--sha`; expired and legacy entries refused; tables: commit after the OK, another branch pushed as the change (F-77 reproduction), PR head moved (gh, az), answer without head commit, 24 h, a branch moved earlier in the call, push then merge in one call, `--all`; pg5-10 the allow control. Red on c4d81cf.  
+**Done when:** every release form compares the released commit with the approved one; the no-python fallback still blocks (pg5-02 nopy).
+
+### E1.F18.T3 [Backend] D-36: `reopen` supersedes the ledger prod approval — _Depends: E1.F18.T2_
+
+**Estimate:** 20 min · **Actual:** 5 min (AI)  
+**Files:** `scripts/karvey_lib/approval.py` (`supersede_prod`), `scripts/karvey-state.py` (`cmd_reopen`); `tests/unit/test_state_approve.py` (`ReopenSupersedesProd`)  
+**Requirements:** REQ-W1-023  
+**Tests added:** the ledger's prod moves to `superseded[]` and into `revision_history[].superseded_approvals.prod`; check-prod then fails; a reopen without a ledger is unchanged. Red on c4d81cf.  
+**Done when:** the tests pass and `check-prod` fails after a reopen.
+
+### E1.F18.T4 [Backend] Spec revision and docs of the prod approval flow — _Depends: E1.F18.T1, E1.F18.T2, E1.F18.T3_
+
+**Estimate:** 35 min · **Actual:** 20 min (AI)  
+**Files:** `docs/spec/changes/wave1-hardening/{requirements.md,spec-delta.md,architecture.md,tasks.md,findings.md}`; `plugins/karvey/skills/karvey/rules/enforcement.md`, `rules/state-machine.md`, `hooks/README.md`, `skills/karvey-deploy/SKILL.md` (2.9), `skills/karvey-iterate/SKILL.md`; `CHANGELOG.md`  
+**Requirements:** REQ-W1-017, REQ-W1-023  
+**Tests added:** — (L-16 anchors for the new promises; L-27 keeps the deploy text commit-free)  
+**Done when:** lint 0 errors, `validate --all` 0 errors, spec-merge dry run parses the delta; F-76, F-77, F-79 closed.
+
+### E1.F18.T5 [Test] QA re-run: D1 and D7 on the diff since 13170b1 — _Depends: E1.F18.T4_
+
+**Estimate:** 30 min · **Actual:** 90 min (AI; four review passes, BUG-47..51 in the micro-loop)  
+**Files:** `docs/spec/changes/wave1-hardening/qa/REVISION_PR_24_20260925.md` (appended section)  
+**Requirements:** REQ-W1-023, REQ-W1-024  
+**Tests added:** — (review; any defect → `findings.md`)  
+**Done when:** the security gate verdict is written; no High/Critical open.
 
 ## Traceability matrix (REQ-W1 → tasks)
 
@@ -863,13 +949,13 @@ Total estimated time: 50 min (2 agent tasks + 1 human)
 | 014 | E1.F4.T2, E1.F5.T3 |
 | 015 | E1.F5.T3 |
 | 016 | E1.F3.T5, E1.F3.T6, E1.F5.T2, E1.F5.T3, E1.F5.T8, E1.F12.T9 |
-| 017 | E1.F1.T1, E1.F1.T2, E1.F4.T1, E1.F5.T2, E1.F12.T7, E1.F16.T2, E1.F16.T7 |
+| 017 | E1.F1.T1, E1.F1.T2, E1.F4.T1, E1.F5.T2, E1.F12.T7, E1.F16.T2, E1.F16.T7, E1.F18.T1 |
 | 018 | E1.F3.T5, E1.F5.T1, E1.F12.T7, E1.F12.T9, E1.F16.T2, E1.F16.T7 |
 | 019 | E1.F5.T2 |
 | 020 | E1.F4.T2, E1.F5.T4, E1.F5.T8 |
 | 021 | E1.F5.T4 |
 | 022 | E1.F5.T4, E1.F10.T4, E1.F12.T9 |
-| 023 | E1.F3.T5, E1.F3.T6, E1.F5.T5, E1.F15.T2, E1.F16.T4, E1.F16.T5, E1.F16.T6 |
+| 023 | E1.F3.T5, E1.F3.T6, E1.F5.T5, E1.F15.T2, E1.F16.T4, E1.F16.T5, E1.F16.T6, E1.F18.T1..T5 |
 | 024 | E1.F1.T1, E1.F4.T3, E1.F5.T5, E1.F5.T6, E1.F16.T4 |
 | 025 | E1.F2.T4, E1.F5.T6, E1.F16.T4, E1.F16.T6 |
 | 026 | E1.F2.T5, E1.F4.T3, E1.F5.T6, E1.F8.T1, E1.F12.T9 |

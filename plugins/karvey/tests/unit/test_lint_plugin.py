@@ -309,6 +309,20 @@ class L06(LintCase):
         self.t.append(REQS, "\n- Verify `approvals.architecture.approved = true` before starting.\n")
         self.assertPasses("L-06")
 
+    def test_hand_edits_in_other_words_fail(self):
+        """BUG-46: three hand-edit instructions passed L-06 (a REQ-W1-013 regression would reach CI green)."""
+        for text in ("\nSet the phase to `impl` in spec.json by hand.\n",
+                     "\nRun `jq '.phase = \"test\"' spec.json > t && mv t spec.json`.\n",
+                     "\nEdit `spec.json` and change `approvals.qa.approved` to true.\n"):
+            with self.subTest(text=text):
+                t = Tree()
+                try:
+                    t.append(REQS, text)
+                    fs = [f for f in lint(t.root, ["L-06"]) if f["check"] == "L-06"]
+                    self.assertTrue(fs, "L-06 did not fire on %r" % text)
+                finally:
+                    t.cleanup()
+
 
 class L07(LintCase):
     def test_pass(self):

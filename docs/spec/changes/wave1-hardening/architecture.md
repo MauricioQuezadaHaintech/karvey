@@ -173,12 +173,12 @@ ledger (§2.4); consuming the approval markers (§3.3).
 | `next <change>` | `--root`, `--json` | Computes from `state-machine.json` and returns `{change, phase, status: in-progress\|awaiting-approval\|ready\|invalid, next_phase, skill, preconditions:[{phase, state: approved\|skipped\|pending}], blockers:[…]}`. `invalid` carries the validation errors (REQ-W1-005 error scenario). | — (read-only; exit 4 if unreadable) |
 | `advance <change> <to>` | `--by`, `--pipeline-run`, `--post-deploy-check pass` (only for `deployed`), `--json` | Applies an edge. Closes the open `phase_history` entry with `exited_at` and appends `{phase, entered_at, by?}`. Sets `updated_at`. Consumes the markers of the phase that closed (REQ-W1-016). | Edge not in the graph. A preceding approvable phase is neither approved nor skipped (the message names it: `requirements not approved or skipped`). Last history entry corrupt (REQ-W1-008). `to=deployed` without pipeline and check evidence (REQ-W1-011). `to=archived` without `phase=deployed` and a human `approvals.prod` in spec.json. The phase value is unmappable legacy. |
 | `generated <change> <phase>` | | `approvals.<phase>.generated = true` (REQ-W1-001 success scenario). | Unknown phase. |
-| `approve <change> <phase>` | `--by`, `--role human\|ceo-delegate`, `--ref`, `--date?`, `--write-spec` (prod only) | Writes `{approved: true, by, role, date, ref, evidence}` (REQ-W1-006). **prod:** it writes the machine-local **release ledger**, not spec.json (D-03). With `--write-spec`, used by archive on its own branch, it copies the ledger or D-NN approval into `spec.json:approvals.prod` (REQ-W1-032). A **retroactive** record (prod happened before it was recorded, D-08) passes `--date` with the day prod actually happened; without `--date` the recording time is written (F-48, D-19, revision 1). | Any of by/role/ref missing. `prod` with a role other than `human` ("production approval is never delegated"). `prod` without a valid **prod-kind approval marker** (§3.3, Q-A1). For the other phases, a missing marker is a warning in 3.12.0 and `evidence: {"marker": "none"}` is recorded. |
+| `approve <change> <phase>` | `--by`, `--role human\|ceo-delegate`, `--ref`, `--date?`, `--write-spec` (prod only) | Writes `{approved: true, by, role, date, ref, evidence}` (REQ-W1-006). **prod:** it writes the machine-local **release ledger**, not spec.json (D-03). With `--write-spec`, used by archive on its own branch, it copies the ledger or D-NN approval into `spec.json:approvals.prod` (REQ-W1-032). A **retroactive** record (prod happened before it was recorded, D-08) passes `--date` with the day prod actually happened; without `--date` the recording time is written (F-48, D-19, revision 1). **prod, revision 4 (D-35):** `--sha <rev>` (default `HEAD`) is resolved to the full commit the human approved and stored as `head_sha`, with `expires_at` = the marker's creation (the human's OK) + 24 h. | Any of by/role/ref missing. `prod` with a role other than `human` ("production approval is never delegated"). `prod` without a valid **prod-kind approval marker** (§3.3, Q-A1). For the other phases, a missing marker is a warning in 3.12.0 and `evidence: {"marker": "none"}` is recorded. |
 | `skip <change> <phase>` | `--reason` | `skipped[phase] = reason` (REQ-W1-007). | Empty reason. Phase not `skippable` in the graph (mockup, design_graphic, infra in Wave 1). |
-| `reopen <change> <phase>` | `--reason`, `--ref` | The backward edge used by `karvey-iterate` for a spec-gap. It moves the approvals of the reopened phase and of everything downstream into a new `revision_history[]` entry (`superseded_approvals`), sets them to `approved: false`, and appends a history entry. | The target is not a reopen target (`requirements`, `architecture`, `tasks`, `impl`). Missing reason. |
+| `reopen <change> <phase>` | `--reason`, `--ref` | The backward edge used by `karvey-iterate` for a spec-gap. It moves the approvals of the reopened phase and of everything downstream into a new `revision_history[]` entry (`superseded_approvals`), sets them to `approved: false`, and appends a history entry. **Revision 4 (D-36):** a prod approval in the release ledger is superseded too: copied into `superseded_approvals.prod` and moved in the ledger from `prod` to `superseded[]` (`{at, reason, ref, prod}`). | The target is not a reopen target (`requirements`, `architecture`, `tasks`, `impl`). Missing reason. |
 | `validate [PATH…\|--all]` | `--fix`, `--dry-run`, `--accept-proposed`, `--strict`, `--json` | Validates spec.json and project.json against the schemas plus the semantic checks (§2.3). With `--fix` it migrates (§2.5): the unified diff always goes to stdout first, then the file is written unless `--dry-run`. `--fix` is idempotent (REQ-W1-009). | exit 1 on errors. In advisory mode warnings keep exit 0 (REQ-W1-003). Unmappable or unmigratable values make `--fix` exit 3 and write nothing. |
 | `active` | `--root`, `--json` | The one active-change resolution shared by the hooks and the dashboard (§5). | — |
-| `check-prod <change>` | `--json` | `{ok, change, by, role, ref, date, source: ledger\|spec, missing:[…]}`. The prod-gate calls it in-process. | exit 1 if not ok, exit 4 if unreadable. |
+| `check-prod <change>` | `--json`, `--sha <commit>` (revision 4) | `{ok, change, by, role, ref, date, source: ledger\|spec, head_sha, expires_at, missing:[…]}`. The prod-gate calls it in-process with the commit being released. `missing` names `audit` (no matching audit record, D-34), `sha` (no approved commit, or `--sha` differs, D-35) and `expired` (D-35). | exit 1 if not ok, exit 4 if unreadable. |
 
 **Legacy files and transitions (3.12.0 advisory).** Transitions accept exact-tier legacy phase values
 (§2.5) by mapping them in memory. They write back only the fields they own, in normalised form, and leave
@@ -212,7 +212,9 @@ same project lookup and the same shell segmentation.
       { "matcher": "Bash",
         "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-bash", "timeout": 15 }] },
       { "matcher": "Edit|Write|MultiEdit|NotebookEdit",
-        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-edit", "timeout": 5 }] }
+        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-edit", "timeout": 5 }] },
+      { "matcher": "Agent|Task",
+        "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/karvey-hook.sh\" pre-agent", "timeout": 5 }] }
     ],
     "PostToolUse": [
       { "matcher": "Edit|Write|MultiEdit|NotebookEdit",
@@ -236,6 +238,7 @@ The `SessionStart` split passes `startup` or `resume` as an **argument taken fro
 |---|---|---|---|
 | `pre-bash` → **protect-paths** → **prod-gate** → **git-flow** → **plan-gate** | 018 · 023..027, 035 · 020..022, 035 · 014..016 | protect-paths always on · prod-gate **on** (D-02) · git-flow off · plan-gate off | protect-paths closed · prod-gate **closed** · git-flow closed when enabled · plan-gate closed when enabled |
 | `pre-edit` → **protect-paths** → **plan-gate** | 018 · 016 | as above | as above |
+| `pre-agent` → **subagent-prompt** (revision 2, D-33) | 081 | on in Karvey projects | open |
 | `post-edit` → **spec-write validator** (`docs/spec/**/spec.json` and `project.json`) → **pending-sync recorder** (`docs/spec/**`) | 028 · 063 | on in Karvey projects | open, with one warning line |
 | `prompt` → **approval hook** | 017, 019 | on in Karvey projects | open: no marker is created, which is the safe side |
 
@@ -255,6 +258,7 @@ The `SessionStart` split passes `startup` or `resume` as an **argument taken fro
 | plan-gate | Bash segments, or Edit/Write | Command-class classification (§3.4). Allows if a valid marker exists for (repo, change) or (repo, `_project`), newer than the TTL, not consumed and not corrupt. | exit 2: `[karvey] BLOCK plan-gate: <class>. Present the plan and wait for the human's approval; the approval hook records it.` Nothing tells the agent to create anything. |
 | spec-write validator | `tool_input.file_path` (A-3) | If the path matches, runs `karvey-state.py validate <file>` in-process. | violations: exit 2, with the list on stderr (A-4: in PostToolUse this feeds the reason back to the session) · valid: silent |
 | pending-sync | same | Appends the repo-relative path to `docs/spec/.graph-pending` (dedupe, sorted, LF), except the pending file itself and `graphify-out/**`. | silent |
+| subagent-prompt (revision 2, D-33, BUG-25) | `tool_input.prompt` of an `Agent`/`Task` call | Inert outside a Karvey project, or when the prompt carries the ban on `docs/spec/project.json` itself ("do not write `docs/spec/project.json`" and its variants; typographic quotes normalised). Otherwise it splits the prompt into sentences and blocks on the first one where a write/persist/authorise verb, not negated just before it, governs a settings target within the next few words: `docs/spec/project.json`, a bare `project.json` only next to tracker/settings words, `management.statuses`, the tracker/team settings, a status map (BUG-31: a settings page, an editor's `settings.json` or another tool's `project.json` are not targets). It reads only the prompt text; it never reads or writes files. | exit 2: `[karvey] BLOCK subagent-prompt: … Re-send the prompt without that permission and with this line: <ban line>` (the quoted sentence is cut to 160 characters) · otherwise silent |
 | approval hook | prompt text (A-2) | §3.3 and §3.6. | silent. When it records a marker it prints one stdout line, `[karvey] approval recorded (<kind>, <scope>, expires hh:mm)`, so the human sees it. |
 
 **Legacy templates.** `skills/karvey/hooks/git-flow-guard.sh` and `plan-gate.sh` stay for 3.12.x as shims
@@ -989,6 +993,7 @@ or a cloned template, so they are untrusted input. Three rules apply:
 | **git-flow** (opt-in) | python missing · target repo unresolvable (`git -C $X`, unexpanded variable) · unparsable command | When enabled: **block** `git commit\|push\|merge\|cherry-pick\|revert\|am` segments with "cannot resolve the target repository; rewrite without variables". When disabled: nothing. | The project asked for it. The block names the rewrite that passes. |
 | **plan-gate** (opt-in) | python missing · unparsable command | When enabled: **block** with the reason, keeping today's semantics (no marker → block the classes). Unparsable commands fall back to a conservative regex over the raw string. | The project asked for it. Wrongly allowing a destructive command is worse than a retry. |
 | **approval hook** | anything | **Open**: no marker is created and the prompt is never blocked (exit 0). The failure is recorded in `audit.log` (`approval-hook error`). | Failing open here means *not approving*, which is the safe side. The human sees no `[karvey] approval recorded` line and can repeat the approval. |
+| **subagent-prompt** (revision 2) | python missing · crash | **Open**: the call goes through (the bash fallback has no classifier for it). | A backstop for REQ-W1-081, whose primary control is the rule text (`management-adapters.md` rule 5). A false block costs a re-sent prompt; failing closed would block every subagent on a machine without python. |
 | **spec-write validator** | python missing · crash | **Open** with one line: `[karvey] spec.json not validated: <reason>`. | The write already happened, and PostToolUse cannot undo it. CI (L-18) is the backstop. |
 | **pending-sync** | anything | **Open**, silent. | Archive recomputes pending paths from `git diff` since the last sync anyway (§5). |
 | **session hook** | python missing | **Open**; the degraded settings line is still printed (REQ-W1-050). | It informs; it never gates. |
@@ -1024,8 +1029,16 @@ never an instruction it follows or a one-command shortcut. They are layered:
    (`marker not found in transcript`) and shown on the dashboard. It does not block, because the transcript
    format is undocumented.
 6. **Prod needs more than a marker.** `approve prod` requires a **prod-kind** marker (Q-A1): the human's
-   prompt had an approval phrase **and** a prod term. It then writes the ledger. The prod-gate checks the
-   ledger **and** the matching evidence. A hand-edited `spec.json:approvals.prod` without a ledger entry is
+   prompt had an approval phrase **and** a prod term. The marker must be scoped to that change (a
+   project-wide `_project` marker never approves production), and `approve prod` consumes it (BUG-41,
+   revision 3). It then writes the ledger. The prod-gate checks the
+   ledger **and** the matching evidence. **The matching evidence (revision 4, D-34)** is the audit-log line
+   the approval hook writes when it records the prod marker (`guard: approval`, `event: marker`,
+   `decision: recorded`, `reason: prod`) with the same change, `prompt_sha256`, `session_id` and
+   `created_at` as the ledger's `evidence` (`prompt_sha256`, `session`, `marker_created_at`); the evidence
+   must name `approvals/<change>.json`. The current and the rotated log are read; a record lost to a second
+   rotation fails closed (the human approves again). The `D-NN` is not required at merge time: it is written
+   at archive (F-29, BL-47). A hand-edited `spec.json:approvals.prod` without a ledger entry is
    blocked with "approval not recorded through the state tool". The durable, human-visible records remain
    the `D-NN` and the PR (D-03).
 7. **Consumption and expiry.** TTL: `plan_marker_ttl_min`, default 120 (D-07), clamped to 5..1440 and read
@@ -1036,7 +1049,9 @@ never an instruction it follows or a one-command shortcut. They are layered:
 building the path at runtime can forge a marker. Controls 3–6 make that visible:
 - the audit log shows a marker with no `approval recorded` line in the session;
 - the transcript cross-check fails;
-- for prod, a `D-NN` still has to exist in the decision log and the PR.
+- for prod, a `D-NN` still has to exist in the decision log and the PR;
+- for prod, the ledger also needs the approval hook's audit line of that marker (revision 4): a forger must
+  also append a matching line to the protected `audit.log`, a second deliberate step.
 
 The authoritative production control where the platform offers it is a server-side branch protection, which
 the prod-gate complements and does not replace (Q-A8).
@@ -1055,7 +1070,9 @@ A project overrides it in `project.json:enforcement.approval_vocabulary`, read f
 4. **Accept** when an approval term appears (word boundaries) within the first 12 words, or anywhere if the
    cleaned prompt is ≤ 120 characters. Default approval terms:
    `ok`, `okey`, `dale`, `aprobado`, `apruebo`, `aprueba`, `ejecuta`, `adelante`, `procede`, `si`,
-   `perfecto`, `approved`, `approve`, `go ahead`, `lgtm`, `proceed`, `ship it`.
+   `perfecto`, `approved`, `approve`, `go ahead`, `lgtm`, `proceed`, `ship it`. `si` counts only as the
+   affirmative: written `sí`, or a bare `si` that is the whole reply or opens it before punctuation; the
+   conditional "si" ("revisa si …") never approves (BUG-42, revision 3).
 5. `kind = prod` when a prod term also appears. Default prod terms:
    `prod`, `produccion`, `production`, `pr a prod`, `merge`, `release`, `master`, `main`, `publica`, `libera`.
    Otherwise `kind = plan`. A prod marker also satisfies plan-gate.
@@ -1094,6 +1111,32 @@ default counts whenever it is not the integration branch. Table cases pg3-01..06
 1. the PR head branch `feature_prefix + <id>` with `docs/spec/changes/<id>` present;
 2. a PR title matching `^\[Deploy\] (<id>)`;
 3. the only change in `deploying`.
+
+The change id only selects the ledger entry; it is under the agent's control (a branch name, a PR title), so
+it is not what gets approved (F-77). **Revision 4 (D-35):** the ledger stores the approved head commit
+(`head_sha`) and `expires_at` (the OK + 24 h), and the prod-gate compares the **commit being released**:
+- a PR merge (`gh`, `gh api …/pulls/N/merge`, gh aliases): `headRefOid` of `gh pr view`; `az`:
+  `lastMergeSourceCommit.commitId`; `glab`: `sha`. An answer without it blocks (fail closed);
+- a `git push` in every recognised form (explicit refspec, `@`, `HEAD`, implicit upstream or configured push
+  refspec, aliases, `send-pack`): the source resolved with `git rev-parse --verify <src>^{commit}` in the
+  target repository, a short name as `refs/heads/<name>` first (a tag of the same name never stands in for the
+  branch, BUG-47). Options are read as git reads them: a unique prefix of a long option counts, an unknown one
+  blocks, `-o` in a short cluster takes the rest as its value (BUG-50), the last of `--dry-run`/`--no-dry-run`
+  wins and `--repo` names the remote when no positional one does (BUG-51). `--all`, `--mirror`, a configured mirror, `push.default matching`, a matching (`:`) or
+  wildcard refspec that can reach production, and a delete name no single commit and block (BUG-47); every
+  production destination of one push must receive the same commit;
+- a deferred merge (`gh pr merge --auto`, `az … --auto-complete`, `glab mr merge`, which merges when the
+  pipeline succeeds) lands later: it is allowed only when the host is bound to the approved commit
+  (`--match-head-commit`, `--sha`), else it blocks (BUG-48);
+- a release command preceded, in the same tool call, by a command that can move refs (any `git` subcommand
+  outside a read-only list, or a `gh`/`glab`/`az` command outside their read-only list) blocks: the gate
+  resolves the commit before anything runs (`git branch -f X work && git push origin X:main`).
+
+A different commit or an expired approval blocks with the reason; a new commit needs a new OK. A `reopen`
+supersedes the ledger prod approval (D-36, §1.2). The no-python fallback keeps its documented fail-closed
+behaviour (§3.2): every PR merge blocks, and a push blocks when it names a production branch, has no refspec,
+or (BUG-47) has a wildcard or matching refspec. It never reads the ledger, so the commit and expiry checks do
+not apply there; `HEAD`/`@` on the production branch stays the known gap F-80 (BL-55).
 
 When several changes are `deploying`, the gate checks the resolved one and prints a warning listing the
 others without prod approval (H-21 stays Wave 2, D-02).
@@ -1444,6 +1487,7 @@ before the tables are frozen.
 | `approval.json` | ≥ 7 approvals, ≥ 7 negations/questions, ≥ 3 quoted/pasted, prod kind (4), scope (4), non-Karvey (1), long prompt (2) | **REQ-W1-019** minimums (5/5/2): "aprobado, ejecuta" · "ok" · "dale" · "approved, go ahead" · "lgtm" / "no apruebo todavía" · "¿está aprobado?" · "no, espera" · "don't proceed yet" · "ok pero antes revisa X" / a code fence with `status: approved` · `> approved by QA` · `el log dice "approved"`. Prod: "ok, merge a prod" → kind prod; "aprobado" → kind plan. The recorded excerpt is 80 characters. |
 | `protect-paths.json` | touch/echo/cp/mv/python with literal path (6), Write/Edit on the marker (3), plugin root edit (2), compat marker (2) | REQ-W1-018 error scenario; active with plan-gate **off**. |
 | `notify-confirm.json` | human phrase recorded (2), negation / quoted (2), agent alone (1), human then `--confirm` (1), other destination (1), other project (1), expired (1), protect-paths on the confirmation and the notify record (3) | D-16 / F-15, REQ-W1-097. |
+| `subagent-prompt.json` (revision 2) | blocked (3: persist settings, persist a status map, `Task` tool name), allowed (4: ban line present, no settings talk, negated sentence, outside a Karvey project) | BUG-25 rerun prompt → block; sp-01 also in the `nopy` pass, where it is allowed (fail open). |
 | `spec-write.json` | valid (2), enum violation (2), prod ref missing (1), non-spec file (2), outside docs/spec (1), invalid JSON (1), nopy (1) | REQ-W1-028: `phase: "qa-approved"` reported. |
 | `session.json` | active selection (5), manifest (3), bounds (4), settings notice (8), structured output (2), worktree (1) | REQ-W1-045..047, 050 incl. `"notifications": {}` on startup → 1 line, on resume → none; bare `docs/spec/openapi.yaml` under a Karvey parent above the git top level → none; settings only on `origin/main` → none (REQ-W1-083); no python → degraded line; `.git` file (worktree) → measured. |
 | `statusline.json` | TZ (3), windows (3), rotation default (2) | BUG-08 `(TZ?)`, BUG-09 separators, `rot?` when defaults.json is missing. |
@@ -1892,3 +1936,6 @@ deliberately not run: this change moves the sync to archive only (REQ-W1-062), a
 | Rev | Date | Ref | Sections | Why |
 |---|---|---|---|---|
 | 1 | 2026-09-24 | D-19 · F-16..F-19, F-40, F-47..F-49 | §1.4 (profile-only commits), §1.2 `approve` (`--date` on retro records), §3.1 (exemptions, `other`, sprints, `..`, status `( )`, `"`), §6.5 (manual executor), §7.3 (option a; `[human]` T2) | Test-phase spec-gaps; reopened from `test` with `karvey-state.py reopen … architecture --ref D-19`. |
+| 2 | 2026-09-25 | D-33 · BUG-25 · F-52 | §1.3 (`hooks.json` `Agent\|Task` entry, `pre-agent` event, subagent-prompt contract), §3.2 (fail open), §6.1 (`subagent-prompt.json`) | The guard was added during impl to close BUG-25, outside the approved architecture; D-33 keeps it and records it here. |
+| 3 | 2026-09-26 | BUG-28, BUG-41, BUG-42 (QA) | §3.3 (prod marker scoped to the change and consumed; `si` only as the affirmative) | QA fixes that change documented behaviour; the prod-gate candidate forms added by BUG-28 are listed in `rules/enforcement.md` and the tables. |
+| 4 | 2026-09-26 | D-34, D-35, D-36 · F-76, F-77, F-79 (QA spec-gaps); BUG-47..51 (QA re-run) | §1.2 (`approve prod --sha`, `check-prod --sha`, `reopen`), §3.3 control 6 (the matching evidence = the approval hook's audit-log line), §3.4 (the ledger stores the approved head commit + expiry; the released commit is compared; reopen supersedes the prod approval) | The owner's decisions on the three open QA spec-gaps; tables pg5-01..11 and ap-40, tasks E1.F18. |

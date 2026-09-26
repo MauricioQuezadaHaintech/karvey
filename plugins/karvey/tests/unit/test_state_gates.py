@@ -106,6 +106,10 @@ class How(Base):
 
 
 class Release(Base):
+    def put(self, spec, project=None):
+        super().put(spec, project)
+        g.commit_all(self.root, "fixture")  # D-35: a prod approval is bound to a commit
+
     def spec(self):
         a = {k: ok() for k in ("requirements", "architecture", "tasks")}
         a["qa"] = {"generated": True, "approved": False}

@@ -209,5 +209,22 @@ class Ledger(Base):
         self.assertEqual(p.read_text(), "{")
 
 
+class AuditRecord(Base):
+    """D-34: the approval hook's audit line of a marker carries the prompt hash, session and time."""
+
+    def test_marker_line_carries_hash_session_and_time(self):
+        m = ap.write_marker(self.repo, "prod", "feat-a", "ok, merge a prod", session_id="s1")
+        rec = [r for r in self.log() if r.get("event") == "marker" and r.get("decision") == "recorded"][-1]
+        self.assertEqual((rec["prompt_sha256"], rec["session_id"], rec["created_at"], rec["reason"], rec["change"]),
+                         (m["prompt_sha256"], "s1", m["created_at"], "prod", "feat-a"))
+        self.assertTrue(ap.audit_record_of(self.repo, "feat-a", ap.evidence(m, "feat-a")))
+
+    def test_no_line_no_match(self):
+        m = ap.write_marker(self.repo, "prod", "feat-a", "ok, merge a prod", session_id="s1")
+        ev = ap.evidence(m, "feat-a")
+        ev["session"] = "s2"
+        self.assertFalse(ap.audit_record_of(self.repo, "feat-a", ev))
+
+
 if __name__ == "__main__":
     unittest.main()

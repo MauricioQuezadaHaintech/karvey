@@ -63,8 +63,17 @@
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "string",
-        "minLength": 1
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "object",
+            "x-karvey-severity": "warning",
+            "x-karvey-note": "legacy repo object {name, url, stack, layer}: list the repo by name or path (BUG-33)"
+          }
+        ]
       }
     },
     "spec_repo": {

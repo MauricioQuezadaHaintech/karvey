@@ -40,7 +40,7 @@ How to build it:
 - **The environment and the build identity come from the pipeline:** the stage sets `APP_ENV` (`dev` | `prod`), the CI provides the build number and the short commit (`git rev-parse --short HEAD`). The code composes: `APP_ENV === 'prod' ? version : `${version}-dev.${build}+${sha}``.
 - Discreet but accessible place; the DEV mark must be impossible to confuse with production.
 
-`karvey-deploy` must **recommend this to the user** when it detects a frontend layer whose version is not visible or not differentiated by environment, and its canary **checks the visible version** (see `karvey-deploy` 2.7 / 2.11): DEV shows `-dev` of the version just bumped; PROD shows exactly the released version. A mismatch is a finding (stale build, wrong stage variable, or a version read from the wrong source).
+`karvey-deploy` must **recommend this to the user** when it detects a frontend layer whose version is not visible or not differentiated by environment, and its canary **checks the visible version** (see `karvey-deploy` 2.6 / 2.10): DEV shows the version in the version file **of the deployed commit** (`git show <deployed-sha>:<version file>`, never the tip of the integration branch, where a later change may already have bumped it) with an unmistakable DEV mark, in any format — the `-dev.{build}+{sha}` form above is the recommendation, not the test; PROD shows exactly the released version. A mismatch is a finding (stale build, wrong stage variable, or a version read from the wrong source); a UI with no visible version is a recommendation, not a finding.
 
 ## In the step-by-step deployment (`karvey-deploy`)
 

@@ -12,7 +12,8 @@ clone and never tracked by git; directories 0700, files 0600::
                              a human confirmation of a changed notification destination (D-16,
                              F-15), key = hash of the project root within the clone — written ONLY
                              by the approval hook, consumed by ``karvey-config.py notify-check --confirm``
-    ledger/<change>.json     release facts — written by karvey-state.py approve prod / advance deployed
+    ledger/<change>.json     release facts — written by karvey-state.py approve prod / advance deployed;
+                             ``reopen`` moves a prod approval to ``superseded`` (D-36)
 
 A marker is valid only as JSON ``v: 1`` with ``kind`` in plan|prod, the expected ``scope``,
 ``repo`` equal to this clone's common dir, ``created_at`` within its TTL (clamped to 5..1440 min),
@@ -41,6 +42,7 @@ KINDS = ("plan", "prod")
 SCOPE_PROJECT = "_project"
 EXCERPT_MAX = 80
 CONSUMED_KEEP_H = 24
+PROD_VALID_H = 24  # D-35: a prod approval is valid 24 h after the human's OK
 COMPAT_ENV = "KARVEY_COMPAT_MARKER"
 _SCOPE_RE = re.compile(r"^(_project|[a-z0-9][a-z0-9-]{1,62})$")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -163,8 +165,10 @@ def write_marker(root, kind, scope, prompt, session_id="", ttl_min=None, now=Non
         except (OSError, atomicio.AtomicIOError) as exc:
             _audit(root, {"guard": "approval", "event": "compat-marker", "decision": "error",
                           "reason": str(exc)})
+    # D-34: the prod-gate matches a prod approval against this line (hash, session, time)
     _audit(root, {"guard": "approval", "event": "marker", "decision": "recorded", "reason": kind,
                   "change": scope, "session_id": session_id or "", "prompt_excerpt": marker["prompt_excerpt"],
+                  "prompt_sha256": marker["prompt_sha256"], "created_at": marker["created_at"],
                   "compat": compat_written})
     return marker
 
@@ -347,7 +351,35 @@ def evidence(marker, scope):
         return {"marker": "none"}
     return {"marker": marker_rel(scope), "marker_created_at": marker.get("created_at", ""),
             "prompt_excerpt": (marker.get("prompt_excerpt") or "")[:EXCERPT_MAX],
-            "session": marker.get("session_id", "")}
+            "session": marker.get("session_id", ""), "prompt_sha256": marker.get("prompt_sha256", "")}
+
+
+def audit_record_of(root, scope, ev):
+    """D-34: True when ``audit.log`` (current or rotated) holds the approval hook's ``recorded`` line
+    of the prod marker that ``ev`` names: same scope, prompt hash, session and creation time."""
+    if not isinstance(ev, dict) or not isinstance(ev.get("prompt_sha256"), str) or \
+            not _HEX64.match(ev["prompt_sha256"]) or not isinstance(ev.get("marker_created_at"), str):
+        return False
+    try:
+        records = audit.read(pj.state_dir(root, create=False), include_rotated=True)
+    except OSError:
+        return False
+    for r in records:
+        if (r.get("guard"), r.get("event"), r.get("decision"), r.get("reason")) != \
+                ("approval", "marker", "recorded", "prod"):
+            continue
+        if r.get("change") == scope and r.get("prompt_sha256") == ev["prompt_sha256"] and \
+                r.get("session_id", "") == ev.get("session", "") and r.get("created_at") == ev["marker_created_at"]:
+            return True
+    return False
+
+
+def prod_record(marker, scope, by, ref, date, head_sha):
+    """The ledger record of a human prod approval (D-03, D-34, D-35): who, when, evidence, the
+    approved head commit and ``expires_at`` = the human's OK (the marker) + 24 h."""
+    created = parse_dt((marker or {}).get("created_at")) or now_dt()
+    return {"by": by, "role": "human", "date": date, "ref": ref, "head_sha": head_sha,
+            "expires_at": iso(created + timedelta(hours=PROD_VALID_H)), "evidence": evidence(marker, scope)}
 
 
 # --------------------------------------------------------------------------- notify confirmation (D-16)
@@ -524,6 +556,26 @@ def record_prod(root, change, approval):
     return _update_ledger(root, change, "prod", approval)
 
 
+def supersede_prod(root, change, at, reason, ref=None):
+    """D-36: a reopen moves the ledger's prod approval to ``superseded[]``. Returns the moved record,
+    or None when there is none. A corrupt ledger is left alone (check-prod already refuses it)."""
+    data, status = read_ledger(root, change)
+    if status != "ok" or not isinstance(data.get("prod"), dict):
+        return None
+    path = ledger_path(root, change)
+    loaded = atomicio.read_json(path)
+    data = loaded.data
+    prod = data.pop("prod")
+    entry = {"at": at, "reason": reason, "prod": prod}
+    if ref:
+        entry["ref"] = ref
+    sup = data.get("superseded") if isinstance(data.get("superseded"), list) else []
+    sup.append(entry)
+    data["superseded"] = sup
+    _write_private(path, data, expected=loaded.sha256)
+    return prod
+
+
 def record_release(root, change, pipeline_run, post_deploy_check, at=None):
     return _update_ledger(root, change, "release", {"pipeline_run": pipeline_run,
                                                      "post_deploy_check": post_deploy_check,
@@ -595,6 +647,16 @@ def find_term(text, terms):
     return None
 
 
+_ACCENTED_SI = re.compile(r"(?<![\w])s[\u00ed\u00cd](?![\w])")
+_BARE_SI = re.compile(r"^si(?:\s*[,.!;:]|\s*$)")
+
+
+def _affirmative_si(raw, cleaned):
+    """BUG-42: "si" approves only as the affirmative: written "sí" (accent kept), or a bare "si" that is the
+    whole reply or opens it followed by punctuation. The conditional "si" ("revisa si …") never does."""
+    return bool(_ACCENTED_SI.search(unicodedata.normalize("NFC", strip_quoted(raw)))) or bool(_BARE_SI.match(cleaned))
+
+
 def classify(prompt, vocab=None):
     """Decide whether ``prompt`` is an approval. Returns a dict:
     ``{approved, kind, reason, term, cleaned}``; ``kind`` is ``plan`` or ``prod`` (D-10) when
@@ -618,7 +680,9 @@ def classify(prompt, vocab=None):
         return res
     window = cleaned if len(cleaned) <= rules["short_prompt_chars"] else " ".join(
         cleaned.split(" ")[:rules["position_words"]])
-    term = find_term(window, vocab["approve"])
+    term = find_term(window, [t for t in vocab["approve"] if normalise(t) != "si"])
+    if not term and any(normalise(t) == "si" for t in vocab["approve"]) and _affirmative_si(raw, cleaned):
+        term = "si"
     if not term:
         res["reason"] = "no approval term" + ("" if window is cleaned else " in the first %d words"
                                               % rules["position_words"])
