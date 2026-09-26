@@ -1,6 +1,6 @@
 """``karvey-contrast-check.py`` (architecture §1.18, C-18).
 
-@req REQ-W3-038
+@req REQ-W3-038 REQ-W3-039
 """
 import json
 import shutil
@@ -87,6 +87,40 @@ class Contrast(unittest.TestCase):
     def test_missing_file_is_exit_4(self):
         code, env = self.run_tool()
         self.assertEqual(code, 4)
+
+
+class GateSummary(unittest.TestCase):
+    """@req REQ-W3-039 — the what-gate summary shows the contrast result beside the design judge."""
+
+    def test_contrast_result_in_the_what_gate(self):
+        import contextlib
+        import importlib.util
+        import io
+        from _state import make_project
+        tmp = Path(tempfile.mkdtemp(prefix="karvey-contrast-gate-"))
+        self.addCleanup(shutil.rmtree, str(tmp), True)
+        f = make_project(tmp, spec={"change_id": "feat-a", "phase": "design_graphic", "lane": "feature-ui",
+                                    "phase_history": [{"phase": "design_graphic",
+                                                       "entered_at": "2026-10-01T10:00:00-03:00"}],
+                                    "approvals": {"requirements": {"generated": True}}})
+        (tmp / "docs/spec/design-system.md").write_text(SEED.read_text(encoding="utf-8"), encoding="utf-8")
+        (f.parent / "design-delta.md").write_text(
+            "## Modified\n\n| Token | Scheme | Base value | New value |\n|---|---|---|---|\n"
+            "| `--color-accent` | light | `#8f5312` | `#c08a4a` |\n", encoding="utf-8")
+        cp = subprocess.run([sys.executable, str(TOOL), "--root", str(tmp), "--delta", "feat-a", "--json"],
+                            capture_output=True, text=True, timeout=60)
+        (f.parent / "contrast.json").write_text(cp.stdout, encoding="utf-8")
+        m = importlib.util.spec_from_file_location("karvey_context_cg", str(_path.SCRIPTS_DIR / "karvey-context.py"))
+        mod = importlib.util.module_from_spec(m)
+        m.loader.exec_module(mod)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = mod.main(["--root", str(tmp), "--section", "gate", "--change", "feat-a", "--gate", "what"])
+        text = out.getvalue()
+        self.assertEqual(code, 0, text)
+        self.assertIn("contrast:", text)
+        self.assertIn("13 pair(s) × 2 schemes · 2 below level", text)
+        self.assertIn("--color-accent on --color-surface (light)", text)
 
 
 if __name__ == "__main__":

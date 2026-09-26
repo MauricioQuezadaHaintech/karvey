@@ -1011,6 +1011,23 @@ def gate_summary(rd, ctx):
             est = sum(float(x) for x in _EST.findall(tasks))
             res["sections"]["estimated_cost"] = ["%g min over %d task(s) (tasks.md)" % (est, len(_EST.findall(tasks)))]
             res["sections"]["human_tasks"] = ["%s %s" % m for m in _HUMAN_TASK.findall(tasks)] or ["none"]
+    if args.gate == "what" and any(p["phase"] == "design_graphic" and p["state"] not in ("skipped", "skipped (lane)")
+                                   for p in phases):
+        # the design judge's deterministic sub-score beside its verdict (REQ-W3-039)
+        ct = rd.text(cdir / "contrast.json")
+        try:
+            cj = (json.loads(ct).get("result") or json.loads(ct)) if ct else None
+        except (ValueError, AttributeError):
+            cj = None
+        if not isinstance(cj, dict) or "rows" not in cj:
+            res["sections"]["contrast"] = ["not computed (karvey-contrast-check.py --delta %s --json > contrast.json)"
+                                           % c["id"]]
+        else:
+            below = cj.get("below") or []
+            res["sections"]["contrast"] = ["%d pair(s) × 2 schemes · %d below level" % (cj.get("pairs") or 0,
+                                                                                        len(below))] + [
+                "%s on %s (%s): %.2f:1 < %s" % (b["text"], b["background"], b["scheme"], b["ratio"], b["level"])
+                for b in below] + ["unparseable: %s" % u for u in cj.get("unparseable") or []]
     if args.gate in ("how", "release"):
         req, tasks_t = rd.text(cdir / "requirements.md"), rd.text(cdir / "tasks.md")
         if req is None:
