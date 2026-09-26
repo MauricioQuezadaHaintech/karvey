@@ -156,7 +156,7 @@ The skills' bodies are in English (what Claude reads), but **artifacts are gener
 
 ## Knowledge graph (`graphify-out/`)
 
-The repo ships a [graphify](https://github.com/safishamsi/graphify) knowledge graph of the method itself (`project.json:knowledge_sync = "graphify"`): skills, shared rules, releases and the concepts that connect them.
+The repo ships a [graphify](https://github.com/safishamsi/graphify) knowledge graph of the method itself (`project.json:knowledge_sync = "graphify"`): skills, shared rules, releases and the concepts that connect them. The knowledge sync is **optional** for projects that use Karvey: `knowledge_sync` defaults to `none`, and nothing in the method needs graphify.
 
 - `graphify-out/GRAPH_REPORT.md` — communities, god nodes, surprising connections, suggested questions.
 - `graphify-out/graph.html` — interactive graph, opens in any browser. `graphify-out/graph.json` — raw graph.

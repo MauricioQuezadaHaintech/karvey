@@ -999,6 +999,28 @@ class L45(LintCase):
         self.assertFails("L-45", "E{1..99}", file=f)
 
 
+class L46(LintCase):
+    """@req REQ-W2-079 — knowledge sync is optional."""
+
+    def test_pass(self):
+        self.assertPasses("L-46")
+
+    def test_graphify_required_in_a_skill_fails(self):
+        f = SKILLS + "/karvey-archive/SKILL.md"
+        self.t.append(f, "\ngraphify is required before archiving.\n")
+        self.assertFails("L-46", "described as required", file=f)
+
+    def test_negated_sentence_passes(self):
+        self.t.append(SKILLS + "/karvey-archive/SKILL.md", "\ngraphify is not required.\n")
+        self.assertPasses("L-46")
+
+    def test_rule_without_none_default_fails(self):
+        real = _path.PLUGIN_ROOT / "skills/karvey/rules/knowledge-sync.md"
+        self.t.write(RULES + "/knowledge-sync.md",
+                     real.read_text(encoding="utf-8").replace("**yes** (also when the key is absent)", "no"))
+        self.assertFails("L-46", "default", file=RULES + "/knowledge-sync.md")
+
+
 class L34(LintCase):
     def test_pass(self):
         self.assertPasses("L-34")

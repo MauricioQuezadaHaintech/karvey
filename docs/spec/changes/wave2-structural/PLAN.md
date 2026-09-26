@@ -157,7 +157,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F11: Knowledge sync optional
 
-- [ ] E1.F11.T1 [Backend] Knowledge sync optional everywhere (`none` default), archive syncs only when declared + L-46 — est: 8min (P)
+- [x] E1.F11.T1 [Backend] Knowledge sync optional everywhere (`none` default), archive syncs only when declared + L-46 — est: 8min (P)
 
 ### Feature E1.F12: Deferred Wave 1 backlog
 
@@ -240,7 +240,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F9.T4 [Backend] | ✅ done | 10 | 7 | 0 |  |
 | E1.F10.T1 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F10.T2 [Backend] | ⬜ todo | 8 | — | — |  |
-| E1.F11.T1 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F11.T1 [Backend] | ✅ done | 8 | 7 | 0 |  |
 | E1.F12.T1 [Backend] | ⬜ todo | 6 | — | — |  |
 | E1.F12.T2 [Backend] | ⬜ todo | 5 | — | — |  |
 | E1.F12.T3 [Test] | ⬜ todo | 8 | — | — |  |

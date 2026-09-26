@@ -87,7 +87,7 @@ git commit -m "chore: archive {change-id}"
 
 ### Step 6 — Knowledge sync (here only)
 
-The knowledge sync runs at archive and on demand, never per phase (`../karvey/rules/knowledge-sync.md`). With `knowledge_sync: none`, skip and say so. Otherwise sync the union of the paths queued in `.graph-pending` and `git diff --name-only "origin/$P"...HEAD` — e.g. `/graphify docs/spec/ --update` (without `--update` when there is no graph yet); `--update` also drops the nodes of deleted documents. Clear `.graph-pending` after a successful sync.
+The knowledge sync is optional and runs at archive and on demand, never per phase (`../karvey/rules/knowledge-sync.md`). Only when `project.json` declares `knowledge_sync: graphify` or `obsidian`: otherwise (absent or `none`) skip this step silently — it is not a missing step. When declared, sync the union of the paths queued in `.graph-pending` and `git diff --name-only "origin/$P"...HEAD` — e.g. `/graphify docs/spec/ --update` (without `--update` when there is no graph yet); `--update` also drops the nodes of deleted documents. Clear `.graph-pending` after a successful sync.
 
 ### Step 7 — Close the loop (sweeps and optional steps)
 

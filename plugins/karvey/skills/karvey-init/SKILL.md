@@ -42,7 +42,7 @@ If `$ARGUMENTS` includes the change-id, use it. If not, generate it from the des
 
 - **`git_platform`**: `github` | `azure_devops`.
 - **`cloud.provider`**: `azure` | `gcp` | `aws` | `mixed` | `none`. **`iac_tool`**: `terraform` | `bicep` | `pulumi` | `none`.
-- **`knowledge_sync`** (`../karvey/rules/knowledge-sync.md`): `obsidian` if an Obsidian MCP is in the session, `graphify` if graphify is installed, otherwise `none` — say once that the sync then does not run. It runs only at archive or on demand.
+- **`knowledge_sync`** (`../karvey/rules/knowledge-sync.md`), optional, default `none`: offer `obsidian` (an Obsidian MCP is in the session) or `graphify` (installed) only when one is available, and write it only if the team wants a graph. It runs only at archive or on demand.
 - **`repos`**: MINIMUM 1 element. **`spec_repo`**: the one repo, or ask which holds `docs/spec/`.
 - **`branch_flow`**: recommend **trunk** — `{ "feature_prefix": "feature/", "integration": "main", "production": "main", "mode": "trunk" }`: each change reaches production through its own PR. `env-branches` (integration ≠ production, e.g. `dev` → `master`) only when the team deploys an integration environment from its own branch. Without `mode` it is derived (trunk when integration = production); a declared mode that contradicts the branches fails `validate`.
 

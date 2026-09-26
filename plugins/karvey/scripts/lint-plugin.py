@@ -1768,6 +1768,35 @@ def l33_duplicate_ids(ctx):
                     seen[m.group(1)] = n
 
 
+# --------------------------------------------------------------------------- L-46 (wave2-structural)
+KS_TOOL_RE = re.compile(r"\b(graphify|obsidian|knowledge[ _-]sync|knowledge graph)\b", re.I)
+KS_REQUIRED_RE = re.compile(r"\b(required|requires|mandatory|obligatory|must (?:be )?(?:installed|run|present)|"
+                            r"needs? to be installed)\b", re.I)
+KS_NEGATION_RE = re.compile(r"\b(not|never|no|optional|nothing|without)\b", re.I)
+
+
+@check("L-46", "No skill, rule or README describes graphify or knowledge sync as required; the knowledge-sync "
+               "rule makes none (or an absent key) the default with no sync step (REQ-W2-079)", reqs=("W2-079",))
+def l46_knowledge_sync_optional(ctx):
+    files = list(ctx.skills().values()) + sorted(ctx.rules_dir.glob("*.md")) + \
+        [p for p in (ctx.root / "README.md", ctx.plugin / "README.md") if p.is_file()]
+    for path in files:
+        for n, line, lang in iter_lines(ctx.lines(path)):
+            if lang is not None:
+                continue
+            for sentence in re.split(r"(?<=[.;:])\s+", line):
+                if KS_TOOL_RE.search(sentence) and KS_REQUIRED_RE.search(sentence) \
+                        and not KS_NEGATION_RE.search(sentence):
+                    yield path, n, "knowledge sync described as required (%s); it is optional (none by default)" % (
+                        sentence.strip()[:80])
+    rule = ctx.rule("knowledge-sync.md")
+    if rule is not None:
+        text = ctx.read(rule) or ""
+        row = re.search(r"^\|\s*`none`\s*\|.*$", text, re.M)
+        if row and not re.search(r"\*\*yes\*\*[^\n]*absent", row.group(0)):
+            yield rule, 1, "rules/knowledge-sync.md must make `none` the default, also when the key is absent"
+
+
 # --------------------------------------------------------------------------- L-49 (wave2-structural)
 @check("L-49", "A change in deployed (not archived) has its spec-delta merged into the living spec "
                "(karvey-spec-merge.py --check = merged) (REQ-W2-056)", reqs=("W2-056",))

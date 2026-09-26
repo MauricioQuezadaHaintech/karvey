@@ -1,7 +1,8 @@
 # Rule: Knowledge synchronization
 
 Karvey can keep a knowledge graph of `docs/spec/` (and of the code) so later changes see earlier decisions and
-dependencies. The mechanism is `knowledge_sync` in `docs/spec/project.json`, chosen once by `karvey-init`.
+dependencies. It is **optional**: the mechanism is `knowledge_sync` in `docs/spec/project.json`, and without the key
+(or with `none`) no phase runs, attempts or reports a sync step. No tool here is needed to use the method.
 
 ## Choosing the mechanism
 
@@ -9,9 +10,10 @@ dependencies. The mechanism is `knowledge_sync` in `docs/spec/project.json`, cho
 |---|---|---|
 | `obsidian` | an Obsidian MCP is available in the session (tools whose name contains `obsidian`) | — |
 | `graphify` | graphify is installed | — |
-| `none` | neither is available, or the team does not want a graph | yes, when graphify is not detected |
+| `none` | the team does not want a graph, or neither tool is available | **yes** (also when the key is absent) |
 
-`karvey-init` says once which value it chose and why; `none` is a valid choice, not an error.
+`karvey-init` offers a mechanism only when one is available and the team wants it; otherwise it leaves `none`.
+`none` is the default and a complete setup, not an error or a missing step.
 
 ## When the sync runs: at archive and on demand only
 
@@ -35,5 +37,6 @@ It runs:
   `--update`.
 - Multi-repo: also in each repo of `project.json:repos` whose code the change touched.
 
-### `knowledge_sync = "none"`
-- Nothing runs; `.graph-pending` is still kept, so enabling a mechanism later can catch up.
+### `knowledge_sync = "none"` or absent
+- Nothing runs and nothing is reported as missing; `.graph-pending` is still kept, so enabling a mechanism later
+  can catch up.
