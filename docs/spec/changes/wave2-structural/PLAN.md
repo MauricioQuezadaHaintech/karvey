@@ -1,7 +1,7 @@
 # Plan: wave2-structural
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend, Infra
-**Created:** 2026-09-25 | **Status:** 🔄 in_progress (impl: batch 1 done, 25 of 69 agent tasks; see Task status)
+**Created:** 2026-09-25 | **Status:** 🔄 in_progress (impl: batch 2 done, 50 of 69 agent tasks; see Task status)
 **Lane:** standard (no UI: mockup and design_graphic to be skipped at the architecture transition)
 **Release target:** 3.13.0 (advisory / opt-in) → 4.0.0 when the D-24 defaults turn blocking
 **Flow:** trunk (`feature/wave2-structural` → PR → `main`) · **Decisions:** D-22..D-27, D-29, D-30 (D-01..D-19 hold)
@@ -49,15 +49,15 @@ manifest makes "what was approved" equal "what shipped"; metrics make every one 
 |---------|------|----------------------|-----------------|--------|
 | F1 | Flow metrics, gate outcomes, deploy records, retro | REQ-W2-001..010 | R-14 · DM-11, PM-05, PM-12 · D-24, D-30 · BL-17, BL-45 | ✅ |
 | F2 | Lanes with objective criteria, official `patch` lane | REQ-W2-011..021 | R-09 · DM-01, PM-09, H-03, H-04 · D-25, D-29 · BL-12 | ⬜ |
-| F3 | Advisory judges (incl. the qa fiscal) | REQ-W2-022..033 | R-11 / JU-01 · AG-12, DM-06, DM-08, B-12 · D-23, D-30 · BL-14 | ⬜ |
-| F4 | Three merged human gates, one question, `-y` = auto | REQ-W2-034..042 | R-10 · DM-06, AG-08, H-06 · D-22 · BL-13 | ⬜ |
+| F3 | Advisory judges (incl. the qa fiscal) | REQ-W2-022..033 | R-11 / JU-01 · AG-12, DM-06, DM-08, B-12 · D-23, D-30 · BL-14 | ✅ |
+| F4 | Three merged human gates, one question, `-y` = auto | REQ-W2-034..042 | R-10 · DM-06, AG-08, H-06 · D-22 · BL-13 | ✅ |
 | F5 | Release per change: trailer, manifest, integration PR, trunk | REQ-W2-043..053 | R-08 · DM-03, PM-04, H-21, F-28..F-30 · D-26 · BL-11, BL-46..BL-48 | ⬜ |
-| F6 | Living spec merged before production | REQ-W2-054..056 | R-17 (timing) · DM-09 · BL-20 | ⬜ |
+| F6 | Living spec merged before production | REQ-W2-054..056 | R-17 (timing) · DM-09 · BL-20 | ✅ |
 | F7 | Test-first and traceability | REQ-W2-057..063 | R-12 · DM-07 · BL-15 | ⬜ |
 | F8 | Deterministic security tools | REQ-W2-064..068 | R-13 · DM-08 · BL-16 | ⬜ |
-| F9 | Release-gate, id, health and evidence scripts | REQ-W2-069..074 | R-20 · AG-07, AG-10, AG-12, PM-13, F-26 · BL-23, BL-44 | ⬜ |
+| F9 | Release-gate, id, health and evidence scripts | REQ-W2-069..074 | R-20 · AG-07, AG-10, AG-12, PM-13, F-26 · BL-23, BL-44 | ✅ |
 | F10 | Post-deploy verification with thresholds | REQ-W2-075..078 | R-23 · DM-10 · BL-26 | ⬜ |
-| F11 | Knowledge sync optional | REQ-W2-079 | R-16 · D-27 | ⬜ |
+| F11 | Knowledge sync optional | REQ-W2-079 | R-16 · D-27 | ✅ |
 | F12 | Deferred Wave 1 backlog | REQ-W2-080..082 | F-31, F-32, F-33 · BL-49, BL-50 | ⬜ |
 | F13 | Rollout 3.13 → 4.0 and dogfooding | REQ-W2-083..088 | Ola 2 plan · D-24, D-26 | ⬜ |
 
@@ -265,3 +265,4 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | 2026-09-25 | tasks | `tasks.md` generated: 71 tasks (69 agent, 2 `[human]`), 706 min calibrated, critical path 141 min, REQ-W2 88/88; inherited base commits `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` are `wave1-hardening` decision commits (spec-only, mapped to that change, E1.F5.T9); not approved |
 | 2026-09-25 | impl | Batch 1 (25 tasks): E1.F1.T1..T11 (F1 complete), E1.F2.T1..T8, E1.F3.T1..T4, E1.F3.T6, E1.F6.T1; one commit each with `Karvey-Change: wave2-structural`, one `[Unreleased]` line each, no version change. Deviations: (1) E1.F2.T6 adds `karvey-state.py lane-check` so the QA lane-check text is executable (the design names `measure_diff` + `record_hit`, not the CLI); (2) E1.F1.T5 done-when grep prints 0, not 1 — the change is in impl with no blocker, the duplicate is reproduced by `test_state_next` BlockersOnce; (3) E1.F2.T8 diff has no `@@` hunk header (it conflicts with the no-`@` check; applied by hand); (4) `project.schema.json:checks` also accepts `granular`/`merged` (the `gates.merged` levels); (5) `lanes.json` gains no rank: raise/lower order is derived from the number of phases a lane runs. Next: E1.F2.T9 waits on E1.F5.T3; continue with E1.F3.T5, E1.F4.*, E1.F5.*, E1.F9.* |
 | 2026-09-26 | impl | E1.F5.T9 — inherited base commits: `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` (decision-log and wave1 fix commits on the base branch) belong to `wave1-hardening`; no history is rewritten. `karvey-release-gate.py manifest --base origin/main` run on 2026-09-26: `wave1-hardening` is not yet on `origin/main`, so the four shas are listed among the 107 inherited commits of that change (all pre-trailer). After `wave1-hardening` merges they leave this range; if they are still in it at the release gate, run it with `--base` at the merge base and quote this note in the PR body. |
+| 2026-09-26 | impl | Batch 2 (25 tasks): E1.F3.T5, E1.F3.T7 (F3 complete), E1.F4.T1..T7 (F4 complete), E1.F5.T1, T2, T4, T5, T7, T9, E1.F9.T1..T4 (F9 complete), E1.F6.T2, T3 (F6 complete), E1.F11.T1 (F11 complete), E1.F12.T2, T3, E1.F7.T1; one commit each with `Karvey-Change: wave2-structural`, one `[Unreleased]` line each, no version change. Deviations logged as F-01..F-04 (`gate` query command; L-33 release line = `origin/{production}`; coverage also by `Tests added`; L-30 ignores the per-period glob, L-49 tests in the spec-merge suite); F-05: the method page counts are stale (release docs). Next: E1.F12.T1, E1.F7.T2 → E1.F5.T3 → E1.F2.T9, E1.F8.T1..T3, E1.F10.T1, E1.F5.T6, E1.F10.T2, E1.F5.T8, E1.F7.T3, E1.F13.* |
