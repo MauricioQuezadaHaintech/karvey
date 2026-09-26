@@ -1537,3 +1537,33 @@ wildcards are matched against full refs; in a cluster `-o` takes the rest as its
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-95, karvey-qa re-run D7 second opinion re-check (N-1..N-4) |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 0ce4a7b, green after |
+
+## BUG-51 — The prod-gate trusted `--dry-run` cancelled by `--no-dry-run`, and ignored `--repo`
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_push_parse`, `_evaluate_candidate`)
+- **Change / origin:** wave1-hardening — finding F-96 (QA re-run, D7 second opinion re-check (N-5, N-6))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With `wip` at an unapproved B: `git push --dry-run --no-dry-run origin wip:main`. With a second remote `pub` on the same repository set as a mirror, or with a wildcard push refspec, and local `main` at B: `git push --repo=pub`.
+
+### Actual vs expected
+- Actual: the gate allowed both, and `origin/main` ended at B.
+- Expected: the options are read as git reads them: the last of `--dry-run`/`--no-dry-run` wins, and `--repo` names the remote when no positional one does.
+
+### Root cause
+the dry-run early exit ran before the unknown-option check and never saw the negation; with no positional remote the implicit push read `origin`'s configuration instead of the `--repo` one.
+
+### Fix
+`--no-dry-run` clears the dry run; the unknown-option check runs before any early exit; `--repo` gives the remote when there is no positional one.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg6-18-dry-run-cancelled-by-no-dry-run, pg6-19-repo-option-names-a-mirror-remote, pg6-20-repo-option-names-a-wildcard-remote; red on d0153c2. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-96, karvey-qa re-run D7 second opinion re-check (N-5, N-6) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on d0153c2, green after |

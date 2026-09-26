@@ -675,7 +675,7 @@ def flow_config(ctx, target_dir):
 
 
 # git push long options (git accepts a unique prefix of any of them, BUG-50); those that take a value
-PUSH_LONG = ("--all", "--branches", "--mirror", "--prune", "--dry-run", "--porcelain", "--delete", "--tags",
+PUSH_LONG = ("--all", "--branches", "--mirror", "--prune", "--dry-run", "--no-dry-run", "--porcelain", "--delete", "--tags",
              "--follow-tags", "--no-follow-tags", "--signed", "--no-signed", "--atomic", "--no-atomic",
              "--push-option", "--receive-pack", "--exec", "--repo", "--force", "--no-force", "--force-with-lease",
              "--no-force-with-lease", "--force-if-includes", "--no-force-if-includes", "--set-upstream",
@@ -700,7 +700,7 @@ def _push_parse(args):
     unique prefix (``--mirro`` → ``--mirror``); an unknown one adds ``UNKNOWN_FLAG`` and its name.
     In a short cluster, ``-o`` takes the rest as its value (``-on`` is push-option ``n``, not a dry
     run); ``-n`` counts as a dry run only on its own (BUG-50)."""
-    flags, pos = set(), []
+    flags, pos, repo = set(), [], None
     i = 0
     while i < len(args):
         a = args[i]
@@ -712,10 +712,16 @@ def _push_parse(args):
             canon = _push_long(name)
             if canon is None:
                 flags.update((UNKNOWN_FLAG, name))
+            elif canon == "--no-dry-run":  # BUG-51: the last one wins, as in git
+                flags.difference_update(("--dry-run", "-n"))
             else:
                 flags.add(canon)
                 if canon in PUSH_LONG_WITH_ARG and not has_val:
+                    if canon == "--repo" and i + 1 < len(args):
+                        repo = args[i + 1]
                     i += 1
+                elif canon == "--repo":
+                    repo = a.split("=", 1)[1]
         elif a.startswith("-") and len(a) > 1:
             cluster = a[1:]
             for j, ch in enumerate(cluster):
@@ -730,7 +736,7 @@ def _push_parse(args):
         else:
             pos.append(a)
         i += 1
-    remote = pos[0] if pos else None
+    remote = pos[0] if pos else repo  # BUG-51: --repo names the remote when no positional one does
     return remote, pos[1:], flags
 
 
@@ -1304,15 +1310,15 @@ def _evaluate_candidate(ctx, c, deadline):
                                              "push goes; rewrite the push without -c and with an explicit refspec")
         head_branch = t.branch(ctx)
         dests, flags = push_destinations(t.args, head_branch)
+        if UNKNOWN_FLAG in flags:  # BUG-50/51: before any early exit
+            return _pg_block(None, "target", "cannot verify the production approval: unrecognised push option %s; "
+                                             "spell the options out in full"
+                             % ", ".join(sorted(f for f in flags if f.startswith("--") and _push_long(f) is None)))
         if "--dry-run" in flags or "-n" in flags:
             return None
         if not dests and "--tags" in flags:
             return None  # BUG-29: only tags are pushed, no branch
         bulk = None
-        if UNKNOWN_FLAG in flags:  # BUG-50: git may read it as an option the gate does not know
-            return _pg_block(None, "target", "cannot verify the production approval: unrecognised push option %s; "
-                                             "spell the options out in full"
-                             % ", ".join(sorted(f for f in flags if f.startswith("--") and _push_long(f) is None)))
         if "--mirror" in flags:
             bulk = "--mirror"
         elif "--all" in flags or "--branches" in flags:

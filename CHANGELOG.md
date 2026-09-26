@@ -111,6 +111,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
   - BUG-47 prod-gate: wildcard and matching (`:`) refspecs, a configured mirror, `push.default matching`, a tag shadowing the pushed branch and a second production destination reached production; they now block, and the pushed branch is resolved as `refs/heads/<name>` first; without python, a wildcard or matching refspec blocks too.
   - BUG-48 a deferred merge (`gh pr merge --auto`, `az … --auto-complete`, `glab mr merge`) blocks unless bound to the approved commit (`--match-head-commit`, `--sha`).
   - BUG-50 prod-gate push parser: `refs/*:refs/*`, `-on` (push-option `n`, not a dry run), abbreviated long options (`--mirro`) and a remote name with a slash released an unapproved commit; options are read as git reads them and an unknown long option blocks.
+  - BUG-51 prod-gate: `--dry-run --no-dry-run` was skipped as a dry run and `--repo` was ignored; the last dry-run option wins and `--repo` names the remote.
   - BUG-49 `reopen` supersedes the ledger prod approval inside its transaction, so a failure reopens nothing.
 
 ### Changed

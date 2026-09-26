@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-50 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -242,6 +242,11 @@ INDEX = {
         ("table", "prod-gate", "pg6-15-abbreviated-mirror-option"),
         ("table", "prod-gate", "pg6-16-unknown-long-option"),
         ("table", "prod-gate", "pg6-17-remote-name-with-a-slash"),
+    ],
+    "BUG-51": [  # F-96 (QA re-run D7 second opinion re-check (N-5, N-6))
+        ("table", "prod-gate", "pg6-18-dry-run-cancelled-by-no-dry-run"),
+        ("table", "prod-gate", "pg6-19-repo-option-names-a-mirror-remote"),
+        ("table", "prod-gate", "pg6-20-repo-option-names-a-wildcard-remote"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
