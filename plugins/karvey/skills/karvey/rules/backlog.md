@@ -22,10 +22,12 @@ A `spec-gap` does **not** go to the backlog — it re-opens `requirements` for t
 ```markdown
 # Discovery Backlog — {project}
 
-| ID | Date | Origin | Type | Priority | Title | Status | Tracker | Promoted to change-id |
-|----|------|--------|------|----------|-------|--------|---------|-----------------------|
-| BL-12 | 2026-06-17 | add-claim-filter / F-03 | feature | med | PDF export of the report | open | task xyz | — |
-| BL-13 | 2026-06-17 | retro add-claim-filter | tech-debt | low | extract claims helper | open | — | — |
+Last refinement: 2026-06-20
+
+| ID | Date | Origin | Type | Priority | Title | Status | Tracker | Promoted to change-id | Value | Effort | CoD | Needed by | Client | Reviewed | Commit |
+|----|------|--------|------|----------|-------|--------|---------|-----------------------|-------|--------|-----|-----------|--------|----------|--------|
+| BL-12 | 2026-06-17 | add-claim-filter / F-03 | feature | med | PDF export of the report | open | task xyz | — | 4 | M | 3 | — | sample-client | 2026-06-20 | — |
+| BL-13 | 2026-06-17 | retro add-claim-filter | tech-debt | low | extract claims helper | done-direct | — | — | 2 | 45 | — | — | — | 2026-06-20 | abc1234 |
 
 ## BL-12 — PDF export of the report
 - **Origin:** change add-claim-filter, finding F-03 (browse, emergent)
@@ -34,7 +36,31 @@ A `spec-gap` does **not** go to the backlog — it re-opens `requirements` for t
 - **Status:** open
 ```
 
-`status`: `open` → `promoted` (a `change-id` was created from it) → `discarded` (with a reason).
+`status`: `open` → `promoted` (a `change-id` was created from it) · `discarded` (with a reason) · `done-direct` (small
+work done without a change — the `Commit` column is required; `validate` refuses the state without it).
+
+## Ranking — WSJF (REQ-W3-049)
+
+```
+wsjf = (value + urgency) / effort          two decimals
+```
+
+- **Value** 1–5 (what doing it is worth).
+- **Urgency** = **CoD** (cost of delay) 1–5; without it, from the days left to **Needed by**: past or ≤ 14 → 5,
+  ≤ 30 → 4, ≤ 60 → 3, ≤ 90 → 2, otherwise 1.
+- **Effort** S / M / L = 1 / 2 / 3, or minutes: ≤ 60 → 1, ≤ 240 → 2, otherwise 3.
+- A missing value, effort or urgency leaves the item **unscored** (listed apart, never 0); a malformed cell is an
+  **invalid row** named by its id. **Client** says whom it serves; **Reviewed** is the last date someone looked at
+  it — more than 30 days ago is **stale**.
+
+`karvey-context.py --backlog` lists the open items by score, the unscored apart, the stale ones flagged
+(read-only; `karvey_lib/backlog.py` computes it).
+
+## Refinement cadence (REQ-W3-052)
+
+Refine the backlog every **14 days** (`project.json:backlog.refine_days`): re-score, mark `Reviewed`, discard what no
+longer matters, then update the `Last refinement: YYYY-MM-DD` line at the top of `backlog.md`. The dashboard's
+overview shows that date, `overdue` past the cadence, or `never refined`.
 
 ## Promotion to a change-id
 
