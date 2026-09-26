@@ -283,6 +283,22 @@ class ProdManifest(Base):
         self.assertIsNone(ap.read_ledger(self.root, "feat-a")[0])
         self.assertIsNone(ap.read_marker(self.root, "feat-a")[0]["consumed_at"])
 
+    def test_a_marker_that_cannot_be_consumed_is_reported(self):
+        """BUG-73 (F-62): a failed consume after the ledger writes was swallowed, so the marker stayed live
+        silently; it is now a warning naming the scope, and consume is bound to the marker that approved."""
+        ap.write_marker(self.root, "prod", "_project", "ok, merge a prod")
+        calls = []
+
+        def boom(root, scope, now=None, created_at=None):
+            calls.append((scope, created_at))
+            raise OSError("disk full")
+        with mock.patch.object(ap, "consume", boom):
+            c, env = self.approve()
+        self.assertEqual(c, 0, env)
+        self.assertEqual(env["result"]["consumed"], [])
+        self.assertTrue(any("_project" in w["message"] for w in env["warnings"]), env["warnings"])
+        self.assertTrue(all(ca is not None for _, ca in calls), calls)
+
     def test_auto_refused(self):
         c, env = self.st("approve", "feat-a", "prod", "--manifest", "--by", "a", "--role", "auto", "--ref", "D-8")
         self.assertEqual(c, 3)

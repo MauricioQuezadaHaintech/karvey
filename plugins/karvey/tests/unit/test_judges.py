@@ -193,6 +193,18 @@ class Collect(unittest.TestCase):
         self.assertEqual((r["runs"][0]["model"], r["runs"][0]["intra_model"]), ("model-a", True))
 
 
+class Bug76(Collect):
+    """BUG-76 (F-67): a judge's own JSON cannot declare its model or its independence; the orchestrator's
+    --model / --intra-model are the record."""
+
+    def test_judge_cannot_declare_itself_cross_model(self):
+        self.result("methods.json", {"lens": "methods", "verdict": "pass", "model": "other-family",
+                                     "intra_model": False, "findings": []})
+        code, r = self.collect()
+        self.assertEqual(code, 0)
+        self.assertEqual((r["runs"][0]["model"], r["runs"][0]["intra_model"]), ("model-a", True))
+
+
 class Bug56(Collect):
     """BUG-56 (finding F-17): the judge output filter — lens, cite, idempotence, the diff file.
 

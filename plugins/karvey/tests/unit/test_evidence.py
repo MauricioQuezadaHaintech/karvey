@@ -90,6 +90,27 @@ class Evidence(unittest.TestCase):
         for s in ("tk777", "pw888"):
             self.assertNotIn(s, argv)
 
+    def test_query_tokens_and_auth_headers_are_redacted(self):
+        """@req REQ-W2-073 — BUG-75 (F-65, F-66): URL query secrets and an Authorization header value never reach
+        evidence.jsonl (short flags stay: `-p` is a test pattern for the trace)."""
+        args = [sys.executable, "-c", "pass", "https://h.example/x?token=qt111&page=2", "-H",
+                "Authorization: Bearer hb222", "--url=https://h.example/y?api_key=qk333"]
+        p = run(self.t.path, *args)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        text = self.ev.read_text()
+        for s in ("qt111", "hb222", "qk333"):
+            self.assertNotIn(s, text)
+        self.assertIn("page=2", text)
+
+    def test_junit_path_home_is_collapsed(self):
+        """@req REQ-W2-073 — BUG-75 (F-65, F-66): the --junit path is written like argv, home as ``~``."""
+        home = os.path.expanduser("~")
+        p = subprocess.run([sys.executable, EV, "--root", str(self.t.path), "--change", "feat-a", "--label", "unit",
+                            "--junit", home + "/nowhere-karvey-test/r.xml", "--", sys.executable, "-c", "pass"],
+                           cwd=str(self.t.path), capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertNotIn(home + "/", self.ev.read_text())
+
     def test_home_directory_is_collapsed(self):
         """@req REQ-W2-073 — BUG-69 (F-40): a user's home path never reaches the committed evidence (it names
         the user); it is written as ``~``. The file name stays, so the trace still matches test files."""

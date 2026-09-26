@@ -1593,16 +1593,18 @@ def _approve_prod_manifest(args, root, by, date, ref):
         approval.record_prod(root, cid, {"by": by, "role": "human", "date": date, "ref": ref,
                                          "evidence": approval.evidence(marker, scope)})
         written.append(cid)
-    consumed = []
-    for scope in sorted({s for _, s in markers.values()}):
-        try:
-            if approval.consume(root, scope):
+    consumed, warnings = [], []
+    by_scope = {s: m for m, s in markers.values()}
+    for scope in sorted(by_scope):
+        try:  # BUG-73 (F-62): bound to the marker that approved; a failure is reported, never swallowed
+            if approval.consume(root, scope, created_at=by_scope[scope].get("created_at")):
                 consumed.append(scope)
-        except (approval.ApprovalError, atomicio.AtomicIOError, OSError):
-            pass
+        except (approval.ApprovalError, atomicio.AtomicIOError, OSError) as exc:
+            warnings.append(kl.issue("state.marker_not_consumed", "the prod marker of %s could not be consumed "
+                                     "(%s): it stays live until its TTL" % (scope, exc), severity="warning"))
     res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "manifest": written,
            "unmapped": len(man["unmapped"]), "consumed": consumed}
-    return kl.EXIT_OK, res, [], [], "prod approval recorded in the release ledger for %d change(s) of the " \
+    return kl.EXIT_OK, res, [], warnings, "prod approval recorded in the release ledger for %d change(s) of the " \
         "manifest (%s), ref %s; marker(s) consumed: %s" % (len(written), ", ".join(written), ref,
                                                             ", ".join(consumed) or "none")
 
@@ -1749,6 +1751,7 @@ def cmd_lane(args, root):
     now = now_iso()
     answers = _read_answers(args.answers)
     warnings = []
+    marker = lower_scope = None
     if args.action == "set" and args.lane == "patch":
         adm = ln.admit_patch(answers)
         if not adm["admitted"]:
@@ -1761,7 +1764,9 @@ def cmd_lane(args, root):
         _require(args, ("by", "role", "ref"))
         if args.role != "human":
             raise Refused("lowering a lane needs the human (--role human)", code="state.lane_lower")
-        marker, _, reasons = approval.find_valid(root, args.change, kinds=("plan", "prod"), ttl_min=reviewed_ttl(root))
+        # BUG-74 (F-63): the change's own marker (never the project-wide one), consumed by the lower
+        marker, lower_scope, reasons = approval.find_valid(root, args.change, kinds=("plan", "prod"),
+                                                           ttl_min=reviewed_ttl(root), project_scope=False)
         if marker is None:
             raise Refused("lowering a lane needs the human's approval: no valid approval marker for %s (%s)" % (
                 args.change, ", ".join("%s: %s" % kv for kv in sorted(reasons.items()))), code="state.lane_lower")
@@ -1821,6 +1826,8 @@ def cmd_lane(args, root):
 
     path, res, _ = transact(root, args.change, mutate)
     res["file"] = rel(root, path)
+    if args.action == "lower":  # BUG-74: one approval, one lower
+        approval.consume(root, lower_scope, created_at=marker.get("created_at"))
     human = "%s: lane %s %s%s" % (args.change, args.action, args.lane,
                                   (" (from %s; pending: %s)" % (res["from"], ", ".join(res["pending"]) or "none"))
                                   if args.action != "set" else "")

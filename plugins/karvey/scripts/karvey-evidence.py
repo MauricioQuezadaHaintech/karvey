@@ -52,6 +52,9 @@ _SECRET_WORD = _SecretName()
 _LONG_FLAG = re.compile(r"^--([A-Za-z0-9][A-Za-z0-9_.-]*)$")
 _LONG_FLAG_EQ = re.compile(r"^(--[A-Za-z0-9][A-Za-z0-9_.-]*)=(.*)$", re.S)
 _ENV_ARG = re.compile(r"^([A-Za-z_][A-Za-z0-9_.-]*)=(.*)$", re.S)
+_QUERY_SECRET = re.compile(r"([?&]([A-Za-z0-9_.-]+)=)([^&#\s]*)")  # BUG-75: ?token=… in a URL
+_AUTH_HEADER = re.compile(r"^((?:proxy-)?authorization:\s*(?:\S+\s+)?|[A-Za-z0-9-]*(?:api-?key|token|secret)"
+                          r"[A-Za-z0-9-]*:\s*)\S.*$", re.I)
 _USERINFO = re.compile(r"(\b[A-Za-z][A-Za-z0-9+.-]*://)[^/@\s]+@")
 
 
@@ -84,7 +87,10 @@ def redact_argv(argv):
         m = _LONG_FLAG.match(a)
         if m and _SECRET_WORD.search(m.group(1)):
             hide_next = True
-        out.append(_USERINFO.sub(r"\1%s@" % REDACTED, a))
+        a = _USERINFO.sub(r"\1%s@" % REDACTED, a)
+        a = _QUERY_SECRET.sub(lambda m: m.group(1) + (REDACTED if _SECRET_WORD.search(m.group(2)) else m.group(3)), a)
+        a = _AUTH_HEADER.sub(r"\1%s" % REDACTED, a)  # BUG-75: "Authorization: Bearer x", "X-Api-Key: x"
+        out.append(a)
     return out
 
 
@@ -188,7 +194,7 @@ def main(argv=None):
     rec = {"at": datetime.now().astimezone().isoformat(timespec="seconds"), "change": change,
            "label": args.label[:120], "argv": redact_argv(cmd), "cwd_rel": os.path.relpath(cwd, str(root)).replace(os.sep, "/"),
            "exit": code, "duration_ms": ms, "stdout_sha256": so, "stderr_sha256": se, "bytes": nbytes,
-           "junit": args.junit}
+           "junit": _collapse_home(args.junit) if args.junit else args.junit}  # BUG-75: home as ~
     path = Path(root) / pj.CHANGES_DIR / change / EVIDENCE_FILE
     try:
         line = append_record(path, rec)

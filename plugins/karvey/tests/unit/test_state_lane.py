@@ -211,6 +211,19 @@ class LaneChanges(GitBase):
         self.assertFalse(state.is_raise("ops", "feature-ui"))  # infra mandatory → optional
         self.assertFalse(state.is_raise("standard", "standard"))
 
+    def test_lower_needs_the_changes_own_marker_and_consumes_it(self):
+        """BUG-74 (F-63): a project-wide plan marker lowered any change's lane, and the marker stayed live."""
+        self.put(dict(at_requirements("standard")))
+        ap.write_marker(self.root, "plan", "_project", "aprobado")
+        self.refused(("lane", "feat-a", "lower", "patch", "--reason", "one-line fix", "--by", "owner",
+                      "--role", "human", "--ref", "D-1"), "approval marker")
+        ap.write_marker(self.root, "plan", "feat-a", "aprobado, bájalo a patch")
+        code, env = self.st("lane", "feat-a", "lower", "patch", "--reason", "one-line fix", "--by", "owner",
+                            "--role", "human", "--ref", "D-1")
+        self.assertEqual(code, 0, env)
+        m, status = ap.read_marker(self.root, "feat-a")
+        self.assertIsNotNone(m["consumed_at"])
+
     def test_unknown_lane_lists_valid(self):
         self.put(dict(at_requirements("standard")))
         self.refused(("lane", "feat-a", "raise", "express", "--reason", "x"), "feature-ui")

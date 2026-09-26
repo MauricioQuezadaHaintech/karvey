@@ -75,6 +75,18 @@ class Run(Base):
         self.assertEqual(json.loads(ev[-1])["label"], "security:secrets:gitleaks")
         self.assertTrue((self.root / r["report"]).is_file())
 
+    def test_no_absolute_path_in_argv_or_evidence(self):
+        """BUG-77 (F-71): the tools run in the repository with `.` and a repo-relative report path, so neither
+        the evidence line nor the report names the user's directories."""
+        code, env, by = self.scan("--categories", "secrets")
+        self.assertEqual(code, 0, env)
+        r = by["secrets"]
+        self.assertIn(".", r["argv"])
+        for a in r["argv"]:
+            self.assertFalse(os.path.isabs(a), r["argv"])
+        ev = (self.root / "docs/spec/changes/feat-a/evidence.jsonl").read_text()
+        self.assertNotIn(str(self.root), ev)
+
     def test_findings_are_counted_by_severity(self):
         rep = json.dumps({"results": [{"issue_severity": "HIGH"}, {"issue_severity": "LOW"}]})
         _, _, by = self.scan("--categories", "sast", env={"KARVEY_STUB_SEC_REPORT": rep, "KARVEY_STUB_SEC_RC": "1"})

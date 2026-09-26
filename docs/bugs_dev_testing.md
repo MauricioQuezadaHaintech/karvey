@@ -1440,3 +1440,153 @@ Files: `plugins/karvey/tests/unit/test_state_validate.py`. `test_state_validate.
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-43 |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-73 — The manifest prod path swallowed a failed marker consume
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`approve … prod --manifest`)
+- **Change / origin:** wave2-structural — finding F-62 (QA judge:security)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`approve feat-a prod --manifest …` with the marker store failing on consume.
+
+### Actual vs expected
+- Actual: prod recorded for every change, the failure ignored, the marker live and reusable; consume not bound to the approving marker.
+- Expected: the failure reported; consume bound to that marker (`created_at`).
+
+### Root cause
+`except …: pass` after the ledger writes.
+
+### Fix
+A warning `state.marker_not_consumed` names the scope; consume passes `created_at`.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_state_gates.py`. `test_state_gates.py` `ProdManifest.test_a_marker_that_cannot_be_consumed_is_reported`, red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-62 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-74 — A project-wide plan marker could lower any change's lane, repeatedly
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`lane … lower`)
+- **Change / origin:** wave2-structural — finding F-63 (QA judge:security)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A `_project` plan marker; `lane feat-a lower patch --role human …`, then another change.
+
+### Actual vs expected
+- Actual: accepted from the project-wide marker, which stayed live for the next lower.
+- Expected: the change's own approval, used once (a lower is less review).
+
+### Root cause
+`find_valid` fell back to `_project` and the marker was not consumed.
+
+### Fix
+`project_scope=False` and the marker is consumed after the write.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_state_lane.py`. `test_state_lane.py` `LaneChanges.test_lower_needs_the_changes_own_marker_and_consumes_it`, red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-63 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-75 — Evidence kept URL query secrets, auth headers and a home path in `--junit`
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-evidence.py
+- **Change / origin:** wave2-structural — finding F-65, F-66 (QA judge:security)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`karvey-evidence.py -- cmd 'https://h/x?token=…' -H 'Authorization: Bearer …'`; `--junit ~/…/r.xml`.
+
+### Actual vs expected
+- Actual: the token, the bearer value and the home path in `evidence.jsonl`.
+- Expected: redacted, and the home written as `~`.
+
+### Root cause
+Redaction covered only long flags, `NAME=value` and URL user info; `--junit` was written as given.
+
+### Fix
+Query values whose name is a secret word and header-style `Authorization:` / `*token*:` values are redacted; `--junit` goes through the home collapse. Short flags stay (`-p` is a test pattern for the trace).
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_evidence.py`. `test_evidence.py` `Evidence.test_query_tokens_and_auth_headers_are_redacted`, `Evidence.test_junit_path_home_is_collapsed`, red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-65, F-66 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-76 — A judge could declare itself cross-model in its own output
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/judges.py (`collect`)
+- **Change / origin:** wave2-structural — finding F-67 (QA judge:security)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A judge result with `"model": "other-family", "intra_model": false`; `collect … --model m --intra-model`.
+
+### Actual vs expected
+- Actual: the run recorded the judge's claim (cross-model).
+- Expected: the orchestrator's `--model` / `--intra-model` are the record.
+
+### Root cause
+The judge's JSON took precedence.
+
+### Fix
+The orchestrator's values win; the judge's are a fallback only when the orchestrator gives none.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_judges.py`. `test_judges.py` `Bug76.test_judge_cannot_declare_itself_cross_model`, red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-67 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-77 — The security scan wrote absolute user paths into committed evidence and reports
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-security-scan.py (`run_tool`)
+- **Change / origin:** wave2-structural — finding F-71 (QA, running the tools over this change)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`karvey-security-scan.py run <change>` in a clone under the home directory.
+
+### Actual vs expected
+- Actual: `--source /home/<user>/…` in `evidence.jsonl` and absolute file names in the SAST report.
+- Expected: no personal path in committed files.
+
+### Root cause
+The catalogue's `{repo}` / `{out}` were filled with absolute paths although the tool runs in the repository.
+
+### Fix
+`{repo}` = `.` and `{out}` = the report path relative to the repository (the tool's cwd).
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_security_scan.py`. `test_security_scan.py` `Run.test_no_absolute_path_in_argv_or_evidence`, red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-71 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |

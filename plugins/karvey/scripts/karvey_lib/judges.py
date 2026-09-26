@@ -247,7 +247,7 @@ def collect(root, change, phase, results, allowed, model=None, intra_model=None,
             continue
         if not _valid_result(r):
             rmodel = r.get("model") if isinstance(r, dict) and isinstance(r.get("model"), str) else None
-            runs.append({"phase": phase, "lens": lens, "model": rmodel or model or "unknown",
+            runs.append({"phase": phase, "lens": lens, "model": model or rmodel or "unknown",
                          "intra_model": bool(intra_model), "verdict": "not-run",
                          "findings": {}, "discarded": 0, "at": at, "reason": "invalid output"})
             lines.append("%s: not run (invalid output)" % lens)
@@ -261,8 +261,10 @@ def collect(root, change, phase, results, allowed, model=None, intra_model=None,
             counts[sev] = counts.get(sev, 0) + 1
             kept.append({"lens": r["lens"], "severity": sev, "type": f.get("type_guess") if f.get("type_guess") in TYPES
                          else "emergent", "text": sanitise(f["text"]), "cite": f["cite"]})
-        m = r.get("model") or model or "unknown"
-        im = r.get("intra_model") if isinstance(r.get("intra_model"), bool) else bool(intra_model)
+        # BUG-76 (F-67): the orchestrator records the model and the independence, never the judge's own claim
+        m = model or r.get("model") or "unknown"
+        im = bool(intra_model) if intra_model is not None else (
+            r.get("intra_model") if isinstance(r.get("intra_model"), bool) else False)
         ti, to, usd, est = cost(r.get("usage"), chars_in, len(raw), m)
         runs.append({"phase": phase, "lens": r["lens"], "model": m, "intra_model": im, "verdict": r["verdict"],
                      "findings": counts, "discarded": discarded, "tokens_in": ti, "tokens_out": to, "usd": usd,

@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-22, BUG-48..BUG-72 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-22, BUG-48..BUG-77 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -223,6 +223,22 @@ INDEX = {
     ],
     "BUG-72": [  # Under strict mode a missing lane named a remedy that is refused outsid (F-43)
         ('unit', 'test_state_validate.py', 'StrictModeFromRegistry.test_registry_blocking_is_strict_and_missing_lane_errors'),
+    ],
+    "BUG-73": [  # The manifest prod path swallowed a failed marker consume (F-62)
+        ('unit', 'test_state_gates.py', 'ProdManifest.test_a_marker_that_cannot_be_consumed_is_reported'),
+    ],
+    "BUG-74": [  # A project-wide plan marker could lower any change's lane, repeatedly (F-63)
+        ('unit', 'test_state_lane.py', 'LaneChanges.test_lower_needs_the_changes_own_marker_and_consumes_it'),
+    ],
+    "BUG-75": [  # Evidence kept URL query secrets, auth headers and a home path in `--ju (F-65, F-66)
+        ('unit', 'test_evidence.py', 'Evidence.test_query_tokens_and_auth_headers_are_redacted'),
+        ('unit', 'test_evidence.py', 'Evidence.test_junit_path_home_is_collapsed'),
+    ],
+    "BUG-76": [  # A judge could declare itself cross-model in its own output (F-67)
+        ('unit', 'test_judges.py', 'Bug76.test_judge_cannot_declare_itself_cross_model'),
+    ],
+    "BUG-77": [  # The security scan wrote absolute user paths into committed evidence an (F-71)
+        ('unit', 'test_security_scan.py', 'Run.test_no_absolute_path_in_argv_or_evidence'),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

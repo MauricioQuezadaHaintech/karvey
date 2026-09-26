@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-72 RESUELTO; BUG-23..47 live on other branches, numbered by `karvey-id.py`). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
+Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-77 RESUELTO; BUG-23..47 live on other branches, numbered by `karvey-id.py`). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -55,6 +55,11 @@ Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-72 RESUELTO; B
 | BUG-70 | karvey | high | The release gate recorded production from a project-wide prod marker and never consumed it | wave2-structural / F-41 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py; plugins/karvey/tests/unit/test_state_approve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-71 | karvey | medium | Evidence redaction hid ordinary flags' arguments (`--passWithNoTests <test>`) | wave2-structural / F-42 | RESUELTO | plugins/karvey/tests/unit/test_evidence.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-72 | karvey | medium | Under strict mode a missing lane named a remedy that is refused outside init | wave2-structural / F-43 | RESUELTO | plugins/karvey/tests/unit/test_state_validate.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-73 | karvey | medium | The manifest prod path swallowed a failed marker consume | wave2-structural / F-62 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-74 | karvey | medium | A project-wide plan marker could lower any change's lane, repeatedly | wave2-structural / F-63 | RESUELTO | plugins/karvey/tests/unit/test_state_lane.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-75 | karvey | medium | Evidence kept URL query secrets, auth headers and a home path in `--junit` | wave2-structural / F-65, F-66 | RESUELTO | plugins/karvey/tests/unit/test_evidence.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-76 | karvey | medium | A judge could declare itself cross-model in its own output | wave2-structural / F-67 | RESUELTO | plugins/karvey/tests/unit/test_judges.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-77 | karvey | medium | The security scan wrote absolute user paths into committed evidence and reports | wave2-structural / F-71 | RESUELTO | plugins/karvey/tests/unit/test_security_scan.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 
 ## Summary by state
 
@@ -63,7 +68,7 @@ Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-72 RESUELTO; B
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 47 | BUG-01 .. BUG-22, BUG-48 .. BUG-72 |
+| RESUELTO | 52 | BUG-01 .. BUG-22, BUG-48 .. BUG-77 |
 | REABIERTO | 0 | — |
 
-Next number: from `karvey-id.py next BUG` (scans every branch); BUG-73 at this update.
+Next number: from `karvey-id.py next BUG` (scans every branch); BUG-78 at this update.
