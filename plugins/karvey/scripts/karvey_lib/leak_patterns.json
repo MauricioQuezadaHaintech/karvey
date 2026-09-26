@@ -1,0 +1,89 @@
+{
+  "$comment": "Leak rules of the sponsor page (architecture §1.13, wave3-optimization; REQ-W3-023). Public token formats and generic shapes only — no organisation's own value. karvey_lib/leakcheck.py compiles them; a hit refuses the page and is reported by field and rule, never by value.",
+  "version": 1,
+  "secret": [
+    {
+      "id": "private-key",
+      "re": "-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----"
+    },
+    {
+      "id": "cloud-access-key",
+      "re": "\\b(?:AKIA|ASIA)[0-9A-Z]{16}\\b"
+    },
+    {
+      "id": "code-host-token",
+      "re": "\\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{22,}|glpat-[A-Za-z0-9_-]{20,})"
+    },
+    {
+      "id": "chat-token",
+      "re": "\\bxox[abprs]-[A-Za-z0-9-]{10,}"
+    },
+    {
+      "id": "api-key-prefix",
+      "re": "\\b(?:AIza[0-9A-Za-z_-]{35}|sk-[A-Za-z0-9_-]{20,})"
+    },
+    {
+      "id": "jwt",
+      "re": "\\beyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}"
+    },
+    {
+      "id": "assignment",
+      "re": "(?i)\\b(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)\\s*[:=]\\s*[^\\s;,]{3,}"
+    },
+    {
+      "id": "connection-string",
+      "re": "(?i)\\b(?:server|data source|host|endpoint|accountname)\\s*=[^;\\n]{1,200};[^\\n]{0,300}\\b(?:password|pwd|accountkey|sharedaccesskey)\\s*="
+    },
+    {
+      "id": "url-credentials",
+      "re": "\\b[a-z][a-z0-9+.-]*://[^/\\s:@]{1,64}:[^/\\s@]{1,128}@"
+    },
+    {
+      "id": "signed-url",
+      "re": "(?i)[?&](?:sig|signature|x-amz-signature|token)=[A-Za-z0-9%+/=_-]{16,}"
+    }
+  ],
+  "entropy": {
+    "min_length": 32,
+    "min_bits_per_char": 4.2
+  },
+  "path": [
+    {
+      "id": "posix",
+      "re": "(?<![\\w.:/])/(?:[A-Za-z0-9._@-]+/)+[A-Za-z0-9._@-]+"
+    },
+    {
+      "id": "windows",
+      "re": "\\b[A-Za-z]:\\\\[^\\s\"'<>|]+"
+    },
+    {
+      "id": "unc",
+      "re": "\\\\\\\\[A-Za-z0-9._-]+\\\\[^\\s\"'<>|]+"
+    },
+    {
+      "id": "home",
+      "re": "(?:^|[\\s(\"'`])~/[^\\s\"'<>]*"
+    }
+  ],
+  "host": [
+    {
+      "id": "private-suffix",
+      "re": "(?i)\\b[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.(?:local|internal|lan|corp|intranet|home\\.arpa)\\b"
+    },
+    {
+      "id": "ipv4-private",
+      "re": "\\b(?:10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3}|127\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|169\\.254\\.\\d{1,3}\\.\\d{1,3})\\b"
+    },
+    {
+      "id": "ipv6-private",
+      "re": "(?i)(?<![\\w:])(?:::1|f[cd][0-9a-f]{2}:[0-9a-f:]{2,}|fe80:[0-9a-f:]{2,})(?![\\w:])"
+    }
+  ],
+  "email": {
+    "re": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
+  },
+  "pii": {
+    "re": "(?<![\\w.])\\+?\\d[\\d .()-]{6,}\\d(?![\\w])",
+    "min_digits": 8
+  }
+}
