@@ -1,6 +1,6 @@
 ---
 name: karvey-archive
-description: Karvey phase 12 — on chore/archive-{id}: records the release, merges the spec-delta, archives the change, closes the Epic, knowledge sync. After karvey-deploy. Triggers include "karvey archive", "archivar con karvey", "cerrar epic karvey".
+description: Karvey phase 12 — on chore/archive-{id}: records the release, checks the living spec, archives the change, closes the Epic, knowledge sync. After karvey-deploy. Triggers include "karvey archive", "archivar con karvey", "cerrar epic karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 argument-hint: <change-id>
 ---
@@ -9,7 +9,7 @@ argument-hint: <change-id>
 
 ## Purpose
 
-PHASE 12, the last: after `/karvey-deploy`, close the change's lifecycle on its own docs branch — record the release in `spec.json`, merge the spec-delta into the living specs, archive the change directory, close the Epic in the team's tracker (`../karvey/rules/management-adapters.md`) or in `PLAN.md`, and run the knowledge sync. Nothing is committed on the integration or production branch (`../karvey/rules/state-machine.md`, D-03).
+PHASE 12, the last: after `/karvey-deploy`, close the change's lifecycle on its own docs branch — record the release in `spec.json`, check that the living specs already hold the spec-delta (merged before production; a legacy leftover is merged here), archive the change directory, close the Epic in the team's tracker (`../karvey/rules/management-adapters.md`) or in `PLAN.md`, and run the knowledge sync. Nothing is committed on the integration or production branch (`../karvey/rules/state-machine.md`, D-03).
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py"
@@ -51,15 +51,23 @@ Blockers → report and stop.
    Neither ledger nor D-NN / PR URL → **stop**: there is no recorded human prod OK to copy. If the `D-NN` is not yet in `docs/spec/decisions.md`, write it now from the PR text (who, when, the words verbatim).
 3. Create the production marker `docs/spec/changes/{change-id}/IMPLEMENTED`.
 
-### Step 3 — Merge the spec-delta into the living specs
+### Step 3 — Check the living specs; merge only a legacy leftover
 
-Deterministic, never by hand. Review the diff first, then apply:
+The spec-delta is merged **on the change branch, before the production PR** (`/karvey-deploy` step 2.4-bis), so
+archive normally only moves and closes. Ask the read-only check first:
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-spec-merge.py" "{change-id}" --dry-run
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-spec-merge.py" "{change-id}"
-git add docs/spec/specs/ docs/spec/changes/ docs/spec/decisions.md
-git commit -m "spec: record release and merge deltas from {change-id}"
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-spec-merge.py" "{change-id}" --check
 ```
+- `merged` → nothing is merged again; go to Step 4.
+- `unmerged` (a legacy change deployed before this rule; the ids are listed) → say so, then merge it here, on
+  `chore/archive-{change-id}`, deterministic and never by hand — review the diff first, then apply:
+  ```bash
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-spec-merge.py" "{change-id}" --dry-run
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-spec-merge.py" "{change-id}"
+  git add docs/spec/specs/ docs/spec/changes/ docs/spec/decisions.md
+  git commit -m "spec: record release and merge deltas from {change-id}" -m "Karvey-Change: {change-id}"
+  ```
+- `conflict` → stop and route it through `/karvey-iterate` (the living spec and the delta disagree).
 The capability comes from `spec.json:capability` (`--capability` overrides). ADDED is appended, MODIFIED replaces the block, REMOVED leaves a deprecation comment (`../karvey/rules/living-specs.md`).
 
 ### Step 4 — Archive the change directory
