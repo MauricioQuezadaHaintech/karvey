@@ -99,7 +99,10 @@ def cmd_plan(args, root):
 
 def cmd_branch(args, root):
     res = upgrade.ensure_branch(root)
-    if res["created"]:
+    if res["created"] and res.get("remote"):
+        human = ("created %s from %s (another clone already pushed this upgrade: a PR to %s may already be open) "
+                 "and switched to it" % (res["branch"], res["base"], res.get("integration")))
+    elif res["created"]:
         human = "created %s from %s and switched to it" % (res["branch"], res["base"])
     elif res["switched"]:
         human = "switched to the existing %s" % res["branch"]

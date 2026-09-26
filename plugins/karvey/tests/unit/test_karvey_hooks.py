@@ -232,6 +232,40 @@ class UpgradeOffer(unittest.TestCase):
         self.assertIn("team settings not set", text)
         self.assertIn("upgrade offer unavailable: RuntimeError: boom", text)
 
+    def test_f09_the_offer_reads_as_the_plugins_own_notice(self):
+        """regression_project-upgrade_iterate_offer_wording (F-09): phrased like the settings notice (what the
+        user can do), not as an imperative order naming a command, which a model may take for an injection."""
+        lines = self.offer(self.legacy)
+        text = " ".join(lines)
+        self.assertNotIn("Ask ONE", text)
+        self.assertNotIn("the decline command above", text)
+        self.assertTrue(lines[0].startswith("Karvey (upgrade): "), "signed like the settings notice")
+        self.assertIn("the user can decline", lines[0])
+        self.assertTrue(lines[1].startswith("The user can get an upgrade plan"), lines[1])
+        self.assertIn("do you want a plan to upgrade this project?", lines[1])
+        self.assertIn("Not for this version", lines[1])
+
+    def test_f25_a_stuck_probe_is_cut_by_the_watchdog(self):
+        import time as _t
+
+        def stuck(root, deadline, **kw):
+            _t.sleep(3)
+            return "none"
+        t0 = _t.monotonic()
+        with mock.patch.object(upgrade, "any_applicable", side_effect=stuck):
+            lines = self.offer(self.clean, env={kh.UPGRADE_PROBE_ENV: "100"})
+        self.assertLess(_t.monotonic() - t0, 1.5, "the hook does not wait for a stuck check")
+        self.assertEqual(len(lines), 2, "cut by the watchdog = a timeout: the offer is shown")
+        self.assertIsNone(upgrade.read_seen(self.clean), "nothing recorded")
+
+    def test_f27_a_karvey_project_outside_git_gets_no_offer_and_no_record(self):
+        plain = self.t.path / "nogit"
+        g.write(plain, "docs/spec/project.json", {"a": 1})
+        state = self.t.path / "xdg"
+        with mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(state)}):
+            self.assertEqual(self.offer(plain), [])
+        self.assertFalse(state.exists(), "nothing under the home's state dir")
+
     def test_session_text_places_the_offer(self):
         text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)})
         lines = text.splitlines()

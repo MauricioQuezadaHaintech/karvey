@@ -1933,9 +1933,17 @@ UPGRADE_SCOPES = ("project", "git_dir")
 # direct I/O a step function may never do: only the Probe reads, only the engine writes (project-upgrade §1.4)
 FORBIDDEN_MODULES = ("shutil", "subprocess")
 FORBIDDEN_OS = ("remove", "unlink", "rename", "replace", "mkdir", "makedirs", "rmdir", "removedirs", "chmod",
-                "symlink", "link", "truncate", "system", "popen")
+                "symlink", "link", "truncate", "system", "popen", "open", "write", "renames", "chown", "utime")
 FORBIDDEN_METHODS = ("write_text", "write_bytes", "unlink", "rmdir", "mkdir", "touch", "chmod", "symlink_to")
 HOME_READS = ("home_read", "home_json")
+# F-26: the only names a step may use on the state / config tools it gets from the Probe (all read-only);
+# anything else (cmd_*, write_*, …) could write the project behind the engine's back
+PROBE_TOOLS = {
+    "state": ("SCHEMA_VERSION", "Unmigratable", "fix_spec", "fix_project", "validate_data", "map_phase",
+              "compute_next"),
+    "config": ("Settings", "propose_settings", "Refused", "CHANNELS", "VIAS", "EVENTS", "DETAILS", "TOOLS",
+               "LEGACY_TOOLS"),
+}
 
 
 def upgrade_paths(ctx):
@@ -1973,9 +1981,57 @@ def _reachable(start, funcs):
     return seen
 
 
-def _io_violations(fn):
-    """``(line, what)`` of every direct write or process call in one function."""
+def _module_aliases(tree):
+    """``{local name: canonical dotted name}`` of the module-level imports (``import os as o`` → ``o: os``,
+    ``from os import remove`` → ``remove: os.remove``, ``from . import atomicio`` → ``atomicio: atomicio``), so
+    an alias never hides a forbidden call (F-26)."""
+    out = {}
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for a in node.names:
+                out[a.asname or a.name.split(".")[0]] = a.name if a.asname else a.name.split(".")[0]
+        elif isinstance(node, ast.ImportFrom):
+            mod = (node.module or "").split(".")[-1] if node.level else (node.module or "")
+            for a in node.names:
+                out[a.asname or a.name] = ("%s.%s" % (mod, a.name)) if mod else a.name
+    return out
+
+
+def _forbidden_import(line, dotted):
+    top = dotted.split(".")[0]
+    if top in FORBIDDEN_MODULES:
+        return line, "imports %s" % dotted
+    return None
+
+
+def _write_mode(node, pos):
+    """True when the ``open`` call ``node`` passes a mode (positional ``pos`` or ``mode=``) that may write."""
+    mode = node.args[pos] if len(node.args) > pos else next((k.value for k in node.keywords if k.arg == "mode"),
+                                                            None)
+    return mode is not None and not (isinstance(mode, ast.Constant) and isinstance(mode.value, str)
+                                     and not set(mode.value) & set("wax+"))
+
+
+def _canonical_call(f, aliases):
+    """The dotted name a call target resolves to through the module's import aliases, or None."""
+    if isinstance(f, ast.Name):
+        return aliases.get(f.id, f.id)
+    if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name):
+        return "%s.%s" % (aliases.get(f.value.id, f.value.id), f.attr)
+    return None
+
+
+def _io_violations(fn, aliases=None, tools=None):
+    """``(line, what)`` of every direct write or process call in one function. ``aliases`` are the module's import
+    aliases; ``tools`` maps a local name to ``"state"``/``"config"`` (bound to ``probe.state`` / ``probe.config``)."""
+    aliases = aliases or {}
+    tools = dict(tools or {})
     out = []
+    for node in ast.walk(fn):  # names bound to the Probe's tools inside this function
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            kind = _tool_kind(node.value, tools)
+            if kind:
+                tools[node.targets[0].id] = kind
     for node in ast.walk(fn):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             names = [a.name for a in node.names] + ([node.module] if isinstance(node, ast.ImportFrom) and
@@ -1983,26 +2039,71 @@ def _io_violations(fn):
             for nm in names:
                 if nm and nm.split(".")[0] in FORBIDDEN_MODULES:
                     out.append((node.lineno, "imports %s" % nm))
+        if isinstance(node, ast.Attribute):
+            kind = _tool_kind(node.value, tools)
+            if kind and node.attr not in PROBE_TOOLS[kind]:
+                out.append((node.lineno, "probe.%s.%s, not a read-only function of the %s tool" % (
+                    kind, node.attr, kind)))
         if not isinstance(node, ast.Call):
             continue
         f = node.func
-        if isinstance(f, ast.Name) and f.id == "open":
-            mode = node.args[1] if len(node.args) > 1 else next((k.value for k in node.keywords if k.arg == "mode"),
-                                                                None)
-            if mode is not None and not (isinstance(mode, ast.Constant) and isinstance(mode.value, str)
-                                         and not set(mode.value) & set("wax+")):
+        name = _canonical_call(f, aliases)
+        if isinstance(f, ast.Name) and name == "open":
+            if _write_mode(node, 1):
                 out.append((node.lineno, "open() in a write mode"))
-        elif isinstance(f, ast.Attribute):
-            base = f.value.id if isinstance(f.value, ast.Name) else None
-            if base in FORBIDDEN_MODULES:
-                out.append((node.lineno, "%s.%s" % (base, f.attr)))
-            elif base == "os" and f.attr in FORBIDDEN_OS:
-                out.append((node.lineno, "os.%s" % f.attr))
-            elif base == "atomicio" and f.attr.startswith("write"):
-                out.append((node.lineno, "atomicio.%s" % f.attr))
-            elif f.attr in FORBIDDEN_METHODS:
-                out.append((node.lineno, ".%s()" % f.attr))
+            continue
+        if isinstance(f, ast.Attribute) and f.attr == "open" and name != "os.open":
+            if _write_mode(node, 0):
+                out.append((node.lineno, ".open() in a write mode"))
+            continue
+        top, _, attr = (name or "").partition(".")
+        if top in FORBIDDEN_MODULES:
+            out.append((node.lineno, name if attr else "%s()" % name))
+        elif top == "os" and attr in FORBIDDEN_OS:
+            out.append((node.lineno, name))
+        elif top == "atomicio" and attr.startswith("write"):
+            out.append((node.lineno, name))
+        elif isinstance(f, ast.Attribute) and f.attr in FORBIDDEN_METHODS:
+            out.append((node.lineno, ".%s()" % f.attr))
     return out
+
+
+def _tool_kind(node, tools):
+    """``"state"``/``"config"`` when ``node`` is ``probe.state`` / ``probe.config`` or a name bound to one."""
+    if isinstance(node, ast.Attribute) and node.attr in PROBE_TOOLS and isinstance(node.value, ast.Name) \
+            and node.value.id == "probe":
+        return node.attr
+    if isinstance(node, ast.Name):
+        return tools.get(node.id)
+    return None
+
+
+def _tool_params(funcs):
+    """``{function: {param: kind}}``: parameters that receive ``probe.state`` / ``probe.config`` (or a name bound
+    to one) at a call site between module functions, propagated to a fixed point (F-26)."""
+    params = {}
+    changed = True
+    while changed:
+        changed = False
+        for name, fn in funcs.items():
+            local = dict(params.get(name, {}))
+            for node in ast.walk(fn):
+                if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                    kind = _tool_kind(node.value, local)
+                    if kind:
+                        local[node.targets[0].id] = kind
+            for node in ast.walk(fn):
+                if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in funcs):
+                    continue
+                callee = funcs[node.func.id]
+                names = [a.arg for a in callee.args.args]
+                bound = list(zip(names, node.args)) + [(k.arg, k.value) for k in node.keywords if k.arg]
+                for pname, arg in bound:
+                    kind = _tool_kind(arg, local)
+                    if kind and params.setdefault(node.func.id, {}).get(pname) != kind:
+                        params[node.func.id][pname] = kind
+                        changed = True
+    return params
 
 
 def _home_reads(fn):
@@ -2041,6 +2142,19 @@ def l38_upgrade_catalogue(ctx):
         yield steps_py, exc.lineno or 1, "upgrade_steps.py does not parse: %s" % exc.msg
         return
     registry, funcs = _step_functions(tree)
+    aliases = _module_aliases(tree)
+    tool_params = _tool_params(funcs)
+    for node in tree.body:  # F-26: a forbidden module imported at module level (under any alias)
+        if isinstance(node, ast.Import):
+            dotted = [a.name for a in node.names]
+        elif isinstance(node, ast.ImportFrom) and not node.level:
+            dotted = [node.module or ""]
+        else:
+            continue
+        for d in dotted:
+            hit = _forbidden_import(node.lineno, d)
+            if hit:
+                yield steps_py, hit[0], "upgrade_steps.py %s: only the Probe reads and only the engine writes" % hit[1]
     pj = ctx.json(plugin_json_path(ctx)) or {}
     version = str(pj.get("version", "0.0.0"))
     unreleased = _unreleased_has_entries(ctx)
@@ -2078,7 +2192,7 @@ def l38_upgrade_catalogue(ctx):
             if not fname or fname not in funcs:
                 continue
             for fn in sorted(_reachable(fname, funcs)):
-                for ln, what in _io_violations(funcs[fn]):
+                for ln, what in _io_violations(funcs[fn], aliases, tool_params.get(fn)):
                     yield (steps_py, ln, "step %s: %s %s does direct I/O (%s): only the Probe reads and only the "
                                          "engine writes" % (sid, key, fn, what))
                 if key == "fix" and not human:

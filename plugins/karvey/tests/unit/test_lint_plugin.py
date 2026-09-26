@@ -1114,6 +1114,32 @@ class L38(UpgradeMiniPlugin):
                                "def schema_migrate_fix(probe, params, values):\n    %s\n" % body)
                 self.assertFails("L-38", "step schema-migrate: fix schema_migrate_fix does direct I/O (%s)" % what)
 
+    def test_f26_path_open_os_open_aliases_and_state_writers_fail(self):
+        """regression_project-upgrade_iterate_l38_scan (F-26): the gaps the QA review found in the AST scan."""
+        src = (_path.PLUGIN_ROOT / "scripts/karvey_lib/upgrade_steps.py").read_text(encoding="utf-8")
+        cases = (
+            ("", 'probe.root.joinpath("x").open("w")', ".open() in a write mode"),
+            ("", 'probe.root.joinpath("x").open(mode="a")', ".open() in a write mode"),
+            ("", 'os.open(".x", 1)', "os.open"),
+            ("import os as o\n", 'o.remove(".x")', "os.remove"),
+            ("from os import remove\n", 'remove(".x")', "os.remove"),
+            ("from shutil import rmtree as rt\n", 'rt(".x")', "shutil.rmtree"),
+            ("import subprocess as sp\n", 'sp.run(["true"])', "subprocess.run"),
+            ("", "probe.state.cmd_approve(None, None)", "probe.state.cmd_approve"),
+            ("", "c = probe.config\n    c.cmd_set(None)", "probe.config.cmd_set"),
+            ("", "_hand(probe.state)", "probe.state.write_spec"),
+        )
+        for head, body, what in cases:
+            with self.subTest(what=what, body=body):
+                text = src.replace("import copy\n", "import copy\n" + head, 1)
+                text = text.replace("def schema_migrate_fix(probe, params, values):\n",
+                                    "def schema_migrate_fix(probe, params, values):\n    %s\n" % body, 1)
+                text += "\n\ndef _hand(mod):\n    mod.write_spec({})\n"
+                self.t.write(STEPS, text)
+                self.assertFails("L-38", "does direct I/O (%s" % what)
+        self.t.write(STEPS, src)
+        self.assertPasses("L-38")
+
     def test_a_helper_reached_from_a_check_is_scanned(self):
         self.t.replace(STEPS, "def _spec_files(probe):\n", "def _spec_files(probe):\n    os.unlink('.x')\n")
         self.assertFails("L-38", "does direct I/O (os.unlink)")

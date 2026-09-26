@@ -188,6 +188,9 @@ GIT_READ_ALLOW = (("rev-parse",), ("symbolic-ref",), ("status", "--porcelain"), 
 GIT_READ_DENY_PREFIX = ("--output", "--exec", "--upload-pack", "--receive-pack", "-c", "--config")
 HOME_FILES = (".claude/settings.json", ".claude/settings.local.json", ".claude/CLAUDE.md")
 HOME_READ_MAX = 1024 * 1024
+# F-25: no project file a step reads is anywhere near this; a larger one is refused, never read into memory
+PROJECT_READ_MAX = 2 * 1024 * 1024
+PRUNED_DIRS = (".git", "node_modules")
 _MODULES = {}
 
 
@@ -272,6 +275,8 @@ class Probe:
         if rel in self.overlay:
             return self.overlay[rel]
         try:
+            if p.stat().st_size > PROJECT_READ_MAX:
+                raise CheckFailed("unreadable: %s is larger than %d bytes" % (rel, PROJECT_READ_MAX))
             return p.read_bytes().decode("utf-8")
         except (FileNotFoundError, IsADirectoryError, NotADirectoryError):
             return None
@@ -293,17 +298,34 @@ class Probe:
         return _parse_json(text, rel)
 
     def glob(self, pattern):
-        """Relative POSIX paths of files matching ``pattern`` under the root (overlay applied; ``.git`` and
-        ``node_modules`` never listed)."""
+        """Relative POSIX paths of files matching ``pattern`` under the root (overlay applied).
+
+        F-25: the walk starts at the pattern's literal prefix, stops at the pattern's depth (no ``**``),
+        **prunes** ``.git``, ``node_modules`` and nested work trees instead of filtering them afterwards, and
+        checks the deadline in every directory, so a huge tree costs the hook its budget, not its timeout."""
         pattern = self._norm(pattern)
+        parts = pattern.split("/")
+        i = 0
+        while i < len(parts) - 1 and not any(c in parts[i] for c in "*?["):
+            i += 1
+        base = self.root.joinpath(*parts[:i]) if i else self.root
+        remaining = None if "**" in parts[i:] else len(parts) - i
         out = set()
-        for p in self.root.glob(pattern):
-            rel = p.relative_to(self.root).as_posix()
-            if ".git" in rel.split("/") or "node_modules" in rel.split("/") or not p.is_file():
-                continue
-            if self._in_nested_tree(p):
-                continue
-            out.add(rel)
+        if base.is_dir() and not base.is_symlink():
+            for dirpath, dirnames, filenames in os.walk(str(base)):
+                self.check_deadline()
+                d = Path(dirpath)
+                depth = len(d.relative_to(base).parts)
+                if remaining is not None and depth >= remaining - 1:
+                    dirnames[:] = []
+                else:
+                    dirnames[:] = [n for n in dirnames
+                                   if n not in PRUNED_DIRS and not os.path.lexists(os.path.join(dirpath, n, ".git"))]
+                for f in filenames:
+                    p = d / f
+                    rel = p.relative_to(self.root).as_posix()
+                    if glob_match(rel, pattern) and p.is_file() and not self._in_nested_tree(p):
+                        out.add(rel)
         for rel, text in self.overlay.items():
             if text is None:
                 out.discard(rel)
@@ -525,11 +547,22 @@ class Plan:
         return "\n".join(lines)
 
 
+_UNPRINTABLE = re.compile("[\x00-\x1f\x7f-\x9f\u2028\u2029]")
+
+
+def one_line(value):
+    """``value`` as one printable line: every control character (newline, CR, ESC, …) is shown escaped
+    (``\\n``), so a string read from the project (a phase, a directory name) can never add a line to the
+    plan or the apply report that the agent relays (F-28)."""
+    return _UNPRINTABLE.sub(lambda m: "\\x%02x" % ord(m.group()) if ord(m.group()) < 0x100
+                            else "\\u%04x" % ord(m.group()), str(value))
+
+
 def _row(step, res):
     return {"id": step["id"], "since": step["since"], "title": step["title"], "status": res.status,
-            "summary": res.summary, "dry_run": step["dry_run"], "risk": step["risk"],
+            "summary": one_line(res.summary), "dry_run": step["dry_run"], "risk": step["risk"],
             "human": bool(step["human"] or res.status == "human"), "report_only": step["report_only"],
-            "inputs_needed": list(res.inputs_needed), "warnings": list(res.warnings)}
+            "inputs_needed": [one_line(x) for x in res.inputs_needed], "warnings": [one_line(w) for w in res.warnings]}
 
 
 def plan(root, steps=None, registry=None, home=None, seen_version=_UNSET, installed=None):
@@ -636,6 +669,11 @@ def write_seen(root, version, resolution, from_version=_UNSET):
         raise SeenWriteError("installed version %r is not a release number" % (version,))
     if resolution not in RESOLUTIONS:
         raise ValueError("resolution must be one of %s" % "|".join(RESOLUTIONS))
+    if pj.git_common_dir(root) is None:
+        # F-27: the record is per clone; outside git there is no clone, and the fallback state dir sits under the
+        # home (REQ-UP-016). The upgrade needs a branch anyway (E-12), so nothing is recorded.
+        raise SeenWriteError("[karvey] this Karvey project is not in a git repository: the upgrade answer is "
+                             "recorded per clone and the upgrade needs a branch, so nothing is recorded")
     if from_version is _UNSET:
         from_version = upgraded_from(read_seen(root), version)
     rec = {"v": SEEN_V, "version": version, "resolution": resolution, "at": audit.now_iso(),
@@ -830,6 +868,8 @@ def apply(root, ids, dry_run=False, preview=None, inputs=None, confirm_no_previe
 
     rep = ApplyReport(dry_run=bool(dry_run))
     if dry_run:
+        if top is not None:
+            check_preview_base(root, installed)
         got = evaluate(rep)
         if got is None:
             return rep
@@ -1069,9 +1109,30 @@ def integration_branch(root, integ):
     raise Refused("no integration branch: set project.json:branch_flow.integration")
 
 
+def branch_base(root, installed=None):
+    """``(base_ref, remote, integration)``: where the upgrade branch is (or would be) — the local upgrade branch
+    when it exists; else the **remote** upgrade branch when ``refs/remotes/origin/<upgrade branch>`` exists locally
+    (another clone pushed the same upgrade, F-08: this clone builds on it, so its push is a fast-forward and the
+    open PR gets the new commit); else ``refs/remotes/origin/<integration>``, else ``refs/heads/<integration>``.
+    It never fetches. Raises :class:`Refused` when the integration branch cannot be resolved or found."""
+    _, integ, _ = check_values(root, installed)
+    ub = upgrade_branch(installed)
+    if _ref_exists(root, "refs/heads/" + ub):
+        return "refs/heads/" + ub, False, integ
+    integ = integration_branch(root, integ)
+    if _ref_exists(root, "refs/remotes/origin/" + ub):
+        return "refs/remotes/origin/" + ub, True, integ
+    for ref in ("refs/remotes/origin/" + integ, "refs/heads/" + integ):
+        if _ref_exists(root, ref):
+            return ref, False, integ
+    raise Refused("integration branch %s (project.json:branch_flow.integration) not found locally; fetch it "
+                  "first: git fetch origin %s" % (integ, integ))
+
+
 def ensure_branch(root, installed=None):
-    """Create or switch to ``chore/karvey-upgrade-<installed>`` (§1.5 ``branch``). It never fetches: the base
-    is ``refs/remotes/origin/<integration>`` when that ref exists locally, else ``refs/heads/<integration>``."""
+    """Create or switch to ``chore/karvey-upgrade-<installed>`` (§1.5 ``branch``), from :func:`branch_base`.
+    ``remote`` is True when it was created from another clone's pushed upgrade branch (F-08): a PR for it may
+    already be open. ``integration`` is the branch the PR targets."""
     root = Path(os.path.realpath(str(root)))
     if pj.git_toplevel(root) is None:
         raise Refused("apply needs git: the upgrade goes through a branch")
@@ -1079,7 +1140,8 @@ def ensure_branch(root, installed=None):
     ub = upgrade_branch(installed)
     cur = current_branch(root)
     if cur == ub:
-        return {"branch": ub, "base": None, "created": False, "switched": False}
+        return {"branch": ub, "base": None, "created": False, "switched": False, "remote": False,
+                "integration": _integration_or_none(root, integ)}
     dirty = dirty_paths(root)
     if dirty:
         raise Refused("the working tree has uncommitted changes: %s — commit or stash them first"
@@ -1088,21 +1150,43 @@ def ensure_branch(root, installed=None):
         rc, out = _git(["checkout", "-q", ub], root)
         if rc != 0:
             raise Refused("could not switch to %s: %s" % (ub, out.strip()[:200]))
-        return {"branch": ub, "base": None, "created": False, "switched": True}
-    integ = integration_branch(root, integ)
-    base = None
-    for ref in ("refs/remotes/origin/" + integ, "refs/heads/" + integ):
-        if _ref_exists(root, ref):
-            base = ref
-            break
-    if base is None:
-        raise Refused("integration branch %s (project.json:branch_flow.integration) not found locally; fetch it "
-                      "first: git fetch origin %s" % (integ, integ))
+        return {"branch": ub, "base": None, "created": False, "switched": True, "remote": False,
+                "integration": _integration_or_none(root, integ)}
+    base, remote, integ = branch_base(root, installed)
     rc, out = _git(["checkout", "-q", "--no-track", "-b", ub, base], root)
     if rc != 0:
         raise Refused("could not create %s from %s: %s" % (ub, base, out.strip()[:200]))
     _reset_journal(root)  # F-13: a journal of an earlier (merged, deleted) branch of the same name is stale
-    return {"branch": ub, "base": base, "created": True, "switched": True}
+    return {"branch": ub, "base": base, "created": True, "switched": True, "remote": remote, "integration": integ}
+
+
+def _integration_or_none(root, integ):
+    try:
+        return integration_branch(root, integ)
+    except Refused:
+        return None
+
+
+def _tree(root, ref):
+    rc, out = _git(["rev-parse", "--verify", "--quiet", ref + "^{tree}"], root)
+    return out.strip() if rc == 0 else None
+
+
+def check_preview_base(root, installed=None):
+    """F-24: a dry-run previews the current tree, and ``apply`` writes on the upgrade branch. Off that branch the
+    two are the same only when the current commit's tree equals the branch's base (:func:`branch_base`);
+    otherwise the dry-run is refused, naming ``branch``. When the base cannot be resolved ``apply`` refuses on
+    its own, so the dry-run is left alone."""
+    ub = upgrade_branch(installed)
+    if current_branch(root) == ub:
+        return
+    try:
+        base, _, _ = branch_base(root, installed)
+    except Refused:
+        return
+    if _tree(root, base) != _tree(root, "HEAD"):
+        raise Refused("this dry-run would preview the current branch, but apply writes on %s (from %s), whose "
+                      "files differ: run `karvey-upgrade.py branch` first, then the dry-run" % (ub, base))
 
 
 def commit(root, picked_by, picked_at=None, answer=None, trailers=(), installed=None):
@@ -1312,7 +1396,8 @@ def top_release(changelog_text):
 
 
 def surface_status(repo_root, surface_path=None):
-    """``{release, top_release, changed, recorded_files}`` of the committed fingerprint against the tree."""
+    """``{release, top_release, globs, changed, path, data, current}`` of the committed fingerprint against the
+    tree (``data`` is the recorded document, ``current`` the tree's ``{path: sha256}``)."""
     root = Path(repo_root)
     sp = Path(surface_path) if surface_path else root / "plugins" / "karvey" / "scripts" / "karvey_lib" / SURFACE_NAME
     try:

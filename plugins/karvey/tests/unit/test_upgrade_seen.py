@@ -3,6 +3,7 @@ import json
 import os
 import stat
 import unittest
+from unittest import mock
 
 import _gitrepo as g
 import _path  # noqa: F401
@@ -127,6 +128,21 @@ class SeenCli(unittest.TestCase):
 
     def test_unanswered_means_offered_again(self):
         self.assertFalse(upgrade.is_resolved(self.root, upgrade.INSTALLED))
+
+    def test_f27_outside_git_nothing_is_recorded(self):
+        """regression_project-upgrade_iterate_seen_outside_git (F-27): no record under the home's state dir."""
+        from test_upgrade_cli import run_tool
+        plain = self.t.path / "nogit"
+        g.write(plain, "docs/spec/project.json", {"a": 1})
+        state = self.t.path / "xdg"
+        env = {"XDG_STATE_HOME": str(state)}
+        with mock.patch.dict(os.environ, env):
+            code, out, _ = run_tool("seen", "--decline", "--json", cwd=plain)
+            self.assertEqual(code, 3, out)
+            self.assertIn("git", json.loads(out)["errors"][0]["message"])
+            with self.assertRaises(upgrade.SeenWriteError):
+                upgrade.write_seen(plain, upgrade.INSTALLED, "empty")
+        self.assertFalse(state.exists())
 
     def test_one_flag_required(self):
         from test_upgrade_cli import run_tool

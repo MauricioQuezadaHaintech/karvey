@@ -14,15 +14,19 @@ import json
 import re
 
 from . import safe_values as sv
-from .upgrade import CheckFailed, Edit, NeedsInput, StepResult
+from .upgrade import CheckFailed, Edit, NeedsInput, StepResult, one_line
 
 PROJECT_JSON = "docs/spec/project.json"
 
 
 # --------------------------------------------------------------------------- 1–2 schema-migrate(-proposed)
+ARCHIVE_DIR = "docs/spec/changes/archive/"
+
+
 def _spec_files(probe):
-    """Every ``spec.json`` under ``docs/spec`` (archive included) and ``docs/spec/project.json``."""
-    files = [f for f in probe.glob("docs/spec/**/spec.json")]
+    """Every ``spec.json`` under ``docs/spec`` and ``docs/spec/project.json``. Archived changes are history and are
+    never rewritten (D-14, E-22; F-22): ``docs/spec/changes/archive/`` is left out."""
+    files = [f for f in probe.glob("docs/spec/**/spec.json") if not f.startswith(ARCHIVE_DIR)]
     if probe.exists(PROJECT_JSON):
         files.append(PROJECT_JSON)
     return files
@@ -38,15 +42,15 @@ def _migrate(probe, proposed):
         try:
             doc = probe.read_json(rel)
         except CheckFailed as exc:
-            human.append("%s: %s" % (rel, exc))
+            human.append(one_line("%s: %s" % (rel, exc)))
             continue
         data = doc.data
         if not isinstance(data, dict):
-            human.append("%s: not a JSON object" % rel)
+            human.append(one_line("%s: not a JSON object" % rel))
             continue
         v = data.get("schema_version")
         if isinstance(v, int) and not isinstance(v, bool) and v > st.SCHEMA_VERSION:
-            human.append("%s: schema_version %d is newer than this Karvey" % (rel, v))
+            human.append(one_line("%s: schema_version %d is newer than this Karvey" % (rel, v)))
             continue
         fixer = st.fix_project if rel == PROJECT_JSON else st.fix_spec
         try:
@@ -58,7 +62,7 @@ def _migrate(probe, proposed):
             else:
                 new = exact
         except st.Unmigratable as exc:
-            human.append("%s: %s" % (rel, exc))
+            human.append(one_line("%s: %s" % (rel, exc)))
             continue
         if new != data:
             edits.append(Edit("write", rel, before_sha256=doc.sha256, text=doc.dumps(new)))
@@ -484,9 +488,9 @@ def statusline_launcher_check(probe, params):
                                            "command" % where, diff=diff + "\n",
                           instructions="Replace statusLine in %s by (Karvey never writes it):\n%s" % (where, snippet))
     if not kinds:
-        return StepResult("human", summary="no statusline: the stable Karvey command is available",
-                          instructions="Optional: add to ~/.claude/settings.json (Karvey never writes it):\n%s"
-                                       % snippet)
+        # F-21 (REQ-UP-023 as revised): no statusline is a choice, not work — a note, never an offer every version
+        return StepResult("nothing", warnings=["no statusline: optional, the stable Karvey command is in the "
+                                               "plugin's hooks/README.md (statusline section)"])
     if all(k[0] == "own" for k in kinds):
         return StepResult("nothing", warnings=["own statusline, left as is"])
     return StepResult("nothing")
@@ -564,10 +568,11 @@ def changes_in_flight_check(probe, params):
         cid = rel.split("/")[-2]
         if cid == "archive":
             continue
+        cid = one_line(cid)  # F-28: a directory name is project data, never a new line of the report
         try:
             doc = probe.read_json(rel)
         except CheckFailed as exc:
-            lines.append("%s: unreadable (%s)" % (cid, exc))
+            lines.append("%s: unreadable (%s)" % (cid, one_line(exc)))
             continue
         data = doc.data
         if not isinstance(data, dict):
@@ -587,10 +592,10 @@ def changes_in_flight_check(probe, params):
                     if g not in gates and b.endswith("not approved or skipped"):
                         gates.append(g)
             except Exception as exc:  # a spec the state tool cannot read is reported, never fixed
-                lines.append("%s: next phase not computable (%s)" % (cid, exc))
+                lines.append("%s: next phase not computable (%s)" % (cid, one_line(exc)))
         if gates:
-            lines.append("%s (phase %s): unmet gate%s %s" % (cid, data.get("phase"), "" if len(gates) == 1 else "s",
-                                                            ", ".join(gates)))
+            lines.append("%s (phase %s): unmet gate%s %s" % (cid, one_line(data.get("phase")),
+                                                            "" if len(gates) == 1 else "s", ", ".join(gates)))
     if not lines:
         return StepResult("nothing")
     return StepResult("report", summary="%d change%s in flight with unmet gates (reported, never reprocessed)" % (

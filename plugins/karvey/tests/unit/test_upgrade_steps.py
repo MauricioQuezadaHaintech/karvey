@@ -69,7 +69,7 @@ class SchemaMigrate(FixtureCase):
         row, res = self.row("schema-migrate")
         self.assertEqual(row["status"], "applies")
         paths = sorted(e.path for e in res.edits)
-        self.assertEqual(paths, sorted([SPEC60, SPEC61, PJ]))
+        self.assertEqual(paths, sorted([SPEC60, PJ]))  # archive: history (F-22)
         for e in res.edits:
             before = atomicio.read_json(self.root / e.path)
             self.assertEqual(e.before_sha256, before.sha256)
@@ -296,9 +296,10 @@ class HumanSteps(FixtureCase):
         self.assertIn("/karvey/3.11.2/hooks/karvey-statusline.sh", res.diff)
         self.assertEqual(res.edits, [])
 
-    def test_no_statusline_is_human(self):
+    def test_no_statusline_is_a_note_not_work(self):
         self.home_settings({})
-        self.assertEqual(self.row("statusline-launcher")[0]["status"], "human")
+        row, _ = self.row("statusline-launcher")
+        self.assertEqual(row["status"], "nothing")  # REQ-UP-023 as revised by F-21
 
     def test_own_statusline_is_left_as_is(self):
         self.home_settings({"statusLine": {"type": "command", "command": "bash ~/bin/my-status.sh"}})
@@ -500,6 +501,107 @@ class RegressionProjectUpgradeQA(FixtureCase):
         for bad in (("show", "--output=x", "HEAD"), ("ls-files", "--output=x")):
             with self.subTest(args=bad), self.assertRaises(upgrade.ProbeError):
                 p.git_read(*bad)
+
+
+class RegressionProjectUpgradeIterate(FixtureCase):
+    """regression_project-upgrade_iterate_* (karvey-iterate 2026-09-26): the spec revisions of F-08, F-21..F-25
+    and the emergent F-28, each reproduced on the legacy fixture."""
+    UB = "chore/karvey-upgrade-" + INSTALLED
+
+    def git(self, *args, cwd=None):
+        return subprocess.run(["git"] + list(args), cwd=str(cwd or self.root), capture_output=True, text=True)
+
+    def test_f21_no_statusline_is_not_work_only_a_note(self):
+        (self.home / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+        row, res = self.row("statusline-launcher")
+        self.assertEqual(row["status"], "nothing")
+        self.assertTrue(any(w.startswith("no statusline") for w in row["warnings"]), row["warnings"])
+        # every other step satisfied + no statusline = an empty plan (REQ-UP-005 reachable)
+        self.assertEqual(upgrade.any_applicable(self.root, 1e18, steps=[s for s in upgrade.load_catalogue()
+                                                                    if s["id"] == "statusline-launcher"],
+                                                home=self.home), "none")
+
+    def test_f22_archived_changes_are_never_migrated(self):
+        before = self.read(SPEC61)
+        row, res = self.row("schema-migrate")
+        self.assertNotIn(SPEC61, [e.path for e in res.edits])
+        self.assertNotIn("archive/", row["summary"])
+        self.apply(["schema-migrate"])
+        self.assertEqual(self.read(SPEC61), before, "archived history is never rewritten (D-14)")
+
+    def test_f23_the_init_enforcement_block_declares_every_default(self):
+        import re
+        text = (_path.PLUGIN_ROOT / "skills" / "karvey-init" / "SKILL.md").read_text(encoding="utf-8")
+        m = re.search(r'^"enforcement": (\{.*\})$', text, re.M)
+        self.assertIsNotNone(m, "karvey-init shows the enforcement block it writes")
+        block = json.loads(m.group(1))
+        schema = json.loads((_path.PLUGIN_ROOT / "schemas" / "project.schema.json").read_text(encoding="utf-8"))
+        props = schema["properties"]["enforcement"]["properties"]
+        defaults = {k for k, v in props.items() if "x-karvey-default" in v}
+        self.assertLessEqual(defaults, set(block), "init declares every enforcement default")
+        data = json.loads(self.read(PJ))
+        data["enforcement"] = block
+        data["standards"] = {}
+        self.write(PJ, data)
+        self.assertEqual(self.row("enforcement-defaults")[0]["status"], "nothing")
+
+    def test_f24_a_dry_run_off_the_upgrade_branch_must_preview_its_base(self):
+        g.with_origin(self.root, "dev")
+        self.write("local.txt", "a local commit origin/dev does not have\n")
+        with self.assertRaises(upgrade.Refused) as cm:
+            upgrade.apply(self.root, ["enforcement-defaults"], dry_run=True, installed=INSTALLED, home=self.home)
+        self.assertIn("branch", str(cm.exception))
+        upgrade.ensure_branch(self.root, INSTALLED)
+        rep = self.apply(["enforcement-defaults"])
+        self.assertEqual(rep.applied, ["enforcement-defaults"])
+
+    def test_f08_a_second_clone_builds_on_the_remote_upgrade_branch(self):
+        bare = g.with_origin(self.root, "dev")
+        self.apply(["legacy-shims"])
+        upgrade.commit(self.root, "The Owner", installed=INSTALLED)
+        self.assertEqual(self.git("push", "-q", "origin", self.UB).returncode, 0)
+        other = self.t.path / "other"
+        self.assertEqual(subprocess.run(["git", "clone", "-q", "-b", "dev", str(bare), str(other)],
+                                        capture_output=True).returncode, 0)
+        res = upgrade.ensure_branch(other, INSTALLED)
+        self.assertEqual((res["base"], res["created"]), ("refs/remotes/origin/" + self.UB, True))
+        self.assertTrue(res.get("remote"), res)
+        p = upgrade.plan(other, home=self.home, installed=INSTALLED)
+        self.assertEqual({r["id"]: r["status"] for r in p.rows()}["legacy-shims"], "nothing")
+        rep = upgrade.apply(other, ["enforcement-defaults"], dry_run=True, installed=INSTALLED, home=self.home)
+        upgrade.apply(other, ["enforcement-defaults"], preview=rep.preview, installed=INSTALLED, home=self.home)
+        upgrade.commit(other, "Someone Else", installed=INSTALLED)
+        push = self.git("push", "-q", "origin", self.UB, cwd=other)
+        self.assertEqual(push.returncode, 0, "a fast-forward of the first clone's branch: " + push.stderr)
+
+    def test_f25_project_reads_are_capped_and_the_walk_honours_the_deadline(self):
+        big = "docs/spec/changes/big/spec.json"
+        self.write(big, '{"x": "%s"}\n' % ("a" * (upgrade.PROJECT_READ_MAX + 1)), commit=False)
+        p = upgrade.Probe(self.root, home=self.home, installed=INSTALLED)
+        with self.assertRaises(upgrade.CheckFailed) as cm:
+            p.read_text(big)
+        self.assertIn("larger than", str(cm.exception))
+        late = upgrade.Probe(self.root, home=self.home, installed=INSTALLED, deadline=0.0)
+        with self.assertRaises(upgrade.DeadlineExceeded):
+            late.glob("docs/spec/**/spec.json")
+        (self.root / "node_modules" / "deep").mkdir(parents=True)
+        with mock.patch("os.scandir", wraps=os.scandir) as sc:
+            p.glob("docs/spec/**/spec.json")
+        walked = [str(c.args[0]) for c in sc.call_args_list if c.args]
+        self.assertFalse(any("node_modules" in w for w in walked), "pruned, not filtered")
+        self.assertTrue(all(w.startswith(str(self.root / "docs" / "spec")) for w in walked), walked[:3])
+
+    def test_f28_project_strings_cannot_add_lines_to_the_plan(self):
+        evil = "docs/spec/changes/evil\n| injected | x | yes | low | no |/spec.json"
+        self.write(evil, self.read(SPEC60))
+        p = self.plan()
+        for line in p.table().splitlines():
+            self.assertFalse(line.lstrip("|/ ").startswith("injected"), line)
+        for r in p.rows():
+            self.assertNotIn("\n", r["summary"])
+            self.assertTrue(all("\n" not in w for w in r["warnings"]))
+        rep = upgrade.apply(self.root, ["changes-in-flight"], installed=INSTALLED, home=self.home)
+        self.assertFalse(any(ln.startswith("| injected") for x in rep.lines for ln in x.splitlines()), rep.lines)
 
 
 if __name__ == "__main__":

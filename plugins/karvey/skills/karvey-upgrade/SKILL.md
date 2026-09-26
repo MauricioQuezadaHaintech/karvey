@@ -39,6 +39,8 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" plan --json
 ```
 
 - Exit 3 (not a Karvey project) → say so and **stop** without writing anything.
+- A Karvey project outside git: show the plan, say that the upgrade needs a git repository (it goes through a
+  branch and a PR) and **stop**. Nothing is recorded there (`seen` refuses outside git).
 - Exit 4 (the step catalogue is unreadable) → relay the message and stop.
 - Every step `nothing` ("nothing to do") → run `seen --empty`, tell the person the project is already current, and stop:
   ```bash
@@ -74,15 +76,20 @@ A step handed to `/karvey:karvey-init --settings` (no `project.json`) is not ans
 
 ### 6. The upgrade branch
 
-Fetch the integration branch when a remote exists (the tool itself never fetches), then create or switch to the upgrade branch:
+Fetch the integration branch and, if another clone already pushed it, the upgrade branch of this version, when a remote exists (the tool itself never fetches); then create or switch to the upgrade branch. `<version>` is the plan's `to`, written literally:
 
 ```bash
 INTEG=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get branch_flow.integration --shell 2>/dev/null) || INTEG=""
-if git remote get-url origin >/dev/null 2>&1; then git fetch origin ${INTEG:+"$INTEG"}; fi
+if git remote get-url origin >/dev/null 2>&1; then
+  git fetch origin ${INTEG:+"$INTEG"}
+  git fetch origin 'refs/heads/chore/karvey-upgrade-<version>:refs/remotes/origin/chore/karvey-upgrade-<version>' 2>/dev/null || true
+fi
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" branch --json
 ```
 
-An undeclared `branch_flow.integration` is not an error here: the tool falls back to `origin/HEAD`, and the `base` it returns names the integration branch the PR targets. Keep the `branch` it returns (`chore/karvey-upgrade-<version>`): steps 9–10 write it **literally**. A dirty tree, or neither the key nor `origin/HEAD`, is refused by the tool with the paths / the key to set: relay it and stop.
+An undeclared `branch_flow.integration` is not an error here: the tool falls back to `origin/HEAD`, and the `integration` it returns names the branch the PR targets. Keep the `branch` it returns (`chore/karvey-upgrade-<version>`): steps 9–10 write it **literally**. A dirty tree, or neither the key nor `origin/HEAD`, is refused by the tool with the paths / the key to set: relay it and stop.
+
+`remote: true` means another clone (another person, or this person elsewhere) already pushed this upgrade: the branch starts from theirs, so what they applied is already there and the push of step 10 is a fast-forward. Tell the person a PR for it may already be open. When the dry-run of step 7 then says "nothing to do" for every pick, say that the upgrade is already on that branch and stop (no commit).
 
 ### 7. Dry-run: show every diff
 
@@ -90,7 +97,7 @@ An undeclared `branch_flow.integration` is not an error here: the tool falls bac
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" apply --steps "a,b" --dry-run --json
 ```
 
-Show each step's unified diff **verbatim** (one diff block per step, not a summary of it) and the human and report output as returned. A step with `dry_run: false` has no preview: it gets **its own confirmation question**. Then **one** confirmation question: "Apply these changes?". No → stop (the branch stays, without commits). Keep the returned `preview` id.
+Run it on the upgrade branch (after step 6): off it, the tool refuses a dry-run whose tree differs from the branch's base, because the preview would not be what `apply` writes. Show each step's unified diff **verbatim** (one diff block per step, not a summary of it) and the human and report output as returned. A step with `dry_run: false` has no preview: it gets **its own confirmation question**. Then **one** confirmation question: "Apply these changes?". No → stop (the branch stays, without commits). Keep the returned `preview` id.
 
 ### 8. Apply exactly what was previewed
 
@@ -129,7 +136,7 @@ git push -u origin chore/karvey-upgrade-<version>
 Write the branch returned by step 6 literally (above, `<version>` is the installed version): Karvey's own
 prod-gate refuses a push whose destination is a shell variable ("the push destination cannot be resolved").
 
-Open **one** PR from the upgrade branch to the integration branch with `pr_title` (single-quoted: it is the tool's fixed text) and the body file, using the repository's host (`project.json:git_platform`, or the `origin` URL): `gh pr create --base <integration> --head chore/karvey-upgrade-<version> --title '<pr_title>' --body-file "$BODY"` · `az repos pr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> --title '<pr_title>' --description "$(cat "$BODY")"` · `glab mr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> --title '<pr_title>' --description "$(cat "$BODY")"`. Never paste `pr_body` into a double-quoted argument: it contains backticks. No PR tooling or no remote → print the exact commands for the person. A rejected push → report it with the retry command; the commit stays local. **Never merge**: the PR goes through the project's normal review.
+Open **one** PR from the upgrade branch to the integration branch with `pr_title` (single-quoted: it is the tool's fixed text) and the body file, using the repository's host (`project.json:git_platform`, or the `origin` URL): `gh pr create --base <integration> --head chore/karvey-upgrade-<version> --title '<pr_title>' --body-file "$BODY"` · `az repos pr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> --title '<pr_title>' --description "$(cat "$BODY")"` · `glab mr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> --title '<pr_title>' --description "$(cat "$BODY")"`. Never paste `pr_body` into a double-quoted argument: it contains backticks. No PR tooling or no remote → print the exact commands for the person. When step 6 returned `remote: true` and the host says a PR from this branch already exists, do not open a second one: the push added the commit to it. A rejected push → report it with the retry command; the commit stays local. **Never merge**: the PR goes through the project's normal review.
 
 ## What this skill never does
 

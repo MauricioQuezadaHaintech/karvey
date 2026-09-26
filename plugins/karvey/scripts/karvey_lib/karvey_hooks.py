@@ -577,6 +577,8 @@ def upgrade_offer(start, team_root, mode, env):
             kp = team_root
         if kp is None:
             return []
+        if pj.git_common_dir(kp) is None:
+            return []  # F-27: no clone, no per-clone record (it would land under the home); the upgrade needs git
         from karvey_lib import __version__ as installed, upgrade  # absolute: the hook also runs as a script
         if not upgrade.VERSION_RE.match(installed or ""):
             return unavailable("plugin version %r is not a release number" % (installed,))
@@ -589,7 +591,7 @@ def upgrade_offer(start, team_root, mode, env):
             budget = min(budget, int(forced))
         t0 = time.monotonic()
         try:
-            result = upgrade.any_applicable(kp, t0 + budget / 1000.0)
+            result = _probe_with_watchdog(upgrade, kp, t0 + budget / 1000.0)
         except upgrade.CatalogueError as exc:
             _offer_audit(kp, seen, installed, "unavailable", t0)
             return unavailable(str(exc))
@@ -604,20 +606,48 @@ def upgrade_offer(start, team_root, mode, env):
         frm = seen["version"] if seen else None
         tool = shlex.quote(os.path.join(kl_plugin_root(), "scripts", "karvey-upgrade.py"))
         decline = "python3 %s seen --decline" % tool
-        first = "Karvey (upgrade): installed %s, %s \u2014 project upgrade steps may apply; to decline: %s" % (
-            installed, "last resolved in this clone %s" % frm if frm else "no upgrade resolved yet in this clone",
-            decline)
+        # F-09: phrased like the settings notice — a notice of the installed plugin saying what the user can do —
+        # not an imperative order naming a command, which a model may rightly distrust as an injection
+        first = ("Karvey (upgrade): installed %s, %s \u2014 project upgrade steps may apply; the user can decline "
+                 "for this version with: %s" % (
+                     installed, "last resolved in this clone %s" % frm if frm else
+                     "no upgrade resolved yet in this clone", decline))
         if len(first) > limit:
-            first = ("Karvey (upgrade): installed %s, %s \u2014 project upgrade steps may apply; to decline: run "
-                     "scripts/karvey-upgrade.py seen --decline from the Karvey plugin" % (
+            first = ("Karvey (upgrade): installed %s, %s \u2014 project upgrade steps may apply; the user can decline "
+                     "with scripts/karvey-upgrade.py seen --decline of the Karvey plugin" % (
                          installed, "last resolved here %s" % frm if frm else "none resolved here"))
-        second = ('Ask ONE question (AskUserQuestion, their language): "Karvey %s\u2192 %s: do you want a plan '
-                  'to upgrade this project?" \u2014 "Yes, show me the plan (Recommended)" \u2192 /karvey:karvey-upgrade'
-                  ' \u00b7 "Not for this version" \u2192 the decline command above. No answer or cannot ask: '
-                  'record nothing.' % (frm + " " if frm else "", installed))
+        second = ('The user can get an upgrade plan; if you can ask, offer it (AskUserQuestion): "Karvey %s\u2192 %s: '
+                  'do you want a plan to upgrade this project?" \u2014 "Yes, show me the plan (Recommended)": '
+                  '/karvey:karvey-upgrade \u00b7 "Not for this version": the decline command. Unanswered: record '
+                  'nothing.' % (frm + " " if frm else "", installed))
         return [_cap(first, limit), _cap(second, limit)]
     except Exception as exc:  # open: the offer must never break the session (REQ-UP-006)
         return unavailable("%s: %s" % (type(exc).__name__, exc))
+
+
+PROBE_WATCHDOG_GRACE_S = 0.25
+
+
+def _probe_with_watchdog(upgrade, kp, deadline):
+    """``upgrade.any_applicable`` in a daemon thread, waited for until the deadline plus a short grace (F-25).
+    The probe checks the deadline itself between steps, files and directories; the watchdog covers one call that
+    blocks (a slow disk, a huge file): past it the result is ``timeout`` — the offer is shown and nothing is
+    recorded, since only this thread ever writes the ``empty`` record."""
+    box = {}
+
+    def run():
+        try:
+            box["result"] = upgrade.any_applicable(kp, deadline)
+        except BaseException as exc:  # handed back to the caller below
+            box["error"] = exc
+    th = threading.Thread(target=run, name="karvey-upgrade-probe", daemon=True)
+    th.start()
+    th.join(max(0.0, deadline - time.monotonic()) + PROBE_WATCHDOG_GRACE_S)
+    if th.is_alive():
+        return "timeout"
+    if "error" in box:
+        raise box["error"]
+    return box.get("result", "timeout")
 
 
 def kl_plugin_root():
