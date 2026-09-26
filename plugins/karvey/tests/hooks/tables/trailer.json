@@ -1,0 +1,408 @@
+{
+ "table": "trailer",
+ "description": "wave2-structural E1.F5.T4 / REQ-W2-044: with enforcement.trailer_guard warn or blocking, a git commit on {feature_prefix}{id} of an active change must carry Karvey-Change: {id}; the message is read from -m, -F and --trailer; an editor commit and a branch of no active change are silent; off (the default) is silent.",
+ "cases": [
+  {
+   "id": "tr-01-off-by-default-silent",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m 'feat: x'"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "stderr_empty": true
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  },
+  {
+   "id": "tr-02-warn-missing-prints-warning",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "warn"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m 'feat: x'"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": "[karvey] trailer WARNING: add \"Karvey-Change: feat-a\""
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  },
+  {
+   "id": "tr-03-blocking-missing-blocks",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m 'feat: x'"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK trailer",
+     "Karvey-Change: feat-a"
+    ]
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  },
+  {
+   "id": "tr-04-trailer-present-silent",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m 'feat: x' -m 'Karvey-Change: feat-a'"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "stderr_empty": true
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  },
+  {
+   "id": "tr-05-editor-commit-silent",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "stderr_empty": true
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  },
+  {
+   "id": "tr-06-branch-of-no-active-change-silent",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/other",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m 'feat: x'"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "stderr_empty": true
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  },
+  {
+   "id": "tr-07-file-with-trailer-silent",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "msg.txt": "feat: x\n\nKarvey-Change: feat-a\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -F msg.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "stderr_empty": true
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  },
+  {
+   "id": "tr-08-file-without-trailer-blocks",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "msg.txt": "feat: x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -F msg.txt"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": "[karvey] BLOCK trailer"
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  },
+  {
+   "id": "tr-09-trailer-option-silent",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "blocking"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m 'feat: x' --trailer 'Karvey-Change: feat-a'"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_empty": true,
+    "stderr_empty": true
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  },
+  {
+   "id": "tr-10-wrong-change-in-trailer-warns",
+   "guard": "trailer",
+   "given": {
+    "repo": {
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "trailer_guard": "warn"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -m 'feat: x' -m 'Karvey-Change: feat-b'"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": "trailer WARNING"
+   },
+   "tags": [
+    "trailer",
+    "REQ-W2-044"
+   ]
+  }
+ ]
+}

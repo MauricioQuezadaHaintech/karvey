@@ -21,21 +21,22 @@ def run(event, payload, env=None, **kw):
 class Registry(unittest.TestCase):
     def test_order_and_fail_modes_of_section_1_3(self):
         names = lambda ev: [g.name for g in kh.guards_for(ev) if g.name != "selftest"]  # noqa: E731
-        self.assertEqual(names("pre-bash"), ["protect-paths", "prod-gate", "git-flow", "plan-gate"])
+        self.assertEqual(names("pre-bash"), ["protect-paths", "prod-gate", "git-flow", "plan-gate", "trailer"])
         self.assertEqual(names("pre-edit"), ["protect-paths", "plan-gate"])
         self.assertEqual(names("post-edit"), ["spec-write", "pending-sync"])
         self.assertEqual(names("prompt"), ["approval"])
         fail = {g.name: g.fail for g in kh.REGISTRY}
         self.assertEqual(fail, {"selftest": "closed", "protect-paths": "closed", "prod-gate": "closed",
-                                "git-flow": "closed", "plan-gate": "closed", "spec-write": "open",
+                                "git-flow": "closed", "plan-gate": "closed", "trailer": "open", "spec-write": "open",
                                 "pending-sync": "open", "approval": "open"})
         default = {g.name: g.default_on for g in kh.REGISTRY}
         self.assertTrue(default["prod-gate"])        # D-02
         self.assertFalse(default["git-flow"])        # opt-in
         self.assertFalse(default["plan-gate"])       # opt-in
+        self.assertFalse(default["trailer"])         # opt-in, fails open (wave2 §1.10)
 
     def test_wired_guards(self):
-        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths", "prod-gate", "git-flow", "plan-gate", "spec-write", "pending-sync", "approval"])
+        self.assertEqual([g.name for g in kh.REGISTRY if g.wired], ["selftest", "protect-paths", "prod-gate", "git-flow", "plan-gate", "trailer", "spec-write", "pending-sync", "approval"])
 
     def test_only_filter(self):
         self.assertEqual([g.name for g in kh.guards_for("pre-bash", ["git-flow"])], ["git-flow"])

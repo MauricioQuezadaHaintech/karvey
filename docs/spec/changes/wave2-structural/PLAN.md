@@ -118,7 +118,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F5.T1 [Backend] `karvey_lib/manifest.py`: trailer parse (strict pattern), merge-commit mapping, path-only mapping (A-12) — est: 12min (depends E1.F2.T2)
 - [x] E1.F5.T2 [Backend] `karvey-release-gate.py manifest`: changes with version / lane / QA state, `unmapped`, verdict per mode, hits — est: 12min (depends E1.F5.T1, E1.F1.T2)
 - [ ] E1.F5.T3 [Backend] `karvey-release-gate.py check` (qa_gate, tests, changelog, version_match, lane_triplet, manifest, spec_merged, pr_body) + `release-branch` (read-only plan) — est: 15min (depends E1.F5.T2, E1.F2.T4, E1.F6.T1, E1.F7.T2)
-- [ ] E1.F5.T4 [Backend] Trailer guard (`enforcement.trailer_guard: off|warn|blocking`, reviewed line, `-m`/`-F`/`--trailer`, fail open) + table `trailer.json` + hooks README anchors — est: 12min (depends E1.F1.T2) (P)
+- [x] E1.F5.T4 [Backend] Trailer guard (`enforcement.trailer_guard: off|warn|blocking`, reviewed line, `-m`/`-F`/`--trailer`, fail open) + table `trailer.json` + hooks README anchors — est: 12min (depends E1.F1.T2) (P)
 - [ ] E1.F5.T5 [Backend] Prod gate: manifest verdict after the Wave 1 allow (warn → allow + line; blocking → block; not computable), every manifest change through `check_prod`; `approve prod --manifest` — est: 15min (depends E1.F5.T2, E1.F4.T1)
 - [ ] E1.F5.T6 [Backend] Deploy flow text: 2.4-bis spec merge on the change branch, 2.5 integration by PR, 2.8-bis manifest + release gate, prod OK in PR body at deploy → D-NN at archive, attested fallback, `release/*` offer — est: 15min (depends E1.F5.T3)
 - [ ] E1.F5.T7 [Backend] `branch_flow.mode` derived (trunk when integration = production), contradiction reported, trunk recommended by `karvey-init --settings` — est: 6min (depends E1.F1.T1) (P)
@@ -219,7 +219,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F5.T1 [Backend] | ✅ done | 12 | 6 | 0 |  |
 | E1.F5.T2 [Backend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F5.T3 [Backend] | ⬜ todo | 15 | — | — |  |
-| E1.F5.T4 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F5.T4 [Backend] | ✅ done | 12 | 10 | 0 |  |
 | E1.F5.T5 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F5.T6 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F5.T7 [Backend] | ⬜ todo | 6 | — | — |  |

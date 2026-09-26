@@ -199,6 +199,8 @@ REGISTRY = [
           enabled=guards.git_flow_enabled),                             # E1.F5.T4
     Guard("plan-gate", ("pre-bash", "pre-edit"), "closed", False, wired=True, run=guards.plan_gate,
           enabled=guards.plan_gate_enabled),                            # E1.F5.T3
+    Guard("trailer", ("pre-bash",), "open", False, wired=True, run=guards.trailer,
+          enabled=guards.trailer_enabled),                              # wave2 E1.F5.T4
     Guard("spec-write", ("post-edit",), "open", True, wired=True, run=spec_write),      # E1.F5.T7
     Guard("pending-sync", ("post-edit",), "open", True, wired=True, run=pending_sync),  # E1.F5.T7
     Guard("approval", ("prompt",), "open", True, wired=True, run=guards.approval_hook),  # E1.F5.T2

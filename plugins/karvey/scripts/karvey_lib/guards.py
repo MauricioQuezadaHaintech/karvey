@@ -737,6 +737,105 @@ def git_flow(ctx):
     return None
 
 
+# --------------------------------------------------------------------------- trailer (wave2 §1.10 C-10)
+TRAILER_LEVELS = ("off", "warn", "blocking")
+TRAILER_FILE_CAP = 64 * 1024
+_TRAILER_LINE = re.compile(r"^\s*Karvey-Change\s*[:=]\s*(\S+)\s*$", re.M)
+
+
+def trailer_enabled(ctx):
+    """Cheap pre-filter: a ``git … commit`` in the command. Whether the project turned it on is read per
+    segment (:func:`trailer`)."""
+    if ctx.force_enabled:
+        return True
+    return bool(re.search(r"\bgit\b.*\bcommit\b", ctx.payload.command or ""))
+
+
+def trailer_mode(ctx, root):
+    """``enforcement.trailer_guard``: the stricter of the working copy and the reviewed line (so turning it
+    down in the working copy alone does not weaken it); invalid values count as ``off``."""
+    wc, _ = project_wc(ctx, root)
+    vals = [enforcement(wc).get("trailer_guard"), reviewed_setting(ctx, "trailer_guard", root)]
+    levels = [TRAILER_LEVELS.index(v) for v in vals if v in TRAILER_LEVELS]
+    return TRAILER_LEVELS[max(levels)] if levels else "off"
+
+
+def _commit_message(args, cwd):
+    """``(text, seen)`` of a ``git commit``'s message from ``-m``/``--message``, ``-F``/``--file`` and
+    ``--trailer``; ``seen`` is False when none is given (an editor, ``--no-edit``, ``-C``)."""
+    parts, seen, i = [], False, 0
+    while i < len(args):
+        a = args[i]
+        val, kind = None, None
+        for short, long_, k in (("-m", "--message", "m"), ("-F", "--file", "F"), (None, "--trailer", "t")):
+            if a == long_ or (short and a == short):
+                val, kind = (args[i + 1] if i + 1 < len(args) else None), k
+                i += 1
+                break
+            if a.startswith(long_ + "="):
+                val, kind = a[len(long_) + 1:], k
+                break
+            if short and a.startswith(short) and len(a) > 2 and not a.startswith("--"):
+                val, kind = a[2:], k
+                break
+        i += 1
+        if val is None:
+            continue
+        if kind == "m":
+            parts.append(val)
+            seen = True
+        elif kind == "t":
+            parts.append(val.replace("=", ":", 1) if ":" not in val.split("=", 1)[0] else val)
+            seen = True
+        elif kind == "F":
+            if val == "-":
+                continue  # stdin: the guard cannot see it
+            path = val if os.path.isabs(val) else os.path.join(cwd or ".", val)
+            try:
+                with open(path, "rb") as fh:
+                    parts.append(fh.read(TRAILER_FILE_CAP).decode("utf-8", "replace"))
+                seen = True
+            except OSError:
+                continue
+    return "\n".join(parts), seen
+
+
+def trailer(ctx):
+    """A commit on ``{feature_prefix}{id}`` of an active change must carry ``Karvey-Change: {id}``
+    (REQ-W2-044). Opt-in (``off`` by default); fails open: a check that cannot run never blocks."""
+    try:
+        for seg, t in git_targets(ctx):
+            if t.sub != "commit" or t.unresolved:
+                continue
+            root, _, _ = flow_config(ctx, t.config_dir())
+            if root is None:
+                continue
+            mode = trailer_mode(ctx, root)
+            if mode == "off":
+                continue
+            wc, _ = project_wc(ctx, root)
+            prefix, _, _ = pj.branch_flow(wc or {})
+            head = t.branch(ctx)
+            if not head or not prefix or not head.startswith(prefix):
+                continue
+            cid = head[len(prefix):]
+            if cid not in {c["id"] for c in pj.list_changes(root)}:
+                continue
+            text, seen = _commit_message(t.args, t.dir)
+            if not seen:
+                continue  # an editor commit: the manifest catches it as unmapped
+            if cid in _TRAILER_LINE.findall(text):
+                continue
+            msg = 'add "Karvey-Change: %s" as the last paragraph of the commit message' % cid
+            if mode == "blocking":
+                return Decision.block("[karvey] BLOCK trailer: %s (enforcement.trailer_guard: blocking)" % msg,
+                                      record={"reason": "missing trailer", "change": cid})
+            return Decision.allow(stdout=['[karvey] trailer WARNING: add "Karvey-Change: %s"' % cid])
+    except Exception:  # fail open (§1.10)
+        return None
+    return None
+
+
 # --------------------------------------------------------------------------- prod-gate (§3.4, §3.2)
 NET_BUDGET_S = 6.0          # within the 15 s pre-bash timeout (A-7)
 _DEPLOY_TITLE = re.compile(r"^\[Deploy\] ([a-z0-9][a-z0-9-]{1,62})\b")
@@ -1085,5 +1184,5 @@ def approval_hook(ctx):
         return None
 
 
-__all__ = ["Decision", "protect_paths", "approval_hook", "plan_gate", "plan_gate_enabled", "git_flow",
+__all__ = ["Decision", "trailer", "trailer_enabled", "protect_paths", "approval_hook", "plan_gate", "plan_gate_enabled", "git_flow",
            "git_flow_enabled", "prod_gate", "prod_gate_enabled", "prod_gate_setting", "EDIT_TOOLS", "hookio"]
