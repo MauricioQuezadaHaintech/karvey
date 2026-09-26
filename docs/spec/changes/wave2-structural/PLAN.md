@@ -274,4 +274,4 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ## QA Review
 - Findings of the change: 0 Critical · 10 High · 23 Medium · 13 Low — 29 fixed; 16 emergent deferred as backlog candidates; F-61 (High) open for the owner (`findings.md`).
-- Pending: the owner's decision on F-61, then the *release* gate; integration with the newest `wave1-hardening` commits (Wave 1's prod-approval binding D-35 must reach the manifest path).
+- Pending: the owner's *release* gate answer (QA ready for approval after revision 4: wave1-hardening merged, F-61 closed by D-37, security gate PASS); F-84..F-86 deferred.
