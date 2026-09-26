@@ -923,7 +923,7 @@ Total estimated time: 165 min (5 agent tasks)
 
 ### E1.F18.T5 [Test] QA re-run: D1 and D7 on the diff since 13170b1 — _Depends: E1.F18.T4_
 
-**Estimate:** 30 min · **Actual:** (filled when done)  
+**Estimate:** 30 min · **Actual:** 90 min (AI; four review passes, BUG-47..51 in the micro-loop)  
 **Files:** `docs/spec/changes/wave1-hardening/qa/REVISION_PR_24_20260925.md` (appended section)  
 **Requirements:** REQ-W1-023, REQ-W1-024  
 **Tests added:** — (review; any defect → `findings.md`)  

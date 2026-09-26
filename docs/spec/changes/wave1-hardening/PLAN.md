@@ -205,7 +205,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F18.T2 [Backend] D-35: prod approval bound to the approved head commit, valid 24 h — est: 50min
 - [x] E1.F18.T3 [Backend] D-36: `reopen` supersedes the ledger prod approval — est: 20min
 - [x] E1.F18.T4 [Backend] Spec revision and docs of the prod approval flow — est: 35min
-- [ ] E1.F18.T5 [Test] QA re-run: D1 and D7 on the diff since 13170b1 — est: 30min
+- [x] E1.F18.T5 [Test] QA re-run: D1 and D7 on the diff since 13170b1 — est: 30min
 
 ---
 
@@ -298,7 +298,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F18.T2 [Backend] | ✅ done | 50 | 30 | 0 | F-77/D-35: `head_sha` + `expires_at`; `approve prod --sha`, `check-prod --sha`; prod-gate compares the released commit in every form; pg5-02..11 red on c4d81cf |
 | E1.F18.T3 [Backend] | ✅ done | 20 | 5 | 0 | F-79/D-36: `reopen` → ledger `superseded[]` + `revision_history` |
 | E1.F18.T4 [Backend] | ✅ done | 35 | 20 | 0 | requirements rev 1 (017, 023), spec-delta, architecture rev 4, tasks E1.F18, docs (enforcement, hooks README, deploy 2.9, state-machine, iterate) |
-| E1.F18.T5 [Test] | 🔄 in progress | 30 | — | — | D1 + D7 over 13170b1..HEAD |
+| E1.F18.T5 [Test] | ✅ done | 30 | 90 | 0 | D1 + D7 (4 passes) over 13170b1..HEAD; BUG-47..51 fixed in the micro-loop; security gate PASS |
 | E1.F17.T8 [Test] | ✅ done | 30 | 25 | 0 | reruns PASS: settings-docs-branch (A, B), visible-version (1, 2, 3), no-human-no-mapping (headless, subagent after the guard; tracker line by tests), per-level-maps (A without tracker; comment and B by tests); F-54 → BL-52 (wave2-structural); BL-51 reworded |
 
 ---
@@ -338,6 +338,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-25 | architecture | Revision 2 (D-33): §1.3, §3.2, §6.1 describe the `subagent-prompt` guard added for BUG-25 (commit 55561c4). |
 | 2026-09-25 | test | Test phase 2 (`advance … test`). Unit 711 · regression 10 · test-hooks 68 · tables 321 cases / 390 runs · page 22 — all green; lint 0 errors; `validate --all` 0 errors; manual scripts 10/10 PASS (four after re-run); every requirement area PASS (E2E release/archive still in deploy/archive). Benchmark: pre-bash slower than baseline under load (F-55, emergent). Evidence `docs/test_evidence.md` § Test phase 2. |
 | 2026-09-25 | qa | QA entered (`advance … qa`); 9 dimensions over `origin/main...4c9b7c0` (D1–D4 and D7 by review subagents, D7 intra-model). 20 bugs fixed in the micro-loop (BUG-27..46, each red on 4c9b7c0); 13 spec-gap/emergent F-76..F-88: F-76, F-77, F-79 open for the owner (prod approval evidence and binding), 10 deferred to BL-53..BL-61. Security gate FAIL on F-76/F-77; QA not approved. Review `qa/REVISION_PR_24_20260925.md`. After the fixes: unit 735 · regression 10 · test-hooks 68 · tables 363 cases / 438 runs · page 22 · lint 0 errors · validate 0 errors. |
+| 2026-09-26 | qa | karvey-iterate for D-34..D-36: spec revision (REQ-W1-017/023, architecture rev 4, E1.F18) and implementation, tests red first on c4d81cf; QA re-run D1 + D7 (4 passes) found BUG-47..51 (prod-gate push forms, deferred merges, reopen ordering), all RESUELTO; F-90 → BL-62, F-91 → BL-63; security gate PASS, QA ready for approval (not recorded). |
 
 ## QA Review (2026-09-25)
 
