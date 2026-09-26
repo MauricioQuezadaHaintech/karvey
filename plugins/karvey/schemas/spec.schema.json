@@ -334,6 +334,53 @@
       "$ref": "karvey:project.schema.json#/$defs/stakeholders",
       "x-karvey-note": "per-role override of project.json:stakeholders (wave3 §1.12)"
     },
+    "risk_log": {
+      "type": "array",
+      "x-karvey-note": "append-only log of risk state changes, written by karvey-state.py risk (wave3 §1.17)",
+      "items": {
+        "type": "object",
+        "required": [
+          "risk",
+          "from",
+          "to",
+          "at"
+        ],
+        "properties": {
+          "risk": {
+            "type": "string",
+            "pattern": "^R-\\d+$"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "x-karvey-format": "datetime-tz"
+          },
+          "by_role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
     "approvals": {
       "type": "object",
       "properties": {

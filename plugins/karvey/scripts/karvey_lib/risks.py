@@ -87,3 +87,25 @@ def problems(rows):
 
 def open_risks(rows):
     return [r for r in rows if r["state"] == "open"]
+
+
+ACTIONS = {"review": None, "close": "closed", "mitigate": "mitigated", "accept": "accepted", "move": "moved"}
+
+
+def rewrite(text, rid, state_cell=None, last_review=None):
+    """The register text with ``rid``'s ``State`` and ``Last review`` cells replaced (other rows untouched)."""
+    lines = (text or "").split("\n")
+    rows = {r["id"]: r for r in parse(text)}
+    if rid not in rows:
+        raise KeyError(rid)
+    head_line = next(ln for ln in lines if ln.lstrip().startswith("|") and "ID" in ln and "Owner" in ln)
+    head = [c.lower() for c in _cells(head_line)]
+    n = rows[rid]["line"] - 1
+    cells = _cells(lines[n])
+    for i, h in enumerate(head):
+        if h == "state" and state_cell is not None and i < len(cells):
+            cells[i] = state_cell
+        elif h == "last review" and last_review is not None and i < len(cells):
+            cells[i] = last_review
+    lines[n] = "| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |"
+    return "\n".join(lines)

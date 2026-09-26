@@ -25,6 +25,8 @@ Commands:
   lane <change> set|raise|lower <lane> [--answers F] [--reason R] [--by --role human --ref]   (lower: the human)
   judge-run <change> <phase> --from FILE    judge_runs[] (model and intra_model required)
   effort <change> <phase> [--review-min N]  effort[] of the closing phase from the statusline capture (wave3 §1.9)
+  risk <change> R-N review|close|move|mitigate|accept [--reason R] [--by-role ROLE] [--to BL-NN]
+                                        the risk register row + spec.json:risk_log (wave3 §1.17)
   lane-check <change> --base REF [--head REF] [--finding F-NN]   (lane.diff hits → changes/{id}/checks.jsonl)
   lane-evidence <change> --bug BUG-NN --finding F-NN --regression-test PATH::NAME   (patch / hotfix)
   deploy-record <change> --env --version --verification pass|regression|not-evaluated [--rollback] [--evidence]
@@ -36,6 +38,7 @@ import re
 import difflib
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -2236,12 +2239,102 @@ def cmd_effort(args, root):
     return kl.EXIT_OK, res, [], [], human
 
 
+def _backlog_row(root, bl, change, risk, day):
+    """Append the backlog row of a moved risk to ``docs/spec/backlog.md`` (created with its header when absent)."""
+    p = Path(root) / pj.SPEC_DIR / "backlog.md"
+    head = ("| ID | Date | Origin | Type | Priority | Title | Status | Tracker | Promoted to change-id |\n"
+            "|----|------|--------|------|----------|-------|--------|---------|-----------------------|\n")
+    title = re.sub(r"\s+", " ", risk["risk"]).replace("|", "\\|").strip()
+    row = "| %s | %s | %s / %s | risk | med | %s | open | — | — |" % (bl, day, change, risk["id"], title)
+    try:
+        text = p.read_text(encoding="utf-8-sig")
+    except FileNotFoundError:
+        text = "# Discovery Backlog\n\n" + head
+    lines = text.rstrip("\n").split("\n")
+    rows = [i for i, ln in enumerate(lines) if ln.lstrip().startswith("|")]
+    if rows:
+        lines.insert(rows[-1] + 1, row)
+    else:
+        lines += ["", head.rstrip("\n"), row]
+    atomicio.write_text_atomic(str(p), "\n".join(lines) + "\n")
+    return rel(root, p)
+
+
+def _reserve_bl(root):
+    cmd = [sys.executable, str(Path(__file__).resolve().parent / "karvey-id.py"), "next", "BL", "--root", str(root),
+           "--json"]
+    try:
+        cp = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        env = json.loads(cp.stdout)
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        raise Refused("could not reserve a BL-NN with karvey-id.py: %s" % exc, code="state.risk")
+    if cp.returncode != 0 or not env.get("ok"):
+        raise Refused("could not reserve a BL-NN with karvey-id.py: %s" % "; ".join(
+            e.get("message", "") for e in env.get("errors") or []), code="state.risk")
+    return env["result"]["id"]
+
+
+def cmd_risk(args, root):
+    """``risk <change> R-N review|close|move|mitigate|accept``: rewrite the row of ``risks.md`` and append
+    ``{risk, from, to, at, by_role, reason, ref}`` to ``spec.json:risk_log`` under the register's lock (wave3 §1.17,
+    REQ-W3-031, 034). ``move`` reserves a ``BL-NN`` (or takes ``--to``) and writes the backlog row citing the risk."""
+    if args.action not in rk.ACTIONS:
+        raise Usage("action must be one of %s" % ", ".join(rk.ACTIONS))
+    if not rk.R_ID.match(args.risk or ""):
+        raise Usage("invalid risk id %r (R-N)" % args.risk)
+    if args.to and not re.match(r"^BL-\d+$", args.to):
+        raise Usage("--to must be a BL-NN")
+    path = change_spec_path(root, args.change)
+    reg = path.parent / rk.FILE
+    now = now_iso()
+    with atomicio.lock(str(reg) + ".register"):
+        try:
+            text = reg.read_text(encoding="utf-8-sig")
+        except FileNotFoundError:
+            raise NotFound("%s has no risk register (%s)" % (args.change, rel(root, reg)))
+        expected = atomicio.file_sha256(reg)
+        rows = {r["id"]: r for r in rk.parse(text)}
+        if args.risk not in rows:
+            raise NotFound("%s: no %s in %s" % (args.change, args.risk, rel(root, reg)))
+        risk = rows[args.risk]
+        ref, backlog = None, None
+        if args.action == "move":
+            ref = args.to or _reserve_bl(root)
+            new_state = "moved → %s" % ref
+        elif args.action == "review":
+            new_state = risk["state_cell"]
+        else:
+            new_state = rk.ACTIONS[args.action]
+        review = "%s %s" % (now[:10], args.by_role or "owner")
+        new_text = rk.rewrite(text, args.risk, new_state, review)
+        entry = {"risk": args.risk, "from": risk["state"], "to": rk.state_of(new_state), "at": now,
+                 "by_role": args.by_role, "reason": args.reason, "ref": ref}
+
+        def mutate(data):
+            log = data.get("risk_log") if isinstance(data.get("risk_log"), list) else []
+            log.append(entry)
+            data["risk_log"] = log
+            data["updated_at"] = now
+            return {"change": args.change, "entry": entry}
+
+        _, res, _ = transact(root, args.change, mutate)
+        atomicio.write_text_atomic(str(reg), new_text, expected_sha256=expected)
+        if args.action == "move":
+            backlog = _backlog_row(root, ref, args.change, risk, now[:10])
+    res["register"] = rel(root, reg)
+    if backlog:
+        res["backlog"] = backlog
+    human = "%s %s: %s → %s%s" % (args.change, args.risk, entry["from"], new_state,
+                                   (" · backlog row in %s" % backlog) if backlog else "")
+    return kl.EXIT_OK, res, [], [], human
+
+
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
             "check-prod": cmd_check_prod, "outcome": cmd_outcome, "approve-gate": cmd_approve_gate,
             "gate": cmd_gate,
             "deploy-record": cmd_deploy_record, "lane": cmd_lane, "lane-evidence": cmd_lane_evidence,
-            "lane-check": cmd_lane_check, "judge-run": cmd_judge_run, "effort": cmd_effort}
+            "lane-check": cmd_lane_check, "judge-run": cmd_judge_run, "effort": cmd_effort, "risk": cmd_risk}
 
 
 def build_parser():
@@ -2350,6 +2443,13 @@ def build_parser():
     ef_.add_argument("change")
     ef_.add_argument("phase")
     ef_.add_argument("--review-min", type=int, default=None, help="review minutes the human states at the gate")
+    rs = sub.add_parser("risk", parents=[common], help="change a risk's state in the register (+ risk_log)")
+    rs.add_argument("change")
+    rs.add_argument("risk")
+    rs.add_argument("action", choices=sorted(rk.ACTIONS))
+    rs.add_argument("--reason")
+    rs.add_argument("--by-role", dest="by_role", help="the role of whoever answered (the risk owner)")
+    rs.add_argument("--to", help="move: an already reserved BL-NN (default: reserve one with karvey-id.py)")
     dr = sub.add_parser("deploy-record", parents=[common], help="append a deploys[] entry (env, version, verification)")
     dr.add_argument("change")
     dr.add_argument("--env")
