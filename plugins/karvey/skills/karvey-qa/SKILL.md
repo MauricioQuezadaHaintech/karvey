@@ -299,6 +299,7 @@ Resolve the destination with `karvey-config.py resolve notifications`; never loo
 - `channel` unset → skip and say `Notification: not configured — run /karvey:karvey-init --settings`.
 - `channel: none`, or `qa` not in `events` → skip and say so.
 - Otherwise run `karvey-config.py notify-check` first: exit 10 means the destination changed since the last confirmed send — show it and ask the human to type the phrase it prints (`confirmo notificacion <code>`); only then does `notify-check --confirm` record it (D-16). Then send through `via`. A failed send is reported, not swallowed; the phase still closes.
+- Send only when `karvey-config.py notify-sent {change-id} --event qa --item qa --state {verdict} --run-id {run}` says `new` (the first run and a verdict change; every run with `notifications.qa_every_run`), then re-run it with `--record`; the message carries the run id and the time.
 
 Content (event `qa`): change-id, source → target, **counts** by severity and the review path (`detail: counts`, the default); finding titles and manual-testing areas only with `detail: full`.
 Write it in the **channel's own markup** (`notifications.md` → Message format per channel). Google Chat / Slack example:

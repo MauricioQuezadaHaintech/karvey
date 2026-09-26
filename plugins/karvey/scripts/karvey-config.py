@@ -351,6 +351,82 @@ def resolve_event(settings, notif, event, change=None, item=None, verdict=None, 
             "source": source, "note": note, "payload": payload}
 
 
+# --------------------------------------------------------------------------- sent-log (wave3 §1.15, REQ-W3-027)
+SENT_LOG = "notifications.jsonl"
+
+
+def _h(*parts):
+    return hashlib.sha256("|".join("" if p is None else str(p) for p in parts).encode("utf-8")).hexdigest()
+
+
+def sent_log_path(root, change):
+    if not isinstance(change, str) or not re.match(r"^[a-z0-9][a-z0-9._-]*$", change):
+        raise Usage("invalid change id %r" % (change,))
+    d = Path(root) / pj.CHANGES_DIR / change
+    if not d.is_dir():
+        raise NotFound("change %r not found" % change, code="config.no_change")
+    return d / SENT_LOG
+
+
+def read_sent(path):
+    out = []
+    try:
+        lines = Path(path).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return out
+    for ln in lines:
+        try:
+            rec = json.loads(ln)
+        except ValueError:
+            continue
+        if isinstance(rec, dict):
+            out.append(rec)
+    return out
+
+
+def notify_status(log, event, change, item=None, state=None, version=None, env=None, qa_every_run=False):
+    """``(status, key, scope)``: ``new`` or ``sent``. ``deploy`` once per version and environment; ``qa`` on the
+    first run and on a verdict change (every run with ``qa_every_run``); any other event once per state change of
+    its item."""
+    scope = _h(event, change, item)
+    if event == "deploy":
+        key = _h(event, change, item, None, version, env)
+        return ("sent" if any(r.get("key") == key for r in log) else "new"), key, scope
+    key = _h(event, change, item, state, version, env)
+    if event == "qa" and qa_every_run:
+        return "new", key, scope
+    last = [r for r in log if r.get("scope") == scope]
+    if last and last[-1].get("state_key") == _h(state):
+        return "sent", key, scope
+    return "new", key, scope
+
+
+def cmd_notify_sent(args, root):
+    path = sent_log_path(root, args.change)
+    settings = Settings(root)
+    notif, _ = resolve_notifications(settings)
+    raw, _ = settings.block("notifications")
+    every = isinstance(raw, dict) and raw.get("qa_every_run") is True
+    log = read_sent(path)
+    status, key, scope = notify_status(log, args.event, args.change, args.item, args.state, args.version, args.env,
+                                       every)
+    at = datetime.now().astimezone().isoformat(timespec="seconds")
+    recorded = False
+    if args.record and status == "new":
+        rec = {"event": args.event, "key": key, "scope": scope, "state_key": _h(args.state), "at": at,
+               "run_id": args.run_id}
+        line = json.dumps(rec, ensure_ascii=False, sort_keys=True) + "\n"
+        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+        try:
+            os.write(fd, line.encode("utf-8"))
+        finally:
+            os.close(fd)
+        recorded = True
+    res = {"status": status, "key": key, "event": args.event, "run_id": args.run_id, "at": at, "recorded": recorded}
+    human = "%s: %s%s" % (args.event, status, " (recorded)" if recorded else "")
+    return kl.EXIT_OK, res, [], [], human
+
+
 # --------------------------------------------------------------------------- get --shell
 BRANCH_KEYS = {"branch_flow.integration", "branch_flow.production"}
 
@@ -719,7 +795,7 @@ def cmd_propose(args, root):
 
 
 COMMANDS = {"resolve": cmd_resolve, "get": cmd_get, "propose-settings": cmd_propose,
-            "notify-check": cmd_notify_check, "outbox": cmd_outbox}
+            "notify-check": cmd_notify_check, "outbox": cmd_outbox, "notify-sent": cmd_notify_sent}
 
 
 def resolve_root(args):
@@ -757,6 +833,16 @@ def build_parser():
                         help="exit 10 when the destination changed since the last confirmed send")
     nc.add_argument("--confirm", action="store_true",
                     help="record the destination; needs the human's typed confirmation (D-16)")
+    ns = sub.add_parser("notify-sent", parents=[common],
+                        help="new or sent: was this notification already sent (changes/{id}/notifications.jsonl)?")
+    ns.add_argument("change")
+    ns.add_argument("--event", required=True, choices=EVENTS)
+    ns.add_argument("--item", help="the gate, task or phase the notification is about")
+    ns.add_argument("--state", help="qa: the verdict; your-turn events: the state of the item")
+    ns.add_argument("--version", help="deploy: the version")
+    ns.add_argument("--env", help="deploy: the environment")
+    ns.add_argument("--run-id", dest="run_id", help="the run or iteration id the payload carries")
+    ns.add_argument("--record", action="store_true", help="record it as sent when new (after sending)")
     ob = sub.add_parser("outbox", parents=[common], help="pending tracker operations of a change")
     ob.add_argument("action", choices=["add", "list", "done"])
     ob.add_argument("change")

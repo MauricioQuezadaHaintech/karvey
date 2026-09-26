@@ -225,6 +225,7 @@ Resolve the tracker with `python3 "$C" resolve management --change "{change-id}"
 ### Step 5 — Notify the team + final output
 
 Send the `deploy` notification per `../karvey/rules/notifications.md`: `python3 "$C" resolve notifications --json`; `none` or `deploy` not in `events` → skip and say so. Run `python3 "$C" notify-check` first: exit 10 (destination changed) → show old and new destination and ask the human before sending. Post in the channel's own markup: repos + versions, DEV/PROD state, post-deploy verification, branches. A failed send is reported, not swallowed.
+Send once per version and environment: `python3 "$C" notify-sent {change-id} --event deploy --version {version} --env {env} --run-id {pipeline run}` must say `new` (a retry of the same version says `sent`: report the retry's run id, send nothing), then re-run it with `--record`.
 
 ```
 ✅ Deploy complete — {change-id}

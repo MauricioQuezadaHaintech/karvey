@@ -84,5 +84,58 @@ class Events(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+class SentLog(unittest.TestCase):
+    """@req REQ-W3-027 — no duplicate qa, deploy or "your turn" notification."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-sent-"))
+        (self.tmp / "docs/spec/changes/sample-change").mkdir(parents=True)
+        (self.tmp / "docs/spec/project.json").write_text(json.dumps(PROJECT), encoding="utf-8")
+        self.log = self.tmp / "docs/spec/changes/sample-change/notifications.jsonl"
+
+    def tearDown(self):
+        shutil.rmtree(str(self.tmp), ignore_errors=True)
+
+    def sent(self, *extra):
+        code, out = run("notify-sent", "sample-change", "--root", str(self.tmp), "--record", "--json", *extra)
+        self.assertEqual(code, 0, out)
+        return json.loads(out)["result"]
+
+    def test_REQ_W3_027_three_qa_runs_same_verdict_one_new(self):
+        got = [self.sent("--event", "qa", "--item", "qa", "--state", "concerns", "--run-id", "run-%d" % i)["status"]
+               for i in (1, 2, 3)]
+        self.assertEqual(got, ["new", "sent", "sent"])
+        self.assertEqual(self.sent("--event", "qa", "--item", "qa", "--state", "pass")["status"], "new")
+
+    def test_REQ_W3_027_deploy_retry_same_version_env_is_sent_with_the_retry_run_id(self):
+        a = self.sent("--event", "deploy", "--version", "4.1.0", "--env", "prod", "--run-id", "pipeline-10")
+        b = self.sent("--event", "deploy", "--version", "4.1.0", "--env", "prod", "--run-id", "pipeline-11")
+        self.assertEqual((a["status"], b["status"], b["run_id"]), ("new", "sent", "pipeline-11"))
+        self.assertTrue(b["at"])
+        self.assertEqual(self.sent("--event", "deploy", "--version", "4.1.0", "--env", "dev")["status"], "new")
+
+    def test_qa_every_run_notifies_every_run(self):
+        p = dict(PROJECT)
+        p["notifications"] = dict(PROJECT["notifications"], qa_every_run=True)
+        (self.tmp / "docs/spec/project.json").write_text(json.dumps(p), encoding="utf-8")
+        got = [self.sent("--event", "qa", "--item", "qa", "--state", "pass")["status"] for _ in range(3)]
+        self.assertEqual(got, ["new", "new", "new"])
+
+    def test_your_turn_once_per_state(self):
+        args = ("--event", "awaiting_human", "--item", "E1.F2.T3")
+        self.assertEqual(self.sent(*(args + ("--state", "awaiting")))["status"], "new")
+        self.assertEqual(self.sent(*(args + ("--state", "awaiting")))["status"], "sent")
+        self.assertEqual(self.sent(*(args + ("--state", "done")))["status"], "new")
+
+    def test_the_log_holds_hashes_and_no_destination(self):
+        self.sent("--event", "qa", "--item", "qa", "--state", "pass", "--run-id", "run-1")
+        text = self.log.read_text(encoding="utf-8")
+        self.assertNotIn("#team-sample", text)
+        self.assertNotIn("approver@example.org", text)
+        self.assertNotIn("pass", text.replace("run-1", ""))
+        rec = json.loads(text.splitlines()[0])
+        self.assertRegex(rec["key"], r"^[0-9a-f]{64}$")
+
+
 if __name__ == "__main__":
     unittest.main()
