@@ -66,5 +66,71 @@ class Colour(unittest.TestCase):
         self.assertIn("--color-x", str(cm.exception))
 
 
+class Project(unittest.TestCase):
+    """A project with the seed design system and one change (``sample-change``) whose design-spec is the seed."""
+
+    def setUp(self):
+        import shutil
+        import tempfile
+        from pathlib import Path
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-design-"))
+        self.addCleanup(shutil.rmtree, str(self.tmp), True)
+        self.system = self.tmp / "docs/spec/design-system.md"
+        self.cdir = self.tmp / "docs/spec/changes/sample-change"
+        self.cdir.mkdir(parents=True)
+        (self.cdir / "spec.json").write_text('{"change_id": "sample-change", "phase": "design_graphic"}\n')
+        self.seed = (FIX / "design-system.md").read_text(encoding="utf-8")
+        self.system.write_text(self.seed, encoding="utf-8")
+        (self.cdir / "design-spec.md").write_text(self.seed, encoding="utf-8")
+
+    def delta(self, text):
+        (self.cdir / "design-delta.md").write_text(text, encoding="utf-8")
+
+    def tool(self, *argv):
+        import json
+        import subprocess
+        import sys
+        cp = subprocess.run([sys.executable, str(_path.SCRIPTS_DIR / "karvey-design.py")] + list(argv) +
+                            ["--root", str(self.tmp), "--json"], capture_output=True, text=True, timeout=60)
+        return cp.returncode, json.loads(cp.stdout)
+
+
+class Diff(Project):
+    """@req REQ-W3-036"""
+
+    def test_REQ_W3_036_one_new_component_is_the_only_delta(self):
+        spec = self.seed.replace("| Status pill | sample-first-ui |", "| Status pill | sample-first-ui |\n| Tag | — |")
+        (self.cdir / "design-spec.md").write_text(spec, encoding="utf-8")
+        self.delta("## Components\n\n| Component | Action |\n|---|---|\n| Tag | added |\n")
+        code, env = self.tool("diff", "sample-change")
+        r = env["result"]
+        self.assertEqual(code, 0, env)
+        self.assertEqual((r["added"], r["modified"], r["components"], r["undeclared"]), ([], [], ["Tag"], []))
+        self.assertEqual(r["declared"]["components"], ["Tag"])
+
+    def test_REQ_W3_036_an_undeclared_primary_change_is_reported(self):
+        spec = self.seed.replace("| `--color-primary` | `#2b4256` |", "| `--color-primary` | `#1f4f7a` |")
+        (self.cdir / "design-spec.md").write_text(spec, encoding="utf-8")
+        self.delta("empty\n")
+        code, env = self.tool("diff", "sample-change")
+        self.assertEqual(code, 0, env)  # warn in 4.1
+        self.assertEqual(env["result"]["undeclared"], ["undeclared modification: --color-primary"])
+        self.assertEqual(env["result"]["modified"][0]["base"], "#2b4256")
+        self.assertIn("undeclared modification: --color-primary", [w["message"] for w in env["warnings"]])
+
+    def test_REQ_W3_036_no_change_is_empty(self):
+        self.delta("empty\n")
+        code, env = self.tool("diff", "sample-change")
+        self.assertTrue(env["result"]["empty"])
+        self.assertEqual(env["warnings"], [])
+
+    def test_without_a_design_system_everything_is_an_addition(self):
+        self.system.unlink()
+        self.delta("empty\n")
+        code, env = self.tool("diff", "sample-change")
+        self.assertFalse(env["result"]["system"])
+        self.assertIn("undeclared addition: --color-primary", env["result"]["undeclared"])
+
+
 if __name__ == "__main__":
     unittest.main()

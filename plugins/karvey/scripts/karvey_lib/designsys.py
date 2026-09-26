@@ -275,3 +275,49 @@ def contrast(fg, bg):
 def passed_levels(ratio, size="normal"):
     """The WCAG levels a ratio reaches for a text size (``["AA", "AAA"]``, ``["AA"]`` or ``[]``)."""
     return [lvl for lvl in ("AA", "AAA") if ratio + 1e-9 >= LEVELS[(lvl, size)]]
+
+
+# --------------------------------------------------------------------------- diff (REQ-W3-036)
+def _norm(v):
+    return re.sub(r"\s+", "", (v or "").lower())
+
+
+def _covers(rows, token, scheme):
+    return any(r["token"] == token and r["scheme"] in ("both", scheme) for r in rows)
+
+
+def diff(system, spec, delta):
+    """Compare a design-spec's tokens and components with the design system and the declared delta.
+
+    Returns ``{added, modified, components, undeclared, empty}``: the computed additions and modifications (with
+    the system's value as the base) and ``undeclared`` — every modification (or addition) the delta does not
+    declare (``undeclared modification: --color-primary``)."""
+    st, sp = system["tokens"], spec["tokens"]
+    added, modified, undeclared = [], [], []
+    for name in sorted(sp):
+        for sch in SCHEMES:
+            new = sp[name].get(sch) if sch == "light" or sp[name].get("dark") else None
+            if new is None:
+                continue
+            if name not in st:
+                if sch == "light":
+                    added.append({"token": name, "light": sp[name].get("light"), "dark": sp[name].get("dark")})
+                    if not _covers(delta["added"], name, "light"):
+                        undeclared.append("undeclared addition: %s" % name)
+                continue
+            base = st[name].get(sch) if sch == "light" or st[name].get("dark") else st[name].get("light")
+            if _norm(base) == _norm(new):
+                continue
+            modified.append({"token": name, "scheme": sch, "base": base, "new": new})
+            if not _covers(delta["modified"], name, sch):
+                msg = "undeclared modification: %s" % name
+                if msg not in undeclared:
+                    undeclared.append(msg)
+    have = {c["name"].lower() for c in system["components"]}
+    declared = {c["name"].lower() for c in delta["components"]}
+    comps = [c["name"] for c in spec["components"] if c["name"].lower() not in have]
+    for c in comps:
+        if c.lower() not in declared:
+            undeclared.append("undeclared component: %s" % c)
+    empty = not (added or modified or comps or delta["added"] or delta["modified"] or delta["components"])
+    return {"added": added, "modified": modified, "components": comps, "undeclared": undeclared, "empty": empty}
