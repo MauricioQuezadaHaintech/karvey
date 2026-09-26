@@ -56,6 +56,7 @@ from karvey_lib import sponsor as spx  # noqa: E402
 from karvey_lib import questions as qs, risks as rsk  # noqa: E402
 from karvey_lib import portfolio as pfl  # noqa: E402
 from karvey_lib import backlog as bkl  # noqa: E402
+from karvey_lib import incidents as inc  # noqa: E402
 
 TOOL = "karvey-context"
 CHANGE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
@@ -425,6 +426,12 @@ def read_bugs(rd):
             b["planned_in"] = col(r, "fix planned in")
             if not b["regression"]:
                 b["regression"] = col(r, "regression test")
+    for b in bugs.values():  # neutral names and their localized aliases (REQ-W3-057)
+        b["state_neutral"] = inc.neutral(b["state"])
+        if b["state"] and b["state_neutral"] is None:
+            rd.warnings.append(kl.issue("incident.state", "%s: state %r is not a known incident state (accepted: %s)"
+                                        % (b["id"], b["state"], inc.accepted()), severity="warning",
+                                        file="docs/bugs_dev_testing.md"))
     return bugs
 
 
@@ -532,7 +539,7 @@ def open_work(rd, ctx):
     res["bugs"] = [{"id": b["id"], "title": b["title"], "state": b["state"] or "unknown",
                     "priority": b.get("priority", "")}
                    for b in sorted(bugs.values(), key=lambda b: int(b["id"].split("-")[1]))
-                   if (b["state"] or "").upper() != RESOLVED]
+                   if not inc.is_resolved(b["state"])]
     res["backlog"] = read_backlog(rd) or []
     # open questions (owner, needed-by, overdue / date invalid) and open risks of active changes (REQ-W3-030)
     today = ctx["now"].date().isoformat()
@@ -828,7 +835,7 @@ def convergence(rd, ctx):
                 b = bugs.get(bid)
                 if b is None:
                     offenders.append({"kind": "bug", "change": cid, "id": bid, "reason": "not in the incident tracker"})
-                elif (b.get("state") or "").upper() != RESOLVED:
+                elif not inc.is_resolved(b.get("state")):
                     offenders.append({"kind": "bug", "change": cid, "id": bid, "reason": b.get("state") or "no state"})
                 elif not has_regression(b.get("regression")):
                     offenders.append({"kind": "bug", "change": cid, "id": bid,

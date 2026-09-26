@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import loadlist  # noqa: E402
+from karvey_lib import incidents  # noqa: E402
 
 TOOL = "lint-plugin"
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -1683,11 +1684,15 @@ def l32_resuelto_has_regression(ctx):
     for s in sections:
         state = None
         for _, line in s["body"]:
-            m = re.search(r"\*\*Current state:\*\*\s*([A-Z ]+)", line)
+            m = re.search(r"\*\*Current state:\*\*\s*([A-Za-z][A-Za-z _-]*)", line)
             if m:
                 state = m.group(1).strip()
                 break
-        if state != "RESUELTO":
+        if state and incidents.neutral(state) is None:  # REQ-W3-057: neutral names or their aliases
+            yield (path, s["line"], "%s: state %r is not a known incident state (accepted: %s)"
+                   % (s["id"], state, incidents.accepted()), "warning")
+            continue
+        if not incidents.is_resolved(state):
             continue
         reg, on = [], False
         for n, line in s["body"]:

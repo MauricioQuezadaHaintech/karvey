@@ -48,16 +48,21 @@ A `bug`-type finding (see `iteration-loop.md`) is promoted to a `BUG-NN` here by
 ## State machine
 
 ```
-DETECTADO ─→ DIAGNOSTICADO ─→ EN FIX ─→ RESUELTO
-     ▲                                      │
-     └──────────────── REABIERTO ◀──────────┘   (if it regresses)
+detected ─→ diagnosed ─→ in-fix ─→ resolved
+    ▲                                  │
+    └──────────── reopened ◀───────────┘   (if it regresses)
 ```
 
-- **DETECTADO** — logged from a finding, not yet root-caused.
-- **DIAGNOSTICADO** — root cause established (with evidence). Complex cases: use `karvey-investigate` (diagnoses, does **not** fix) and paste its result here.
-- **EN FIX** — a fix is being applied on the change's feature branch.
-- **RESUELTO** — fixed + a **regression test** exists so it fails again if it reappears. The incident's `### Regression` section **names** it: a test file path that exists, or a lint id (`L-NN`); `lint-plugin.py` L-32 checks it.
-- **REABIERTO** — a `RESUELTO` incident regressed; re-opens with a new history row, keeping the same `BUG-NN`.
+The states are neutral English names (`${CLAUDE_PLUGIN_ROOT}/schemas/incident-states.json`). The localized names a tracker already uses are
+**permanent aliases** and stay valid: `DETECTADO` = detected, `DIAGNOSTICADO` = diagnosed, `EN FIX` = in-fix,
+`RESUELTO` = resolved, `REABIERTO` = reopened. The dashboard and L-32 map both; any other state is reported with the
+accepted list.
+
+- **detected** (`DETECTADO`) — logged from a finding, not yet root-caused.
+- **diagnosed** (`DIAGNOSTICADO`) — root cause established (with evidence). Complex cases: use `karvey-investigate` (diagnoses, does **not** fix) and paste its result here.
+- **in-fix** (`EN FIX`) — a fix is being applied on the change's feature branch.
+- **resolved** (`RESUELTO`) — fixed + a **regression test** exists so it fails again if it reappears. The incident's `### Regression` section **names** it: a test file path that exists, or a lint id (`L-NN`); `lint-plugin.py` L-32 checks it.
+- **reopened** (`REABIERTO`) — a resolved incident regressed; re-opens with a new history row, keeping the same `BUG-NN`.
 
 **Every transition appends a row to "State history"** (date + responsible human + AI model + note). The history is never overwritten — that is the whole point.
 

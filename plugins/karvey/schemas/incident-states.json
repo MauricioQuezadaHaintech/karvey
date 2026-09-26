@@ -1,0 +1,11 @@
+{
+  "$comment": "wave3-optimization §1.22 (REQ-W3-057, MODIFIES REQ-W1-068): the incident states in neutral English, each with the localized names a tracker already uses as permanent aliases. karvey-context.py (read_bugs) and lint L-32 map both; an unknown state is reported with this list.",
+  "version": 1,
+  "states": [
+    {"id": "detected", "aliases": ["DETECTADO"], "meaning": "logged from a finding, not yet root-caused"},
+    {"id": "diagnosed", "aliases": ["DIAGNOSTICADO"], "meaning": "root cause known"},
+    {"id": "in-fix", "aliases": ["EN FIX"], "meaning": "the fix is being made"},
+    {"id": "resolved", "aliases": ["RESUELTO"], "meaning": "fixed, with a named regression test"},
+    {"id": "reopened", "aliases": ["REABIERTO"], "meaning": "a resolved incident regressed"}
+  ]
+}
