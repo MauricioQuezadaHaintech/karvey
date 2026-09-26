@@ -2203,7 +2203,8 @@
        "production": "master"
       },
       "enforcement": {
-       "git_flow_hook": true
+       "git_flow_hook": true,
+       "prod_gate_hook": false
       }
      },
      "spec": {
@@ -2232,7 +2233,8 @@
    "tags": [
     "git-flow",
     "REQ-W1-020"
-   ]
+   ],
+   "note": "prod-gate runs first in the §1.3 order and, since BUG-28, also blocks this aliased push; it is switched off here so the case pins git-flow's own rule"
   },
   {
    "id": "gf-49-unresolvable-C-variable",
@@ -2713,6 +2715,53 @@
    "tags": [
     "git-flow",
     "nopy"
+   ]
+  },
+  {
+   "id": "gf-bug28-push-at-sign-on-master",
+   "guard": "git-flow",
+   "given": {
+    "repo": {
+     "default_branch": "master",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "master",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "master"
+      },
+      "enforcement": {
+       "git_flow_hook": true,
+       "prod_gate_hook": false
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin @"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK git-flow"
+    ]
+   },
+   "tags": [
+    "git-flow",
+    "REQ-W1-021",
+    "BUG-28"
    ]
   }
  ]

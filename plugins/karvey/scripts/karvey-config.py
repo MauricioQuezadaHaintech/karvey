@@ -170,6 +170,9 @@ def _normalise_management(value, where, warnings):
                       code="config.invalid_management")
     out = copy.deepcopy(value)
     tool = out.get("tool")
+    if tool is not None and not isinstance(tool, str):  # BUG-36
+        raise Refused("%s: management.tool must be a tool name, got %r" % (where, tool),
+                      code="config.invalid_management")
     if tool is not None:
         if tool in LEGACY_TOOLS:
             warnings.append(kl.issue("config.legacy_alias", "%s: management tool %r is a legacy alias of %r"
@@ -278,6 +281,9 @@ def resolve_notifications(settings):
     if not isinstance(raw, dict):
         raise Refused("notifications must be an object, got %r" % (raw,), code="config.invalid_notifications")
     ch = raw.get("channel", "none")
+    if not isinstance(ch, str):  # BUG-36
+        raise Refused("notifications.channel must be a channel name, got %r" % (ch,),
+                      code="config.invalid_notifications")
     if ch in LEGACY_CHANNELS:
         warnings.append(kl.issue("config.legacy_alias", "notifications.channel %r is a legacy alias of %r"
                                  % (ch, LEGACY_CHANNELS[ch]), severity="warning", path="$.notifications.channel"))
@@ -381,6 +387,9 @@ def propose_settings(settings, from_legacy=False):
         notes.append("management: legacy string %r → object" % raw)
     elif isinstance(raw, dict):
         mg = copy.deepcopy(raw)
+        if mg.get("tool") is not None and not isinstance(mg.get("tool"), str):  # BUG-36
+            raise Refused("management.tool must be a tool name, got %r" % (mg.get("tool"),),
+                          code="config.invalid_management")
         tool = LEGACY_TOOLS.get(mg.get("tool"), mg.get("tool") or "markdown")
         mg["tool"] = tool
     else:
@@ -416,7 +425,7 @@ def propose_settings(settings, from_legacy=False):
     else:
         nt = {"channel": "none", "target": "", "via": "", "events": []}
         notes.append("notifications: absent → channel none (set it with /karvey:karvey-init --settings)")
-    if nt.get("channel") in LEGACY_CHANNELS:
+    if isinstance(nt.get("channel"), str) and nt.get("channel") in LEGACY_CHANNELS:
         notes.append("notifications.channel %r → %r" % (nt["channel"], LEGACY_CHANNELS[nt["channel"]]))
         nt["channel"] = LEGACY_CHANNELS[nt["channel"]]
     snippet = {"management": mg, "notifications": nt}

@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-26 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-46 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -126,6 +126,96 @@ INDEX = {
         ("unit", "test_skill_rules.py", "TrackerCredentialsAreLookedUpEverywhere.test_impl_blocker_keeps_status_and_comments_when_blocked_is_null"),
         ("manual", "per-level-maps.md"),
     ],
+    "BUG-27": [  # F-56 (QA D1 security (S-1))
+        ("table", "protect-paths", "pp-18-glob-in-state-dir-path-blocked"),
+        ("table", "protect-paths", "pp-19-cd-chain-glob-then-mkdir-blocked"),
+        ("table", "protect-paths", "pp-20-variable-path-component-blocked"),
+        ("table", "protect-paths", "pp-21-bare-wildcard-under-git-into-ledger-blocked"),
+    ],
+    "BUG-28": [  # F-57 (QA D1 security (S-2, S-3), D2 (E-1))
+        ("table", "prod-gate", "pg4-01-inline-alias-to-push-main"),
+        ("table", "prod-gate", "pg4-02-configured-alias-to-push-main"),
+        ("table", "prod-gate", "pg4-03-inline-remote-push-refspec"),
+        ("table", "prod-gate", "pg4-05-configured-upstream-bare-push"),
+        ("table", "prod-gate", "pg4-06-configured-remote-push-refspec"),
+        ("table", "prod-gate", "pg4-07-send-pack-into-main"),
+        ("table", "prod-gate", "pg4-08-xargs-git-push"),
+        ("table", "prod-gate", "pg4-10-gh-alias-to-pr-merge"),
+        ("table", "prod-gate", "pg4-11-gh-api-merges-endpoint-into-main"),
+        ("table", "prod-gate", "pg4-12-gh-api-ref-update-of-main"),
+        ("table", "prod-gate", "pg4-13-gh-api-graphql-merge-branch"),
+        ("table", "prod-gate", "pg4-19-push-at-sign-from-main"),
+        ("table", "prod-gate", "pg4-22-shell-alias-push-into-main"),
+        ("table", "git-flow", "gf-bug28-push-at-sign-on-master"),
+    ],
+    "BUG-29": [  # F-58 (QA D4 impact (I-4))
+        ("table", "prod-gate", "pg4-17-push-tags-from-main-allowed"),
+    ],
+    "BUG-30": [  # F-59 (QA D4 impact (I-3))
+        ("table", "prod-gate", "pg4-23-block-says-how-to-record-the-approval"),
+        ("table", "prod-gate", "pg4-24-unknown-change-names-the-switch"),
+    ],
+    "BUG-31": [  # F-60 (QA D4 impact (I-1), D2 (E-4))
+        ("table", "subagent-prompt", "sp-08-settings-page-component-allowed"),
+        ("table", "subagent-prompt", "sp-09-editor-settings-file-allowed"),
+        ("table", "subagent-prompt", "sp-10-tests-for-a-status-mapping-function-allowed"),
+        ("table", "subagent-prompt", "sp-11-typographic-apostrophe-ban-allowed"),
+        ("table", "subagent-prompt", "sp-12-another-tools-project-json-allowed"),
+        ("table", "subagent-prompt", "sp-13-ban-like-sentence-does-not-excuse-a-write-blocked"),
+    ],
+    "BUG-32": [  # F-61 (QA D1 security (S-6))
+        ("unit", "test_fixtures_anonymous.py", "NoRealChatSpaceIds.test_space_ids_are_placeholders"),
+    ],
+    "BUG-33": [  # F-62 (QA D4 impact (I-2))
+        ("unit", "test_state_validate.py", "LegacyRealShapesAreWarnings.test_repos_as_objects_is_a_warning"),
+        ("unit", "test_state_validate.py", "LegacyRealShapesAreWarnings.test_generated_as_a_date_is_a_warning"),
+    ],
+    "BUG-34": [  # F-63 (QA D2 errors (E-2))
+        ("unit", "test_karvey_hooks.py", "Dispatch.test_crash_outside_a_guard_applies_the_fail_mode"),
+    ],
+    "BUG-35": [  # F-64 (QA D2 errors (E-3))
+        ("unit", "test_state_validate.py", "NonStringPhase.test_list_phase_in_history_is_a_validation_error"),
+        ("unit", "test_state_validate.py", "NonStringPhase.test_active_change_and_dashboard_survive"),
+    ],
+    "BUG-36": [  # F-65 (QA D2 errors (E-5))
+        ("unit", "test_config_resolve.py", "NonStringSettings.test_list_channel_and_tool_are_refused_not_crashes"),
+    ],
+    "BUG-37": [  # F-66 (QA D2 errors (E-6))
+        ("unit", "test_atomicio.py", "LockOwnership.test_release_keeps_a_lock_that_is_not_ours"),
+        ("unit", "test_atomicio.py", "LockOwnership.test_breaking_does_not_remove_a_fresh_lock_taken_meanwhile"),
+    ],
+    "BUG-38": [  # F-67 (QA D2 errors (E-8))
+        ("unit", "test_spec_merge.py", "LineEndings.test_bom_and_crlf_are_kept"),
+    ],
+    "BUG-39": [  # F-68 (QA D4 impact (I-5))
+        ("table", "protect-paths", "pp-25-commit-message-mentioning-the-path-allowed"),
+        ("table", "protect-paths", "pp-26-echo-text-mentioning-the-record-allowed"),
+    ],
+    "BUG-40": [  # F-69 (QA D6 versioning)
+        ("unit", "test_skill_rules.py", "ChangelogUnreleasedTraceability.test_unreleased_names_the_owner_and_the_model"),
+    ],
+    "BUG-41": [  # F-70 (QA D7 second opinion (X-1))
+        ("unit", "test_state_approve.py", "ProdMarkerScope.test_project_wide_prod_marker_is_not_a_prod_approval_of_a_change"),
+        ("unit", "test_state_approve.py", "ProdMarkerScope.test_prod_marker_is_consumed_by_the_approval"),
+    ],
+    "BUG-42": [  # F-71 (QA D7 second opinion (X-2))
+        ("unit", "test_approval_vocab.py", "ConditionalSi.test_conditional_si_is_not_an_approval"),
+    ],
+    "BUG-43": [  # F-72 (QA D7 second opinion (X-5))
+        ("unit", "test_state_approve.py", "ConsumeOnlyWhatClosed.test_prod_marker_survives_a_phase_without_approval"),
+    ],
+    "BUG-44": [  # F-73 (QA D7 second opinion (X-6))
+        ("unit", "test_state_fix.py", "NothingLostInMigration.test_transition_keeps_every_other_field"),
+        ("unit", "test_state_fix.py", "NothingLostInMigration.test_gates_skipped_record_is_kept_in_the_reason"),
+    ],
+    "BUG-45": [  # F-74 (QA D7 second opinion (X-7))
+        ("unit", "test_spec_merge.py", "DuplicateIds.test_removed_twice_is_refused_and_nothing_is_written"),
+        ("unit", "test_spec_merge.py", "DuplicateIds.test_modified_and_removed_is_refused"),
+    ],
+    "BUG-46": [  # F-75 (QA D7 second opinion (X-9))
+        ("lint", "L-06"),
+        ("unit", "test_lint_plugin.py", "L06.test_hand_edits_in_other_words_fail"),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 
@@ -189,7 +279,7 @@ def tracker_sections():
 
 class NamedChecksExist(unittest.TestCase):
     def test_every_routed_incident_is_indexed(self):
-        for n in range(5, 27):
+        for n in range(5, 47):
             self.assertIn("BUG-%02d" % n, INDEX)
 
     def test_lint_ids_are_registered(self):

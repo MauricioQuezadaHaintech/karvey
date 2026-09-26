@@ -14,6 +14,7 @@ import os
 import re
 import tempfile
 import time
+import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -126,40 +127,70 @@ def _lock_path(path):
     return Path(str(path) + ".lock")
 
 
+def _break_stale(lp, seen_ino, stale_s):
+    """Break the stale lock ``lp`` whose inode was ``seen_ino`` (BUG-37). The file is first renamed aside,
+    which only one waiter can do; if the renamed file is not the stale one seen (another waiter broke it and
+    took a fresh lock in between), it is put back and the lock is left to its owner. True when broken."""
+    aside = lp.with_name("%s.%s.stale" % (lp.name, uuid.uuid4().hex[:12]))
+    try:
+        os.rename(str(lp), str(aside))
+    except FileNotFoundError:
+        return False
+    try:
+        st = aside.stat()
+        if st.st_ino == seen_ino and time.time() - st.st_mtime > stale_s:
+            return True
+        try:
+            os.link(str(aside), str(lp))  # put the fresh lock back (fails if a newer one exists)
+        except (FileExistsError, OSError):
+            pass
+        return False
+    finally:
+        try:
+            aside.unlink()
+        except FileNotFoundError:
+            pass
+
+
 @contextmanager
 def lock(path, wait_s=5.0, stale_s=None):
-    """Exclusive ``<file>.lock`` via ``O_EXCL``. A lock older than ``stale_s`` is broken."""
+    """Exclusive ``<file>.lock`` via ``O_EXCL``. A lock older than ``stale_s`` is broken. The lock holds a
+    token, and only its owner removes it (BUG-37)."""
     if stale_s is None:
         stale_s = defaults().get("lock_stale_seconds", 30)
     lp = _lock_path(path)
     deadline = time.monotonic() + wait_s
+    token = ("%d %f %s\n" % (os.getpid(), time.time(), uuid.uuid4().hex)).encode()
     while True:
         try:
             fd = os.open(str(lp), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
             break
         except FileExistsError:
             try:
-                age = time.time() - lp.stat().st_mtime
+                st = lp.stat()
             except FileNotFoundError:
                 continue
-            if age > stale_s:
-                try:
-                    lp.unlink()
-                except FileNotFoundError:
-                    pass
+            if time.time() - st.st_mtime > stale_s:
+                _break_stale(lp, st.st_ino, stale_s)
                 continue
             if time.monotonic() >= deadline:
                 raise LockBusy("locked by another writer: %s (re-run)" % lp)
             time.sleep(0.05)
     try:
-        os.write(fd, ("%d %f\n" % (os.getpid(), time.time())).encode())
+        os.write(fd, token)
         os.close(fd)
         yield lp
     finally:
         try:
-            lp.unlink()
-        except FileNotFoundError:
-            pass
+            with open(str(lp), "rb") as fh:
+                mine = fh.read() == token
+        except OSError:
+            mine = False
+        if mine:
+            try:
+                lp.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def write_text_atomic(path, text, expected_sha256=None, mode=None):

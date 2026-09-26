@@ -149,6 +149,8 @@ def list_changes(root):
             try:
                 data = read_json(spec).data
                 phase = data.get("phase") if isinstance(data, dict) else None
+                if phase is not None and not isinstance(phase, str):  # BUG-35: validate reports it
+                    phase, err = None, "phase is not a string"
             except ReadError as exc:
                 err = str(exc)
         else:

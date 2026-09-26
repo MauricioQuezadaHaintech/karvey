@@ -101,5 +101,20 @@ class TrackerCredentialsAreLookedUpEverywhere(unittest.TestCase):
         self.assertIn(".connections.json", blockers)
 
 
+class ChangelogUnreleasedTraceability(unittest.TestCase):
+    """BUG-40: the [Unreleased] section held 80+ lines and no human owner or AI model, which the QA versioning
+    dimension (`changelog-why`) and the deploy pre-check require (changelog-policy.md)."""
+
+    def test_unreleased_names_the_owner_and_the_model(self):
+        text = (_path.REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        m = re.search(r"^## \[Unreleased\]\s*$(.*?)(?=^## \[)", text, re.M | re.S)
+        self.assertIsNotNone(m, "no [Unreleased] section")
+        body = m.group(1)
+        if not re.search(r"^- ", body, re.M):
+            self.skipTest("[Unreleased] is empty")
+        self.assertRegex(body, r"(?m)^> .*Human owner: \S")
+        self.assertRegex(body, r"(?m)^> .*AI-assisted: \S")
+
+
 if __name__ == "__main__":
     unittest.main()

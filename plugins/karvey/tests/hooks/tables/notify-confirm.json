@@ -15,7 +15,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -32,16 +32,16 @@
     }
    },
    "input": {
-    "prompt": "confirmo notificación de54d3c8"
+    "prompt": "confirmo notificación 099549b3"
    },
    "expect": {
     "decision": "allow",
-    "stdout_contains": "[karvey] notification destination confirmation recorded (de54d3c8, expires ",
+    "stdout_contains": "[karvey] notification destination confirmation recorded (099549b3, expires ",
     "files_exist": "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json",
     "file_contains": {
      "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json": [
       "\"kind\": \"notify\"",
-      "\"code\": \"de54d3c8\"",
+      "\"code\": \"099549b3\"",
       "\"project\": \".\"",
       "\"ttl_min\": 120"
      ]
@@ -72,7 +72,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -89,12 +89,12 @@
     }
    },
    "input": {
-    "prompt": "ok, confirm notification de54d3c8"
+    "prompt": "ok, confirm notification 099549b3"
    },
    "expect": {
     "decision": "allow",
     "stdout_contains": [
-     "notification destination confirmation recorded (de54d3c8",
+     "notification destination confirmation recorded (099549b3",
      "[karvey] approval recorded (plan, feat-a"
     ],
     "files_exist": "{{repo}}/karvey/approvals/notify/confirm-cdb4ee2aea69cc6a.json"
@@ -117,7 +117,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -134,7 +134,7 @@
     }
    },
    "input": {
-    "prompt": "no confirmo notificacion de54d3c8 todavia"
+    "prompt": "no confirmo notificacion 099549b3 todavia"
    },
    "expect": {
     "decision": "allow",
@@ -159,7 +159,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -176,7 +176,7 @@
     }
    },
    "input": {
-    "prompt": "> confirmo notificacion de54d3c8\nwhat does this mean"
+    "prompt": "> confirmo notificacion 099549b3\nwhat does this mean"
    },
    "expect": {
     "decision": "allow",
@@ -201,7 +201,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -225,7 +225,7 @@
     "stdout_contains": [
      "NOT CONFIRMED",
      "no human confirmation recorded",
-     "confirmo notificacion de54d3c8",
+     "confirmo notificacion 099549b3",
      "rc=10"
     ],
     "files_absent": "{{repo}}/karvey/notify-last.json"
@@ -249,7 +249,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -264,7 +264,7 @@
       }
      }
     },
-    "setup": "printf '%s' '{\"session_id\": \"s\", \"transcript_path\": \"\", \"cwd\": \"{{root}}\", \"hook_event_name\": \"UserPromptSubmit\", \"prompt\": \"confirmo notificacion de54d3c8\"}' | CLAUDE_PROJECT_DIR={{root}} bash {{plugin}}/hooks/karvey-hook.sh prompt >/dev/null"
+    "setup": "printf '%s' '{\"session_id\": \"s\", \"transcript_path\": \"\", \"cwd\": \"{{root}}\", \"hook_event_name\": \"UserPromptSubmit\", \"prompt\": \"confirmo notificacion 099549b3\"}' | CLAUDE_PROJECT_DIR={{root}} bash {{plugin}}/hooks/karvey-hook.sh prompt >/dev/null"
    },
    "input": {},
    "event": "prompt",
@@ -299,7 +299,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -346,7 +346,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -369,7 +369,7 @@
        },
        "notifications": {
         "channel": "google-chat",
-        "target": "spaces/AAAAQCj0Cjc",
+        "target": "spaces/AAAAexample1",
         "via": "cli",
         "events": [
          "qa",
@@ -379,7 +379,7 @@
       }
      }
     },
-    "setup": "printf '%s' '{\"session_id\": \"s\", \"transcript_path\": \"\", \"cwd\": \"{{root}}/sub\", \"hook_event_name\": \"UserPromptSubmit\", \"prompt\": \"confirmo notificacion de54d3c8\"}' | CLAUDE_PROJECT_DIR={{root}}/sub bash {{plugin}}/hooks/karvey-hook.sh prompt >/dev/null"
+    "setup": "printf '%s' '{\"session_id\": \"s\", \"transcript_path\": \"\", \"cwd\": \"{{root}}/sub\", \"hook_event_name\": \"UserPromptSubmit\", \"prompt\": \"confirmo notificacion 099549b3\"}' | CLAUDE_PROJECT_DIR={{root}}/sub bash {{plugin}}/hooks/karvey-hook.sh prompt >/dev/null"
    },
    "input": {},
    "event": "prompt",
@@ -415,7 +415,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -430,7 +430,7 @@
       }
      }
     },
-    "setup": "python3 -c \"import sys; sys.path.insert(0, '{{plugin}}/scripts'); from datetime import timedelta; from karvey_lib import approval; approval.write_notify_marker('{{root}}', 'de54d3c8', 'confirmo notificacion de54d3c8', now=approval.now_dt() - timedelta(minutes=121))\""
+    "setup": "python3 -c \"import sys; sys.path.insert(0, '{{plugin}}/scripts'); from datetime import timedelta; from karvey_lib import approval; approval.write_notify_marker('{{root}}', '099549b3', 'confirmo notificacion 099549b3', now=approval.now_dt() - timedelta(minutes=121))\""
    },
    "input": {},
    "event": "prompt",
@@ -462,7 +462,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -509,7 +509,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",
@@ -556,7 +556,7 @@
       },
       "notifications": {
        "channel": "google-chat",
-       "target": "spaces/AAAAQCj0Cjc",
+       "target": "spaces/AAAAexample1",
        "via": "cli",
        "events": [
         "qa",

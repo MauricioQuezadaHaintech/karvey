@@ -252,5 +252,40 @@ class RealDelta(unittest.TestCase):
         self.assertEqual(self.target.read_text(encoding="utf-8"), before)
 
 
+class DuplicateIds(Base):
+    """BUG-45: a REMOVED id listed twice, or both MODIFIED and REMOVED, produced overlapping line edits that
+    silently deleted neighbouring requirements (exit 0)."""
+
+    def test_removed_twice_is_refused_and_nothing_is_written(self):
+        before = self.text()
+        self.delta("## REMOVED Requirements\n\n- **REQ-A-001** — gone.\n- **REQ-A-001** — gone again.\n")
+        code, env = self.merge()
+        self.assertNotEqual(code, 0)
+        self.assertEqual(self.text(), before)
+        self.assertIn("twice", json.dumps(env["errors"]))
+
+    def test_modified_and_removed_is_refused(self):
+        before = self.text()
+        self.delta("## MODIFIED Requirements\n\n### Requirement: REQ-A-002\n- **REQ-A-002** — changed.\n\n"
+                   "## REMOVED Requirements\n\n- **REQ-A-002** — gone.\n")
+        code, env = self.merge()
+        self.assertNotEqual(code, 0)
+        self.assertEqual(self.text(), before)
+
+
+class LineEndings(Base):
+    """BUG-38: a living spec with a BOM and CRLF line endings was rewritten with LF and no BOM, so git showed
+    every line as changed."""
+
+    def test_bom_and_crlf_are_kept(self):
+        self.target.write_bytes(("\ufeff" + LIVING).replace("\n", "\r\n").encode("utf-8"))
+        code, env = self.merge()
+        self.assertEqual(code, 0, env["errors"])
+        raw = self.target.read_bytes()
+        self.assertTrue(raw.startswith(b"\xef\xbb\xbf"))
+        self.assertNotIn(b"\n", raw.replace(b"\r\n", b""))
+        self.assertIn("REQ-X-001", raw.decode("utf-8-sig"))
+
+
 if __name__ == "__main__":
     unittest.main()

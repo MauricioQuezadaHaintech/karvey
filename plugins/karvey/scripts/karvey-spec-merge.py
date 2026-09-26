@@ -246,6 +246,9 @@ def parse_delta(text):
                 why = re.sub(r"^Reason:\s*", "", why).strip()
                 if not why:
                     raise ParseError(i + 1, "REMOVED %s has no reason" % rid)
+                if rid in seen:  # BUG-45
+                    raise ParseError(i + 1, "%s appears twice in the delta" % rid)
+                seen.add(rid)
                 res["removed"].append((rid, why, i + 1))
                 i = j
                 continue
@@ -258,6 +261,9 @@ def parse_delta(text):
                 why = re.sub(r"^[—:\-–]+\s*", "", why).strip()
                 if not why:
                     raise ParseError(i + 1, "REMOVED %s has no reason" % m.group(1))
+                if m.group(1) in seen:  # BUG-45
+                    raise ParseError(i + 1, "%s appears twice in the delta" % m.group(1))
+                seen.add(m.group(1))
                 res["removed"].append((m.group(1), why, i + 1))
                 i = j
                 continue
@@ -329,7 +335,12 @@ def merge(target_text, delta, change, version, date):
     if errors:
         return None, report, errors
 
-    for start, end, repl in sorted(edits, key=lambda e: e[0], reverse=True):
+    ordered = sorted(edits, key=lambda e: e[0])
+    for (s1, e1, _), (s2, _e2, _) in zip(ordered, ordered[1:]):
+        if s2 < e1:  # BUG-45: overlapping edits would delete a neighbour
+            return None, report, [kl.issue("merge.overlap", "edits overlap at lines %d-%d of the living spec"
+                                           % (s1 + 1, e1), path="line %d" % (s2 + 1))]
+    for start, end, repl in reversed(ordered):
         lines[start:end] = repl
 
     if any(fresh for _, fresh in new_groups):
@@ -409,7 +420,8 @@ def _read_text(path):
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise NotFound("not UTF-8: %s (%s)" % (p, exc))
-    return text.replace("\r\n", "\n"), atomicio.sha256_bytes(raw)
+    style = {"bom": raw.startswith(b"\xef\xbb\xbf"), "crlf": b"\r\n" in raw}  # BUG-38
+    return text.replace("\r\n", "\n"), atomicio.sha256_bytes(raw), style
 
 
 def _capability(cdir, override):
@@ -433,7 +445,7 @@ def run(args):
         raise NotFound("not a Karvey project (no docs/spec/project.json or docs/spec/changes/)")
     cdir = change_dir(root, args.change)
     delta_path = cdir / "spec-delta.md"
-    delta_text, _ = _read_text(delta_path)
+    delta_text, _, _ = _read_text(delta_path)
     try:
         delta = parse_delta(delta_text)
     except ParseError as exc:
@@ -441,9 +453,9 @@ def run(args):
     cap = _capability(cdir, args.capability)
     target = Path(root) / pj.SPEC_DIR / "specs" / cap / "spec.md"
     if target.is_file():
-        target_text, sha = _read_text(target)
+        target_text, sha, style = _read_text(target)
     else:
-        target_text, sha = "# Living spec — capability `%s`\n" % cap, None
+        target_text, sha, style = "# Living spec — capability `%s`\n" % cap, None, {"bom": False, "crlf": False}
     date = args.date or datetime.now().astimezone().date().isoformat()
     new_text, report, errors = merge(target_text, delta, args.change, delta.get("version"), date)
     rel_target = os.path.relpath(str(target), str(root)).replace(os.sep, "/")
@@ -466,7 +478,8 @@ def run(args):
     if args.dry_run:
         return kl.EXIT_OK, result, [], diff + "\n(dry run, nothing written) %s" % summary
     target.parent.mkdir(parents=True, exist_ok=True)
-    atomicio.write_text_atomic(target, new_text, expected_sha256=sha)
+    out_text = new_text.replace("\n", "\r\n") if style["crlf"] else new_text
+    atomicio.write_text_atomic(target, ("\ufeff" if style["bom"] else "") + out_text, expected_sha256=sha)
     return kl.EXIT_OK, result, [], "%s merged into %s (%s)" % (args.change, rel_target, summary)
 
 

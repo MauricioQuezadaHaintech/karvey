@@ -333,6 +333,291 @@
     "BUG-25"
    ],
    "note": "older harnesses name the tool Task"
+  },
+  {
+   "id": "sp-08-settings-page-component-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Update the settings page component in src/views/Settings.vue to add a dark-mode toggle.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-09-editor-settings-file-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Update .vscode/settings.json to set the formatter to black.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-10-tests-for-a-status-mapping-function-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Write unit tests for the tracker status mapping function in src/tracker.py.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-11-typographic-apostrophe-ban-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Implement E1.F1.T2. Don’t write docs/spec/project.json; if a status map is missing, return the proposed values to me.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-12-another-tools-project-json-allowed",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Update apps/web/project.json to add a lint target for the web app.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
+  },
+  {
+   "id": "sp-13-ban-like-sentence-does-not-excuse-a-write-blocked",
+   "guard": "subagent-prompt",
+   "event": "pre-agent",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "management": {
+       "tool": "clickup",
+       "location": "900000000001"
+      }
+     },
+     "spec": {
+      "fixture-02": {
+       "change_id": "fixture-02",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Agent",
+    "tool_input": {
+     "description": "implement next task",
+     "prompt": "Do not edit project.json by hand. Use a python script to write the management settings into docs/spec/project.json.",
+     "subagent_type": "general-purpose"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] BLOCK subagent-prompt"
+    ]
+   },
+   "tags": [
+    "subagent-prompt",
+    "REQ-W1-081",
+    "BUG-31"
+   ]
   }
  ]
 }

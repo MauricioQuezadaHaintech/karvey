@@ -67,8 +67,8 @@ def norm_path(path, cwd=None, platform=None, home=None):
             q = base.rstrip("/") + "/" + q
         return posixpath.normpath(q)
     if not p.startswith("/"):
-        base = norm_path(cwd, platform=platform, home=home) if cwd else os.getcwd()
-        p = posixpath.join(base or os.getcwd(), p)
+        base = norm_path(cwd, platform=platform, home=home) if cwd else _getcwd()
+        p = posixpath.join(base or _getcwd(), p)
     return posixpath.normpath(p)
 
 
@@ -120,12 +120,20 @@ class Payload:
         return {k: getattr(self, k) for k in self.__slots__ if k != "raw"}
 
 
+def _getcwd():
+    """``os.getcwd()``, or ``/`` when the directory was deleted (BUG-34: never raise before a guard runs)."""
+    try:
+        return os.getcwd()
+    except OSError:
+        return "/"
+
+
 def _fallback_cwd(env):
     for key in ("CLAUDE_PROJECT_DIR", "PWD"):
         v = env.get(key)
         if v:
             return v
-    return os.getcwd()
+    return _getcwd()
 
 
 def parse(text, env=None, platform=None):
@@ -149,7 +157,7 @@ def parse(text, env=None, platform=None):
             base.update(ok=True, raw=raw)
     raw = base["raw"] or {}
     cwd_raw = raw.get("cwd") if isinstance(raw.get("cwd"), str) and raw.get("cwd").strip() else _fallback_cwd(env)
-    cwd = norm_path(cwd_raw, cwd=os.getcwd(), platform=platform)
+    cwd = norm_path(cwd_raw, cwd=_getcwd(), platform=platform)
     tool_input = raw.get("tool_input") if isinstance(raw.get("tool_input"), dict) else {}
     fp_raw = tool_path(tool_input)
     cmd = tool_input.get("command")

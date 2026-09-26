@@ -343,7 +343,7 @@ def semantic_spec(data, strict, file):
             out.append(kl.issue("state.history_missing", "no phase_history (legacy file)", severity=sev,
                                 file=file, path="$.phase_history", expected="entries up to %r" % mapped))
     else:
-        seen = {e.get("phase") for e in entries}
+        seen = {e.get("phase") for e in entries if isinstance(e.get("phase"), str)}  # BUG-35
         seen |= {map_phase(e.get("to"))[0] for e in hist if _is_legacy_transition(e)}
         seen |= {map_phase(e.get("from"))[0] for e in hist if _is_legacy_transition(e)}
         for p in machine()["phases"][:idx + 1]:
@@ -482,9 +482,9 @@ def _fix_history(hist, accept_proposed, notes):
             else:
                 notes.append("phase_history: no open %r entry for the transition to %r" % (e.get("from"), to))
             new = {"phase": to, "entered_at": at}
-            for k in ("by", "ref", "evidence"):
-                if k in e:
-                    new[k] = e[k]
+            for k, v in e.items():  # BUG-44: every other field of the transition is kept
+                if k not in ("from", "to", "at", "phase", "entered_at", "exited_at"):
+                    new[k] = v
             out.append(new)
             notes.append("phase_history: {from: %r, to: %r} → {phase: %r, entered_at}" % (e.get("from"),
                                                                                          e.get("to"), to))
@@ -537,6 +537,10 @@ def fix_spec(data, accept_proposed=False):
     if isinstance(gs, dict):
         phases = gs.get("phases") if isinstance(gs.get("phases"), list) else []
         reason = gs.get("reason") if isinstance(gs.get("reason"), str) and gs["reason"].strip() else SKIP_REASON_NONE
+        record = ", ".join("%s %s" % (k, gs[k]) for k in sorted(gs)
+                           if k not in ("phases", "reason") and isinstance(gs[k], (str, int, float)))
+        if record:  # BUG-44: who/when/ref of the legacy skip survive in the reason
+            reason = "%s (%s)" % (reason, record)
         rest = []
         for ph in phases:
             name = _norm_phase_name(ph)
@@ -574,7 +578,7 @@ def fix_project(data, accept_proposed=False):
     new = copy.deepcopy(data)
     notes = []
     nt = new.get("notifications")
-    if isinstance(nt, dict) and nt.get("channel") in pj.LEGACY_CHANNELS:
+    if isinstance(nt, dict) and isinstance(nt.get("channel"), str) and nt.get("channel") in pj.LEGACY_CHANNELS:
         notes.append("notifications.channel %r → %r" % (nt["channel"], pj.LEGACY_CHANNELS[nt["channel"]]))
         nt["channel"] = pj.LEGACY_CHANNELS[nt["channel"]]
     if "management" in new:
@@ -962,7 +966,9 @@ def consume_on_close(root, change, data, closing):
                 entered = parse_dt(e.get("entered_at"))
                 break
         m, status = approval.read_marker(root, change)
-        if change not in consumed and status == "ok" and m.get("consumed_at") is None:
+        # BUG-43: only a phase that has an approval consumes the change's marker, never a prod one
+        if key and change not in consumed and status == "ok" and m.get("consumed_at") is None \
+                and m.get("kind") != "prod":
             created = parse_dt(m.get("created_at"))
             if created is not None and (entered is None or created >= entered):
                 if approval.consume(root, change):
@@ -1307,7 +1313,8 @@ def cmd_approve(args, root):
             raise Refused("production approval is never delegated", code="state.delegated")
         if not PROD_REF.match(ref):
             raise Refused("prod --ref must be a D-NN or a PR approval URL (got %r)" % ref, code="state.ref")
-        marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root))
+        marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root),
+                                                     project_scope=False)  # BUG-41
         if marker is None:
             raise Refused("production approval needs a prod-kind approval marker: the human's own message must "
                           "contain an approval word and a production word (D-10); none is valid for %s (%s)"
@@ -1315,6 +1322,7 @@ def cmd_approve(args, root):
                           code="state.no_prod_marker")
         rec = {"by": by, "role": "human", "date": date, "ref": ref, "evidence": approval.evidence(marker, scope)}
         approval.record_prod(root, args.change, rec)
+        approval.consume(root, scope, created_at=marker.get("created_at"))  # BUG-41: one approval, one change
         res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
         return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s); spec.json " \
                                         "untouched (D-03)" % (args.change, ref)

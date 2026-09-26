@@ -282,7 +282,16 @@
       "type": "object",
       "properties": {
         "generated": {
-          "type": "boolean"
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "x-karvey-severity": "warning",
+              "x-karvey-note": "legacy date in generated: the state tool writes true (BUG-33)"
+            }
+          ]
         },
         "approved": {
           "type": [

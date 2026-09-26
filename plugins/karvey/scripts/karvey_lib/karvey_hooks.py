@@ -668,6 +668,14 @@ def main(argv=None):
     try:
         data = sys.stdin.buffer.read(STDIN_MAX) if hasattr(sys.stdin, "buffer") else sys.stdin.read(STDIN_MAX)
         code = _dispatch_watched(watchdog, args.event, data, only, args.force_enabled)
+    except Exception as exc:  # BUG-34: an uncaught exception exits 1, which the harness treats as allow
+        if closed:
+            sys.stderr.write("[karvey] BLOCK %s: hook error before the guards ran: %s: %s (fail closed)\n"
+                             % (closed[0].name, type(exc).__name__, exc))
+            code = HOOK_BLOCK
+        else:
+            sys.stderr.write("[karvey] hook error (not blocking): %s: %s\n" % (type(exc).__name__, exc))
+            code = HOOK_ALLOW
     finally:
         watchdog.cancel()
     sys.stdout.flush()

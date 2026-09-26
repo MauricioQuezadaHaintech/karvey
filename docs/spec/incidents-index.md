@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-25 (wave1-hardening E1.F17.T4..T8: BUG-23..26 RESUELTO from the manual-script findings F-50..F-53; BUG-25 reopened by its rerun and resolved again with the subagent-prompt guard). Before: 2026-09-25 (E1.F17.T1: BUG-22 RESUELTO).
+Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimension review and the second opinion, all RESUELTO with a regression test red on 4c9b7c0)
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -34,6 +34,26 @@ Last updated: 2026-09-25 (wave1-hardening E1.F17.T4..T8: BUG-23..26 RESUELTO fro
 | BUG-24 | karvey | medium | DEV visible-version check demands `-dev.{build}+{sha}` and reads the tip of dev | wave1-hardening / F-51 | RESUELTO | plugins/karvey/tests/unit/test_skill_rules.py (VisibleVersionCheck) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-25 | karvey | medium | A subagent prompt composed by the agent authorises writing project.json | wave1-hardening / F-52 | RESUELTO | plugins/karvey/tests/unit/test_skill_rules.py (SubagentPromptsCarryTheProjectJsonBan); plugins/karvey/tests/hooks/tables/subagent-prompt.json (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-26 | karvey | low | Block comment queued: tracker key looked for only in the environment | wave1-hardening / F-53 | RESUELTO | plugins/karvey/tests/unit/test_skill_rules.py (TrackerCredentialsAreLookedUpEverywhere) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-27 | karvey | high | protect-paths passed a glob or a variable that names the state dirs | wave1-hardening / F-56 | RESUELTO | plugins/karvey/tests/hooks/tables/protect-paths.json (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-28 | karvey | high | prod-gate missed pushes and merges not spelled as `git push … main` / `gh pr merge` | wave1-hardening / F-57 | RESUELTO | plugins/karvey/tests/hooks/tables/git-flow.json; plugins/karvey/tests/hooks/tables/prod-gate.json (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-29 | karvey | medium | `git push origin --tags` from the production branch was blocked as a branch push | wave1-hardening / F-58 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-30 | karvey | medium | The prod-gate block did not say how to record the approval | wave1-hardening / F-59 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-31 | karvey | high | subagent-prompt blocked ordinary prompts about settings and let a ban-like sentence excuse a real write | wave1-hardening / F-60 | RESUELTO | plugins/karvey/tests/hooks/tables/subagent-prompt.json (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-32 | karvey | low | Real team chat space ids in the tests | wave1-hardening / F-61 | RESUELTO | plugins/karvey/tests/unit/test_fixtures_anonymous.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-33 | karvey | high | Two real legacy shapes were schema errors: `repos` as objects, `approvals.*.generated` as a date | wave1-hardening / F-62 | RESUELTO | plugins/karvey/tests/unit/test_state_validate.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-34 | karvey | medium | An exception before any guard ran exited 1, so the prod-gate failed open | wave1-hardening / F-63 | RESUELTO | plugins/karvey/tests/unit/test_karvey_hooks.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-35 | karvey | medium | A non-string `phase` crashed validate, the hooks and the dashboard | wave1-hardening / F-64 | RESUELTO | plugins/karvey/tests/unit/test_state_validate.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-36 | karvey | low | A list `management.tool` or `notifications.channel` crashed karvey-config | wave1-hardening / F-65 | RESUELTO | plugins/karvey/tests/unit/test_config_resolve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-37 | karvey | low | Breaking a stale lock could remove a fresh one; the release removed a lock it did not own | wave1-hardening / F-66 | RESUELTO | plugins/karvey/tests/unit/test_atomicio.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-38 | karvey | low | spec-merge rewrote a BOM/CRLF living spec with LF and no BOM | wave1-hardening / F-67 | RESUELTO | plugins/karvey/tests/unit/test_spec_merge.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-39 | karvey | medium | protect-paths blocked text that only mentions the paths | wave1-hardening / F-68 | RESUELTO | plugins/karvey/tests/hooks/tables/protect-paths.json (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-40 | karvey | medium | CHANGELOG [Unreleased] had no human owner or AI model | wave1-hardening / F-69 | RESUELTO | plugins/karvey/tests/unit/test_skill_rules.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-41 | karvey | high | One project-wide prod marker approved production for every change | wave1-hardening / F-70 | RESUELTO | plugins/karvey/tests/unit/test_state_approve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-42 | karvey | high | The conditional "si" was read as an approval | wave1-hardening / F-71 | RESUELTO | plugins/karvey/tests/unit/test_approval_vocab.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-43 | karvey | medium | Closing a phase without an approval consumed the change's prod marker | wave1-hardening / F-72 | RESUELTO | plugins/karvey/tests/unit/test_state_approve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-44 | karvey | medium | `validate --fix` dropped fields of legacy transitions and of `gates_skipped` | wave1-hardening / F-73 | RESUELTO | plugins/karvey/tests/unit/test_state_fix.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-45 | karvey | high | spec-merge deleted neighbouring requirements on a duplicated REMOVED id | wave1-hardening / F-74 | RESUELTO | plugins/karvey/tests/unit/test_spec_merge.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-46 | karvey | medium | L-06 let hand-edit instructions through in other words | wave1-hardening / F-75 | RESUELTO | L-06; plugins/karvey/tests/unit/test_lint_plugin.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 
 ## Summary by state
 
@@ -42,7 +62,7 @@ Last updated: 2026-09-25 (wave1-hardening E1.F17.T4..T8: BUG-23..26 RESUELTO fro
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 26 | BUG-01 .. BUG-26 |
+| RESUELTO | 46 | BUG-01 .. BUG-46 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-27**.
+Next number: **BUG-47**.

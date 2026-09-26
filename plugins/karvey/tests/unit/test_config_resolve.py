@@ -294,7 +294,7 @@ class OnlyProjectJson(Base):
 
     def test_instruction_file_ignored(self):
         self.project({"project": "x"})
-        (self.root / "CLAUDE.md").write_text("| Soporte | `spaces/AAAA-xSW3Rg` |\n", encoding="utf-8")
+        (self.root / "CLAUDE.md").write_text("| Soporte | `spaces/AAAA-example` |\n", encoding="utf-8")
         r = C.run_json("resolve", "notifications", "--root", self.root)[1]["result"]
         self.assertEqual((r["channel"], r["target"]), ("none", ""))
 
@@ -463,6 +463,7 @@ EXPECTED_MANAGEMENT = {  # fixture → (tool, location, external, missing, warni
     "notifications-google_chat.json": ("markdown", None, False, [], "config.no_management"),
     "notifications-none.json": ("markdown", None, False, [], "config.no_management"),
     "trunk.json": ("markdown", None, False, [], "config.no_management"),
+    "repos-objects.json": ("markdown", None, False, [], "config.legacy_management"),  # BUG-33
 }
 
 # F-38: a legacy management.status_flow keyed by the logical states is proposed as statuses
@@ -604,6 +605,20 @@ class LegacyProjectFixtures(Base):
         for key in ("branch_flow.integration", "branch_flow.production"):
             code, out, _ = C.run("get", key, "--shell", "--root", self.root)
             self.assertEqual((code, out.strip()), (0, "main"))
+
+class NonStringSettings(Base):
+    """BUG-36: a list or an object where ``management.tool`` or ``notifications.channel`` expects a name
+    crashed resolve / notify-check / propose-settings with ``TypeError: unhashable type`` (exit 5)."""
+
+    def test_list_channel_and_tool_are_refused_not_crashes(self):
+        self.project({"notifications": {"channel": ["google-chat"]}, "management": {"tool": ["clickup"]}})
+        for argv in (("resolve", "management"), ("resolve", "notifications"), ("notify-check",),
+                     ("propose-settings",)):
+            with self.subTest(argv=argv):
+                code, env = C.run_json(*argv, "--root", self.root)
+                self.assertNotEqual(code, 5, env)
+                self.assertFalse([e for e in env["errors"] if e["code"] == "internal"], env["errors"])
+
 
 if __name__ == "__main__":
     unittest.main()

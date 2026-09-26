@@ -221,13 +221,15 @@ def check_marker(marker, root, scope=None, ttl_min=None, now=None, kinds=KINDS):
     return True, "ok"
 
 
-def find_valid(root, change=None, kinds=KINDS, ttl_min=None, now=None):
-    """The first valid marker for ``(repo, change)`` then ``(repo, _project)``.
+def find_valid(root, change=None, kinds=KINDS, ttl_min=None, now=None, project_scope=True):
+    """The first valid marker for ``(repo, change)`` then ``(repo, _project)`` (the latter only with
+    ``project_scope``; a production approval is always of one change, BUG-41).
 
     Returns ``(marker, scope, reasons)``; ``marker`` is None when none is valid, and
     ``reasons`` maps each scope tried to why it did not count. A corrupt file is audited.
     """
-    scopes = ([change] if change and valid_scope(change) and change != SCOPE_PROJECT else []) + [SCOPE_PROJECT]
+    scopes = ([change] if change and valid_scope(change) and change != SCOPE_PROJECT else []) + \
+        ([SCOPE_PROJECT] if project_scope else [])
     reasons = {}
     for scope in scopes:
         m, status = read_marker(root, scope)
@@ -593,6 +595,16 @@ def find_term(text, terms):
     return None
 
 
+_ACCENTED_SI = re.compile(r"(?<![\w])s[\u00ed\u00cd](?![\w])")
+_BARE_SI = re.compile(r"^si(?:\s*[,.!;:]|\s*$)")
+
+
+def _affirmative_si(raw, cleaned):
+    """BUG-42: "si" approves only as the affirmative: written "sí" (accent kept), or a bare "si" that is the
+    whole reply or opens it followed by punctuation. The conditional "si" ("revisa si …") never does."""
+    return bool(_ACCENTED_SI.search(unicodedata.normalize("NFC", strip_quoted(raw)))) or bool(_BARE_SI.match(cleaned))
+
+
 def classify(prompt, vocab=None):
     """Decide whether ``prompt`` is an approval. Returns a dict:
     ``{approved, kind, reason, term, cleaned}``; ``kind`` is ``plan`` or ``prod`` (D-10) when
@@ -616,7 +628,9 @@ def classify(prompt, vocab=None):
         return res
     window = cleaned if len(cleaned) <= rules["short_prompt_chars"] else " ".join(
         cleaned.split(" ")[:rules["position_words"]])
-    term = find_term(window, vocab["approve"])
+    term = find_term(window, [t for t in vocab["approve"] if normalise(t) != "si"])
+    if not term and any(normalise(t) == "si" for t in vocab["approve"]) and _affirmative_si(raw, cleaned):
+        term = "si"
     if not term:
         res["reason"] = "no approval term" + ("" if window is cleaned else " in the first %d words"
                                               % rules["position_words"])

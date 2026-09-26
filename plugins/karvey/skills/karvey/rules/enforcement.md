@@ -34,6 +34,8 @@ the plugin's own files are never written by the agent.
 - Blocks Write/Edit on a marker, the ledger or a plugin file. <!-- guard-case: pp-07-write-tool-on-marker, pp-08-edit-tool-on-ledger-relative, pp-10-edit-plugin-hook -->
 - Blocks writing the notification confirmation (`approvals/notify/`) or the notify record (`notify-last.json`). <!-- guard-case: nc-10-protect-paths-blocks-writing-the-confirmation, nc-11-protect-paths-blocks-editing-the-confirmation, nc-12-protect-paths-blocks-writing-the-notify-record -->
 - Allows running the plugin's scripts and reading the audit log. <!-- guard-case: pp-14-running-plugin-script-allowed, pp-16-reading-the-audit-log-allowed -->
+- Blocks a glob or a shell variable that could expand to those directories (`.git/kar?ey/ledger`, `cd kar*ey`, `D=karvey; .git/$D/…`) and a redirection into them. <!-- guard-case: pp-18-glob-in-state-dir-path-blocked, pp-19-cd-chain-glob-then-mkdir-blocked, pp-20-variable-path-component-blocked, pp-21-bare-wildcard-under-git-into-ledger-blocked, pp-27-echo-into-the-ledger-still-blocked -->
+- Allows globs and variables elsewhere, and text that only mentions the paths (echo/printf arguments, a commit message). <!-- guard-case: pp-23-globs-elsewhere-allowed, pp-24-variables-elsewhere-allowed, pp-25-commit-message-mentioning-the-path-allowed, pp-26-echo-text-mentioning-the-record-allowed -->
 
 ## Approval hook (UserPromptSubmit, D-01, D-10)
 
@@ -65,6 +67,10 @@ Merges and pushes into production need a human prod approval in the release ledg
 - A merge into the integration branch stays silent, also when the remote default branch is the integration branch (D-15); `main` and `master` are always gated. <!-- guard-case: pg1-06-gh-merge-into-dev-silent, pg3-01-pr-into-dev-default-dev-not-gated, pg3-02-merge-into-dev-default-dev-not-gated -->
 - Blocks when the change cannot be determined, the CLI fails or times out, or the files are corrupt (fails closed). <!-- guard-case: pg1-08-change-cannot-be-determined, pg1-12-gh-timeout-fails-closed, pg2-05-corrupt-spec-json, pg2-08-corrupt-ledger -->
 - A hand-edited `approvals.prod` without the ledger still blocks. <!-- guard-case: pg2-07-hand-edited-approvals-prod-without-ledger -->
+- The push destination comes from the repository too: aliases (`-c alias.X=push`, configured, shell), `-c` push settings, a configured upstream or push refspec, `send-pack` and `@` count, and a push or merge run through `xargs` or `find -exec` cannot be verified. <!-- guard-case: pg4-01-inline-alias-to-push-main, pg4-02-configured-alias-to-push-main, pg4-03-inline-remote-push-refspec, pg4-05-configured-upstream-bare-push, pg4-06-configured-remote-push-refspec, pg4-07-send-pack-into-main, pg4-08-xargs-git-push, pg4-19-push-at-sign-from-main, pg4-22-shell-alias-push-into-main -->
+- gh aliases and `gh api` writes to a production branch (the merges endpoint, `git/refs`, `mergeBranch`) are gated; a ref write to another branch is not. <!-- guard-case: pg4-10-gh-alias-to-pr-merge, pg4-11-gh-api-merges-endpoint-into-main, pg4-12-gh-api-ref-update-of-main, pg4-13-gh-api-graphql-merge-branch, pg4-14-gh-api-delete-feature-ref-allowed -->
+- `git push --tags` pushes no branch and is not gated. <!-- guard-case: pg4-17-push-tags-from-main-allowed -->
+- The block says how to record the approval, or names the switch when the change is unknown. <!-- guard-case: pg4-23-block-says-how-to-record-the-approval, pg4-24-unknown-change-names-the-switch -->
 
 ## git-flow (PreToolUse on Bash, opt-in)
 
@@ -91,7 +97,8 @@ A subagent never writes `docs/spec/project.json` (`management-adapters.md` rule 
 text does not reach a session that writes a subagent prompt before it loads any skill, so the prompt is
 checked when the tool is called.
 
-- A prompt with a sentence that lets the subagent write the settings (a write, persist or authorise verb with `project.json`, settings or a status map, not negated just before the verb) and without the ban line is blocked; the message gives the line to add. <!-- guard-case: sp-01-rerun-prompt-persist-settings-blocked, sp-02-first-run-prompt-persist-map-blocked, sp-07-task-tool-name-blocked -->
+- A prompt with a sentence that lets the subagent write the settings (a write, persist or authorise verb followed within a few words by `docs/spec/project.json`, the tracker or team settings or a status map, not negated just before the verb) and without the ban on `docs/spec/project.json` itself is blocked; the message gives the line to add. <!-- guard-case: sp-01-rerun-prompt-persist-settings-blocked, sp-02-first-run-prompt-persist-map-blocked, sp-07-task-tool-name-blocked, sp-13-ban-like-sentence-does-not-excuse-a-write-blocked -->
+- A settings page, an editor's `settings.json`, tests for a status-mapping function and another tool's `project.json` are not the project settings. <!-- guard-case: sp-08-settings-page-component-allowed, sp-09-editor-settings-file-allowed, sp-10-tests-for-a-status-mapping-function-allowed, sp-12-another-tools-project-json-allowed, sp-11-typographic-apostrophe-ban-allowed -->
 - The ban line, a prompt that does not touch the settings, a negated sentence and any prompt outside a Karvey project are allowed. <!-- guard-case: sp-03-ban-line-present-allowed, sp-04-no-settings-talk-allowed, sp-05-negated-settings-sentence-allowed, sp-06-outside-a-karvey-project-allowed -->
 - Fail open: without python the call goes through, and the text rule still applies.
 

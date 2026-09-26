@@ -89,8 +89,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 - E1.F17.T7 / BUG-26 (F-53) — tracker credentials are looked up in order before an operation is queued for lack of one: `.connections.json` at the project root first, then the environment, then the vault or the tool's MCP session (`management-adapters.md` rule 2); `karvey-impl` Step 3 and its blocker text point to it, and with `blocked: null` the tracker status is kept and the comment posted alone. Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5. Why: recording a block, the agent checked only the environment, missed the key in `.connections.json` and queued the explaining comment instead of posting it (REQ-W1-082, manual script per-level-maps).
 - E1.F17.T6 / BUG-25 (F-52, reopened by the rerun) — new `subagent-prompt` guard on PreToolUse `Agent|Task` (`guards.subagent_prompt`, event `pre-agent`, fail open, on in a Karvey project): a subagent prompt that lets the subagent write the project settings (a write, persist or authorise verb with `project.json`, settings or a status map, not negated) and lacks the ban line is blocked with the line to add; `hooks.json`, the no-python dispatcher (allows), `hooks/README.md` and `enforcement.md` document it; table `subagent-prompt.json` (7 cases). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5. Why: the rerun showed the session writes the subagent prompt before it loads any skill, so the text rule alone never reached it.
 
+- QA of wave1-hardening (BUG-27..46), each with its regression test red first. Why: the 9-dimension review and the second opinion found ways past the guards and silent data loss the tables did not cover:
+  - BUG-27 protect-paths: a glob or a shell variable in a path component (`.git/kar?ey/ledger`, `cd kar*ey`, `D=karvey; .git/$D/…`) named the state dirs without spelling them; now expanded or matched as a pattern (python and no-python).
+  - BUG-28 prod-gate: `git -c alias.X=push`, configured and shell aliases, `-c remote.*.push`/`push.default`, a configured upstream or push refspec, `send-pack`, `xargs`/`find -exec`, gh aliases, `gh api` merges/ref writes/`mergeBranch`, and `@` as HEAD reached production unseen.
+  - BUG-29 `git push origin --tags` from the production branch was blocked as a branch push.
+  - BUG-30 the prod-gate block names the command that records the approval, and the switch for projects that do not release through Karvey.
+  - BUG-31 subagent-prompt: a settings page, an editor's `settings.json`, tests for a mapping function or another tool's `project.json` were blocked; a ban-like sentence excused a real write.
+  - BUG-32 two real chat space ids in the tests replaced by placeholders; a test keeps them out.
+  - BUG-33 `repos` as objects and `approvals.*.generated` as a date (real legacy shapes) are warnings, not errors that block the prod-gate.
+  - BUG-34 an exception before any guard ran (a deleted working directory) exited 1, which the harness treats as allow; closed events now block.
+  - BUG-35 a non-string `phase` crashed validate, the hooks and the dashboard; BUG-36 a list `management.tool`/`notifications.channel` crashed karvey-config.
+  - BUG-37 breaking a stale lock could remove a fresh one and the release removed a lock it did not own.
+  - BUG-38 spec-merge kept the living spec's BOM and CRLF; BUG-45 a REMOVED id listed twice, or MODIFIED and REMOVED together, deleted neighbouring requirements.
+  - BUG-39 protect-paths ignores echo/printf text and commit messages that only mention the paths.
+  - BUG-40 this [Unreleased] section names the owner and the model.
+  - BUG-41 a project-wide prod marker no longer approves production for a change, and `approve prod` consumes the marker; BUG-42 the conditional "si" is not an approval ("sí" is); BUG-43 closing a phase without an approval no longer consumes a prod marker.
+  - BUG-44 `validate --fix` keeps every field of a legacy transition and the who/when/ref of `gates_skipped`.
+  - BUG-46 L-06 catches "set the phase to X", `jq '.phase = …'` and "change approvals.X.approved to true".
+
 ### Changed
 - Statusline context lights by percent of the window: amber at 30 %, red + TIME TO ROTATE at 50 % (`defaults.json:context_pct`, env `KARVEY_ROTATE_CTX_{YELLOW,RED}_PCT`); the 100k/150k token pair is only the fallback without a window size. Why: fixed tokens fired at 15 % of a 1M window (D-18, F-41, F-33).
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5 (1M context)
+> 🔗 Change: wave1-hardening · Karvey phase: impl, test, qa · Apache 2.0
 
 ## [3.11.4] - 2026-09-23 — hotfix
 

@@ -258,7 +258,7 @@ The `SessionStart` split passes `startup` or `resume` as an **argument taken fro
 | plan-gate | Bash segments, or Edit/Write | Command-class classification (§3.4). Allows if a valid marker exists for (repo, change) or (repo, `_project`), newer than the TTL, not consumed and not corrupt. | exit 2: `[karvey] BLOCK plan-gate: <class>. Present the plan and wait for the human's approval; the approval hook records it.` Nothing tells the agent to create anything. |
 | spec-write validator | `tool_input.file_path` (A-3) | If the path matches, runs `karvey-state.py validate <file>` in-process. | violations: exit 2, with the list on stderr (A-4: in PostToolUse this feeds the reason back to the session) · valid: silent |
 | pending-sync | same | Appends the repo-relative path to `docs/spec/.graph-pending` (dedupe, sorted, LF), except the pending file itself and `graphify-out/**`. | silent |
-| subagent-prompt (revision 2, D-33, BUG-25) | `tool_input.prompt` of an `Agent`/`Task` call | Inert outside a Karvey project, or when the prompt already carries the ban line ("do not write `docs/spec/project.json`" and its variants). Otherwise it splits the prompt into sentences and blocks on the first one that names the settings (`project.json`, settings, a status map) with a write/persist/authorise verb not negated just before it. It reads only the prompt text; it never reads or writes files. | exit 2: `[karvey] BLOCK subagent-prompt: … Re-send the prompt without that permission and with this line: <ban line>` (the quoted sentence is cut to 160 characters) · otherwise silent |
+| subagent-prompt (revision 2, D-33, BUG-25) | `tool_input.prompt` of an `Agent`/`Task` call | Inert outside a Karvey project, or when the prompt carries the ban on `docs/spec/project.json` itself ("do not write `docs/spec/project.json`" and its variants; typographic quotes normalised). Otherwise it splits the prompt into sentences and blocks on the first one where a write/persist/authorise verb, not negated just before it, governs a settings target within the next few words: `docs/spec/project.json`, a bare `project.json` only next to tracker/settings words, `management.statuses`, the tracker/team settings, a status map (BUG-31: a settings page, an editor's `settings.json` or another tool's `project.json` are not targets). It reads only the prompt text; it never reads or writes files. | exit 2: `[karvey] BLOCK subagent-prompt: … Re-send the prompt without that permission and with this line: <ban line>` (the quoted sentence is cut to 160 characters) · otherwise silent |
 | approval hook | prompt text (A-2) | §3.3 and §3.6. | silent. When it records a marker it prints one stdout line, `[karvey] approval recorded (<kind>, <scope>, expires hh:mm)`, so the human sees it. |
 
 **Legacy templates.** `skills/karvey/hooks/git-flow-guard.sh` and `plan-gate.sh` stay for 3.12.x as shims
@@ -993,7 +993,7 @@ or a cloned template, so they are untrusted input. Three rules apply:
 | **git-flow** (opt-in) | python missing · target repo unresolvable (`git -C $X`, unexpanded variable) · unparsable command | When enabled: **block** `git commit\|push\|merge\|cherry-pick\|revert\|am` segments with "cannot resolve the target repository; rewrite without variables". When disabled: nothing. | The project asked for it. The block names the rewrite that passes. |
 | **plan-gate** (opt-in) | python missing · unparsable command | When enabled: **block** with the reason, keeping today's semantics (no marker → block the classes). Unparsable commands fall back to a conservative regex over the raw string. | The project asked for it. Wrongly allowing a destructive command is worse than a retry. |
 | **approval hook** | anything | **Open**: no marker is created and the prompt is never blocked (exit 0). The failure is recorded in `audit.log` (`approval-hook error`). | Failing open here means *not approving*, which is the safe side. The human sees no `[karvey] approval recorded` line and can repeat the approval. |
-| **subagent-prompt** (revision 2) | python missing · crash | **Open**: the call goes through (the bash fallback has no classifier for it). | A backstop for REQ-W1-081, whose primary control is the rule text every subagent-composing skill carries. A false block costs a re-sent prompt; failing closed would block every subagent on a machine without python. |
+| **subagent-prompt** (revision 2) | python missing · crash | **Open**: the call goes through (the bash fallback has no classifier for it). | A backstop for REQ-W1-081, whose primary control is the rule text (`management-adapters.md` rule 5). A false block costs a re-sent prompt; failing closed would block every subagent on a machine without python. |
 | **spec-write validator** | python missing · crash | **Open** with one line: `[karvey] spec.json not validated: <reason>`. | The write already happened, and PostToolUse cannot undo it. CI (L-18) is the backstop. |
 | **pending-sync** | anything | **Open**, silent. | Archive recomputes pending paths from `git diff` since the last sync anyway (§5). |
 | **session hook** | python missing | **Open**; the degraded settings line is still printed (REQ-W1-050). | It informs; it never gates. |
@@ -1029,7 +1029,9 @@ never an instruction it follows or a one-command shortcut. They are layered:
    (`marker not found in transcript`) and shown on the dashboard. It does not block, because the transcript
    format is undocumented.
 6. **Prod needs more than a marker.** `approve prod` requires a **prod-kind** marker (Q-A1): the human's
-   prompt had an approval phrase **and** a prod term. It then writes the ledger. The prod-gate checks the
+   prompt had an approval phrase **and** a prod term. The marker must be scoped to that change (a
+   project-wide `_project` marker never approves production), and `approve prod` consumes it (BUG-41,
+   revision 3). It then writes the ledger. The prod-gate checks the
    ledger **and** the matching evidence. A hand-edited `spec.json:approvals.prod` without a ledger entry is
    blocked with "approval not recorded through the state tool". The durable, human-visible records remain
    the `D-NN` and the PR (D-03).
@@ -1060,7 +1062,9 @@ A project overrides it in `project.json:enforcement.approval_vocabulary`, read f
 4. **Accept** when an approval term appears (word boundaries) within the first 12 words, or anywhere if the
    cleaned prompt is ≤ 120 characters. Default approval terms:
    `ok`, `okey`, `dale`, `aprobado`, `apruebo`, `aprueba`, `ejecuta`, `adelante`, `procede`, `si`,
-   `perfecto`, `approved`, `approve`, `go ahead`, `lgtm`, `proceed`, `ship it`.
+   `perfecto`, `approved`, `approve`, `go ahead`, `lgtm`, `proceed`, `ship it`. `si` counts only as the
+   affirmative: written `sí`, or a bare `si` that is the whole reply or opens it before punctuation; the
+   conditional "si" ("revisa si …") never approves (BUG-42, revision 3).
 5. `kind = prod` when a prod term also appears. Default prod terms:
    `prod`, `produccion`, `production`, `pr a prod`, `merge`, `release`, `master`, `main`, `publica`, `libera`.
    Otherwise `kind = plan`. A prod marker also satisfies plan-gate.
@@ -1899,3 +1903,4 @@ deliberately not run: this change moves the sync to archive only (REQ-W1-062), a
 |---|---|---|---|---|
 | 1 | 2026-09-24 | D-19 · F-16..F-19, F-40, F-47..F-49 | §1.4 (profile-only commits), §1.2 `approve` (`--date` on retro records), §3.1 (exemptions, `other`, sprints, `..`, status `( )`, `"`), §6.5 (manual executor), §7.3 (option a; `[human]` T2) | Test-phase spec-gaps; reopened from `test` with `karvey-state.py reopen … architecture --ref D-19`. |
 | 2 | 2026-09-25 | D-33 · BUG-25 · F-52 | §1.3 (`hooks.json` `Agent\|Task` entry, `pre-agent` event, subagent-prompt contract), §3.2 (fail open), §6.1 (`subagent-prompt.json`) | The guard was added during impl to close BUG-25, outside the approved architecture; D-33 keeps it and records it here. |
+| 3 | 2026-09-26 | BUG-28, BUG-41, BUG-42 (QA) | §3.3 (prod marker scoped to the change and consumed; `si` only as the affirmative) | QA fixes that change documented behaviour; the prod-gate candidate forms added by BUG-28 are listed in `rules/enforcement.md` and the tables. |

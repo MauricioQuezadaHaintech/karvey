@@ -20,6 +20,8 @@ local helpers below (``project_wc`` / ``project_reviewed`` / ``enforcement``). T
 minimal subset of the settings resolver that ``karvey-config.py`` (lane B, E1.F7) owns; the
 orchestrator reconciles them at merge (finding F-10).
 """
+import fnmatch
+import glob as globmod
 import importlib.util
 import json
 import os
@@ -235,6 +237,81 @@ def _mutated_args(seg):
     return pos
 
 
+# BUG-27: a glob or a shell variable in a path component names a protected directory without spelling it
+# ("kar?ey", ".git/*/ledger", "D=karvey; .git/$D/…"). The shell expands them after the hook has checked.
+GLOB_CHARS = frozenset("*?[")
+PROTECTED_NAMES = ("karvey", "ledger", "approvals")
+_VAR_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
+GLOB_MAX = 2000
+
+
+def _subst_vars(text, variables):
+    """``text`` with the command's own ``NAME=value`` assignments substituted (unknown names kept)."""
+    if not isinstance(text, str) or "$" not in text:
+        return text
+    return _VAR_RE.sub(lambda m: variables.get(m.group(1), m.group(0)), text)
+
+
+def _as_glob(text):
+    """``text`` with every unresolved variable turned into ``*`` (what it could expand to)."""
+    return _VAR_RE.sub("*", text).replace("$(", "*(").replace("`", "*")
+
+
+def _names_protected_dir(text):
+    """True when a path component that is a glob (with 2+ literal characters) or a variable could expand
+    to a protected directory name, or when a wildcard component sits right under ``.git`` or right above
+    ``ledger``/``approvals``."""
+    comps = [c for c in _as_glob(text).split("/") if c]
+    for i, c in enumerate(comps):
+        if not (set(c) & GLOB_CHARS):
+            continue
+        literal = len([ch for ch in c if ch not in GLOB_CHARS])
+        if literal >= 2 and any(fnmatch.fnmatchcase(n, c) for n in PROTECTED_NAMES):
+            return True
+        prev_git = i > 0 and comps[i - 1].endswith(".git")
+        next_state = i + 1 < len(comps) and comps[i + 1] in ("ledger", "approvals")
+        if (prev_git or next_state) and fnmatch.fnmatchcase("karvey", c):
+            return True
+    return False
+
+
+def _glob_expand(path):
+    """The paths a glob in ``path`` matches now (``[]`` without glob characters)."""
+    if not path or not (set(path) & GLOB_CHARS):
+        return []
+    out = []
+    for i, p in enumerate(globmod.iglob(path)):
+        if i >= GLOB_MAX:
+            break
+        out.append(p)
+    return out
+
+
+def _in_state_dir(p, env):
+    return bool(_hits(p.rstrip("/") + "/", ("/karvey/approvals/", "/karvey/ledger/", "/.git/karvey/"))) or \
+        under(p, _xdg_state_root(env))
+
+
+TEXT_COMMANDS = frozenset({"echo", "printf"})
+MESSAGE_SUBS = frozenset({"commit", "tag", "notes", "stash", "merge", "revert"})
+
+
+def _free_text_args(seg):
+    """Indexes of ``seg.argv`` that are message text, never paths (BUG-39): every argument of echo/printf
+    (their output goes through a redirection, which is still checked) and the ``-m``/``--message`` value
+    of a git commit, tag, note, stash, merge or revert."""
+    if seg.argv0 in TEXT_COMMANDS:
+        return set(range(1, len(seg.argv)))
+    out = set()
+    if seg.argv0 == "git" and seg.git and seg.git.get("sub") in MESSAGE_SUBS:
+        for i, a in enumerate(seg.argv):
+            if a in ("-m", "--message") and i + 1 < len(seg.argv):
+                out.add(i + 1)
+            elif a.startswith("--message=") or (a.startswith("-m") and len(a) > 2 and not a.startswith("--")):
+                out.add(i)
+    return out
+
+
 def protect_paths(ctx):
     env = ctx.env
     needles = _state_needles(env)
@@ -265,10 +342,22 @@ def protect_paths(ctx):
         if _hits(cmd, needles) or _hits(_unquote(expanded_raw), needles):
             return Decision.block(PROTECT_MSG, record={"reason": "unparsed command names a protected path"})
         return None
+    variables = {}
     for seg in parsed.segments:
-        texts = [env_expand(a, env) for a in seg.argv]
-        targets = [env_expand(r.target, env) for r in seg.redirects
+        variables.update({k: v for k, v in seg.assignments.items() if isinstance(v, str)})
+        free = _free_text_args(seg)
+        texts = [env_expand(_subst_vars(a, variables), env) for i, a in enumerate(seg.argv) if i not in free]
+        targets = [env_expand(_subst_vars(r.target, variables), env) for r in seg.redirects
                    if r.target and r.op in (">", ">>", ">|", "&>", "&>>", "<>", ">&")]
+        # BUG-27: globs and variables that could name a protected directory (not read-only commands)
+        if seg.argv0 not in READ_ONLY or targets:
+            for t in (texts[1:] if seg.argv0 not in READ_ONLY else []) + targets:
+                if _names_protected_dir(t):
+                    return Decision.block(PROTECT_MSG, record={"reason": "glob or variable names a protected path"})
+                full = seg_path(seg, t, env) if "$" not in t else None
+                for p in _glob_expand(full):
+                    if _in_state_dir(p, env) or _in_state_dir(realpath(p), env):
+                        return Decision.block(PROTECT_MSG, record={"reason": "glob expands into a protected path"})
         # the state dirs and the compat marker: any mention, except by a read-only command
         if seg.argv0 not in READ_ONLY or any(_hits(t, needles) for t in targets):
             joined = " ".join(texts + targets)
@@ -278,15 +367,22 @@ def protect_paths(ctx):
             if _hits(" ".join(texts), needles):
                 return Decision.block(PROTECT_MSG, record={"reason": "command names a protected path"})
         # the plugin root: only writes (running the plugin's own scripts is normal)
-        writes = [seg_path(seg, a, env) for a in _mutated_args(seg)] + \
-                 [seg_path(seg, r.target, env) for r in seg.redirects
+        writes = [seg_path(seg, _subst_vars(a, variables), env) for a in _mutated_args(seg)] + \
+                 [seg_path(seg, _subst_vars(r.target, variables), env) for r in seg.redirects
                   if r.target and r.op in (">", ">>", ">|", "&>", "&>>", "<>") or
                   (r.op == ">&" and r.target and not r.target.isdigit() and r.target != "-")]
-        for w in writes:
+        for w in [x for w in writes for x in ([w] + _glob_expand(w))]:
             if w and any(under(w, root) or under(realpath(w), root) for root in plugin_roots):
                 return Decision.block(PROTECT_MSG, record={"reason": "write under the plugin root"})
-    # a needle hidden by quoting across words (``karvey/"approvals"``) in the whole command
-    if _hits(_unquote(expanded_raw), [n for n in needles if "/" in n]) and not all(
+    # a needle hidden by quoting across words (``karvey/"approvals"``) in the whole command, message text aside
+    reduced = []
+    for seg in parsed.segments:
+        free = _free_text_args(seg)
+        tail = seg.words[len(seg.words) - len(seg.argv):] if seg.argv else []
+        reduced += [w.raw for w in seg.words[:len(seg.words) - len(tail)]]
+        reduced += [w.raw for i, w in enumerate(tail) if i not in free]
+        reduced += [r.target for r in seg.redirects if r.target]
+    if _hits(_unquote(env_expand(" ".join(reduced), env)), [n for n in needles if "/" in n]) and not all(
             s.argv0 in READ_ONLY for s in parsed.segments):
         return Decision.block(PROTECT_MSG, record={"reason": "command names a protected path"})
     return None
@@ -470,7 +566,7 @@ GIT_BUILTINS = frozenset({
 class GitTarget:
     """The repository one git segment acts on (§3.4 target resolution)."""
 
-    __slots__ = ("dir", "git_dir", "work_tree", "unresolved", "sub", "args", "via_alias")
+    __slots__ = ("dir", "git_dir", "work_tree", "unresolved", "sub", "args", "via_alias", "config")
 
     def __init__(self, seg):
         g = seg.git or {}
@@ -480,6 +576,7 @@ class GitTarget:
             if isinstance(v, str) and ("$" in v or "`" in v):
                 self.unresolved = True
         self.sub, self.args, self.via_alias = g.get("sub"), list(g.get("args") or []), None
+        self.config = [c for c in (g.get("config") or []) if isinstance(c, str)]
 
     def prefix(self):
         a = []
@@ -519,7 +616,12 @@ class GitTarget:
         """Replace an alias subcommand by what it runs (``git config --get alias.X``)."""
         if not self.sub or self.sub in GIT_BUILTINS or self.unresolved:
             return None
-        rc, val = self.git(ctx, "config", "--get", "alias." + self.sub)
+        inline = [c.split("=", 1)[1] for c in self.config
+                  if "=" in c and c.split("=", 1)[0].lower() == "alias." + self.sub.lower()]
+        if inline:  # BUG-28: `git -c alias.X=push X …`
+            rc, val = 0, inline[-1]
+        else:
+            rc, val = self.git(ctx, "config", "--get", "alias." + self.sub)
         if rc != 0 or not val:
             return None
         self.via_alias = self.sub
@@ -610,6 +712,8 @@ def push_destinations(args, head):
     for spec in specs:
         forced = forced_all or spec.startswith("+")
         spec = spec.lstrip("+")
+        if spec == "@" or spec.startswith("@:"):  # BUG-28: `@` is git's name for HEAD
+            spec = "HEAD" + spec[1:]
         if ":" in spec:
             src, dst = spec.split(":", 1)
         else:
@@ -744,6 +848,7 @@ _PULL_MERGE = re.compile(r"(?:^|[\s/])repos/([^/\s]+/[^/\s]+)/pulls/(\d+)/merge\
 _GRAPHQL_MERGE = re.compile(r"mergePullRequest|enablePullRequestAutoMerge", re.I)
 _RAW_MERGE = re.compile(r"\bgh\b.*\bpr\b.*\bmerge\b|\baz\b.*\brepos\b.*\bpr\b.*\bupdate\b|\bglab\b.*\bmr\b.*"
                         r"\bmerge\b|\bgh\b.*\bapi\b.*(pulls/\d+/merge|mergePullRequest)|\bgit\b.*\bpush\b", re.I)
+_MAYBE_MERGE = re.compile(r"\b(git|gh|glab|az)\b")  # aliases and wrappers (BUG-28): evaluated per candidate
 _STATE_MOD = None
 
 
@@ -781,25 +886,152 @@ def _opt(args, *names):
     return None
 
 
+GH_BUILTINS = frozenset({
+    "alias", "api", "attestation", "auth", "browse", "cache", "co", "codespace", "completion", "config", "copilot",
+    "extension", "gist", "gpg-key", "help", "issue", "label", "org", "pr", "project", "release", "repo", "ruleset",
+    "run", "search", "secret", "ssh-key", "status", "variable", "workflow", "version", "--version", "--help",
+    "preview", "agent-task"})
+_GH_REF_WRITE = re.compile(r"(?:^|[\s/])repos/[^/\s]+/[^/\s]+/(merges|git/refs(?:/heads)?/?(\S*))")
+_GRAPHQL_REF_WRITE = re.compile(r"\b(mergeBranch|updateRef|updateRefs|createCommitOnBranch|deleteRef)\b")
+_PUSH_CONFIG = re.compile(r"^(remote\.[^=]*\.push|push\.default|remote\.pushdefault|branch\.[^=]*\.(pushremote|merge|"
+                          r"remote))=", re.I)
+WRAPPED_TOOLS = frozenset({"git", "gh", "glab", "az"})
+_XARGS_WITH_ARG = frozenset({"-I", "-i", "-n", "-L", "-l", "-P", "-s", "-d", "-E", "-e", "-a", "--arg-file",
+                             "--delimiter", "--max-args", "--max-lines", "--max-procs", "--max-chars",
+                             "--replace", "--eof", "--process-slot-var"})
+
+
+def gh_aliases(env):
+    """``{name: expansion}`` of the gh CLI aliases (``aliases:`` in gh's ``config.yml``), best effort."""
+    base = env.get("GH_CONFIG_DIR") or posixpath.join(
+        env.get("XDG_CONFIG_HOME") or posixpath.join(env.get("HOME") or os.path.expanduser("~"), ".config"), "gh")
+    out, inside = {}, False
+    try:
+        with open(posixpath.join(base, "config.yml"), encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                if not line[:1].isspace():
+                    inside = line.split(":", 1)[0].strip() == "aliases"
+                    continue
+                if inside and ":" in line:
+                    k, v = line.strip().split(":", 1)
+                    out[k.strip().strip("'\"")] = v.strip().strip("'\"")
+    except (OSError, UnicodeDecodeError):
+        pass
+    return out
+
+
+def _gh_write_method(a):
+    m = _opt(a, "-X", "--method")
+    if m:
+        return m.upper() != "GET"
+    return any(x in ("-f", "-F", "--field", "--raw-field", "--input") or x.startswith(("--field=", "--raw-field=",
+               "--input=")) for x in a)
+
+
+def _gh_candidate(seg, a, env, depth=0):
+    """The candidate of one ``gh`` invocation with arguments ``a`` (aliases expanded once), or None."""
+    if a[:2] == ["pr", "merge"]:
+        rest = a[2:]
+        pos = _positional(rest, {"-R", "--repo", "-t", "--subject", "-b", "--body", "-F", "--body-file",
+                                 "--match-head-commit", "-A", "--author-email"})
+        return Candidate("gh", seg, dir=seg.cwd, selector=pos[0] if pos else None, repo_arg=_opt(rest, "-R", "--repo"))
+    if a[:1] == ["api"]:
+        joined = " ".join(a[1:])
+        m = _PULL_MERGE.search(joined)
+        if m:
+            return Candidate("gh", seg, dir=seg.cwd, selector=m.group(2), repo_arg=m.group(1))
+        if _GRAPHQL_MERGE.search(joined) or ("graphql" in a[1:2] and "@" in joined):
+            return Candidate("gh", seg, dir=seg.cwd, fail="a GraphQL merge mutation cannot be resolved to a PR base; "
+                                                          "merge through gh pr merge")
+        if "graphql" in a[1:2] and _GRAPHQL_REF_WRITE.search(joined):  # BUG-28
+            return Candidate("gh", seg, dir=seg.cwd, fail="a GraphQL mutation that writes a branch cannot be "
+                                                          "verified; merge through gh pr merge")
+        r = _GH_REF_WRITE.search(joined)
+        if r and _gh_write_method(a[1:]):  # BUG-28: merges endpoint, ref create/update/delete
+            if r.group(1) == "merges":
+                dst = next((f.split("=", 1)[1] for f in a if f.startswith("base=")), None)
+            else:
+                dst = _strip_heads((r.group(2) or "").strip("/")) or None
+            return Candidate("gh-ref", seg, dir=seg.cwd, dst=dst)
+        return None
+    if depth == 0 and a and a[0] not in GH_BUILTINS:  # BUG-28: gh aliases
+        exp = gh_aliases(env).get(a[0])
+        if exp:
+            if exp.startswith("!"):
+                if re.search(r"\b(merge|push|api)\b", exp):
+                    return Candidate("gh", seg, dir=seg.cwd, fail="a gh shell alias that merges or pushes cannot be "
+                                                                  "verified; run the gh command directly")
+                return None
+            try:
+                words = shlex.split(exp)
+            except ValueError:
+                return None
+            return _gh_candidate(seg, words + a[1:], env, depth + 1)
+    return None
+
+
+def _wrapped_command(seg):
+    """The command ``xargs``/``parallel``/``find -exec`` runs (its words), or None."""
+    a = seg.argv[1:]
+    if seg.argv0 in ("xargs", "parallel"):
+        i = 0
+        while i < len(a) and a[i].startswith("-"):
+            i += 2 if a[i] in _XARGS_WITH_ARG else 1
+        return a[i:] or None
+    if seg.argv0 == "find":
+        for i, x in enumerate(a):
+            if x in ("-exec", "-execdir", "-ok", "-okdir"):
+                inner = []
+                for y in a[i + 1:]:
+                    if y in (";", "\\;", "+"):
+                        break
+                    inner.append(y)
+                return inner or None
+    return None
+
+
+def implicit_push_dests(ctx, t, head):
+    """BUG-28: where a push with no refspec goes, from the repository config: the remote's ``push``
+    refspecs, else ``<branch>@{push}`` (push.default, upstream, pushRemote)."""
+    remote, _specs, _flags = _push_parse(t.args)
+    if not remote and head:
+        for key in ("branch.%s.pushRemote" % head, "remote.pushDefault", "branch.%s.remote" % head):
+            rc, val = t.git(ctx, "config", "--get", key)
+            if rc == 0 and val:
+                remote = val
+                break
+    remote = remote or "origin"
+    rc, specs = t.git(ctx, "config", "--get-all", "remote.%s.push" % remote)
+    if rc == 0 and specs:
+        return push_destinations(["_remote"] + specs.split(), head)[0]
+    if not head:
+        return []
+    rc, up = t.git(ctx, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "%s@{push}" % head)
+    if rc == 0 and up and "/" in up:
+        return [(head, up.split("/", 1)[1], False, False)]
+    return []
+
+
 def prod_candidates(ctx):
     """Every production-merge candidate segment of the command (§3.4)."""
     out = []
+    for s2, t in git_targets(ctx):  # aliases expanded (BUG-28)
+        if t.sub in ("push", "send-pack") and not any(c.seg is s2 for c in out):
+            out.append(Candidate("git-push", s2, target=t))
     for seg in ctx.parsed.segments:
         a = seg.argv[1:]
-        if seg.argv0 == "gh" and a[:2] == ["pr", "merge"]:
-            rest = a[2:]
-            pos = _positional(rest, {"-R", "--repo", "-t", "--subject", "-b", "--body", "-F", "--body-file",
-                                     "--match-head-commit", "-A", "--author-email"})
-            out.append(Candidate("gh", seg, dir=seg.cwd, selector=pos[0] if pos else None,
-                                 repo_arg=_opt(rest, "-R", "--repo")))
-        elif seg.argv0 == "gh" and a[:1] == ["api"]:
-            joined = " ".join(a[1:])
-            m = _PULL_MERGE.search(joined)
-            if m:
-                out.append(Candidate("gh", seg, dir=seg.cwd, selector=m.group(2), repo_arg=m.group(1)))
-            elif _GRAPHQL_MERGE.search(joined) or ("graphql" in a[1:2] and "@" in joined):
-                out.append(Candidate("gh", seg, dir=seg.cwd, fail="a GraphQL merge mutation cannot be resolved "
-                                                                  "to a PR base; merge through gh pr merge"))
+        inner = _wrapped_command(seg)
+        if inner and posixpath.basename(inner[0]) in WRAPPED_TOOLS and re.search(
+                r"\b(push|send-pack|merge|api|update)\b", " ".join(inner[1:])):
+            out.append(Candidate("wrapped", seg, dir=seg.cwd, fail="the command runs through %s, so its arguments "
+                                 "cannot be verified; run it directly" % seg.argv0))
+            continue
+        if seg.argv0 == "gh":
+            c = _gh_candidate(seg, a, ctx.env)
+            if c is not None:
+                out.append(c)
         elif seg.argv0 == "az" and a[:3] == ["repos", "pr", "update"]:
             status, auto = _opt(a, "--status"), _opt(a, "--auto-complete")
             if (status or "").lower() == "completed" or (auto or "").lower() in ("true", "yes", "1"):
@@ -808,8 +1040,6 @@ def prod_candidates(ctx):
             pos = _positional(a[2:], {"-m", "--message", "--sha", "-R", "--repo"})
             out.append(Candidate("glab", seg, dir=seg.cwd, selector=pos[0] if pos else None,
                                  repo_arg=_opt(a[2:], "-R", "--repo")))
-        elif seg.argv0 == "git" and seg.git and seg.git.get("sub") == "push":
-            out.append(Candidate("git-push", seg, target=GitTarget(seg)))
     return out
 
 
@@ -955,17 +1185,28 @@ def _evaluate_candidate(ctx, c, deadline):
     note = " (project.json missing)" if wc is None else ""
     if c.fail:
         return _pg_block(None, "base", "cannot verify the production approval: " + c.fail)
+    if c.kind == "gh-ref":  # BUG-28: a branch written through the REST API, not a PR merge
+        if c.dst is None or "$" in c.dst or c.dst in prods:
+            return _pg_block(None, "base", "cannot verify the production approval: gh api writes the branch %s "
+                                           "directly; merge through a PR (gh pr merge)" % (c.dst or "?"))
+        return None
     if c.kind == "git-push":
         t = c.target
+        if any(_PUSH_CONFIG.match(x) for x in t.config):  # BUG-28
+            return _pg_block(None, "target", "cannot verify the production approval: `git -c` changes where the "
+                                             "push goes; rewrite the push without -c and with an explicit refspec")
         head_branch = t.branch(ctx)
         dests, flags = push_destinations(t.args, head_branch)
         if "--dry-run" in flags or "-n" in flags:
             return None
         hit = None
+        if not dests and "--tags" in flags:
+            return None  # BUG-29: only tags are pushed, no branch
         if "--all" in flags or "--mirror" in flags:
             hit = (head_branch, sorted(prods)[0] if prods else "?")
         elif not dests:
-            if head_branch in prods:
+            dests = implicit_push_dests(ctx, t, head_branch) if t.sub == "push" else []
+            if not dests and head_branch in prods:
                 hit = (head_branch, head_branch)
         for src, dst, _f, _d in dests:
             if "$" in dst or "`" in dst:
@@ -990,7 +1231,9 @@ def _evaluate_candidate(ctx, c, deadline):
     if cid is None:
         return _pg_block(None, "change", "cannot verify the production approval: cannot determine the change being "
                                          "released into %s (head %s; name the branch %s<id> or title the PR "
-                                         "'[Deploy] <id>')%s" % (base, head or "?", prefix, note))
+                                         "'[Deploy] <id>')%s. A project that does not release through Karvey "
+                                         "switches the gate off with enforcement.prod_gate_hook: false, merged to "
+                                         "%s" % (base, head or "?", prefix, note, base))  # BUG-30
     try:
         res = state_tool().check_prod(root, cid)
     except Exception as exc:
@@ -1009,7 +1252,11 @@ def _evaluate_candidate(ctx, c, deadline):
             warn.append("[karvey] prod-gate WARNING: other changes are deploying without a prod approval: %s"
                         % ", ".join(pending))
     if not res.get("ok"):
-        d = _pg_block(cid, ",".join(res.get("missing") or ["?"]), (res.get("reason") or "no production approval") + note)
+        how = (". To release: the human approves production in their own message (the hook prints '[karvey] approval "
+               "recorded (prod, %s, …)'), then run: karvey-state.py approve %s prod --by \"<human>\" --role human "
+               "--ref <D-NN or PR URL>" % (cid, cid))  # BUG-30
+        d = _pg_block(cid, ",".join(res.get("missing") or ["?"]),
+                      (res.get("reason") or "no production approval") + note + how)
         d.stdout = warn
         return d
     rec = {"change": cid, "approver": res.get("by"), "ref": res.get("ref"), "branch": base, "reason": "approved"}
@@ -1020,7 +1267,8 @@ def _evaluate_candidate(ctx, c, deadline):
 def prod_gate_enabled(ctx):
     """Runs on any command that could be a production merge (cheap test); the per-project
     switch (§3.5) is decided per candidate, so a disabled gate still prints its notice."""
-    return bool(_RAW_MERGE.search(ctx.payload.command or ""))
+    cmd = ctx.payload.command or ""
+    return bool(_RAW_MERGE.search(cmd) or _MAYBE_MERGE.search(cmd))
 
 
 def prod_gate(ctx):
@@ -1093,28 +1341,50 @@ def approval_hook(ctx):
 SUBAGENT_TOOLS = frozenset({"Agent", "Task"})
 SUBAGENT_BAN = "Do not write `docs/spec/project.json`. If a setting or a status map is missing, return the " \
                "proposed values to me and change no tracker status that needs them."
-_BAN_RE = re.compile(r"\b(do not|don't|never|must not)\s+(write|edit|modify|change|touch)\s+`?"
-                     r"(docs/spec/)?project\.json`?", re.I)
+# BUG-31: only the ban on docs/spec/project.json itself excuses a prompt ("do not edit project.json by hand"
+# does not); a target is the Karvey settings, not any "settings" (a settings page, .vscode/settings.json) nor
+# another tool's project.json; the verb must govern the target (no "for"/"about"/"from" in between).
+_BAN_RE = re.compile(r"\b(do not|don't|never|must not)\s+(write|edit|modify|change|touch)\s+`?docs/spec/project\.json`?",
+                     re.I)
 _SETTINGS_WRITE_RE = re.compile(
     r"\b(persist\w*|writ(e|es|ing)|sav(e|es|ing)|updat(e|es|ing)|stor(e|es|ing)|record(s|ing)?|"
     r"edit(s|ing)?|modif(y|ies|ying)|chang(e|es|ing)|authori[sz]\w*|set(s|ting)?)\b", re.I)
-_SETTINGS_TARGET_RE = re.compile(r"project\.json|\bsettings\b|\b(tracker|team|project)\s+setting\b|status(es)?\s+map|"
-                                 r"management\.statuses|"
-                                 r"\bstatus\s+mapping\b", re.I)
+_SETTINGS_TARGET_RE = re.compile(r"docs/spec/project\.json|(?<![\w/.-])project\.json|management\.statuses|"
+                                 r"\b(tracker|team|karvey|management)\s+settings?\b|\bproject'?s\s+settings\b|"
+                                 r"\bstatus(es)?\s+map(s|ping)?\b", re.I)
+_KARVEY_CONTEXT_RE = re.compile(r"\b(tracker|karvey|management|status(es)?|settings)\b", re.I)
+_NOT_THE_OBJECT_RE = re.compile(r"\b(for|about|from)\b", re.I)
 _NEGATION_RE = re.compile(r"\b(not|never|no|don't|doesn't|mustn't|cannot|can't|without)\b[\s\w`'-]{0,20}$", re.I)
+_WINDOW = 80
+
+
+def _normalise_quotes(text):
+    return text.replace("\u2019", "'").replace("\u2018", "'").replace("\u201c", '"').replace("\u201d", '"')
 
 
 def _sentences(text):
     return [s for s in re.split(r"(?<=[.;!?])\s+|\n+", text) if s.strip()]
 
 
+def _is_target(sentence, m):
+    """A settings target; a bare ``project.json`` counts only next to tracker/settings words (another
+    tool, e.g. a monorepo's ``apps/x/project.json``, has its own)."""
+    if m.group(0).lower() == "project.json":
+        return bool(_KARVEY_CONTEXT_RE.search(sentence))
+    return True
+
+
 def _allows_writing(sentence):
-    """A sentence naming the settings with a write/persist/authorise verb that is not negated just
-    before it ("do not write", "never change" …)."""
-    if not _SETTINGS_TARGET_RE.search(sentence):
-        return False
-    return any(not _NEGATION_RE.search(sentence[max(0, m.start() - 30):m.start()])
-               for m in _SETTINGS_WRITE_RE.finditer(sentence))
+    """A sentence where a write/persist/authorise verb, not negated just before it, governs a Karvey
+    settings target within the next few words ("persist the map to project.json")."""
+    for m in _SETTINGS_WRITE_RE.finditer(sentence):
+        if _NEGATION_RE.search(sentence[max(0, m.start() - 30):m.start()]):
+            continue
+        window = sentence[m.end():m.end() + _WINDOW]
+        for t in _SETTINGS_TARGET_RE.finditer(window):
+            if _is_target(sentence, t) and not _NOT_THE_OBJECT_RE.search(window[:t.start()]):
+                return True
+    return False
 
 
 def subagent_prompt(ctx):
@@ -1124,7 +1394,10 @@ def subagent_prompt(ctx):
     if p.tool_name not in SUBAGENT_TOOLS or ctx.root is None:
         return None
     prompt = (p.tool_input or {}).get("prompt")
-    if not isinstance(prompt, str) or not prompt.strip() or _BAN_RE.search(prompt):
+    if not isinstance(prompt, str) or not prompt.strip():
+        return None
+    prompt = _normalise_quotes(prompt)
+    if _BAN_RE.search(prompt):
         return None
     for s in _sentences(prompt):
         if _allows_writing(s):

@@ -48,7 +48,7 @@ class CommonRefusal(unittest.TestCase):
 
 class Targets(unittest.TestCase):
     CASES = {
-        "google-chat": (["spaces/AAAAQCj0Cjc", "spaces/a_b-c"],
+        "google-chat": (["spaces/AAAAexample1", "spaces/a_b-c"],
                         ["spaces/AAA; rm -rf ~", "spaces/", "rooms/AAA", "spaces/AAA/threads/x",
                          "spaces/" + "A" * 65, "-spaces/AAA", "spaces/$(id)"]),
         "slack": (["#dev-ops", "#a.b_c", "C0123ABCD", "C0123ABCD45"],
