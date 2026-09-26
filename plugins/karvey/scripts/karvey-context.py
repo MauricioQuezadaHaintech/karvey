@@ -1534,10 +1534,11 @@ def build_context(args, rd):
 
 
 def run(args):
-    root = pj.find_root(start=os.getcwd(), root=args.root)
-    if args.portfolio:  # the portfolio needs no current project when --file is given
+    if args.portfolio:  # with --file no project lookup at all: the view starts no process (REQ-W3-047)
+        root = None if args.file else pj.find_root(start=os.getcwd(), root=args.root)
         res = portfolio_view(args, root)
         return kl.EXIT_OK, res, [], render_portfolio(res)
+    root = pj.find_root(start=os.getcwd(), root=args.root)
     if root is None or not pj.spec_dir(root).is_dir():
         raise NotFound("no docs/spec or spec here (not a Karvey project): %s" % (args.root or os.getcwd()))
     rd = Reader(root)
