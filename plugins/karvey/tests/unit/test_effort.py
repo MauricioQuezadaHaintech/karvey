@@ -3,13 +3,17 @@
 @req REQ-W3-014 REQ-W3-015 REQ-W3-016 REQ-W3-017
 """
 import json
+import os
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import _path
 from karvey_lib import effort
+from karvey_lib import project as pj
+from _state import GOOD_SPEC, make_project, run_json
 
 FIX = _path.UNIT_DIR / "fixtures" / "effort"
 TA, TB = str(FIX / "transcript-a.jsonl"), str(FIX / "transcript-b.jsonl")
@@ -112,6 +116,79 @@ class Lib(unittest.TestCase):
         self.capture()
         self.assertEqual(self.close(review=12)["review_min"],
                          {"value": 12, "quality": "exact", "source": "stated at the gate"})
+
+
+class Command(unittest.TestCase):
+    """@req REQ-W3-014 REQ-W3-016 — ``karvey-state.py effort`` and the validate checks."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-effort-cli-"))
+        self.root = self.tmp / "proj"
+        self.spec = make_project(self.root, spec=dict(GOOD_SPEC))
+        self.env = mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(self.tmp / "state")})
+        self.env.start()
+        self.cost = pj.state_dir(self.root) / effort.CAPTURE_DIR
+
+    def tearDown(self):
+        self.env.stop()
+        shutil.rmtree(str(self.tmp), ignore_errors=True)
+
+    def capture(self, usd=2.25, transcript=TA, pct=12.0):
+        self.cost.mkdir(parents=True, exist_ok=True)
+        rec = {"root_key": effort.root_key(self.root), "usd": usd, "transcript": transcript, "context_pct": pct,
+               "context_tokens": 24000, "at": "2026-09-26T10:00:00-03:00"}
+        (self.cost / "sessA.json").write_text(json.dumps(rec), encoding="utf-8")
+
+    def data(self):
+        return json.loads(self.spec.read_text(encoding="utf-8"))
+
+    def test_runtime_with_cost_gives_exact_usd_tokens_and_review(self):
+        self.capture()
+        code, env = run_json("effort", "feat-a", "requirements", "--review-min", "7", "--root", str(self.root))
+        self.assertEqual(code, 0, env)
+        e = self.data()["effort"][0]
+        self.assertEqual((e["kind"], e["phase"]), ("phase", "requirements"))
+        self.assertEqual((e["usd"]["value"], e["usd"]["quality"]), (2.25, "exact"))
+        self.assertEqual((e["tokens"]["total"], e["tokens"]["quality"]), (2900, "exact"))
+        self.assertEqual(e["review_min"], {"value": 7, "quality": "exact", "source": "stated at the gate"})
+        self.assertTrue((self.cost / ("sessA" + effort.CHARGED_SUFFIX)).is_file())
+        code, env = run_json("validate", str(self.spec), "--strict", "--root", str(self.root))
+        self.assertEqual(code, 0, env["errors"])
+
+    def test_without_the_flag_review_is_na(self):
+        self.capture()
+        run_json("effort", "feat-a", "requirements", "--root", str(self.root))
+        self.assertEqual(self.data()["effort"][0]["review_min"]["quality"], "n/a")
+
+    def test_no_capture_is_na_statusline_not_installed_never_zero(self):
+        code, env = run_json("effort", "feat-a", "requirements", "--root", str(self.root))
+        self.assertEqual(code, 0)
+        e = self.data()["effort"][0]
+        self.assertEqual((e["usd"]["value"], e["usd"]["reason"]), (None, "statusline not installed"))
+
+    def test_a_red_context_advises_a_checkpoint(self):
+        self.capture(pct=55.0)
+        code, env = run_json("effort", "feat-a", "requirements", "--root", str(self.root))
+        self.assertIn("fresh session", env["result"]["advice"])
+
+    def test_unknown_phase_is_usage(self):
+        code, _ = run_json("effort", "feat-a", "nope", "--root", str(self.root))
+        self.assertEqual(code, 2)
+
+    def test_validate_reports_a_mixed_entry_and_a_non_phase_kind(self):
+        d = self.data()
+        d["judge_runs"] = [{"phase": "requirements", "lens": "domain", "model": "model-a", "intra_model": True,
+                            "verdict": "pass", "at": AT, "usd": 0.4}]
+        d["effort"] = [{"kind": "phase", "phase": "requirements", "at": AT, "usd": {"value": 0.4, "quality": "exact"},
+                        "tokens": {"quality": "n/a"}, "review_min": {"value": None, "quality": "n/a"}},
+                       {"kind": "judge", "phase": "requirements", "at": AT, "usd": {"value": 1, "quality": "exact"},
+                        "tokens": {"quality": "n/a"}, "review_min": {"value": None, "quality": "n/a"}}]
+        self.spec.write_text(json.dumps(d, indent=2), encoding="utf-8")
+        code, env = run_json("validate", str(self.spec), "--strict", "--root", str(self.root))
+        msgs = [w["message"] for w in env["warnings"]]
+        self.assertTrue(any(m.startswith("mixed entry") for m in msgs), msgs)
+        self.assertTrue(any("kind 'judge'" in m for m in msgs), msgs)
+        self.assertEqual(code, 0, env["errors"])
 
 
 if __name__ == "__main__":

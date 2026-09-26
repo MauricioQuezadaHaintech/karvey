@@ -24,6 +24,7 @@ Commands:
   check-prod <change>                   the prod-gate's question (REQ-W1-023)
   lane <change> set|raise|lower <lane> [--answers F] [--reason R] [--by --role human --ref]   (lower: the human)
   judge-run <change> <phase> --from FILE    judge_runs[] (model and intra_model required)
+  effort <change> <phase> [--review-min N]  effort[] of the closing phase from the statusline capture (wave3 §1.9)
   lane-check <change> --base REF [--head REF] [--finding F-NN]   (lane.diff hits → changes/{id}/checks.jsonl)
   lane-evidence <change> --bug BUG-NN --finding F-NN --regression-test PATH::NAME   (patch / hotfix)
   deploy-record <change> --env --version --verification pass|regression|not-evaluated [--rollback] [--evidence]
@@ -42,7 +43,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import approval, atomicio, gitlog, judges as jd, lanes as ln, modes, project as pj  # noqa: E402
+from karvey_lib import approval, atomicio, effort as ef, gitlog, judges as jd, lanes as ln, modes, project as pj  # noqa: E402
 from karvey_lib import schema_lite as sl  # noqa: E402
 
 TOOL = "karvey-state"
@@ -424,6 +425,28 @@ def semantic_spec(data, strict, file):
     return out
 
 
+def semantic_effort(data, file):
+    """wave3 §1.9 (REQ-W3-016): ``effort[]`` holds only ``kind: phase`` entries and no judge figure. Warnings in
+    every mode (check ``effort.mixed``, warn in 4.1): a 4.0 file has no ``effort`` at all."""
+    out = []
+    eff = data.get("effort")
+    if not isinstance(eff, list):
+        return out
+    judge = {(j.get("phase"), j.get("at"), j.get("usd")) for j in data.get("judge_runs") or [] if isinstance(j, dict)}
+    for i, e in enumerate(eff):
+        if not isinstance(e, dict):
+            continue
+        if e.get("kind") != "phase":
+            out.append(kl.issue("effort.kind", "effort entry of kind %r: only phase entries belong here (judge cost "
+                                "stays in judge_runs)" % (e.get("kind"),), severity="warning", file=file,
+                                path="$.effort[%d].kind" % i, expected="phase", got=e.get("kind")))
+        usd = e.get("usd") if isinstance(e.get("usd"), dict) else {}
+        if (e.get("phase"), e.get("at"), usd.get("value")) in judge:
+            out.append(kl.issue("effort.mixed", "mixed entry: effort[%d] repeats a judge_runs record of phase %r"
+                                % (i, e.get("phase")), severity="warning", file=file, path="$.effort[%d]" % i))
+    return out
+
+
 def semantic_project(data, strict, file):
     out = []
     if isinstance(data.get("management"), str) and data["management"] == "none":
@@ -502,6 +525,7 @@ def validate_data(data, kind, strict, file=None):
     if kind == "spec":
         issues = _legacy_rewrite(issues, data, strict, file)
         issues += semantic_spec(data, strict, file)
+        issues += semantic_effort(data, file)
         issues = _downgrade_pre_312(issues, data, file)
     else:
         issues += semantic_project(data, strict, file)
@@ -2073,12 +2097,51 @@ def cmd_outcome(args, root):
         args.change, args.outcome, args.target, args.kind, reason)
 
 
+def cmd_effort(args, root):
+    """``effort <change> <phase> [--review-min N]``: append the phase's interval to ``effort[]`` (wave3 §1.9,
+    REQ-W3-014, 015) — run last by the gate-close script. The charged file is written after the spec.json write."""
+    if args.phase not in phase_ids():
+        raise Usage("unknown phase %r (one of %s)" % (args.phase, ", ".join(phase_ids())))
+    if args.review_min is not None and args.review_min < 0:
+        raise Usage("--review-min must be >= 0")
+    cost_dir = pj.state_dir(root) / ef.CAPTURE_DIR
+    rkey = ef.root_key(root)
+    now = now_iso()
+    entry, charge = ef.compute(cost_dir, rkey, args.phase, now, args.review_min)
+
+    def mutate(data):
+        log = data.get("effort") if isinstance(data.get("effort"), list) else []
+        log.append(entry)
+        data["effort"] = log
+        data["updated_at"] = now
+        return {"change": args.change, "phase": args.phase, "entry": entry}
+
+    path, res, _ = transact(root, args.change, mutate)
+    if charge is not None and entry.get("session"):
+        ef.write_charged(cost_dir, entry["session"], charge)
+    res["file"] = rel(root, path)
+    red = (kl.defaults().get("context_pct") or {}).get("red")
+    res["advice"] = ef.rotation_advice(cost_dir, rkey, red)
+
+    def fmt(v, unit):
+        if v.get("value") is None and "total" not in v:
+            return "%s n/a — %s" % (unit, v.get("reason", ""))
+        val = v.get("value", v.get("total"))
+        return "%s %s (%s%s)" % (unit, val, v["quality"], (", " + v["reason"]) if v.get("reason") else "")
+    human = "%s %s: %s · %s · review min %s" % (
+        args.change, args.phase, fmt(entry["usd"], "US$"), fmt(entry["tokens"], "tokens"),
+        entry["review_min"]["value"] if entry["review_min"]["value"] is not None else "n/a")
+    if res["advice"]:
+        human += "\n" + res["advice"]
+    return kl.EXIT_OK, res, [], [], human
+
+
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
             "check-prod": cmd_check_prod, "outcome": cmd_outcome, "approve-gate": cmd_approve_gate,
             "gate": cmd_gate,
             "deploy-record": cmd_deploy_record, "lane": cmd_lane, "lane-evidence": cmd_lane_evidence,
-            "lane-check": cmd_lane_check, "judge-run": cmd_judge_run}
+            "lane-check": cmd_lane_check, "judge-run": cmd_judge_run, "effort": cmd_effort}
 
 
 def build_parser():
@@ -2183,6 +2246,10 @@ def build_parser():
     jr.add_argument("change")
     jr.add_argument("phase")
     jr.add_argument("--from", dest="source", required=True, help="the run records file written by collect")
+    ef_ = sub.add_parser("effort", parents=[common], help="append the closing phase's cost interval to effort[]")
+    ef_.add_argument("change")
+    ef_.add_argument("phase")
+    ef_.add_argument("--review-min", type=int, default=None, help="review minutes the human states at the gate")
     dr = sub.add_parser("deploy-record", parents=[common], help="append a deploys[] entry (env, version, verification)")
     dr.add_argument("change")
     dr.add_argument("--env")
