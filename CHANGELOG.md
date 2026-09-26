@@ -4,6 +4,48 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+### Wave 2 (`wave2-structural`) — summary for the release block
+The cost of the process now scales with the size and risk of the change, and every gate, lane and judge is measured
+from the change's own artifacts. Every new check ships **advisory or warn** in this release; no Wave 1 allow turns
+into a block (guard table `compat.json`). The version number and date are set at release.
+
+**Check modes** (`plugins/karvey/schemas/check-modes.json`; a project overrides one with `project.json:checks.{id}`):
+
+| Check | Would refuse | This release | 4.0 |
+|---|---|---|---|
+| `schema.strict` | `lane`, `phase_history`, `skipped` missing; legacy shapes | warn | blocking |
+| `gates.merged` | (a default) three human gates instead of seven | granular | merged |
+| `release.manifest` | unmapped commit or change without QA in the release manifest | warn | blocking |
+| `lane.diff` | the diff exceeds the lane's criteria | warn | warn |
+| `coverage.requirements` | requirement without a green test or a `manual` exception | warn | warn |
+| `trailer.guard` | commit on a change branch without `Karvey-Change` | off | off |
+| `judges.mode` | open Critical/High judge finding at approve | advisory | advisory |
+| `security.tools` | a security category not evaluated | advisory | advisory |
+| `postdeploy.contract` | deploy without a post-deploy contract | advisory | advisory |
+
+**Upgrade (manual, until the project-upgrade catalogue carries these steps;** declared in
+`docs/spec/changes/wave2-structural/upgrade-steps.handoff.json`**):**
+- `lane-infer` — run `karvey-state.py validate --all --fix`, read the proposed `lane` of each active change, then
+  `--fix --accept-proposed` (from `type`, a generated mockup or the recorded skips; shown as a diff first).
+- `approvals-deploy-retire` — the same `--fix` moves a legacy `approvals.deploy` into `deploys[]` when it holds data
+  (never an approval), else removes it.
+- `branch-flow-mode` — set `project.json:branch_flow.mode`: `trunk` when integration = production (recommended),
+  else `env-branches`.
+- `knowledge-sync-declare` — if the project uses graphify (`graphify-out/` exists), set `knowledge_sync: graphify`:
+  an absent key now means `none`.
+- `judges-budget-ignored` — remove `project.json:judges.budget` if present (cost is measured, never capped).
+- `evidence-into-changes` — split a shared `docs/test_evidence.md` / `docs/test_plan.md` into
+  `docs/spec/changes/{id}/` (the human reviews the split).
+- `checks-overrides-known` — keep only `project.json:checks` keys that exist in `check-modes.json`.
+- `global-patch-lane` — optionally add the `patch`-lane bullet to your own global instructions (a diff you apply).
+- 4.0 only: `strict-schema-ready` (every change passes `validate --strict`) and `manifest-unmapped` (list the
+  commits without a trailer before the first blocking release).
+
+**3.13 → 4.0.** 4.0 flips exactly three defaults — `schema.strict`, `gates.merged` and `release.manifest` — and
+nothing else. It is proposed only when `karvey-context.py --readiness` shows at least 4 measured changes, with that
+report attached, and its approval is its own decision. The checks beyond those three stay warn or advisory in 4.0
+until a later decision reads the readiness data. The Wave 1 deprecated shims are removed in the same release.
+
 ### Added
 - E1.F1.T1 — real hook payloads captured headless from CLI 2.1.281 into `plugins/karvey/tests/fixtures/payloads/` (9 sanitised fixtures); F-02 closed with a result per assumption A-1..A-10, A-8 nuance logged as F-04. Why: freeze the parser and guard tables on the real contract, not on docs.
 - E1.F2.T1 — `karvey_lib` package: exit codes, `--json` envelope and `defaults.json` (8 h rotation, 120 min marker, 7 days stalled, ±30 % over 3 changes). Why: one contract and one place for the D-06/D-07 values (REQ-W1-049).
@@ -138,6 +180,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 - wave2-structural E1.F13.T4 — this repository on the Wave 2 settings, after its 2026-09-25 baseline (L-48): `validate --fix --accept-proposed` on the active changes (`team-adapters`: `lane: standard` proposed from no mockup recorded, its `approvals.deploy` moved to `deploys[]` as `not-evaluated`; `wave1-hardening`: the empty `approvals.deploy` removed), the archived `team-layer` gets only its proposed `lane`, and `project.json` sets `branch_flow.mode: trunk`, `gates: merged` and `judges` (enabled, advisory, cross-model preferred); `validate --all` 0 errors. Why: the method must run on itself before it asks projects to (REQ-W2-006, REQ-W2-088). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5.
 - wave2-structural E1.F13.T5 — hand-off `docs/spec/changes/wave2-structural/upgrade-steps.handoff.json`: the ten project-upgrade steps of architecture §7.4 (`lane-infer`, `approvals-deploy-retire`, `branch-flow-mode`, `knowledge-sync-declare`, `judges-budget-ignored`, `evidence-into-changes`, `checks-overrides-known`, `global-patch-lane`, and the 4.0-only `strict-schema-ready`, `manifest-unmapped`) in the catalogue's field shape, `since` a placeholder fixed at release, status `declared` — no engine code. Why: a release that changes the upgrade surface must declare how a project catches up; the catalogue entries follow once both changes are on the main branch (REQ-W2-083, 084, 087). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5.
 - wave2-structural E1.F13.T6 — whole-repo gate on the change, every command through `karvey-evidence.py` (`evidence.jsonl` 1–10): unit, regression, the 406 guard-table cases (JUnit under `test-results/`), `test-hooks.sh`, the page tests, lint 0 errors, `validate --all` 0 errors, and `karvey-trace.py wave2-structural --write --check` → `traceability.md`, `coverage: 97/97`; the trace also reads JSON test tables and manual scripts (F-07), this repo declares its `tests.globs`, and tests name the MODIFIED Wave 1 requirements they verify. Why: the release needs one reproducible, cited gate result, not a session's memory (REQ-W2-059, 062, 088). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5.
+- wave2-structural E1.F13.T7 — release docs: the `[Unreleased]` block opens with the Wave 2 summary — the check-mode table (this release vs 4.0), the manual Upgrade list from the upgrade-steps hand-off (`lane-infer`, `approvals-deploy-retire`, `branch-flow-mode`, …) and the 3.13 → 4.0 note (three defaults flip, only after ≥ 4 measured changes, its own decision) — with no version or date; `docs/karvey.html` counts fixed in the five languages (33 skills, 19 support, 26 rules) with the `karvey-judges` card and the `gates`, `judges`, `lanes`, `state-machine` rule rows and chips (F-05); PLAN feature states updated. Why: the release notes must say what turns on, when, and how a project catches up (REQ-W2-083, 085, 086). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5.
 - wave2-structural F-06 — merged gates can be walked: with `gates: merged`, `advance` and `next` pass a generated phase that does not close its gate when the target is in the same gate (architecture → tasks inside *how*); leaving the gate still needs `approve-gate`; granular mode is unchanged. Why: `advance tasks` refused on the pending architecture approval, so a merged gate with more than one phase was unreachable (found by the Wave 2 flow test; regression `test_state_gates.py` `MergedGateAdvance`). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5.
 
 ### Fixed

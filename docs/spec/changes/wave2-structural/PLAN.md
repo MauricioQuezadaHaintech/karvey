@@ -48,18 +48,18 @@ manifest makes "what was approved" equal "what shipped"; metrics make every one 
 | Feature | Area | Requirements covered | Panel / sources | Status |
 |---------|------|----------------------|-----------------|--------|
 | F1 | Flow metrics, gate outcomes, deploy records, retro | REQ-W2-001..010 | R-14 · DM-11, PM-05, PM-12 · D-24, D-30 · BL-17, BL-45 | ✅ |
-| F2 | Lanes with objective criteria, official `patch` lane | REQ-W2-011..021 | R-09 · DM-01, PM-09, H-03, H-04 · D-25, D-29 · BL-12 | ⬜ |
+| F2 | Lanes with objective criteria, official `patch` lane | REQ-W2-011..021 | R-09 · DM-01, PM-09, H-03, H-04 · D-25, D-29 · BL-12 | ✅ |
 | F3 | Advisory judges (incl. the qa fiscal) | REQ-W2-022..033 | R-11 / JU-01 · AG-12, DM-06, DM-08, B-12 · D-23, D-30 · BL-14 | ✅ |
 | F4 | Three merged human gates, one question, `-y` = auto | REQ-W2-034..042 | R-10 · DM-06, AG-08, H-06 · D-22 · BL-13 | ✅ |
-| F5 | Release per change: trailer, manifest, integration PR, trunk | REQ-W2-043..053 | R-08 · DM-03, PM-04, H-21, F-28..F-30 · D-26 · BL-11, BL-46..BL-48 | ⬜ |
+| F5 | Release per change: trailer, manifest, integration PR, trunk | REQ-W2-043..053 | R-08 · DM-03, PM-04, H-21, F-28..F-30 · D-26 · BL-11, BL-46..BL-48 | ✅ |
 | F6 | Living spec merged before production | REQ-W2-054..056 | R-17 (timing) · DM-09 · BL-20 | ✅ |
-| F7 | Test-first and traceability | REQ-W2-057..063 | R-12 · DM-07 · BL-15 | ⬜ |
-| F8 | Deterministic security tools | REQ-W2-064..068 | R-13 · DM-08 · BL-16 | ⬜ |
+| F7 | Test-first and traceability | REQ-W2-057..063 | R-12 · DM-07 · BL-15 | ✅ |
+| F8 | Deterministic security tools | REQ-W2-064..068 | R-13 · DM-08 · BL-16 | ✅ |
 | F9 | Release-gate, id, health and evidence scripts | REQ-W2-069..074 | R-20 · AG-07, AG-10, AG-12, PM-13, F-26 · BL-23, BL-44 | ✅ |
-| F10 | Post-deploy verification with thresholds | REQ-W2-075..078 | R-23 · DM-10 · BL-26 | ⬜ |
+| F10 | Post-deploy verification with thresholds | REQ-W2-075..078 | R-23 · DM-10 · BL-26 | ✅ |
 | F11 | Knowledge sync optional | REQ-W2-079 | R-16 · D-27 | ✅ |
-| F12 | Deferred Wave 1 backlog | REQ-W2-080..082 | F-31, F-32, F-33 · BL-49, BL-50 | ⬜ |
-| F13 | Rollout 3.13 → 4.0 and dogfooding | REQ-W2-083..088 | Ola 2 plan · D-24, D-26 | ⬜ |
+| F12 | Deferred Wave 1 backlog | REQ-W2-080..082 | F-31, F-32, F-33 · BL-49, BL-50 | ✅ |
+| F13 | Rollout 3.13 → 4.0 and dogfooding | REQ-W2-083..088 | Ola 2 plan · D-24, D-26 | 🙋 agent tasks ✅; T8, T9 await the owner |
 
 Internal order for tasks (panel Ola 2): F1 → F2 + F3 → F4 + F5 → F6..F12 → F13 (4.0 is a later release of its own).
 
@@ -173,7 +173,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F13.T4 [Backend] This repo: `validate --fix --accept-proposed` on its own changes, `branch_flow.mode: trunk`, then `gates: merged` and `judges` (after the baseline, L-48) — est: 6min (depends E1.F1.T9, E1.F13.T1, E1.F4.T2, E1.F5.T7)
 - [x] E1.F13.T5 [Backend] Hand-off of the §7.4 upgrade steps for project-upgrade's catalogue (declarations only) — est: 8min (depends E1.F13.T1, E1.F5.T7)
 - [x] E1.F13.T6 [Test] Whole-repo gate: lint 0 errors, every unit and regression suite, every table, `validate --all`, `karvey-trace.py wave2-structural --write --check`, manual scripts run headless (D-19) — est: 10min (depends every other agent task)
-- [ ] E1.F13.T7 [Backend] Release docs: `[Unreleased]` summary (modes table, the manual Upgrade list from the hand-off, the 3.13 → 4.0 note), no version or date — est: 6min (depends E1.F13.T6, E1.F13.T5)
+- [x] E1.F13.T7 [Backend] Release docs: `[Unreleased]` summary (modes table, the manual Upgrade list from the hand-off, the 3.13 → 4.0 note), no version or date — est: 6min (depends E1.F13.T6, E1.F13.T5)
 - [ ] E1.F13.T8 [human] Apply the `patch`-lane bullet to the owner's global instructions — executor: the owner (depends E1.F2.T8)
 - [ ] E1.F13.T9 [human] The prod OK for the release that ships this change (D-10) — executor: the owner — never delegated (depends E1.F13.T7)
 
@@ -250,7 +250,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F13.T4 [Backend] | ✅ done | 6 | 6 | 0 | archived team-layer gets `lane` only (its legacy approvals.deploy is kept as recorded history) |
 | E1.F13.T5 [Backend] | ✅ done | 8 | 5 | 0 |  |
 | E1.F13.T6 [Test] | ✅ done | 10 | 20 | 0 | coverage 97/97 = 88 REQ-W2 + 9 MODIFIED REQ-W1 (F-07); manual scripts not run: owner task per D-19 (no session may write under the user config) |
-| E1.F13.T7 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F13.T7 [Backend] | ✅ done | 6 | 9 | 0 | F-05 fixed here: page counts 33 skills / 19 support / 26 rules in the five languages, plus the karvey-judges card and the four rule rows |
 | E1.F13.T8 [human] | ⬜ todo | — | — | — | executor: the owner |
 | E1.F13.T9 [human] | ⬜ todo | — | — | — | executor: the owner — never delegated |
 

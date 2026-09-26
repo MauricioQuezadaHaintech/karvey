@@ -379,9 +379,9 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
     </aside>
   </div>
   <ul class="counts" aria-label="Plugin figures">
-    <li><b>32</b><span>skills = 1 orchestrator + 13 phases + 18 support</span></li>
+    <li><b>33</b><span>skills = 1 orchestrator + 13 phases + 19 support</span></li>
     <li><b>13</b><span>pipeline phases (0–12)</span></li>
-    <li><b>22</b><span>shared rules in <code>rules/</code></span></li>
+    <li><b>26</b><span>shared rules in <code>rules/</code></span></li>
     <li><b>1 + 2</b><span>hook active on install + bundled opt-in scripts (and 2 more described in the rule)</span></li>
   </ul>
 </section>
@@ -411,7 +411,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
   <div class="org" role="group" aria-label="Org chart of the karvey plugin">
     <div class="org-node">
       <div class="t">Plugin <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">marketplace <span class="mono">karvey-methods</span> · 32 skills · 22 rules · hooks</div>
+      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 skills · 26 rules · hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -443,11 +443,11 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
 
       <!-- (b) Support layer -->
       <section class="branch" aria-labelledby="en-org-b">
-        <h3 id="en-org-b"><span class="l" aria-hidden="true">b</span> Support layer · 18 skills</h3>
+        <h3 id="en-org-b"><span class="l" aria-hidden="true">b</span> Support layer · 19 skills</h3>
         <h4>Iteration / diagnosis</h4>
         <ul class="chips"><li>iterate</li><li>investigate</li></ul>
         <h4>Quality / review</h4>
-        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li></ul>
+        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li><li>judges</li></ul>
         <h4>Eyes / evidence</h4>
         <ul class="chips"><li>browse</li></ul>
         <h4>State / handoff</h4>
@@ -468,7 +468,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
 
       <!-- (c) Rules -->
       <section class="branch" aria-labelledby="en-org-c">
-        <h3 id="en-org-c"><span class="l" aria-hidden="true">c</span> Shared rules · 22</h3>
+        <h3 id="en-org-c"><span class="l" aria-hidden="true">c</span> Shared rules · 26</h3>
         <h4>Project and configuration</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>Team and tools (3.10)</h4>
@@ -482,6 +482,8 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
         <h4>Collaboration</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team (optional)</li></ul>
+        <h4>Flow, lanes and gates</h4>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -771,7 +773,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
 <!-- 6. SUPPORT LAYER -->
 <section class="block" id="en-support" aria-labelledby="en-t-sup">
   <p class="eyebrow">06 · At any time</p>
-  <h2 id="en-t-sup">Support layer · 18 support skills</h2>
+  <h2 id="en-t-sup">Support layer · 19 support skills</h2>
   <p class="lede">They are not phases: they do not push <code>spec.json:phase</code> forward. The one exception is <code>karvey-iterate</code>, which may make the controlled <em>backward</em> transition of the revision sub-cycle. They honour the same gates and hooks.</p>
 
   <div class="filter" id="en-sup-filter" data-filter="sup" hidden>
@@ -787,6 +789,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
     <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">quality</span><p>A 0–10 quality score (type-check, lint, tests, dead code) with a trend, plus method readiness: skills installed and pinned inputs (<code>repo path @commit</code>) still current.</p><p class="small muted"><b>When:</b> periodic check-ups or multi-repo work.</p></article>
     <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">review</span><p>Reviews the developer experience: walks the real onboarding, measures time-to-hello-world and finds friction and “docs that lie”. Plan and live modes.</p><p class="small muted"><b>When:</b> auditing onboarding or DX.</p></article>
     <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">review</span><p>Cycle retrospective: velocity, test health, per-person breakdown, streaks and improvement opportunities from the commit history.</p><p class="small muted"><b>When:</b> closing a cycle (recommended at archive).</p></article>
+    <article class="card" data-f><h3><code>karvey-judges</code></h3><span class="tag s">review</span><p>Advisory judges at the cheap end of the cycle: clean-context subagents with Read/Grep/Glob only read a closed list of inputs and a rubric per lens (requirements, architecture, and QA with the fiscal); a script collects their verdicts, citations and cost into <code>findings.md</code> and <code>judge_runs</code>.</p><p class="small muted"><b>When:</b> before the gate of requirements, architecture and QA; never a substitute for the human.</p></article>
     <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">eyes</span><p>Gives the agent eyes in the real runtime: browser (web), simulator or device (mobile), terminal (CLI). Click, screenshot, inspect; imports cookies for authenticated views.</p><p class="small muted"><b>When:</b> to see what the user sees; it also writes to <code>findings.md</code>.</p></article>
     <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">state / handoff</span><p><code>save</code> / <code>restore</code> of the change’s checkpoint <strong>and the agent’s handoff</strong>: identity, manifest, board, checklist, measured repo state (<code>state.json</code>), standing decisions and scheduled tasks.</p><p class="small muted"><b>When:</b> rotating a session or handing work over, with one agent or several.</p></article>
     <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">documentation</span><p>Documentation engineer: generates Diátaxis docs (tutorial, how-to, reference, explanation) from the code, updates stale docs and exports Markdown to PDF.</p><p class="small muted"><b>When:</b> after a release (recommended at archive).</p></article>
@@ -834,7 +837,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
 <!-- 7. RULES -->
 <section class="block" id="en-rules" aria-labelledby="en-t-rules">
   <p class="eyebrow">07 · Common contract</p>
-  <h2 id="en-t-rules">Shared rules · 22</h2>
+  <h2 id="en-t-rules">Shared rules · 26</h2>
   <p class="lede">They live in <code>plugins/karvey/skills/karvey/rules/</code>. Skills cite them instead of repeating them; local copies must be byte-for-byte identical to the canonical one.</p>
 
   <div class="filter" id="en-rules-filter" data-filter="rules" hidden>
@@ -869,6 +872,10 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
         <tr><td><code>verification.md</code></td><td>18 failure modes that make a green report false (a citation is not the thing cited, exit 0 is not success, a green test on code nobody calls…).</td><td>every phase (before saying “done”), guard, qa, health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>Multi-agent and multi-repo work: parent/child changes, <code>D-NN</code> decisions, <code>@commit</code>-pinned inputs, approvals with who and where, <code>[human]</code> tasks, <code>ops</code> and <code>hotfix</code> types, docs-only PRs.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health and every gate</td></tr>
         <tr><td><code>team.md</code> <span class="tag">optional</span></td><td>The agent-team layer: <code>team.json</code>, roles, rotation, addressing, minimal communication and measured cost.</td><td>checkpoint (handoff), team, decisions, context</td></tr>
+        <tr><td><code>gates.md</code></td><td>The one closing block of every phase skill: three merged human gates (<em>what</em>, <em>how</em>, <em>release</em>) or seven granular ones, one question per gate, <code>-y</code> = <code>role: auto</code> and never production.</td><td>every phase</td></tr>
+        <tr><td><code>judges.md</code></td><td>The judge prompt template (Read/Grep/Glob only, no edits), the output contract and the rubric per lens under <code>rules/judges/</code>.</td><td>requirements, architecture, qa</td></tr>
+        <tr><td><code>lanes.md</code></td><td>The six lanes (patch, standard, feature-ui, ops, hotfix, docs): which phases each runs or skips, objective admission criteria and the official <code>patch</code> path.</td><td>init, every phase</td></tr>
+        <tr><td><code>state-machine.md</code></td><td>The phase table as data: skill, approval key, gate, skippable, produces and reads; edges and reopen targets.</td><td>every phase</td></tr>
       </tbody>
     </table>
   </div>
@@ -1209,9 +1216,9 @@ claude plugin update karvey@karvey-methods</code></pre>
     </aside>
   </div>
   <ul class="counts" aria-label="Cifras del plugin">
-    <li><b>32</b><span>skills = 1 orquestador + 13 fases + 18 de apoyo</span></li>
+    <li><b>33</b><span>skills = 1 orquestador + 13 fases + 19 de apoyo</span></li>
     <li><b>13</b><span>fases del pipeline (0–12)</span></li>
-    <li><b>22</b><span>reglas compartidas en <code>rules/</code></span></li>
+    <li><b>26</b><span>reglas compartidas en <code>rules/</code></span></li>
     <li><b>1 + 2</b><span>hook activo al instalar + scripts opt-in incluidos (y 2 más descritos en la regla)</span></li>
   </ul>
 </section>
@@ -1241,7 +1248,7 @@ claude plugin update karvey@karvey-methods</code></pre>
   <div class="org" role="group" aria-label="Organigrama del plugin karvey">
     <div class="org-node">
       <div class="t">Plugin <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">marketplace <span class="mono">karvey-methods</span> · 32 skills · 22 reglas · hooks</div>
+      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 skills · 26 reglas · hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -1273,11 +1280,11 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (b) Capa transversal -->
       <section class="branch" aria-labelledby="es-org-b">
-        <h3 id="es-org-b"><span class="l" aria-hidden="true">b</span> Capa transversal · 18 skills</h3>
+        <h3 id="es-org-b"><span class="l" aria-hidden="true">b</span> Capa transversal · 19 skills</h3>
         <h4>Iteración / diagnóstico</h4>
         <ul class="chips"><li>iterate</li><li>investigate</li></ul>
         <h4>Calidad / revisión</h4>
-        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li></ul>
+        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li><li>judges</li></ul>
         <h4>Ojos / evidencia</h4>
         <ul class="chips"><li>browse</li></ul>
         <h4>Estado / handoff</h4>
@@ -1298,7 +1305,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (c) Reglas -->
       <section class="branch" aria-labelledby="es-org-c">
-        <h3 id="es-org-c"><span class="l" aria-hidden="true">c</span> Reglas compartidas · 22</h3>
+        <h3 id="es-org-c"><span class="l" aria-hidden="true">c</span> Reglas compartidas · 26</h3>
         <h4>Proyecto y configuración</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>Equipo y herramientas (3.10)</h4>
@@ -1312,6 +1319,8 @@ claude plugin update karvey@karvey-methods</code></pre>
         <h4>Colaboración</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team (opcional)</li></ul>
+        <h4>Flujo, carriles y gates</h4>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -1601,7 +1610,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 6. CAPA TRANSVERSAL -->
 <section class="block" id="es-support" aria-labelledby="es-t-sup">
   <p class="eyebrow">06 · En cualquier momento</p>
-  <h2 id="es-t-sup">Capa transversal · 18 skills de apoyo</h2>
+  <h2 id="es-t-sup">Capa transversal · 19 skills de apoyo</h2>
   <p class="lede">No son fases: no empujan <code>spec.json:phase</code> hacia adelante. La única excepción es <code>karvey-iterate</code>, que puede hacer la transición controlada <em>hacia atrás</em> del sub-ciclo de revisión. Respetan las mismas compuertas y hooks.</p>
 
   <div class="filter" id="es-sup-filter" data-filter="sup" hidden>
@@ -1617,6 +1626,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">calidad</span><p>Puntaje 0–10 de calidad (type-check, lint, tests, código muerto) con tendencia, más preparación del método: skills instalados e inputs fijados (<code>repo path @commit</code>) vigentes.</p><p class="small muted"><b>Cuándo:</b> chequeo periódico o trabajo multi-repo.</p></article>
     <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">revisión</span><p>Revisa la experiencia del desarrollador: recorre el onboarding real, mide time-to-hello-world y encuentra fricciones y «docs que mienten». Modos plan y live.</p><p class="small muted"><b>Cuándo:</b> auditar onboarding o DX.</p></article>
     <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">revisión</span><p>Retrospectiva del ciclo: velocidad, salud de tests, desglose por persona, rachas y oportunidades de mejora desde el historial de commits.</p><p class="small muted"><b>Cuándo:</b> al cerrar un ciclo (recomendado en archive).</p></article>
+    <article class="card" data-f><h3><code>karvey-judges</code></h3><span class="tag s">revisión</span><p>Jueces consultivos en el extremo barato del ciclo: subagentes de contexto limpio, solo con Read/Grep/Glob, leen una lista cerrada de insumos y una rúbrica por lente (requisitos, arquitectura y QA con el fiscal); un script recoge sus veredictos, citas y costo en <code>findings.md</code> y <code>judge_runs</code>.</p><p class="small muted"><b>Cuándo:</b> antes del gate de requisitos, arquitectura y QA; nunca reemplaza al humano.</p></article>
     <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">ojos</span><p>Le da ojos al agente en el runtime real: navegador (web), simulador o dispositivo (móvil), terminal (CLI). Clic, captura, inspección; importa cookies para vistas autenticadas.</p><p class="small muted"><b>Cuándo:</b> ver lo que ve el usuario; también escribe en <code>findings.md</code>.</p></article>
     <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">estado / handoff</span><p><code>save</code> / <code>restore</code> del checkpoint del cambio <strong>y del handoff del agente</strong>: identidad, manifiesto, tablero, checklist, estado medido de los repos (<code>state.json</code>), decisiones vigentes y tareas programadas.</p><p class="small muted"><b>Cuándo:</b> al rotar sesión o traspasar trabajo, con uno o varios agentes.</p></article>
     <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">documentación</span><p>Ingeniero de documentación: genera docs Diátaxis (tutorial, how-to, referencia, explicación) desde el código, actualiza docs desfasadas y exporta Markdown a PDF.</p><p class="small muted"><b>Cuándo:</b> tras lo liberado (recomendado en archive).</p></article>
@@ -1664,7 +1674,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 7. REGLAS -->
 <section class="block" id="es-rules" aria-labelledby="es-t-rules">
   <p class="eyebrow">07 · Contrato común</p>
-  <h2 id="es-t-rules">Reglas compartidas · 22</h2>
+  <h2 id="es-t-rules">Reglas compartidas · 26</h2>
   <p class="lede">Viven en <code>plugins/karvey/skills/karvey/rules/</code>. Los skills las citan en vez de repetirlas; las copias locales deben ser idénticas byte a byte a la canónica.</p>
 
   <div class="filter" id="es-rules-filter" data-filter="rules" hidden>
@@ -1699,6 +1709,10 @@ claude plugin update karvey@karvey-methods</code></pre>
         <tr><td><code>verification.md</code></td><td>18 modos de falla que vuelven falso un reporte en verde (una cita no es lo citado, exit 0 no es éxito, un test verde sobre código que nadie llama…).</td><td>todas las fases (antes de decir «listo»), guard, qa, health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>Trabajo multi-agente y multi-repo: cambios padre/hijo, decisiones <code>D-NN</code>, inputs fijados <code>@commit</code>, aprobaciones con quién y dónde, tareas <code>[human]</code>, tipos <code>ops</code> y <code>hotfix</code>, PR solo docs.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health y todo gate</td></tr>
         <tr><td><code>team.md</code> <span class="tag">opcional</span></td><td>Capa de equipo de agentes: <code>team.json</code>, roles, rotación, direccionamiento, comunicación mínima y costo medido.</td><td>checkpoint (handoff), team, decisions, context</td></tr>
+        <tr><td><code>gates.md</code></td><td>El único bloque de cierre de cada skill de fase: tres gates humanos fusionados (<em>qué</em>, <em>cómo</em>, <em>release</em>) o siete granulares, una pregunta por gate, <code>-y</code> = <code>role: auto</code> y nunca producción.</td><td>todas las fases</td></tr>
+        <tr><td><code>judges.md</code></td><td>La plantilla del prompt del juez (solo Read/Grep/Glob, sin ediciones), el contrato de salida y la rúbrica por lente en <code>rules/judges/</code>.</td><td>requirements, architecture, qa</td></tr>
+        <tr><td><code>lanes.md</code></td><td>Los seis carriles (patch, standard, feature-ui, ops, hotfix, docs): qué fases corre u omite cada uno, criterios objetivos de admisión y el camino oficial <code>patch</code>.</td><td>init, todas las fases</td></tr>
+        <tr><td><code>state-machine.md</code></td><td>La tabla de fases como datos: skill, clave de aprobación, gate, omitible, qué produce y qué lee; aristas y destinos de reapertura.</td><td>todas las fases</td></tr>
       </tbody>
     </table>
   </div>
@@ -2038,9 +2052,9 @@ claude plugin update karvey@karvey-methods</code></pre>
     </aside>
   </div>
   <ul class="counts" aria-label="Números do plugin">
-    <li><b>32</b><span>skills = 1 orquestrador + 13 fases + 18 de apoio</span></li>
+    <li><b>33</b><span>skills = 1 orquestrador + 13 fases + 19 de apoio</span></li>
     <li><b>13</b><span>fases do pipeline (0–12)</span></li>
-    <li><b>22</b><span>regras compartilhadas em <code>rules/</code></span></li>
+    <li><b>26</b><span>regras compartilhadas em <code>rules/</code></span></li>
     <li><b>1 + 2</b><span>hook ativo na instalação + scripts opt-in incluídos (e mais 2 descritos na regra)</span></li>
   </ul>
 </section>
@@ -2070,7 +2084,7 @@ claude plugin update karvey@karvey-methods</code></pre>
   <div class="org" role="group" aria-label="Organograma do plugin karvey">
     <div class="org-node">
       <div class="t">Plugin <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">marketplace <span class="mono">karvey-methods</span> · 32 skills · 22 regras · hooks</div>
+      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 skills · 26 regras · hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -2102,11 +2116,11 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (b) Support layer -->
       <section class="branch" aria-labelledby="pt-org-b">
-        <h3 id="pt-org-b"><span class="l" aria-hidden="true">b</span> Camada de apoio · 18 skills</h3>
+        <h3 id="pt-org-b"><span class="l" aria-hidden="true">b</span> Camada de apoio · 19 skills</h3>
         <h4>Iteração / diagnóstico</h4>
         <ul class="chips"><li>iterate</li><li>investigate</li></ul>
         <h4>Qualidade / revisão</h4>
-        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li></ul>
+        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li><li>judges</li></ul>
         <h4>Olhos / evidência</h4>
         <ul class="chips"><li>browse</li></ul>
         <h4>Estado / handoff</h4>
@@ -2127,7 +2141,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (c) Rules -->
       <section class="branch" aria-labelledby="pt-org-c">
-        <h3 id="pt-org-c"><span class="l" aria-hidden="true">c</span> Regras compartilhadas · 22</h3>
+        <h3 id="pt-org-c"><span class="l" aria-hidden="true">c</span> Regras compartilhadas · 26</h3>
         <h4>Projeto e configuração</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>Equipe e ferramentas (3.10)</h4>
@@ -2141,6 +2155,8 @@ claude plugin update karvey@karvey-methods</code></pre>
         <h4>Colaboração</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team (opcional)</li></ul>
+        <h4>Fluxo, faixas e gates</h4>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -2430,7 +2446,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 6. SUPPORT LAYER -->
 <section class="block" id="pt-support" aria-labelledby="pt-t-sup">
   <p class="eyebrow">06 · A qualquer momento</p>
-  <h2 id="pt-t-sup">Camada de apoio · 18 skills de apoio</h2>
+  <h2 id="pt-t-sup">Camada de apoio · 19 skills de apoio</h2>
   <p class="lede">Não são fases: não avançam o <code>spec.json:phase</code>. A única exceção é o <code>karvey-iterate</code>, que pode fazer a transição controlada <em>para trás</em> do subciclo de revisão. Respeitam os mesmos gates e hooks.</p>
 
   <div class="filter" id="pt-sup-filter" data-filter="sup" hidden>
@@ -2446,6 +2462,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">qualidade</span><p>Uma nota de qualidade de 0 a 10 (type-check, lint, testes, código morto) com tendência, mais a prontidão do método: skills instaladas e inputs fixados (<code>repo path @commit</code>) ainda vigentes.</p><p class="small muted"><b>Quando:</b> revisões periódicas ou trabalho multirrepositório.</p></article>
     <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">revisão</span><p>Revisa a experiência do desenvolvedor: percorre o onboarding real, mede o time-to-hello-world e encontra atritos e “docs que mentem”. Modos plano e ao vivo.</p><p class="small muted"><b>Quando:</b> ao auditar o onboarding ou a DX.</p></article>
     <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">revisão</span><p>Retrospectiva do ciclo: velocidade, saúde dos testes, detalhamento por pessoa, sequências e oportunidades de melhoria a partir do histórico de commits.</p><p class="small muted"><b>Quando:</b> ao fechar um ciclo (recomendado no arquivamento).</p></article>
+    <article class="card" data-f><h3><code>karvey-judges</code></h3><span class="tag s">revisão</span><p>Juízes consultivos no ponto barato do ciclo: subagentes de contexto limpo, só com Read/Grep/Glob, leem uma lista fechada de insumos e uma rubrica por lente (requisitos, arquitetura e QA com o fiscal); um script reúne veredictos, citações e custo em <code>findings.md</code> e <code>judge_runs</code>.</p><p class="small muted"><b>Quando:</b> antes do gate de requisitos, arquitetura e QA; nunca substitui o humano.</p></article>
     <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">olhos</span><p>Dá olhos ao agente no runtime real: navegador (web), simulador ou dispositivo (mobile), terminal (CLI). Clica, captura a tela, inspeciona; importa cookies para visões autenticadas.</p><p class="small muted"><b>Quando:</b> para ver o que o usuário vê; também escreve no <code>findings.md</code>.</p></article>
     <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">estado / handoff</span><p><code>save</code> / <code>restore</code> do checkpoint da mudança <strong>e do handoff do agente</strong>: identidade, manifesto, quadro, checklist, estado medido dos repositórios (<code>state.json</code>), decisões vigentes e tarefas agendadas.</p><p class="small muted"><b>Quando:</b> ao rotacionar uma sessão ou passar o trabalho adiante, com um agente ou vários.</p></article>
     <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">documentação</span><p>Engenheiro de documentação: gera docs Diátaxis (tutorial, how-to, referência, explicação) a partir do código, atualiza docs desatualizados e exporta Markdown para PDF.</p><p class="small muted"><b>Quando:</b> após um release (recomendado no arquivamento).</p></article>
@@ -2493,7 +2510,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 7. RULES -->
 <section class="block" id="pt-rules" aria-labelledby="pt-t-rules">
   <p class="eyebrow">07 · Contrato comum</p>
-  <h2 id="pt-t-rules">Regras compartilhadas · 22</h2>
+  <h2 id="pt-t-rules">Regras compartilhadas · 26</h2>
   <p class="lede">Ficam em <code>plugins/karvey/skills/karvey/rules/</code>. As skills as citam em vez de repeti-las; as cópias locais devem ser idênticas byte a byte à canônica.</p>
 
   <div class="filter" id="pt-rules-filter" data-filter="rules" hidden>
@@ -2528,6 +2545,10 @@ claude plugin update karvey@karvey-methods</code></pre>
         <tr><td><code>verification.md</code></td><td>18 modos de falha que tornam falso um relatório verde (uma citação não é a coisa citada, exit 0 não é sucesso, um teste verde sobre código que ninguém chama…).</td><td>todas as fases (antes de dizer “pronto”), guard, qa, health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>Trabalho multiagente e multirrepositório: mudanças mãe/filha, decisões <code>D-NN</code>, inputs fixados com <code>@commit</code>, aprovações com quem e onde, tarefas <code>[human]</code>, tipos <code>ops</code> e <code>hotfix</code>, PRs só de documentação.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health e todos os gates</td></tr>
         <tr><td><code>team.md</code> <span class="tag">opcional</span></td><td>A camada de equipe de agentes: <code>team.json</code>, papéis, rotação, endereçamento, comunicação mínima e custo medido.</td><td>checkpoint (handoff), team, decisions, context</td></tr>
+        <tr><td><code>gates.md</code></td><td>O único bloco de fechamento de cada skill de fase: três gates humanos fundidos (<em>o quê</em>, <em>como</em>, <em>release</em>) ou sete granulares, uma pergunta por gate, <code>-y</code> = <code>role: auto</code> e nunca produção.</td><td>todas as fases</td></tr>
+        <tr><td><code>judges.md</code></td><td>O template do prompt do juiz (só Read/Grep/Glob, sem edições), o contrato de saída e a rubrica por lente em <code>rules/judges/</code>.</td><td>requirements, architecture, qa</td></tr>
+        <tr><td><code>lanes.md</code></td><td>As seis faixas (patch, standard, feature-ui, ops, hotfix, docs): quais fases cada uma roda ou pula, critérios objetivos de admissão e o caminho oficial <code>patch</code>.</td><td>init, todas as fases</td></tr>
+        <tr><td><code>state-machine.md</code></td><td>A tabela de fases como dados: skill, chave de aprovação, gate, pulável, o que produz e o que lê; arestas e destinos de reabertura.</td><td>todas as fases</td></tr>
       </tbody>
     </table>
   </div>
@@ -2867,9 +2888,9 @@ claude plugin update karvey@karvey-methods</code></pre>
     </aside>
   </div>
   <ul class="counts" aria-label="Kennzahlen des Plugins">
-    <li><b>32</b><span>Skills = 1 Orchestrator + 13 Phasen + 18 Unterstützung</span></li>
+    <li><b>33</b><span>Skills = 1 Orchestrator + 13 Phasen + 19 Unterstützung</span></li>
     <li><b>13</b><span>Pipeline-Phasen (0–12)</span></li>
-    <li><b>22</b><span>gemeinsame Regeln in <code>rules/</code></span></li>
+    <li><b>26</b><span>gemeinsame Regeln in <code>rules/</code></span></li>
     <li><b>1 + 2</b><span>Hook aktiv bei Installation + mitgelieferte Opt-in-Skripte (und 2 weitere, in der Regel beschrieben)</span></li>
   </ul>
 </section>
@@ -2899,7 +2920,7 @@ claude plugin update karvey@karvey-methods</code></pre>
   <div class="org" role="group" aria-label="Organigramm des Plugins karvey">
     <div class="org-node">
       <div class="t">Plugin <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">Marketplace <span class="mono">karvey-methods</span> · 32 Skills · 22 Regeln · Hooks</div>
+      <div class="d">Marketplace <span class="mono">karvey-methods</span> · 33 Skills · 26 Regeln · Hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -2931,11 +2952,11 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (b) Support layer -->
       <section class="branch" aria-labelledby="de-org-b">
-        <h3 id="de-org-b"><span class="l" aria-hidden="true">b</span> Unterstützungsebene · 18 Skills</h3>
+        <h3 id="de-org-b"><span class="l" aria-hidden="true">b</span> Unterstützungsebene · 19 Skills</h3>
         <h4>Iteration / Diagnose</h4>
         <ul class="chips"><li>iterate</li><li>investigate</li></ul>
         <h4>Qualität / Review</h4>
-        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li></ul>
+        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li><li>judges</li></ul>
         <h4>Augen / Nachweise</h4>
         <ul class="chips"><li>browse</li></ul>
         <h4>Zustand / Übergabe</h4>
@@ -2956,7 +2977,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (c) Rules -->
       <section class="branch" aria-labelledby="de-org-c">
-        <h3 id="de-org-c"><span class="l" aria-hidden="true">c</span> Gemeinsame Regeln · 22</h3>
+        <h3 id="de-org-c"><span class="l" aria-hidden="true">c</span> Gemeinsame Regeln · 26</h3>
         <h4>Projekt und Konfiguration</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>Team und Werkzeuge (3.10)</h4>
@@ -2970,6 +2991,8 @@ claude plugin update karvey@karvey-methods</code></pre>
         <h4>Zusammenarbeit</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team (optional)</li></ul>
+        <h4>Ablauf, Spuren und Gates</h4>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -3259,7 +3282,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 6. SUPPORT LAYER -->
 <section class="block" id="de-support" aria-labelledby="de-t-sup">
   <p class="eyebrow">06 · Jederzeit</p>
-  <h2 id="de-t-sup">Unterstützungsebene · 18 Unterstützungs-Skills</h2>
+  <h2 id="de-t-sup">Unterstützungsebene · 19 Unterstützungs-Skills</h2>
   <p class="lede">Sie sind keine Phasen: Sie schieben <code>spec.json:phase</code> nicht voran. Die einzige Ausnahme ist <code>karvey-iterate</code>, das den kontrollierten Übergang <em>zurück</em> im Revisions-Teilzyklus vornehmen darf. Sie respektieren dieselben Gates und Hooks.</p>
 
   <div class="filter" id="de-sup-filter" data-filter="sup" hidden>
@@ -3275,6 +3298,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">Qualität</span><p>Ein Qualitätswert von 0–10 (Type-Check, Lint, Tests, toter Code) mit Trend, dazu die Methodenbereitschaft: installierte Skills und gepinnte Eingaben (<code>repo path @commit</code>), die noch aktuell sind.</p><p class="small muted"><b>Wann:</b> regelmäßige Kontrollen oder Arbeit über mehrere Repos.</p></article>
     <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">Review</span><p>Prüft die Developer Experience: durchläuft das reale Onboarding, misst die Time-to-Hello-World und findet Reibungspunkte und „Dokumentation, die lügt“. Modi Plan und Live.</p><p class="small muted"><b>Wann:</b> beim Audit von Onboarding oder DX.</p></article>
     <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">Review</span><p>Retrospektive eines Zyklus: Velocity, Testgesundheit, Aufschlüsselung pro Person, Serien und Verbesserungsmöglichkeiten aus der Commit-Historie.</p><p class="small muted"><b>Wann:</b> beim Abschluss eines Zyklus (empfohlen bei der Archivierung).</p></article>
+    <article class="card" data-f><h3><code>karvey-judges</code></h3><span class="tag s">Review</span><p>Beratende Richter am günstigen Ende des Zyklus: Subagenten mit sauberem Kontext und nur Read/Grep/Glob lesen eine geschlossene Liste von Eingaben und eine Rubrik pro Linse (Anforderungen, Architektur und QA mit dem Fiskal); ein Skript sammelt Urteile, Zitate und Kosten in <code>findings.md</code> und <code>judge_runs</code>.</p><p class="small muted"><b>Wann:</b> vor dem Gate von Anforderungen, Architektur und QA; nie ein Ersatz für den Menschen.</p></article>
     <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">Augen</span><p>Gibt dem Agenten Augen in der realen Laufzeitumgebung: Browser (Web), Simulator oder Gerät (Mobile), Terminal (CLI). Klicken, Screenshot, Inspizieren; importiert Cookies für authentifizierte Ansichten.</p><p class="small muted"><b>Wann:</b> um zu sehen, was der Nutzer sieht; schreibt ebenfalls in <code>findings.md</code>.</p></article>
     <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">Zustand / Übergabe</span><p><code>save</code> / <code>restore</code> des Checkpoints der Änderung <strong>und der Übergabe des Agenten</strong>: Identität, Manifest, Board, Checkliste, gemessener Repo-Zustand (<code>state.json</code>), stehende Entscheidungen und geplante Aufgaben.</p><p class="small muted"><b>Wann:</b> beim Rotieren einer Sitzung oder bei der Übergabe von Arbeit, mit einem oder mehreren Agenten.</p></article>
     <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">Dokumentation</span><p>Dokumentationsingenieur: erzeugt Diátaxis-Dokumentation (Tutorial, How-to, Referenz, Erklärung) aus dem Code, aktualisiert veraltete Dokumentation und exportiert Markdown als PDF.</p><p class="small muted"><b>Wann:</b> nach einem Release (empfohlen bei der Archivierung).</p></article>
@@ -3322,7 +3346,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 7. RULES -->
 <section class="block" id="de-rules" aria-labelledby="de-t-rules">
   <p class="eyebrow">07 · Gemeinsamer Vertrag</p>
-  <h2 id="de-t-rules">Gemeinsame Regeln · 22</h2>
+  <h2 id="de-t-rules">Gemeinsame Regeln · 26</h2>
   <p class="lede">Sie liegen in <code>plugins/karvey/skills/karvey/rules/</code>. Skills verweisen auf sie, statt sie zu wiederholen; lokale Kopien müssen byteweise identisch mit der kanonischen sein.</p>
 
   <div class="filter" id="de-rules-filter" data-filter="rules" hidden>
@@ -3357,6 +3381,10 @@ claude plugin update karvey@karvey-methods</code></pre>
         <tr><td><code>verification.md</code></td><td>18 Fehlermodi, die einen grünen Bericht falsch machen (ein Zitat ist nicht das Zitierte, Exit 0 ist kein Erfolg, ein grüner Test auf Code, den niemand aufruft…).</td><td>jede Phase (bevor „fertig“ gesagt wird), guard, qa, health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>Arbeit mit mehreren Agenten und Repos: über-/untergeordnete Änderungen, <code>D-NN</code>-Entscheidungen, per <code>@commit</code> gepinnte Eingaben, Freigaben mit wer und wo, <code>[human]</code>-Aufgaben, Typen <code>ops</code> und <code>hotfix</code>, reine Doku-PRs.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health und jedes Gate</td></tr>
         <tr><td><code>team.md</code> <span class="tag">optional</span></td><td>Die Agententeam-Ebene: <code>team.json</code>, Rollen, Rotation, Adressierung, minimale Kommunikation und gemessene Kosten.</td><td>checkpoint (Übergabe), team, decisions, context</td></tr>
+        <tr><td><code>gates.md</code></td><td>Der eine Abschlussblock jedes Phasen-Skills: drei zusammengelegte menschliche Gates (<em>was</em>, <em>wie</em>, <em>Release</em>) oder sieben granulare, eine Frage pro Gate, <code>-y</code> = <code>role: auto</code> und nie Produktion.</td><td>jede Phase</td></tr>
+        <tr><td><code>judges.md</code></td><td>Die Prompt-Vorlage der Richter (nur Read/Grep/Glob, keine Änderungen), der Ausgabevertrag und die Rubrik pro Linse unter <code>rules/judges/</code>.</td><td>requirements, architecture, qa</td></tr>
+        <tr><td><code>lanes.md</code></td><td>Die sechs Spuren (patch, standard, feature-ui, ops, hotfix, docs): welche Phasen jede ausführt oder überspringt, objektive Zulassungskriterien und der offizielle <code>patch</code>-Weg.</td><td>init, jede Phase</td></tr>
+        <tr><td><code>state-machine.md</code></td><td>Die Phasentabelle als Daten: Skill, Freigabeschlüssel, Gate, überspringbar, was sie erzeugt und liest; Kanten und Wiedereröffnungsziele.</td><td>jede Phase</td></tr>
       </tbody>
     </table>
   </div>
@@ -3696,9 +3724,9 @@ claude plugin update karvey@karvey-methods</code></pre>
     </aside>
   </div>
   <ul class="counts" aria-label="插件数据">
-    <li><b>32</b><span>个技能 = 1 个编排器 + 13 个阶段 + 18 个支持技能</span></li>
+    <li><b>33</b><span>个技能 = 1 个编排器 + 13 个阶段 + 19 个支持技能</span></li>
     <li><b>13</b><span>个流水线阶段（0–12）</span></li>
-    <li><b>22</b><span>条共享规则，位于 <code>rules/</code></span></li>
+    <li><b>26</b><span>条共享规则，位于 <code>rules/</code></span></li>
     <li><b>1 + 2</b><span>个安装即生效的 hook + 随附的可选启用脚本（另有 2 个在规则中描述）</span></li>
   </ul>
 </section>
@@ -3728,7 +3756,7 @@ claude plugin update karvey@karvey-methods</code></pre>
   <div class="org" role="group" aria-label="karvey 插件组织结构图">
     <div class="org-node">
       <div class="t">插件 <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">marketplace <span class="mono">karvey-methods</span> · 32 个技能 · 22 条规则 · hooks</div>
+      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 个技能 · 26 条规则 · hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -3760,11 +3788,11 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (b) Support layer -->
       <section class="branch" aria-labelledby="zh-org-b">
-        <h3 id="zh-org-b"><span class="l" aria-hidden="true">b</span> 支持层 · 18 个技能</h3>
+        <h3 id="zh-org-b"><span class="l" aria-hidden="true">b</span> 支持层 · 19 个技能</h3>
         <h4>迭代 / 诊断</h4>
         <ul class="chips"><li>iterate</li><li>investigate</li></ul>
         <h4>质量 / 评审</h4>
-        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li></ul>
+        <ul class="chips"><li>second-opinion</li><li>health</li><li>devex</li><li>retro</li><li>judges</li></ul>
         <h4>眼睛 / 证据</h4>
         <ul class="chips"><li>browse</li></ul>
         <h4>状态 / 交接</h4>
@@ -3785,7 +3813,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (c) Rules -->
       <section class="branch" aria-labelledby="zh-org-c">
-        <h3 id="zh-org-c"><span class="l" aria-hidden="true">c</span> 共享规则 · 22</h3>
+        <h3 id="zh-org-c"><span class="l" aria-hidden="true">c</span> 共享规则 · 26</h3>
         <h4>项目与配置</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>团队与工具（3.10）</h4>
@@ -3799,6 +3827,8 @@ claude plugin update karvey@karvey-methods</code></pre>
         <h4>协作</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team（可选）</li></ul>
+        <h4>流程、通道与关口</h4>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -4088,7 +4118,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 6. SUPPORT LAYER -->
 <section class="block" id="zh-support" aria-labelledby="zh-t-sup">
   <p class="eyebrow">06 · 随时可用</p>
-  <h2 id="zh-t-sup">支持层 · 18 个支持技能</h2>
+  <h2 id="zh-t-sup">支持层 · 19 个支持技能</h2>
   <p class="lede">它们不是阶段：不会推进 <code>spec.json:phase</code>。唯一的例外是 <code>karvey-iterate</code>，它可以执行修订子循环中受控的<em>回退</em>转换。它们同样遵守关卡和 hooks。</p>
 
   <div class="filter" id="zh-sup-filter" data-filter="sup" hidden>
@@ -4104,6 +4134,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">质量</span><p>0–10 的质量评分（类型检查、lint、测试、死代码）及其趋势，外加方法就绪度：技能已安装，且固定的输入（<code>repo path @commit</code>）仍是最新。</p><p class="small muted"><b>何时用：</b>定期体检或多仓库工作。</p></article>
     <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">评审</span><p>评审开发者体验：走一遍真实的上手流程，测量 time-to-hello-world，找出摩擦点和“说谎的文档”。提供计划和实时两种模式。</p><p class="small muted"><b>何时用：</b>审查上手流程或 DX。</p></article>
     <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">评审</span><p>周期回顾：基于提交历史给出速度、测试健康度、个人明细、连续记录以及改进机会。</p><p class="small muted"><b>何时用：</b>结束一个周期时（建议在归档时）。</p></article>
+    <article class="card" data-f><h3><code>karvey-judges</code></h3><span class="tag s">评审</span><p>在周期成本最低处的咨询型评审：只具备 Read/Grep/Glob 的干净上下文子代理，读取封闭的输入清单和每个视角的评分标准（需求、架构，以及带稽核员的 QA）；由脚本把结论、引用和成本汇总到 <code>findings.md</code> 和 <code>judge_runs</code>。</p><p class="small muted"><b>何时：</b>在需求、架构和 QA 的关口之前；永远不替代人。</p></article>
     <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">眼睛</span><p>让代理在真实运行环境中拥有“眼睛”：浏览器（Web）、模拟器或真机（移动端）、终端（CLI）。可点击、截图、检查；导入 cookie 以查看需要登录的页面。</p><p class="small muted"><b>何时用：</b>要看到用户所看到的内容时；它也会写入 <code>findings.md</code>。</p></article>
     <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">状态 / 交接</span><p><code>save</code> / <code>restore</code> 变更检查点<strong>以及代理交接</strong>，内容包括：身份、清单、看板、检查表、测得的仓库状态（<code>state.json</code>）、长期有效的决策以及计划任务。</p><p class="small muted"><b>何时用：</b>轮换会话或移交工作时，无论是一个代理还是多个。</p></article>
     <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">文档</span><p>文档工程师：从代码生成 Diátaxis 文档（教程、操作指南、参考、解释），更新过时的文档，并把 Markdown 导出为 PDF。</p><p class="small muted"><b>何时用：</b>发布之后（建议在归档时）。</p></article>
@@ -4151,7 +4182,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 7. RULES -->
 <section class="block" id="zh-rules" aria-labelledby="zh-t-rules">
   <p class="eyebrow">07 · 共同契约</p>
-  <h2 id="zh-t-rules">共享规则 · 22</h2>
+  <h2 id="zh-t-rules">共享规则 · 26</h2>
   <p class="lede">它们位于 <code>plugins/karvey/skills/karvey/rules/</code>。技能引用这些规则，而不是重复其内容；本地副本必须与规范版本逐字节一致。</p>
 
   <div class="filter" id="zh-rules-filter" data-filter="rules" hidden>
@@ -4186,6 +4217,10 @@ claude plugin update karvey@karvey-methods</code></pre>
         <tr><td><code>verification.md</code></td><td>18 种会让“全绿”报告失真的失败模式（引用不等于被引用的事物本身，exit 0 不等于成功，测试通过但代码无人调用……）。</td><td>每个阶段（在说“完成”之前）、guard、qa、health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>多代理与多仓库工作：父/子变更、<code>D-NN</code> 决策、以 <code>@commit</code> 固定的输入、注明由谁在何处批准、<code>[human]</code> 任务、<code>ops</code> 与 <code>hotfix</code> 类型、纯文档 PR。</td><td>init、requirements、design-graphic、infra、tasks、impl、test、iterate、deploy、health 以及每个关卡</td></tr>
         <tr><td><code>team.md</code> <span class="tag">可选</span></td><td>代理团队层：<code>team.json</code>、角色、轮换、寻址、最少化沟通以及实测成本。</td><td>checkpoint（交接）、team、decisions、context</td></tr>
+        <tr><td><code>gates.md</code></td><td>每个阶段技能唯一的收尾块：三个合并的人工关口（<em>做什么</em>、<em>怎么做</em>、<em>发布</em>）或七个细分关口，每个关口只问一次，<code>-y</code> = <code>role: auto</code> 且永不用于生产。</td><td>所有阶段</td></tr>
+        <tr><td><code>judges.md</code></td><td>评审提示词模板（仅 Read/Grep/Glob，不做编辑）、输出约定，以及 <code>rules/judges/</code> 下每个视角的评分标准。</td><td>requirements, architecture, qa</td></tr>
+        <tr><td><code>lanes.md</code></td><td>六条通道（patch、standard、feature-ui、ops、hotfix、docs）：各自运行或跳过哪些阶段、客观准入标准，以及官方的 <code>patch</code> 路径。</td><td>init、所有阶段</td></tr>
+        <tr><td><code>state-machine.md</code></td><td>以数据表示的阶段表：技能、审批键、关口、可跳过、产出与读取；边与重开目标。</td><td>所有阶段</td></tr>
       </tbody>
     </table>
   </div>
