@@ -44,7 +44,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import approval, atomicio, effort as ef, gitlog, judges as jd, lanes as ln, modes, project as pj  # noqa: E402
-from karvey_lib import questions as qs  # noqa: E402
+from karvey_lib import questions as qs, risks as rk  # noqa: E402
 from karvey_lib import safe_values as sv  # noqa: E402
 from karvey_lib import schema_lite as sl  # noqa: E402
 
@@ -901,6 +901,8 @@ def cmd_validate(args, root):
                     entry["written"] = True
             data = new
         issues = validate_data(data, kind_of(f), strict, file=name)
+        if kind_of(f) == "spec":
+            issues += risk_register_issues(root, Path(f).parent)
         e = [i for i in issues if i["severity"] == "error"]
         w = [i for i in issues if i["severity"] == "warning"]
         entry["errors"], entry["warnings"] = len(e), len(w)
@@ -933,6 +935,14 @@ def cmd_validate(args, root):
     lines.append("mode: %s · %d files · %d errors · %d warnings" % (strict_mode, len(report), len(errors),
                                                                    len(warnings)))
     return worst, result, errors, warnings, "\n".join(lines)
+
+
+def risk_register_issues(root, change_dir):
+    """wave3 §1.17 (REQ-W3-031): the risk register's problems — a risk without owner (``R-2: owner missing``), an
+    unknown state, a duplicate id — as warnings (check ``risks.owner``, warn in 4.1)."""
+    p = Path(change_dir) / rk.FILE
+    return [kl.issue("risks.%s" % field, msg, severity="warning", file=rel(root, p), path=rid)
+            for rid, field, msg in rk.problems(rk.read(change_dir))]
 
 
 DECISION_HEAD = re.compile(r"^#{2,4}\s+(D-\d+)\b")

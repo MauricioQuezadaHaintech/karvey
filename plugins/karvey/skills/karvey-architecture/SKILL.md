@@ -223,6 +223,10 @@ Explicitly mark WHERE untrusted input enters and WHERE it is validated. Any data
 |--------|-------------|---------|-----------|
 | {risk} | High/Medium/Low | High/Medium/Low | {how it is mitigated} |
 
+Create the change's risk register `docs/spec/changes/{change-id}/risks.md` from this table (format in
+`../karvey/rules/risks.md`): one `R-N` row per risk with its owner (a role) and its trigger, state `open`, last
+review today. No risk → no file.
+
 ## Edge cases (MANDATORY)
 
 List the identified edge cases and how the design handles them. Cover at least: empty/null inputs, out-of-range values, concurrency/duplicates, external dependency failures (timeout, error, unavailability), inconsistent data, and size/quantity limits.
