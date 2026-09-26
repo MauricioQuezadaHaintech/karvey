@@ -1377,8 +1377,9 @@ class ListAll(unittest.TestCase):
             self.assertIn("L-%02d " % i, out)
         ids = [c.id for c in lp.registry()]
         self.assertEqual(ids[:36], ["L-%02d" % i for i in range(1, 37)])
-        # wave2-structural checks start at L-40 (L-37..L-39 are reserved by project-upgrade)
-        self.assertTrue(all(40 <= int(i[2:]) <= 54 for i in ids[36:]), ids[36:])
+        # wave2-structural checks start at L-40 (L-37..L-39 are reserved by project-upgrade);
+        # wave3-optimization checks are L-55..L-75 (architecture §1.25)
+        self.assertTrue(all(40 <= int(i[2:]) <= 75 for i in ids[36:]), ids[36:])
 
 
 if __name__ == "__main__":

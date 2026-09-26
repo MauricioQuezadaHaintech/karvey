@@ -31,6 +31,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
+from karvey_lib import loadlist  # noqa: E402
 
 TOOL = "lint-plugin"
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -2270,6 +2271,15 @@ def l48_baseline_before_defaults(ctx):
                "defaults" % (dates[0], ", ".join(keys), first))
 
 
+# --------------------------------------------------------------------------- L-62 (wave3-optimization)
+@check("L-62", "A skill's Load: line names only files that exist (blocking; REQ-W3-072)", reqs=("W3-072",))
+def l62_load_entries_exist(ctx):
+    for name, path in sorted(ctx.skills().items()):
+        text = ctx.read(path) or ""
+        for line, entry in loadlist.missing_load_entries(text, ctx.rules_dir, path.parent):
+            yield (path, line, "skill %s: Load: names %s, which does not exist" % (name, entry))
+
+
 # --------------------------------------------------------------------------- L-50 (wave2-structural)
 def _cells(line):
     return [c.strip() for c in line.strip().strip("|").split("|")]
@@ -2397,6 +2407,7 @@ def requirement_ids(ctx, files=None):
         text = ctx.read(p) or ""
         ids.update(re.findall(r"REQ-W1-(\d{3})", text))
         ids.update("W2-" + n for n in re.findall(r"REQ-W2-(\d{3})", text))
+        ids.update("W3-" + n for n in re.findall(r"REQ-W3-(\d{3})", text))
     return ids, paths
 
 
