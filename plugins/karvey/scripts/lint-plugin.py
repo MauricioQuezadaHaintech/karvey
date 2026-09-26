@@ -2276,6 +2276,48 @@ def l48_baseline_before_defaults(ctx):
                "defaults" % (dates[0], ", ".join(keys), first))
 
 
+# --------------------------------------------------------------------------- L-55 (wave3-optimization)
+CORE_WORDS_MAX = 1000
+CORE_HEADING_RE = re.compile(r"^##\s+(.*?)\s*$")
+CONTRACT_ID_RE = re.compile(r"\{#contract-([a-z0-9-]+)\}")
+
+
+@check("L-55", "The core rule (rules/_core.md) has at most 1,000 words, every contract heading carries an "
+               "{#contract-<id>} id, every contract of contracts.json is anchored there, and it says footnotes "
+               "are never opened (REQ-W3-003)", reqs=("W3-003",))
+def l55_core_contracts(ctx):
+    core = ctx.rules_dir / "_core.md"
+    reg_path = ctx.schemas_dir() / "contracts.json" if (ctx.plugin / "schemas").is_dir() else None
+    reg = ctx.json(reg_path) if reg_path is not None and reg_path.is_file() else None
+    if not core.is_file():
+        if reg is not None:
+            yield (reg_path, 1, "contracts.json exists but rules/_core.md does not: the contracts have no core")
+        return
+    words = loadlist.size(core)["words"]
+    if words > CORE_WORDS_MAX:
+        yield (core, 1, "the core has %d words, over the %d-word limit" % (words, CORE_WORDS_MAX))
+    ids = set()
+    for n, line, lang in iter_lines(ctx.lines(core)):
+        if lang is not None:
+            continue
+        m = CORE_HEADING_RE.match(line)
+        if not m:
+            continue
+        cm = CONTRACT_ID_RE.search(m.group(1))
+        if cm is None:
+            yield (core, n, "contract heading without an id: %r needs {#contract-<id>}" % m.group(1))
+        else:
+            ids.add(cm.group(1))
+    if "never opened" not in (ctx.read(core) or ""):
+        yield (core, 1, "the core does not say that footnote citations are never opened")
+    for c in (reg or {}).get("contracts", []) if isinstance(reg, dict) else []:
+        cid = c.get("id") if isinstance(c, dict) else None
+        if cid and cid not in ids:
+            yield (reg_path, 1, "contract %s is not anchored in the core ({#contract-%s} missing)" % (cid, cid))
+        elif cid and c.get("anchor") != "#contract-%s" % cid:
+            yield (reg_path, 1, "contract %s: anchor must be #contract-%s (got %r)" % (cid, cid, c.get("anchor")))
+
+
 # --------------------------------------------------------------------------- L-62 (wave3-optimization)
 @check("L-62", "A skill's Load: line names only files that exist (blocking; REQ-W3-072)", reqs=("W3-072",))
 def l62_load_entries_exist(ctx):

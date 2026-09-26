@@ -281,5 +281,40 @@ class L72(LintCase):
         self.assertIn("model id ('claude-x')", msgs)
 
 
+CORE = SKILLS + "/karvey/rules/_core.md"
+CONTRACTS = "plugins/karvey/schemas/contracts.json"
+
+
+class L55(LintCase):
+    """@req REQ-W3-003 — the core: at most 1,000 words, every contract heading with an id."""
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(CORE, "# Core\nFootnote citations are never opened.\n\n## Gate {#contract-gate}\nOne question.\n")
+        self.t.write(CONTRACTS, {"contracts": [{"id": "gate", "anchor": "#contract-gate"}], "baseline": {}})
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-55")
+
+    def test_shipped_core_passes(self):
+        self.t.write(CORE, (_path.SCRIPTS_DIR.parent / "skills" / "karvey" / "rules" / "_core.md").read_text(
+            encoding="utf-8"))
+        self.t.write(CONTRACTS, json.loads((_path.SCHEMAS_DIR / "contracts.json").read_text(encoding="utf-8")))
+        self.assertPasses("L-55")
+
+    def test_REQ_W3_003_a_core_of_1200_words_fails_with_the_count(self):
+        self.t.write(CORE, self.t.read(CORE) + ("word " * 1200) + "\n")
+        self.assertFails("L-55", "words, over the 1000-word limit", file=CORE)
+
+    def test_a_contract_heading_without_an_id_fails(self):
+        self.t.write(CORE, self.t.read(CORE) + "\n## Commits\nTrailer.\n")
+        self.assertFails("L-55", "contract heading without an id", file=CORE)
+
+    def test_a_registered_contract_missing_from_the_core_fails(self):
+        self.t.write(CONTRACTS, {"contracts": [{"id": "gate", "anchor": "#contract-gate"},
+                                               {"id": "prod-gate", "anchor": "#contract-prod-gate"}], "baseline": {}})
+        self.assertFails("L-55", "contract prod-gate is not anchored in the core", file=CONTRACTS)
+
+
 if __name__ == "__main__":
     unittest.main()

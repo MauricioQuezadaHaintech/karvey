@@ -3,7 +3,7 @@
   "contracts": [
     {
       "id": "state-tool",
-      "anchor": "state-machine.md",
+      "anchor": "#contract-state-tool",
       "sources": [
         "state-machine.md"
       ],
@@ -11,7 +11,7 @@
     },
     {
       "id": "gate",
-      "anchor": "gates.md",
+      "anchor": "#contract-gate",
       "sources": [
         "gates.md",
         "phase-close.md"
@@ -20,7 +20,7 @@
     },
     {
       "id": "prod-gate",
-      "anchor": "enforcement.md",
+      "anchor": "#contract-prod-gate",
       "sources": [
         "enforcement.md",
         "deploy-workflow.md"
@@ -29,7 +29,7 @@
     },
     {
       "id": "branch-commit",
-      "anchor": "deploy-workflow.md",
+      "anchor": "#contract-branch-commit",
       "sources": [
         "deploy-workflow.md",
         "versioning.md"
@@ -38,7 +38,7 @@
     },
     {
       "id": "verification",
-      "anchor": "verification.md",
+      "anchor": "#contract-verification",
       "sources": [
         "verification.md"
       ],
@@ -46,7 +46,7 @@
     },
     {
       "id": "finding-router",
-      "anchor": "iteration-loop.md",
+      "anchor": "#contract-finding-router",
       "sources": [
         "iteration-loop.md"
       ],
@@ -54,7 +54,7 @@
     },
     {
       "id": "neutral-text",
-      "anchor": null,
+      "anchor": "#contract-neutral-text",
       "sources": [],
       "summary": "public text names no organisation, product, client, person, internal URL or path"
     }
