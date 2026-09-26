@@ -494,6 +494,47 @@ def wbs(text):
             "epic_items": [x for x in order if ".F" not in x], "issues": issues}
 
 
+PHASE_WORDS = ("requirements", "mockup", "design", "design graphic", "design_graphic", "architecture", "infra",
+               "infrastructure", "tasks", "impl", "implementation", "test", "testing", "qa", "deploy", "deployment",
+               "archive")
+_PLAN_SECTION = re.compile(r"^#{2,4}\s+(Feature|Epic item)\b\s*([^:\s]*)\s*:?\s*(.*)$", re.I)
+_PLAN_ITEM = re.compile(r"^\s*[-*]\s+\[[ xX]\]\s+(.*)$")
+_QA_DEPLOY = re.compile(r"\bQA\b|\[Deploy\]|\bdeploy(?:ment)?\b", re.I)
+
+
+def wbs_plan(text):
+    """Tracker reconciliation of a Markdown tracker (``PLAN.md``), read-only (REQ-W3-040, 041): a Feature named
+    after a pipeline phase → ``legacy shape``; a QA or deploy item not under ``E{n}.QA`` / ``E{n}.DEPLOY`` →
+    ``outside the hierarchy``. Nothing is rewritten."""
+    out, section = [], None
+    for n, line in enumerate((text or "").splitlines(), 1):
+        m = _PLAN_SECTION.match(line)
+        if m:
+            kind, key, name = m.group(1).lower(), m.group(2), m.group(3).strip()
+            section = (kind, key.upper())
+            label = re.sub(r"[`*_]", "", name).strip().lower()
+            if kind == "feature" and (label in PHASE_WORDS or re.sub(r"\s+phase$", "", label) in PHASE_WORDS):
+                out.append("legacy shape: Feature %s %r is a pipeline phase (line %d) — phases belong on the Epic"
+                           % (key or "?", name, n))
+            continue
+        if line.startswith("## "):
+            section = None
+            continue
+        it = _PLAN_ITEM.match(line)
+        if not it:
+            continue
+        item = it.group(1)
+        if not _QA_DEPLOY.search(item.split(" — ")[0][:80]):
+            continue
+        if section and section[0] == "epic item" and re.search(r"\.(QA|DEPLOY)$", section[1]):
+            continue
+        if re.match(r"E\d+\.F\d+\.T\d+\b", item) and section and section[0] == "feature":
+            continue  # a task of a functional area that mentions QA or deploy in its title
+        out.append("outside the hierarchy: %r (line %d) — QA and deploy items live under E{n}.QA / E{n}.DEPLOY"
+                   % (item[:60], n))
+    return out
+
+
 def wbs_main(root, args):
     cdir = Path(root) / pj.CHANGES_DIR / args.change
     text = _read(cdir / "tasks.md")
@@ -502,13 +543,20 @@ def wbs_main(root, args):
             "trace.not_found", "no tasks.md for %s" % args.change)]), args.json)
     res = wbs(text)
     res["change"] = args.change
+    plan = _read(cdir / "PLAN.md")
+    res["tracker"] = wbs_plan(plan) if plan is not None else []
+    lmode = modes.resolve(root=root, check_id="wbs.legacy")["mode"]
     mode = modes.resolve(root=root, check_id="wbs.split")["mode"]
     res["mode"] = mode
     lines = ["%s: WBS — %d task(s) under %d Feature(s)%s · %d issue(s) (wbs.split: %s)" % (
         args.change, res["tasks"], len(res["features"]),
         (" + " + ", ".join(res["epic_items"])) if res["epic_items"] else "", len(res["issues"]), mode)]
     lines += ["  " + i for i in res["issues"]]
+    lines += ["  tracker %s (wbs.legacy: %s)" % (i, lmode) for i in res["tracker"]]
     code, warnings, errors = kl.EXIT_OK, [], []
+    if lmode != "off":
+        warnings += [kl.issue("trace.wbs_legacy", i, severity="warning")
+                     for i in res["tracker"]]
     for i in res["issues"]:
         if modes.would_refuse(mode):
             errors.append(kl.issue("trace.wbs", i))

@@ -94,5 +94,55 @@ class Cli(unittest.TestCase):
         self.assertIn("E1.F9.T1", env["warnings"][0]["message"])
 
 
+LEGACY_PLAN = """# Plan: sample-change
+
+## Tasks
+
+### Feature E1.F1: Requirements
+- [x] E1.F1.T1 [Backend] Write requirements
+
+### Feature E1.F2: Sign-in
+- [ ] E1.F2.T1 [Backend] Sign-in endpoint
+
+- [ ] QA Review sample-change (feature → main)
+- [ ] [Deploy] sample-change@1.2.0
+
+### Epic item E1.DEPLOY
+- [ ] E1.DEPLOY.T1 [human] The production OK
+"""
+
+
+class Legacy(unittest.TestCase):
+    """@req REQ-W3-040 REQ-W3-041 — the tracker reconciliation reports, never rewrites."""
+
+    def test_REQ_W3_040_a_phase_feature_is_legacy_shape_and_a_root_qa_item_is_outside(self):
+        out = trace.wbs_plan(LEGACY_PLAN)
+        self.assertEqual(len(out), 3, out)
+        self.assertTrue(out[0].startswith("legacy shape: Feature E1.F1 'Requirements' is a pipeline phase"))
+        self.assertTrue(out[1].startswith("outside the hierarchy: 'QA Review sample-change"))
+        self.assertTrue(out[2].startswith("outside the hierarchy: '[Deploy] sample-change@1.2.0'"))
+
+    def test_the_file_is_unchanged_through_the_cli(self):
+        tmp = Path(tempfile.mkdtemp(prefix="karvey-wbs-legacy-"))
+        self.addCleanup(shutil.rmtree, str(tmp), True)
+        d = tmp / "docs/spec/changes/sample-change"
+        d.mkdir(parents=True)
+        (d / "spec.json").write_text('{"change_id": "sample-change", "phase": "impl"}\n')
+        (d / "tasks.md").write_text(GOOD)
+        (d / "PLAN.md").write_text(LEGACY_PLAN)
+        before = (d / "PLAN.md").read_bytes()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = trace.main(["sample-change", "--wbs", "--root", str(tmp), "--json"])
+        env = json.loads(out.getvalue())
+        self.assertEqual(code, 0)
+        self.assertEqual(len(env["result"]["tracker"]), 3)
+        self.assertEqual((d / "PLAN.md").read_bytes(), before)
+
+    @unittest.skipUnless(OWN.is_file(), "not this repository")
+    def test_this_changes_own_plan_is_in_the_new_shape(self):
+        self.assertEqual(trace.wbs_plan((OWN.parent / "PLAN.md").read_text(encoding="utf-8")), [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -34,6 +34,12 @@ Markdown: a history row in `PLAN.md`.
 - **Outbox retry:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" outbox list {change-id}`; apply
   each ready entry, then `outbox done {change-id} <entry_id>` (or `--failed "<error>"` to keep it).
 
+- **WBS reconciliation (report, never rewrite):** the tracker (or `PLAN.md`) should hold the one work breakdown
+  of `management-adapters.md`. `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-trace.py" {change-id} --wbs` reads
+  `tasks.md` and `PLAN.md`; a 4.0 item — a Feature per pipeline phase — is reported `legacy shape`, a QA or deploy
+  item outside `E{n}.QA` / `E{n}.DEPLOY` is reported `outside the hierarchy`. Mention them in the close comment;
+  moving or renaming them is the team's decision, never a side effect of the close.
+
 ### 4. Record the state
 - `phase` and approvals are written only by `karvey-state.py` (`generated`, `approve`, `advance`; see
   `state-machine.md`), never by hand.
