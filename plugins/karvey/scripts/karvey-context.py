@@ -1205,6 +1205,13 @@ def _fmt_value(v):
     return str(v)
 
 
+def _fmt_cost(v):
+    if not isinstance(v, dict):
+        return _fmt_value(v)
+    return "US$ %s · %d change(s) · estimated share %s · judges US$ %s" % (
+        v["total_usd"], v["changes"], v["estimated_share"], v["judge_usd"])
+
+
 def render_metrics(res):
     p = res["period"]
     L = ["== METRICS %s .. %s (as of %s)%s ==" % (p["from"], p["to"], p["as_of"],
@@ -1212,9 +1219,17 @@ def render_metrics(res):
          "changes: %s" % (", ".join(res["changes"]) or "none")]
     for m in mx.METRICS:
         tot = res["total"][m]
-        L.append("%-26s %s" % (m, _fmt_value(tot["value"])))
+        fmt = _fmt_cost if m == "cost_per_change" else _fmt_value
+        L.append("%-26s %s" % (m, fmt(tot["value"])))
         for lane, vals in sorted(res["lanes"].items()):
-            L.append("  %-24s %s" % ("lane " + lane, _fmt_value(vals[m]["value"])))
+            L.append("  %-24s %s" % ("lane " + lane, fmt(vals[m]["value"])))
+        if m == "cost_per_change" and isinstance(tot["value"], dict):
+            for client, g in sorted(tot["value"]["by_client"].items()):
+                L.append("  %-24s US$ %s · %d change(s) · estimated share %s" % (
+                    "client " + client, g["usd"], g["changes"], g["estimated_share"]))
+            for cid, c in sorted(tot["value"]["by_change"].items()):
+                L.append("  %-24s US$ %s · %s tokens · review %s min · judges US$ %s · estimated share %s" % (
+                    "change " + cid, c["usd"], c["tokens"], c["review_min"], c["judge_usd"], c["estimated_share"]))
         for r in tot["reasons"]:
             L.append("  %s" % r)
     for u in res.get("unreadable", []):

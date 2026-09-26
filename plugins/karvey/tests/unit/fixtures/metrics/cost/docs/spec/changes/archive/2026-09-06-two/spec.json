@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "change_id": "two",
+  "phase": "archived",
+  "created_at": "2026-09-01T09:00:00-03:00",
+  "approvals": {},
+  "client": "sample-client-a",
+  "lane": "standard",
+  "effort": [
+    {
+      "kind": "phase",
+      "phase": "requirements",
+      "at": "2026-09-02T10:00:00-03:00",
+      "session": "s4",
+      "usd": {
+        "value": 2.0,
+        "quality": "estimated",
+        "source": "runtime statusline"
+      },
+      "tokens": {
+        "total": 1000,
+        "quality": "estimated",
+        "source": "session transcript"
+      },
+      "review_min": {
+        "value": null,
+        "quality": "n/a"
+      }
+    },
+    {
+      "kind": "phase",
+      "phase": "architecture",
+      "at": "2026-09-02T10:00:00-03:00",
+      "session": "s4",
+      "usd": {
+        "value": 2.0,
+        "quality": "exact",
+        "source": "runtime statusline"
+      },
+      "tokens": {
+        "total": 1000,
+        "quality": "exact",
+        "source": "session transcript"
+      },
+      "review_min": {
+        "value": null,
+        "quality": "n/a"
+      }
+    }
+  ],
+  "judge_runs": [
+    {
+      "phase": "architecture",
+      "lens": "security",
+      "model": "model-a",
+      "intra_model": true,
+      "verdict": "pass",
+      "at": "2026-09-05T10:00:00-03:00",
+      "usd": 0.5
+    }
+  ]
+}

@@ -218,5 +218,72 @@ class Readiness(unittest.TestCase):
         self.assertEqual(sorted(r["checks"]), sorted(__import__("karvey_lib.modes").modes.check_ids()))
 
 
+COST = FIX / "cost"
+
+
+def cost_records():
+    out = []
+    for d in sorted((COST / "docs/spec/changes/archive").iterdir()):
+        spec = json.loads((d / "spec.json").read_text(encoding="utf-8"))
+        out.append({"id": spec["change_id"], "spec": spec, "findings": None, "plan_rows": None,
+                    "archived_on": d.name[:10]})
+    return out
+
+
+class Cost(unittest.TestCase):
+    """@req REQ-W3-018 — cost per change, per lane, per client and period, with the estimated share."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.all = M.compute_all(cost_records(), FRM, TO)
+
+    def test_REQ_W3_018_per_client_total_and_estimated_share(self):
+        v = self.all["total"]["cost_per_change"]["value"]
+        self.assertEqual(v["by_client"], {"sample-client-a": {"usd": 8.0, "changes": 2, "estimated_share": 0.25},
+                                          "sample-client-b": {"usd": 3.0, "changes": 1, "estimated_share": 0.0}})
+        self.assertEqual((v["total_usd"], v["changes"], v["judge_usd"]), (11.0, 3, 0.5))
+        self.assertEqual(v["by_change"]["two"]["estimated_share"], 0.5)
+
+    def test_REQ_W3_018_change_without_effort_is_na_and_excluded_from_cost_only(self):
+        r = self.all["total"]["cost_per_change"]
+        self.assertIn("n/a (no effort): four", r["reasons"])
+        self.assertNotIn("four", r["value"]["by_change"])
+        self.assertIn("four", self.all["changes"])
+
+    def test_per_lane(self):
+        self.assertEqual(self.all["lanes"]["patch"]["cost_per_change"]["value"]["total_usd"], 3.0)
+        self.assertEqual(self.all["lanes"]["standard"]["cost_per_change"]["value"]["total_usd"], 8.0)
+
+    def test_phases_per_session(self):
+        self.assertEqual(self.all["total"]["phases_per_session"]["value"], {"one": 1.0, "three": 1.0, "two": 2.0})
+
+    def test_no_effort_anywhere_is_never_zero(self):
+        v, reasons = M.cost_per_change([{"id": "x", "spec": {}}])
+        self.assertIsNone(v)
+        self.assertEqual(reasons, ["n/a (no effort): x"])
+
+
+class CostCli(unittest.TestCase):
+    """@req REQ-W3-018 — the cost rows of ``--metrics`` (table and JSON), byte-identical across runs."""
+
+    def setUp(self):
+        self.t = g.TempDir()
+        self.root = g.init(self.t.path / "repo")
+        shutil.copytree(str(COST / "docs"), str(self.root / "docs"))
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def test_REQ_W3_018_json_and_table(self):
+        args = ("--root", str(self.root), "--metrics", "--from", FRM, "--to", TO, "--as-of", TO)
+        c1, a = run_ctx(*(args + ("--json",)))
+        c2, b = run_ctx(*(args + ("--json",)))
+        self.assertEqual((c1, a), (c2, b))
+        self.assertEqual(json.loads(a)["result"]["total"]["cost_per_change"]["value"]["total_usd"], 11.0)
+        _, human = run_ctx(*args)
+        self.assertIn("cost_per_change", human)
+        self.assertIn("n/a (no effort): four", human)
+
+
 if __name__ == "__main__":
     unittest.main()

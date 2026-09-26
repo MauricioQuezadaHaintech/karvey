@@ -310,6 +310,112 @@ def judge_cost(changes):
             "by_change": {k: r2(v) for k, v in sorted(by_change.items())}}, []
 
 
+# --------------------------------------------------------------------------- cost (wave3 §1.11, REQ-W3-018, 019)
+NO_EFFORT = "n/a (no effort)"
+UNASSIGNED_CLIENT = "unassigned"
+
+
+def client_of(spec):
+    """``spec.client``, else the tracker's client tag, else ``unassigned``."""
+    c = spec.get("client")
+    if isinstance(c, str) and c.strip():
+        return c.strip()
+    cu = spec.get("clickup") if isinstance(spec.get("clickup"), dict) else {}
+    tag = cu.get("client_tag")
+    return tag.strip() if isinstance(tag, str) and tag.strip() else UNASSIGNED_CLIENT
+
+
+def _numv(v):
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+def effort_totals(spec):
+    """``{usd, estimated_usd, tokens, review_min, phases: {phase: usd}, sessions, entries, na}`` of a change's
+    ``effort[]``; ``None`` when it has no effort record."""
+    eff = _list(spec, "effort")
+    if not isinstance(spec.get("effort"), list) or not eff:
+        return None
+    usd = est = 0.0
+    tokens = review = 0
+    phases, sessions, na_n, measured = {}, set(), 0, 0
+    for e in eff:
+        if e.get("kind", "phase") != "phase":
+            continue
+        u = e.get("usd") if isinstance(e.get("usd"), dict) else {}
+        v = _numv(u.get("value"))
+        if v is None:
+            na_n += 1
+        else:
+            measured += 1
+            usd += v
+            if u.get("quality") == "estimated":
+                est += v
+            ph = e.get("phase") or "unknown"
+            phases[ph] = phases.get(ph, 0.0) + v
+        t = e.get("tokens") if isinstance(e.get("tokens"), dict) else {}
+        if _numv(t.get("total")) is not None:
+            tokens += int(t["total"])
+        r = e.get("review_min") if isinstance(e.get("review_min"), dict) else {}
+        if _numv(r.get("value")) is not None:
+            review += r["value"]
+        if isinstance(e.get("session"), str) and e["session"]:
+            sessions.add(e["session"])
+    if not measured:
+        return None
+    return {"usd": usd, "estimated_usd": est, "tokens": tokens, "review_min": review, "phases": phases,
+            "sessions": len(sessions), "entries": measured + na_n, "na": na_n}
+
+
+def _group(rows):
+    usd = sum(r["usd"] for r in rows)
+    est = sum(r["estimated_usd"] for r in rows)
+    return {"usd": r2(usd), "changes": len(rows), "estimated_share": r2(est / usd) if usd else 0.0}
+
+
+def cost_per_change(changes):
+    """``{total_usd, estimated_share, tokens, review_min, judge_usd, by_change, by_client}``. A change without an
+    effort record is ``n/a (no effort)`` and excluded from the cost only (REQ-W3-018)."""
+    rows, reasons, by_change = [], [], {}
+    for c in changes:
+        spec = spec_of(c)
+        t = effort_totals(spec)
+        if t is None:
+            reasons.append("%s: %s" % (NO_EFFORT, c["id"]))
+            continue
+        judge = sum(j["usd"] for j in _list(spec, "judge_runs") if _numv(j.get("usd")) is not None)
+        row = dict(t, id=c["id"], client=client_of(spec), lane=lane_of(spec), judge_usd=judge)
+        rows.append(row)
+        by_change[c["id"]] = {"usd": r2(t["usd"]), "tokens": t["tokens"], "review_min": r2(t["review_min"]),
+                              "judge_usd": r2(judge), "client": row["client"],
+                              "estimated_share": r2(t["estimated_usd"] / t["usd"]) if t["usd"] else 0.0}
+    if not rows:
+        return None, reasons or [na("no effort record")]
+    clients = {}
+    for r in rows:
+        clients.setdefault(r["client"], []).append(r)
+    total = _group(rows)
+    return {"total_usd": total["usd"], "estimated_share": total["estimated_share"], "changes": total["changes"],
+            "tokens": sum(r["tokens"] for r in rows), "review_min": r2(sum(r["review_min"] for r in rows)),
+            "judge_usd": r2(sum(r["judge_usd"] for r in rows)),
+            "by_change": dict(sorted(by_change.items())),
+            "by_client": {k: _group(v) for k, v in sorted(clients.items())}}, reasons
+
+
+def phases_per_session(changes):
+    """``{change: phases / sessions}`` from the hashed session of each effort entry (the measure of one phase per
+    session, F-55)."""
+    out, reasons = {}, []
+    for c in changes:
+        eff = [e for e in _list(spec_of(c), "effort") if isinstance(e.get("session"), str) and e["session"]]
+        if not eff:
+            reasons.append("%s: %s" % (NO_EFFORT, c["id"]))
+            continue
+        out[c["id"]] = r2(len(eff) / float(len({e["session"] for e in eff})))
+    if not out:
+        return None, reasons or [na("no effort record")]
+    return dict(sorted(out.items())), reasons
+
+
 def automatic_approvals(changes):
     """``{auto, human}``: approvals recorded with ``role: auto`` apart from human ones (REQ-W2-040)."""
     auto = human = 0
@@ -327,7 +433,7 @@ def automatic_approvals(changes):
 METRICS = ("lead_time_days", "cycle_time_hours", "approval_wait_hours", "throughput_per_week",
            "deploy_frequency_per_week", "change_failure_rate", "time_to_restore_hours", "spec_gap_rate",
            "ripple", "gate_rejection_rate", "estimate_accuracy", "judge_acceptance", "judge_cost_usd",
-           "automatic_approvals")
+           "automatic_approvals", "cost_per_change", "phases_per_session")
 
 
 def compute(changes, frm, to):
@@ -349,6 +455,8 @@ def compute(changes, frm, to):
         "judge_acceptance": lambda: judge_acceptance(changes),
         "judge_cost_usd": lambda: judge_cost(changes),
         "automatic_approvals": lambda: automatic_approvals(changes),
+        "cost_per_change": lambda: cost_per_change(changes),
+        "phases_per_session": lambda: phases_per_session(changes),
     }
     out = {}
     for m in METRICS:
