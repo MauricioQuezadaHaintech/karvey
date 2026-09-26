@@ -72,5 +72,76 @@ class DoneDirect(unittest.TestCase):
         self.assertIn("BL-01: done-direct needs the commit", err[0]["message"])
 
 
+class View(unittest.TestCase):
+    """@req REQ-W3-051"""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        import _gitrepo as g
+        g.isolate_git()
+        self.g = g
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-bl-view-"))
+        self.addCleanup(__import__("shutil").rmtree, str(self.tmp), True)
+        self.root = g.init(self.tmp / "repo")
+        rows = []
+        for i in range(1, 11):
+            value, cod, eff, reviewed = str(1 + i % 5), str(1 + (i * 2) % 5), "SML"[i % 3], "2026-10-%02d" % i
+            if i == 3:
+                eff = "—"  # unscored
+            if i == 7:
+                value = "high"  # malformed
+            if i in (1, 2):
+                reviewed = "2026-08-01"  # stale
+            rows.append("| BL-%02d | 2026-08-01 | retro | feature | low | Item %d | open | — | — | %s | %s | %s | — | — "
+                        "| %s | — |" % (i, i, value, eff, cod, reviewed))
+        rows.append("| BL-11 | 2026-08-01 | retro | feature | low | Closed one | discarded | — | — | 5 | S | 5 | — | — "
+                    "| 2026-10-01 | — |")
+        text = ("# Discovery Backlog\n\n| ID | Date | Origin | Type | Priority | Title | Status | Tracker | Promoted "
+                "to change-id | Value | Effort | CoD | Needed by | Client | Reviewed | Commit |\n" + "|---" * 16 + "|\n"
+                + "\n".join(rows) + "\n")
+        g.write(self.root, "docs/spec/backlog.md", text)
+        g.write(self.root, "docs/spec/project.json", {"repos": ["repo"]})
+        g.run(["add", "-A"], self.root)
+        g.run(["commit", "-q", "-m", "fixture"], self.root)
+
+    def view(self, *argv):
+        import contextlib
+        import importlib.util
+        import io
+        import json
+        m = importlib.util.spec_from_file_location("karvey_context_bl", str(_path.SCRIPTS_DIR / "karvey-context.py"))
+        mod = importlib.util.module_from_spec(m)
+        m.loader.exec_module(mod)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = mod.main(["--backlog", "--root", str(self.root), "--as-of", TODAY] + list(argv))
+        return code, out.getvalue()
+
+    def test_REQ_W3_051_ordered_by_score_with_stale_flagged(self):
+        import json
+        code, out = self.view("--json")
+        self.assertEqual(code, 0, out)
+        res = json.loads(out)["result"]
+        scores = [x["score"] for x in res["scored"]]
+        self.assertEqual(scores, sorted(scores, reverse=True))
+        self.assertEqual(len(res["scored"]), 8)
+        self.assertEqual({x["id"] for x in res["scored"] if x["stale"]}, {"BL-01", "BL-02"})
+        self.assertEqual([x["id"] for x in res["unscored"]], ["BL-03"])
+        self.assertNotIn("BL-11", out)
+
+    def test_REQ_W3_051_a_malformed_row_is_an_invalid_row_and_the_rest_render(self):
+        code, out = self.view()
+        self.assertIn("invalid row BL-07: Value 'high' is not 1-5", out)
+        self.assertIn("BL-01", out)
+        self.assertIn("stale (reviewed 2026-08-01)", out)
+
+    def test_read_only(self):
+        import subprocess
+        self.view()
+        st = subprocess.run(["git", "status", "--porcelain"], cwd=str(self.root), capture_output=True, text=True)
+        self.assertEqual(st.stdout.strip(), "")
+
+
 if __name__ == "__main__":
     unittest.main()

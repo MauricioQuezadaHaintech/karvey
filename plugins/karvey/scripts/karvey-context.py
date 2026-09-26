@@ -6,6 +6,7 @@
                       [--json]
     karvey-context.py --metrics [--from YYYY-MM-DD --to YYYY-MM-DD] [--as-of YYYY-MM-DD] [--lane L] [--json]
     karvey-context.py --readiness [--json]
+    karvey-context.py --backlog [--as-of YYYY-MM-DD] [--json]
     karvey-context.py --portfolio [--file PATH] [--client NAME] [--from --to --as-of] [--json]
 
 - Opens every file read-only and never writes, also under ``--json`` (REQ-W1-072). JSON is parsed as
@@ -54,6 +55,7 @@ from karvey_lib import approval, audit, metrics as mx, modes, project as pj  # n
 from karvey_lib import sponsor as spx  # noqa: E402
 from karvey_lib import questions as qs, risks as rsk  # noqa: E402
 from karvey_lib import portfolio as pfl  # noqa: E402
+from karvey_lib import backlog as bkl  # noqa: E402
 
 TOOL = "karvey-context"
 CHANGE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
@@ -1412,6 +1414,49 @@ def render_metrics(res):
     return "\n".join(L)
 
 
+# --------------------------------------------------------------------------- backlog (wave3 §1.21)
+def backlog_view(args, rd):
+    """Open items by WSJF score, the unscored apart, ``stale`` past 30 days since ``Reviewed``, malformed rows as
+    ``invalid row`` with their id (REQ-W3-051). Read-only."""
+    as_of = _day(args.as_of, "--as-of") or datetime.now().astimezone().date().isoformat()
+    text = rd.text(rd.spec / "backlog.md")
+    rows = bkl.parse(text or "")
+    scored, unscored, invalid = [], [], []
+    for r in rows:
+        if r["status"] != "open":
+            continue
+        sc = bkl.score(r, as_of)
+        item = {"id": r["id"], "title": r["title"], "client": r["client"], "reviewed": r["reviewed"],
+                "stale": bkl.stale(r, as_of)}
+        if sc["invalid"]:
+            invalid.append({"id": r["id"], "reason": sc["invalid"]})
+        elif sc["unscored"]:
+            unscored.append(dict(item, reason=sc["unscored"]))
+        else:
+            scored.append(dict(item, score=sc["score"], urgency=sc["urgency"], effort=sc["effort"]))
+    scored.sort(key=lambda x: (-x["score"], x["id"]))
+    unscored.sort(key=lambda x: x["id"])
+    return {"as_of": as_of, "file": None if text is None else "backlog.md", "scored": scored, "unscored": unscored,
+            "invalid": invalid, "last_refinement": bkl.last_refinement(text or ""),
+            "unreadable": list(rd.unreadable)}
+
+
+def render_backlog(res):
+    L = ["== BACKLOG (as of %s) · %d scored · %d unscored · %d invalid ==" % (
+        res["as_of"], len(res["scored"]), len(res["unscored"]), len(res["invalid"]))]
+    if res["file"] is None:
+        L.append("no backlog.md")
+    for x in res["scored"]:
+        L.append("%6.2f  %-6s %s%s%s" % (x["score"], x["id"], x["title"], (" · " + x["client"]) if x["client"] else "",
+                                         " · stale (reviewed %s)" % x["reviewed"] if x["stale"] else ""))
+    if res["unscored"]:
+        L.append("unscored:")
+        L += ["        %-6s %s · %s%s" % (x["id"], x["title"], x["reason"], " · stale" if x["stale"] else "")
+              for x in res["unscored"]]
+    L += ["invalid row %s: %s" % (x["id"], x["reason"]) for x in res["invalid"]]
+    return "\n".join(L)
+
+
 # --------------------------------------------------------------------------- portfolio (wave3 §1.20)
 def portfolio_file(args, root):
     """``--file``, else ``{ops_repo}/docs/spec/portfolio.json`` beside this repository, else this spec dir's."""
@@ -1554,6 +1599,9 @@ def run(args):
     if args.report:
         res = report_view(args, rd)
         return kl.EXIT_OK, res, list(rd.warnings), render_report(res)
+    if args.backlog:
+        res = backlog_view(args, rd)
+        return kl.EXIT_OK, res, list(rd.warnings), render_backlog(res)
     ctx = build_context(args, rd)
     sections = [args.section] if args.section else list(DEFAULT_SECTIONS)
     result = {"root": str(root), "sections": sections}
@@ -1585,6 +1633,7 @@ def build_parser():
     p.add_argument("--report", action="store_true",
                    help="business-language status for a period (released, in progress, blocked, risks, decisions)")
     p.add_argument("--client", help="--report / --portfolio: only this client's changes")
+    p.add_argument("--backlog", action="store_true", help="open backlog items ranked by WSJF (read-only)")
     p.add_argument("--portfolio", action="store_true",
                    help="read-only, offline view of every repository of the portfolio file, per client")
     p.add_argument("--file", help="--portfolio: the portfolio file (default {ops_repo}/docs/spec/portfolio.json)")
@@ -1614,7 +1663,7 @@ def main(argv=None):
         return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL,
                                    errors=[kl.issue("internal", "%s: %s" % (type(exc).__name__, exc))]), args.json)
     env = kl.envelope(TOOL, code, result=result, warnings=warnings)
-    if args.json and (args.metrics or args.readiness or args.report or args.portfolio):  # byte-identical output: sorted keys, no wall clock, no absolute path
+    if args.json and (args.metrics or args.readiness or args.report or args.portfolio or args.backlog):  # byte-identical output: sorted keys, no wall clock, no absolute path
         sys.stdout.write(json.dumps(env, ensure_ascii=False, sort_keys=True) + "\n")
         return code
     return kl.emit(env, args.json, human=human)
