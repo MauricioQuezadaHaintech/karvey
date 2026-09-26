@@ -1934,7 +1934,10 @@ UPGRADE_SCOPES = ("project", "git_dir")
 FORBIDDEN_MODULES = ("shutil", "subprocess")
 FORBIDDEN_OS = ("remove", "unlink", "rename", "replace", "mkdir", "makedirs", "rmdir", "removedirs", "chmod",
                 "symlink", "link", "truncate", "system", "popen", "open", "write", "renames", "chown", "utime")
-FORBIDDEN_METHODS = ("write_text", "write_bytes", "unlink", "rmdir", "mkdir", "touch", "chmod", "symlink_to")
+FORBIDDEN_METHODS = ("write_text", "write_bytes", "unlink", "rmdir", "mkdir", "touch", "chmod", "symlink_to",
+                     "rename", "hardlink_to")
+FORBIDDEN_OS_PREFIXES = ("exec", "spawn", "posix_spawn", "fork", "kill")
+OPEN_FUNCTIONS = ("open", "io.open", "codecs.open")  # the mode is the 2nd argument
 HOME_READS = ("home_read", "home_json")
 # F-26: the only names a step may use on the state / config tools it gets from the Probe (all read-only);
 # anything else (cmd_*, write_*, …) could write the project behind the engine's back
@@ -2027,11 +2030,16 @@ def _io_violations(fn, aliases=None, tools=None):
     aliases = aliases or {}
     tools = dict(tools or {})
     out = []
-    for node in ast.walk(fn):  # names bound to the Probe's tools inside this function
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-            kind = _tool_kind(node.value, tools)
-            if kind:
-                tools[node.targets[0].id] = kind
+    for _ in range(2):  # names bound to the Probe (``p = probe``) or to its tools, in any order of assignment
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                if isinstance(node.value, ast.Name) and (node.value.id == "probe" or
+                                                         tools.get(node.value.id) == "probe"):
+                    tools[node.targets[0].id] = "probe"
+                    continue
+                kind = _tool_kind(node.value, tools)
+                if kind:
+                    tools[node.targets[0].id] = kind
     for node in ast.walk(fn):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             names = [a.name for a in node.names] + ([node.module] if isinstance(node, ast.ImportFrom) and
@@ -2039,16 +2047,22 @@ def _io_violations(fn, aliases=None, tools=None):
             for nm in names:
                 if nm and nm.split(".")[0] in FORBIDDEN_MODULES:
                     out.append((node.lineno, "imports %s" % nm))
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "getattr" and node.args:
+            kind = _tool_kind(node.args[0], tools)
+            name = node.args[1].value if len(node.args) > 1 and isinstance(node.args[1], ast.Constant) else None
+            if kind and kind != "probe" and name not in PROBE_TOOLS[kind]:
+                out.append((node.lineno, "getattr(probe.%s, %r), not a read-only function of the %s tool" % (
+                    kind, name, kind)))
         if isinstance(node, ast.Attribute):
             kind = _tool_kind(node.value, tools)
-            if kind and node.attr not in PROBE_TOOLS[kind]:
+            if kind and kind != "probe" and node.attr not in PROBE_TOOLS[kind]:
                 out.append((node.lineno, "probe.%s.%s, not a read-only function of the %s tool" % (
                     kind, node.attr, kind)))
         if not isinstance(node, ast.Call):
             continue
         f = node.func
         name = _canonical_call(f, aliases)
-        if isinstance(f, ast.Name) and name == "open":
+        if name in OPEN_FUNCTIONS:
             if _write_mode(node, 1):
                 out.append((node.lineno, "open() in a write mode"))
             continue
@@ -2059,7 +2073,7 @@ def _io_violations(fn, aliases=None, tools=None):
         top, _, attr = (name or "").partition(".")
         if top in FORBIDDEN_MODULES:
             out.append((node.lineno, name if attr else "%s()" % name))
-        elif top == "os" and attr in FORBIDDEN_OS:
+        elif top == "os" and (attr in FORBIDDEN_OS or attr.startswith(FORBIDDEN_OS_PREFIXES)):
             out.append((node.lineno, name))
         elif top == "atomicio" and attr.startswith("write"):
             out.append((node.lineno, name))
@@ -2071,7 +2085,7 @@ def _io_violations(fn, aliases=None, tools=None):
 def _tool_kind(node, tools):
     """``"state"``/``"config"`` when ``node`` is ``probe.state`` / ``probe.config`` or a name bound to one."""
     if isinstance(node, ast.Attribute) and node.attr in PROBE_TOOLS and isinstance(node.value, ast.Name) \
-            and node.value.id == "probe":
+            and (node.value.id == "probe" or tools.get(node.value.id) == "probe"):
         return node.attr
     if isinstance(node, ast.Name):
         return tools.get(node.id)
@@ -2096,7 +2110,7 @@ def _tool_params(funcs):
                 if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in funcs):
                     continue
                 callee = funcs[node.func.id]
-                names = [a.arg for a in callee.args.args]
+                names = [a.arg for a in callee.args.posonlyargs + callee.args.args]
                 bound = list(zip(names, node.args)) + [(k.arg, k.value) for k in node.keywords if k.arg]
                 for pname, arg in bound:
                     kind = _tool_kind(arg, local)
@@ -2149,12 +2163,17 @@ def l38_upgrade_catalogue(ctx):
             dotted = [a.name for a in node.names]
         elif isinstance(node, ast.ImportFrom) and not node.level:
             dotted = [node.module or ""]
+            if any(a.name == "*" for a in node.names) and (node.module or "").split(".")[0] in ("os",) + \
+                    FORBIDDEN_MODULES:
+                yield steps_py, node.lineno, ("upgrade_steps.py does direct I/O (imports %s.*): a star import hides "
+                                              "forbidden calls" % node.module)
         else:
             continue
         for d in dotted:
             hit = _forbidden_import(node.lineno, d)
             if hit:
-                yield steps_py, hit[0], "upgrade_steps.py %s: only the Probe reads and only the engine writes" % hit[1]
+                yield (steps_py, hit[0], "upgrade_steps.py does direct I/O (%s): only the Probe reads and only the "
+                                         "engine writes" % hit[1])
     pj = ctx.json(plugin_json_path(ctx)) or {}
     version = str(pj.get("version", "0.0.0"))
     unreleased = _unreleased_has_entries(ctx)

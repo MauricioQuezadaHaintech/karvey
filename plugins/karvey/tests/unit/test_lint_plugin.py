@@ -1128,6 +1128,12 @@ class L38(UpgradeMiniPlugin):
             ("", "probe.state.cmd_approve(None, None)", "probe.state.cmd_approve"),
             ("", "c = probe.config\n    c.cmd_set(None)", "probe.config.cmd_set"),
             ("", "_hand(probe.state)", "probe.state.write_spec"),
+            ("import io\n", 'io.open(".x", "w")', "open() in a write mode"),
+            ("", 'probe.root.joinpath("x").rename("y")', ".rename()"),
+            ("", 'os.execv("/bin/sh", ["sh"])', "os.execv"),
+            ("from os import *\n", "pass", "imports os.*"),
+            ("", "p = probe\n    p.state.cmd_init(None)", "probe.state.cmd_init"),
+            ("", 'getattr(probe.state, "cmd_init")(None)', "getattr(probe.state, 'cmd_init')"),
         )
         for head, body, what in cases:
             with self.subTest(what=what, body=body):
@@ -1137,6 +1143,10 @@ class L38(UpgradeMiniPlugin):
                 text += "\n\ndef _hand(mod):\n    mod.write_spec({})\n"
                 self.t.write(STEPS, text)
                 self.assertFails("L-38", "does direct I/O (%s" % what)
+        self.t.write(STEPS, src.replace("def schema_migrate_fix(probe, params, values):\n",
+                                        "def schema_migrate_fix(probe, params, values):\n"
+                                        "    import io\n    io.open(probe.root / 'x').read()\n", 1))
+        self.assertPasses("L-38")  # a read-only io.open is not a write
         self.t.write(STEPS, src)
         self.assertPasses("L-38")
 

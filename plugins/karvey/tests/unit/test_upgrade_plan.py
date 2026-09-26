@@ -238,7 +238,7 @@ class PlanTests(unittest.TestCase):
         steps = [step("a", "t_applies", fix="t_applies"), step("b", "t_nothing"), step("c", "t_raises")]
         p = upgrade.plan(self.root, steps=steps, registry=REG, seen_version="3.0.0")
         doc = json.loads(json.dumps(p.as_json()))
-        self.assertEqual(set(doc), {"from", "to", "computed_on", "steps"})
+        self.assertEqual(set(doc), {"from", "to", "computed_on", "in_git", "steps"})
         self.assertEqual([r["id"] for r in doc["steps"]], ["a", "b", "c"])
         keys = {"id", "since", "title", "status", "summary", "dry_run", "risk", "human", "report_only",
                 "inputs_needed", "warnings"}

@@ -632,7 +632,8 @@ def _probe_with_watchdog(upgrade, kp, deadline):
     """``upgrade.any_applicable`` in a daemon thread, waited for until the deadline plus a short grace (F-25).
     The probe checks the deadline itself between steps, files and directories; the watchdog covers one call that
     blocks (a slow disk, a huge file): past it the result is ``timeout`` — the offer is shown and nothing is
-    recorded, since only this thread ever writes the ``empty`` record."""
+    recorded: the probe thread never writes, and the caller writes the ``empty`` record only for a ``none``
+    result it received before the watchdog expired."""
     box = {}
 
     def run():

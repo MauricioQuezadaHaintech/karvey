@@ -101,7 +101,10 @@ def cmd_branch(args, root):
     res = upgrade.ensure_branch(root)
     if res["created"] and res.get("remote"):
         human = ("created %s from %s (another clone already pushed this upgrade: a PR to %s may already be open) "
-                 "and switched to it" % (res["branch"], res["base"], res.get("integration")))
+                 "and switched to it\ncommits it brings:\n%s\nfiles:\n%s" % (
+                     res["branch"], res["base"], res.get("integration"),
+                     "\n".join("  " + c for c in res.get("remote_commits") or []) or "  (none)",
+                     "\n".join("  " + f for f in res.get("remote_files") or []) or "  (none)"))
     elif res["created"]:
         human = "created %s from %s and switched to it" % (res["branch"], res["base"])
     elif res["switched"]:

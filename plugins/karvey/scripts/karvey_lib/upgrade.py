@@ -311,20 +311,36 @@ class Probe:
         base = self.root.joinpath(*parts[:i]) if i else self.root
         remaining = None if "**" in parts[i:] else len(parts) - i
         out = set()
-        if base.is_dir() and not base.is_symlink():
-            for dirpath, dirnames, filenames in os.walk(str(base)):
+        seen = set()
+
+        def inside(path):
+            real = Path(os.path.realpath(path))
+            return real == self.root or self.root in real.parents, real
+
+        ok, real_base = inside(str(base))
+        if base.is_dir() and ok:
+            seen.add(real_base)
+            # symlinked directories are followed like Path.glob did, but only while they resolve inside the
+            # project root and only once each (a link loop or a link out of the tree is never walked)
+            for dirpath, dirnames, filenames in os.walk(str(base), followlinks=True):
                 self.check_deadline()
                 d = Path(dirpath)
                 depth = len(d.relative_to(base).parts)
-                if remaining is not None and depth >= remaining - 1:
-                    dirnames[:] = []
-                else:
-                    dirnames[:] = [n for n in dirnames
-                                   if n not in PRUNED_DIRS and not os.path.lexists(os.path.join(dirpath, n, ".git"))]
+                keep = []
+                if remaining is None or depth < remaining - 1:
+                    for n in dirnames:
+                        if n in PRUNED_DIRS or os.path.lexists(os.path.join(dirpath, n, ".git")):
+                            continue
+                        ok, real = inside(os.path.join(dirpath, n))
+                        if ok and real not in seen:
+                            seen.add(real)
+                            keep.append(n)
+                dirnames[:] = keep
                 for f in filenames:
                     p = d / f
                     rel = p.relative_to(self.root).as_posix()
-                    if glob_match(rel, pattern) and p.is_file() and not self._in_nested_tree(p):
+                    if glob_match(rel, pattern) and p.is_file() and inside(str(p))[0] \
+                            and not self._in_nested_tree(p):
                         out.add(rel)
         for rel, text in self.overlay.items():
             if text is None:
@@ -511,13 +527,14 @@ class Plan:
     steps: list
     results: dict
     exit: int
+    in_git: bool = True
 
     def rows(self):
         return list(self.steps)
 
     def as_json(self):
         return {"from": self.from_version, "to": self.to_version, "computed_on": self.computed_on,
-                "steps": [dict(r) for r in self.steps]}
+                "in_git": self.in_git, "steps": [dict(r) for r in self.steps]}
 
     def nothing_to_do(self):
         return all(r["status"] == "nothing" for r in self.steps)
@@ -558,6 +575,16 @@ def one_line(value):
                             else "\\u%04x" % ord(m.group()), str(value))
 
 
+_UNPRINTABLE_IN_BLOCK = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u2028\u2029]")
+
+
+def printable_block(value):
+    """A multi-line block (instructions, a diff body) with every control character except newline and tab shown
+    escaped: its lines are the tool's own, and a CR or an escape sequence cannot rewrite what the person sees."""
+    return _UNPRINTABLE_IN_BLOCK.sub(lambda m: "\\x%02x" % ord(m.group()) if ord(m.group()) < 0x100
+                                     else "\\u%04x" % ord(m.group()), str(value))
+
+
 def _row(step, res):
     return {"id": step["id"], "since": step["since"], "title": step["title"], "status": res.status,
             "summary": one_line(res.summary), "dry_run": step["dry_run"], "risk": step["risk"],
@@ -581,7 +608,8 @@ def plan(root, steps=None, registry=None, home=None, seen_version=_UNSET, instal
     if seen_version is _UNSET:
         seen_version = upgraded_from(read_seen(root), probe.installed)
     failed = any(r["status"] == "check-failed" for r in rows)
-    return Plan(seen_version, probe.installed, current_branch(root), rows, results, 1 if failed else 0)
+    return Plan(seen_version, probe.installed, current_branch(root), rows, results, 1 if failed else 0,
+                in_git=pj.git_toplevel(root) is not None)
 
 
 def any_applicable(root, deadline, steps=None, registry=None, home=None):
@@ -672,7 +700,7 @@ def write_seen(root, version, resolution, from_version=_UNSET):
     if pj.git_common_dir(root) is None:
         # F-27: the record is per clone; outside git there is no clone, and the fallback state dir sits under the
         # home (REQ-UP-016). The upgrade needs a branch anyway (E-12), so nothing is recorded.
-        raise SeenWriteError("[karvey] this Karvey project is not in a git repository: the upgrade answer is "
+        raise SeenWriteError("this Karvey project is not in a git repository: the upgrade answer is "
                              "recorded per clone and the upgrade needs a branch, so nothing is recorded")
     if from_version is _UNSET:
         from_version = upgraded_from(read_seen(root), version)
@@ -836,9 +864,10 @@ def preview_id(planned):
 def unified_diff(p):
     before = p.before_text or ""
     after = p.edit.text if p.edit.op == "write" else ""
-    a = "/dev/null" if p.before_text is None else "a/" + p.edit.path
-    b = "/dev/null" if p.edit.op == "delete" else "b/" + p.edit.path
-    return "".join(difflib.unified_diff(before.splitlines(True), after.splitlines(True), fromfile=a, tofile=b))
+    a = "/dev/null" if p.before_text is None else "a/" + one_line(p.edit.path)  # F-28: a path is one line
+    b = "/dev/null" if p.edit.op == "delete" else "b/" + one_line(p.edit.path)
+    return printable_block("".join(difflib.unified_diff(before.splitlines(True), after.splitlines(True),
+                                                        fromfile=a, tofile=b)))
 
 
 def apply(root, ids, dry_run=False, preview=None, inputs=None, confirm_no_preview=(), steps=None,
@@ -883,7 +912,7 @@ def apply(root, ids, dry_run=False, preview=None, inputs=None, confirm_no_previe
                 continue
             text = "".join(unified_diff(p) for p in planned)
             rep.diffs[st["id"]] = text
-            rep.lines.append("%s: %s" % (st["id"], res.summary))
+            rep.lines.append("%s: %s" % (st["id"], one_line(res.summary)))
             rep.lines.append(text.rstrip("\n"))
         if pid:
             rep.lines.append("preview id: %s" % pid)
@@ -940,7 +969,7 @@ def _evaluate(root, ids, steps, registry, home, installed, inputs, top, common, 
         res = run_check(st, probe, registry)
         planned = []
         if res.status == "check-failed":
-            failed_checks.append("%s (%s)" % (st["id"], res.summary))
+            failed_checks.append("%s (%s)" % (st["id"], one_line(res.summary)))
         elif res.status == "needs-input" and not inputs.get(st["id"]):
             missing.append("%s: %s" % (st["id"], ", ".join(res.inputs_needed) or "values"))
         elif res.status in ("applies", "needs-input") and st["fix"] and not st["human"] and not st["report_only"]:
@@ -972,12 +1001,12 @@ def _evaluate(root, ids, steps, registry, home, installed, inputs, top, common, 
     for st, res, planned in evals:
         if res.status in ("human", "report") or (res.status == "applies" and not planned):
             rep.shown.append(st["id"])
-            rep.lines.append("%s [%s, shown, not applied]: %s" % (st["id"], res.status, res.summary))
+            rep.lines.append("%s [%s, shown, not applied]: %s" % (st["id"], res.status, one_line(res.summary)))
             for part in (res.instructions, res.diff):
                 if part:
-                    rep.lines.append(part.rstrip("\n"))
+                    rep.lines.append(printable_block(part).rstrip("\n"))
         for w in res.warnings:
-            rep.lines.append("  %s: %s" % (st["id"], w))
+            rep.lines.append("  %s: %s" % (st["id"], one_line(w)))
 
     previewable = [p for st, _, planned in evals if st["dry_run"] for p in planned]
     blind = [st["id"] for st, _, planned in evals if planned and not st["dry_run"]]
@@ -1114,17 +1143,22 @@ def branch_base(root, installed=None):
     when it exists; else the **remote** upgrade branch when ``refs/remotes/origin/<upgrade branch>`` exists locally
     (another clone pushed the same upgrade, F-08: this clone builds on it, so its push is a fast-forward and the
     open PR gets the new commit); else ``refs/remotes/origin/<integration>``, else ``refs/heads/<integration>``.
-    It never fetches. Raises :class:`Refused` when the integration branch cannot be resolved or found."""
+    The remote upgrade branch is taken only when it builds on the integration branch (``merge-base
+    --is-ancestor``); an unrelated branch under that name is refused, never checked out. It never fetches. Raises
+    :class:`Refused` when the integration branch cannot be resolved or found."""
     _, integ, _ = check_values(root, installed)
     ub = upgrade_branch(installed)
     if _ref_exists(root, "refs/heads/" + ub):
         return "refs/heads/" + ub, False, integ
     integ = integration_branch(root, integ)
+    integ_ref = next((r for r in ("refs/remotes/origin/" + integ, "refs/heads/" + integ) if _ref_exists(root, r)),
+                     None)
     if _ref_exists(root, "refs/remotes/origin/" + ub):
-        return "refs/remotes/origin/" + ub, True, integ
-    for ref in ("refs/remotes/origin/" + integ, "refs/heads/" + integ):
-        if _ref_exists(root, ref):
-            return ref, False, integ
+        # QA re-run (D1): only a branch that builds on the integration branch is taken as the base; an unrelated
+        # branch pushed under the upgrade name is refused, never checked out
+        return branch_base_remote_check(root, ub, integ)
+    if integ_ref:
+        return integ_ref, False, integ
     raise Refused("integration branch %s (project.json:branch_flow.integration) not found locally; fetch it "
                   "first: git fetch origin %s" % (integ, integ))
 
@@ -1140,8 +1174,9 @@ def ensure_branch(root, installed=None):
     ub = upgrade_branch(installed)
     cur = current_branch(root)
     if cur == ub:
-        return {"branch": ub, "base": None, "created": False, "switched": False, "remote": False,
-                "integration": _integration_or_none(root, integ)}
+        res = {"branch": ub, "base": None, "created": False, "switched": False, "remote": False,
+               "integration": _integration_or_none(root, integ), "remote_commits": [], "remote_files": []}
+        return _catch_up(root, ub, res) if not dirty_paths(root) else res
     dirty = dirty_paths(root)
     if dirty:
         raise Refused("the working tree has uncommitted changes: %s — commit or stash them first"
@@ -1150,14 +1185,68 @@ def ensure_branch(root, installed=None):
         rc, out = _git(["checkout", "-q", ub], root)
         if rc != 0:
             raise Refused("could not switch to %s: %s" % (ub, out.strip()[:200]))
-        return {"branch": ub, "base": None, "created": False, "switched": True, "remote": False,
-                "integration": _integration_or_none(root, integ)}
+        res = {"branch": ub, "base": None, "created": False, "switched": True, "remote": False,
+               "integration": _integration_or_none(root, integ), "remote_commits": [], "remote_files": []}
+        return _catch_up(root, ub, res)
     base, remote, integ = branch_base(root, installed)
+    commits, files = _remote_changes(root, integ, base) if remote else ([], [])
     rc, out = _git(["checkout", "-q", "--no-track", "-b", ub, base], root)
     if rc != 0:
         raise Refused("could not create %s from %s: %s" % (ub, base, out.strip()[:200]))
     _reset_journal(root)  # F-13: a journal of an earlier (merged, deleted) branch of the same name is stale
-    return {"branch": ub, "base": base, "created": True, "switched": True, "remote": remote, "integration": integ}
+    return {"branch": ub, "base": base, "created": True, "switched": True, "remote": remote, "integration": integ,
+            "remote_commits": commits, "remote_files": files}
+
+
+REMOTE_LIST_MAX = 20
+
+
+def _catch_up(root, ub, res):
+    """The local upgrade branch is strictly behind ``origin/<ub>`` (another clone pushed after this one started,
+    F-08): fast-forward it, so this clone's commit lands on top and its push is a fast-forward too. A branch that
+    diverged is left as it is (the push is then rejected and the skill relays the retry)."""
+    remote = "refs/remotes/origin/" + ub
+    if not _ref_exists(root, remote) or not res.get("integration"):
+        return res
+    if _git(["merge-base", "--is-ancestor", "HEAD", remote], root)[0] != 0:
+        return res
+    if _git(["rev-parse", "HEAD"], root)[1] == _git(["rev-parse", remote], root)[1]:
+        return res
+    try:
+        _, _, integ = branch_base_remote_check(root, ub, res["integration"])
+    except Refused:
+        return res
+    commits, files = _remote_changes(root, integ, remote, since="HEAD")
+    if _git(["merge", "-q", "--ff-only", remote], root)[0] != 0:
+        return res
+    return dict(res, remote=True, base=remote, remote_commits=commits, remote_files=files)
+
+
+def branch_base_remote_check(root, ub, integ):
+    """``(remote_ref, True, integ)`` when ``origin/<ub>`` builds on the integration branch, else :class:`Refused`."""
+    integ_ref = next((r for r in ("refs/remotes/origin/" + integ, "refs/heads/" + integ) if _ref_exists(root, r)),
+                     None)
+    remote_ub = "refs/remotes/origin/" + ub
+    if integ_ref is None or _git(["merge-base", "--is-ancestor", integ_ref, remote_ub], root)[0] != 0:
+        raise Refused("origin/%s does not build on %s: it is not another clone's upgrade of %s — review it, or "
+                      "delete it on the remote, then run branch again" % (ub, integ_ref or integ, integ))
+    return remote_ub, True, integ
+
+
+def _remote_changes(root, integ, base, since=None):
+    """``(commits, files)`` the remote upgrade branch adds on top of the integration branch (one line each, at most
+    ``REMOTE_LIST_MAX`` + a "… N more" line), so the person sees what another clone pushed before building on it."""
+    ref = next((r for r in ("refs/remotes/origin/" + integ, "refs/heads/" + integ) if _ref_exists(root, r)), None)
+    if ref is None:
+        return [], []
+
+    def capped(items):
+        items = [one_line(x) for x in items if x]
+        return items[:REMOTE_LIST_MAX] + (["… %d more" % (len(items) - REMOTE_LIST_MAX)]
+                                          if len(items) > REMOTE_LIST_MAX else [])
+    _, log = _git(["log", "--format=%h %s", (since or ref) + ".." + base], root)
+    _, names = _git(["diff", "--name-only", "-z", (since or ref) + "..." + base], root)
+    return capped(log.splitlines()), capped(names.split("\0"))
 
 
 def _integration_or_none(root, integ):
@@ -1277,7 +1366,8 @@ def _journal_best_effort(root, journal, rep):
         _write_journal(root, journal)
         return True
     except (OSError, atomicio.AtomicIOError) as exc:
-        rep.lines.append("journal NOT written (%s): files changed so far: %s" % (exc, ", ".join(rep.files) or "none"))
+        done = ", ".join(rep.files) or "none"
+        rep.lines.append(one_line("journal NOT written (%s): files changed so far: %s" % (exc, done)))
         rep.exit = EXIT_FINDINGS
         return False
 
@@ -1325,7 +1415,7 @@ def _write(root, rep, evals, top, common, installed):
             journal["at"] = audit.now_iso()
             _journal_best_effort(root, journal, rep)
             audit.append(sdir, {"event": "upgrade.apply", "step": st["id"], "status": "failed", "files": written})
-            rep.lines.append("%s: FAILED — %s" % (st["id"], reason))
+            rep.lines.append("%s: FAILED — %s" % (st["id"], one_line(reason)))
             if rep.not_run:
                 rep.lines.append("not run: %s" % ", ".join(rep.not_run))
             rep.exit = EXIT_FINDINGS
@@ -1343,7 +1433,7 @@ def _write(root, rep, evals, top, common, installed):
             rep.exit = EXIT_FINDINGS
             return rep
         audit.append(sdir, {"event": "upgrade.apply", "step": st["id"], "status": "applied", "files": written})
-        rep.lines.append("%s: applied (%s)" % (st["id"], ", ".join(written) or "no file"))
+        rep.lines.append("%s: applied (%s)" % (st["id"], one_line(", ".join(written)) or "no file"))
     return rep
 
 

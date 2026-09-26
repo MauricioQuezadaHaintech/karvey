@@ -574,6 +574,71 @@ class RegressionProjectUpgradeIterate(FixtureCase):
         push = self.git("push", "-q", "origin", self.UB, cwd=other)
         self.assertEqual(push.returncode, 0, "a fast-forward of the first clone's branch: " + push.stderr)
 
+    def test_f08_a_remote_upgrade_branch_not_built_on_integration_is_refused(self):
+        """QA re-run D1 #2: an unrelated (orphan) branch pushed under the upgrade name is never checked out."""
+        bare = g.with_origin(self.root, "dev")
+        other = self.t.path / "orphan"
+        subprocess.run(["git", "clone", "-q", "-b", "dev", str(bare), str(other)], check=True, capture_output=True)
+        self.git("checkout", "-q", "--orphan", "evil", cwd=other)
+        self.git("rm", "-rq", ".", cwd=other)
+        g.write(other, "docs/spec/project.json", {"branch_flow": {"integration": "dev"}})
+        g.commit_all(other, "unrelated")
+        self.assertEqual(self.git("push", "-q", "origin", "evil:" + self.UB, cwd=other).returncode, 0)
+        self.assertEqual(self.git("fetch", "-q", "origin").returncode, 0)
+        head = self.git("rev-parse", "HEAD").stdout
+        with self.assertRaises(upgrade.Refused) as cm:
+            upgrade.ensure_branch(self.root, INSTALLED)
+        self.assertIn("does not build on", str(cm.exception))
+        self.assertEqual(self.git("rev-parse", "HEAD").stdout, head, "nothing checked out")
+
+    def test_f08_the_remote_commits_are_listed_for_the_person(self):
+        bare = g.with_origin(self.root, "dev")
+        self.apply(["legacy-shims"])
+        upgrade.commit(self.root, "The Owner", installed=INSTALLED)
+        self.git("push", "-q", "origin", self.UB)
+        other = self.t.path / "other2"
+        subprocess.run(["git", "clone", "-q", "-b", "dev", str(bare), str(other)], check=True, capture_output=True)
+        res = upgrade.ensure_branch(other, INSTALLED)
+        self.assertEqual(len(res["remote_commits"]), 1)
+        self.assertIn("chore(karvey): project upgrade", res["remote_commits"][0])
+        self.assertIn(SHIM, res["remote_files"])
+
+    def test_f08_a_local_upgrade_branch_behind_the_remote_one_is_fast_forwarded(self):
+        """QA re-run D4 #9: the clone that started first, then saw another clone push, must not diverge."""
+        bare = g.with_origin(self.root, "dev")
+        upgrade.ensure_branch(self.root, INSTALLED)          # this clone: local upgrade branch, no commit yet
+        self.git("checkout", "-q", "dev")
+        other = self.t.path / "other3"
+        subprocess.run(["git", "clone", "-q", "-b", "dev", str(bare), str(other)], check=True, capture_output=True)
+        rep = upgrade.apply(other, ["legacy-shims"], dry_run=True, installed=INSTALLED, home=self.home)
+        upgrade.apply(other, ["legacy-shims"], preview=rep.preview, installed=INSTALLED, home=self.home)
+        upgrade.commit(other, "Someone Else", installed=INSTALLED)
+        self.git("push", "-q", "origin", self.UB, cwd=other)
+        self.git("fetch", "-q", "origin")
+        res = upgrade.ensure_branch(self.root, INSTALLED)
+        self.assertTrue(res["remote"], res)
+        self.assertEqual(self.git("rev-parse", "HEAD").stdout, self.git("rev-parse", "origin/" + self.UB).stdout)
+
+    def test_plan_json_says_whether_the_project_is_in_git(self):
+        self.assertTrue(self.plan().as_json()["in_git"])
+        plain = self.t.path / "nogit"
+        shutil.copytree(str(FIXTURE), str(plain))
+        self.assertFalse(upgrade.plan(plain, home=self.home, installed=INSTALLED).as_json()["in_git"])
+
+    def test_glob_follows_a_symlinked_directory_inside_the_root(self):
+        """QA re-run D2 #4: the rewritten walk must find what the old Path.glob found (a symlinked dir)."""
+        shared = self.root / "shared-hooks"
+        (self.root / ".claude" / "hooks").rename(shared)
+        os.symlink("../shared-hooks", str(self.root / ".claude" / "hooks"))
+        g.commit_all(self.root)
+        p = upgrade.Probe(self.root, home=self.home, installed=INSTALLED)
+        self.assertIn(SHIM, p.glob(".claude/hooks/plan-gate.sh"))
+        outside = self.t.path / "outside"
+        g.write(outside, "spec.json", "{}")
+        os.symlink(str(outside), str(self.root / "docs" / "spec" / "changes" / "linked"))
+        self.assertNotIn("docs/spec/changes/linked/spec.json", p.glob("docs/spec/changes/*/spec.json"),
+                         "a link out of the project is never listed")
+
     def test_f25_project_reads_are_capped_and_the_walk_honours_the_deadline(self):
         big = "docs/spec/changes/big/spec.json"
         self.write(big, '{"x": "%s"}\n' % ("a" * (upgrade.PROJECT_READ_MAX + 1)), commit=False)
@@ -602,6 +667,10 @@ class RegressionProjectUpgradeIterate(FixtureCase):
             self.assertTrue(all("\n" not in w for w in r["warnings"]))
         rep = upgrade.apply(self.root, ["changes-in-flight"], installed=INSTALLED, home=self.home)
         self.assertFalse(any(ln.startswith("| injected") for x in rep.lines for ln in x.splitlines()), rep.lines)
+        # the output boundary too: dry-run summary lines and the diff headers (QA re-run, D1 #1)
+        rep = upgrade.apply(self.root, ["schema-migrate"], dry_run=True, installed=INSTALLED, home=self.home)
+        out = rep.text().splitlines() + [ln for d in rep.diffs.values() for ln in d.splitlines()]
+        self.assertFalse([ln for ln in out if ln.lstrip("|/+- ").startswith("injected")], out)
 
 
 if __name__ == "__main__":

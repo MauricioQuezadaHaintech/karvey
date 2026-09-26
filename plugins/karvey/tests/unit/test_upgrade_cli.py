@@ -179,6 +179,55 @@ class RegressionProjectUpgradeSkillPush(unittest.TestCase):
         self.assertIn("BLOCK", text)
 
 
+class RegressionProjectUpgradeSkillFetch(unittest.TestCase):
+    """regression_project-upgrade_skill_fetch (QA re-run 2026-09-26): the skill's fetch of the remote upgrade
+    branch must not fail when there is none, must follow a force-push, and must drop a copy deleted on the remote
+    (a stale ref would say "a PR may be open" for an upgrade that was closed)."""
+
+    def test_the_upgrade_branch_fetch_is_tolerant_forced_and_pruned(self):
+        import re
+        text = RegressionProjectUpgradeSkillPush.SKILL.read_text(encoding="utf-8")
+        lines = [ln.strip() for b in re.findall(r"```bash\n(.*?)```", text, re.S) for ln in b.splitlines()
+                 if "karvey-upgrade-<version>" in ln and ln.strip().startswith("git fetch")]
+        self.assertEqual(len(lines), 1, lines)
+        cmd = lines[0].replace("<version>", INSTALLED)
+        code, out = RegressionProjectUpgradeSkillPush._gate(self, cmd)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("BLOCK", out, "Karvey's own guards let the fetch through")
+        t = g.TempDir()
+        self.addCleanup(t.cleanup)
+        g.isolate_git()
+        a = g.init(t.path / "a", branch="dev")
+        g.commit_all(a)
+        bare = g.with_origin(a, "dev")
+        b = t.path / "b"
+        subprocess.run(["git", "clone", "-q", "-b", "dev", str(bare), str(b)], check=True, capture_output=True)
+        ub = "chore/karvey-upgrade-" + INSTALLED
+
+        def fetch():
+            return subprocess.run(["bash", "-c", cmd], cwd=str(b), capture_output=True, text=True)
+
+        def remote_ref():
+            cp = subprocess.run(["git", "rev-parse", "--verify", "-q", "refs/remotes/origin/" + ub], cwd=str(b),
+                                capture_output=True, text=True)
+            return cp.stdout.strip() or None
+        self.assertEqual(fetch().returncode, 0, "no remote upgrade branch is not an error")
+        self.assertIsNone(remote_ref())
+        g.run(["push", "-q", "origin", "dev:" + ub], a)
+        fetch()
+        first = remote_ref()
+        self.assertTrue(first)
+        g.write(a, "x.txt", "x\n")
+        g.run(["add", "-A"], a)
+        g.run(["commit", "-q", "--amend", "-m", "rewritten"], a)
+        g.run(["push", "-q", "-f", "origin", "dev:" + ub], a)
+        self.assertEqual(fetch().returncode, 0)
+        self.assertNotEqual(remote_ref(), first, "a force-push is followed")
+        g.run(["push", "-q", "origin", ":" + ub], a)
+        fetch()
+        self.assertIsNone(remote_ref(), "a branch deleted on the remote is pruned")
+
+
 class RegressionProjectUpgradeSkillWording(unittest.TestCase):
     """regression_project-upgrade_skill_wording (F-07, E2E 2026-09-25): after a decline the agent said the offer
     "comes back next session" (it comes back with the next version), and it summarised the dry-run diffs
@@ -232,7 +281,7 @@ class Cli(unittest.TestCase):
         code, env = self.tool_json("plan")
         self.assertIn(code, (0, 1))
         res = env["result"]
-        self.assertEqual(set(res), {"from", "to", "computed_on", "steps"})
+        self.assertEqual(set(res), {"from", "to", "computed_on", "in_git", "steps"})
         self.assertEqual(res["computed_on"], "dev")
         _, text, _ = self.tool("plan")
         table = [line.split("|")[1].strip() for line in text.splitlines()

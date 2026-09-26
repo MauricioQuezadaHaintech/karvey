@@ -39,8 +39,8 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" plan --json
 ```
 
 - Exit 3 (not a Karvey project) → say so and **stop** without writing anything.
-- A Karvey project outside git: show the plan, say that the upgrade needs a git repository (it goes through a
-  branch and a PR) and **stop**. Nothing is recorded there (`seen` refuses outside git).
+- `in_git: false` (a Karvey project outside git): show the plan, say that the upgrade needs a git repository (it
+  goes through a branch and a PR) and **stop**. Nothing is recorded there (`seen` refuses outside git).
 - Exit 4 (the step catalogue is unreadable) → relay the message and stop.
 - Every step `nothing` ("nothing to do") → run `seen --empty`, tell the person the project is already current, and stop:
   ```bash
@@ -82,14 +82,14 @@ Fetch the integration branch and, if another clone already pushed it, the upgrad
 INTEG=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get branch_flow.integration --shell 2>/dev/null) || INTEG=""
 if git remote get-url origin >/dev/null 2>&1; then
   git fetch origin ${INTEG:+"$INTEG"}
-  git fetch origin 'refs/heads/chore/karvey-upgrade-<version>:refs/remotes/origin/chore/karvey-upgrade-<version>' 2>/dev/null || true
+  git fetch --prune origin '+refs/heads/chore/karvey-upgrade-<version>*:refs/remotes/origin/chore/karvey-upgrade-<version>*'
 fi
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" branch --json
 ```
 
 An undeclared `branch_flow.integration` is not an error here: the tool falls back to `origin/HEAD`, and the `integration` it returns names the branch the PR targets. Keep the `branch` it returns (`chore/karvey-upgrade-<version>`): steps 9–10 write it **literally**. A dirty tree, or neither the key nor `origin/HEAD`, is refused by the tool with the paths / the key to set: relay it and stop.
 
-`remote: true` means another clone (another person, or this person elsewhere) already pushed this upgrade: the branch starts from theirs, so what they applied is already there and the push of step 10 is a fast-forward. Tell the person a PR for it may already be open. When the dry-run of step 7 then says "nothing to do" for every pick, say that the upgrade is already on that branch and stop (no commit).
+The second fetch is a pattern: it brings the remote upgrade branch when another clone pushed it (also after a force-push) and drops a stale local copy once it was deleted on the remote; it is not an error when there is none. `remote: true` means another clone (another person, or this person elsewhere) already pushed this upgrade: the branch starts from theirs, or a local upgrade branch behind it is fast-forwarded, so what they applied is already there and the push of step 10 is a fast-forward. Show the person `remote_commits` and `remote_files` as returned (what the other clone brings) and tell them a PR for it may already be open. A remote upgrade branch that does not build on the integration branch is refused by the tool: relay it and stop. When the dry-run of step 7 then says "nothing to do" for every pick, say that the upgrade is already on that branch and stop (no commit).
 
 ### 7. Dry-run: show every diff
 

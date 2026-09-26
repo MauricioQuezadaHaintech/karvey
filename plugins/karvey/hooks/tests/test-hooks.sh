@@ -13,16 +13,20 @@ bad()  { FAIL=$((FAIL+1)); printf '  FAIL %s\n       got: %s\n' "$1" "$2"; }
 T=$(cd "$(mktemp -d)" && pwd -P); trap 'rm -rf "$T"' EXIT
 # Portable timeout: macOS has no timeout(1); perl's alarm is there on every runner (F-44).
 to() { local s="$1"; shift; if command -v timeout >/dev/null 2>&1; then timeout "$s" "$@"; else perl -e 'alarm shift; exec @ARGV' "$s" "$@"; fi; }
-# An isolated HOME / state home: the startup upgrade offer reads ~/.claude and may write its seen record
-# under the state dir of a project outside git — never the real ones.
+# An isolated HOME / state home: the startup upgrade offer reads ~/.claude — never the real ones. (Outside git it
+# is silent and records nothing, F-27; the state home stays isolated for the other hooks.)
 mkdir -p "$T/home" "$T/xdg"
 ctx() { CLAUDE_PROJECT_DIR="$1" HOME="$T/home" XDG_STATE_HOME="$T/xdg" bash "$H/karvey-session-context.sh" 2>&1; }
-# Mark the installed version as resolved for the project at $1, so the once-per-version offer stays silent.
+# Mark the installed version as resolved for the project at $1, so the once-per-version offer stays silent
+# (a project outside git has no record and no offer: nothing to mark).
 seen_resolved() { HOME="$T/home" XDG_STATE_HOME="$T/xdg" python3 - "$1" "$(dirname "$H")/scripts" <<'PY'
 import sys; sys.path.insert(0, sys.argv[2])
 import karvey_lib
 from karvey_lib import upgrade
-upgrade.write_seen(sys.argv[1], karvey_lib.__version__, "accepted")
+try:
+    upgrade.write_seen(sys.argv[1], karvey_lib.__version__, "accepted")
+except upgrade.SeenWriteError:
+    pass  # outside git: the hook offers nothing there (F-27)
 PY
 }
 
