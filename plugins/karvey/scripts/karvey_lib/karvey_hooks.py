@@ -551,6 +551,20 @@ def _origin_head(root):
     return out[len("origin/"):] if rc == 0 and out.startswith("origin/") else None
 
 
+def settings_invalid_line(kroot):
+    """``settings invalid ({key} …)`` from karvey-config.py's resolvers (REQ-W3-059), or None; never raises."""
+    try:
+        import importlib.util
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        spec = importlib.util.spec_from_file_location("karvey_config_session", os.path.join(here, "karvey-config.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        line = mod.settings_line(kroot)
+    except Exception:  # noqa: BLE001 - the session hook informs, never breaks
+        return None
+    return "Karvey (warning): " + line if line else None
+
+
 def layout_line(kroot):
     """The spec layout when it is not the default (REQ-W3-048): ``spec/``, or ``two spec roots``."""
     _, label, note = pj.spec_layout(kroot)
@@ -602,7 +616,8 @@ def session_text(mode, env):
         kp = pj.find_root(start=start)
         ow = open_work_block(kp) if kp else []
         lay = layout_line(kp) if kp else None
-        return "\n".join(([n] if n else []) + ([lay] if lay else []) + ow).strip("\n")
+        bad = settings_invalid_line(kp) if kp else None
+        return "\n".join(([n] if n else []) + ([lay] if lay else []) + ([bad] if bad else []) + ow).strip("\n")
     rel = os.path.relpath(start, root) if start != root else ""
     top = rel.split(os.sep, 1)[0] if rel and not rel.startswith("..") else ""
     name, role, profile, board = resolve_profile(root, cfg, kind, top)
@@ -657,6 +672,9 @@ def session_text(mode, env):
         lay = layout_line(kroot)
         if lay:
             out.append(lay)
+        bad = settings_invalid_line(kroot)
+        if bad:
+            out.append(bad)
         out.extend(open_work_block(kroot))
     out.append("")
     out.append("=== First action ===")

@@ -69,6 +69,10 @@ _SPEC = importlib.util.spec_from_file_location("karvey_state", os.path.join(os.p
                                                                              "karvey-state.py"))
 state = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(state)
+_CSPEC = importlib.util.spec_from_file_location("karvey_config", os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                                             "karvey-config.py"))
+config = importlib.util.module_from_spec(_CSPEC)
+_CSPEC.loader.exec_module(config)
 
 
 class NotFound(Exception):
@@ -345,6 +349,16 @@ def overview(rd, ctx):
         res["current"] = None
     if res["wip"]["exceeded"]:
         ctx["warnings"].append(kl.issue("context.wip", "WIP %d/%d" % (len(active), wip), severity="warning"))
+    try:  # the team settings as the resolvers see them (REQ-W3-059)
+        invalid, normalised = config.settings_problems(rd.root)
+    except Exception as exc:  # noqa: BLE001 - one section must not take the dashboard down
+        invalid, normalised = ["settings unreadable: %s" % exc], []
+    res["settings"] = {"invalid": invalid, "normalised": normalised}
+    if invalid:
+        mode = modes.resolve(root=rd.root, check_id="settings.valid", project=ctx["project"])["mode"]
+        if mode != "off":
+            ctx["warnings"].append(kl.issue("settings.valid", "settings invalid (%s)" % "; ".join(invalid),
+                                            severity="warning"))
     btext = rd.text(rd.spec / "backlog.md")
     if btext is not None:  # the refinement cadence (REQ-W3-052)
         bset = (ctx["project"] or {}).get("backlog") if isinstance((ctx["project"] or {}).get("backlog"), dict) else {}
@@ -1119,6 +1133,11 @@ def render(result, ctx):
             L.append(("WARNING WIP %d/%d" if w["exceeded"] else "WIP %d/%d") % (w["count"], w["limit"]))
         else:
             L.append("WIP %d (no wip_limit)" % w["count"])
+        st = ov.get("settings") or {}
+        if st.get("invalid"):
+            L.append("settings invalid (%s)" % "; ".join(st["invalid"]))
+        for x in st.get("normalised") or []:
+            L.append("settings: %s" % x)
         br = ov.get("backlog_refinement")
         if br:
             L.append("backlog refinement: %s" % ("never refined" if br["state"] == "never refined" else

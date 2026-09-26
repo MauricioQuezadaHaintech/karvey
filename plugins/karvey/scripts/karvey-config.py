@@ -823,6 +823,48 @@ def cmd_propose(args, root):
     return kl.EXIT_OK, res, [], [], human
 
 
+def settings_problems(root):
+    """``(invalid, normalised)`` of the team settings as ``resolve management`` / ``resolve notifications`` see them
+    (wave3 §1.22, REQ-W3-059): ``invalid`` names each failing key (``management.statuses missing``, a refused value
+    with its message); ``normalised`` shows each documented alias as its canonical value. An absent block is not
+    invalid (that is the ``settings not set`` notice)."""
+    invalid, normalised = [], []
+    try:
+        settings = Settings(root)
+    except (NotFound, Refused) as exc:
+        return ["project.json: %s" % exc], []
+    for what, fn in (("management", lambda: resolve_management(settings)),
+                     ("notifications", lambda: resolve_notifications(settings)),
+                     ("browse", lambda: resolve_browse(settings))):
+        raw, _ = settings.block(what)
+        if raw is None:
+            continue
+        try:
+            res, warns = fn()
+        except Refused as exc:
+            invalid.append(str(exc))
+            continue
+        if what == "management":
+            invalid += ["management.%s missing" % m for m in res.get("missing") or []]
+        if what == "notifications" and res.get("target_error"):
+            invalid.append("notifications.target: %s" % res["target_error"])
+        for w in warns:
+            if w.get("code") == "config.legacy_alias" or w.get("code") == "config.legacy_management":
+                normalised.append(w["message"])
+            elif w.get("code") == "config.unsafe_value":
+                invalid.append(w["message"])
+    return invalid, normalised
+
+
+def settings_line(root):
+    """The one line the session hook and the dashboard print, or None when the settings are valid."""
+    invalid, _ = settings_problems(root)
+    if not invalid:
+        return None
+    return ("settings invalid (%s) \u2014 fix project.json or run `/karvey:karvey-init --settings`"
+            % "; ".join(invalid))
+
+
 COMMANDS = {"resolve": cmd_resolve, "get": cmd_get, "propose-settings": cmd_propose,
             "notify-check": cmd_notify_check, "outbox": cmd_outbox, "notify-sent": cmd_notify_sent}
 

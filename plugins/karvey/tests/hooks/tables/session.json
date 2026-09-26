@@ -1292,6 +1292,58 @@
     "session",
     "REQ-W3-048"
    ]
+  },
+  {
+   "id": "ss-27-settings-invalid",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "jira",
+       "location": "SAMPLE",
+       "status_map": {
+        "todo": "To Do"
+       }
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "settings invalid (management.statuses missing)"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-W3-059"
+   ]
   }
  ]
 }
