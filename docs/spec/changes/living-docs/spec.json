@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "change_id": "living-docs",
+  "capability": "method",
+  "description": "Documentation that stays true while the work moves (D-38, 4.2.0): the owner's instructions during an active change are captured verbatim by the prompt hook and must each be classified before a gate closes; every component of a project (data store — relational and document —, backend service, frontend module, infra resource) has a living technical sheet mapped to its code paths, updated in the same commit as the code and merged at archive, with a read-only check of document-store schemas against real development documents; and each repository's README keeps a minimal section set current. Reaches existing projects through project-upgrade steps.",
+  "goal": "No instruction the owner gives during an active change is lost — each is captured verbatim by the hook and classified before its gate closes — and every component and repository of a project has a technical sheet and a README that change in the same change as the code they describe, so that an agent or a person can learn a data shape, a contract, a setting or a runbook from the documents instead of from the code or from a failure.",
+  "layers": [
+    "Backend"
+  ],
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 3,
+  "security_tier_reason": "the prompt hook writes the owner's verbatim text into tracked files of a repository that may be public (secrets and third-party data must not reach them); the schema sampler reads documents of a real data store with credentials held outside the repository (it must never write, never read production, never print a value); the bootstrap reads code and configuration into generated documents (no secret value may be copied); the classification check gates approvals (the agent must not be able to forge, edit or dismiss captured rows unseen)",
+  "type": "feature",
+  "links": {
+    "parent": "",
+    "children": []
+  },
+  "decisions": [
+    "D-38"
+  ],
+  "inputs": {
+    "decisions": "karvey docs/spec/decisions.md @338e513 (branch feature/wave1-hardening, D-38)",
+    "wave3_spec_delta": "karvey docs/spec/changes/wave3-optimization/spec-delta.md @563b512",
+    "wave2_spec_delta": "karvey docs/spec/changes/wave2-structural/spec-delta.md @563b512",
+    "project_upgrade_requirements": "karvey docs/spec/changes/project-upgrade/requirements.md @3feda6a (branch feature/project-upgrade)"
+  },
+  "iteration_count": 0,
+  "revision_history": [
+    {
+      "at": "2026-09-26T14:20:00+00:00",
+      "by": "agent (judges routed in place, pre-approval; owner standing instruction D-21)",
+      "reason": "requirements judges (domain, methods; intra-model) — right findings fixed in place before the what gate: project inbox holds every gate, dismissed inbox entries shown, multi-repo sheet pairing by change, capture acknowledged and force-capture marker, capture failures visible, cross-clone rows pass when self-consistent, working copy can only turn capture on, README setting defined, confirm phrases for removal and review, relational sheet check, every shipped language measured, narrower phone redaction, reclassified rows at the gate, explicit refusals and budgets (tamper, unreadable findings, 1 s, 200 chars), delta coverage by tasks, size baseline after Wave 3, splits 008/059 and 029/062, testable scenarios; F-23 rejected with reason",
+      "findings": [
+        "F-01",
+        "F-02",
+        "F-03",
+        "F-04",
+        "F-05",
+        "F-06",
+        "F-07",
+        "F-08",
+        "F-09",
+        "F-10",
+        "F-11",
+        "F-12",
+        "F-13",
+        "F-14",
+        "F-15",
+        "F-16",
+        "F-17",
+        "F-18",
+        "F-19",
+        "F-20",
+        "F-21",
+        "F-22",
+        "F-23",
+        "F-24",
+        "F-25",
+        "F-26",
+        "F-27",
+        "F-28",
+        "F-29",
+        "F-30",
+        "F-31"
+      ],
+      "note": "runtime reported about 63k subagent tokens per judge; the recorded judge cost is the prompt-based estimate (collect found no transcript usage)"
+    }
+  ],
+  "phase": "requirements",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-26T13:50:37+00:00",
+      "exited_at": "2026-09-26T13:56:45+00:00",
+      "by": "agent (D-38; owner standing instruction D-21)"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-26T13:56:45+00:00"
+    }
+  ],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": false,
+      "generated_at": "2026-09-26T13:56:45+00:00"
+    }
+  },
+  "created_at": "2026-09-26T13:50:37+00:00",
+  "updated_at": "2026-09-26T14:01:46+00:00",
+  "lane": "standard",
+  "judge_runs": [
+    {
+      "lens": "domain",
+      "model": "claude-opus-5-5",
+      "intra_model": true,
+      "verdict": "concerns",
+      "findings": {
+        "High": 4,
+        "Medium": 6,
+        "Low": 4
+      },
+      "discarded": 0,
+      "at": "2026-09-26T13:58:16+00:00",
+      "tokens_in": 24720,
+      "tokens_out": 1275,
+      "tokens_total": 25995,
+      "usd": 0.093285,
+      "estimated": true,
+      "usd_estimated": true,
+      "source": "estimate",
+      "phase": "requirements"
+    },
+    {
+      "lens": "methods",
+      "model": "claude-opus-5-5",
+      "intra_model": true,
+      "verdict": "concerns",
+      "findings": {
+        "High": 2,
+        "Medium": 8,
+        "Low": 7
+      },
+      "discarded": 0,
+      "at": "2026-09-26T13:58:16+00:00",
+      "tokens_in": 24720,
+      "tokens_out": 1529,
+      "tokens_total": 26249,
+      "usd": 0.097095,
+      "estimated": true,
+      "usd_estimated": true,
+      "source": "estimate",
+      "phase": "requirements"
+    }
+  ]
+}
