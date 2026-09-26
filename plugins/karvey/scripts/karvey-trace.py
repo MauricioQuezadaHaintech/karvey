@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """karvey-trace.py — requirement → task → commit → test traceability of a change (architecture §1.12 C-14).
 
-    karvey-trace.py <change> [--base REF] [--root DIR] [--json]
+    karvey-trace.py <change> [--base REF] [--write] [--check] [--root DIR] [--json]
 
 - **Requirements**: the ``REQ-…-NNN`` headings of ``requirements.md`` and the ADDED / MODIFIED ids of
   ``spec-delta.md``.
@@ -14,19 +14,29 @@
 - **Tests**: files matched by ``project.json:tests.globs`` (defaults below) carrying ``@req REQ-…-NNN`` or a
   ``test_REQ_…_NNN`` name. A test file added by the change's commits with no reference is an ``unmapped test``.
 
-Read-only. Exit: 0 · 2 usage · 4 not found. Python >= 3.9, stdlib only.
+- **Last result** of each test file: from the JUnit XML files named in ``changes/{id}/evidence.jsonl`` (the
+  newest file that has a test case of it), else from the newest evidence line whose command ran it (the file,
+  its name or a directory holding it in the argv; exit 0 → ``pass``); with neither it is ``not run``.
+- ``--write`` renders ``changes/{id}/traceability.md`` (the only file this tool writes).
+- ``--check`` is the coverage gate (REQ-W2-062): every requirement needs a green test (last result ``pass``) or
+  a ``manual`` exception. Its mode is ``coverage.requirements`` (warn in 3.13): one ``checks.jsonl`` hit per
+  uncovered requirement; ``blocking`` exits 1.
+
+Exit: 0 · 1 coverage gate refused (blocking) · 2 usage · 4 not found. Python >= 3.9, stdlib only.
 """
 import argparse
 import fnmatch
+import json
 import os
 import re
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import gitlog, manifest as mf, project as pj  # noqa: E402
+from karvey_lib import atomicio, gitlog, manifest as mf, modes, project as pj  # noqa: E402
 
 TOOL = "karvey-trace"
 DEFAULT_GLOBS = ("tests/**", "**/test_*", "**/*_test.*", "**/*.test.*", "**/*.spec.*")
@@ -151,6 +161,121 @@ def added_files(root, base):
     return {x.strip() for x in out.splitlines() if x.strip()}
 
 
+EVIDENCE_FILE = "evidence.jsonl"
+TRACE_FILE = "traceability.md"
+JUNIT_MAX_BYTES = 20 * 1024 * 1024
+
+
+def evidence_records(cdir):
+    """The ``evidence.jsonl`` records of the change, oldest first (unreadable lines skipped)."""
+    out = []
+    for line in (_read(cdir / EVIDENCE_FILE) or "").splitlines():
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(rec, dict):
+            out.append(rec)
+    return out
+
+
+def _junit_path(root, rec):
+    j = rec.get("junit")
+    if not isinstance(j, str) or not j:
+        return None
+    p = Path(j)
+    if not p.is_absolute():
+        p = Path(root) / (rec.get("cwd_rel") or ".") / p
+    return p
+
+
+def junit_cases(path):
+    """``[(file_or_class, name, outcome)]`` of a JUnit XML (outcome pass | fail | skipped); [] when unreadable."""
+    try:
+        if path.stat().st_size > JUNIT_MAX_BYTES:
+            return []
+        tree = ET.parse(str(path))
+    except (OSError, ET.ParseError):
+        return []
+    cases = []
+    for tc in tree.getroot().iter("testcase"):
+        tags = {c.tag for c in tc}
+        outcome = "fail" if tags & {"failure", "error"} else ("skipped" if "skipped" in tags else "pass")
+        cases.append((tc.get("file") or tc.get("classname") or "", tc.get("name") or "", outcome))
+    return cases
+
+
+def _case_is_of(case_ref, rel):
+    """A JUnit case belongs to a test file by its ``file`` attribute or by its class/module name."""
+    if not case_ref:
+        return False
+    ref = case_ref.replace("\\", "/")
+    if ref == rel or ref.endswith("/" + rel) or rel.endswith("/" + ref):
+        return True
+    stem = rel.rsplit("/", 1)[-1].split(".", 1)[0]
+    parts = re.split(r"[./]", ref)
+    return stem in parts
+
+
+def _argv_ran(rec, rel):
+    """Did an evidence command run this test file (its path, name, stem or a directory above it)?"""
+    argv = rec.get("argv") if isinstance(rec.get("argv"), list) else []
+    base = rel.rsplit("/", 1)[-1]
+    stem = base.split(".", 1)[0]
+    cwd = (rec.get("cwd_rel") or ".").strip("/")
+    pattern = None
+    for i, a in enumerate(argv):
+        if a == "-p" and i + 1 < len(argv):
+            pattern = argv[i + 1]
+    for a in argv:
+        if not isinstance(a, str) or not a or a.startswith("-"):
+            continue
+        cand = a.replace("\\", "/").rstrip("/")
+        full = cand if cwd in ("", ".") else "%s/%s" % (cwd, cand)
+        if cand in (rel, base, stem) or full == rel or re.search(r"(^|[./])%s($|[.:])" % re.escape(stem), cand):
+            return True
+        if cand and (rel.startswith(cand + "/") or rel.startswith(full + "/")):
+            if pattern is None or fnmatch.fnmatch(base, pattern):
+                return True
+    return False
+
+
+def last_results(root, cdir, files):
+    """``{test_file: pass | fail | skipped | not run}`` from JUnit files named in evidence, else the evidence exit."""
+    recs = evidence_records(cdir)
+    res = {}
+    junits = []
+    for rec in reversed(recs):
+        p = _junit_path(root, rec)
+        if p is not None:
+            junits.append(junit_cases(p))
+    for f in files:
+        outcome = None
+        for cases in junits:
+            mine = [c for c in cases if _case_is_of(c[0], f)]
+            if mine:
+                outs = {c[2] for c in mine}
+                outcome = "fail" if "fail" in outs else ("pass" if "pass" in outs else "skipped")
+                break
+        if outcome is None:
+            for rec in reversed(recs):
+                if _argv_ran(rec, f):
+                    outcome = "pass" if rec.get("exit") == 0 else "fail"
+                    break
+        res[f] = outcome or "not run"
+    return res
+
+
+def _req_result(results):
+    if not results:
+        return "no test"
+    if "fail" in results:
+        return "fail"
+    if "pass" in results:
+        return "pass"
+    return "not run" if "not run" in results else "skipped"
+
+
 def build(root, change, base=None, project=None):
     """The traceability model of one change (pure over the repo; nothing written)."""
     cdir = Path(root) / pj.CHANGES_DIR / change
@@ -189,18 +314,86 @@ def build(root, change, base=None, project=None):
         rows.append({"id": rid, "tasks": citing, "test_tasks": test_tasks, "manual": bool(manual),
                      "test_first": test_first, "status": status, "tests": sorted(by_req.get(rid, [])),
                      "commits": linked, "commit_text": "no commit" if linked == [] else None})
+    results = last_results(root, cdir, sorted({f for r in rows for f in r["tests"]}))
+    for r in rows:
+        r["results"] = {f: results[f] for f in r["tests"]}
+        r["result"] = _req_result(list(r["results"].values()))
+        r["green"] = r["manual"] or r["result"] == "pass"
     added = added_files(root, base)
     unmapped = sorted(f for f in files if f in added and not file_refs.get(f))
     return {"change": change, "base": base, "requirements": rows, "unmapped_tests": unmapped,
             "uncovered": [r["id"] for r in rows if r["status"] == "uncovered"],
             "no_commit": [r["id"] for r in rows if r["commits"] == []],
-            "commits_readable": commits is not None, "globs": globs}
+            "commits_readable": commits is not None, "globs": globs,
+            "not_green": [r["id"] for r in rows if not r["green"]]}
+
+
+def render(res):
+    """``traceability.md`` — deterministic for the same model (no timestamps)."""
+    n = len(res["requirements"])
+    green = n - len(res["not_green"])
+    out = ["# Traceability: %s" % res["change"], "",
+           "> Generated by `karvey-trace.py %s --write` — do not edit by hand; re-run it. Base `%s`."
+           % (res["change"], res["base"]), "",
+           "Coverage: %d/%d requirements with a green test or a `manual` exception · %d uncovered by tasks · "
+           "%d without commit · %d unmapped test(s)" % (green, n, len(res["uncovered"]), len(res["no_commit"]),
+                                                       len(res["unmapped_tests"])), "",
+           "| Requirement | Tasks | Commits | Tests | Last result | Coverage |",
+           "|---|---|---|---|---|---|"]
+    for r in res["requirements"]:
+        if r["commits"] is None:
+            commits = "not readable"
+        elif not r["commits"]:
+            commits = "no commit"
+        else:
+            commits = ", ".join("`%s`" % c[:7] for c in r["commits"])
+        tests = ", ".join("`%s`" % t for t in r["tests"]) or "—"
+        result = r["result"] + (" · manual" if r["manual"] else "")
+        cov = "green" if r["green"] else ("uncovered" if r["status"] == "uncovered" else "not green")
+        out.append("| %s | %s | %s | %s | %s | %s |" % (r["id"], ", ".join(r["tasks"]) or "—", commits, tests,
+                                                      result, cov))
+    if res["unmapped_tests"]:
+        out += ["", "## Unmapped tests", ""] + ["- `%s`" % f for f in res["unmapped_tests"]]
+    return "\n".join(out) + "\n"
+
+
+def write(root, res):
+    path = Path(root) / pj.CHANGES_DIR / res["change"] / TRACE_FILE
+    atomicio.write_text_atomic(path, render(res), expected_sha256="*")  # a generated file: this tool owns it
+    return path
+
+
+def check(root, res, project=None):
+    """The coverage gate: ``{mode, verdict, line, missing, hits}``; a hit per requirement not green."""
+    m = modes.resolve(root, "coverage.requirements", project=project)
+    missing = list(res["not_green"])
+    n = len(res["requirements"])
+    hits = 0
+    for rid in missing:
+        try:
+            modes.record_hit(root, res["change"], "coverage.requirements",
+                             "%s: no green test and no manual exception" % rid, mode=m["mode"])
+            hits += 1
+        except (modes.ModeError, OSError):
+            pass
+    if not missing:
+        verdict = "pass"
+    elif m["mode"] == "blocking":
+        verdict = "fail"
+    elif m["mode"] == "off":
+        verdict = "off"
+    else:
+        verdict = "warn"
+    return {"mode": m["mode"], "verdict": verdict, "line": "coverage: %d/%d" % (n - len(missing), n),
+            "missing": missing, "hits": hits, "warning": m["warning"]}
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="karvey-trace.py", description="requirement → task → commit → test")
     ap.add_argument("change")
     ap.add_argument("--base", help="default origin/{branch_flow.production}")
+    ap.add_argument("--write", action="store_true", help="render changes/{id}/traceability.md")
+    ap.add_argument("--check", action="store_true", help="coverage gate (coverage.requirements mode)")
     ap.add_argument("--root")
     ap.add_argument("--json", action="store_true")
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -224,7 +417,26 @@ def main(argv=None):
         len(res["unmapped_tests"]))]
     lines += ["  uncovered %s" % r for r in res["uncovered"]]
     lines += ["  unmapped test %s" % f for f in res["unmapped_tests"]]
-    return kl.emit(kl.envelope(TOOL, kl.EXIT_OK, result=res), args.json, human="\n".join(lines))
+    code, warnings, errors = kl.EXIT_OK, [], []
+    if args.write:
+        path = write(root, res)
+        res["written"] = os.path.relpath(str(path), str(root)).replace(os.sep, "/")
+        lines.append("written %s" % res["written"])
+    if args.check:
+        gate = check(root, res)
+        res["coverage"] = gate
+        lines.append("%s (%s, mode %s)" % (gate["line"], gate["verdict"], gate["mode"]))
+        lines += ["  not green %s" % r for r in gate["missing"]]
+        if gate["warning"]:
+            warnings.append(kl.issue("trace.mode", gate["warning"], severity="warning"))
+        if gate["verdict"] == "warn":
+            warnings.append(kl.issue("trace.coverage", "%d requirement(s) without a green test or manual "
+                                     "exception" % len(gate["missing"]), severity="warning"))
+        elif gate["verdict"] == "fail":
+            code = 1
+            errors.append(kl.issue("trace.coverage", "coverage gate refused: %s" % ", ".join(gate["missing"])))
+    return kl.emit(kl.envelope(TOOL, code, result=res, warnings=warnings, errors=errors), args.json,
+                   human="\n".join(lines))
 
 
 if __name__ == "__main__":

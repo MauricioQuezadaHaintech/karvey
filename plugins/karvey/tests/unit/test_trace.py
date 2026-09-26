@@ -1,8 +1,11 @@
 """karvey-trace.py: requirement → task → commit → test (architecture §1.12 C-14 of wave2-structural).
 
-@req REQ-W2-057 REQ-W2-058 REQ-W2-060
+@req REQ-W2-057 REQ-W2-058 REQ-W2-060 REQ-W2-062
 """
+import contextlib
 import importlib.util
+import io
+import json
 import unittest
 
 import _path
@@ -98,6 +101,92 @@ class Trace(Base):
         _, by = self.model()
         self.assertIn("REQ-X-004", by)
         self.assertNotIn("REQ-X-009", by)
+
+
+JUNIT_PASS = ('<testsuite><testcase classname="test_first.T" name="test_it"/>'
+              '<testcase classname="test_named.T" name="test_REQ_X_003_page"/></testsuite>')
+
+
+def quiet_main(argv):
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        return tr.main(argv)
+
+
+class WriteAndCheck(Base):
+    def evidence(self, *recs):
+        p = self.root / "docs/spec/changes/feat-a/evidence.jsonl"
+        p.write_text("".join(json.dumps(r) + "\n" for r in recs), encoding="utf-8")
+
+    def hits(self):
+        p = self.root / "docs/spec/changes/feat-a/checks.jsonl"
+        if not p.exists():
+            return []
+        return [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()]
+
+    def test_REQ_W2_060_result_not_run_without_evidence(self):
+        res = tr.build(self.root, "feat-a", base="base")
+        by = {r["id"]: r for r in res["requirements"]}
+        self.assertEqual(by["REQ-X-001"]["results"], {"tests/test_first.py": "not run"})
+        self.assertEqual(by["REQ-X-001"]["result"], "not run")
+        self.assertEqual(by["REQ-X-002"]["result"], "no test")
+
+    def test_result_from_junit_named_in_evidence(self):
+        (self.root / "out").mkdir()
+        (self.root / "out/junit.xml").write_text(JUNIT_PASS, encoding="utf-8")
+        self.evidence({"argv": ["pytest"], "cwd_rel": ".", "exit": 0, "junit": "out/junit.xml"})
+        by = {r["id"]: r for r in tr.build(self.root, "feat-a", base="base")["requirements"]}
+        self.assertEqual(by["REQ-X-001"]["result"], "pass")
+
+    def test_junit_failure_wins_over_exit(self):
+        (self.root / "j.xml").write_text('<testsuites><testsuite><testcase classname="test_first.T" name="a">'
+                                         '<failure/></testcase></testsuite></testsuites>', encoding="utf-8")
+        self.evidence({"argv": ["x"], "cwd_rel": ".", "exit": 0, "junit": "j.xml"})
+        by = {r["id"]: r for r in tr.build(self.root, "feat-a", base="base")["requirements"]}
+        self.assertEqual(by["REQ-X-001"]["result"], "fail")
+
+    def test_result_from_evidence_command_that_ran_the_file(self):
+        self.evidence({"argv": ["python3", "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
+                       "cwd_rel": ".", "exit": 0},
+                      {"argv": ["python3", "tests/test_named.py"], "cwd_rel": ".", "exit": 1})
+        by = {r["id"]: r for r in tr.build(self.root, "feat-a", base="base")["requirements"]}
+        self.assertEqual(by["REQ-X-001"]["result"], "pass")  # the discover run holds tests/
+        self.assertEqual(by["REQ-X-003"]["result"], "fail")  # the newest run of test_named failed
+
+    def test_REQ_W2_062_every_requirement_green_reads_n_of_n(self):
+        g.write(self.root, "tests/test_second.py", '"""@req REQ-X-002"""\n')
+        g.commit_all(self.root, "test second")
+        self.evidence({"argv": ["python3", "-m", "unittest", "discover", "-s", "tests"], "cwd_rel": ".", "exit": 0})
+        res = tr.build(self.root, "feat-a", base="base")
+        gate = tr.check(self.root, res)
+        self.assertEqual(gate["line"], "coverage: 3/3")
+        self.assertEqual(gate["verdict"], "pass")
+        self.assertEqual(self.hits(), [])
+
+    def test_REQ_W2_062_two_uncovered_listed_warn_two_hits(self):
+        res = tr.build(self.root, "feat-a", base="base")  # no evidence: 001 not run, 002 no test, 003 manual
+        gate = tr.check(self.root, res)
+        self.assertEqual(gate["missing"], ["REQ-X-001", "REQ-X-002"])
+        self.assertEqual((gate["mode"], gate["verdict"], gate["line"]), ("warn", "warn", "coverage: 1/3"))
+        hits = self.hits()
+        self.assertEqual(len(hits), 2)
+        self.assertEqual({h["check"] for h in hits}, {"coverage.requirements"})
+
+    def test_blocking_mode_fails_and_exits_1(self):
+        g.write(self.root, "docs/spec/project.json", {"branch_flow": {"integration": "main", "production": "main"},
+                                                      "checks": {"coverage.requirements": "blocking"}})
+        code = quiet_main(["feat-a", "--base", "base", "--check", "--root", str(self.root), "--json"])
+        self.assertEqual(code, 1)
+
+    def test_write_renders_traceability_md(self):
+        code = quiet_main(["feat-a", "--base", "base", "--write", "--root", str(self.root), "--json"])
+        self.assertEqual(code, 0)
+        text = (self.root / "docs/spec/changes/feat-a/traceability.md").read_text(encoding="utf-8")
+        self.assertIn("| REQ-X-002 | E1.F1.T3 | no commit |", text)
+        self.assertIn("Coverage: 1/3", text)
+        self.assertIn("`tests/test_orphan.py`", text)
+        first = text
+        quiet_main(["feat-a", "--base", "base", "--write", "--root", str(self.root), "--json"])
+        self.assertEqual((self.root / "docs/spec/changes/feat-a/traceability.md").read_text(encoding="utf-8"), first)
 
 
 if __name__ == "__main__":

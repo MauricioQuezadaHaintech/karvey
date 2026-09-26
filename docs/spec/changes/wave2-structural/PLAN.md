@@ -134,7 +134,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 ### Feature E1.F7: Test-first and traceability
 
 - [x] E1.F7.T1 [Backend] `karvey-trace.py`: parse requirements, tasks (test task precedes impl task, `manual:`), trailer commits, tests by globs and `@req`/`test_REQ_*` — est: 15min (depends E1.F5.T1)
-- [ ] E1.F7.T2 [Backend] `karvey-trace.py --write` (`traceability.md`) and `--check` (coverage gate, `coverage.requirements` mode, hits); last result from JUnit / `evidence.jsonl` — est: 12min (depends E1.F7.T1, E1.F1.T2, E1.F9.T4)
+- [x] E1.F7.T2 [Backend] `karvey-trace.py --write` (`traceability.md`) and `--check` (coverage gate, `coverage.requirements` mode, hits); last result from JUnit / `evidence.jsonl` — est: 12min (depends E1.F7.T1, E1.F1.T2, E1.F9.T4)
 - [ ] E1.F7.T3 [Backend] Tasks / test / QA text: test task per requirement, coverage plan read and `planned, not executed`, evidence under `changes/{id}/`, QA runs or cites the CI run of the reviewed commit + L-44 — est: 12min (depends E1.F7.T2)
 
 ### Feature E1.F8: Deterministic security tools
@@ -229,7 +229,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F6.T2 [Backend] | ✅ done | 6 | 4 | 0 |  |
 | E1.F6.T3 [Backend] | ✅ done | 10 | 8 | 0 |  |
 | E1.F7.T1 [Backend] | ✅ done | 15 | 11 | 0 | covered also by a task with Tests added (the repo convention), besides [Test] tasks |
-| E1.F7.T2 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F7.T2 [Backend] | ✅ done | 12 | 9 | 0 |  |
 | E1.F7.T3 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F8.T1 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F8.T2 [Backend] | ⬜ todo | 10 | — | — |  |
