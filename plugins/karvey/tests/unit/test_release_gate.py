@@ -1,6 +1,6 @@
 """karvey-release-gate.py: the release manifest and the release gate (architecture §1.9 of wave2-structural).
 
-@req REQ-W2-045 REQ-W2-046
+@req REQ-W2-045 REQ-W2-046 REQ-W2-047 REQ-W2-050 REQ-W2-069 REQ-W2-014
 """
 import contextlib
 import importlib.util
@@ -127,6 +127,126 @@ class Blocking(Base):
         self.change("feat-a")
         code, env = self.manifest()
         self.assertEqual((code, env["result"]["verdict"]), (0, "pass"))
+
+
+class Check(Base):
+    def setUp(self):
+        super().setUp()
+        g.write(self.root, "package.json", {"name": "x", "version": "1.0.0"})
+        g.commit_all(self.root, "chore: package version\n\nKarvey-Change: feat-a")
+
+    def evidence(self, cid, exit_code=0):
+        p = self.root / "docs/spec/changes" / cid / "evidence.jsonl"
+        p.write_text(json.dumps({"argv": ["python3", "-m", "unittest"], "cwd_rel": ".", "exit": exit_code,
+                                 "label": "unit"}) + "\n", encoding="utf-8")
+
+    def check(self, cid, *extra):
+        code, out = run("check", cid, "--base", "base", "--root", str(self.root), "--json", *extra)
+        return code, json.loads(out)["result"]
+
+    def test_REQ_W2_069_all_items_pass(self):
+        self.change("feat-a")
+        self.evidence("feat-a")
+        code, r = self.check("feat-a")
+        self.assertEqual((code, r["verdict"]), (0, "pass"), r)
+        self.assertEqual(set(r["items"]), set(rg.ITEMS))
+        st = {k: v["status"] for k, v in r["items"].items()}
+        self.assertEqual(st["qa_gate"], "pass")
+        self.assertEqual(st["version_match"], "pass")
+        self.assertEqual(st["lane_triplet"], "not-applicable")
+        self.assertEqual(st["pr_body"], "not-applicable")
+
+    def test_REQ_W2_069_no_changelog_line_exits_1_naming_changelog(self):
+        self.change("feat-c")
+        self.evidence("feat-c")
+        code, r = self.check("feat-c")
+        self.assertEqual((code, r["verdict"]), (1, "fail"))
+        self.assertIn("changelog", r["failed"])
+        self.assertEqual(r["items"]["changelog"]["status"], "fail")
+
+    def test_tests_not_evaluated_without_evidence(self):
+        self.change("feat-a")
+        code, r = self.check("feat-a")
+        self.assertEqual(code, 1)
+        self.assertIn("not evaluated", r["items"]["tests"]["detail"])
+
+    def test_red_last_run_fails_tests(self):
+        self.change("feat-a")
+        self.evidence("feat-a", exit_code=1)
+        _, r = self.check("feat-a")
+        self.assertEqual(r["items"]["tests"]["status"], "fail")
+
+    def test_version_mismatch_fails(self):
+        g.write(self.root, "package.json", {"name": "x", "version": "1.1.0"})
+        self.change("feat-a")
+        self.evidence("feat-a")
+        code, r = self.check("feat-a")
+        self.assertEqual((code, r["items"]["version_match"]["status"]), (1, "fail"))
+        self.assertIn("1.1.0", r["items"]["version_match"]["detail"])
+
+    def test_REQ_W2_047_pr_body_lists_one_of_two_changes(self):
+        self.change("feat-a")
+        self.change("feat-b")
+        self.evidence("feat-a")
+        body = self.t.path / "pr.md"
+        body.write_text("Release\n- feat-a\n", encoding="utf-8")
+        code, r = self.check("feat-a", "--pr-body", str(body))
+        self.assertEqual((code, r["items"]["pr_body"]["status"]), (1, "fail"))
+        self.assertIn("feat-b", r["items"]["pr_body"]["detail"])
+        body.write_text("Release\n- feat-a\n- feat-b\n", encoding="utf-8")
+        code, r = self.check("feat-a", "--pr-body", str(body))
+        self.assertEqual((code, r["items"]["pr_body"]["status"]), (0, "pass"))
+
+    def test_manifest_warn_is_not_a_failure(self):
+        self.change("feat-a")
+        self.change("feat-b", qa=False)
+        self.evidence("feat-a")
+        code, r = self.check("feat-a")
+        self.assertEqual((code, r["verdict"], r["items"]["manifest"]["status"]), (0, "warn", "warn"))
+
+    def test_REQ_W2_014_patch_without_regression_test_fails_the_triplet(self):
+        self.change("feat-a", lane="patch")
+        self.evidence("feat-a")
+        _, r = self.check("feat-a")
+        self.assertEqual(r["items"]["lane_triplet"]["status"], "fail")
+        self.assertIn("regression test", r["items"]["lane_triplet"]["detail"])
+        sp = json.loads((self.root / "docs/spec/changes/feat-a/spec.json").read_text())
+        sp["lane_evidence"] = {"bug_id": "BUG-01", "finding": "F-01", "regression_test": "src/feat-a.py::test_x"}
+        g.write(self.root, "docs/spec/changes/feat-a/spec.json", sp)
+        _, r = self.check("feat-a")
+        self.assertEqual(r["items"]["lane_triplet"]["status"], "pass")
+
+    def test_spec_merged_item_reads_spec_merge_check(self):
+        self.change("feat-a")
+        self.evidence("feat-a")
+        sp = json.loads((self.root / "docs/spec/changes/feat-a/spec.json").read_text())
+        sp["capability"] = "cap"
+        g.write(self.root, "docs/spec/changes/feat-a/spec.json", sp)
+        g.write(self.root, "docs/spec/changes/feat-a/spec-delta.md",
+                "# Spec delta\n\n## ADDED Requirements\n\n- **REQ-A-001** — the thing SHALL work.\n")
+        _, r = self.check("feat-a")
+        self.assertEqual(r["items"]["spec_merged"]["status"], "fail")
+        self.assertIn("REQ-A-001", r["items"]["spec_merged"]["detail"])
+
+
+class ReleaseBranch(Base):
+    def test_REQ_W2_050_lists_the_approved_commits_in_order(self):
+        self.change("feat-a")
+        self.change("feat-b", qa=False)
+        g.write(self.root, "src/a2.py", "x\n")
+        g.commit_all(self.root, "feat: a again" + TRAILER % "feat-a")
+        code, out = run("release-branch", "--version", "1.1.0", "--base", "base", "--root", str(self.root), "--json")
+        r = json.loads(out)["result"]
+        self.assertEqual(code, 0)
+        self.assertEqual([c["subject"] for c in r["commits"]], ["docs: feat-a spec", "feat: feat-a", "feat: a again"])
+        self.assertEqual(r["excluded"], [{"id": "feat-b", "qa": "missing"}])
+        self.assertEqual(r["branch"], "release/1.1.0")
+        self.assertEqual(r["commands"][0], "git switch -c release/1.1.0 base")
+        self.assertFalse(r["executed"])
+        import subprocess
+        branches = subprocess.run(["git", "branch", "--list", "release/*"], cwd=str(self.root),
+                                  capture_output=True, text=True).stdout
+        self.assertEqual(branches.strip(), "")
 
 
 if __name__ == "__main__":
