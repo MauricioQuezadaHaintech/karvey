@@ -219,5 +219,36 @@ class ClientAndCommand(unittest.TestCase):
         self.assertEqual(argv[-2:], ["--change", "feat-0"])
 
 
+class Offline(unittest.TestCase):
+    """@req REQ-W3-047 — no process, no socket, no write: the fixture repositories are unchanged."""
+
+    def snapshot(self):
+        out = {}
+        for dirpath, dirnames, filenames in os.walk(str(FIX)):
+            dirnames.sort()
+            for n in sorted(filenames + dirnames):
+                p = os.path.join(dirpath, n)
+                st = os.stat(p)
+                out[os.path.relpath(p, str(FIX))] = (st.st_mtime_ns, st.st_size)
+        return out
+
+    def test_REQ_W3_047_no_process_no_socket_nothing_written(self):
+        import socket
+        import subprocess
+        from unittest import mock
+
+        def refuse(*a, **k):
+            raise AssertionError("the portfolio view started a process or opened a socket")
+        before = self.snapshot()
+        with mock.patch.object(subprocess, "Popen", side_effect=refuse), \
+                mock.patch.object(socket, "socket", side_effect=refuse), \
+                mock.patch.object(os, "system", side_effect=refuse):
+            code, out = run_view("--json")
+            code2, text = run_view("--client", "sample-client-a")
+        self.assertEqual((code, code2), (0, 0), out + text)
+        self.assertEqual(len(json.loads(out)["result"]["clients"]), 2)
+        self.assertEqual(self.snapshot(), before)
+
+
 if __name__ == "__main__":
     unittest.main()
