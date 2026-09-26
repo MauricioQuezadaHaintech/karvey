@@ -137,3 +137,18 @@ def open_questions(rows, today):
         ok = valid_date(q["needed_by"])
         out.append(dict(q, overdue=bool(ok and q["needed_by"] < today), date_invalid=not ok))
     return sorted(out, key=lambda q: (not q["overdue"], q["needed_by"] if not q["date_invalid"] else "9999", q["id"]))
+
+
+def capped(lines, cap=5):
+    """At most ``cap`` lines, then ``+N more — karvey-context`` (the session hook's bound, F-50; REQ-W3-030)."""
+    lines = list(lines)
+    if len(lines) <= cap:
+        return lines
+    return lines[:cap] + ["+%d more — karvey-context" % (len(lines) - cap)]
+
+
+def line(q):
+    """One open question as a dashboard line: id, text, owner, needed-by and its flag."""
+    flag = " · overdue" if q.get("overdue") else (" · date invalid" if q.get("date_invalid") else "")
+    return "%s %s · owner %s · needed by %s%s" % (q["id"], q["question"], q["owner"] or "?",
+                                                          q["needed_by"] or "?", flag)

@@ -551,6 +551,29 @@ def _origin_head(root):
     return out[len("origin/"):] if rc == 0 and out.startswith("origin/") else None
 
 
+def open_work_block(kroot):
+    """The bounded open-work lines of the session context: open questions (overdue first) and open risks of
+    active changes, at most five lines per list plus ``+N more — karvey-context`` (F-50, REQ-W3-030); ``[]``
+    when there is nothing open or anything fails (the session hook informs, never breaks)."""
+    try:
+        from datetime import datetime
+        try:
+            from karvey_lib import risks as rsk
+        except ImportError:  # pragma: no cover - package import
+            from . import risks as rsk
+        active = [c["id"] for c in pj.list_changes(kroot)
+                  if not c["implemented"] and c["phase"] not in pj.INACTIVE_PHASES]
+        ql, rl = rsk.open_work_lines(kroot, datetime.now().astimezone().date().isoformat(), active, cap=5)
+    except Exception:  # noqa: BLE001
+        return []
+    out = []
+    if ql:
+        out += ["", "=== Open questions ==="] + ql
+    if rl:
+        out += ["", "=== Open risks (active changes) ==="] + rl
+    return out
+
+
 def session_text(mode, env):
     """The SessionStart context as text ('' when there is nothing to say)."""
     start = env.get("CLAUDE_PROJECT_DIR") or env.get("PWD") or os.getcwd()
@@ -566,7 +589,9 @@ def session_text(mode, env):
     out = []
     if root is None:
         n = settings_notice(start, None, mode, env)
-        return n or ""
+        kp = pj.find_root(start=start)
+        ow = open_work_block(kp) if kp else []
+        return "\n".join(([n] if n else []) + ow).strip("\n")
     rel = os.path.relpath(start, root) if start != root else ""
     top = rel.split(os.sep, 1)[0] if rel and not rel.startswith("..") else ""
     name, role, profile, board = resolve_profile(root, cfg, kind, top)
@@ -617,6 +642,8 @@ def session_text(mode, env):
     n = settings_notice(start, root, mode, env)
     if n:
         out.append(n)
+    if kroot:
+        out.extend(open_work_block(kroot))
     out.append("")
     out.append("=== First action ===")
     if act["change"] or drift or not os.path.isfile(handoff):

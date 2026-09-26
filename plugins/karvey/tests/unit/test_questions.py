@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import _path  # noqa: F401
+import _path
 from karvey_lib import questions as qs
 from _state import GOOD_SPEC, make_project, run_json
 
@@ -115,3 +115,63 @@ class Validate(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Dashboard(unittest.TestCase):
+    """@req REQ-W3-030 — the dashboard's open-work lists open questions and open risks of active changes."""
+
+    def setUp(self):
+        import contextlib
+        import importlib.util
+        import io
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-qd-"))
+        make_project(self.tmp, spec=dict(GOOD_SPEC))
+        text = qs.add(TABLE, "Q-05", "Needed yesterday?", "sponsor", "2026-10-13")
+        text = qs.add(text, "Q-06", "Malformed date?", "approver", "2026-10-20").replace("2026-10-20 | — | — | open",
+                                                                                        "20/10 | — | — | open")
+        (self.tmp / "docs/spec/questions.md").write_text(text, encoding="utf-8")
+        (self.tmp / "docs/spec/changes/feat-a/risks.md").write_text(
+            "| ID | Risk | Probability | Impact | Owner | Trigger | Mitigation | State | Last review |\n"
+            "|----|------|-------------|--------|-------|---------|------------|-------|-------------|\n"
+            "| R-1 | Late data | Medium | High | tech lead | import fails | retry | open | 2026-10-01 tech lead |\n"
+            "| R-2 | Old risk | Low | Low | tech lead | — | — | closed | 2026-10-01 tech lead |\n", encoding="utf-8")
+        spec = importlib.util.spec_from_file_location("karvey_context_q", str(_path.SCRIPTS_DIR / "karvey-context.py"))
+        self.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.mod)
+        self._io = (contextlib, io)
+
+    def tearDown(self):
+        shutil.rmtree(str(self.tmp), ignore_errors=True)
+
+    def run_ctx(self, *argv):
+        contextlib, io = self._io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = self.mod.main(["--root", str(self.tmp), "--section", "open-work",
+                                  "--now", "2026-10-14T10:00:00-03:00"] + list(argv))
+        return code, out.getvalue()
+
+    def test_REQ_W3_030_overdue_with_owner_and_invalid_date_listed(self):
+        code, out = self.run_ctx()
+        self.assertEqual(code, 0, out)
+        self.assertIn("Q-05 Needed yesterday? · owner sponsor · needed by 2026-10-13 · overdue", out)
+        self.assertIn("Q-06 Malformed date? · owner approver · needed by 20/10 · date invalid", out)
+        self.assertNotIn("Q-02", out)  # resolved
+        self.assertIn("feat-a R-1 Late data · owner tech lead · trigger import fails", out)
+        self.assertNotIn("R-2", out)  # closed
+
+    def test_json_carries_both_lists(self):
+        import json
+        code, out = self.run_ctx("--json")
+        ow = json.loads(out)["result"]["open-work"]
+        self.assertEqual([q["id"] for q in ow["questions"]], ["Q-05", "Q-01", "Q-06"])
+        self.assertEqual([(r["change"], r["id"]) for r in ow["risks"]], [("feat-a", "R-1")])
+
+
+class SessionCap(unittest.TestCase):
+    """@req REQ-W3-030 — the session hook prints at most five lines per list plus ``+N more``."""
+
+    def test_eight_items_five_lines_and_three_more(self):
+        lines = qs.capped(["Q-%02d" % i for i in range(1, 9)])
+        self.assertEqual(lines, ["Q-01", "Q-02", "Q-03", "Q-04", "Q-05", "+3 more — karvey-context"])
+        self.assertEqual(qs.capped(["a", "b"]), ["a", "b"])

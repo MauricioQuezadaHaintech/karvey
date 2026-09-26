@@ -1110,6 +1110,59 @@
     "REQ-W1-048",
     "BUG-21"
    ]
+  },
+  {
+   "id": "ss-24-open-questions-capped",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "repo"
+      ],
+      "spec_repo": "repo",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
+      "docs/spec/questions.md": "# Open questions\n\n| ID | Question | Owner | Needed by | Changes | Context | State | Resolved by |\n|----|----|----|----|----|----|----|----|\n| Q-01 | Sample question 1? | sponsor | 2020-01-01 | feat-a | — | open | — |\n| Q-02 | Sample question 2? | sponsor | 2020-01-02 | feat-a | — | open | — |\n| Q-03 | Sample question 3? | sponsor | 2020-01-03 | feat-a | — | open | — |\n| Q-04 | Sample question 4? | sponsor | 2020-01-04 | feat-a | — | open | — |\n| Q-05 | Sample question 5? | sponsor | 2020-01-05 | feat-a | — | open | — |\n| Q-06 | Sample question 6? | sponsor | 2020-01-06 | feat-a | — | open | — |\n| Q-07 | Sample question 7? | sponsor | 2020-01-07 | feat-a | — | open | — |\n| Q-08 | Sample question 8? | sponsor | 2020-01-08 | feat-a | — | open | — |\n"
+     }
+    }
+   },
+   "input": {
+    "source": "startup"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "=== Open questions ===",
+     "Q-01 Sample question 1? · owner sponsor · needed by 2020-01-01 · overdue",
+     "Q-05 ",
+     "+3 more — karvey-context"
+    ],
+    "context_not_contains": "Q-06 "
+   },
+   "tags": [
+    "session",
+    "REQ-W3-030"
+   ]
   }
  ]
 }

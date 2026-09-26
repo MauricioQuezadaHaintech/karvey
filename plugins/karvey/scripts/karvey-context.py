@@ -15,7 +15,8 @@ Sections:
   overview      active changes, phase, days in phase (``stalled`` past ``stall_days``, ``unknown``
                 without history), WIP against ``wip_limit`` (REQ-W1-069, REQ-W1-071)
   open-work     findings by type and status per change, BUG-NN not RESUELTO, ``[human]`` tasks
-                awaiting a human, open backlog items, pending tracker outbox (REQ-W1-068, REQ-W1-090)
+                awaiting a human, open backlog items, pending tracker outbox, open questions (owner, needed-by,
+                ``overdue`` / ``date invalid``) and open risks of active changes (REQ-W1-068, REQ-W1-090, REQ-W3-030)
   approvals     every approval from requirements to prod: by, role, date, or ``skipped: <reason>``;
                 ``approved`` without ``by`` is ``approver missing`` (REQ-W1-070)
   enforcement   prod-gate ``on (default)`` / ``on`` / ``off (…reviewed on origin/<prod>)``, git-flow,
@@ -49,6 +50,7 @@ import karvey_lib as kl  # noqa: E402
 from karvey_lib import outbox as obx  # noqa: E402
 from karvey_lib import approval, audit, metrics as mx, modes, project as pj  # noqa: E402
 from karvey_lib import sponsor as spx  # noqa: E402
+from karvey_lib import questions as qs, risks as rsk  # noqa: E402
 
 TOOL = "karvey-context"
 SECTIONS = ("overview", "open-work", "approvals", "enforcement", "close-report", "calibration", "convergence")
@@ -517,6 +519,19 @@ def open_work(rd, ctx):
                    for b in sorted(bugs.values(), key=lambda b: int(b["id"].split("-")[1]))
                    if (b["state"] or "").upper() != RESOLVED]
     res["backlog"] = read_backlog(rd) or []
+    # open questions (owner, needed-by, overdue / date invalid) and open risks of active changes (REQ-W3-030)
+    today = ctx["now"].date().isoformat()
+    qt = rd.text(rd.root / pj.SPEC_DIR / "questions.md")
+    res["questions"] = [{k: q[k] for k in ("id", "question", "owner", "needed_by", "overdue", "date_invalid")}
+                        for q in qs.open_questions(qs.parse(qt or ""), today)]
+    res["risks"] = []
+    for c in ctx["changes"]:
+        if not is_active(c):
+            continue
+        rt = rd.text(c["dir"] / rsk.FILE)
+        for r in rsk.open_risks(rsk.parse(rt or "")):
+            res["risks"].append({"change": c["id"], "id": r["id"], "risk": r["risk"], "owner": r["owner"],
+                                 "trigger": r["trigger"], "last_review": r["last_review"]})
     return res
 
 
@@ -1074,6 +1089,11 @@ def render(result, ctx):
             for h in hw:
                 L.append("awaiting human %s: %s · executor %s · since %s" % (cid, h["task"], h["executor"], h["since"]))
         L.append("backlog open (%d): %s" % (len(ow["backlog"]), ", ".join(b["id"] for b in ow["backlog"]) or "none"))
+        L.append("open questions (%d)%s" % (len(ow.get("questions") or []), ":" if ow.get("questions") else ": none"))
+        L.extend("  " + qs.line(q) for q in ow.get("questions") or [])
+        L.append("open risks of active changes (%d)%s" % (len(ow.get("risks") or []),
+                                                         ":" if ow.get("risks") else ": none"))
+        L.extend("  " + rsk.line(r["change"], r) for r in ow.get("risks") or [])
         for cid, ob in sorted(ow["outbox"].items()):
             L.append("tracker outbox %s: %d pending%s" % (cid, len(ob), "".join(
                 " · %s %s%s" % (e.get("id"), e.get("op"), " blocked_by " + str(e["blocked_by"]) if e.get("state") == "blocked" else "")
