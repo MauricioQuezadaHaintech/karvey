@@ -82,5 +82,80 @@ class Library(unittest.TestCase):
         self.assertEqual(loadlist.first_diff("a\nb\n", "a\nc\n"), (2, "b", "c"))
 
 
+def run(*args, cwd=None):
+    p = subprocess.run([sys.executable, str(TOOL)] + list(args), capture_output=True, text=True, timeout=120,
+                       cwd=cwd)
+    return p.returncode, p.stdout, p.stderr
+
+
+def git_status():
+    return subprocess.run(["git", "-C", str(_path.REPO_ROOT), "status", "--porcelain"], capture_output=True,
+                          text=True, timeout=30).stdout
+
+
+class Measure(unittest.TestCase):
+    """@req REQ-W3-001 REQ-W3-071 REQ-W3-072 — the ``measure`` command."""
+
+    def test_REQ_W3_071_two_runs_give_identical_bytes(self):
+        before = git_status()
+        rc1, out1, _ = run("measure", "--label", "check", "--json")
+        rc2, out2, _ = run("measure", "--label", "check", "--json")
+        self.assertEqual(rc1, 0)
+        self.assertIsNone(loadlist.first_diff(out1, out2))
+        self.assertEqual(out1, out2)
+        self.assertEqual(git_status(), before, "the measure run wrote into the repository")
+        # a stamped output is caught and the first differing line is named
+        lines = out1.splitlines()
+        stamped = "\n".join(lines[:3] + ['  "at": "2026-01-01T00:00:00+00:00",'] + lines[3:]) + "\n"
+        diff = loadlist.first_diff(out1, stamped)
+        self.assertEqual(diff[0], 4)
+        self.assertIn('"at"', diff[2])
+
+    def test_every_phase_skill_has_a_row_and_json_is_sorted_without_absolute_paths(self):
+        rc, out, _ = run("measure", "--label", "check", "--json")
+        env = json.loads(out)
+        snap = env["result"]
+        skills = [r["skill"] for r in snap["rows"]]
+        self.assertEqual(skills, sorted(skills))
+        for sk in ("karvey", "karvey-requirements", "karvey-deploy", "karvey-archive"):
+            self.assertIn(sk, skills)
+        for r in snap["rows"]:
+            for k in ("own", "direct", "closure_min", "closure_max"):
+                self.assertEqual(r[k]["tokens_quality"], "estimated")
+            self.assertLessEqual(r["closure_min"]["bytes"], r["closure_max"]["bytes"])
+        self.assertIsInstance(snap["session_hook"]["bytes"], int)
+        self.assertEqual(out, json.dumps(env, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+        self.assertNotIn(str(_path.REPO_ROOT), out)
+        self.assertNotIn(tempfile.gettempdir(), out)
+
+    def test_fixture_rows_and_phases(self):
+        rc, out, _ = run("measure", "--plugin", str(FIX), "--json")
+        self.assertEqual(rc, 0, out)
+        rows = {r["skill"]: r for r in json.loads(out)["result"]["rows"]}
+        self.assertEqual(sorted(rows), ["karvey", "karvey-alpha", "karvey-beta"])
+        self.assertEqual(rows["karvey-beta"]["phases"], ["beta", "beta-close"])
+        self.assertTrue(rows["karvey-alpha"]["has_load_line"])
+        self.assertIsNone(json.loads(out)["result"]["session_hook"]["bytes"])
+
+    def test_REQ_W3_072_missing_load_file_exits_1_naming_skill_line_file(self):
+        tmp = tempfile.mkdtemp(prefix="karvey-budget-t-")
+        try:
+            tree = Path(tmp) / "plugin"
+            shutil.copytree(str(FIX), str(tree))
+            sk = tree / "skills" / "karvey-alpha" / "SKILL.md"
+            sk.write_text(sk.read_text(encoding="utf-8").replace("e.md?", "e.md?, references/gone.md"),
+                          encoding="utf-8")
+            rc, out, err = run("measure", "--plugin", str(tree))
+            self.assertEqual(rc, 1)
+            self.assertIn("skills/karvey-alpha/SKILL.md:7", err)
+            self.assertIn("references/gone.md", err)
+            rc, out, _ = run("measure", "--plugin", str(tree), "--json")
+            e = json.loads(out)["errors"][0]
+            self.assertEqual((e["file"], e["path"], e["got"]),
+                             ("skills/karvey-alpha/SKILL.md", "line 7", "references/gone.md"))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

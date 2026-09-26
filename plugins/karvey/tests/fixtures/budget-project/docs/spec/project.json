@@ -1,0 +1,5 @@
+{
+  "name": "sample-project",
+  "notifications": {"channel": "none"},
+  "management": {"tool": "markdown"}
+}

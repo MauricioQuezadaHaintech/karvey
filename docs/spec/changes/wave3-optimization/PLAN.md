@@ -212,7 +212,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | Task | Status | estimate_min | actual_ai_min | actual_review_min | Notes |
 |------|--------|--------------|---------------|-------------------|-------|
 | E1.F1.T1 [Backend] | ✅ done | 12 | 10 | 0 |  |
-| E1.F1.T2 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F1.T2 [Backend] | ✅ done | 12 | 12 | 0 |  |
 | E1.F1.T3 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F1.T4 [Backend] | ⬜ todo | 6 | — | — |  |
 | E1.F1.T5 [Backend] | ⬜ todo | 6 | — | — |  |
