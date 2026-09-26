@@ -2,7 +2,7 @@
 name: karvey-decisions
 description: Karvey support — the numbered decision log (D-NN, C-NN) and `cross`, which checks a question against it — before declaring anything blocked. Triggers include "karvey decisions", "registro de decisiones karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [log | cross | show <D-NN>] [--series D|C] [--repo <ops_repo>]
+argument-hint: [log | cross | ask | show <D-NN>] [--series D|C] [--repo <ops_repo>]
 ---
 
 # Karvey Decisions
@@ -76,7 +76,21 @@ one silently; the owner decides which entry stands and the other is superseded.
 4. **Result:**
    - Found → cite the `D-NN`, apply it, and **go on**. Do not escalate.
    - Not found → the block is written in this exact form: *"searched the decision log and the offer
-     material, no answer exists for X"*. A block written any other way is not written.
+     material, no answer exists for X"*. A block written any other way is not written. Then **offer `ask`**, so
+     the open question gets an owner and a date instead of living only in a message.
+
+### `ask` — record an open question
+
+1. Collect: the question; its **owner** (who decides — a stakeholder role or name); its **needed-by** date
+   (`YYYY-MM-DD`, the day from which it blocks); the changes it affects; optionally a **context** in business
+   words (the options seen and the effect of waiting — the sponsor page shows it under the question).
+   Without an owner or a needed-by date, refuse and name the missing field; never invent either.
+2. Reserve the id with `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next Q`.
+3. Append the row to `{ops_repo}/docs/spec/questions.md` (`| ID | Question | Owner | Needed by | Changes | Context
+   | State | Resolved by |`, state `open`; the table is created on first use). `karvey_lib/questions.py` holds the
+   format and the refusals.
+4. **Answered** → record the answer with `log` as a `D-NN` that cites the `Q-NN`, then set the question's state to
+   `resolved → D-NN` (and `Resolved by`). The row is never deleted.
 
 ### `show <D-NN>` — resolve a reference
 
