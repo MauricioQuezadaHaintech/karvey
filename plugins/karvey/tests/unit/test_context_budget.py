@@ -157,5 +157,68 @@ class Measure(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+def snapshot(sizes, hook=None):
+    return {"method_version": "x", "rows": [{"skill": k, "closure_max": {"bytes": v}} for k, v in sorted(sizes.items())],
+            "session_hook": {"bytes": hook}}
+
+
+class Compare(unittest.TestCase):
+    """@req REQ-W3-010 REQ-W3-011 — the ``compare`` command."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-budget-c-"))
+
+    def tearDown(self):
+        shutil.rmtree(str(self.tmp), ignore_errors=True)
+
+    def write(self, name, obj):
+        p = self.tmp / name
+        p.write_text(json.dumps(obj), encoding="utf-8")
+        return str(p)
+
+    BASE = {"a": 1000, "b": 1000, "c": 1000}
+
+    def test_median_below_target_exits_1_naming_the_median(self):
+        base = self.write("base.json", snapshot(self.BASE))
+        after = self.write("after.json", snapshot({"a": 650, "b": 650, "c": 650}))
+        rc, out, err = run("compare", base, after)
+        self.assertEqual(rc, 1)
+        self.assertIn("median reduction 35% is below the 40% target", err)
+
+    def test_phase_below_target_listed_with_reason_or_unexplained(self):
+        base = self.write("base.json", snapshot(self.BASE))
+        after = self.write("after.json", snapshot({"a": 550, "b": 550, "c": 800}))
+        rc, out, _ = run("compare", base, after, "--json")
+        self.assertEqual(rc, 0, out)
+        res = json.loads(out)["result"]
+        self.assertEqual(res["median_reduction_pct"], 45.0)
+        self.assertEqual(res["below_target"], [{"skill": "c", "before": 1000, "after": 800, "reduction_pct": 20.0,
+                                                "reason": "unexplained"}])
+        reasons = self.write("reasons.json", {"reasons": {"c": "the phase keeps its full deploy flow"}})
+        rc, out, _ = run("compare", base, after, "--reasons", reasons)
+        self.assertEqual(rc, 0)
+        self.assertIn("the phase keeps its full deploy flow", out)
+
+    def test_growth_warns_with_phase_and_percent_and_exits_0(self):
+        base = self.write("base.json", snapshot(self.BASE))
+        after = self.write("after.json", snapshot({"a": 1150, "b": 1000, "c": 1050}))
+        rc, out, _ = run("compare", base, after, "--warn-growth", "10")
+        self.assertEqual(rc, 0)
+        warns = [ln for ln in out.splitlines() if ln.startswith("::warning")]
+        self.assertEqual(len(warns), 1)
+        self.assertIn("a closure grew 15%", warns[0])
+
+    def test_live_against_itself_does_not_warn(self):
+        rc, out, _ = run("measure", "--label", "now", "--json")
+        base = self.write("now.json", json.loads(out))
+        rc, out, _ = run("compare", base, "--live", "--warn-growth", "10")
+        self.assertEqual(rc, 0)
+        self.assertNotIn("::warning", out)
+
+    def test_missing_snapshot_exits_4(self):
+        rc, _, _ = run("compare", str(self.tmp / "none.json"), "--live")
+        self.assertEqual(rc, 4)
+
+
 if __name__ == "__main__":
     unittest.main()
