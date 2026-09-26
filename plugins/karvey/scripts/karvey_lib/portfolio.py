@@ -132,3 +132,107 @@ def repo_changes(abs_path):
             continue
         out.append({"id": d.name, "spec": spec, "error": None})
     return layout, note, out
+
+
+def _day(v):
+    return v[:10] if isinstance(v, str) and re.match(r"^\d{4}-\d{2}-\d{2}", v) else None
+
+
+def _days(a, b):
+    from datetime import date
+    try:
+        return (date.fromisoformat(b) - date.fromisoformat(a)).days
+    except (TypeError, ValueError):
+        return None
+
+
+def _all_change_specs(spec_root):
+    """``[(change id, spec dict, archived)]`` of every change (archive included), by file reads only."""
+    out = []
+    base = spec_root / "changes"
+    for parent, archived in ((base, False), (base / pj.ARCHIVE_NAME, True)):
+        try:
+            dirs = sorted(os.scandir(str(parent)), key=lambda d: d.name)
+        except OSError:
+            continue
+        for d in dirs:
+            if not d.is_dir() or d.name.startswith(".") or (not archived and d.name == pj.ARCHIVE_NAME):
+                continue
+            try:
+                spec = read_json(os.path.join(d.path, "spec.json"))
+            except NotRead:
+                continue
+            if isinstance(spec, dict):
+                implemented = os.path.exists(os.path.join(d.path, pj.IMPLEMENTED_MARKER))
+                cid = spec.get("change_id") if isinstance(spec.get("change_id"), str) else d.name
+                out.append((cid, spec, archived or implemented))
+    return out
+
+
+def read_repo(abs_path, frm, to, as_of):
+    """One repository's portfolio row (REQ-W3-046), by file reads only: ``{layout, note, active, waiting, released,
+    cost}``. ``active`` = active changes with phase, lane, age and days in the phase; ``waiting`` = open questions
+    owned by the repository's stakeholders (all open questions when it declares none) and approvals generated but
+    not given; ``released`` = production deploys in the period; ``cost`` = effort US$ recorded in the period with the
+    estimated share. Every foreign text is sanitised. ``NotRead`` when it is not a Karvey project or cannot be read."""
+    from . import questions as qs
+    layout, note, _active = repo_changes(abs_path)
+    root = Path(abs_path)
+    sroot = root / pj.spec_layout(root)[0]
+    try:
+        project = read_json(sroot / "project.json")
+    except NotRead:
+        project = {}
+    who = set()
+    for role, v in ((project or {}).get("stakeholders") or {}).items() if isinstance(project, dict) and \
+            isinstance(project.get("stakeholders"), dict) else ():
+        who.add(str(role).lower())
+        if isinstance(v, dict):
+            for k in ("role", "name"):
+                if isinstance(v.get(k), str):
+                    who.add(v[k].lower())
+    active, waiting, released = [], [], []
+    usd, est, n_cost = 0.0, 0.0, set()
+    for cid, spec, done in _all_change_specs(sroot):
+        cid_s = sanitise(cid, 80)
+        for dep in spec.get("deploys") or []:
+            if isinstance(dep, dict) and dep.get("env") == "prod":
+                day = _day(dep.get("at"))
+                if day and frm <= day <= to:
+                    released.append({"change": cid_s, "version": sanitise(dep.get("version") or "?", 40), "date": day})
+        for e in spec.get("effort") or []:
+            if not isinstance(e, dict) or e.get("kind", "phase") != "phase":
+                continue
+            day = _day(e.get("at"))
+            u = e.get("usd") if isinstance(e.get("usd"), dict) else {}
+            if day and frm <= day <= to and isinstance(u.get("value"), (int, float)):
+                usd += u["value"]
+                n_cost.add(cid)
+                if u.get("quality") == "estimated":
+                    est += u["value"]
+        if done or spec.get("phase") in pj.INACTIVE_PHASES:
+            continue
+        hist = [h for h in spec.get("phase_history") or [] if isinstance(h, dict)]
+        start = _day(spec.get("created_at")) or (_day(hist[0].get("entered_at")) if hist else None)
+        since = _day(hist[-1].get("entered_at")) if hist else None
+        active.append({"change": cid_s, "phase": sanitise(spec.get("phase") or "?", 40),
+                       "lane": sanitise(spec.get("lane") or "legacy", 40), "age_days": _days(start, as_of),
+                       "in_phase_days": _days(since, as_of), "id_raw": cid})
+        aps = spec.get("approvals") if isinstance(spec.get("approvals"), dict) else {}
+        for k, a in sorted(aps.items()):
+            if isinstance(a, dict) and a.get("generated") and not a.get("approved"):
+                waiting.append({"kind": "approval", "change": cid_s, "item": sanitise(k, 40)})
+    try:
+        qrows = qs.parse(read_text(sroot / "questions.md"))
+    except NotRead:
+        qrows = []
+    for q in qs.open_questions(qrows, as_of):
+        if who and q["owner"].strip().lower() not in who:
+            continue
+        waiting.append({"kind": "question", "item": q["id"], "owner": sanitise(q["owner"], 60),
+                        "needed_by": sanitise(q["needed_by"], 20),
+                        "flag": "overdue" if q["overdue"] else ("date invalid" if q["date_invalid"] else "")})
+    released.sort(key=lambda r: (r["date"], r["change"]))
+    return {"layout": layout, "note": note, "active": active, "waiting": waiting, "released": released,
+            "cost": {"usd": round(usd, 2), "changes": len(n_cost),
+                     "estimated_share": round(est / usd, 2) if usd else 0.0}}

@@ -96,5 +96,64 @@ class Reader(unittest.TestCase):
         self.assertEqual((layout, note, [c["id"] for c in changes]), ("spec/", None, ["feat-a"]))
 
 
+FIX = _path.UNIT_DIR / "fixtures" / "portfolio"
+PERIOD = ["--from", "2026-10-01", "--to", "2026-10-14", "--as-of", "2026-10-14"]
+
+
+def context():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("karvey_context_pf", str(_path.SCRIPTS_DIR / "karvey-context.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+CTX = context()
+
+
+def run_view(*argv):
+    import contextlib
+    import io
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+        code = CTX.main(["--portfolio", "--file", str(FIX / "portfolio.json")] + PERIOD + list(argv))
+    return code, out.getvalue()
+
+
+class View(unittest.TestCase):
+    """@req REQ-W3-046 REQ-W3-048"""
+
+    def test_REQ_W3_046_grouped_by_client_with_the_four_column_groups(self):
+        code, out = run_view("--json")
+        self.assertEqual(code, 0, out)
+        res = json.loads(out)["result"]
+        self.assertEqual([c["client"] for c in res["clients"]], ["sample-client-a", "sample-client-b"])
+        a = res["clients"][0]
+        repo_a = a["repos"][0]
+        self.assertEqual(repo_a["active"][0], {"change": "feat-a", "phase": "tasks", "lane": "standard",
+                                                "age_days": 13, "in_phase_days": 4})
+        self.assertEqual([(w["kind"], w["item"]) for w in repo_a["waiting"]], [("approval", "tasks"),
+                                                                                ("question", "Q-01")])
+        self.assertEqual(repo_a["waiting"][1]["flag"], "overdue")
+        self.assertEqual(repo_a["released"], [{"change": "old", "version": "1.4.0", "date": "2026-10-05"}])
+        self.assertEqual(repo_a["cost"], {"usd": 12.0, "changes": 2, "estimated_share": 0.17})
+        self.assertEqual(a["totals"], {"active": 2, "waiting": 2, "released": 1, "usd": 12.0})
+
+    def test_REQ_W3_048_the_spec_layout_is_read_and_marked(self):
+        code, out = run_view("--json")
+        repo_b = json.loads(out)["result"]["clients"][0]["repos"][1]
+        self.assertEqual((repo_b["layout"], [x["change"] for x in repo_b["active"]]), ("spec/", ["feat-b"]))
+
+    def test_REQ_W3_046_a_non_karvey_repository_is_shown_and_the_rest_render(self):
+        code, out = run_view()
+        self.assertEqual(code, 0, out)
+        self.assertIn("repo-c · owner team-b — not a Karvey project", out)
+        self.assertIn("active   feat-a · tasks · lane standard", out)
+
+    def test_byte_identical_across_runs(self):
+        self.assertEqual(run_view("--json")[1], run_view("--json")[1])
+        self.assertEqual(run_view()[1], run_view()[1])
+
+
 if __name__ == "__main__":
     unittest.main()

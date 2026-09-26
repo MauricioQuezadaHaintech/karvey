@@ -1,0 +1,49 @@
+{
+  "change_id": "old",
+  "phase": "archived",
+  "lane": "patch",
+  "client": "sample-client-a",
+  "created_at": "2026-10-02T10:00:00-03:00",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-10-02T10:00:00-03:00",
+      "exited_at": "2026-10-02T10:00:00-03:00"
+    },
+    {
+      "phase": "archived",
+      "entered_at": "2026-10-06T10:00:00-03:00"
+    }
+  ],
+  "approvals": {},
+  "deploys": [
+    {
+      "env": "prod",
+      "version": "1.4.0",
+      "at": "2026-10-05T10:00:00-03:00",
+      "verification": "pass"
+    }
+  ],
+  "effort": [
+    {
+      "kind": "phase",
+      "phase": "impl",
+      "at": "2026-10-04T10:00:00-03:00",
+      "session": "s0",
+      "usd": {
+        "value": 6.0,
+        "quality": "exact"
+      }
+    },
+    {
+      "kind": "phase",
+      "phase": "qa",
+      "at": "2026-10-05T10:00:00-03:00",
+      "session": "s0",
+      "usd": {
+        "value": 2.0,
+        "quality": "estimated"
+      }
+    }
+  ]
+}

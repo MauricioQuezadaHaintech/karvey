@@ -6,6 +6,7 @@
                       [--json]
     karvey-context.py --metrics [--from YYYY-MM-DD --to YYYY-MM-DD] [--as-of YYYY-MM-DD] [--lane L] [--json]
     karvey-context.py --readiness [--json]
+    karvey-context.py --portfolio [--file PATH] [--client NAME] [--from --to --as-of] [--json]
 
 - Opens every file read-only and never writes, also under ``--json`` (REQ-W1-072). JSON is parsed as
   JSON; Markdown tables are parsed by header name (``Type``, ``Status``, …), never by position.
@@ -51,6 +52,7 @@ from karvey_lib import outbox as obx  # noqa: E402
 from karvey_lib import approval, audit, metrics as mx, modes, project as pj  # noqa: E402
 from karvey_lib import sponsor as spx  # noqa: E402
 from karvey_lib import questions as qs, risks as rsk  # noqa: E402
+from karvey_lib import portfolio as pfl  # noqa: E402
 
 TOOL = "karvey-context"
 SECTIONS = ("overview", "open-work", "approvals", "enforcement", "close-report", "calibration", "convergence")
@@ -1408,6 +1410,89 @@ def render_metrics(res):
     return "\n".join(L)
 
 
+# --------------------------------------------------------------------------- portfolio (wave3 §1.20)
+def portfolio_file(args, root):
+    """``--file``, else ``{ops_repo}/docs/spec/portfolio.json`` beside this repository, else this spec dir's."""
+    if args.file:
+        return Path(args.file) if os.path.isabs(args.file) else Path(os.getcwd()) / args.file
+    if root is None:
+        raise NotFound("no portfolio file: pass --file PATH (outside a Karvey project)")
+    proj, _ = pj.load_project_json(root)
+    ops = (proj or {}).get("ops_repo") if isinstance(proj, dict) else None
+    if isinstance(ops, str) and ops and "/" not in ops and ops not in (".", ".."):
+        cand = Path(root).parent / ops / pj.SPEC_DIR / "portfolio.json"
+        if cand.is_file():
+            return cand
+    return pj.spec_dir(root) / "portfolio.json"
+
+
+def portfolio_view(args, root):
+    """Per client and repository, read-only and offline (REQ-W3-046, 047): active changes (phase, lane, age),
+    questions and approvals awaited, releases and cost of the period; a repository that cannot be read says why."""
+    frm, to, as_of = metric_period(args)
+    f = portfolio_file(args, root)
+    try:
+        entries, problems = pfl.load(f)
+    except pfl.NotRead as exc:
+        raise NotFound("portfolio file %s: %s" % (f.name, exc))
+    clients = {}
+    for e in entries:
+        row = {"path": pfl.sanitise(e["path"], 120), "owner": e["owner"], "state": e["state"], "layout": None,
+               "active": [], "waiting": [], "released": [], "cost": None}
+        if e["state"] == "ok":
+            try:
+                row.update(pfl.read_repo(e["abs"], frm, to, as_of))
+            except pfl.NotRead as exc:
+                row["state"] = pfl.NOT_KARVEY if str(exc) == pfl.NOT_KARVEY else "not read: %s" % exc
+        clients.setdefault(e["client"], []).append(row)
+    out = []
+    for client in sorted(clients, key=str.lower):
+        repos = sorted(clients[client], key=lambda r: r["path"])
+        for r in repos:
+            for a in r["active"]:
+                a.pop("id_raw", None)
+        tot = {"active": sum(len(r["active"]) for r in repos), "waiting": sum(len(r["waiting"]) for r in repos),
+               "released": sum(len(r["released"]) for r in repos),
+               "usd": round(sum((r["cost"] or {}).get("usd", 0) for r in repos), 2)}
+        out.append({"client": client, "repos": repos, "totals": tot})
+    return {"period": {"from": frm, "to": to, "as_of": as_of}, "file": f.name, "problems": problems,
+            "clients": out, "repositories": len(entries)}
+
+
+def render_portfolio(res):
+    p = res["period"]
+    L = ["== PORTFOLIO %s .. %s (as of %s) · %d repositories · %d clients ==" % (
+        p["from"], p["to"], p["as_of"], res["repositories"], len(res["clients"]))]
+    L += ["portfolio file: %s" % x for x in res["problems"]]
+    for c in res["clients"]:
+        L.append("client %s" % c["client"])
+        for r in c["repos"]:
+            head = "  %s%s%s" % (r["path"], (" (%s)" % r["layout"]) if r.get("layout") else "",
+                                 (" · owner %s" % r["owner"]) if r["owner"] else "")
+            if r["state"] != "ok":
+                L.append("%s — %s" % (head, r["state"]))
+                continue
+            L.append(head + ((" · %s" % r["note"]) if r.get("note") else ""))
+            L += ["    active   %s · %s · lane %s · %s d (%s d in step)" % (
+                a["change"], a["phase"], a["lane"], "?" if a["age_days"] is None else a["age_days"],
+                "?" if a["in_phase_days"] is None else a["in_phase_days"]) for a in r["active"]] or \
+                ["    active   none"]
+            for w in r["waiting"]:
+                if w["kind"] == "approval":
+                    L.append("    waiting  approval %s (%s)" % (w["item"], w["change"]))
+                else:
+                    L.append("    waiting  %s · owner %s · needed by %s%s" % (
+                        w["item"], w["owner"], w["needed_by"], (" · " + w["flag"]) if w["flag"] else ""))
+            L += ["    released %s %s on %s" % (x["change"], x["version"], x["date"]) for x in r["released"]]
+            cost = r["cost"] or {}
+            L.append("    cost     US$ %.2f · %d change(s) · estimated share %.2f" % (
+                cost.get("usd", 0), cost.get("changes", 0), cost.get("estimated_share", 0)))
+        t = c["totals"]
+        L.append("  totals: %d active · %d waiting · %d released · US$ %.2f" % (t["active"], t["waiting"],
+                                                                               t["released"], t["usd"]))
+    return "\n".join(L)
+
+
 # --------------------------------------------------------------------------- CLI
 def build_context(args, rd):
     project = rd.json(rd.spec / "project.json")
@@ -1429,6 +1514,9 @@ def build_context(args, rd):
 
 def run(args):
     root = pj.find_root(start=os.getcwd(), root=args.root)
+    if args.portfolio:  # the portfolio needs no current project when --file is given
+        res = portfolio_view(args, root)
+        return kl.EXIT_OK, res, [], render_portfolio(res)
     if root is None or not pj.spec_dir(root).is_dir():
         raise NotFound("no docs/spec or spec here (not a Karvey project): %s" % (args.root or os.getcwd()))
     rd = Reader(root)
@@ -1474,7 +1562,10 @@ def build_parser():
     p.add_argument("--gate", choices=["what", "how", "release"], help="--section gate: which merged gate")
     p.add_argument("--report", action="store_true",
                    help="business-language status for a period (released, in progress, blocked, risks, decisions)")
-    p.add_argument("--client", help="--report: only this client's changes")
+    p.add_argument("--client", help="--report / --portfolio: only this client's changes")
+    p.add_argument("--portfolio", action="store_true",
+                   help="read-only, offline view of every repository of the portfolio file, per client")
+    p.add_argument("--file", help="--portfolio: the portfolio file (default {ops_repo}/docs/spec/portfolio.json)")
     p.add_argument("--json", action="store_true", help="print one JSON envelope")
     return p
 
@@ -1501,7 +1592,7 @@ def main(argv=None):
         return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL,
                                    errors=[kl.issue("internal", "%s: %s" % (type(exc).__name__, exc))]), args.json)
     env = kl.envelope(TOOL, code, result=result, warnings=warnings)
-    if args.json and (args.metrics or args.readiness or args.report):  # byte-identical output: sorted keys, no wall clock, no absolute path
+    if args.json and (args.metrics or args.readiness or args.report or args.portfolio):  # byte-identical output: sorted keys, no wall clock, no absolute path
         sys.stdout.write(json.dumps(env, ensure_ascii=False, sort_keys=True) + "\n")
         return code
     return kl.emit(env, args.json, human=human)

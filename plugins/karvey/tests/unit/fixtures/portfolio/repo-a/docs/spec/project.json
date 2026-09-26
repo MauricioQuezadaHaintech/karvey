@@ -1,0 +1,10 @@
+{
+  "stakeholders": {
+    "sponsor": {
+      "role": "sponsor",
+      "destination": {
+        "channel": "none"
+      }
+    }
+  }
+}
