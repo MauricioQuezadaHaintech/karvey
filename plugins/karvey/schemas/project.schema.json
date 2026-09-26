@@ -229,6 +229,16 @@
       "minLength": 1,
       "x-karvey-note": "the client this project serves; every new change inherits it (wave3 §1.20, REQ-W3-044)"
     },
+    "browse": {
+      "type": "object",
+      "properties": {
+        "via": {
+          "type": "string",
+          "pattern": "^(local|none|agent:[A-Za-z0-9][A-Za-z0-9._-]{0,63})$",
+          "x-karvey-note": "where browser work runs: local (default), agent:<name> (a self-contained instruction to another agent), none (visual checks not evaluated) — wave3 §1.22, REQ-W3-054"
+        }
+      }
+    },
     "backlog": {
       "type": "object",
       "properties": {

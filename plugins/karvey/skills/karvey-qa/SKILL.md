@@ -157,7 +157,7 @@ Before releasing, obtain an adversarial review with ANOTHER model, by invoking t
 
 **Dimension 8: Visual audit of the IMPLEMENTED product vs design-spec**
 
-Audit the **already-built** UI in the target's actual runtime (not the mockup, not the isolated code), relying on `karvey-browse` to open the target and capture the actual state. It is **target-agnostic** (web, mobile, desktop, or other): what matters is comparing what the user actually sees against what was specified.
+Audit the **already-built** UI in the target's actual runtime (not the mockup, not the isolated code), relying on `karvey-browse` to open the target and capture the actual state — where it runs is `browse.via` (`karvey-config.py resolve browse`); with `none` this dimension is **`not evaluated (browse.via: none)`**, written as such in the review, never scored. It is **target-agnostic** (web, mobile, desktop, or other): what matters is comparing what the user actually sees against what was specified.
 
 - Load the expected design from `docs/spec/changes/{change-id}/design-spec.md` (or the corresponding scope's `design-spec.md`).
 - With `karvey-browse`, navigate the implemented flow in the target's actual runtime and capture evidence (screenshots/state) of each relevant screen/state.

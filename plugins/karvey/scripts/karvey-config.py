@@ -265,6 +265,32 @@ def resolve_management(settings, change=None):
 
 
 # --------------------------------------------------------------------------- notifications
+BROWSE_VIA = re.compile(r"^(local|none|agent:[A-Za-z0-9][A-Za-z0-9._-]{0,63})$")
+
+
+def resolve_browse(settings):
+    """``{via, agent, raw, source, note}`` of ``project.json:browse.via`` (wave3 §1.22, REQ-W3-054): ``local``
+    (default), ``agent:<name>`` or ``none`` — ``none`` makes the visual checks ``not evaluated (browse.via: none)``."""
+    raw, src = settings.block("browse")
+    res = {"via": "local", "agent": None, "raw": None, "source": src or "default", "note": None}
+    if raw is None:
+        return res, []
+    if not isinstance(raw, dict):
+        raise Refused("browse must be an object, got %r" % (raw,), code="config.invalid_browse")
+    v = raw.get("via", "local")
+    if not isinstance(v, str) or not BROWSE_VIA.match(v):
+        raise Refused("browse.via %r is not local, none or agent:<name> (letters, digits, . _ -; no spaces)" % (v,),
+                      code="config.invalid_browse")
+    res["raw"] = v
+    if v.startswith("agent:"):
+        res["via"], res["agent"] = "agent", v[len("agent:"):]
+    else:
+        res["via"] = v
+    if v == "none":
+        res["note"] = "not evaluated (browse.via: none)"
+    return res, []
+
+
 def resolve_notifications(settings):
     """``{channel, target, via, events, detail, deferred, source}`` with defaults (REQ-W1-098)."""
     warnings = []
@@ -753,6 +779,9 @@ def cmd_resolve(args, root):
         res, warnings = resolve_management(settings, args.change)
         human = json.dumps({k: res[k] for k in ("tool", "location", "statuses", "sprints", "source",
                                                 "external", "missing")}, ensure_ascii=False)
+    elif args.what == "browse":
+        res, warnings = resolve_browse(settings)
+        human = json.dumps(res, ensure_ascii=False, sort_keys=True)
     else:
         if args.change and not args.event:
             raise Usage("--change applies to 'resolve management' or to 'resolve notifications --event'")
@@ -817,7 +846,7 @@ def build_parser():
                                 parents=[top])
     sub = p.add_subparsers(dest="command")
     r = sub.add_parser("resolve", parents=[common], help="resolve management or notifications")
-    r.add_argument("what", choices=["management", "notifications"])
+    r.add_argument("what", choices=["management", "notifications", "browse"])
     r.add_argument("--change", help="change id whose spec.json override applies (management; notifications --event)")
     r.add_argument("--event", help="notifications: a 'your turn' event (approval_requested, awaiting_human, blocked)")
     r.add_argument("--item", help="--event: the gate or task the event is about")
