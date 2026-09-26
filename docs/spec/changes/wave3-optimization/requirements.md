@@ -32,6 +32,10 @@ the per-phase instruction size and the cost per change are measured before and a
 - **Actors.** "the method" = the skills and rules as shipped; "a phase skill" = any skill that owns a phase; "the
   human" = the person who owns the change's approvals (`role: human`); "the sponsor" = the stakeholder declared
   for the project or change who pays for or commissions it; "a judge" = an independent reviewing subagent (R-11).
+- **Measure, never cap.** "Never capped" in the north star applies to cost (D-30): nothing stops, shortens or skips
+  work because of cost. The size limits (REQ-W3-003, REQ-W3-008, REQ-W3-011) bound the method's own text through the
+  linter and never stop a change's work. Single-agent cost is first recorded by 4.1, so its "before" is stated as not
+  measured and this change's own record is the first figure later changes compare against (REQ-W3-064).
 - **Neutrality.** No requirement, rule or example names an organisation, product, client, internal URL, person's
   e-mail or personal path (PRD §9).
 
@@ -76,8 +80,9 @@ skill, direct and closure sizes, and the JSON form holds the same numbers.
 it reports the missing rule with the skill and line, and exits non-zero.
 
 ### 1.2 REQ-W3-002 — Baseline before the reorganisation, reproducible
-BEFORE any skill or rule is moved by this change, the method SHALL store the size snapshot of the 4.0.0 content
-with the date and the method version, and the size tool SHALL produce byte-identical output for the same input.
+The method SHALL store the size snapshot of the 4.0.0 content, with the date and the method version, in a commit that
+precedes every commit of this change that moves a skill or rule, and the size tool SHALL produce byte-identical output
+for the same input.
 
 Traces to PRD: §6 S-1, O-1, AC-1 · Sources: R-15 ("hay que re-probar"), Wave 2 baseline pattern (REQ-W2-006) · BL-18
 
@@ -173,15 +178,16 @@ baseline map is covered.
 check runs THEN it fails with "deploy: contract prod-gate not loaded".
 
 ### 1.10 REQ-W3-010 — The budget is a target, measured after
-WHEN the reorganisation is complete, the size tool SHALL report the per-phase closure against the baseline, and
-the change SHALL meet a median reduction of at least 40% or record, per phase that misses it, the reason.
+WHEN the reorganisation is complete, the size tool SHALL report the per-phase closure against the baseline; the change
+SHALL meet a median reduction of at least 40%, and the test phase SHALL fail otherwise; every phase whose own
+reduction is below 40% SHALL carry a recorded reason, which never excuses the median.
 
 Traces to PRD: §6 S-2, O-2, AC-2 · Sources: R-15 (−45–55% estimado por AG), AG-04 · BL-18
 
 **Scenario — success:** GIVEN baseline and after snapshots WHEN compared THEN the median closure reduction is
 reported and is ≥ 40%.
-**Scenario — error:** GIVEN a phase whose closure did not shrink WHEN the comparison runs THEN it lists that phase
-with its recorded reason, or flags it as unexplained.
+**Scenario — error:** GIVEN a median reduction of 35% WHEN the test phase compares THEN it fails naming the median; a
+phase below 40% while the median passes is listed with its reason, or flagged as unexplained.
 
 ### 1.11 REQ-W3-011 — Size checked in CI
 The plugin's CI SHALL run the size tool, SHALL warn when a phase's closure grows more than 10% over the last
@@ -212,17 +218,19 @@ Traces to PRD: §6 S-2, O-2 · Sources: R-15 ("declarar el patrón una fase por 
 
 **Scenario — success:** GIVEN a gate just approved WHEN the phase closes THEN the output offers the checkpoint save
 and the fresh-session option.
-**Scenario — error:** GIVEN a session that is already above the rotation threshold WHEN a new phase is about to
-start THEN the method recommends the checkpoint and a fresh session before loading the next skill.
+**Scenario — error:** GIVEN a session that is already above the context threshold `karvey-checkpoint` declares for
+rotating a session WHEN a new phase is about to start THEN the method recommends the checkpoint and a fresh session
+before loading the next skill.
 
 ---
 
 ## Requirement 2: Cost per change with a single agent (R-25)
 
 ### 2.1 REQ-W3-014 — Effort recorded at each phase close
-WHEN a phase closes, the method SHALL add to the change's effort record the AI cost in US$, the tokens and the
-human review minutes of the interval since the previous close, per phase, marking each value as `exact`,
-`estimated` or `n/a` with its source.
+WHEN a phase closes, the method SHALL add to the change's effort record the AI cost in US$, the tokens and the human
+review minutes of the interval since the previous close, per phase, marking each value as `exact`, `estimated` or
+`n/a` with its source; the human review minutes SHALL be those the human states at the gate (`exact`), otherwise `n/a`
+— the gate wait is not review time and the metrics report it apart (REQ-W2-003).
 
 Traces to PRD: §6 S-3, O-6, AC-6 · Sources: R-25 (`spec.json:effort{ai_usd, tokens, human_review_min}`), PM-08 · Decision: D-30 · BL-28
 
@@ -232,27 +240,29 @@ effort record holds the interval's US$ and tokens marked `exact` and the review 
 with the reason "runtime exposes no cost", never as zero.
 
 ### 2.2 REQ-W3-015 — Cost source captured outside the model
-The method SHALL capture the session cost from a runtime source that does not rely on the model's own account
-(the statusline input or the session transcript), SHALL keep the last captured value per session so that the
-interval can be computed, and SHALL NOT spend model turns to collect it.
+The method SHALL capture the session cost from a runtime source that does not rely on the model's own account (the
+statusline input or the session transcript), SHALL keep the last captured value per session so that the interval can
+be computed — a session's first close counting from the session's start, and a session that works on several changes
+charging each interval to the change whose phase closes — and SHALL NOT spend model turns to collect it.
 
 Traces to PRD: §6 S-3, O-6 · Sources: R-25 (la statusline ya recibe el costo y no se guarda), PM-08, team-layer F-03 · BL-28, BL-37
 
 **Scenario — success:** GIVEN the statusline receives a session cost WHEN it runs THEN the value is stored where the
 phase-close step reads it, with no model turn.
-**Scenario — error:** GIVEN two sessions working on the same change WHEN both close phases THEN each interval is
-computed from its own session's last value and no cost is counted twice.
+**Scenario — error:** GIVEN a runtime cost source that cannot be read WHEN a phase closes THEN the interval is
+recorded `n/a` with the reason, and the next readable value starts a new interval instead of charging the gap twice.
 
 ### 2.3 REQ-W3-016 — Judge cost kept apart
-The effort record SHALL keep the judges' cost (REQ-W2-030) apart from the phase work, so that the cost of the judges
-can be judged on its own.
+The effort record SHALL keep the judges' cost (REQ-W2-030) apart from the phase work — judge cost is read only from
+the judge run records, and every effort entry carries its kind (`phase`) — so that the cost of the judges can be
+judged on its own.
 
 Traces to PRD: §6 S-3, O-6 · Sources: R-25 ("el costo de los jueces se registra aparte"), R-11 · Decision: D-30
 
 **Scenario — success:** GIVEN a gate with two judge runs WHEN the effort is read THEN phase cost and judge cost are
 two separate figures.
-**Scenario — error:** GIVEN a judge run recorded into the phase figure WHEN the state tool validates THEN it reports
-the mixed entry.
+**Scenario — error:** GIVEN an effort entry whose kind is not `phase`, or that repeats a judge run's figure, WHEN the
+state tool validates THEN it reports the mixed entry.
 
 ### 2.4 REQ-W3-017 — Cost is never a cap
 No setting SHALL stop, shorten, skip or ask to confirm any phase, judge or task because of its measured or estimated
@@ -279,7 +289,8 @@ excluded from the cost aggregate only.
 
 ### 2.6 REQ-W3-019 — Outliers in the retro
 MODIFIES REQ-W2-008. WHEN the retro runs, it SHALL flag every change whose cost exceeds three times the median of the
-period for its lane, with its phases' share, as an input for the discussion, not as a verdict.
+period for its lane (with at least three measured changes in the lane), with its phases' share, as an input for the
+discussion, not as a verdict.
 
 Traces to PRD: §6 S-3, O-6 · Sources: R-25, PM-08 ("un cambio cuyo costo supere X veces la mediana se señala en la retro") · Decision: D-30
 
@@ -293,8 +304,9 @@ and it says "too few changes in lane".
 ## Requirement 3: Sponsor page and "your turn" events (R-19)
 
 ### 3.1 REQ-W3-020 — Stakeholders declared in the project
-The project settings SHALL declare the stakeholders of the project — at least the sponsor — each with a role, a
-display name and a destination resolved through the notification adapters; a change MAY override the sponsor.
+The project settings SHALL declare the stakeholders of the project — at least the sponsor, and optionally the approver
+and the executor — each with a role, a display name and a destination resolved through the notification adapters; a
+change MAY override any of them.
 
 Traces to PRD: §6 S-4, O-3 · Sources: R-19, PM-07 ("usar la sección Stakeholders del PRD") · Decision: D-31 · BL-22
 
@@ -306,8 +318,10 @@ asks for the name of the secret instead.
 ### 3.2 REQ-W3-021 — One page per change, from the artifacts
 WHEN the sponsor page is produced, it SHALL be generated only from the change's artifacts and state — scope from the
 PRD and requirements, state and lane from the phase history, cost from the effort record, risks from the risk
-register, pending decisions from the open questions owned by the sponsor, and what reached production from the
-release manifest — in business language, with the date of every figure.
+register, pending decisions from the open questions whose owner matches the sponsor's role or display name
+(case-insensitive), and what reached production from the release manifest — in business language (no requirement,
+finding or decision ids other than the change id, no file paths and no command names in the body), with the date of
+every figure.
 
 Traces to PRD: §6 S-4, O-3, AC-3 · Sources: R-19 (reporte en lenguaje de negocio), PM-07 · Decision: D-31 · BL-22
 
@@ -328,9 +342,11 @@ Traces to PRD: §6 S-4, O-3, AC-3 · Decision: D-31 · Sources: R-19 · BL-22
 for reconciliation and the page stays in the change folder.
 
 ### 3.4 REQ-W3-023 — Nothing internal leaves
-The sponsor page SHALL contain only fields on an allow-list and SHALL pass a leak check that fails closed on
-secret-shaped values, file-system paths, internal hostnames, personal e-mail addresses and the name of any client
-other than the change's own; a failing page SHALL NOT be delivered.
+The sponsor page SHALL contain only fields on an allow-list and SHALL pass a leak check that fails closed on values
+matching the method's secret patterns, absolute or home-relative file-system paths, hostnames under non-public
+suffixes or in private address ranges, e-mail addresses other than a declared stakeholder destination, and the names
+of other clients taken from the portfolio file where it is readable (WHERE it is not, the check SHALL say
+"other-client names not checked" and still run the rest); a failing page SHALL NOT be delivered.
 
 Traces to PRD: §6 S-4, §9, O-3, AC-3 · Sources: R-19 (riesgo: fuga de información entre tenants), PM-07 · Decision: D-31 · BL-22
 
@@ -341,7 +357,8 @@ refused naming the field, and the page is not sent.
 
 ### 3.5 REQ-W3-024 — Self-contained, readable page
 The sponsor page SHALL be a single self-contained HTML file with no external requests, readable on a phone and a
-desktop, in light and dark schemes, in the change's language, and printable.
+desktop (no horizontal scroll from 360 to 1440 CSS px wide), in light and dark schemes, in the change's language, and
+printable (a print style that shows every section and hides only navigation).
 
 Traces to PRD: §6 S-4, O-3 · Sources: R-19 · Decision: D-31 · BL-22
 
@@ -364,8 +381,8 @@ client" and exits zero.
 ### 3.7 REQ-W3-026 — "Your turn" events
 The notification settings SHALL accept the events `approval_requested`, `awaiting_human` and `blocked`; WHEN one of
 them occurs and is enabled, the method SHALL notify the person who must act — the approver, the declared executor, or
-whoever unblocks — with the change, the item and what is expected; a `blocked` event raised by a judge's verdict SHALL
-carry that verdict.
+whoever unblocks — at the destination of the stakeholder with that role, else the team destination, with the change,
+the item and what is expected; a `blocked` event raised by a judge's verdict SHALL carry that verdict.
 
 Traces to PRD: §6 S-4, O-4, AC-4 · Sources: R-19 ("eventos `approval_requested`, `awaiting_human` y `blocked`"), PM-07, R-11 · BL-22
 
@@ -375,9 +392,10 @@ destination receives one message naming the change and the gate.
 team destination and says "no executor declared".
 
 ### 3.8 REQ-W3-027 — Notifications are not duplicated
-Every notification payload SHALL carry a run or iteration id and a timestamp; the method SHALL notify `qa` on the first
-run and on a verdict change only (unless the project asks for every run), and SHALL NOT re-send a "your turn" event
-for a state that has not changed.
+Every notification payload SHALL carry a run or iteration id and a timestamp; the method SHALL notify `qa` on the
+first run and on a verdict change only (unless the project asks for every run), SHALL NOT re-send a deploy
+notification for the same version and environment, and SHALL NOT re-send a "your turn" event for a state that has not
+changed.
 
 Traces to PRD: §6 S-4, O-4, AC-4 · Sources: F-48 · BL-43
 
@@ -425,8 +443,10 @@ rather than skipped.
 
 ### 4.4 REQ-W3-031 — A risk register per change
 The method SHALL keep a risk register per change in which each risk has an id, a description, a probability and an
-impact, an owner, a trigger, a mitigation and a state (`open`, `mitigated`, `accepted`, `closed`, `moved`);
-architecture SHALL create it from its risk analysis and any phase or judge MAY add to it.
+impact, an owner, a trigger, a mitigation, a state (`open`, `mitigated`, `accepted`, `closed`, `moved`) and its last
+review (date and reviewer); architecture SHALL create it from its risk analysis and any phase or judge MAY add to it;
+WHERE the lane skips architecture, the first phase that adds a risk SHALL create it, and a change without a register
+SHALL be read as having no risks.
 
 Traces to PRD: §6 S-5, O-5 · Sources: R-24 (`risks.md` por cambio), PM-11 · BL-27
 
@@ -447,8 +467,9 @@ finding.
 refused and reported.
 
 ### 4.6 REQ-W3-033 — Risks reviewed before the qa and release gates
-BEFORE the qa gate and the release gate, the method SHALL list every `open` risk of the change with its owner and
-trigger in the gate summary and ask its owner for a state; in 4.1 an open risk without a reviewed state SHALL warn.
+WHEN the qa gate or the release gate is asked, the method SHALL list every `open` risk of the change with its owner,
+trigger and last review in the gate summary and ask its owner for a state; in 4.1 an open risk whose last review
+predates the start of that phase SHALL warn.
 
 Traces to PRD: §6 S-5, O-5, AC-5 · Sources: R-24 ("revisado en QA y deploy"), PM-11 · BL-27
 
@@ -504,8 +525,9 @@ Traces to PRD: §6 S-6 · Sources: R-26 ("el catálogo de arte pasa a opt-in"), 
 it reports it.
 
 ### 5.4 REQ-W3-038 — Contrast is computed
-The method SHALL ship a contrast tool that computes the WCAG contrast ratio of each declared text/background token pair
-and reports every pair below its level; design SHALL cite its output.
+The method SHALL ship a contrast tool that computes the WCAG contrast ratio of each declared text/background token
+pair against the pair's target level declared in the design system (AA or AAA, normal or large text; AA normal text,
+4.5:1, when undeclared) and reports every pair below it; design SHALL cite its output.
 
 Traces to PRD: §6 S-6, O-7, AC-7 · Sources: R-26 ("con `contrast-check.py`"), AG-12 · BL-29
 
@@ -531,7 +553,9 @@ reports the self-score.
 
 ### 6.1 REQ-W3-040 — Feature means a functional area
 The method SHALL define a Feature only as a functional area of the change (a unit of value) in every rule and skill;
-pipeline phases SHALL be recorded as a checklist or a field of the Epic, never as Features.
+pipeline phases SHALL be recorded as a checklist or a field of the Epic, never as Features; tracker items created
+under 4.0 in the old shape SHALL be left as they are and reported by the tracker reconciliation as `legacy shape`,
+never rewritten.
 
 Traces to PRD: §6 S-7, O-8 · Sources: R-27 ("Feature = área funcional"), PM-10 · BL-30
 
@@ -595,13 +619,13 @@ named.
 
 ### 7.3 REQ-W3-046 — The portfolio view
 WHEN `karvey-context --portfolio` runs, it SHALL show, per client and per repository, the active changes by phase and
-lane with their age, the open questions and pending approvals awaited from the client, the releases of the period and
-the cost of the period.
+lane with their age, the open questions owned by the client's stakeholders and the gates waiting for a human approval,
+the releases of the period and the cost of the period.
 
 Traces to PRD: §6 S-8, O-9, AC-8 · Sources: R-28, PM-14 · Decision: D-32 · BL-31
 
-**Scenario — success:** GIVEN three repositories of two clients WHEN the view runs THEN it groups them by client with the
-five columns.
+**Scenario — success:** GIVEN three repositories of two clients WHEN the view runs THEN it groups them by client with
+the four column groups (active changes with phase, lane and age; questions and approvals awaited; releases; cost).
 **Scenario — error:** GIVEN a repository with no Karvey project WHEN the view runs THEN it is shown as "not a Karvey
 project" and the rest still render.
 
@@ -631,14 +655,15 @@ layout `spec/`.
 ## Requirement 8: Backlog ranked by WSJF (R-29)
 
 ### 8.1 REQ-W3-049 — Scoring columns
-The backlog SHALL accept for each item a value (1–5), an effort (S/M/L or minutes), a cost of delay or needed-by date,
-and a client, and SHALL compute a WSJF score as (value + urgency) / effort, with the formula written in the backlog
+The backlog SHALL accept for each item a value (1–5), an effort (S/M/L or minutes), a cost of delay (1–5) or needed-by
+date, and a client, and SHALL compute a WSJF score as (value + urgency) / effort, where urgency is the cost of delay,
+or else derives from the days left to needed-by (past or ≤ 14 → 5, ≤ 30 → 4, ≤ 60 → 3, ≤ 90 → 2, otherwise 1), and
+effort is S = 1, M = 2, L = 3 (minutes: ≤ 60 → 1, ≤ 240 → 2, otherwise 3), with the formula written in the backlog
 rule.
 
 Traces to PRD: §6 S-9, O-10, AC-9 · Sources: R-29, PM-15 · BL-32
 
-**Scenario — success:** GIVEN an item with value 4, urgency 3, effort S WHEN scored THEN the score follows the documented
-formula.
+**Scenario — success:** GIVEN an item with value 4, cost of delay 3 and effort S WHEN scored THEN its score is 7.0.
 **Scenario — error:** GIVEN an item without effort WHEN scored THEN it is "unscored", never zero.
 
 ### 8.2 REQ-W3-050 — `done-direct` state
@@ -762,8 +787,11 @@ Traces to PRD: §6 S-10, §9, O-11 · Sources: R-30, AG-14 (rastros de un stack 
 ## Requirement 10: Rollout 4.1.0 and dogfooding
 
 ### 10.1 REQ-W3-061 — Every new check has a mode
-Every check this change adds SHALL declare its mode in the check-modes table, and in 4.1 SHALL default to advisory or
-warn, except the leak check of the sponsor page and the missing-file check of load lists, which are blocking.
+Every check this change adds over a project's existing artifacts SHALL declare its mode in the check-modes table, and
+in 4.1 SHALL default to advisory or warn, except the leak check of the sponsor page and the missing-file check of load
+lists, which are blocking; checks of the plugin's own sources (REQ-W3-011, 012, 067, 069) and refusals of input to a
+field, state or register this change introduces (REQ-W3-020, 028, 034, 050) are not project checks — no 4.0 project
+holds that input — and keep the refusal their requirement states.
 
 Traces to PRD: §6 S-11, §9, O-12, AC-12 · Sources: Ola 3 plan, REQ-W2-083 · Decision: D-24
 
@@ -790,18 +818,20 @@ Traces to PRD: §6 S-11, S-8, O-12 · Sources: R-28, R-01 (`--fix`) · BL-31
 **Scenario — error:** GIVEN `--fix` run twice WHEN compared THEN the second run changes nothing.
 
 ### 10.4 REQ-W3-064 — Measured before and after
-The release of 4.1.0 SHALL carry the context size before and after (REQ-W3-010) and the cost of this change (REQ-W3-014)
-in its release notes.
+The release of 4.1.0 SHALL carry the context size before and after (REQ-W3-010) and the cost of this change
+(REQ-W3-014) in its release notes, stating that single-agent cost before 4.1 was not measured, so that later changes
+compare against the 4.1 figures.
 
 Traces to PRD: §6 S-11, O-1, O-2, O-6 · Sources: R-15, R-25 · Decision: D-30
 
 **Scenario — success:** GIVEN the release notes WHEN read THEN both measurements are present with their dates.
-**Scenario — error:** GIVEN a measurement that could not be taken WHEN the notes are written THEN it is stated "not measured"
-with the reason.
+**Scenario — error:** GIVEN a measurement that could not be taken WHEN the notes are written THEN it is stated "not
+measured" with the reason.
 
 ### 10.5 REQ-W3-065 — Built with itself
-This change SHALL run in the `feature-ui` lane on this repository in trunk mode, SHALL carry the change trailer on every
-commit, SHALL record its own effort at every phase close, and SHALL produce its own sponsor page at each gate close.
+This change SHALL run in the `feature-ui` lane on this repository in trunk mode, SHALL carry the change trailer on
+every commit, SHALL record its own effort at every phase close, and SHALL produce its own sponsor page at each gate
+close, with the method's owner declared as the change's sponsor (the change override of REQ-W3-020).
 
 Traces to PRD: §6 S-11, §9, AC-6 · Sources: panel Ola 1 (dogfooding), H-22 · Decision: D-04, D-26, D-31
 
@@ -903,3 +933,11 @@ gate. D-30, D-31 and D-32 are not open.
 9. **Neutral incident states** in English with the current localized names as permanent aliases (REQ-W3-057).
 10. **Portfolio file lives in the operations repository** (or the spec repository when there is none), not in each project
     (REQ-W3-045).
+11. **WSJF mapping** (judges F-06, F-18): urgency = cost of delay 1–5, else days to needed-by (≤ 14 → 5, ≤ 30 → 4, ≤ 60
+    → 3, ≤ 90 → 2, else 1); effort S/M/L = 1/2/3, minutes ≤ 60 / ≤ 240 / more = 1/2/3 (REQ-W3-049).
+12. **Human review minutes** are what the human states at the gate, else `n/a`; gate wait stays a separate metric
+    (REQ-W3-014, judge F-07).
+13. **Other-client names** for the leak check come from the portfolio file; when it is unreadable the page says "other-client
+    names not checked" and the rest of the check still runs (REQ-W3-023, judge F-10).
+14. **This change's sponsor** is the method's owner, declared as a change-level override, so its own sponsor page is produced
+    (REQ-W3-065, judge F-05).

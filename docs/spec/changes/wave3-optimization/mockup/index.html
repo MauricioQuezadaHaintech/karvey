@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOCKUP — wave3-optimization — Map</title>
+<style>
+:root{
+  /* design-spec.md tokens (light) — values shared with docs/karvey.html */
+  --color-background:#f3eee3; --color-surface:#fbf8f2; --color-surface-2:#ebe3d2;
+  --color-text-primary:#1d2831; --color-text-secondary:#4a5560;
+  --color-border:#d3c6ad; --color-border-strong:#4a5560;
+  --color-primary:#2b4256; --color-primary-soft:#d6e0e8;
+  --color-accent:#8f5312; --color-accent-soft:#ecd3a4;
+  --color-semantic-success:#44632f; --color-semantic-success-soft:#dbe6cf;
+  --color-semantic-error:#973a1e; --color-semantic-error-soft:#f1d5c9;
+  --color-semantic-warning:#8f5312; --color-semantic-warning-soft:#ecd3a4;
+  --color-focus:#1c5d96;
+  --shadow-1:0 1px 0 rgba(40,30,10,.05),0 6px 18px -12px rgba(40,30,10,.25);
+  --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-cjk:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Apple SD Gothic Neo","Malgun Gothic","PingFang SC","Microsoft YaHei","Noto Sans CJK JP","Noto Sans CJK KR","Noto Sans CJK SC";
+  --text-xs:.75rem; --text-sm:.875rem; --text-base:1rem; --text-lg:1.125rem; --text-xl:1.25rem; --text-2xl:1.5rem; --text-3xl:1.875rem;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
+  --duration-fast:100ms; --duration-base:200ms; --duration-slow:300ms;
+  --ease-standard:cubic-bezier(.4,0,.2,1); --ease-enter:cubic-bezier(0,0,.2,1); --ease-exit:cubic-bezier(.4,0,1,1);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+    --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+    --color-border:#34424f; --color-border-strong:#a8b1ba;
+    --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+    --color-accent:#e2ab5f; --color-accent-soft:#433018;
+    --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+    --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+    --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+    --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+  --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+  --color-border:#34424f; --color-border-strong:#a8b1ba;
+  --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+  --color-accent:#e2ab5f; --color-accent-soft:#433018;
+  --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+  --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+  --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+  --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--color-background);color:var(--color-text-primary);font-family:var(--font-sans);font-size:var(--text-base);line-height:1.6;overflow-x:hidden}
+a{color:var(--color-primary);text-underline-offset:2px}
+a:hover{color:var(--color-accent)}
+:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px;border-radius:var(--radius-sm)}
+code,.mono{font-family:var(--font-mono);font-size:.88em}
+code{background:var(--color-surface-2);padding:.08em .35em;border-radius:var(--radius-sm);overflow-wrap:anywhere}
+h1,h2,h3{line-height:1.25;margin:0 0 var(--space-2);letter-spacing:-.01em}
+h1{font-size:clamp(1.5rem,4vw,var(--text-3xl))}
+h2{font-size:var(--text-xl)}
+h3{font-size:var(--text-base)}
+p{margin:var(--space-1) 0 var(--space-3)}
+.muted{color:var(--color-text-secondary)}
+.small{font-size:var(--text-sm)}
+.xs{font-size:var(--text-xs)}
+.eyebrow{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent);margin:0 0 var(--space-1)}
+/* mockup chrome — not part of the product surfaces */
+.mk-banner{background:var(--color-text-primary);color:var(--color-background);font-family:var(--font-mono);font-size:var(--text-xs);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4);align-items:center;justify-content:space-between}
+.mk-banner a{color:var(--color-background)}
+.mk-nav{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.mk-nav a{padding:2px var(--space-2);border-radius:var(--radius-sm);text-decoration:none}
+.mk-nav a[aria-current="page"]{background:var(--color-background);color:var(--color-text-primary);font-weight:700}
+.mk-tools{background:var(--color-surface-2);border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;font-size:var(--text-sm)}
+.mk-tools .lbl{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px}
+button,.btn{font:inherit;font-size:var(--text-sm);cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);min-height:32px;transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
+button:hover,.btn:hover{background:var(--color-surface-2)}
+button[aria-pressed="true"],.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-background);font-weight:600}
+.gap-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px dashed var(--color-semantic-error);color:var(--color-semantic-error);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
+/* layout */
+.wrap{max-width:1080px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
+.grid2{display:grid;gap:var(--space-4);grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-6);box-shadow:var(--shadow-1);min-width:0}
+.card.emph{border-color:var(--color-accent);border-width:2px;background:var(--color-surface)}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);padding:1px var(--space-2);border-radius:var(--radius-full);background:var(--color-surface-2);color:var(--color-text-primary);border:1px solid var(--color-border);white-space:nowrap}
+.tag.ok{background:var(--color-semantic-success-soft);border-color:transparent}
+.tag.err{background:var(--color-semantic-error-soft);border-color:transparent}
+.tag.warn{background:var(--color-semantic-warning-soft);border-color:transparent}
+.tag.info{background:var(--color-primary-soft);border-color:transparent}
+.dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;margin-right:.35em;vertical-align:.05em;background:currentColor}
+table{border-collapse:collapse;width:100%;font-size:var(--text-sm)}
+th,td{text-align:left;padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--color-border);vertical-align:top}
+th{font-weight:600;color:var(--color-text-secondary);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.05em}
+tbody tr{transition:background-color var(--duration-fast) var(--ease-standard)}
+tbody tr:hover{background:var(--color-surface-2)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.table-scroll{overflow-x:auto;max-width:100%}
+details{border-top:1px solid var(--color-border);padding:var(--space-2) 0}
+summary{cursor:pointer;font-weight:600;list-style-position:outside;min-height:32px;display:list-item}
+details[open] > summary{margin-bottom:var(--space-2)}
+/* terminal */
+.term{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:.84rem;line-height:1.55;padding:var(--space-3) var(--space-4);overflow-x:auto;white-space:pre;margin:var(--space-2) 0 var(--space-4)}
+.term .p{color:var(--color-text-secondary)}
+.term .ok{color:var(--color-semantic-success);font-weight:600}
+.term .err{color:var(--color-semantic-error);font-weight:600}
+.term .warn{color:var(--color-semantic-warning);font-weight:600}
+.term .h{font-weight:700}
+.term .dim{color:var(--color-text-secondary)}
+/* views, overlays */
+.view{display:none}
+.view.active{display:block;animation:fade var(--duration-base) var(--ease-enter)}
+.tabs{display:flex;flex-wrap:wrap;gap:var(--space-1);border-bottom:1px solid var(--color-border);margin-bottom:var(--space-4)}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:var(--space-2) var(--space-3);color:var(--color-text-secondary)}
+.tabs button[aria-selected="true"]{color:var(--color-text-primary);border-bottom-color:var(--color-accent);font-weight:600;background:none}
+.overlay{position:fixed;inset:0;background:rgba(16,22,28,.55);display:none;align-items:center;justify-content:center;padding:var(--space-4);z-index:50}
+.overlay.open{display:flex;animation:fade var(--duration-slow) var(--ease-enter)}
+.modal{background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-lg);max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:var(--space-6);box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.modal header{display:flex;justify-content:space-between;align-items:start;gap:var(--space-4);margin-bottom:var(--space-3)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="mk-banner" role="note"><span>MOCKUP WITH GRAPHIC DESIGN — wave3-optimization — Iteration 1 — 2026-09-26</span><nav class="mk-nav" aria-label="Mockup surfaces"><a href="index.html" aria-current="page">Map</a><a href="sponsor.html">Sponsor page</a><a href="portfolio.html">Portfolio</a><a href="terminal.html">Report, backlog, gates</a><a href="method-page.html">Method page</a></nav></div>
+<div class="mk-tools"><span class="lbl">Scheme</span><span class="seg" role="group" aria-label="Colour scheme"><button type="button" aria-pressed="true" onclick="setTheme('auto',this)">System</button><button type="button" aria-pressed="false" onclick="setTheme('light',this)">Light</button><button type="button" aria-pressed="false" onclick="setTheme('dark',this)">Dark</button></span></div>
+
+<main class="wrap">
+<p class="eyebrow">Change wave3-optimization · lane feature-ui · merged gate what (not approved)</p>
+<h1>Mockup map</h1>
+<p class="muted">Two HTML surfaces (the sponsor page, the method page) and the terminal surfaces this change adds (portfolio, report, backlog, dashboard, gate summaries, messages). Project target: <code>cli</code>, so terminal output is shown as transcripts; the two pages are web. Sample data is fictional.</p>
+<div class="grid2">
+ <a class="card" href="sponsor.html" style="text-decoration:none;color:inherit"><p class="eyebrow">Web · D-31</p><h2>Sponsor page</h2><p class="small">One page per change, refreshed at each gate close: waiting for you, scope, progress, cost, risks, released. L4: 8 states, phone, print.</p></a>
+ <a class="card" href="portfolio.html" style="text-decoration:none;color:inherit"><p class="eyebrow">CLI · D-32</p><h2>Portfolio</h2><p class="small">Every listed repository by client, read-only. L3: one change. L4: denied, not Karvey, two roots, bad entry, no file.</p></a>
+ <a class="card" href="terminal.html" style="text-decoration:none;color:inherit"><p class="eyebrow">CLI</p><h2>Report, backlog, gates, messages</h2><p class="small">8 views, each with its success and error scenario; L3: a notification payload.</p></a>
+ <a class="card" href="method-page.html" style="text-decoration:none;color:inherit"><p class="eyebrow">Web · B-06</p><h2>Method page, nine languages</h2><p class="small">Switcher, CJK with system fonts, <code>?lang=xx</code>, JavaScript off, anchor aliases.</p></a>
+</div>
+
+<h2 style="margin-top:var(--space-8)">Levels</h2>
+<div class="term">L1  surfaces        sponsor page · portfolio · terminal surfaces · method page
+L2  sections/views  sponsor: 7 sections · portfolio: all clients, one client, file · terminal: 8 tabs · method page: 9 languages
+L3  details         sponsor: expanders (cost by step, risk trigger, question options) · portfolio: one change · terminal: payload
+L4  states          sponsor: 8 states + phone + print · portfolio: 6 states · terminal: success/error per view · method page: 5 states</div>
+
+<h2>Spec ↔ mockup validation</h2>
+<p class="small">Walked on the requirements as revised after the judges (revision_history 2026-09-26). <strong>34 of 70 requirements</strong> have a screen or state below; the rest have no screen of their own. <strong>7 spec-gaps</strong> found, recorded in <code>findings.md</code> as <code>open</code> for <code>/karvey-iterate</code>.</p>
+<div class="table-scroll"><table><thead><tr><th>Requirements</th><th>Surface</th><th>Where in the mockup</th></tr></thead><tbody><tr><td><code>REQ-W3-001, 010, 011</code></td><td>Context size</td><td>terminal.html › Context size (success: median −51%; error: missing load file)</td></tr><tr><td><code>REQ-W3-013</code></td><td>Gate summary</td><td>terminal.html › Gate summaries (fresh session + checkpoint offered)</td></tr><tr><td><code>REQ-W3-014, 016</code></td><td>Cost</td><td>sponsor.html › Cost (by step, exact/estimated, judges apart); state “Cost not measured”</td></tr><tr><td><code>REQ-W3-018, 019</code></td><td>Metrics, retro</td><td>terminal.html › Cost: metrics and retro (outlier / too few changes)</td></tr><tr><td><code>REQ-W3-020, 022</code></td><td>Gate close</td><td>sponsor.html › states “No sponsor declared”, “Delivery failed”, page history</td></tr><tr><td><code>REQ-W3-021</code></td><td>Sponsor page</td><td>sponsor.html › Waiting for you, What is being built, Progress, Cost, Risks, Released</td></tr><tr><td><code>REQ-W3-023</code></td><td>Leak check</td><td>sponsor.html › state “Leak check refused”</td></tr><tr><td><code>REQ-W3-024</code></td><td>Sponsor page</td><td>sponsor.html › viewport Phone 360 / Print preview; scheme Light / Dark</td></tr><tr><td><code>REQ-W3-025</code></td><td>Report</td><td>terminal.html › Report (success / no changes for client)</td></tr><tr><td><code>REQ-W3-026, 027</code></td><td>Your turn</td><td>terminal.html › Your-turn messages (payload L3, no executor, dedup)</td></tr><tr><td><code>REQ-W3-028, 029</code></td><td>Questions</td><td>terminal.html › Open questions (ask / answer → D-NN / refusal)</td></tr><tr><td><code>REQ-W3-030, 052</code></td><td>Dashboard</td><td>terminal.html › Dashboard: open work (overdue, date invalid, refinement)</td></tr><tr><td><code>REQ-W3-033</code></td><td>Gate summary</td><td>terminal.html › Gate summaries › release (open risks, unreviewed)</td></tr><tr><td><code>REQ-W3-038, 039</code></td><td>Gate summary</td><td>terminal.html › Gate summaries › what (design judge + contrast)</td></tr><tr><td><code>REQ-W3-045..048</code></td><td>Portfolio</td><td>portfolio.html › All clients, Portfolio file; states denied / not Karvey / two roots / invalid entry / no file</td></tr><tr><td><code>REQ-W3-049..051</code></td><td>Backlog</td><td>terminal.html › Backlog (WSJF order, unscored, stale, invalid row, done-direct)</td></tr><tr><td><code>REQ-W3-066..069</code></td><td>Method page</td><td>method-page.html › nine languages, CJK fallbacks, ?lang=xx, JS off, alias table</td></tr></tbody></table></div>
+<p class="small muted">REQ-W3-002..009, 012, 015, 017, 031, 032, 034..037, 040..044, 053..065, 070 — rules, scripts, linter and rollout; no screen of their own (their visible outputs appear in the rows above).</p>
+
+<h2>Spec-gaps found by the mockup</h2>
+<div class="table-scroll"><table><thead><tr><th>Finding</th><th>Severity</th><th>Gap</th><th>Seen in</th></tr></thead><tbody><tr><td><code>F-35</code></td><td><span class="tag warn">Medium</span></td><td>The portfolio has no client filter; only the report takes <code>--client</code>. O-9 asks “how are we doing with client X”.</td><td class="small">portfolio.html › One client</td></tr><tr><td><code>F-36</code></td><td><span class="tag info">Low</span></td><td>No requirement says how a reader opens one change of a listed repository from the portfolio (the mockup uses the existing dashboard with a root).</td><td class="small">portfolio.html › Drill into one change</td></tr><tr><td><code>F-37</code></td><td><span class="tag warn">Medium</span></td><td>REQ-W3-045 allows a “clone location” but not whether the portfolio may fetch it; a read-only view that fetches touches the network and credentials.</td><td class="small">portfolio.html › Portfolio file</td></tr><tr><td><code>F-38</code></td><td><span class="tag info">Low</span></td><td>The sponsor page needs a question's context (options, effect of waiting) in business words; the Q-NN record has only question, owner, needed-by and changes.</td><td class="small">sponsor.html › Waiting for you</td></tr><tr><td><code>F-39</code></td><td><span class="tag warn">Medium</span></td><td>A gate waiting for the human approver is not an open question; REQ-W3-021 lists only questions owned by the sponsor, so a sponsor who is also the approver would not see the gate on the page.</td><td class="small">sponsor.html › Waiting for you</td></tr><tr><td><code>F-40</code></td><td><span class="tag info">Low</span></td><td>Risk states (open, mitigated, accepted, closed, moved) have no business-language wording for the page.</td><td class="small">sponsor.html › Risks</td></tr><tr><td><code>F-41</code></td><td><span class="tag warn">Medium</span></td><td>When the leak check refuses, “the page stays in the change folder” — a file holding the leaked value in a committed folder; it should be redacted or kept out of version control.</td><td class="small">sponsor.html › Leak check refused</td></tr></tbody></table></div>
+</main>
+
+<script>
+function showView(id,btn){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',String(b===btn)));}}
+function showModal(id){const o=document.getElementById(id);o.classList.add('open');const f=o.querySelector('button,a');if(f)f.focus();}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
+document.addEventListener('click',e=>{if(e.target.classList&&e.target.classList.contains('overlay'))e.target.classList.remove('open');});
+function setState(s,btn){document.body.dataset.state=s;document.querySelectorAll('[data-show]').forEach(el=>{el.hidden=!el.dataset.show.split(' ').includes(s);});
+  document.querySelectorAll('[data-hide]').forEach(el=>{el.hidden=el.dataset.hide.split(' ').includes(s);});
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+function setTheme(t,btn){if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.dataset.theme=t;
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+</script>
+
+</body>
+</html>

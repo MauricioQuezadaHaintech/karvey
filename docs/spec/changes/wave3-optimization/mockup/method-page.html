@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOCKUP — wave3-optimization — Method page</title>
+<style>
+:root{
+  /* design-spec.md tokens (light) — values shared with docs/karvey.html */
+  --color-background:#f3eee3; --color-surface:#fbf8f2; --color-surface-2:#ebe3d2;
+  --color-text-primary:#1d2831; --color-text-secondary:#4a5560;
+  --color-border:#d3c6ad; --color-border-strong:#4a5560;
+  --color-primary:#2b4256; --color-primary-soft:#d6e0e8;
+  --color-accent:#8f5312; --color-accent-soft:#ecd3a4;
+  --color-semantic-success:#44632f; --color-semantic-success-soft:#dbe6cf;
+  --color-semantic-error:#973a1e; --color-semantic-error-soft:#f1d5c9;
+  --color-semantic-warning:#8f5312; --color-semantic-warning-soft:#ecd3a4;
+  --color-focus:#1c5d96;
+  --shadow-1:0 1px 0 rgba(40,30,10,.05),0 6px 18px -12px rgba(40,30,10,.25);
+  --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-cjk:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Apple SD Gothic Neo","Malgun Gothic","PingFang SC","Microsoft YaHei","Noto Sans CJK JP","Noto Sans CJK KR","Noto Sans CJK SC";
+  --text-xs:.75rem; --text-sm:.875rem; --text-base:1rem; --text-lg:1.125rem; --text-xl:1.25rem; --text-2xl:1.5rem; --text-3xl:1.875rem;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
+  --duration-fast:100ms; --duration-base:200ms; --duration-slow:300ms;
+  --ease-standard:cubic-bezier(.4,0,.2,1); --ease-enter:cubic-bezier(0,0,.2,1); --ease-exit:cubic-bezier(.4,0,1,1);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+    --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+    --color-border:#34424f; --color-border-strong:#a8b1ba;
+    --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+    --color-accent:#e2ab5f; --color-accent-soft:#433018;
+    --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+    --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+    --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+    --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+  --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+  --color-border:#34424f; --color-border-strong:#a8b1ba;
+  --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+  --color-accent:#e2ab5f; --color-accent-soft:#433018;
+  --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+  --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+  --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+  --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--color-background);color:var(--color-text-primary);font-family:var(--font-sans);font-size:var(--text-base);line-height:1.6;overflow-x:hidden}
+a{color:var(--color-primary);text-underline-offset:2px}
+a:hover{color:var(--color-accent)}
+:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px;border-radius:var(--radius-sm)}
+code,.mono{font-family:var(--font-mono);font-size:.88em}
+code{background:var(--color-surface-2);padding:.08em .35em;border-radius:var(--radius-sm);overflow-wrap:anywhere}
+h1,h2,h3{line-height:1.25;margin:0 0 var(--space-2);letter-spacing:-.01em}
+h1{font-size:clamp(1.5rem,4vw,var(--text-3xl))}
+h2{font-size:var(--text-xl)}
+h3{font-size:var(--text-base)}
+p{margin:var(--space-1) 0 var(--space-3)}
+.muted{color:var(--color-text-secondary)}
+.small{font-size:var(--text-sm)}
+.xs{font-size:var(--text-xs)}
+.eyebrow{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent);margin:0 0 var(--space-1)}
+/* mockup chrome — not part of the product surfaces */
+.mk-banner{background:var(--color-text-primary);color:var(--color-background);font-family:var(--font-mono);font-size:var(--text-xs);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4);align-items:center;justify-content:space-between}
+.mk-banner a{color:var(--color-background)}
+.mk-nav{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.mk-nav a{padding:2px var(--space-2);border-radius:var(--radius-sm);text-decoration:none}
+.mk-nav a[aria-current="page"]{background:var(--color-background);color:var(--color-text-primary);font-weight:700}
+.mk-tools{background:var(--color-surface-2);border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;font-size:var(--text-sm)}
+.mk-tools .lbl{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px}
+button,.btn{font:inherit;font-size:var(--text-sm);cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);min-height:32px;transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
+button:hover,.btn:hover{background:var(--color-surface-2)}
+button[aria-pressed="true"],.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-background);font-weight:600}
+.gap-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px dashed var(--color-semantic-error);color:var(--color-semantic-error);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
+/* layout */
+.wrap{max-width:1080px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
+.grid2{display:grid;gap:var(--space-4);grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-6);box-shadow:var(--shadow-1);min-width:0}
+.card.emph{border-color:var(--color-accent);border-width:2px;background:var(--color-surface)}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);padding:1px var(--space-2);border-radius:var(--radius-full);background:var(--color-surface-2);color:var(--color-text-primary);border:1px solid var(--color-border);white-space:nowrap}
+.tag.ok{background:var(--color-semantic-success-soft);border-color:transparent}
+.tag.err{background:var(--color-semantic-error-soft);border-color:transparent}
+.tag.warn{background:var(--color-semantic-warning-soft);border-color:transparent}
+.tag.info{background:var(--color-primary-soft);border-color:transparent}
+.dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;margin-right:.35em;vertical-align:.05em;background:currentColor}
+table{border-collapse:collapse;width:100%;font-size:var(--text-sm)}
+th,td{text-align:left;padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--color-border);vertical-align:top}
+th{font-weight:600;color:var(--color-text-secondary);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.05em}
+tbody tr{transition:background-color var(--duration-fast) var(--ease-standard)}
+tbody tr:hover{background:var(--color-surface-2)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.table-scroll{overflow-x:auto;max-width:100%}
+details{border-top:1px solid var(--color-border);padding:var(--space-2) 0}
+summary{cursor:pointer;font-weight:600;list-style-position:outside;min-height:32px;display:list-item}
+details[open] > summary{margin-bottom:var(--space-2)}
+/* terminal */
+.term{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:.84rem;line-height:1.55;padding:var(--space-3) var(--space-4);overflow-x:auto;white-space:pre;margin:var(--space-2) 0 var(--space-4)}
+.term .p{color:var(--color-text-secondary)}
+.term .ok{color:var(--color-semantic-success);font-weight:600}
+.term .err{color:var(--color-semantic-error);font-weight:600}
+.term .warn{color:var(--color-semantic-warning);font-weight:600}
+.term .h{font-weight:700}
+.term .dim{color:var(--color-text-secondary)}
+/* views, overlays */
+.view{display:none}
+.view.active{display:block;animation:fade var(--duration-base) var(--ease-enter)}
+.tabs{display:flex;flex-wrap:wrap;gap:var(--space-1);border-bottom:1px solid var(--color-border);margin-bottom:var(--space-4)}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:var(--space-2) var(--space-3);color:var(--color-text-secondary)}
+.tabs button[aria-selected="true"]{color:var(--color-text-primary);border-bottom-color:var(--color-accent);font-weight:600;background:none}
+.overlay{position:fixed;inset:0;background:rgba(16,22,28,.55);display:none;align-items:center;justify-content:center;padding:var(--space-4);z-index:50}
+.overlay.open{display:flex;animation:fade var(--duration-slow) var(--ease-enter)}
+.modal{background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-lg);max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:var(--space-6);box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.modal header{display:flex;justify-content:space-between;align-items:start;gap:var(--space-4);margin-bottom:var(--space-3)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+[hidden]{display:none!important}
+
+.topbar{position:sticky;top:0;z-index:5;background:var(--color-background);border-bottom:1px solid var(--color-border)}
+.topbar-inner{max-width:1080px;margin:0 auto;padding:0 var(--space-4);height:3rem;display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)}
+.brand{font-weight:700;white-space:nowrap}
+.langs{display:flex;gap:2px;list-style:none;margin:0;padding:0;overflow-x:auto;scrollbar-width:thin}
+.langs a{display:block;font-family:var(--font-mono);font-size:.8rem;text-decoration:none;color:var(--color-text-secondary);padding:.25rem .45rem;border-radius:6px;border:1px solid transparent;white-space:nowrap}
+.langs a:hover{background:var(--color-surface-2);color:var(--color-text-primary)}
+.langs a[aria-current="true"]{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-background);font-weight:700}
+.lang-select{display:none;font:inherit;font-size:var(--text-sm);min-height:32px;border:1px solid var(--color-border-strong);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text-primary)}
+@media (max-width:720px){.langs{display:none}.lang-select{display:block}}
+body.nojs .langs,body.nojs .lang-select{display:none!important}
+.lb{display:none}
+.lb.on{display:block}
+:lang(ja),:lang(ko),:lang(zh){font-family:var(--font-sans),var(--font-cjk);line-height:1.75}
+.hero{padding:var(--space-12) 0 var(--space-6)}
+.hero h1{font-size:clamp(2rem,6vw,3.4rem);letter-spacing:-.02em}
+.toast{position:fixed;bottom:var(--space-4);left:50%;transform:translateX(-50%);background:var(--color-text-primary);color:var(--color-background);padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:var(--text-sm);z-index:60}
+</style>
+</head>
+<body>
+<div class="mk-banner" role="note"><span>MOCKUP WITH GRAPHIC DESIGN — wave3-optimization — Iteration 1 — 2026-09-26</span><nav class="mk-nav" aria-label="Mockup surfaces"><a href="index.html">Map</a><a href="sponsor.html">Sponsor page</a><a href="portfolio.html">Portfolio</a><a href="terminal.html">Report, backlog, gates</a><a href="method-page.html" aria-current="page">Method page</a></nav></div>
+<div class="mk-tools"><span class="lbl">Scheme</span><span class="seg" role="group" aria-label="Colour scheme"><button type="button" aria-pressed="true" onclick="setTheme('auto',this)">System</button><button type="button" aria-pressed="false" onclick="setTheme('light',this)">Light</button><button type="button" aria-pressed="false" onclick="setTheme('dark',this)">Dark</button></span><span class="lbl">State (L4)</span><span class="seg" role="group" aria-label="Page state"><button type="button" aria-pressed="true" onclick="mpState('normal',this)">Saved choice</button><button type="button" aria-pressed="false" onclick="mpState('browser',this)">First visit, browser in Korean</button><button type="button" aria-pressed="false" onclick="mpState('badlang',this)">?lang=xx</button><button type="button" aria-pressed="false" onclick="mpState('nojs',this)">JavaScript off</button><button type="button" aria-pressed="false" onclick="mpState('alias',this)">Old anchor link</button></span></div>
+
+<header class="topbar"><div class="topbar-inner"><span class="brand">Karvey</span>
+<nav aria-label="Language"><ul class="langs"><li><a href="?lang=en" hreflang="en" lang="en" title="English" onclick="pick('en');return false">en</a></li><li><a href="?lang=es" hreflang="es" lang="es" title="Español" onclick="pick('es');return false">es</a></li><li><a href="?lang=pt" hreflang="pt" lang="pt" title="Português" onclick="pick('pt');return false">pt</a></li><li><a href="?lang=de" hreflang="de" lang="de" title="Deutsch" onclick="pick('de');return false">de</a></li><li><a href="?lang=zh" hreflang="zh" lang="zh" title="中文" onclick="pick('zh');return false">zh</a></li><li><a href="?lang=it" hreflang="it" lang="it" title="Italiano" onclick="pick('it');return false">it</a></li><li><a href="?lang=ja" hreflang="ja" lang="ja" title="日本語" onclick="pick('ja');return false">ja</a></li><li><a href="?lang=fr" hreflang="fr" lang="fr" title="Français" onclick="pick('fr');return false">fr</a></li><li><a href="?lang=ko" hreflang="ko" lang="ko" title="한국어" onclick="pick('ko');return false">ko</a></li></ul>
+<label class="xs muted" style="display:flex;gap:6px;align-items:center"><span class="lang-select-label" hidden>Language</span><select class="lang-select" aria-label="Language" onchange="pick(this.value)"><option value="en" lang="en">en — English</option><option value="es" lang="es">es — Español</option><option value="pt" lang="pt">pt — Português</option><option value="de" lang="de">de — Deutsch</option><option value="zh" lang="zh">zh — 中文</option><option value="it" lang="it">it — Italiano</option><option value="ja" lang="ja">ja — 日本語</option><option value="fr" lang="fr">fr — Français</option><option value="ko" lang="ko">ko — 한국어</option></select></label></nav></div></header>
+<main class="wrap">
+<p class="small muted" id="mp-note">Nine languages in one file; system fonts only (CJK through local fallbacks); <code>?lang=</code>, saved choice and browser language work the same for all nine (REQ-W3-066..068). Below 720 px the codes become a select.</p>
+<section class="lb" data-lang="en" lang="en"><div class="hero"><p class="eyebrow">4.1.0</p><h1>The Karvey Method</h1><p class="muted" style="font-size:1.2rem">Spec-driven development, from the idea to production.</p></div><h2 id="whats-new-en">What is new in 4.1</h2><p>Each phase loads only what it declares.</p></section><section class="lb" data-lang="es" lang="es"><div class="hero"><p class="eyebrow">4.1.0</p><h1>El Método Karvey</h1><p class="muted" style="font-size:1.2rem">Desarrollo guiado por especificaciones, de la idea a producción.</p></div><h2 id="whats-new-es">Novedades de 4.1</h2><p>Cada fase carga solo lo que declara.</p></section><section class="lb" data-lang="pt" lang="pt"><div class="hero"><p class="eyebrow">4.1.0</p><h1>O Método Karvey</h1><p class="muted" style="font-size:1.2rem">Desenvolvimento guiado por especificações, da ideia à produção.</p></div><h2 id="whats-new-pt">Novidades da 4.1</h2><p>Cada fase carrega apenas o que declara.</p></section><section class="lb" data-lang="de" lang="de"><div class="hero"><p class="eyebrow">4.1.0</p><h1>Die Karvey-Methode</h1><p class="muted" style="font-size:1.2rem">Spezifikationsgetriebene Entwicklung, von der Idee bis zur Produktion.</p></div><h2 id="whats-new-de">Neu in 4.1</h2><p>Jede Phase lädt nur, was sie deklariert.</p></section><section class="lb" data-lang="zh" lang="zh"><div class="hero"><p class="eyebrow">4.1.0</p><h1>Karvey 方法</h1><p class="muted" style="font-size:1.2rem">规格驱动的开发，从想法到生产。</p></div><h2 id="whats-new-zh">4.1 新内容</h2><p>每个阶段只加载它声明的内容。</p></section><section class="lb" data-lang="it" lang="it"><div class="hero"><p class="eyebrow">4.1.0</p><h1>Il Metodo Karvey</h1><p class="muted" style="font-size:1.2rem">Sviluppo guidato dalle specifiche, dall'idea alla produzione.</p></div><h2 id="whats-new-it">Novità della 4.1</h2><p>Ogni fase carica solo ciò che dichiara.</p></section><section class="lb" data-lang="ja" lang="ja"><div class="hero"><p class="eyebrow">4.1.0</p><h1>Karvey メソッド</h1><p class="muted" style="font-size:1.2rem">仕様駆動開発、アイデアから本番まで。</p></div><h2 id="whats-new-ja">4.1 の新機能</h2><p>各フェーズは宣言したものだけを読み込みます。</p></section><section class="lb" data-lang="fr" lang="fr"><div class="hero"><p class="eyebrow">4.1.0</p><h1>La méthode Karvey</h1><p class="muted" style="font-size:1.2rem">Développement piloté par les spécifications, de l'idée à la production.</p></div><h2 id="whats-new-fr">Nouveautés de la 4.1</h2><p>Chaque phase ne charge que ce qu'elle déclare.</p></section><section class="lb" data-lang="ko" lang="ko"><div class="hero"><p class="eyebrow">4.1.0</p><h1>Karvey 메서드</h1><p class="muted" style="font-size:1.2rem">명세 기반 개발, 아이디어에서 운영까지.</p></div><h2 id="whats-new-ko">4.1의 새로운 기능</h2><p>각 단계는 선언한 것만 불러옵니다.</p></section>
+<div class="card" style="margin-top:var(--space-8)"><h2>Renamed anchors (REQ-W3-069)</h2>
+<p class="small">An anchor published since 3.10.0 and later renamed resolves through an alias table, in every language.</p>
+<div class="table-scroll"><table><thead><tr><th>Old anchor</th><th>Resolves to</th></tr></thead><tbody>
+<tr><td><code>#gates-merged</code></td><td><code>#gates</code></td></tr><tr><td><code>#team-settings</code></td><td><code>#settings</code></td></tr><tr><td><code>#judges-intro</code></td><td><code>#judges</code></td></tr></tbody></table></div>
+<p class="xs muted">Illustrative ids; the real table holds the 12 renamed anchors (PRD §3). The linter reports an alias whose target is missing.</p></div>
+</main>
+<div class="toast" id="toast" hidden></div>
+<script>
+let cur='en';
+function pick(c){cur=c;document.querySelectorAll('.lb').forEach(b=>b.classList.toggle('on',b.dataset.lang===c));
+ document.querySelectorAll('.langs a').forEach(a=>a.setAttribute('aria-current',String(a.hreflang===c)));
+ const s=document.querySelector('.lang-select');if(s)s.value=c;document.documentElement.lang=c;
+ const h=document.querySelector('.lb.on h1');document.title='MOCKUP — method page — '+(h?h.textContent:c);}
+function toast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(window._t);window._t=setTimeout(()=>el.hidden=true,3200);}
+function mpState(s,btn){document.body.classList.toggle('nojs',s==='nojs');
+ if(s==='normal'){pick('it');toast('Saved choice: it (remembered for this viewer)');}
+ if(s==='browser'){pick('ko');toast('First visit · navigator.language = ko-KR → ko · tab title follows');}
+ if(s==='badlang'){pick('en');toast('?lang=xx is not one of the nine → English, nothing saved');}
+ if(s==='nojs'){pick('en');toast('No JavaScript → English only, no inert language switch');}
+ if(s==='alias'){pick(cur);toast('#gates-merged → #gates (alias table)');}
+ if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+pick('it');
+</script>
+
+<script>
+function showView(id,btn){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',String(b===btn)));}}
+function showModal(id){const o=document.getElementById(id);o.classList.add('open');const f=o.querySelector('button,a');if(f)f.focus();}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
+document.addEventListener('click',e=>{if(e.target.classList&&e.target.classList.contains('overlay'))e.target.classList.remove('open');});
+function setState(s,btn){document.body.dataset.state=s;document.querySelectorAll('[data-show]').forEach(el=>{el.hidden=!el.dataset.show.split(' ').includes(s);});
+  document.querySelectorAll('[data-hide]').forEach(el=>{el.hidden=el.dataset.hide.split(' ').includes(s);});
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+function setTheme(t,btn){if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.dataset.theme=t;
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+</script>
+
+</body>
+</html>

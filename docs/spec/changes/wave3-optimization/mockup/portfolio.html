@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOCKUP — wave3-optimization — Portfolio</title>
+<style>
+:root{
+  /* design-spec.md tokens (light) — values shared with docs/karvey.html */
+  --color-background:#f3eee3; --color-surface:#fbf8f2; --color-surface-2:#ebe3d2;
+  --color-text-primary:#1d2831; --color-text-secondary:#4a5560;
+  --color-border:#d3c6ad; --color-border-strong:#4a5560;
+  --color-primary:#2b4256; --color-primary-soft:#d6e0e8;
+  --color-accent:#8f5312; --color-accent-soft:#ecd3a4;
+  --color-semantic-success:#44632f; --color-semantic-success-soft:#dbe6cf;
+  --color-semantic-error:#973a1e; --color-semantic-error-soft:#f1d5c9;
+  --color-semantic-warning:#8f5312; --color-semantic-warning-soft:#ecd3a4;
+  --color-focus:#1c5d96;
+  --shadow-1:0 1px 0 rgba(40,30,10,.05),0 6px 18px -12px rgba(40,30,10,.25);
+  --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-cjk:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Apple SD Gothic Neo","Malgun Gothic","PingFang SC","Microsoft YaHei","Noto Sans CJK JP","Noto Sans CJK KR","Noto Sans CJK SC";
+  --text-xs:.75rem; --text-sm:.875rem; --text-base:1rem; --text-lg:1.125rem; --text-xl:1.25rem; --text-2xl:1.5rem; --text-3xl:1.875rem;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
+  --duration-fast:100ms; --duration-base:200ms; --duration-slow:300ms;
+  --ease-standard:cubic-bezier(.4,0,.2,1); --ease-enter:cubic-bezier(0,0,.2,1); --ease-exit:cubic-bezier(.4,0,1,1);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+    --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+    --color-border:#34424f; --color-border-strong:#a8b1ba;
+    --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+    --color-accent:#e2ab5f; --color-accent-soft:#433018;
+    --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+    --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+    --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+    --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+  --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+  --color-border:#34424f; --color-border-strong:#a8b1ba;
+  --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+  --color-accent:#e2ab5f; --color-accent-soft:#433018;
+  --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+  --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+  --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+  --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--color-background);color:var(--color-text-primary);font-family:var(--font-sans);font-size:var(--text-base);line-height:1.6;overflow-x:hidden}
+a{color:var(--color-primary);text-underline-offset:2px}
+a:hover{color:var(--color-accent)}
+:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px;border-radius:var(--radius-sm)}
+code,.mono{font-family:var(--font-mono);font-size:.88em}
+code{background:var(--color-surface-2);padding:.08em .35em;border-radius:var(--radius-sm);overflow-wrap:anywhere}
+h1,h2,h3{line-height:1.25;margin:0 0 var(--space-2);letter-spacing:-.01em}
+h1{font-size:clamp(1.5rem,4vw,var(--text-3xl))}
+h2{font-size:var(--text-xl)}
+h3{font-size:var(--text-base)}
+p{margin:var(--space-1) 0 var(--space-3)}
+.muted{color:var(--color-text-secondary)}
+.small{font-size:var(--text-sm)}
+.xs{font-size:var(--text-xs)}
+.eyebrow{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent);margin:0 0 var(--space-1)}
+/* mockup chrome — not part of the product surfaces */
+.mk-banner{background:var(--color-text-primary);color:var(--color-background);font-family:var(--font-mono);font-size:var(--text-xs);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4);align-items:center;justify-content:space-between}
+.mk-banner a{color:var(--color-background)}
+.mk-nav{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.mk-nav a{padding:2px var(--space-2);border-radius:var(--radius-sm);text-decoration:none}
+.mk-nav a[aria-current="page"]{background:var(--color-background);color:var(--color-text-primary);font-weight:700}
+.mk-tools{background:var(--color-surface-2);border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;font-size:var(--text-sm)}
+.mk-tools .lbl{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px}
+button,.btn{font:inherit;font-size:var(--text-sm);cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);min-height:32px;transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
+button:hover,.btn:hover{background:var(--color-surface-2)}
+button[aria-pressed="true"],.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-background);font-weight:600}
+.gap-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px dashed var(--color-semantic-error);color:var(--color-semantic-error);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
+/* layout */
+.wrap{max-width:1080px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
+.grid2{display:grid;gap:var(--space-4);grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-6);box-shadow:var(--shadow-1);min-width:0}
+.card.emph{border-color:var(--color-accent);border-width:2px;background:var(--color-surface)}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);padding:1px var(--space-2);border-radius:var(--radius-full);background:var(--color-surface-2);color:var(--color-text-primary);border:1px solid var(--color-border);white-space:nowrap}
+.tag.ok{background:var(--color-semantic-success-soft);border-color:transparent}
+.tag.err{background:var(--color-semantic-error-soft);border-color:transparent}
+.tag.warn{background:var(--color-semantic-warning-soft);border-color:transparent}
+.tag.info{background:var(--color-primary-soft);border-color:transparent}
+.dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;margin-right:.35em;vertical-align:.05em;background:currentColor}
+table{border-collapse:collapse;width:100%;font-size:var(--text-sm)}
+th,td{text-align:left;padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--color-border);vertical-align:top}
+th{font-weight:600;color:var(--color-text-secondary);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.05em}
+tbody tr{transition:background-color var(--duration-fast) var(--ease-standard)}
+tbody tr:hover{background:var(--color-surface-2)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.table-scroll{overflow-x:auto;max-width:100%}
+details{border-top:1px solid var(--color-border);padding:var(--space-2) 0}
+summary{cursor:pointer;font-weight:600;list-style-position:outside;min-height:32px;display:list-item}
+details[open] > summary{margin-bottom:var(--space-2)}
+/* terminal */
+.term{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:.84rem;line-height:1.55;padding:var(--space-3) var(--space-4);overflow-x:auto;white-space:pre;margin:var(--space-2) 0 var(--space-4)}
+.term .p{color:var(--color-text-secondary)}
+.term .ok{color:var(--color-semantic-success);font-weight:600}
+.term .err{color:var(--color-semantic-error);font-weight:600}
+.term .warn{color:var(--color-semantic-warning);font-weight:600}
+.term .h{font-weight:700}
+.term .dim{color:var(--color-text-secondary)}
+/* views, overlays */
+.view{display:none}
+.view.active{display:block;animation:fade var(--duration-base) var(--ease-enter)}
+.tabs{display:flex;flex-wrap:wrap;gap:var(--space-1);border-bottom:1px solid var(--color-border);margin-bottom:var(--space-4)}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:var(--space-2) var(--space-3);color:var(--color-text-secondary)}
+.tabs button[aria-selected="true"]{color:var(--color-text-primary);border-bottom-color:var(--color-accent);font-weight:600;background:none}
+.overlay{position:fixed;inset:0;background:rgba(16,22,28,.55);display:none;align-items:center;justify-content:center;padding:var(--space-4);z-index:50}
+.overlay.open{display:flex;animation:fade var(--duration-slow) var(--ease-enter)}
+.modal{background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-lg);max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:var(--space-6);box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.modal header{display:flex;justify-content:space-between;align-items:start;gap:var(--space-4);margin-bottom:var(--space-3)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="mk-banner" role="note"><span>MOCKUP WITH GRAPHIC DESIGN — wave3-optimization — Iteration 1 — 2026-09-26</span><nav class="mk-nav" aria-label="Mockup surfaces"><a href="index.html">Map</a><a href="sponsor.html">Sponsor page</a><a href="portfolio.html" aria-current="page">Portfolio</a><a href="terminal.html">Report, backlog, gates</a><a href="method-page.html">Method page</a></nav></div>
+<div class="mk-tools"><span class="lbl">Scheme</span><span class="seg" role="group" aria-label="Colour scheme"><button type="button" aria-pressed="true" onclick="setTheme('auto',this)">System</button><button type="button" aria-pressed="false" onclick="setTheme('light',this)">Light</button><button type="button" aria-pressed="false" onclick="setTheme('dark',this)">Dark</button></span><span class="lbl">State (L4)</span><span class="seg" role="group" aria-label="Portfolio state"><button type="button" aria-pressed="true" onclick="setState('normal',this)">All readable</button><button type="button" aria-pressed="false" onclick="setState('denied',this)">One repo not readable</button><button type="button" aria-pressed="false" onclick="setState('notkarvey',this)">Not a Karvey project</button><button type="button" aria-pressed="false" onclick="setState('tworoots',this)">Two spec roots</button><button type="button" aria-pressed="false" onclick="setState('badentry',this)">Invalid entry</button><button type="button" aria-pressed="false" onclick="setState('nofile',this)">No portfolio file</button></span></div>
+
+<main class="wrap">
+<p class="eyebrow">Target: CLI · read-only · never published (REQ-W3-046, REQ-W3-047)</p>
+<h1>Organisation portfolio</h1>
+<p class="muted">One read-only view over every Karvey repository listed in the portfolio file. It reads only what the person running it can read, and writes nothing.</p>
+<div class="tabs" role="tablist">
+ <button type="button" role="tab" aria-selected="true" onclick="showView('v-all',this)">All clients</button>
+ <button type="button" role="tab" aria-selected="false" onclick="showView('v-client',this)">One client <span class="gap-note">F-35</span></button>
+ <button type="button" role="tab" aria-selected="false" onclick="showView('v-file',this)">Portfolio file</button>
+</div>
+
+<section id="v-all" class="view active">
+<div class="term" data-hide="badentry nofile"><span class="p">$</span> karvey-context --portfolio --period 2026-10
+<span class="h">PORTFOLIO</span>  period 2026-10-01 → 2026-10-31 · 6 repositories · 2 clients · read 2026-10-14 10:40 (UTC−03:00)
+
+<span class="h">Example Corp</span>                                        owner: Delivery lead
+  REPO            LAYOUT     ACTIVE CHANGES (phase · lane · age)          AWAITED FROM CLIENT      RELEASES   COST (period)
+  example-web     docs/spec  add-login     design · feature-ui · 12 d     Q-04 <span class="err">overdue</span> · gate what   —          US$ 41.20 (12% est.)
+                             audit-export  tasks  · standard   ·  4 d     —                        —
+  example-api     docs/spec  rate-limits   qa     · standard   ·  9 d     gate release             2.3.1      US$ 18.75
+<span data-hide="tworoots">  example-mobile  spec/      push-opt-in   impl   · feature-ui · 21 d     —                        —          US$ 33.10</span><span data-show="tworoots">  example-mobile  <span class="warn">two spec roots</span> — read docs/spec/ (spec/ ignored)
+                             push-opt-in   impl   · feature-ui · 21 d     —                        —          US$ 33.10</span>
+  <span class="dim">client total: 4 active · 1 overdue question · 1 release · US$ 93.05 (7% estimated)</span>
+
+<span class="h">Sample Retail Ltd</span>                                   owner: Delivery lead
+  REPO            LAYOUT     ACTIVE CHANGES (phase · lane · age)          AWAITED FROM CLIENT      RELEASES   COST (period)
+  sample-shop     docs/spec  checkout-v2   architecture · standard · 6 d  gate how                 1.8.0      US$ 27.40
+<span data-hide="denied">  sample-ops      docs/spec  stock-alerts  requirements · standard · 2 d  Q-02 (needed 2026-10-20)  —          n/a (no effort)</span><span data-show="denied">  sample-ops      <span class="err">not read: permission denied</span></span>
+<span data-hide="notkarvey">  sample-tools    docs/spec  —                                             —                        1.0.4      US$ 2.30</span><span data-show="notkarvey">  sample-tools    <span class="warn">not a Karvey project</span> (no project.json under docs/spec/ or spec/)</span>
+  <span class="dim">client total: <span data-hide="denied">2</span><span data-show="denied">1</span> active · 0 overdue · 2 releases · US$ 29.70</span>
+
+<span class="dim">read-only: 0 files changed · output not published · cost is measured, never a limit</span></div>
+
+<div class="term" data-show="badentry"><span class="p">$</span> karvey-context --portfolio --period 2026-10
+<span class="err">portfolio entry refused</span>: entries[3].path "../sample-ops; rm -rf" — contains a shell metacharacter
+<span class="dim">the other 5 entries are read; fix the entry in the portfolio file</span>
+...</div>
+<div class="term" data-show="nofile"><span class="p">$</span> karvey-context --portfolio --period 2026-10
+<span class="warn">no portfolio file found</span> — looked in the operations repository, then the spec repository
+<span class="dim">create portfolio.json listing the repositories (path or clone location, optional client and owner)</span></div>
+
+<div class="grid2">
+ <div class="card"><h2>Drill into one change (L3)</h2><p class="small">From a row, the reader opens that change's own read-only dashboard.</p>
+ <button type="button" class="btn primary" onclick="showModal('m-change')">Open add-login (example-web)</button> <span class="gap-note">F-36</span></div>
+ <div class="card"><h2>Column rules</h2><ul class="small"><li><strong>Awaited from client</strong>: questions owned by the client's stakeholders, and gates waiting for a human approval.</li><li><strong>Cost</strong>: effort recorded in the period; <code>n/a (no effort)</code> when a change has none.</li><li><strong>Layout</strong>: which spec root was found.</li></ul></div>
+</div>
+</section>
+
+<section id="v-client" class="view">
+<p class="small">A client filter keeps the output to what a meeting with one client needs. The requirements give <code>--client</code> to the report only. <span class="gap-note">F-35</span></p>
+<div class="term"><span class="p">$</span> karvey-context --portfolio --client "Example Corp" --period 2026-10
+<span class="h">Example Corp</span> · 3 repositories · 4 active changes · 1 overdue question · 1 release · US$ 93.05 (7% est.)
+  add-login     example-web     design       · 12 d · waiting: Q-04 <span class="err">overdue</span>, gate what
+  audit-export  example-web     tasks        ·  4 d
+  rate-limits   example-api     qa           ·  9 d · waiting: gate release
+  push-opt-in   example-mobile  impl         · 21 d
+<span class="dim">other clients: not shown</span></div>
+</section>
+
+<section id="v-file" class="view">
+<p class="small">The portfolio file lives in the operations repository (open point 10). Paths are validated before any read (REQ-W3-045).</p>
+<div class="term">{
+  "schema_version": 1,
+  "repositories": [
+    {"path": "../example-web",    "client": "Example Corp",      "owner": "Delivery lead"},
+    {"path": "../example-api",    "client": "Example Corp"},
+    {"path": "../example-mobile", "client": "Example Corp"},
+    {"clone": "git@example.invalid:team/sample-shop.git", "client": "Sample Retail Ltd"},
+    {"path": "../sample-ops",     "client": "Sample Retail Ltd"},
+    {"path": "../sample-tools",   "client": "Sample Retail Ltd"}
+  ]
+}</div>
+<p class="small muted">A <code>clone</code> entry is read only if a local clone already exists; the portfolio never fetches. <span class="gap-note">F-37</span></p>
+</section>
+</main>
+
+<div class="overlay" id="m-change" role="dialog" aria-modal="true" aria-labelledby="m-change-t"><div class="modal">
+<header><h2 id="m-change-t">add-login · example-web (read-only)</h2><button type="button" onclick="closeModal('m-change')">Close</button></header>
+<div class="term"><span class="p">$</span> karvey-context --root ../example-web --change add-login
+<span class="h">add-login</span> · client Example Corp · lane feature-ui · phase design_graphic (12 d)
+gate what: waiting for human approval since 2026-10-14
+OPEN QUESTIONS   Q-04  owner: Operations lead (Example Corp)  needed-by 2026-10-10  <span class="err">overdue</span>
+                 Q-05  owner: Operations lead (Example Corp)  needed-by 2026-10-16
+OPEN RISKS       R-1   People who left keep access   owner: Security officer   last review 2026-10-13
+                 R-2   Sign-in service down          owner: Tech lead          last review 2026-10-13
+EFFORT           US$ 41.20 · 312k tokens · review 3 h 10 min · judges US$ 2.10 (apart) · 12% estimated</div>
+</div></div>
+
+<script>
+function showView(id,btn){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',String(b===btn)));}}
+function showModal(id){const o=document.getElementById(id);o.classList.add('open');const f=o.querySelector('button,a');if(f)f.focus();}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
+document.addEventListener('click',e=>{if(e.target.classList&&e.target.classList.contains('overlay'))e.target.classList.remove('open');});
+function setState(s,btn){document.body.dataset.state=s;document.querySelectorAll('[data-show]').forEach(el=>{el.hidden=!el.dataset.show.split(' ').includes(s);});
+  document.querySelectorAll('[data-hide]').forEach(el=>{el.hidden=el.dataset.hide.split(' ').includes(s);});
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+function setTheme(t,btn){if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.dataset.theme=t;
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+</script>
+<script>setState('normal');</script>
+</body>
+</html>

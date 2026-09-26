@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOCKUP — wave3-optimization — Sponsor page</title>
+<style>
+:root{
+  /* design-spec.md tokens (light) — values shared with docs/karvey.html */
+  --color-background:#f3eee3; --color-surface:#fbf8f2; --color-surface-2:#ebe3d2;
+  --color-text-primary:#1d2831; --color-text-secondary:#4a5560;
+  --color-border:#d3c6ad; --color-border-strong:#4a5560;
+  --color-primary:#2b4256; --color-primary-soft:#d6e0e8;
+  --color-accent:#8f5312; --color-accent-soft:#ecd3a4;
+  --color-semantic-success:#44632f; --color-semantic-success-soft:#dbe6cf;
+  --color-semantic-error:#973a1e; --color-semantic-error-soft:#f1d5c9;
+  --color-semantic-warning:#8f5312; --color-semantic-warning-soft:#ecd3a4;
+  --color-focus:#1c5d96;
+  --shadow-1:0 1px 0 rgba(40,30,10,.05),0 6px 18px -12px rgba(40,30,10,.25);
+  --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-cjk:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Apple SD Gothic Neo","Malgun Gothic","PingFang SC","Microsoft YaHei","Noto Sans CJK JP","Noto Sans CJK KR","Noto Sans CJK SC";
+  --text-xs:.75rem; --text-sm:.875rem; --text-base:1rem; --text-lg:1.125rem; --text-xl:1.25rem; --text-2xl:1.5rem; --text-3xl:1.875rem;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
+  --duration-fast:100ms; --duration-base:200ms; --duration-slow:300ms;
+  --ease-standard:cubic-bezier(.4,0,.2,1); --ease-enter:cubic-bezier(0,0,.2,1); --ease-exit:cubic-bezier(.4,0,1,1);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+    --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+    --color-border:#34424f; --color-border-strong:#a8b1ba;
+    --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+    --color-accent:#e2ab5f; --color-accent-soft:#433018;
+    --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+    --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+    --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+    --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+  --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+  --color-border:#34424f; --color-border-strong:#a8b1ba;
+  --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+  --color-accent:#e2ab5f; --color-accent-soft:#433018;
+  --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+  --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+  --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+  --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--color-background);color:var(--color-text-primary);font-family:var(--font-sans);font-size:var(--text-base);line-height:1.6;overflow-x:hidden}
+a{color:var(--color-primary);text-underline-offset:2px}
+a:hover{color:var(--color-accent)}
+:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px;border-radius:var(--radius-sm)}
+code,.mono{font-family:var(--font-mono);font-size:.88em}
+code{background:var(--color-surface-2);padding:.08em .35em;border-radius:var(--radius-sm);overflow-wrap:anywhere}
+h1,h2,h3{line-height:1.25;margin:0 0 var(--space-2);letter-spacing:-.01em}
+h1{font-size:clamp(1.5rem,4vw,var(--text-3xl))}
+h2{font-size:var(--text-xl)}
+h3{font-size:var(--text-base)}
+p{margin:var(--space-1) 0 var(--space-3)}
+.muted{color:var(--color-text-secondary)}
+.small{font-size:var(--text-sm)}
+.xs{font-size:var(--text-xs)}
+.eyebrow{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent);margin:0 0 var(--space-1)}
+/* mockup chrome — not part of the product surfaces */
+.mk-banner{background:var(--color-text-primary);color:var(--color-background);font-family:var(--font-mono);font-size:var(--text-xs);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4);align-items:center;justify-content:space-between}
+.mk-banner a{color:var(--color-background)}
+.mk-nav{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.mk-nav a{padding:2px var(--space-2);border-radius:var(--radius-sm);text-decoration:none}
+.mk-nav a[aria-current="page"]{background:var(--color-background);color:var(--color-text-primary);font-weight:700}
+.mk-tools{background:var(--color-surface-2);border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;font-size:var(--text-sm)}
+.mk-tools .lbl{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px}
+button,.btn{font:inherit;font-size:var(--text-sm);cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);min-height:32px;transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
+button:hover,.btn:hover{background:var(--color-surface-2)}
+button[aria-pressed="true"],.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-background);font-weight:600}
+.gap-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px dashed var(--color-semantic-error);color:var(--color-semantic-error);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
+/* layout */
+.wrap{max-width:1080px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
+.grid2{display:grid;gap:var(--space-4);grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-6);box-shadow:var(--shadow-1);min-width:0}
+.card.emph{border-color:var(--color-accent);border-width:2px;background:var(--color-surface)}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);padding:1px var(--space-2);border-radius:var(--radius-full);background:var(--color-surface-2);color:var(--color-text-primary);border:1px solid var(--color-border);white-space:nowrap}
+.tag.ok{background:var(--color-semantic-success-soft);border-color:transparent}
+.tag.err{background:var(--color-semantic-error-soft);border-color:transparent}
+.tag.warn{background:var(--color-semantic-warning-soft);border-color:transparent}
+.tag.info{background:var(--color-primary-soft);border-color:transparent}
+.dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;margin-right:.35em;vertical-align:.05em;background:currentColor}
+table{border-collapse:collapse;width:100%;font-size:var(--text-sm)}
+th,td{text-align:left;padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--color-border);vertical-align:top}
+th{font-weight:600;color:var(--color-text-secondary);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.05em}
+tbody tr{transition:background-color var(--duration-fast) var(--ease-standard)}
+tbody tr:hover{background:var(--color-surface-2)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.table-scroll{overflow-x:auto;max-width:100%}
+details{border-top:1px solid var(--color-border);padding:var(--space-2) 0}
+summary{cursor:pointer;font-weight:600;list-style-position:outside;min-height:32px;display:list-item}
+details[open] > summary{margin-bottom:var(--space-2)}
+/* terminal */
+.term{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:.84rem;line-height:1.55;padding:var(--space-3) var(--space-4);overflow-x:auto;white-space:pre;margin:var(--space-2) 0 var(--space-4)}
+.term .p{color:var(--color-text-secondary)}
+.term .ok{color:var(--color-semantic-success);font-weight:600}
+.term .err{color:var(--color-semantic-error);font-weight:600}
+.term .warn{color:var(--color-semantic-warning);font-weight:600}
+.term .h{font-weight:700}
+.term .dim{color:var(--color-text-secondary)}
+/* views, overlays */
+.view{display:none}
+.view.active{display:block;animation:fade var(--duration-base) var(--ease-enter)}
+.tabs{display:flex;flex-wrap:wrap;gap:var(--space-1);border-bottom:1px solid var(--color-border);margin-bottom:var(--space-4)}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:var(--space-2) var(--space-3);color:var(--color-text-secondary)}
+.tabs button[aria-selected="true"]{color:var(--color-text-primary);border-bottom-color:var(--color-accent);font-weight:600;background:none}
+.overlay{position:fixed;inset:0;background:rgba(16,22,28,.55);display:none;align-items:center;justify-content:center;padding:var(--space-4);z-index:50}
+.overlay.open{display:flex;animation:fade var(--duration-slow) var(--ease-enter)}
+.modal{background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-lg);max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:var(--space-6);box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.modal header{display:flex;justify-content:space-between;align-items:start;gap:var(--space-4);margin-bottom:var(--space-3)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+[hidden]{display:none!important}
+
+.sp{max-width:880px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
+body.phone .sp{max-width:360px;border-left:1px dashed var(--color-border);border-right:1px dashed var(--color-border)}
+.sp-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-4)}
+.status{display:inline-flex;align-items:center;gap:var(--space-2);font-weight:600;border-radius:var(--radius-full);padding:var(--space-1) var(--space-3);background:var(--color-accent-soft)}
+.status.done{background:var(--color-semantic-success-soft)}
+.toc{display:flex;flex-wrap:wrap;gap:var(--space-1) var(--space-3);font-size:var(--text-sm);padding:var(--space-2) 0 var(--space-4);border-bottom:1px solid var(--color-border);margin-bottom:var(--space-6)}
+.sp section{margin:0 0 var(--space-6)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:var(--space-3);margin:0 0 var(--space-6);padding:0;list-style:none}
+.facts li{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4)}
+.facts b{display:block;font-size:var(--text-lg)}
+.facts span{font-size:var(--text-xs);color:var(--color-text-secondary)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-2);list-style:none;padding:0;margin:var(--space-3) 0}
+.steps li{border-top:4px solid var(--color-border);padding-top:var(--space-2);font-size:var(--text-sm)}
+.steps li.done{border-top-color:var(--color-semantic-success)}
+.steps li.now{border-top-color:var(--color-accent);font-weight:700}
+.steps small{display:block;color:var(--color-text-secondary);font-weight:400}
+.ask{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-3) 0;border-top:1px solid var(--color-border)}
+.ask:first-of-type{border-top:0}
+.ask .when{font-family:var(--font-mono);font-size:var(--text-xs);white-space:nowrap}
+.stamp{font-size:var(--text-xs);color:var(--color-text-secondary)}
+.outside{max-width:880px;margin:var(--space-6) auto;padding:0 var(--space-4)}
+@media (max-width:520px){.steps{grid-template-columns:repeat(2,1fr)}}
+@media print{.mk-banner,.mk-tools,.toc{display:none!important}body{background:#fff;color:#000}.card{box-shadow:none;break-inside:avoid}details{display:block}details>*{display:block}}
+body.printpv .sp{background:#fff;color:#000;max-width:794px;box-shadow:0 0 0 1px #ccc;margin-top:var(--space-4)}
+body.printpv .toc{display:none}
+</style>
+</head>
+<body>
+<div class="mk-banner" role="note"><span>MOCKUP WITH GRAPHIC DESIGN — wave3-optimization — Iteration 1 — 2026-09-26</span><nav class="mk-nav" aria-label="Mockup surfaces"><a href="index.html">Map</a><a href="sponsor.html" aria-current="page">Sponsor page</a><a href="portfolio.html">Portfolio</a><a href="terminal.html">Report, backlog, gates</a><a href="method-page.html">Method page</a></nav></div>
+<div class="mk-tools"><span class="lbl">Scheme</span><span class="seg" role="group" aria-label="Colour scheme"><button type="button" aria-pressed="true" onclick="setTheme('auto',this)">System</button><button type="button" aria-pressed="false" onclick="setTheme('light',this)">Light</button><button type="button" aria-pressed="false" onclick="setTheme('dark',this)">Dark</button></span><span class="lbl">State (L4)</span><span class="seg" role="group" aria-label="Page state"><button type="button" aria-pressed="true" onclick="setState('normal',this)">Waiting for approval</button><button type="button" aria-pressed="false" onclick="setState('changes',this)">Changes requested</button><button type="button" aria-pressed="false" onclick="setState('nocost',this)">Cost not measured</button><button type="button" aria-pressed="false" onclick="setState('norisks',this)">No open risks</button><button type="button" aria-pressed="false" onclick="setState('released',this)">Released</button><button type="button" aria-pressed="false" onclick="setState('nosponsor',this)">No sponsor declared</button><button type="button" aria-pressed="false" onclick="setState('leak',this)">Leak check refused</button><button type="button" aria-pressed="false" onclick="setState('delivery',this)">Delivery failed</button></span><span class="lbl">Viewport</span><span class="seg" role="group" aria-label="Viewport"><button type="button" aria-pressed="true" onclick="document.body.classList.remove('phone','printpv');this.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===this)))">Desktop</button><button type="button" aria-pressed="false" onclick="document.body.classList.remove('printpv');document.body.classList.add('phone');this.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===this)))">Phone 360</button><button type="button" aria-pressed="false" onclick="document.body.classList.remove('phone');document.body.classList.add('printpv');this.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===this)))">Print preview</button></span></div>
+
+<!-- L4 states produced outside the page (terminal of the person closing the gate) -->
+<div class="outside" data-show="nosponsor">
+<p class="eyebrow">Gate close — no sponsor declared (REQ-W3-022 error branch)</p>
+<div class="term"><span class="p">$</span> karvey-state gate add-login design_graphic
+what gate approved · recorded approve-gate add-login what (role human)
+<span class="warn">sponsor page: not produced — no sponsor declared for this project or change (said once)</span>
+<span class="dim">declare one under project.json:stakeholders (role: sponsor) to publish it at every gate close</span></div>
+</div>
+<div class="outside" data-show="leak">
+<p class="eyebrow">Gate close — leak check refused (REQ-W3-023, blocking)</p>
+<div class="term"><span class="p">$</span> karvey-state gate add-login architecture
+how gate: changes requested · recorded outcome add-login how changes_requested
+sponsor page: regenerated changes/add-login/sponsor.html
+<span class="err">leak check: FAIL — delivery refused</span>
+  field  risks[R-2].description   secret-shaped value (connection string)
+  field  scope.summary             file-system path
+<span class="dim">the page stays in the change folder; fix the source artifact and re-run the gate summary</span>  <span class="err">[F-41: a refused page holding the value must not stay committable]</span>
+<span class="dim">other-client names: checked against the portfolio file (4 names)</span></div>
+</div>
+<div class="outside" data-show="delivery">
+<p class="eyebrow">Gate close — delivery failed (REQ-W3-022 error)</p>
+<div class="term"><span class="p">$</span> karvey-state gate add-login design_graphic
+what gate approved · recorded approve-gate add-login what (role human)
+sponsor page: regenerated · leak check <span class="ok">PASS</span>
+<span class="err">delivery: failed</span> (sponsor destination: timeout after 10 s) — recorded for reconciliation (outbox #14)
+<span class="dim">the gate is closed; the page stays at changes/add-login/sponsor.html</span></div>
+</div>
+
+<main class="sp" data-hide="nosponsor leak delivery" id="top">
+  <header class="sp-head">
+    <div>
+      <p class="eyebrow">Change report for the sponsor · Example Corp</p>
+      <h1>Sign-in with the company account</h1>
+      <p class="muted small">Change <code>add-login</code> · prepared for: Operations lead, Example Corp</p>
+    </div>
+    <div>
+      <span class="status" data-hide="changes released"><span class="dot" aria-hidden="true"></span>Waiting for your approval</span>
+      <span class="status" data-show="changes"><span class="dot" aria-hidden="true"></span>Being revised after your comments</span>
+      <span class="status done" data-show="released"><span class="dot" aria-hidden="true"></span>In production</span>
+      <p class="stamp">Updated 2026-10-14 10:32 (UTC−03:00), when the design step closed</p>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Sections">
+    <a href="#waiting">Waiting for you</a><a href="#scope">What is being built</a><a href="#progress">Progress</a>
+    <a href="#cost">Cost</a><a href="#risks">Risks</a><a href="#released">Released</a><a href="#history">Page history</a>
+  </nav>
+
+  <ul class="facts" aria-label="Summary">
+    <li><span>Step</span><b data-hide="released">Design, 3 of 4</b><b data-show="released">Done, 4 of 4</b></li>
+    <li><span>Cost to date</span><b data-hide="nocost">US$ 41.20</b><b data-show="nocost">Not measured</b></li>
+    <li><span>Open risks</span><b data-hide="norisks">2</b><b data-show="norisks">None</b></li>
+    <li><span>Waiting for you</span><b data-hide="released">2 decisions</b><b data-show="released">Nothing</b></li>
+  </ul>
+
+  <section id="waiting" class="card emph" data-hide="released">
+    <h2>Waiting for you</h2>
+    <p class="muted small">Only the questions where you are the one who decides. Each has the date from which it holds the work.</p>
+    <div class="ask"><span class="tag warn when">needed by 2026-10-16</span>
+      <div><strong>Approve the look and the flow of the sign-in screens.</strong> <span class="gap-note">F-39</span>
+      <p class="small">The team shows the screens and the steps a person goes through. Your answer lets the build start.</p>
+      <details><summary>What happens if this waits</summary><p class="small">The build does not start. Each day past the date moves the release by one working day.</p></details></div></div>
+    <div class="ask"><span class="tag err when">overdue since 2026-10-10</span>
+      <div><strong>Should people who leave the company lose access the same day?</strong>
+      <p class="small">Same day needs a nightly check with your staff list; next week is simpler.</p>
+      <details><summary>Options the team sees <span class="gap-note">F-38</span></summary><ul class="small"><li>Same day — one more connection to your staff list (recommended by the team)</li><li>Within a week — no new connection; a short window of access remains</li></ul></details></div></div>
+  </section>
+  <section class="card" data-show="released"><h2>Waiting for you</h2><p>Nothing is waiting for you.</p></section>
+
+  <section id="scope">
+    <h2>What is being built</h2>
+    <p>People at Example Corp sign in with their company account instead of a separate password. Access ends when the account is closed.</p>
+    <div class="grid2">
+      <div><h3>Included</h3><ul class="small"><li>Sign-in with the company account</li><li>Access removed when the account is closed</li><li>A record of every sign-in, kept 12 months</li></ul></div>
+      <div><h3>Not included</h3><ul class="small"><li>Sign-in for people outside the company</li><li>Changes to the reports screens</li></ul></div>
+    </div>
+    <details><summary>Goal, in one sentence</summary><p class="small">Every person at Example Corp reaches the tool with the account they already have, and nobody who has left keeps access.</p></details>
+  </section>
+
+  <section id="progress">
+    <h2>Progress</h2>
+    <ol class="steps" aria-label="Steps">
+      <li class="done">Agree what<small>approved 2026-10-02</small></li>
+      <li class="now" data-hide="released">Design<small>since 2026-10-09</small></li>
+      <li class="done" data-show="released">Design<small>approved 2026-10-16</small></li>
+      <li data-hide="released">Build and check<small>planned</small></li>
+      <li class="done" data-show="released">Build and check<small>passed 2026-10-28</small></li>
+      <li data-hide="released">Release<small>planned</small></li>
+      <li class="done" data-show="released">Release<small>2026-10-30</small></li>
+    </ol>
+    <p class="small muted" data-show="changes">At the last review you asked for a clearer error message; the team is revising the design (since 2026-10-14).</p>
+    <p class="small">Work size: <strong>standard with screens</strong> — the process includes a design review with you.</p>
+  </section>
+
+  <section id="cost">
+    <h2>Cost</h2>
+    <div data-hide="nocost">
+      <p><strong>US$ 41.20</strong> of AI work and <strong>3 h 10 min</strong> of people's review time, as of 2026-10-14. <span class="tag">12% estimated</span></p>
+      <p class="small muted">Independent reviews: US$ 2.10, counted apart.</p>
+      <details><summary>By step</summary>
+        <div class="table-scroll"><table><thead><tr><th>Step</th><th class="num">AI (US$)</th><th class="num">Review time</th><th>How measured</th></tr></thead><tbody>
+        <tr><td>Agree what</td><td class="num">18.40</td><td class="num">1 h 20 min</td><td><span class="tag ok">exact</span></td></tr>
+        <tr><td>Screens</td><td class="num">12.60</td><td class="num">1 h 05 min</td><td><span class="tag ok">exact</span></td></tr>
+        <tr><td>Design</td><td class="num">10.20</td><td class="num">45 min</td><td><span class="tag warn">estimated</span></td></tr>
+        </tbody></table></div>
+        <p class="xs muted">Figures come from the work sessions themselves; they are measured, never used to stop work.</p>
+      </details>
+    </div>
+    <div data-show="nocost"><p><strong>Not measured.</strong> The tool used for this work does not report its cost; review time was not stated.</p></div>
+  </section>
+
+  <section id="risks">
+    <h2>Risks</h2>
+    <div data-hide="norisks">
+      <div class="table-scroll"><table><thead><tr><th>Risk</th><th>Likelihood / impact</th><th>Who watches it</th><th>State</th></tr></thead><tbody>
+      <tr><td>People who left keep access for a while <details><summary class="small">What sets it off · what is done</summary><p class="small">Set off by: an account closed after the nightly check. Done: a same-day check (waiting for your answer above).</p></details></td><td>medium / high</td><td>Security officer</td><td><span class="tag warn">open</span><br><span class="xs muted">last review 2026-10-13</span></td></tr>
+      <tr><td>The company sign-in service is down <details><summary class="small">What sets it off · what is done</summary><p class="small">Set off by: the provider's outage. Done: a clear message and a support contact on the screen.</p></details></td><td>low / medium</td><td>Tech lead</td><td><span class="tag warn">open</span><br><span class="xs muted">last review 2026-10-13</span></td></tr>
+      <tr><td>Sign-in records kept longer than allowed</td><td>low / medium</td><td>Product owner</td><td><span class="tag ok">handled</span> <span class="gap-note">F-40</span></td></tr>
+      </tbody></table></div>
+    </div>
+    <p data-show="norisks">No open risks as of 2026-10-14.</p>
+  </section>
+
+  <section id="released">
+    <h2>Released</h2>
+    <p data-hide="released" class="muted">Nothing has reached production yet.</p>
+    <p data-show="released">Version 2.4.0 reached production on 2026-10-30 with this change complete.</p>
+  </section>
+
+  <section id="history">
+    <h2>Page history</h2>
+    <p class="small muted">This page is refreshed each time a step is closed.</p>
+    <ul class="small"><li>2026-10-14 — design reviewed: <span data-hide="changes">approved</span><span data-show="changes">changes requested</span></li><li>2026-10-09 — screens reviewed: approved</li><li>2026-10-02 — scope agreed: approved</li></ul>
+  </section>
+  <footer class="xs muted">Produced from the change's own records. Contains no internal links or personal contact data.</footer>
+</main>
+
+<script>
+function showView(id,btn){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',String(b===btn)));}}
+function showModal(id){const o=document.getElementById(id);o.classList.add('open');const f=o.querySelector('button,a');if(f)f.focus();}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
+document.addEventListener('click',e=>{if(e.target.classList&&e.target.classList.contains('overlay'))e.target.classList.remove('open');});
+function setState(s,btn){document.body.dataset.state=s;document.querySelectorAll('[data-show]').forEach(el=>{el.hidden=!el.dataset.show.split(' ').includes(s);});
+  document.querySelectorAll('[data-hide]').forEach(el=>{el.hidden=el.dataset.hide.split(' ').includes(s);});
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+function setTheme(t,btn){if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.dataset.theme=t;
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+</script>
+<script>setState('normal');</script>
+</body>
+</html>

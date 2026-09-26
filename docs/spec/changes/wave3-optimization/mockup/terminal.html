@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOCKUP — wave3-optimization — Report, backlog, gates</title>
+<style>
+:root{
+  /* design-spec.md tokens (light) — values shared with docs/karvey.html */
+  --color-background:#f3eee3; --color-surface:#fbf8f2; --color-surface-2:#ebe3d2;
+  --color-text-primary:#1d2831; --color-text-secondary:#4a5560;
+  --color-border:#d3c6ad; --color-border-strong:#4a5560;
+  --color-primary:#2b4256; --color-primary-soft:#d6e0e8;
+  --color-accent:#8f5312; --color-accent-soft:#ecd3a4;
+  --color-semantic-success:#44632f; --color-semantic-success-soft:#dbe6cf;
+  --color-semantic-error:#973a1e; --color-semantic-error-soft:#f1d5c9;
+  --color-semantic-warning:#8f5312; --color-semantic-warning-soft:#ecd3a4;
+  --color-focus:#1c5d96;
+  --shadow-1:0 1px 0 rgba(40,30,10,.05),0 6px 18px -12px rgba(40,30,10,.25);
+  --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-cjk:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Apple SD Gothic Neo","Malgun Gothic","PingFang SC","Microsoft YaHei","Noto Sans CJK JP","Noto Sans CJK KR","Noto Sans CJK SC";
+  --text-xs:.75rem; --text-sm:.875rem; --text-base:1rem; --text-lg:1.125rem; --text-xl:1.25rem; --text-2xl:1.5rem; --text-3xl:1.875rem;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
+  --duration-fast:100ms; --duration-base:200ms; --duration-slow:300ms;
+  --ease-standard:cubic-bezier(.4,0,.2,1); --ease-enter:cubic-bezier(0,0,.2,1); --ease-exit:cubic-bezier(.4,0,1,1);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+    --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+    --color-border:#34424f; --color-border-strong:#a8b1ba;
+    --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+    --color-accent:#e2ab5f; --color-accent-soft:#433018;
+    --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+    --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+    --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+    --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --color-background:#10161c; --color-surface:#17202a; --color-surface-2:#202b36;
+  --color-text-primary:#ebe5d8; --color-text-secondary:#a8b1ba;
+  --color-border:#34424f; --color-border-strong:#a8b1ba;
+  --color-primary:#a3bfd8; --color-primary-soft:#1f3244;
+  --color-accent:#e2ab5f; --color-accent-soft:#433018;
+  --color-semantic-success:#a1c487; --color-semantic-success-soft:#243420;
+  --color-semantic-error:#eb937a; --color-semantic-error-soft:#3f2219;
+  --color-semantic-warning:#e2ab5f; --color-semantic-warning-soft:#433018;
+  --color-focus:#7fb6ea; --shadow-1:0 1px 0 rgba(0,0,0,.3),0 8px 20px -14px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--color-background);color:var(--color-text-primary);font-family:var(--font-sans);font-size:var(--text-base);line-height:1.6;overflow-x:hidden}
+a{color:var(--color-primary);text-underline-offset:2px}
+a:hover{color:var(--color-accent)}
+:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px;border-radius:var(--radius-sm)}
+code,.mono{font-family:var(--font-mono);font-size:.88em}
+code{background:var(--color-surface-2);padding:.08em .35em;border-radius:var(--radius-sm);overflow-wrap:anywhere}
+h1,h2,h3{line-height:1.25;margin:0 0 var(--space-2);letter-spacing:-.01em}
+h1{font-size:clamp(1.5rem,4vw,var(--text-3xl))}
+h2{font-size:var(--text-xl)}
+h3{font-size:var(--text-base)}
+p{margin:var(--space-1) 0 var(--space-3)}
+.muted{color:var(--color-text-secondary)}
+.small{font-size:var(--text-sm)}
+.xs{font-size:var(--text-xs)}
+.eyebrow{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent);margin:0 0 var(--space-1)}
+/* mockup chrome — not part of the product surfaces */
+.mk-banner{background:var(--color-text-primary);color:var(--color-background);font-family:var(--font-mono);font-size:var(--text-xs);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4);align-items:center;justify-content:space-between}
+.mk-banner a{color:var(--color-background)}
+.mk-nav{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.mk-nav a{padding:2px var(--space-2);border-radius:var(--radius-sm);text-decoration:none}
+.mk-nav a[aria-current="page"]{background:var(--color-background);color:var(--color-text-primary);font-weight:700}
+.mk-tools{background:var(--color-surface-2);border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;font-size:var(--text-sm)}
+.mk-tools .lbl{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px}
+button,.btn{font:inherit;font-size:var(--text-sm);cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);min-height:32px;transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
+button:hover,.btn:hover{background:var(--color-surface-2)}
+button[aria-pressed="true"],.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-background);font-weight:600}
+.gap-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px dashed var(--color-semantic-error);color:var(--color-semantic-error);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
+/* layout */
+.wrap{max-width:1080px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
+.grid2{display:grid;gap:var(--space-4);grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-6);box-shadow:var(--shadow-1);min-width:0}
+.card.emph{border-color:var(--color-accent);border-width:2px;background:var(--color-surface)}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);padding:1px var(--space-2);border-radius:var(--radius-full);background:var(--color-surface-2);color:var(--color-text-primary);border:1px solid var(--color-border);white-space:nowrap}
+.tag.ok{background:var(--color-semantic-success-soft);border-color:transparent}
+.tag.err{background:var(--color-semantic-error-soft);border-color:transparent}
+.tag.warn{background:var(--color-semantic-warning-soft);border-color:transparent}
+.tag.info{background:var(--color-primary-soft);border-color:transparent}
+.dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;margin-right:.35em;vertical-align:.05em;background:currentColor}
+table{border-collapse:collapse;width:100%;font-size:var(--text-sm)}
+th,td{text-align:left;padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--color-border);vertical-align:top}
+th{font-weight:600;color:var(--color-text-secondary);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.05em}
+tbody tr{transition:background-color var(--duration-fast) var(--ease-standard)}
+tbody tr:hover{background:var(--color-surface-2)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.table-scroll{overflow-x:auto;max-width:100%}
+details{border-top:1px solid var(--color-border);padding:var(--space-2) 0}
+summary{cursor:pointer;font-weight:600;list-style-position:outside;min-height:32px;display:list-item}
+details[open] > summary{margin-bottom:var(--space-2)}
+/* terminal */
+.term{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:.84rem;line-height:1.55;padding:var(--space-3) var(--space-4);overflow-x:auto;white-space:pre;margin:var(--space-2) 0 var(--space-4)}
+.term .p{color:var(--color-text-secondary)}
+.term .ok{color:var(--color-semantic-success);font-weight:600}
+.term .err{color:var(--color-semantic-error);font-weight:600}
+.term .warn{color:var(--color-semantic-warning);font-weight:600}
+.term .h{font-weight:700}
+.term .dim{color:var(--color-text-secondary)}
+/* views, overlays */
+.view{display:none}
+.view.active{display:block;animation:fade var(--duration-base) var(--ease-enter)}
+.tabs{display:flex;flex-wrap:wrap;gap:var(--space-1);border-bottom:1px solid var(--color-border);margin-bottom:var(--space-4)}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:var(--space-2) var(--space-3);color:var(--color-text-secondary)}
+.tabs button[aria-selected="true"]{color:var(--color-text-primary);border-bottom-color:var(--color-accent);font-weight:600;background:none}
+.overlay{position:fixed;inset:0;background:rgba(16,22,28,.55);display:none;align-items:center;justify-content:center;padding:var(--space-4);z-index:50}
+.overlay.open{display:flex;animation:fade var(--duration-slow) var(--ease-enter)}
+.modal{background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-lg);max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:var(--space-6);box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.modal header{display:flex;justify-content:space-between;align-items:start;gap:var(--space-4);margin-bottom:var(--space-3)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="mk-banner" role="note"><span>MOCKUP WITH GRAPHIC DESIGN — wave3-optimization — Iteration 1 — 2026-09-26</span><nav class="mk-nav" aria-label="Mockup surfaces"><a href="index.html">Map</a><a href="sponsor.html">Sponsor page</a><a href="portfolio.html">Portfolio</a><a href="terminal.html" aria-current="page">Report, backlog, gates</a><a href="method-page.html">Method page</a></nav></div>
+<div class="mk-tools"><span class="lbl">Scheme</span><span class="seg" role="group" aria-label="Colour scheme"><button type="button" aria-pressed="true" onclick="setTheme('auto',this)">System</button><button type="button" aria-pressed="false" onclick="setTheme('light',this)">Light</button><button type="button" aria-pressed="false" onclick="setTheme('dark',this)">Dark</button></span><span class="lbl">Path (L4)</span><span class="seg" role="group" aria-label="Scenario"><button type="button" aria-pressed="true" onclick="setState('ok',this)">Success scenario</button><button type="button" aria-pressed="false" onclick="setState('err',this)">Error scenario</button></span></div>
+<main class="wrap"><p class="eyebrow">Target: CLI · the terminal surfaces this change adds or changes</p><h1>Report, backlog, gates and messages</h1><div class="tabs" role="tablist"><button type="button" role="tab" aria-selected="true" onclick="showView('v-report',this)">Report</button><button type="button" role="tab" aria-selected="false" onclick="showView('v-backlog',this)">Backlog</button><button type="button" role="tab" aria-selected="false" onclick="showView('v-dash',this)">Dashboard: open work</button><button type="button" role="tab" aria-selected="false" onclick="showView('v-gate',this)">Gate summaries</button><button type="button" role="tab" aria-selected="false" onclick="showView('v-ask',this)">Open questions</button><button type="button" role="tab" aria-selected="false" onclick="showView('v-notify',this)">Your-turn messages</button><button type="button" role="tab" aria-selected="false" onclick="showView('v-metrics',this)">Cost: metrics and retro</button><button type="button" role="tab" aria-selected="false" onclick="showView('v-size',this)">Context size</button></div>
+
+<section id="v-report" class="view active"><p class="small">REQ-W3-025 — business-language status for a period, optionally one client; read-only.</p>
+<div class="term" data-show="ok"><span class="p">$</span> karvey-context --report --since 2026-10-01 --client "Example Corp"
+<span class="h">STATUS — Example Corp — 2026-10-01 → 2026-10-14</span>
+RELEASED        rate-limits (2.3.1, 2026-10-08) — fewer failed requests at peak hours
+IN PROGRESS     add-login     design (12 d)   — sign-in with the company account
+                audit-export  planning (4 d)  — export of the audit trail
+BLOCKED         push-opt-in   waiting on Q-06 — unblocks: Operations lead (Example Corp)
+OPEN RISKS      2 (add-login) · owners: Security officer, Tech lead
+AWAITED         Operations lead (Example Corp): Q-04 <span class="err">overdue</span> · Q-05 by 2026-10-16 · gate what (add-login)
+<span class="dim">read-only · 0 files changed</span></div>
+<div class="term" data-show="err"><span class="p">$</span> karvey-context --report --since 2026-10-01 --client "Sample Retail Ltd"
+no changes for client "Sample Retail Ltd" in 2026-10-01 → 2026-10-14
+<span class="dim">exit 0</span></div>
+</section>
+
+<section id="v-backlog" class="view"><p class="small">REQ-W3-049..052 — ranked by WSJF = (value + urgency) / effort; unscored apart; stale after 30 days.</p>
+<div class="term"><span class="p">$</span> karvey-context --backlog
+<span class="h">BACKLOG</span> · 9 open · last refinement 2026-10-09 (5 d ago) <span data-show="err"><span class="warn">· overdue: never refined</span></span>
+  ID     WSJF  VALUE URG EFFORT CLIENT             TITLE
+  BL-12  7.0   4     3   S      Example Corp       Remember the last used filter
+  BL-09  4.5   4     5   M      Sample Retail Ltd  Stock alert by e-mail
+  BL-15  2.7   3     5   L      —                  Faster export of large reports
+  BL-07  1.7   2     3   L      Example Corp       Dark theme for the admin screens   <span class="warn">stale 41 d</span>
+<span class="h">UNSCORED</span> (no effort)
+  BL-16  —     3     —   —      —                  Audit trail retention setting
+<span data-show="err"><span class="err">INVALID ROW</span>  BL-18  column "effort" = "XL" (expected S, M, L or minutes)
+</span><span class="h">DONE-DIRECT</span> (this period)
+  BL-11  commit 3f9c2a1  Typo in the sign-in help text
+<span class="dim">read-only · WSJF formula: rules/backlog.md</span></div>
+</section>
+
+<section id="v-dash" class="view"><p class="small">REQ-W3-030, REQ-W3-052 — OPEN WORK gains open questions, open risks and the refinement date.</p>
+<div class="term"><span class="p">$</span> karvey-context
+…
+<span class="h">OPEN WORK</span>
+  OPEN QUESTIONS
+    Q-04  add-login    owner: Operations lead (Example Corp)   needed-by 2026-10-10   <span class="err">overdue 4 d</span>
+    Q-05  add-login    owner: Operations lead (Example Corp)   needed-by 2026-10-16
+<span data-show="err">    Q-07  audit-export owner: Product owner                    needed-by 2026-13-01   <span class="warn">date invalid</span>
+</span>  OPEN RISKS (active changes)
+    R-1   add-login    People who left keep access    owner: Security officer   last review 2026-10-13
+    R-2   add-login    Sign-in service down           owner: Tech lead          last review 2026-10-13
+  BACKLOG  last refinement 2026-10-09 · every 14 d</div>
+</section>
+
+<section id="v-gate" class="view"><p class="small">REQ-W3-033 (risks at qa / release), REQ-W3-039 (design judge + contrast), REQ-W3-013 (one phase per session).</p>
+<div class="term"><span class="p">$</span> karvey-context --section gate --change add-login --gate what
+<span class="h">GATE what — add-login</span> · requirements ✓ generated · mockup ✓ generated · design_graphic ✓ generated
+JUDGES   requirements: domain concerns (0 H) · methods pass
+         design: ux <span data-show="ok">pass</span><span data-show="err"><span class="warn">concerns</span></span> · contrast <span data-show="ok"><span class="ok">14/14 pairs pass</span> (AA 14, AAA 11)</span><span data-show="err"><span class="err">1 pair below AA</span>: text-secondary on surface-2 = 3.9:1 (target 4.5:1)</span>
+DESIGN DELTA  1 component added (sign-in card) · 0 tokens changed
+EFFORT   phase US$ 41.20 (12% est.) · judges US$ 2.10 (apart)
+SPONSOR  page regenerated at close · delivered to: sponsor (Example Corp)
+<span class="dim">next: architecture — a fresh session is recommended; checkpoint save offered</span></div>
+<div class="term"><span class="p">$</span> karvey-context --section gate --change rate-limits --gate release
+<span class="h">GATE release — rate-limits</span>
+OPEN RISKS
+  R-1  Burst traffic from one partner   owner: Tech lead   trigger: &gt; 5% 429 responses   last review 2026-10-06
+<span data-show="err">  R-3  Cache warm-up after deploy       owner: Ops lead    trigger: p95 &gt; 800 ms       <span class="warn">risk R-3 unreviewed since architecture</span>
+</span>  → ask each owner for a state: open · mitigated · accepted · closed · moved</div>
+</section>
+
+<section id="v-ask" class="view"><p class="small">REQ-W3-028, REQ-W3-029 — a question with an owner and a needed-by date, later a decision.</p>
+<div class="term" data-show="ok"><span class="p">$</span> karvey-decisions ask "Remove access the same day a person leaves?" --owner "Operations lead (Example Corp)" --needed-by 2026-10-10 --change add-login
+recorded <span class="h">Q-04</span> · owner Operations lead (Example Corp) · needed-by 2026-10-10 · affects add-login
+<span class="p">$</span> karvey-decisions answer Q-04 "Same day"
+recorded <span class="h">D-40</span> (cites Q-04) · Q-04 resolved → D-40</div>
+<div class="term" data-show="err"><span class="p">$</span> karvey-decisions ask "Remove access the same day a person leaves?" --change add-login
+<span class="err">refused</span>: missing --owner and --needed-by
+<span class="dim">decisions cross ended with no answer — record it as an open question? [ask]</span></div>
+</section>
+
+<section id="v-notify" class="view"><p class="small">REQ-W3-026, REQ-W3-027 — sent once per state change, with a run id; the channel is whatever the project declared.</p>
+<div class="grid2">
+<div class="card"><p class="eyebrow">approval_requested</p><p><strong>Your turn: approve the what gate of add-login</strong></p><p class="small">Requirements, screens and design are ready. Run id <code>g-what-2</code> · 2026-10-14 10:32.</p><button type="button" onclick="showModal('m-payload')">Show payload (L3)</button></div>
+<div class="card"><p class="eyebrow">awaiting_human</p><p data-show="ok"><strong>Your turn: E1.F2.T4 needs a person</strong> — rotate the sign-in secret in the test environment. Executor: Tech lead.</p><p data-show="err"><strong>E1.F2.T4 needs a person</strong> — <span class="tag warn">no executor declared</span> sent to the team destination.</p></div>
+<div class="card"><p class="eyebrow">blocked</p><p><strong>checkout-v2 is blocked by a judge verdict</strong></p><p class="small">security: fail — 1 Critical (payment callback without signature check). Unblocks: Tech lead.</p></div>
+<div class="card"><p class="eyebrow">deduplication</p><p class="small" data-show="ok">QA ran 3 times with the same verdict → <strong>1 message</strong>.</p><p class="small" data-show="err">Deploy retried for 2.3.1 in dev → message carries run id <code>d-2.3.1-r2</code>; no second "deployed".</p></div>
+</div>
+</section>
+
+<section id="v-metrics" class="view"><p class="small">REQ-W3-018, REQ-W3-019 — cost per lane, client and period; outliers in the retro; never a cap.</p>
+<div class="term"><span class="p">$</span> karvey-context --metrics --period 2026-Q4
+<span class="h">COST PER CHANGE</span>        changes  US$ total  median  tokens   review   estimated
+  lane standard           6      141.30    19.10   3.1M     9 h      8%
+  lane feature-ui         3      118.60    38.00   2.7M     7 h     15%
+  client Example Corp     5      152.40              3.4M    10 h      9%
+  client Sample Retail    4      107.50              2.4M     6 h     13%
+  n/a (no effort)         1      stock-alerts — excluded from the cost aggregate only
+  judges (apart)                  11.80
+<span class="p">$</span> karvey-retro --period 2026-Q4
+<span class="h">COST OUTLIERS</span> (&gt; 3× lane median, input for discussion)
+<span data-show="ok">  push-opt-in  feature-ui  US$ 131.00 = 3.4× median · costliest phase: impl (58%)</span><span data-show="err">  lane patch: too few changes in lane (2) — no outlier claimed</span></div>
+</section>
+
+<section id="v-size" class="view"><p class="small">REQ-W3-001, REQ-W3-010, REQ-W3-011 — instruction size per phase, baseline and after.</p>
+<div class="term"><span class="p">$</span> karvey-context-budget --compare baseline-4.0.0.json
+  PHASE          SKILL   DIRECT   CLOSURE (est. tokens)   BASELINE   Δ
+  requirements   6.1k    2.0k     9.4k                    18.2k      −48%
+  architecture   7.8k    3.1k     12.0k                   24.9k      −52%
+  deploy         5.2k    2.4k     9.8k                    26.7k      −63%
+<span data-show="ok">  median reduction  <span class="ok">−51%</span> (target −40%) · contracts covered 7/7 in every phase</span><span data-show="err">  <span class="err">missing load file</span>: skills/karvey-qa/SKILL.md:9 names rules/qa-dims.md (not found) — exit 1</span></div>
+</section>
+</main>
+
+<div class="overlay" id="m-payload" role="dialog" aria-modal="true" aria-labelledby="m-payload-t"><div class="modal">
+<header><h2 id="m-payload-t">approval_requested — payload</h2><button type="button" onclick="closeModal('m-payload')">Close</button></header>
+<div class="term">{
+  "event": "approval_requested",
+  "change": "add-login",
+  "gate": "what",
+  "to_role": "approver",
+  "expected": "approve or request changes",
+  "run_id": "g-what-2",
+  "at": "2026-10-14T10:32:00-03:00"
+}</div>
+<p class="small muted">The destination is resolved by the notification adapter from the stakeholder with the role <code>approver</code>, else the team destination.</p>
+</div></div>
+
+<script>
+function showView(id,btn){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',String(b===btn)));}}
+function showModal(id){const o=document.getElementById(id);o.classList.add('open');const f=o.querySelector('button,a');if(f)f.focus();}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
+document.addEventListener('click',e=>{if(e.target.classList&&e.target.classList.contains('overlay'))e.target.classList.remove('open');});
+function setState(s,btn){document.body.dataset.state=s;document.querySelectorAll('[data-show]').forEach(el=>{el.hidden=!el.dataset.show.split(' ').includes(s);});
+  document.querySelectorAll('[data-hide]').forEach(el=>{el.hidden=el.dataset.hide.split(' ').includes(s);});
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+function setTheme(t,btn){if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.dataset.theme=t;
+  if(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));}}
+</script>
+<script>setState('ok');</script>
+</body>
+</html>
