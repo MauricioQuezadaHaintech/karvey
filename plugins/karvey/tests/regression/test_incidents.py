@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-22, BUG-48..BUG-67 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-22, BUG-48..BUG-69 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -205,6 +205,12 @@ INDEX = {
     "BUG-67": [  # The impl skill never told the agent to add the Karvey-Change trailer (F-27)
         ('lint', 'L-42'),
         ('unit', 'test_lint_plugin.py', 'L42ImplTrailer.test_impl_without_the_trailer_rule_fails'),
+    ],
+    "BUG-68": [  # A RESUELTO incident written from the rule's template read as having no (F-39)
+        ('unit', 'test_context.py', 'RegressionHeadingOfTheRule.test_rule_heading_is_read'),
+    ],
+    "BUG-69": [  # The evidence wrapper wrote the user's home path into committed evidenc (F-40)
+        ('unit', 'test_evidence.py', 'Evidence.test_home_directory_is_collapsed'),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

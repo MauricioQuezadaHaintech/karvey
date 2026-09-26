@@ -40,8 +40,18 @@ _ENV_ARG = re.compile(r"^([A-Za-z_][A-Za-z0-9_.-]*)=(.*)$", re.S)
 _USERINFO = re.compile(r"(\b[A-Za-z][A-Za-z0-9+.-]*://)[^/@\s]+@")
 
 
+def _collapse_home(a):
+    """BUG-69 (F-40): the user's home directory is written as ``~`` (a path under it names the user)."""
+    home = os.path.expanduser("~").rstrip("/\\")
+    if not isinstance(a, str) or len(home) < 2:
+        return a
+    return re.sub(r"(?<![\w.-])" + re.escape(home) + r"(?=[/\\]|$)", "~", a)
+
+
 def redact_argv(argv):
-    """BUG-55 (F-16): argv without secret values. ``argv[0]`` and ordinary arguments stay as given."""
+    """BUG-55 (F-16): argv without secret values; BUG-69: the home directory collapsed to ``~``. ``argv[0]`` and
+    ordinary arguments otherwise stay as given."""
+    argv = [_collapse_home(a) for a in argv]
     out, hide_next = [], False
     for i, a in enumerate(argv):
         if not isinstance(a, str) or i == 0:

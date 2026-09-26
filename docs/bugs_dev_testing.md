@@ -1290,3 +1290,63 @@ Files: `plugins/karvey/tests/unit/test_lint_plugin.py`. lint L-42 (`test_lint_pl
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-27 |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-68 — A RESUELTO incident written from the rule's template read as having no regression test
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-context.py (`read_bugs`)
+- **Change / origin:** wave2-structural — finding F-39 (manual script run)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+An incident in `docs/bugs_dev_testing.md` with the rule's `### Regression` heading (`rules/incident-tracking.md`); `karvey-context.py --section convergence`.
+
+### Actual vs expected
+- Actual: "RESUELTO without a named regression test" (seen in the merged-gates manual run, which added an index column to get past it).
+- Expected: the rule's own heading is read.
+
+### Root cause
+The reader matched only a `### Regression test` section.
+
+### Fix
+Both `### Regression` and `### Regression test` are read.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_context.py`. `test_context.py` `RegressionHeadingOfTheRule`, red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-39 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-69 — The evidence wrapper wrote the user's home path into committed evidence
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-evidence.py (`redact_argv`)
+- **Change / origin:** wave2-structural — finding F-40 (manual script run)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Run a command through `karvey-evidence.py` with an absolute path under the home directory (the merged-gates manual run committed three such lines).
+
+### Actual vs expected
+- Actual: `/home/<user>/…` in `evidence.jsonl`, which names the user in a public or shared repo.
+- Expected: the home directory written as `~`.
+
+### Root cause
+argv was recorded as given.
+
+### Fix
+Every argument (argv[0] included) has the home prefix collapsed to `~`; file names stay, so the trace still matches tests.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_evidence.py`. `test_evidence.py` `Evidence.test_home_directory_is_collapsed`, red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-40 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |

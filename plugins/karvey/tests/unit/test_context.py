@@ -451,3 +451,21 @@ class Tables(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RegressionHeadingOfTheRule(unittest.TestCase):
+    """BUG-68 (F-39): the incident rule's template heading is `### Regression`; the reader also accepted only
+    `### Regression test`, so a RESUELTO incident written from the rule read as having no regression test."""
+
+    def test_rule_heading_is_read(self):
+        t = g.TempDir()
+        try:
+            root = t.path
+            (root / "docs").mkdir(parents=True)
+            (root / "docs" / "bugs_dev_testing.md").write_text(
+                "# Bugs\n\n## BUG-01 — x\n- **Current state:** RESUELTO\n\n### Regression\n"
+                "`tests/test_x.py::test_y`\n", encoding="utf-8")
+            bugs = ctxmod.read_bugs(ctxmod.Reader(root))
+            self.assertEqual(bugs["BUG-01"]["regression"], "`tests/test_x.py::test_y`")
+        finally:
+            t.cleanup()

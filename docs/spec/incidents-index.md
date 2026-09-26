@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-67 RESUELTO; BUG-23..47 live on other branches, numbered by `karvey-id.py`). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
+Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-69 RESUELTO; BUG-23..47 live on other branches, numbered by `karvey-id.py`). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -50,6 +50,8 @@ Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-67 RESUELTO; B
 | BUG-65 | karvey | low | The how-gate summary reported the post-deploy contract missing although infra.md held it | wave2-structural / F-26 | RESUELTO | plugins/karvey/tests/unit/test_context_gate.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-66 | karvey | low | The method page kept the old skill / support / rule counts | wave2-structural / F-05 | RESUELTO | plugins/karvey/tests/unit/test_page_static.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-67 | karvey | medium | The impl skill never told the agent to add the Karvey-Change trailer | wave2-structural / F-27 | RESUELTO | lint L-42; plugins/karvey/tests/unit/test_lint_plugin.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-68 | karvey | medium | A RESUELTO incident written from the rule's template read as having no regression test | wave2-structural / F-39 | RESUELTO | plugins/karvey/tests/unit/test_context.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-69 | karvey | medium | The evidence wrapper wrote the user's home path into committed evidence | wave2-structural / F-40 | RESUELTO | plugins/karvey/tests/unit/test_evidence.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 
 ## Summary by state
 
@@ -58,7 +60,7 @@ Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-67 RESUELTO; B
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 42 | BUG-01 .. BUG-22, BUG-48 .. BUG-67 |
+| RESUELTO | 44 | BUG-01 .. BUG-22, BUG-48 .. BUG-69 |
 | REABIERTO | 0 | — |
 
-Next number: from `karvey-id.py next BUG` (scans every branch); BUG-68 at this update.
+Next number: from `karvey-id.py next BUG` (scans every branch); BUG-70 at this update.

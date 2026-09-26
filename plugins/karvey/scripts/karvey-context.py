@@ -383,7 +383,7 @@ def read_bugs(rd):
             if line.startswith("## "):
                 cur, section = None, None
                 continue
-            if section == "regression test" and line.strip() and not cur["regression"]:
+            if section in ("regression", "regression test") and line.strip() and not cur["regression"]:  # BUG-68
                 cur["regression"] = line.strip()
     t = rd.text(rd.root / pj.SPEC_DIR / "incidents-index.md")
     if t is not None:

@@ -3,6 +3,7 @@
 @req REQ-W2-073
 """
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -75,6 +76,18 @@ class Evidence(unittest.TestCase):
         self.assertIn("--password=***", argv)
         self.assertIn("DB_SECRET=***", argv)
         self.assertIn("https://***@host.example/x", argv)
+
+    def test_home_directory_is_collapsed(self):
+        """@req REQ-W2-073 — BUG-69 (F-40): a user's home path never reaches the committed evidence (it names
+        the user); it is written as ``~``. The file name stays, so the trace still matches test files."""
+        home = os.path.expanduser("~")
+        args = [sys.executable, "-c", "pass", home + "/proj/tests/test_orders.py", "--root=" + home + "/proj"]
+        p = run(self.t.path, *args)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        argv = json.loads(self.ev.read_text().splitlines()[0])["argv"]
+        self.assertNotIn(home + "/", json.dumps(argv))
+        self.assertIn("~/proj/tests/test_orders.py", argv)
+        self.assertIn("--root=~/proj", argv)
 
     def test_change_id_outside_changes_dir_refused(self):
         """@req REQ-W2-073 — BUG-55 (F-16): --change must be a plain change id; a path never writes elsewhere."""
