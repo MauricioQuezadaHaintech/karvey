@@ -80,6 +80,7 @@ p{margin:var(--space-1) 0 var(--space-3)}
 button,.btn{font:inherit;font-size:var(--text-sm);cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);min-height:32px;transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
 button:hover,.btn:hover{background:var(--color-surface-2)}
 button[aria-pressed="true"],.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-background);font-weight:600}
+.req-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px solid var(--color-semantic-success);color:var(--color-semantic-success);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
 .gap-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px dashed var(--color-semantic-error);color:var(--color-semantic-error);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
 /* layout */
 .wrap{max-width:1080px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
@@ -126,8 +127,8 @@ details[open] > summary{margin-bottom:var(--space-2)}
 </style>
 </head>
 <body>
-<div class="mk-banner" role="note"><span>MOCKUP WITH GRAPHIC DESIGN — wave3-optimization — Iteration 1 — 2026-09-26</span><nav class="mk-nav" aria-label="Mockup surfaces"><a href="index.html">Map</a><a href="sponsor.html">Sponsor page</a><a href="portfolio.html" aria-current="page">Portfolio</a><a href="terminal.html">Report, backlog, gates</a><a href="method-page.html">Method page</a></nav></div>
-<div class="mk-tools"><span class="lbl">Scheme</span><span class="seg" role="group" aria-label="Colour scheme"><button type="button" aria-pressed="true" onclick="setTheme('auto',this)">System</button><button type="button" aria-pressed="false" onclick="setTheme('light',this)">Light</button><button type="button" aria-pressed="false" onclick="setTheme('dark',this)">Dark</button></span><span class="lbl">State (L4)</span><span class="seg" role="group" aria-label="Portfolio state"><button type="button" aria-pressed="true" onclick="setState('normal',this)">All readable</button><button type="button" aria-pressed="false" onclick="setState('denied',this)">One repo not readable</button><button type="button" aria-pressed="false" onclick="setState('notkarvey',this)">Not a Karvey project</button><button type="button" aria-pressed="false" onclick="setState('tworoots',this)">Two spec roots</button><button type="button" aria-pressed="false" onclick="setState('badentry',this)">Invalid entry</button><button type="button" aria-pressed="false" onclick="setState('nofile',this)">No portfolio file</button></span></div>
+<div class="mk-banner" role="note"><span>MOCKUP WITH GRAPHIC DESIGN — wave3-optimization — Iteration 2 — 2026-09-26</span><nav class="mk-nav" aria-label="Mockup surfaces"><a href="index.html">Map</a><a href="sponsor.html">Sponsor page</a><a href="portfolio.html" aria-current="page">Portfolio</a><a href="terminal.html">Report, backlog, gates</a><a href="method-page.html">Method page</a></nav></div>
+<div class="mk-tools"><span class="lbl">Scheme</span><span class="seg" role="group" aria-label="Colour scheme"><button type="button" aria-pressed="true" onclick="setTheme('auto',this)">System</button><button type="button" aria-pressed="false" onclick="setTheme('light',this)">Light</button><button type="button" aria-pressed="false" onclick="setTheme('dark',this)">Dark</button></span><span class="lbl">State (L4)</span><span class="seg" role="group" aria-label="Portfolio state"><button type="button" aria-pressed="true" onclick="setState('normal',this)">All readable</button><button type="button" aria-pressed="false" onclick="setState('denied',this)">One repo not readable</button><button type="button" aria-pressed="false" onclick="setState('notkarvey',this)">Not a Karvey project</button><button type="button" aria-pressed="false" onclick="setState('tworoots',this)">Two spec roots</button><button type="button" aria-pressed="false" onclick="setState('noclone',this)">No local clone</button><button type="button" aria-pressed="false" onclick="setState('badentry',this)">Invalid entry</button><button type="button" aria-pressed="false" onclick="setState('nofile',this)">No portfolio file</button></span></div>
 
 <main class="wrap">
 <p class="eyebrow">Target: CLI · read-only · never published (REQ-W3-046, REQ-W3-047)</p>
@@ -135,7 +136,7 @@ details[open] > summary{margin-bottom:var(--space-2)}
 <p class="muted">One read-only view over every Karvey repository listed in the portfolio file. It reads only what the person running it can read, and writes nothing.</p>
 <div class="tabs" role="tablist">
  <button type="button" role="tab" aria-selected="true" onclick="showView('v-all',this)">All clients</button>
- <button type="button" role="tab" aria-selected="false" onclick="showView('v-client',this)">One client <span class="gap-note">F-35</span></button>
+ <button type="button" role="tab" aria-selected="false" onclick="showView('v-client',this)">One client <span class="req-note">REQ-W3-078</span></button>
  <button type="button" role="tab" aria-selected="false" onclick="showView('v-file',this)">Portfolio file</button>
 </div>
 
@@ -150,16 +151,18 @@ details[open] > summary{margin-bottom:var(--space-2)}
   example-api     docs/spec  rate-limits   qa     · standard   ·  9 d     gate release             2.3.1      US$ 18.75
 <span data-hide="tworoots">  example-mobile  spec/      push-opt-in   impl   · feature-ui · 21 d     —                        —          US$ 33.10</span><span data-show="tworoots">  example-mobile  <span class="warn">two spec roots</span> — read docs/spec/ (spec/ ignored)
                              push-opt-in   impl   · feature-ui · 21 d     —                        —          US$ 33.10</span>
+  <span class="dim">open a change: karvey-context --root ../example-web --change add-login · … --change audit-export
+                 karvey-context --root ../example-api --change rate-limits · ../example-mobile --change push-opt-in</span>
   <span class="dim">client total: 4 active · 1 overdue question · 1 release · US$ 93.05 (7% estimated)</span>
 
 <span class="h">Sample Retail Ltd</span>                                   owner: Delivery lead
   REPO            LAYOUT     ACTIVE CHANGES (phase · lane · age)          AWAITED FROM CLIENT      RELEASES   COST (period)
-  sample-shop     docs/spec  checkout-v2   architecture · standard · 6 d  gate how                 1.8.0      US$ 27.40
+<span data-hide="noclone">  sample-shop     docs/spec  checkout-v2   architecture · standard · 6 d  gate how                 1.8.0      US$ 27.40</span><span data-show="noclone">  sample-shop     <span class="warn">not read: no local clone</span> (clone location recorded; the portfolio never fetches)</span>
 <span data-hide="denied">  sample-ops      docs/spec  stock-alerts  requirements · standard · 2 d  Q-02 (needed 2026-10-20)  —          n/a (no effort)</span><span data-show="denied">  sample-ops      <span class="err">not read: permission denied</span></span>
 <span data-hide="notkarvey">  sample-tools    docs/spec  —                                             —                        1.0.4      US$ 2.30</span><span data-show="notkarvey">  sample-tools    <span class="warn">not a Karvey project</span> (no project.json under docs/spec/ or spec/)</span>
   <span class="dim">client total: <span data-hide="denied">2</span><span data-show="denied">1</span> active · 0 overdue · 2 releases · US$ 29.70</span>
 
-<span class="dim">read-only: 0 files changed · output not published · cost is measured, never a limit</span></div>
+<span class="dim">read-only: 0 files changed · 0 network requests (never fetches) · output not published · cost is measured, never a limit</span></div>
 
 <div class="term" data-show="badentry"><span class="p">$</span> karvey-context --portfolio --period 2026-10
 <span class="err">portfolio entry refused</span>: entries[3].path "../sample-ops; rm -rf" — contains a shell metacharacter
@@ -167,24 +170,30 @@ details[open] > summary{margin-bottom:var(--space-2)}
 ...</div>
 <div class="term" data-show="nofile"><span class="p">$</span> karvey-context --portfolio --period 2026-10
 <span class="warn">no portfolio file found</span> — looked in the operations repository, then the spec repository
-<span class="dim">create portfolio.json listing the repositories (path or clone location, optional client and owner)</span></div>
+<span class="dim">create portfolio.json listing the repositories (local path; optional clone location, client and owner)</span></div>
 
 <div class="grid2">
- <div class="card"><h2>Drill into one change (L3)</h2><p class="small">From a row, the reader opens that change's own read-only dashboard.</p>
- <button type="button" class="btn primary" onclick="showModal('m-change')">Open add-login (example-web)</button> <span class="gap-note">F-36</span></div>
+ <div class="card"><h2>Drill into one change (L3)</h2><p class="small">Each listed change carries the command that opens its own read-only dashboard in that repository's local clone; the portfolio prints it and never opens it itself. No command is printed for a repository shown as “not read”.</p>
+ <button type="button" class="btn primary" onclick="showModal('m-change')">Open add-login (example-web)</button> <span class="req-note">REQ-W3-079</span></div>
  <div class="card"><h2>Column rules</h2><ul class="small"><li><strong>Awaited from client</strong>: questions owned by the client's stakeholders, and gates waiting for a human approval.</li><li><strong>Cost</strong>: effort recorded in the period; <code>n/a (no effort)</code> when a change has none.</li><li><strong>Layout</strong>: which spec root was found.</li></ul></div>
 </div>
 </section>
 
 <section id="v-client" class="view">
-<p class="small">A client filter keeps the output to what a meeting with one client needs. The requirements give <code>--client</code> to the report only. <span class="gap-note">F-35</span></p>
+<p class="small">A client filter keeps the output to what a meeting with one client needs; the client is matched without regard to case, and other clients are said to be hidden. <span class="req-note">REQ-W3-078</span></p>
 <div class="term"><span class="p">$</span> karvey-context --portfolio --client "Example Corp" --period 2026-10
 <span class="h">Example Corp</span> · 3 repositories · 4 active changes · 1 overdue question · 1 release · US$ 93.05 (7% est.)
   add-login     example-web     design       · 12 d · waiting: Q-04 <span class="err">overdue</span>, gate what
+                <span class="dim">→ karvey-context --root ../example-web --change add-login</span>
   audit-export  example-web     tasks        ·  4 d
+                <span class="dim">→ karvey-context --root ../example-web --change audit-export</span>
   rate-limits   example-api     qa           ·  9 d · waiting: gate release
+                <span class="dim">→ karvey-context --root ../example-api --change rate-limits</span>
   push-opt-in   example-mobile  impl         · 21 d
+                <span class="dim">→ karvey-context --root ../example-mobile --change push-opt-in</span>
 <span class="dim">other clients: not shown</span></div>
+<div class="term"><span class="p">$</span> karvey-context --portfolio --client "Unknown Client" --period 2026-10
+no repositories for client "Unknown Client" <span class="dim">(exit 0)</span></div>
 </section>
 
 <section id="v-file" class="view">
@@ -195,12 +204,12 @@ details[open] > summary{margin-bottom:var(--space-2)}
     {"path": "../example-web",    "client": "Example Corp",      "owner": "Delivery lead"},
     {"path": "../example-api",    "client": "Example Corp"},
     {"path": "../example-mobile", "client": "Example Corp"},
-    {"clone": "git@example.invalid:team/sample-shop.git", "client": "Sample Retail Ltd"},
+    {"path": "../sample-shop", "clone": "git@example.invalid:team/sample-shop.git", "client": "Sample Retail Ltd"},
     {"path": "../sample-ops",     "client": "Sample Retail Ltd"},
     {"path": "../sample-tools",   "client": "Sample Retail Ltd"}
   ]
 }</div>
-<p class="small muted">A <code>clone</code> entry is read only if a local clone already exists; the portfolio never fetches. <span class="gap-note">F-37</span></p>
+<p class="small muted">Entries are local paths. A <code>clone</code> location is information only: the portfolio never fetches, pulls or clones and opens no network connection; without a local clone the entry shows “not read: no local clone”. <span class="req-note">REQ-W3-045, 047</span></p>
 </section>
 </main>
 

@@ -79,15 +79,14 @@ skill, direct and closure sizes, and the JSON form holds the same numbers.
 **Scenario — error:** GIVEN a skill whose load list names a rule that does not exist WHEN the size tool runs THEN
 it reports the missing rule with the skill and line, and exits non-zero.
 
-### 1.2 REQ-W3-002 — Baseline before the reorganisation, reproducible
+### 1.2 REQ-W3-002 — Baseline before the reorganisation
 The method SHALL store the size snapshot of the 4.0.0 content, with the date and the method version, in a commit that
-precedes every commit of this change that moves a skill or rule, and the size tool SHALL produce byte-identical output
-for the same input.
+precedes every commit of this change that moves a skill or rule. (Reproducibility of the tool's output is REQ-W3-071.)
 
 Traces to PRD: §6 S-1, O-1, AC-1 · Sources: R-15 ("hay que re-probar"), Wave 2 baseline pattern (REQ-W2-006) · BL-18
 
-**Scenario — success:** GIVEN the baseline stored at the first reorganisation commit's parent WHEN the tool reruns
-on that commit THEN the output equals the stored snapshot byte for byte.
+**Scenario — success:** GIVEN the baseline stored at the first reorganisation commit's parent WHEN the change's test
+phase checks the order THEN the snapshot's commit precedes every commit that moves a skill or rule.
 **Scenario — error:** GIVEN a reorganisation commit with no baseline stored before it WHEN the change's test
 phase checks the order THEN it reports "baseline missing or taken after the reorganisation".
 
@@ -141,10 +140,10 @@ than Markdown's is loaded.
 reports the tool-specific example outside the adapters.
 
 ### 1.7 REQ-W3-007 — Rare paths move to references
-The method SHALL move the paths a phase takes rarely — the first-use team settings of init, the documentation-only,
-hotfix, verification and branch-hygiene paths of deploy, and every other section the architecture lists — into
-references of that skill, loaded only when that path is taken; the skill SHALL keep a one-line pointer that says
-when to load each reference.
+The method SHALL move exactly these rare paths into references of their skill, loaded only when that path is taken:
+the first-use team settings and the `--settings` path of init, and the documentation-only, hotfix, post-deploy
+verification and branch-hygiene paths of deploy; the skill SHALL keep a one-line pointer that says when to load each
+reference. Any further section moves only by adding it to this list through a spec revision.
 
 Traces to PRD: §6 S-2, O-2 · Sources: R-15 ("partir deploy en núcleo + `references/`", "mover `init --settings`"), AG-04 · BL-18
 
@@ -154,14 +153,14 @@ reference is not loaded.
 orphaned.
 
 ### 1.8 REQ-W3-008 — The orchestrator only routes
-The orchestrator skill SHALL contain only routing — the state tool's next phase, the lane and the skill to run —
-and pointers; feature lists, per-phase descriptions, equivalence tables and authorship SHALL move to the README or
-references.
+The orchestrator skill SHALL contain only routing — the state tool's next phase, the lane and the skill to run — and
+pointers, in at most 1,200 words counted as for the core (the 4.0.0 file holds about 3,100); feature lists, per-phase
+descriptions, equivalence tables and authorship SHALL move to the README or references.
 
 Traces to PRD: §6 S-2, O-2 · Sources: R-15 ("el orquestador queda solo con el ruteo"), AG-04 (≈2,9k tokens que no rutean) · BL-18
 
-**Scenario — success:** GIVEN the orchestrator WHEN measured THEN its size is below the architecture's stated
-limit and it routes every phase of every lane.
+**Scenario — success:** GIVEN the orchestrator WHEN the size tool counts it THEN it has at most 1,200 words and it
+routes every phase of every lane.
 **Scenario — error:** GIVEN a phase that the orchestrator can no longer route after the move WHEN the routing
 table test runs THEN it fails naming the phase and lane.
 
@@ -190,8 +189,8 @@ reported and is ≥ 40%.
 phase below 40% while the median passes is listed with its reason, or flagged as unexplained.
 
 ### 1.11 REQ-W3-011 — Size checked in CI
-The plugin's CI SHALL run the size tool, SHALL warn when a phase's closure grows more than 10% over the last
-released snapshot, and SHALL fail when a load list names a missing file.
+The plugin's CI SHALL run the size tool and SHALL warn when a phase's closure grows more than 10% over the last
+released snapshot. (A load list naming a missing file is REQ-W3-072.)
 
 Traces to PRD: §6 S-1, S-2, AC-12 · Sources: R-15, AG-13 (drift that reappears every release) · BL-18
 
@@ -221,6 +220,25 @@ and the fresh-session option.
 **Scenario — error:** GIVEN a session that is already above the context threshold `karvey-checkpoint` declares for
 rotating a session WHEN a new phase is about to start THEN the method recommends the checkpoint and a fresh session
 before loading the next skill.
+
+### 1.14 REQ-W3-071 — The size tool is reproducible
+The size tool SHALL produce byte-identical output for the same input (split from REQ-W3-002).
+
+Traces to PRD: §6 S-1, O-1, AC-1 · Sources: R-15, Wave 2 baseline pattern (REQ-W2-006), judge F-26 · BL-18
+
+**Scenario — success:** GIVEN the baseline commit WHEN the tool reruns on it THEN the output equals the stored snapshot
+byte for byte.
+**Scenario — error:** GIVEN two runs on the same commit that differ (for instance by a timestamp or a file-order
+dependence) WHEN the test phase compares them THEN it fails naming the first differing line.
+
+### 1.15 REQ-W3-072 — A missing load-list file fails CI
+The plugin's CI SHALL fail when a load list names a file that does not exist (split from REQ-W3-011).
+
+Traces to PRD: §6 S-1, S-2, AC-12 · Sources: R-15, AG-13, judge F-26 · BL-18
+
+**Scenario — success:** GIVEN every load list naming existing files WHEN CI runs THEN the step passes.
+**Scenario — error:** GIVEN a load list that names a deleted reference WHEN CI runs THEN it fails naming the skill, the
+line and the file.
 
 ---
 
@@ -255,7 +273,7 @@ recorded `n/a` with the reason, and the next readable value starts a new interva
 ### 2.3 REQ-W3-016 — Judge cost kept apart
 The effort record SHALL keep the judges' cost (REQ-W2-030) apart from the phase work — judge cost is read only from
 the judge run records, and every effort entry carries its kind (`phase`) — so that the cost of the judges can be
-judged on its own.
+judged on its own. (How a judge run's figure is measured is REQ-W3-077.)
 
 Traces to PRD: §6 S-3, O-6 · Sources: R-25 ("el costo de los jueces se registra aparte"), R-11 · Decision: D-30
 
@@ -299,6 +317,19 @@ cost most.
 **Scenario — error:** GIVEN a lane with fewer than three measured changes WHEN the retro runs THEN no outlier is claimed
 and it says "too few changes in lane".
 
+### 2.7 REQ-W3-077 — Judge cost measured from the runtime
+MODIFIES REQ-W2-030. WHEN a judge run finishes, the method SHALL record the token usage the runtime reports for that
+judge's subagent, marked `exact`; WHERE the runtime reports none, the estimate SHALL count every input the judge read (the
+prompt and the files it opened), not only the prompt, and SHALL be marked `estimated`.
+
+Traces to PRD: §6 S-3, O-6 · Sources: R-25, R-11, finding F-34 (a prompt-only estimate understated the runtime figure
+about four times) · Decision: D-30 · BL-28
+
+**Scenario — success:** GIVEN a judge subagent whose result reports its token total WHEN the run is recorded THEN that total
+is stored as `exact`.
+**Scenario — error:** GIVEN a runtime that reports no usage WHEN the run is recorded THEN the estimate includes the files the
+judge opened and is marked `estimated`, never `exact`.
+
 ---
 
 ## Requirement 3: Sponsor page and "your turn" events (R-19)
@@ -319,7 +350,8 @@ asks for the name of the secret instead.
 WHEN the sponsor page is produced, it SHALL be generated only from the change's artifacts and state — scope from the
 PRD and requirements, state and lane from the phase history, cost from the effort record, risks from the risk
 register, pending decisions from the open questions whose owner matches the sponsor's role or display name
-(case-insensitive), and what reached production from the release manifest — in business language (no requirement,
+(case-insensitive) and, WHERE the sponsor is also the change's declared approver (matched the same way), from the gates
+of the change waiting for that human approval, and what reached production from the release manifest — in business language (no requirement,
 finding or decision ids other than the change id, no file paths and no command names in the body), with the date of
 every figure.
 
@@ -339,21 +371,24 @@ Traces to PRD: §6 S-4, O-3, AC-3 · Decision: D-31 · Sources: R-19 · BL-22
 
 **Scenario — success:** GIVEN the *what* gate approved WHEN it closes THEN the page is regenerated and delivered once.
 **Scenario — error:** GIVEN the delivery fails WHEN the gate closes THEN the gate still closes, the failure is recorded
-for reconciliation and the page stays in the change folder.
+for reconciliation and the page — which passed the leak check — stays in the change folder.
 
 ### 3.4 REQ-W3-023 — Nothing internal leaves
 The sponsor page SHALL contain only fields on an allow-list and SHALL pass a leak check that fails closed on values
 matching the method's secret patterns, absolute or home-relative file-system paths, hostnames under non-public
 suffixes or in private address ranges, e-mail addresses other than a declared stakeholder destination, and the names
 of other clients taken from the portfolio file where it is readable (WHERE it is not, the check SHALL say
-"other-client names not checked" and still run the rest); a failing page SHALL NOT be delivered.
+"other-client names not checked" and still run the rest); the check SHALL run before the page is written, and a failing
+page SHALL NOT be delivered nor written to any path — the page last written stays unchanged and only a refusal report
+naming each failing field and rule, never the matched value, is recorded.
 
 Traces to PRD: §6 S-4, §9, O-3, AC-3 · Sources: R-19 (riesgo: fuga de información entre tenants), PM-07 · Decision: D-31 · BL-22
 
 **Scenario — success:** GIVEN a page built from clean artifacts WHEN the leak check runs THEN it passes and the page is
 delivered.
 **Scenario — error:** GIVEN a risk text that quotes a connection string WHEN the leak check runs THEN delivery is
-refused naming the field, and the page is not sent.
+refused naming the field and the rule, the page is neither sent nor written, and the refusal report does not contain the
+string.
 
 ### 3.5 REQ-W3-024 — Self-contained, readable page
 The sponsor page SHALL be a single self-contained HTML file with no external requests, readable on a phone and a
@@ -379,7 +414,7 @@ sections list them.
 client" and exits zero.
 
 ### 3.7 REQ-W3-026 — "Your turn" events
-The notification settings SHALL accept the events `approval_requested`, `awaiting_human` and `blocked`; WHEN one of
+MODIFIES REQ-ADP-011. The notification settings SHALL accept the events `approval_requested`, `awaiting_human` and `blocked`; WHEN one of
 them occurs and is enabled, the method SHALL notify the person who must act — the approver, the declared executor, or
 whoever unblocks — at the destination of the stakeholder with that role, else the team destination, with the change,
 the item and what is expected; a `blocked` event raised by a judge's verdict SHALL carry that verdict.
@@ -404,6 +439,19 @@ message is sent.
 **Scenario — error:** GIVEN a deploy retry of the same version WHEN it notifies THEN the message carries the retry's
 run id and no second "deployed" is sent.
 
+### 3.9 REQ-W3-080 — Business wording for states
+The sponsor page SHALL show phases, the lane and risk states only through a wording table shipped with the method for
+each supported language — for risks: `open` → "being watched", `mitigated` → "reduced", `accepted` → "accepted as is",
+`closed` → "no longer a risk", `moved` → "carried to later work" — and the linter SHALL fail when a state has no wording
+in a supported language.
+
+Traces to PRD: §6 S-4, O-3, AC-3 · Sources: R-19 (lenguaje de negocio), mockup finding F-40 · Decision: D-31 · BL-22
+
+**Scenario — success:** GIVEN a risk in state `mitigated` WHEN the page is produced in English THEN its state reads
+"reduced".
+**Scenario — error:** GIVEN a state added without a wording in one language WHEN the linter runs THEN it names the state
+and the language.
+
 ---
 
 ## Requirement 4: Open questions and risks with owner and date (R-24)
@@ -411,7 +459,8 @@ run id and no second "deployed" is sent.
 ### 4.1 REQ-W3-028 — Open questions are recorded
 WHEN `karvey-decisions ask` runs, the method SHALL record a `Q-NN` (reserved by the id tool) with the question, its
 owner (who decides — a stakeholder role or name), the date from which it blocks (needed-by) and the changes it
-affects; `decisions cross` ending with no answer SHALL offer to record one.
+affects, and MAY record a context in business words (the options seen and the effect of waiting), which the sponsor
+page shows under the question; `decisions cross` ending with no answer SHALL offer to record one.
 
 Traces to PRD: §6 S-5, O-5, AC-5 · Sources: R-24 (`decisions ask`), PM-11 · BL-27
 
@@ -506,7 +555,7 @@ from the change's work or from a pinned `inputs.design_system`.
 ### 5.2 REQ-W3-036 — The change declares only its delta
 WHEN design-graphic runs for a change, it SHALL record only the tokens and components the change adds or modifies and
 the screens it scores; an empty delta SHALL be recorded as such, and the design system SHALL be updated with the
-delta when the change is archived.
+delta when the change is archived (a token another change modified meanwhile is REQ-W3-076).
 
 Traces to PRD: §6 S-6, O-7, AC-7 · Sources: R-26 ("por cambio, solo el delta"), DM-13 · BL-29
 
@@ -547,6 +596,19 @@ verdict and the contrast result.
 **Scenario — error:** GIVEN a design-graphic output that contains a self-assigned score WHEN the linter runs THEN it
 reports the self-score.
 
+### 5.6 REQ-W3-076 — Design-system conflicts stop the apply
+The design delta SHALL record, for each token it modifies, the design system's value when design-graphic ran; WHEN the
+delta is applied at archive and the design system's current value of such a token differs from that base value, the
+method SHALL NOT overwrite it, SHALL report the token, both values and the change that last modified it, and SHALL ask
+the human which value to keep.
+
+Traces to PRD: §6 S-6, O-7 · Sources: R-26, DM-13, judge F-11 (two UI changes in flight modifying one token) · BL-29
+
+**Scenario — success:** GIVEN a delta that modifies a token nobody else changed WHEN archive applies it THEN the value is
+written with no question.
+**Scenario — error:** GIVEN two changes in flight that both modify the primary colour, the first already archived WHEN the
+second is archived THEN the apply stops for that token, shows both values and the first change, and waits for the human.
+
 ---
 
 ## Requirement 6: One work breakdown (R-27)
@@ -564,7 +626,8 @@ appear on the Epic.
 **Scenario — error:** GIVEN a rule text that maps a phase to a Feature WHEN the linter runs THEN it reports the text.
 
 ### 6.2 REQ-W3-041 — QA and deploy belong to the Epic
-The method SHALL create the QA review and the deploy work as `E{n}.QA` and `E{n}.DEPLOY` items under the Epic, so that
+MODIFIES REQ-W1-089. The method SHALL create the QA review and the deploy work as `E{n}.QA` and `E{n}.DEPLOY` items under the Epic,
+found or created by those natural keys, so that
 the Epic's totals include QA rework and deploy effort.
 
 Traces to PRD: §6 S-7, O-8 · Sources: R-27 ("agregar `E{n}.QA` y `E{n}.DEPLOY`"), PM-10 · BL-30
@@ -608,8 +671,8 @@ Traces to PRD: §6 S-8, O-9 · Sources: R-28 ("subir `client` a campo de primer 
 names both values.
 
 ### 7.2 REQ-W3-045 — A portfolio file lists the repositories
-The method SHALL read a portfolio file that lists the organisation's Karvey repositories by path or clone location,
-with an optional client and owner per entry; paths SHALL be validated before any read.
+The method SHALL read a portfolio file that lists the organisation's Karvey repositories by local path, with an
+optional clone location (information only), client and owner per entry; paths SHALL be validated before any read.
 
 Traces to PRD: §6 S-8, O-9 · Sources: R-28 (`portfolio.json`), PM-14 · Decision: D-32 · BL-31
 
@@ -630,18 +693,21 @@ the four column groups (active changes with phase, lane and age; questions and a
 project" and the rest still render.
 
 ### 7.4 REQ-W3-047 — Read-only and within the reader's access
-The portfolio view SHALL be read-only, SHALL read only what the person running it can already read, SHALL mark an
-unreachable repository as "not read" with the reason, and SHALL NOT publish its output anywhere.
+The portfolio view SHALL be read-only (it SHALL NOT write, fetch, pull or clone, and SHALL open no network
+connection), SHALL read only what the person running it can already read in a local clone, SHALL mark an unreachable repository
+(no local clone included) as "not read" with the reason, and SHALL NOT publish its output anywhere.
 
 Traces to PRD: §6 S-8, §7, §9, AC-8 · Sources: R-28 (riesgo: controlar quién ve el portafolio), PM-14 · Decision: D-32 · BL-31
 
-**Scenario — success:** GIVEN every repository readable WHEN the view runs THEN no file changes in any of them.
-**Scenario — error:** GIVEN one repository without read permission WHEN the view runs THEN it shows "not read:
-permission denied" for that one only.
+**Scenario — success:** GIVEN every repository readable WHEN the view runs THEN no file changes in any of them and no
+network request is made.
+**Scenario — error:** GIVEN one repository without read permission and one entry with a clone location but no local
+clone WHEN the view runs THEN it shows "not read: permission denied" and "not read: no local clone" for those two only,
+and nothing is fetched.
 
 ### 7.5 REQ-W3-048 — Both spec layouts are found
-The session hook, the dashboard and the portfolio SHALL find a Karvey project whose specs live under `docs/spec/` or
-under `spec/`, and SHALL report which layout was found.
+MODIFIES REQ-W1-045. The session hook, the dashboard and the portfolio SHALL find a Karvey project whose specs live under
+`docs/spec/` or under `spec/` (excluding the archive and implemented changes under either root), and SHALL report which layout was found.
 
 Traces to PRD: §6 S-8, AC-8 · Sources: F-45 · BL-40
 
@@ -649,6 +715,28 @@ Traces to PRD: §6 S-8, AC-8 · Sources: F-45 · BL-40
 layout `spec/`.
 **Scenario — error:** GIVEN a repository with both layouts WHEN it is read THEN it reports "two spec roots" and uses
 `docs/spec/`.
+
+### 7.6 REQ-W3-078 — The portfolio for one client
+WHEN `karvey-context --portfolio --client <name>` runs, the view SHALL show only the entries of that client (matched
+case-insensitively) and SHALL say that other clients are not shown.
+
+Traces to PRD: §6 S-8, O-9, AC-8 · Sources: R-28, PM-14, mockup finding F-35 ("how are we doing with client X") · Decision:
+D-32 · BL-31
+
+**Scenario — success:** GIVEN six repositories of two clients WHEN the view runs for one client THEN only its three
+repositories and its totals appear, with "other clients: not shown".
+**Scenario — error:** GIVEN a client name that no entry carries WHEN the view runs THEN it says "no repositories for client"
+and exits zero.
+
+### 7.7 REQ-W3-079 — From the portfolio to one change
+For every active change it lists, the portfolio view SHALL print the read-only dashboard command that opens that change
+in its repository's local clone; it SHALL NOT open it by itself.
+
+Traces to PRD: §6 S-8, O-9 · Sources: R-28, REQ-W1-072 (dashboard read-only), mockup finding F-36 · Decision: D-32 · BL-31
+
+**Scenario — success:** GIVEN an active change in a listed repository WHEN the view runs THEN its row carries the command
+that opens that change's dashboard in that repository.
+**Scenario — error:** GIVEN a repository shown as "not read" WHEN the view runs THEN no command is printed for its changes.
 
 ---
 
@@ -739,7 +827,8 @@ Traces to PRD: §6 S-10, O-11, AC-10 · Sources: R-30 (hora de un país fija), A
 **Scenario — error:** GIVEN a rule naming a country's time WHEN the linter runs THEN it reports it.
 
 ### 9.5 REQ-W3-057 — Neutral incident states with aliases
-The incident lifecycle SHALL use neutral English state names and SHALL accept the existing localized names as aliases,
+MODIFIES REQ-W1-068 (its "not resolved" test). The incident lifecycle SHALL use neutral English state names and SHALL
+accept the existing localized names as aliases,
 so that trackers already written in them remain valid.
 
 Traces to PRD: §6 S-10, O-11, AC-10 · Sources: R-30 ("estados neutrales con alias localizados"), AG-14 · BL-33
@@ -788,9 +877,9 @@ Traces to PRD: §6 S-10, §9, O-11 · Sources: R-30, AG-14 (rastros de un stack 
 
 ### 10.1 REQ-W3-061 — Every new check has a mode
 Every check this change adds over a project's existing artifacts SHALL declare its mode in the check-modes table, and
-in 4.1 SHALL default to advisory or warn, except the leak check of the sponsor page and the missing-file check of load
-lists, which are blocking; checks of the plugin's own sources (REQ-W3-011, 012, 067, 069) and refusals of input to a
-field, state or register this change introduces (REQ-W3-020, 028, 034, 050) are not project checks — no 4.0 project
+in 4.1 SHALL default to advisory or warn, except the leak check of the sponsor page (REQ-W3-023) and the missing-file check of load lists (REQ-W3-072), which are
+blocking; checks of the plugin's own sources (REQ-W3-011, 012, 067, 069, 072, 080) and refusals of input to a field,
+state or register this change introduces (REQ-W3-020, 028, 034, 050, 076) are not project checks — no 4.0 project
 holds that input — and keep the refusal their requirement states.
 
 Traces to PRD: §6 S-11, §9, O-12, AC-12 · Sources: Ola 3 plan, REQ-W2-083 · Decision: D-24
@@ -809,15 +898,17 @@ check.
 
 ### 10.3 REQ-W3-063 — Migration to the Wave 3 shape
 MODIFIES REQ-W1-009. WHEN `validate --fix` runs, the state tool SHALL also propose moving a non-empty tracker client tag to
-`client`, SHALL show the diff before writing, SHALL NOT create or flip any approval, and SHALL produce the same file when
-run twice.
+`client`, under the constraints REQ-W1-009 already sets for every `--fix` move (diff shown first, no approval created or
+flipped, same file when run twice).
 
 Traces to PRD: §6 S-11, S-8, O-12 · Sources: R-28, R-01 (`--fix`) · BL-31
 
 **Scenario — success:** GIVEN a change with a client tag WHEN `--fix` runs THEN it proposes `client` and shows the diff.
-**Scenario — error:** GIVEN `--fix` run twice WHEN compared THEN the second run changes nothing.
+**Scenario — error:** GIVEN a change whose `client` is already set and differs from its tracker tag WHEN `--fix` runs THEN
+it proposes nothing for `client` and reports both values (REQ-W3-044).
 
 ### 10.4 REQ-W3-064 — Measured before and after
+*Change-scoped: verified in this change and not merged into the living spec (spec-delta.md, change-scoped section).*
 The release of 4.1.0 SHALL carry the context size before and after (REQ-W3-010) and the cost of this change
 (REQ-W3-014) in its release notes, stating that single-agent cost before 4.1 was not measured, so that later changes
 compare against the 4.1 figures.
@@ -828,10 +919,10 @@ Traces to PRD: §6 S-11, O-1, O-2, O-6 · Sources: R-15, R-25 · Decision: D-30
 **Scenario — error:** GIVEN a measurement that could not be taken WHEN the notes are written THEN it is stated "not
 measured" with the reason.
 
-### 10.5 REQ-W3-065 — Built with itself
-This change SHALL run in the `feature-ui` lane on this repository in trunk mode, SHALL carry the change trailer on
-every commit, SHALL record its own effort at every phase close, and SHALL produce its own sponsor page at each gate
-close, with the method's owner declared as the change's sponsor (the change override of REQ-W3-020).
+### 10.5 REQ-W3-065 — Built with itself: the trailer
+*Change-scoped: verified in this change and not merged into the living spec.*
+Every commit of this change SHALL carry the change trailer. (Its lane is REQ-W3-073, its effort REQ-W3-074 and its
+sponsor page REQ-W3-075.)
 
 Traces to PRD: §6 S-11, §9, AC-6 · Sources: panel Ola 1 (dogfooding), H-22 · Decision: D-04, D-26, D-31
 
@@ -839,6 +930,39 @@ Traces to PRD: §6 S-11, §9, AC-6 · Sources: panel Ola 1 (dogfooding), H-22 ·
 `wave3-optimization`.
 **Scenario — error:** GIVEN a commit of this change without the trailer WHEN the manifest runs THEN it is listed as unmapped
 and fixed before the production gate.
+
+### 10.6 REQ-W3-073 — Built with itself: the lane
+*Change-scoped: verified in this change and not merged into the living spec.*
+This change SHALL run in the `feature-ui` lane on this repository in trunk mode (split from REQ-W3-065).
+
+Traces to PRD: §6 S-11, §9 · Sources: panel Ola 1 (dogfooding), judge F-26 · Decision: D-04, D-26
+
+**Scenario — success:** GIVEN this change's `spec.json` WHEN validated THEN its lane is `feature-ui` and mockup and
+design-graphic are not skipped.
+**Scenario — error:** GIVEN a lane lowered without a recorded human decision WHEN the lane check runs THEN it reports the
+change.
+
+### 10.7 REQ-W3-074 — Built with itself: its own effort
+*Change-scoped: verified in this change and not merged into the living spec.*
+This change SHALL record its own effort (REQ-W3-014) at every phase close (split from REQ-W3-065).
+
+Traces to PRD: §6 S-11, AC-6 · Sources: R-25, judge F-26 · Decision: D-30
+
+**Scenario — success:** GIVEN this change at archive WHEN its effort record is read THEN every closed phase has an entry.
+**Scenario — error:** GIVEN a phase closed before the effort record existed WHEN archive checks THEN that phase is listed as
+"not measured" with the reason, never as zero.
+
+### 10.8 REQ-W3-075 — Built with itself: its own sponsor page
+*Change-scoped: verified in this change and not merged into the living spec.*
+This change SHALL produce its own sponsor page at each gate close once the page generator exists, with the method's owner
+declared as the change's sponsor (the change override of REQ-W3-020) (split from REQ-W3-065).
+
+Traces to PRD: §6 S-11, AC-3 · Sources: R-19, judge F-05, judge F-26 · Decision: D-31
+
+**Scenario — success:** GIVEN the release gate of this change WHEN it closes THEN its sponsor page is regenerated and
+passes the leak check.
+**Scenario — error:** GIVEN a gate that closed before the generator existed WHEN the page history is read THEN that gate is
+listed as "no page (generator not built yet)".
 
 ---
 
@@ -941,3 +1065,30 @@ gate. D-30, D-31 and D-32 are not open.
     names not checked" and the rest of the check still runs (REQ-W3-023, judge F-10).
 14. **This change's sponsor** is the method's owner, declared as a change-level override, so its own sponsor page is produced
     (REQ-W3-065, judge F-05).
+
+Resolved by the second iteration (2026-09-26, pre-approval; recommended option taken under D-21 — each can be changed at
+the *what* gate):
+
+15. **Orchestrator limit: 1,200 words** (about 40% of the 4.0.0 file); the rare paths moved to references are a closed
+    list in the requirement, not left to architecture — a number and a list a test can check (REQ-W3-007, 008; judge
+    F-22).
+16. **Bundled requirements split, ids kept**: 002 → 002 + 071, 011 → 011 + 072, 065 → 065 + 073 + 074 + 075; 063 keeps
+    only its one addition and cites REQ-W1-009 for the rest — one behaviour per requirement, one success and one error
+    scenario each (judge F-26).
+17. **Change-scoped obligations**: REQ-W3-064, 065, 073, 074 and 075 bind this release only and are not merged into the
+    living spec — they would not hold for later changes (judge F-32).
+18. **MODIFIES made explicit** where a living requirement's text changes: REQ-W3-026 → REQ-ADP-011, 041 → REQ-W1-089,
+    048 → REQ-W1-045, 057 → REQ-W1-068, 077 → REQ-W2-030. REQ-W3-040, 050 and 058 stay ADDED: the behaviour they change
+    lives only in rule text, which no living requirement states (judge F-20).
+19. **Design-system conflicts** stop the apply at archive and ask the human, comparing each modified token with the base
+    value the delta recorded — the conflict belongs to the delta this change introduces, so it is a requirement here, not
+    a backlog item (REQ-W3-076; judge F-11, re-typed from emergent to spec-gap).
+20. **Judge cost** is the runtime's reported usage (`exact`); an estimate counts every input the judge read — cost is this
+    change's area (REQ-W3-077; F-34, routed instead of deferred).
+21. **Portfolio**: a `--client` filter (REQ-W3-078); a printed dashboard command per change, never opened by the view
+    (REQ-W3-079); it never fetches, pulls or clones — a clone location is information only (REQ-W3-045, 047) — so the
+    view needs no network and no credentials (mockup F-35, F-36, F-37).
+22. **Sponsor page**: an optional business context on a question (REQ-W3-028, F-38); gates waiting for the sponsor's
+    approval appear under *Waiting for you* when the sponsor is also the approver (REQ-W3-021, F-39); a fixed wording
+    table for phases, lane and risk states (REQ-W3-080, F-40); a refused page is never written — only a refusal report
+    with field and rule, never the value (REQ-W3-023, F-41).

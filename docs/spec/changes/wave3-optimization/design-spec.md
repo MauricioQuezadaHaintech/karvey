@@ -1,10 +1,12 @@
 # Design Spec: wave3-optimization
 
-Applies to the mockup in `mockup/` (iteration 1): `index.html`, `sponsor.html`, `portfolio.html`, `terminal.html`,
+Applies to the mockup in `mockup/` (iteration 2, after `karvey-iterate` resolved the mockup spec-gaps): `index.html`, `sponsor.html`, `portfolio.html`, `terminal.html`,
 `method-page.html`. The project has no `PRODUCT.md`, `DESIGN.md` or `docs/spec/design-system.md` yet and
 `spec.json:inputs` pins no design; the visual language already shipped is the method page `docs/karvey.html`, so this
 spec **reuses its values** instead of inventing a palette. This is the first UI change after REQ-W3-035, so these tokens
-are the proposed seed of the project design system (created at archive, REQ-W3-036).
+are the proposed seed of the project design system (created at archive, REQ-W3-036). As the first delta it only adds
+tokens and modifies none, so it records no base values; a later change that modifies one of them records the base value
+REQ-W3-076 compares at archive.
 
 ## Design register
 
@@ -143,11 +145,29 @@ works fully with no JavaScript (sections and `details` are native).
 | "Waiting for you" card | surface | accent 2 px all round | shadow-1 | the one emphasised card |
 | Status pill | accent-soft (success-soft when released) | none | none | dot + words |
 | Tag | surface-2 or a soft semantic | border / none | none | always a word inside |
+| Risk state tag | accent-soft (being watched), success-soft (reduced, no longer a risk), surface-2 (accepted as is, carried to later work) | none | none | the word comes from the wording table (REQ-W3-080), never the raw state name |
+| "Your approval" tag | surface-2 | border | none | marks a gate awaiting the sponsor as approver inside *Waiting for you* (REQ-W3-021) |
 | Table row | transparent | border bottom | none | surface-2 |
 | Terminal block | surface-2 | border 1 px | none | scroll inside |
 | Modal overlay | surface on 55% scrim | none | large | Esc and scrim click close |
 | Tabs | none | 3 px accent underline when selected | none | text-primary |
 | Language switch | none | transparent / primary when current | none | surface-2 |
+
+## Revision — iteration 2 (2026-09-26)
+
+Screens changed by the resolved spec-gaps; no token, type, spacing or motion value changed.
+
+| Finding | Screen | Change |
+|---|---|---|
+| F-35 | portfolio › One client | `--client` filter is a requirement (REQ-W3-078); new state "no repositories for client" (exit 0) |
+| F-36 | portfolio › All clients, One client | each change carries the dim command that opens its read-only dashboard (REQ-W3-079); none for a "not read" repository |
+| F-37 | portfolio › Portfolio file, states | entries are local paths, `clone` is information only; new state "not read: no local clone"; footer says 0 network requests |
+| F-38 | sponsor › Waiting for you | "Options the team sees" comes from the question's optional context (REQ-W3-028) |
+| F-39 | sponsor › Waiting for you | a gate awaiting the sponsor as approver is listed with a "your approval" tag (REQ-W3-021) |
+| F-40 | sponsor › Risks | state words from the wording table: "being watched", "reduced" (REQ-W3-080) |
+| F-41 | sponsor › state Leak check refused | the page is not written; the transcript names field and rule without the value and says the last written page is unchanged (REQ-W3-023) |
+
+The score below is unchanged: the new elements reuse existing components (tag, dim terminal line) and tokens.
 
 ## Art catalogue
 

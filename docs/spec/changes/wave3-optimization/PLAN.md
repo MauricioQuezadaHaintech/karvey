@@ -47,20 +47,20 @@ F11 rollout; **F12 last** (B-06).
 
 | Feature | Area | Requirements covered | Panel / sources | Status |
 |---------|------|----------------------|-----------------|--------|
-| F1 | Context measurement: size tool, baseline, CI | REQ-W3-001, 002, 010, 011 | R-15 · AG-04, H-34 · BL-18 | ⬜ |
+| F1 | Context measurement: size tool, baseline, CI | REQ-W3-001, 002, 010, 011, 071, 072 | R-15 · AG-04, H-34 · BL-18 | ⬜ |
 | F2 | Context budget: core, load lists, adapters, references, routing-only orchestrator, contract coverage, generated lists, one phase per session | REQ-W3-003..009, 012, 013 | R-15 · AG-04 · BL-18, BL-39 | ⬜ |
-| F3 | Cost per change with a single agent | REQ-W3-014..019 | R-25 · PM-08 · D-30 · BL-28, BL-37 | ⬜ |
-| F4 | Sponsor page, report, "your turn" events, deduplication | REQ-W3-020..027 | R-19 · PM-07 · D-31 · BL-22, BL-43 | ⬜ |
+| F3 | Cost per change with a single agent | REQ-W3-014..019, 077 | R-25 · PM-08 · D-30 · BL-28, BL-37 | ⬜ |
+| F4 | Sponsor page, report, "your turn" events, deduplication | REQ-W3-020..027, 080 | R-19 · PM-07 · D-31 · BL-22, BL-43 | ⬜ |
 | F5 | Open questions Q-NN and risk register | REQ-W3-028..034 | R-24 · PM-11 · BL-27 | ⬜ |
-| F6 | Project design system, design delta, contrast tool, design judge | REQ-W3-035..039 | R-26 · DM-13, AG-12 · D-23, D-30 · BL-29 | ⬜ |
+| F6 | Project design system, design delta, contrast tool, design judge | REQ-W3-035..039, 076 | R-26 · DM-13, AG-12 · D-23, D-30 · BL-29 | ⬜ |
 | F7 | One work breakdown (WBS) | REQ-W3-040..043 | R-27 · PM-10 · BL-30 | ⬜ |
-| F8 | Organisation portfolio | REQ-W3-044..048 | R-28 · PM-14 · D-32 · BL-31, BL-40 | ⬜ |
+| F8 | Organisation portfolio | REQ-W3-044..048, 078, 079 | R-28 · PM-14 · D-32 · BL-31, BL-40 | ⬜ |
 | F9 | Backlog ranked by WSJF, `done-direct` | REQ-W3-049..052 | R-29 · PM-15 · BL-32 | ⬜ |
 | F10 | Portability (guide, browse.via, OS/time neutrality, neutral states, loaded version, settings validation) | REQ-W3-053..060 | R-30 · AG-14 · D-32 · BL-33, BL-38 | ⬜ |
-| F11 | Rollout 4.1.0 and dogfooding | REQ-W3-061..065 | Ola 3 plan · D-24, D-26, D-31 | ⬜ |
+| F11 | Rollout 4.1.0 and dogfooding | REQ-W3-061..065, 073, 074, 075 (064, 065, 073..075 change-scoped) | Ola 3 plan · D-24, D-26, D-31 | ⬜ |
 | F12 | **Last:** method page in it / ja / fr / ko, alias table | REQ-W3-066..070 | B-06 · BL-42 | ⬜ |
 
-Coverage: 70 of 70 REQ-W3 in exactly one Feature.
+Coverage: 80 of 80 REQ-W3 in exactly one Feature.
 
 ## Tasks
 (pending — karvey-tasks)
@@ -70,3 +70,4 @@ Coverage: 70 of 70 REQ-W3 in exactly one Feature.
 |-------|------|--------|
 | 2026-09-26 | init | Change initialised (state tool), lane `feature-ui`; prd.md; spec.json validated `--strict` |
 | 2026-09-26 | requirements | requirements.md (70 REQ-W3, 11 areas), spec-delta.md (ADDED 70, MODIFIED 6, REMOVED 0), Features F1..F12; generated — awaiting the *what* gate |
+| 2026-09-26 | iterate | Second iteration, pre-approval (D-21): mockup spec-gaps F-35..F-41 and judge findings F-11, F-20, F-22, F-26, F-32, F-34 amended in place — REQ-W3-071..080 added (splits of 002, 011, 065; design-system conflict; judge cost source; portfolio client filter and drill-down; state wording), spec-delta ADDED 75 · MODIFIED 10 · change-scoped 5; mockup and design-spec rippled — awaiting the *what* gate |

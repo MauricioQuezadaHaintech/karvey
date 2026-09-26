@@ -80,6 +80,7 @@ p{margin:var(--space-1) 0 var(--space-3)}
 button,.btn{font:inherit;font-size:var(--text-sm);cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);min-height:32px;transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
 button:hover,.btn:hover{background:var(--color-surface-2)}
 button[aria-pressed="true"],.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-background);font-weight:600}
+.req-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px solid var(--color-semantic-success);color:var(--color-semantic-success);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
 .gap-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px dashed var(--color-semantic-error);color:var(--color-semantic-error);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
 /* layout */
 .wrap{max-width:1080px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
@@ -152,7 +153,7 @@ body.printpv .toc{display:none}
 </style>
 </head>
 <body>
-<div class="mk-banner" role="note"><span>MOCKUP WITH GRAPHIC DESIGN — wave3-optimization — Iteration 1 — 2026-09-26</span><nav class="mk-nav" aria-label="Mockup surfaces"><a href="index.html">Map</a><a href="sponsor.html" aria-current="page">Sponsor page</a><a href="portfolio.html">Portfolio</a><a href="terminal.html">Report, backlog, gates</a><a href="method-page.html">Method page</a></nav></div>
+<div class="mk-banner" role="note"><span>MOCKUP WITH GRAPHIC DESIGN — wave3-optimization — Iteration 2 — 2026-09-26</span><nav class="mk-nav" aria-label="Mockup surfaces"><a href="index.html">Map</a><a href="sponsor.html" aria-current="page">Sponsor page</a><a href="portfolio.html">Portfolio</a><a href="terminal.html">Report, backlog, gates</a><a href="method-page.html">Method page</a></nav></div>
 <div class="mk-tools"><span class="lbl">Scheme</span><span class="seg" role="group" aria-label="Colour scheme"><button type="button" aria-pressed="true" onclick="setTheme('auto',this)">System</button><button type="button" aria-pressed="false" onclick="setTheme('light',this)">Light</button><button type="button" aria-pressed="false" onclick="setTheme('dark',this)">Dark</button></span><span class="lbl">State (L4)</span><span class="seg" role="group" aria-label="Page state"><button type="button" aria-pressed="true" onclick="setState('normal',this)">Waiting for approval</button><button type="button" aria-pressed="false" onclick="setState('changes',this)">Changes requested</button><button type="button" aria-pressed="false" onclick="setState('nocost',this)">Cost not measured</button><button type="button" aria-pressed="false" onclick="setState('norisks',this)">No open risks</button><button type="button" aria-pressed="false" onclick="setState('released',this)">Released</button><button type="button" aria-pressed="false" onclick="setState('nosponsor',this)">No sponsor declared</button><button type="button" aria-pressed="false" onclick="setState('leak',this)">Leak check refused</button><button type="button" aria-pressed="false" onclick="setState('delivery',this)">Delivery failed</button></span><span class="lbl">Viewport</span><span class="seg" role="group" aria-label="Viewport"><button type="button" aria-pressed="true" onclick="document.body.classList.remove('phone','printpv');this.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===this)))">Desktop</button><button type="button" aria-pressed="false" onclick="document.body.classList.remove('printpv');document.body.classList.add('phone');this.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===this)))">Phone 360</button><button type="button" aria-pressed="false" onclick="document.body.classList.remove('phone');document.body.classList.add('printpv');this.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===this)))">Print preview</button></span></div>
 
 <!-- L4 states produced outside the page (terminal of the person closing the gate) -->
@@ -167,11 +168,12 @@ what gate approved · recorded approve-gate add-login what (role human)
 <p class="eyebrow">Gate close — leak check refused (REQ-W3-023, blocking)</p>
 <div class="term"><span class="p">$</span> karvey-state gate add-login architecture
 how gate: changes requested · recorded outcome add-login how changes_requested
-sponsor page: regenerated changes/add-login/sponsor.html
-<span class="err">leak check: FAIL — delivery refused</span>
-  field  risks[R-2].description   secret-shaped value (connection string)
-  field  scope.summary             file-system path
-<span class="dim">the page stays in the change folder; fix the source artifact and re-run the gate summary</span>  <span class="err">[F-41: a refused page holding the value must not stay committable]</span>
+sponsor page: built in memory · leak check runs before anything is written
+<span class="err">leak check: FAIL — page not written, not delivered</span>
+  field  risks[R-2].description   rule: secret pattern (value not shown)
+  field  scope.summary             rule: file-system path (value not shown)
+<span class="dim">changes/add-login/sponsor.html unchanged (last written 2026-10-09) · refusal report: fields and rules only, no values</span>
+<span class="dim">fix the source artifact and re-run the gate summary</span>  <span class="req-note">REQ-W3-023</span>
 <span class="dim">other-client names: checked against the portfolio file (4 names)</span></div>
 </div>
 <div class="outside" data-show="delivery">
@@ -212,15 +214,15 @@ sponsor page: regenerated · leak check <span class="ok">PASS</span>
 
   <section id="waiting" class="card emph" data-hide="released">
     <h2>Waiting for you</h2>
-    <p class="muted small">Only the questions where you are the one who decides. Each has the date from which it holds the work.</p>
+    <p class="muted small">The questions where you are the one who decides, and the approvals you give for this work. Each has the date from which it holds the work.</p>
     <div class="ask"><span class="tag warn when">needed by 2026-10-16</span>
-      <div><strong>Approve the look and the flow of the sign-in screens.</strong> <span class="gap-note">F-39</span>
+      <div><span class="tag">your approval</span> <strong>Approve the look and the flow of the sign-in screens.</strong> <span class="req-note">REQ-W3-021</span>
       <p class="small">The team shows the screens and the steps a person goes through. Your answer lets the build start.</p>
       <details><summary>What happens if this waits</summary><p class="small">The build does not start. Each day past the date moves the release by one working day.</p></details></div></div>
     <div class="ask"><span class="tag err when">overdue since 2026-10-10</span>
       <div><strong>Should people who leave the company lose access the same day?</strong>
       <p class="small">Same day needs a nightly check with your staff list; next week is simpler.</p>
-      <details><summary>Options the team sees <span class="gap-note">F-38</span></summary><ul class="small"><li>Same day — one more connection to your staff list (recommended by the team)</li><li>Within a week — no new connection; a short window of access remains</li></ul></details></div></div>
+      <details><summary>Options the team sees <span class="req-note">REQ-W3-028</span></summary><ul class="small"><li>Same day — one more connection to your staff list (recommended by the team)</li><li>Within a week — no new connection; a short window of access remains</li></ul></details></div></div>
   </section>
   <section class="card" data-show="released"><h2>Waiting for you</h2><p>Nothing is waiting for you.</p></section>
 
@@ -270,9 +272,9 @@ sponsor page: regenerated · leak check <span class="ok">PASS</span>
     <h2>Risks</h2>
     <div data-hide="norisks">
       <div class="table-scroll"><table><thead><tr><th>Risk</th><th>Likelihood / impact</th><th>Who watches it</th><th>State</th></tr></thead><tbody>
-      <tr><td>People who left keep access for a while <details><summary class="small">What sets it off · what is done</summary><p class="small">Set off by: an account closed after the nightly check. Done: a same-day check (waiting for your answer above).</p></details></td><td>medium / high</td><td>Security officer</td><td><span class="tag warn">open</span><br><span class="xs muted">last review 2026-10-13</span></td></tr>
-      <tr><td>The company sign-in service is down <details><summary class="small">What sets it off · what is done</summary><p class="small">Set off by: the provider's outage. Done: a clear message and a support contact on the screen.</p></details></td><td>low / medium</td><td>Tech lead</td><td><span class="tag warn">open</span><br><span class="xs muted">last review 2026-10-13</span></td></tr>
-      <tr><td>Sign-in records kept longer than allowed</td><td>low / medium</td><td>Product owner</td><td><span class="tag ok">handled</span> <span class="gap-note">F-40</span></td></tr>
+      <tr><td>People who left keep access for a while <details><summary class="small">What sets it off · what is done</summary><p class="small">Set off by: an account closed after the nightly check. Done: a same-day check (waiting for your answer above).</p></details></td><td>medium / high</td><td>Security officer</td><td><span class="tag warn">being watched</span><br><span class="xs muted">last review 2026-10-13</span></td></tr>
+      <tr><td>The company sign-in service is down <details><summary class="small">What sets it off · what is done</summary><p class="small">Set off by: the provider's outage. Done: a clear message and a support contact on the screen.</p></details></td><td>low / medium</td><td>Tech lead</td><td><span class="tag warn">being watched</span><br><span class="xs muted">last review 2026-10-13</span></td></tr>
+      <tr><td>Sign-in records kept longer than allowed</td><td>low / medium</td><td>Product owner</td><td><span class="tag ok">reduced</span> <span class="req-note">REQ-W3-080</span></td></tr>
       </tbody></table></div>
     </div>
     <p data-show="norisks">No open risks as of 2026-10-14.</p>
