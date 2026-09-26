@@ -30,7 +30,8 @@ def project(**over):
 
 class Loaded(unittest.TestCase):
     def test_both_schemas_in_registry_and_in_subset(self):
-        self.assertEqual(set(REG), {"karvey:spec.schema.json", "karvey:project.schema.json"})
+        self.assertEqual(set(REG), {"karvey:spec.schema.json", "karvey:project.schema.json",
+                                    "karvey:portfolio.schema.json"})
         for s in REG.values():
             self.assertEqual(sl.check_schema(s), [])
             self.assertEqual(s["x-karvey-schema-version"], 1)
