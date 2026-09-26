@@ -7,10 +7,10 @@
 
 | Item | Value |
 |---|---|
-| Features | 17 |
-| Tasks | 81 (63 Backend, 1 Frontend, 2 Infra, 8 Test, 7 human) — revision 1 (D-19): +E1.F17.T1..T3, E1.F16.T2 → `[human]`; D-21: +E1.F17.T4..T8 (manual-script findings F-50..F-54) |
-| Agent tasks / `[human]` tasks | 74 / 7 (E1.F1.T2 is conditional: only if T-0 cannot run headless) |
-| Total estimate (agent tasks, AI + human review) | **2150 min** (35.8 h); revision 1: +50 (E1.F17) −15 (E1.F16.T2 to `[human]`) = **2185 min**; D-21: +100 (E1.F17.T4..T8) = **2285 min** |
+| Features | 18 (D-34..D-36: +E1.F18) |
+| Tasks | 81 (63 Backend, 1 Frontend, 2 Infra, 8 Test, 7 human) — revision 1 (D-19): +E1.F17.T1..T3, E1.F16.T2 → `[human]`; D-21: +E1.F17.T4..T8 (manual-script findings F-50..F-54); D-34..D-36: +E1.F18.T1..T5 (QA spec-gaps F-76, F-77, F-79) → 86 (67 Backend, 9 Test) |
+| Agent tasks / `[human]` tasks | 79 / 7 (E1.F1.T2 is conditional: only if T-0 cannot run headless) |
+| Total estimate (agent tasks, AI + human review) | **2150 min** (35.8 h); revision 1: +50 (E1.F17) −15 (E1.F16.T2 to `[human]`) = **2185 min**; D-21: +100 (E1.F17.T4..T8) = **2285 min**; D-34..D-36: +165 (E1.F18) = **2450 min** |
 | Critical path (agent minutes; `[human]` waits not counted) | **550 min** (9.2 h), 18 tasks |
 | REQ-W1 coverage | 109/109 |
 | Largest task | 50 min (cap 60) |
@@ -883,6 +883,52 @@ Total estimated time: 150 min (7 agent tasks + 1 human)
 **Tests added:** — (evidence runs: headless `claude -p` per script in throw-away repos, as the first run; the tracker parts of no-human-no-mapping and per-level-maps not re-run, covered by the regression tests)  
 **Done when:** every rerun Expected line run is PASS; F-54 is BL-52 routed to `wave2-structural`; BL-51 names the statusline stable-launcher item without an F-number; the throw-away repos and their session transcripts are deleted.
 
+## Feature E1.F18: QA spec-gaps on the production approval (revision 4, D-34..D-36)
+
+Findings of the QA of PR #24 that needed the owner's decision: F-76 (what evidence the prod-gate verifies), F-77 (the approval is tied to a change id, not to the commits, and never expires), F-79 (a reopen leaves the prod approval standing).  
+Requirements covered: 017, 023  
+Total estimated time: 165 min (5 agent tasks)
+
+### E1.F18.T1 [Backend] D-34: the prod approval's evidence is the approval hook's audit record — _Depends: E1.F5.T2, E1.F3.T6_
+
+**Estimate:** 30 min · **Actual:** 10 min (AI)  
+**Files:** `plugins/karvey/scripts/karvey_lib/approval.py` (`write_marker` audit line, `evidence`, `audit_record_of`), `scripts/karvey-state.py` (`check_prod`), `schemas/spec.schema.json` (`evidence.prompt_sha256`); `tests/unit/test_marker.py` (`AuditRecord`), `tests/unit/test_state_approve.py` (`ProdEvidence`), `tests/hooks/tables/prod-gate.json` (pg5-01), `tests/hooks/tables/approval.json` (ap-40), `tests/hooks/run_tables.py` (`@approved` ledger fixture)  
+**Requirements:** REQ-W1-017, REQ-W1-023  
+**Tests added:** the marker's audit line carries hash, session, time; a hand-written ledger, a session/hash/time mismatch and a marker of another change are refused; pg5-01 blocks `missing=audit`. Red on c4d81cf.  
+**Done when:** check-prod refuses a ledger entry without the matching audit line and the tables pass.
+
+### E1.F18.T2 [Backend] D-35: prod approval bound to the approved head commit, valid 24 h — _Depends: E1.F18.T1, E1.F5.T5_
+
+**Estimate:** 50 min · **Actual:** 30 min (AI)  
+**Files:** `scripts/karvey_lib/approval.py` (`prod_record`, `PROD_VALID_H`), `scripts/karvey-state.py` (`approve prod --sha`, `check-prod --sha`, `resolve_commit`), `scripts/karvey_lib/guards.py` (`pr_info` head commit, push source resolution, `earlier_writer`, `--all`/`--mirror`/delete), `schemas/spec.schema.json` (`head_sha`, `expires_at`); `tests/unit/test_state_approve.py` (`ProdShaBinding`), `tests/hooks/tables/prod-gate.json` (pg5-02..11, existing allow cases on `@approved` + head commit)  
+**Requirements:** REQ-W1-023, REQ-W1-024  
+**Tests added:** head and expiry recorded; `--sha` resolves; an unresolvable rev refused; check-prod compares `--sha`; expired and legacy entries refused; tables: commit after the OK, another branch pushed as the change (F-77 reproduction), PR head moved (gh, az), answer without head commit, 24 h, a branch moved earlier in the call, push then merge in one call, `--all`; pg5-10 the allow control. Red on c4d81cf.  
+**Done when:** every release form compares the released commit with the approved one; the no-python fallback still blocks (pg5-02 nopy).
+
+### E1.F18.T3 [Backend] D-36: `reopen` supersedes the ledger prod approval — _Depends: E1.F18.T2_
+
+**Estimate:** 20 min · **Actual:** 5 min (AI)  
+**Files:** `scripts/karvey_lib/approval.py` (`supersede_prod`), `scripts/karvey-state.py` (`cmd_reopen`); `tests/unit/test_state_approve.py` (`ReopenSupersedesProd`)  
+**Requirements:** REQ-W1-023  
+**Tests added:** the ledger's prod moves to `superseded[]` and into `revision_history[].superseded_approvals.prod`; check-prod then fails; a reopen without a ledger is unchanged. Red on c4d81cf.  
+**Done when:** the tests pass and `check-prod` fails after a reopen.
+
+### E1.F18.T4 [Backend] Spec revision and docs of the prod approval flow — _Depends: E1.F18.T1, E1.F18.T2, E1.F18.T3_
+
+**Estimate:** 35 min · **Actual:** 20 min (AI)  
+**Files:** `docs/spec/changes/wave1-hardening/{requirements.md,spec-delta.md,architecture.md,tasks.md,findings.md}`; `plugins/karvey/skills/karvey/rules/enforcement.md`, `rules/state-machine.md`, `hooks/README.md`, `skills/karvey-deploy/SKILL.md` (2.9), `skills/karvey-iterate/SKILL.md`; `CHANGELOG.md`  
+**Requirements:** REQ-W1-017, REQ-W1-023  
+**Tests added:** — (L-16 anchors for the new promises; L-27 keeps the deploy text commit-free)  
+**Done when:** lint 0 errors, `validate --all` 0 errors, spec-merge dry run parses the delta; F-76, F-77, F-79 closed.
+
+### E1.F18.T5 [Test] QA re-run: D1 and D7 on the diff since 13170b1 — _Depends: E1.F18.T4_
+
+**Estimate:** 30 min · **Actual:** (filled when done)  
+**Files:** `docs/spec/changes/wave1-hardening/qa/REVISION_PR_24_20260925.md` (appended section)  
+**Requirements:** REQ-W1-023, REQ-W1-024  
+**Tests added:** — (review; any defect → `findings.md`)  
+**Done when:** the security gate verdict is written; no High/Critical open.
+
 ## Traceability matrix (REQ-W1 → tasks)
 
 | REQ-W1 | Tasks |
@@ -903,13 +949,13 @@ Total estimated time: 150 min (7 agent tasks + 1 human)
 | 014 | E1.F4.T2, E1.F5.T3 |
 | 015 | E1.F5.T3 |
 | 016 | E1.F3.T5, E1.F3.T6, E1.F5.T2, E1.F5.T3, E1.F5.T8, E1.F12.T9 |
-| 017 | E1.F1.T1, E1.F1.T2, E1.F4.T1, E1.F5.T2, E1.F12.T7, E1.F16.T2, E1.F16.T7 |
+| 017 | E1.F1.T1, E1.F1.T2, E1.F4.T1, E1.F5.T2, E1.F12.T7, E1.F16.T2, E1.F16.T7, E1.F18.T1 |
 | 018 | E1.F3.T5, E1.F5.T1, E1.F12.T7, E1.F12.T9, E1.F16.T2, E1.F16.T7 |
 | 019 | E1.F5.T2 |
 | 020 | E1.F4.T2, E1.F5.T4, E1.F5.T8 |
 | 021 | E1.F5.T4 |
 | 022 | E1.F5.T4, E1.F10.T4, E1.F12.T9 |
-| 023 | E1.F3.T5, E1.F3.T6, E1.F5.T5, E1.F15.T2, E1.F16.T4, E1.F16.T5, E1.F16.T6 |
+| 023 | E1.F3.T5, E1.F3.T6, E1.F5.T5, E1.F15.T2, E1.F16.T4, E1.F16.T5, E1.F16.T6, E1.F18.T1..T5 |
 | 024 | E1.F1.T1, E1.F4.T3, E1.F5.T5, E1.F5.T6, E1.F16.T4 |
 | 025 | E1.F2.T4, E1.F5.T6, E1.F16.T4, E1.F16.T6 |
 | 026 | E1.F2.T5, E1.F4.T3, E1.F5.T6, E1.F8.T1, E1.F12.T9 |

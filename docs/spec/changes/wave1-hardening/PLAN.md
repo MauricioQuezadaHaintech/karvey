@@ -199,6 +199,14 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F17.T7 [Backend] BUG-26 (F-53): tracker credentials looked up in `.connections.json` first — est: 15min
 - [x] E1.F17.T8 [Test] Rerun the four failing manual scripts; route F-54 (BL-52); fix the BL-51 id collision — est: 30min
 
+### Feature E1.F18: QA spec-gaps on the production approval (revision 4, D-34..D-36)
+
+- [x] E1.F18.T1 [Backend] D-34: the prod approval's evidence is the approval hook's audit record — est: 30min
+- [x] E1.F18.T2 [Backend] D-35: prod approval bound to the approved head commit, valid 24 h — est: 50min
+- [x] E1.F18.T3 [Backend] D-36: `reopen` supersedes the ledger prod approval — est: 20min
+- [x] E1.F18.T4 [Backend] Spec revision and docs of the prod approval flow — est: 35min
+- [ ] E1.F18.T5 [Test] QA re-run: D1 and D7 on the diff since 13170b1 — est: 30min
+
 ---
 
 ## Task status
@@ -286,6 +294,11 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F17.T5 [Backend] | ✅ done | 20 | 6 | 0 | BUG-24 RESUELTO: deploy 2.6 + versioning.md read `git show <deployed-sha>:<version file>`, any DEV mark format; test_skill_rules.py VisibleVersionCheck (5 tests) red before the fix; regression index BUG-24 |
 | E1.F17.T6 [Backend] | ✅ done | 15 | 25 | 0 | BUG-25 RESUELTO: management-adapters rule 5 + impl `(P)` dispatch carry the ban verbatim (test_skill_rules.py, 3 tests); reopened by the rerun (prompt composed before any skill loads) → `subagent-prompt` guard on PreToolUse Agent|Task, table subagent-prompt.json (7 cases, red on 691f2f7); regression index BUG-25 |
 | E1.F17.T7 [Backend] | ✅ done | 15 | 5 | 0 | BUG-26 RESUELTO: management-adapters rule 2 is an ordered lookup (`.connections.json`, env, vault/MCP); impl Step 3 and blockers point to it, `blocked: null` → comment only; test_skill_rules.py TrackerCredentialsAreLookedUpEverywhere (3 tests) red before the fix; regression index BUG-26 |
+| E1.F18.T1 [Backend] | ✅ done | 30 | 10 | 0 | F-76/D-34: marker audit line with hash/session/time; `check_prod` requires it (`missing=audit`); red on c4d81cf |
+| E1.F18.T2 [Backend] | ✅ done | 50 | 30 | 0 | F-77/D-35: `head_sha` + `expires_at`; `approve prod --sha`, `check-prod --sha`; prod-gate compares the released commit in every form; pg5-02..11 red on c4d81cf |
+| E1.F18.T3 [Backend] | ✅ done | 20 | 5 | 0 | F-79/D-36: `reopen` → ledger `superseded[]` + `revision_history` |
+| E1.F18.T4 [Backend] | ✅ done | 35 | 20 | 0 | requirements rev 1 (017, 023), spec-delta, architecture rev 4, tasks E1.F18, docs (enforcement, hooks README, deploy 2.9, state-machine, iterate) |
+| E1.F18.T5 [Test] | 🔄 in progress | 30 | — | — | D1 + D7 over 13170b1..HEAD |
 | E1.F17.T8 [Test] | ✅ done | 30 | 25 | 0 | reruns PASS: settings-docs-branch (A, B), visible-version (1, 2, 3), no-human-no-mapping (headless, subagent after the guard; tracker line by tests), per-level-maps (A without tracker; comment and B by tests); F-54 → BL-52 (wave2-structural); BL-51 reworded |
 
 ---
@@ -331,7 +344,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 Document: `docs/spec/changes/wave1-hardening/qa/REVISION_PR_24_20260925.md`. Not approved.
 
 Pending actions:
-- [ ] Owner decision on F-76 (what evidence the prod-gate verifies), F-77 (bind the prod approval to the released commits, with an expiry) and F-79 (prod approval across a reopen); then `/karvey-iterate wave1-hardening` routes them (architecture revision) and QA re-runs D1.
+- [x] Owner decision on F-76 (what evidence the prod-gate verifies), F-77 (bind the prod approval to the released commits, with an expiry) and F-79 (prod approval across a reopen) — D-34, D-35, D-36; routed by `/karvey-iterate` to E1.F18 (2026-09-26); then `/karvey-iterate wave1-hardening` routes them (architecture revision) and QA re-runs D1.
 - [ ] Manual areas: prod approval end to end (E2E-04), method page rendering in a browser, a real legacy project after upgrade.
 - [x] BUG-27..46 fixed with regression tests (RESUELTO).
 - [x] Deferred: BL-53..BL-61.
