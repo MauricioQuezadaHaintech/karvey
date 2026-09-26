@@ -8,12 +8,12 @@
     "Infra"
   ],
   "created_at": "2026-09-23T19:22:52Z",
-  "updated_at": "2026-09-26T14:13:13+00:00",
+  "updated_at": "2026-09-26T14:41:56+00:00",
   "language": "en",
   "management": "markdown",
   "security_tier": 2,
   "security_tier_reason": "adds hooks that gate git operations and the merge to production; values from project.json reach shell commands",
-  "phase": "deploying",
+  "phase": "deployed",
   "phase_history": [
     {
       "phase": "init",
@@ -79,7 +79,17 @@
     },
     {
       "phase": "deploying",
-      "entered_at": "2026-09-26T14:13:13+00:00"
+      "entered_at": "2026-09-26T14:13:13+00:00",
+      "exited_at": "2026-09-26T14:41:56+00:00"
+    },
+    {
+      "phase": "deployed",
+      "entered_at": "2026-09-26T14:41:56+00:00",
+      "by": "agente-karvey (Claude Opus 5.5)",
+      "evidence": {
+        "pipeline_run": "https://github.com/MauricioQuezadaHaintech/karvey/actions/runs/36249074745",
+        "post_deploy_check": "pass"
+      }
     }
   ],
   "type": "feature",
@@ -237,9 +247,19 @@
       "approved": false
     },
     "prod": {
-      "by": "",
-      "date": "",
-      "ref": ""
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-09-26T14:36:08+00:00",
+      "ref": "D-39",
+      "evidence": {
+        "marker": "approvals/wave1-hardening.json",
+        "marker_created_at": "2026-09-26T14:35:41+00:00",
+        "prompt_excerpt": "ok, merge a prod wave1-hardening 3.12.0»",
+        "session": "26a08c8b-b68d-4c5e-ad94-aad0c1c8e373",
+        "prompt_sha256": "4b9ca77983c1ee4e9472c8e2905c5e8b1fb0442368bbaa6085839086c3c99d85"
+      },
+      "head_sha": "f6666d2ccc08322e084d0d4924066fa10857345a",
+      "expires_at": "2026-09-27T14:35:41+00:00"
     }
   }
 }
