@@ -416,6 +416,45 @@ def phases_per_session(changes):
     return dict(sorted(out.items())), reasons
 
 
+OUTLIER_FACTOR = 3.0
+OUTLIER_MIN_CHANGES = 3
+TOO_FEW = "too few changes in lane"
+
+
+def _median(xs):
+    v = sorted(xs)
+    n = len(v)
+    return None if not n else (v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2.0)
+
+
+def cost_outliers(changes):
+    """Changes that cost more than 3× the median of their lane in the period, with the phase shares — an input
+    for the retro, not a verdict (REQ-W3-019). A lane with fewer than three measured changes → ``too few
+    changes in lane``."""
+    lanes_ = {}
+    for c in changes:
+        t = effort_totals(spec_of(c))
+        if t is not None:
+            lanes_.setdefault(lane_of(spec_of(c)), []).append((c["id"], t))
+    out, reasons = {}, []
+    for lane, rows in sorted(lanes_.items()):
+        if len(rows) < OUTLIER_MIN_CHANGES:
+            reasons.append("%s: %s (%d measured)" % (TOO_FEW, lane, len(rows)))
+            continue
+        med = _median([t["usd"] for _, t in rows])
+        hits = []
+        for cid, t in rows:
+            if med and t["usd"] > OUTLIER_FACTOR * med:
+                shares = {ph: r2(u / t["usd"]) for ph, u in sorted(t["phases"].items())} if t["usd"] else {}
+                top = max(sorted(t["phases"]), key=lambda ph: t["phases"][ph]) if t["phases"] else None
+                hits.append({"change": cid, "usd": r2(t["usd"]), "lane_median": r2(med),
+                             "ratio": r2(t["usd"] / med), "top_phase": top, "phase_shares": shares})
+        out[lane] = sorted(hits, key=lambda h: h["change"])
+    if not out:
+        return None, reasons or [na("no effort record")]
+    return out, reasons
+
+
 def automatic_approvals(changes):
     """``{auto, human}``: approvals recorded with ``role: auto`` apart from human ones (REQ-W2-040)."""
     auto = human = 0
@@ -433,7 +472,7 @@ def automatic_approvals(changes):
 METRICS = ("lead_time_days", "cycle_time_hours", "approval_wait_hours", "throughput_per_week",
            "deploy_frequency_per_week", "change_failure_rate", "time_to_restore_hours", "spec_gap_rate",
            "ripple", "gate_rejection_rate", "estimate_accuracy", "judge_acceptance", "judge_cost_usd",
-           "automatic_approvals", "cost_per_change", "phases_per_session")
+           "automatic_approvals", "cost_per_change", "phases_per_session", "cost_outliers")
 
 
 def compute(changes, frm, to):
@@ -457,6 +496,7 @@ def compute(changes, frm, to):
         "automatic_approvals": lambda: automatic_approvals(changes),
         "cost_per_change": lambda: cost_per_change(changes),
         "phases_per_session": lambda: phases_per_session(changes),
+        "cost_outliers": lambda: cost_outliers(changes),
     }
     out = {}
     for m in METRICS:

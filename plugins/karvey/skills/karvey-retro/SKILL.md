@@ -47,6 +47,11 @@ From the same output and the archived changes of the period:
   calibration proposal of `karvey-context.py --section calibration` when it makes one.
 - **Judge cost and acceptance:** `judge_cost_usd` (per gate and per change; `estimated` is shown as such) and
   `judge_acceptance` per lens (routed / routed + rejected).
+- **Cost per change:** `cost_per_change` (US$, tokens and review minutes per change, per lane and per client,
+  with the estimated share) and `phases_per_session`. `cost_outliers` lists the changes above 3× their lane's
+  median with the phase that cost most — an **input** for the conversation, not a verdict; a lane with fewer than
+  three measured changes says `too few changes in lane`. A change without an effort record reads `n/a (no
+  effort)`, never 0.
 
 ### 3. Follow up the previous actions
 

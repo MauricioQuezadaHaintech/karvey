@@ -285,5 +285,32 @@ class CostCli(unittest.TestCase):
         self.assertIn("n/a (no effort): four", human)
 
 
+def _rec(cid, lane, usd_by_phase):
+    eff = [{"kind": "phase", "phase": ph, "at": "2026-09-02T10:00:00-03:00", "session": "s-" + cid,
+            "usd": {"value": v, "quality": "exact"}, "tokens": {"quality": "n/a"},
+            "review_min": {"value": None, "quality": "n/a"}} for ph, v in usd_by_phase]
+    return {"id": cid, "spec": {"lane": lane, "effort": eff}}
+
+
+class Outliers(unittest.TestCase):
+    """@req REQ-W3-019 — changes above 3× the lane median, with the phase that cost most."""
+
+    def test_REQ_W3_019_a_change_at_4x_is_listed_with_its_top_phase(self):
+        recs = [_rec("a", "standard", [("requirements", 1.0)]), _rec("b", "standard", [("requirements", 1.0)]),
+                _rec("c", "standard", [("requirements", 1.0)]),
+                _rec("d", "standard", [("requirements", 1.0), ("impl", 3.0)])]
+        v, reasons = M.cost_outliers(recs)
+        self.assertEqual([h["change"] for h in v["standard"]], ["d"])
+        h = v["standard"][0]
+        self.assertEqual((h["ratio"], h["top_phase"], h["phase_shares"]), (4.0, "impl", {"impl": 0.75,
+                                                                                         "requirements": 0.25}))
+
+    def test_REQ_W3_019_a_lane_with_two_measured_changes_is_too_few(self):
+        recs = [_rec("a", "patch", [("impl", 1.0)]), _rec("b", "patch", [("impl", 9.0)])]
+        v, reasons = M.cost_outliers(recs)
+        self.assertIsNone(v)
+        self.assertEqual(reasons, ["too few changes in lane: patch (2 measured)"])
+
+
 if __name__ == "__main__":
     unittest.main()
