@@ -15,7 +15,10 @@ from . import SCHEMAS_DIR, defaults
 from . import lanes as ln
 from . import project as pj
 
-PHASES_WITH_RUBRIC = ("requirements", "architecture", "qa")
+PHASES_WITH_RUBRIC = ("requirements", "design_graphic", "architecture", "qa")
+MOCKUP_MAX_BYTES = 200 * 1024
+MOCKUP_FILE = re.compile(r"\.(html?|svg|png|jpe?g|webp|gif|pdf)$", re.I)
+PHASE_NOT_JUDGED = "judges: phase not judged (lane %s skips %s)"
 TEXT_MAX = 300
 NONE_FOR_LANE = "judges: none for lane %s"
 DISABLED = "judges: disabled by project setting"
@@ -93,6 +96,46 @@ def _expand(cdir, item):
     return [] if optional else [item.rstrip("/") + " (missing)"]
 
 
+def applies_to(spec_text):
+    """The mockup files named on the design-spec's ``Applies to`` line (backticked names; a ``mockup/`` folder named
+    on the line is their directory)."""
+    m = re.search(r"^Applies to\b(.*?)(?:\n\s*\n|\Z)", spec_text or "", re.M | re.S)
+    if not m:
+        return []
+    text = m.group(1)
+    masked = re.sub(r"`[^`]*`", lambda x: "x" * len(x.group(0)), text)  # the first sentence only
+    end = re.search(r"\.(\s|$)", masked)
+    names = re.findall(r"`([^`]+)`", text[:end.start()] if end else text)
+    folder = next((n for n in names if n.endswith("/")), "")
+    return [n if "/" in n else folder + n for n in names if MOCKUP_FILE.search(n)]
+
+
+def design_inputs(cdir, change):
+    """``(paths, dropped)`` of the design judge: ``design-delta.md``, each "Applies to" mockup of at most 200 KB
+    (a larger one is dropped with a ``dropped:`` line) and ``contrast.json``; a missing one is listed as missing."""
+    base = "%s/%s/" % (pj.CHANGES_DIR.as_posix(), change)
+    paths, dropped = [], []
+    for fixed in ("design-delta.md",):
+        paths.append(base + fixed + ("" if (cdir / fixed).is_file() else " (missing)"))
+    try:
+        spec_text = (cdir / "design-spec.md").read_text(encoding="utf-8-sig")
+    except OSError:
+        spec_text = ""
+    for rel in applies_to(spec_text):
+        p = cdir / rel
+        if not p.is_file():
+            paths.append(base + rel + " (missing)")
+            continue
+        size = p.stat().st_size
+        if size > MOCKUP_MAX_BYTES:
+            dropped.append("dropped: %s (%d KB > %d KB)" % (base + rel, (size + 1023) // 1024, MOCKUP_MAX_BYTES // 1024))
+            continue
+        paths.append(base + rel)
+    paths.append(base + "contrast.json" + ("" if (cdir / "contrast.json").is_file() else " (missing: run "
+                                            "karvey-contrast-check.py --delta %s --json > contrast.json)" % change))
+    return paths, dropped
+
+
 def build_inputs(root, change, phase, extras=(), project=None, diff_path=None, plugin_rules=None):
     """The closed input list of a judge run (REQ-W2-022, 023, 031). Pure of side effects."""
     machine = _machine()
@@ -118,6 +161,9 @@ def build_inputs(root, change, phase, extras=(), project=None, diff_path=None, p
     if phase not in (st["phases"] or []):
         res["status"] = NOT_JUDGED % phase
         return res
+    if ln.lane_skips(lane, phase):
+        res["status"] = PHASE_NOT_JUDGED % (lane, phase)
+        return res
     count = ln.judges_for(lane, {"judges": {"per_lane": st["per_lane"]}})
     if count == 0:
         res["status"] = NONE_FOR_LANE % lane
@@ -136,6 +182,10 @@ def build_inputs(root, change, phase, extras=(), project=None, diff_path=None, p
     pdef = machine[phase]
     items = list(pdef.get("produces") or []) + list(pdef.get("reads") or [])
     paths = []
+    if phase == "design_graphic":  # the delta, the mockups it applies to, the contrast result (REQ-W3-039)
+        paths, dropped = design_inputs(cdir, change)
+        res["dropped"].extend(dropped)
+        items = []
     for it in items:
         for p in _expand(cdir, it):
             q = "%s/%s/%s" % (pj.CHANGES_DIR.as_posix(), change, p)

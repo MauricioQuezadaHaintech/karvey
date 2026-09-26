@@ -1252,7 +1252,7 @@ class L51(LintCase):
         super().setUp()
         real = _path.PLUGIN_ROOT / "skills/karvey/rules"
         self.t.write(self.RULE, (real / "judges.md").read_text(encoding="utf-8"))
-        for ph in ("requirements", "architecture", "qa"):
+        for ph in ("requirements", "design_graphic", "architecture", "qa"):
             self.t.write(RULES + "/judges/%s.md" % ph, (real / "judges" / ("%s.md" % ph)).read_text(encoding="utf-8"))
 
     def test_pass(self):

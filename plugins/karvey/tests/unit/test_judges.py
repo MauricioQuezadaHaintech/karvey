@@ -1,6 +1,6 @@
 """Judges: closed inputs (architecture §1.7 of wave2-structural).
 
-@req REQ-W2-022 REQ-W2-023 REQ-W2-025 REQ-W2-033 REQ-W2-026 REQ-W2-029 REQ-W2-030 REQ-W2-031 REQ-W2-032
+@req REQ-W2-022 REQ-W2-023 REQ-W2-025 REQ-W2-033 REQ-W2-026 REQ-W2-029 REQ-W2-030 REQ-W2-031 REQ-W2-032 REQ-W3-032 REQ-W3-039
 """
 import json
 import unittest
@@ -261,6 +261,43 @@ class Collect(unittest.TestCase):
         self.assertIn("dropped: register edit (register_edit)", text)
         self.assertIn("dropped: register edit (risks)", text)
         self.assertEqual(reg.read_bytes(), before)
+
+
+class DesignJudge(unittest.TestCase):
+    """@req REQ-W3-039 — the design judge's closed inputs."""
+
+    def setUp(self):
+        self.t = g.TempDir()
+        self.root = self.t.path
+        f = make_project(self.root, spec=spec(lane="feature-ui"))
+        self.cdir = f.parent
+        (self.cdir / "mockup").mkdir()
+        (self.cdir / "mockup" / "index.html").write_text("<p>screen</p>\n")
+        (self.cdir / "mockup" / "big.html").write_text("x" * (300 * 1024))
+        (self.cdir / "design-spec.md").write_text("# Design spec\n\nApplies to the mockup in `mockup/`: `index.html`, "
+                                                  "`big.html`. The rest names `other.md`.\n")
+        (self.cdir / "design-delta.md").write_text("empty\n")
+        (self.cdir / "contrast.json").write_text("{}\n")
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def test_REQ_W3_039_one_design_lens_with_the_contrast_json(self):
+        r = jd.build_inputs(self.root, "feat-a", "design_graphic", project={})
+        self.assertEqual(r["lenses"], ["design"])
+        base = "docs/spec/changes/feat-a/"
+        self.assertEqual(r["inputs"], [base + "design-delta.md", base + "mockup/index.html", base + "contrast.json"])
+        self.assertTrue(r["rubric"].endswith("rules/judges/design_graphic.md"))
+
+    def test_REQ_W3_039_a_300_kb_mockup_is_dropped(self):
+        r = jd.build_inputs(self.root, "feat-a", "design_graphic", project={})
+        self.assertEqual(r["dropped"], ["dropped: docs/spec/changes/feat-a/mockup/big.html (300 KB > 200 KB)"])
+
+    def test_REQ_W3_039_standard_lane_phase_not_judged(self):
+        make_project(self.root, spec=spec(lane="standard"))
+        r = jd.build_inputs(self.root, "feat-a", "design_graphic", project={})
+        self.assertEqual(r["lenses"], [])
+        self.assertTrue(r["status"].startswith("judges: phase not judged"), r["status"])
 
 
 

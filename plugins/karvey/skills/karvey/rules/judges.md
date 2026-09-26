@@ -2,7 +2,7 @@
 
 A **judge** is a clean-context subagent that reads the artifacts of one phase through one **lens** and reports
 findings with a `file:line` citation. Judges run before the human gate of the phases in `project.json:judges.phases`
-(default: `requirements`, `architecture`, `qa`). They observe: they never route a finding, edit an artifact,
+(default: `requirements`, `design_graphic`, `architecture`, `qa`). They observe: they never route a finding, edit an artifact,
 approve a phase or write a `spec.json` state field. The human still decides at the gate, with their verdicts in
 the gate summary.
 
@@ -12,7 +12,7 @@ the gate summary.
 |---|---|---|
 | `enabled` | `true` | `false` → the gate summary says `judges: disabled by project setting` |
 | `mode` | `advisory` | `blocking` → `approve` refuses while a Critical/High judge finding of that phase is `open` |
-| `phases` | `requirements`, `architecture`, `qa` | where judges run |
+| `phases` | `requirements`, `design_graphic`, `architecture`, `qa` | where judges run (a phase the lane skips: `judges: phase not judged`) |
 | `lenses` | per phase, below | which lens sections of the rubric run (an unknown lens is reported) |
 | `per_lane` | `lanes.json` (`patch` 0, `standard` 2, `feature-ui` 3) | lenses per judged phase, integer ≥ 0 |
 | `cross_model` | `prefer` | another model family when one is available; otherwise intra-model, declared |
@@ -21,6 +21,9 @@ the gate summary.
 Default lenses (`defaults.json:judges.lenses`, one section each in the phase's rubric):
 
 - `requirements`: `domain`, `methods` — `judges/requirements.md`
+- `design_graphic`: `design` — `judges/design_graphic.md`. Its closed inputs are `design-delta.md`, the mockups the
+  design-spec's "Applies to" line names (each ≤ 200 KB; a larger one is `dropped:`) and `contrast.json` from
+  `karvey-contrast-check.py --delta` — the deterministic sub-score; design-graphic never scores itself (REQ-W3-039).
 - `architecture`: `security`, `methods`, `agents-cost` — `judges/architecture.md`
 - `qa`: `fiscal`, `security` — `judges/qa.md`. The **fiscal** always runs at `qa`, whatever the lane count.
 
