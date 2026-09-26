@@ -152,7 +152,7 @@ Total estimated time: 50 min (5 tasks)
 **Estimate:** 10 min  
 **Files:** `plugins/karvey/scripts/karvey_lib/upgrade_steps.py` (`STABLE_STATUSLINE`, §1.9); `plugins/karvey/scripts/karvey_lib/upgrade-steps.json` (`human: true`, `fix: null`, `params.recommend`); `plugins/karvey/tests/unit/test_upgrade_steps.py`  
 **Requirements:** REQ-UP-015, REQ-UP-023, REQ-UP-025  
-**Tests added:** fake-home versioned statusline → `human` with the stable command; no statusline → `human`; an own (non-Karvey) command → `nothing`, note "own statusline, left as is"; `global-config` shows a unified diff of only the Karvey-related keys; unreadable or invalid home JSON → `check-failed: unreadable`, the rest computed; the fake home is byte-identical after `plan` and `apply`  
+**Tests added:** fake-home versioned statusline → `human` with the stable command; no statusline → `human` (revised by F-21: `nothing` with a note, E1.F9.T1); an own (non-Karvey) command → `nothing`, note "own statusline, left as is"; `global-config` shows a unified diff of only the Karvey-related keys; unreadable or invalid home JSON → `check-failed: unreadable`, the rest computed; the fake home is byte-identical after `plan` and `apply`  
 **Done when:** `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_upgrade_steps.py' -v` passes.
 
 ### E1.F3.T5 [Backend] Report step `changes-in-flight`; the shipped catalogue is complete — _Depends: E1.F3.T4_

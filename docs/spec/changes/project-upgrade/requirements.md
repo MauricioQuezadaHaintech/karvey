@@ -260,7 +260,9 @@ THEN the plan and the skill mark it "no preview" and the skill asks for a separa
 ### 3.3 REQ-UP-013 — On the upgrade branch, never on integration or production
 WHEN the upgrade tool applies steps, it SHALL do so on the upgrade branch created from the project's
 integration branch — or, IF another clone already pushed the upgrade branch of the same version (known from
-local refs), from that remote upgrade branch, saying that a PR for it may already be open; IF the current
+local refs) and it builds on the integration branch, from that remote upgrade branch, listing the commits and
+files it brings and saying that a PR for it may already be open (a remote upgrade branch that does not build on
+the integration branch SHALL be refused, never checked out); IF the current
 branch is the integration or the production branch, THEN it SHALL switch to the upgrade branch before writing,
 and it SHALL NOT commit on integration or production.
 
@@ -643,4 +645,4 @@ owner reviews this list.
 | 2026-09-26 | 2 | F-25 | REQ-UP-006 | size cap on project reads, pruned and deadline-checked walks, a watchdog thread in the hook | Bounds the worst case at the budget plus a fixed grace instead of the 10 s hook timeout. |
 | 2026-09-26 | 2 | F-26 | REQ-UP-031 | extend the scan: aliases, `.open()` write modes, `os.open`, and an allow-list of the state / config tools' read functions | Makes "read-only by construction" hold for the cases the review found. |
 | 2026-09-26 | 2 | F-27 | REQ-UP-003, REQ-UP-016 | outside git: no offer and no record (not: allow the home state dir and guard it) | The record is per clone and the upgrade needs a branch (E-12); nothing is written under the home. |
-| 2026-09-26 | 2 | F-08 | REQ-UP-013 | base the branch on the remote upgrade branch when it exists locally, and say a PR may be open (not: a clone-unique suffix) | One PR per upgrade (REQ-UP-018) instead of one per clone; the second push becomes a fast-forward. |
+| 2026-09-26 | 2 | F-08 | REQ-UP-013 | base the branch on the remote upgrade branch when it exists locally and builds on the integration branch (else refused), list what it brings, fast-forward a local one behind it, and say a PR may be open (not: a clone-unique suffix) | One PR per upgrade (REQ-UP-018) instead of one per clone; the second push becomes a fast-forward. |

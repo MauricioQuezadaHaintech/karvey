@@ -197,3 +197,79 @@ Plus the test-phase findings: F-05, F-06, F-07, F-10 fixed; F-08 (spec-gap) and 
   was offered as a command, not opened.
 - **Two clones upgrading to the same version** (F-08): the second push is rejected. The recovery the person
   chooses is not specified.
+
+---
+
+## Re-run after karvey-iterate (2026-09-26) — dimensions D1–D4 on the new diff
+
+- **Scope:** `cecab37..HEAD` on `feature/project-upgrade`: requirements rev. 2 (F-08, F-21..F-27; REQ-UP-003, 006,
+  012, 013, 016, 020, 023, 026, 031 rewritten in place, the recommended option of each listed in `requirements.md`
+  § Revision history for the owner), architecture rev. 2, tasks E1.F9.T1..T5, and the emergent F-09 and F-28 fixed.
+  F-29 (duplicated helpers) and F-04 (fingerprint at the release) are deferred with their reason.
+- **Method:** two read-only reviewer subagents in parallel, D1 + D2 and D3 + D4. Each reproduced its cases in
+  throw-away repositories under the scratch directory, with an isolated HOME and git config. D5–D9 were not re-run:
+  there is no new variable, no version change beyond `[Unreleased]`, no UI and no standards; the second opinion of
+  the first review stands.
+- **Result:** 9 new findings (F-31..F-39): 0 critical, 0 high, 3 medium, 6 low (8 bugs, 1 spec-gap). Every one is
+  fixed in this iteration, each with a regression test that fails on the reviewed code where the defect is
+  behavioural (verified by swapping the previous file back in for the L-38 and skill-fetch cases).
+
+| # | Dim. | Severity | Problem | Resolution |
+|---|---|---|---|---|
+| F-31 | D1 | medium | F-28 covered only the plan; dry-run summaries, diff headers and report lines still printed project paths raw | `one_line` / `printable_block` at the report boundary |
+| F-32 | D1 | medium | any `origin/chore/karvey-upgrade-<v>` became the base, even an unrelated branch, checked out silently | only when it builds on the integration branch, else refused; commits and files listed to the person |
+| F-35 | D1/D3 | medium | L-38 gaps: `io.open`/`codecs.open`, `Path.rename`, `os.exec*`, star imports, `p = probe`, `getattr(probe.state, …)` | caught (6 more test cases); residual `.replace()` and computed `getattr` names are accepted limits of a static scan |
+| F-33 | D1/D4 | low | the skill's fetch did not follow a force-push nor drop a deleted remote branch | pattern refspec with `+` and `--prune` |
+| F-34 | D2 | low | the new walk skipped symlinked directories that the old `Path.glob` followed | followed while inside the root, once each |
+| F-36 | D4 | low | a local upgrade branch behind the pushed one was not fast-forwarded (non-fast-forward push again) | fast-forward when strictly behind |
+| F-37 | D4 | low | no tool signal for "outside git" in the skill | `plan --json` carries `in_git` |
+| F-38 | D4 | low | `test-hooks.sh` called `write_seen` outside git (traceback); a `[karvey]` prefix on one refusal | helper tolerant; prefix removed |
+| F-39 | D3 | low | stale sentences in the init skill, architecture (Probe allow-list, A-08, E-11), tasks, spec-delta, hooks README, a docstring | fixed in the text |
+
+**Verified clean (re-run):**
+- the rewritten requirements match `spec-delta.md` word for word, and match architecture rev. 2 and the code;
+- "Ask ONE question", "no statusline → human", "archive included" (for the step) and the XDG seen record outside
+  git are gone from the method text;
+- the three `Probe.glob` patterns give the same results as before, and `.git`, `node_modules` and nested work
+  trees are pruned;
+- `PROJECT_READ_MAX` refuses without reading;
+- the watchdog never lets a late probe record anything, and daemon threads do not block the exit;
+- `write_seen` and the hook write nothing outside git;
+- `ensure_branch`'s new keys have two consumers only (`branch`, `apply`);
+- the F-24 refusal does not break the skill flow (branch before dry-run) or the manual script;
+- exit codes and the envelope are reused;
+- no organisation, person, id, home path or secret appears in the new public text.
+
+**STRIDE delta:**
+- **T** (Tampering): F-32 (content from another clone) and F-31 (relayed text) are fixed.
+- **D** (Denial of service): F-25 is closed by the read cap, the pruned deadline-checked walk and the watchdog.
+- **I** (Information disclosure): no change.
+- **E** (Elevation of privilege): L-38 is stronger (F-26, F-35).
+
+**Security gate: PASS** (no critical or high).
+
+**Gate after the fixes:**
+
+| Suite | Result |
+|---|---|
+| unit | 888 OK |
+| regression | 10 OK |
+| test-hooks | 66/66 |
+| guard tables | 396/396 runs |
+| page | 22/22 |
+| lint | 0 errors (5 expected warnings) |
+| validate --all | 0 errors |
+
+One guard-table run failed once on the time limit of `pg-26` / `pg-27` while the machine was loaded (load average
+7). The re-run was green, and the code under those cases is unchanged.
+
+**Convergence:**
+- no `bug` or `spec-gap` in `findings.md` is `open` or `routed`;
+- the emergent F-04 and F-29 are `deferred` with their reason, for the backlog;
+- the security gate passes.
+
+The change is ready for the owner's QA approval. The approval is not recorded by the agent.
+
+### Pre-merge checklist (update)
+- [x] Open spec-gaps routed by `/karvey-iterate` (F-08, F-21..F-27), then QA re-run (D1–D4)
+- [ ] QA approval by the owner (not recorded by the agent)

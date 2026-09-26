@@ -4,10 +4,11 @@ Against the living spec `docs/spec/specs/method/spec.md` (capability `method`). 
 in `requirements.md`; the living spec keeps the compact form it already uses. `karvey-archive` merges this
 file with `karvey-spec-merge`.
 
-Summary: **ADDED 32** (REQ-UP-001..032) · **MODIFIED 0** · **REMOVED 0**. Revision 2 (2026-09-26,
-`karvey-iterate`: F-08, F-21..F-27) rewrote REQ-UP-003, 006, 012, 013, 016, 020, 023, 026 and 031 in place (see
-`requirements.md` § Revision history); they are still ADDED, since none is in the living spec yet. The existing settings notice and
-REQ-W1-045..047 (session bounds) are unchanged: the offer lives inside those bounds (REQ-UP-006).
+Summary: **ADDED 32** (REQ-UP-001..032) · **MODIFIED 0** · **REMOVED 0**. Revision 2 (2026-09-26, `karvey-iterate`:
+F-08, F-21..F-27) rewrote REQ-UP-003, 006, 012, 013, 016, 020, 023, 026 and 031 in place, and REQ-UP-005's trace
+line (see `requirements.md` § Revision history); they are still ADDED, since none is in the living spec yet. The
+existing settings notice and REQ-W1-045..047 (session bounds) are unchanged: the offer lives inside those bounds
+(REQ-UP-006).
 
 ## ADDED Requirements
 
@@ -32,7 +33,7 @@ Traced to `docs/spec/changes/project-upgrade/prd.md` · Decision D-20.
 ### Applying the plan
 - **REQ-UP-011** — Only the steps the person picked. WHEN the upgrade tool applies a plan, it SHALL apply only the step ids passed to it; IF an id is unknown or not applicable, THEN it SHALL refuse before changing anything and name the id. *(Traces: PRD §Goal ("applies only what the person approves"))*
 - **REQ-UP-012** — Dry-run before every apply. WHEN a step that supports dry-run is applied, the method SHALL show its dry-run result to the person before the write; `apply --dry-run` SHALL show every selected step's result and write nothing, and SHALL preview the tree `apply` writes: off the upgrade branch, IF the current tree differs from the tree the upgrade branch starts from, THEN it SHALL refuse and name the command that creates the upgrade branch. *(Traces: PRD §Goal · F-24 (rev. 2: a dry-run on a local integration branch ahead of its remote previewed a tree `apply` never writes))*
-- **REQ-UP-013** — On the upgrade branch, never on integration or production. WHEN the upgrade tool applies steps, it SHALL do so on the upgrade branch created from the project's integration branch — or, IF another clone already pushed the upgrade branch of the same version (known from local refs), from that remote upgrade branch, saying that a PR for it may already be open; IF the current branch is the integration or the production branch, THEN it SHALL switch to the upgrade branch before writing, and it SHALL NOT commit on integration or production. *(Traces: PRD §Goal ("on a branch, through one PR") · owner's global rules · D-03, D-15 · F-08 (rev. 2: the offer is per clone, the branch per version; a second clone's push was rejected as non-fast-forward))*
+- **REQ-UP-013** — On the upgrade branch, never on integration or production. WHEN the upgrade tool applies steps, it SHALL do so on the upgrade branch created from the project's integration branch — or, IF another clone already pushed the upgrade branch of the same version (known from local refs) and it builds on the integration branch, from that remote upgrade branch, listing the commits and files it brings and saying that a PR for it may already be open (a remote upgrade branch that does not build on the integration branch SHALL be refused, never checked out); IF the current branch is the integration or the production branch, THEN it SHALL switch to the upgrade branch before writing, and it SHALL NOT commit on integration or production. *(Traces: PRD §Goal ("on a branch, through one PR") · owner's global rules · D-03, D-15 · F-08 (rev. 2: the offer is per clone, the branch per version; a second clone's push was rejected as non-fast-forward))*
 - **REQ-UP-014** — Idempotent. WHEN `apply` runs twice with the same steps on the same project, the second run SHALL report "nothing to do" for every step and SHALL change no file. *(Traces: PRD §Key idea)*
 - **REQ-UP-015** — Human steps are shown, never done. IF a step is declared as needing a human, THEN the upgrade tool SHALL print what the person must do (and the diff, when there is one) and SHALL NOT perform it; the step SHALL stay in the plan until its check passes. *(Traces: PRD §Out of scope · Decisions: D-01, D-11)*
 - **REQ-UP-016** — Nothing under the user's home is written. The upgrade tool SHALL NOT write any file outside the project's working tree and the clone's git dir; for a project outside git it SHALL record nothing (the seen-version record lives only in a clone's git dir). *(Traces: PRD §Out of scope · Decisions: D-01, D-11 · F-27 (rev. 2: outside git the record fell back to a state directory under the home))*

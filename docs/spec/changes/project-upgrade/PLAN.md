@@ -1,7 +1,7 @@
 # Plan: project-upgrade
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend
-**Created:** 2026-09-25 | **Status:** 👀 QA review written (security gate PASS; not approved: spec-gaps open for karvey-iterate) — E1.F8.T4 (prod OK) is `[human]`
+**Created:** 2026-09-25 | **Status:** 👀 QA re-run after karvey-iterate rev. 2 (every spec-gap closed, emergent deferred with reason; security gate PASS; QA approval is the owner's) — E1.F8.T4 (prod OK) is `[human]`
 **Skipped (planned):** mockup, design_graphic (no UI), infra (no cloud)
 **Release target:** the release right after 3.12.0 · **Flow:** trunk (`feature/project-upgrade` → PR → `main`) · **Decisions:** D-20
 
@@ -85,6 +85,14 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F8.T3 [Backend] Release docs: `[Unreleased]` declares the project upgrade — est: 8min (depends E1.F8.T2)
 - [ ] E1.F8.T4 [human] Prod OK for the release (D-10), inside `karvey-deploy` — executor: owner (depends E1.F8.T3)
 
+### Feature E1.F9: Iteration rev. 2 (karvey-iterate, 2026-09-26)
+
+- [x] E1.F9.T1 [Backend] Steps: F-21 statusline note, F-22 archive, F-23 init defaults, F-28 one-line strings — est: 10min
+- [x] E1.F9.T2 [Backend] F-08 remote upgrade branch as base, F-24 dry-run base check — est: 10min (depends E1.F9.T1)
+- [x] E1.F9.T3 [Backend] F-25 bounded probe + watchdog, F-27 silent outside git — est: 8min (depends E1.F9.T2)
+- [x] E1.F9.T4 [Backend] F-09 offer wording — est: 4min (depends E1.F9.T3)
+- [x] E1.F9.T5 [Backend] F-26 L-38 scan — est: 8min (depends E1.F9.T1) (P)
+
 ---
 
 ## Task status
@@ -117,6 +125,11 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F8.T2 [human] | ✅ done | — | 15 | 0 | Executed: maintainer agent, headless under D-21 · 2026-09-25 · `qa/manual/e2e-2026-09-25.md` (PASS after F-05, F-06, F-07) |
 | E1.F8.T3 [Backend] | ✅ done | 8 | 4 | 0 |  |
 | E1.F8.T4 [human] | 🙋 awaiting-human | — | — | — | executor: owner — prod OK inside karvey-deploy (D-10), after E1.F8.T3 |
+| E1.F9.T1 [Backend] | ✅ done | 10 | 8 | 0 | tests red first (F-21, F-22, F-23, F-28) |
+| E1.F9.T2 [Backend] | ✅ done | 10 | 8 | 0 | tests red first (F-08, F-24) |
+| E1.F9.T3 [Backend] | ✅ done | 8 | 7 | 0 | tests red first (F-25, F-27) |
+| E1.F9.T4 [Backend] | ✅ done | 4 | 4 | 0 | test red first (F-09); line length bound kept |
+| E1.F9.T5 [Backend] | ✅ done | 8 | 8 | 0 | test red first (F-26, 10 cases) |
 
 `estimate_min` is written here once; impl fills the two actual columns and never edits the estimate.
 
@@ -131,19 +144,17 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | 2026-09-25 | impl | 23 agent tasks done (E1.F1.T1 … E1.F8.T3), one commit each with its `[Unreleased]` line; whole-repo gate green (unit 860, regression 10, test-hooks 66, guard tables 325 cases / 396 runs, page 22, lint 0 errors, validate 0 errors). Findings F-01..F-04: L-38 treats a `since` newer than `plugin.json` as a warning while `[Unreleased]` holds entries (F-01, deviation from §1.8); `Probe.plugin_read` / `plugin_json` added for the shipped shims and schema (F-02); the test-hooks path and its isolated HOME (F-03); re-record the fingerprint if 3.12.0 ships first (F-04). E1.F8.T3 done before the `[human]` E1.F8.T2 on the owner's instruction (release text only). E1.F8.T2 and E1.F8.T4 await the owner. |
 | 2026-09-25 | test | Whole-repo gate green (unit 857, regression 10, test-hooks 66, guard tables 396 runs, page 22, lint 0 errors, validate 0 errors); E1.F8.T2 run headless under D-21 in a throw-away repo with a bare origin: offer → accept → PR offered, second session silent, decline until the version changes, manual script 6/6. F-05, F-06, F-07, F-10 bugs fixed with regression tests; F-08 spec-gap and F-09 emergent open for karvey-iterate. 32/32 REQ-UP PASS. Benchmark: startup hook median 114 ms with the offer, 113 ms without. `test_plan.md`, `test_evidence.md`. |
 | 2026-09-25 | qa | 9-dimension review `qa/REVISION_PR_feature-project-upgrade_20260925.md`: 20 findings (0 critical, 3 high, 8 medium, 9 low); security gate PASS; second opinion intra-model (FAIL on the reviewed code). Bugs F-11..F-20, F-30 fixed in the iterate micro-loop with regression tests (unit 870, all gates green). Open: spec-gaps F-08, F-21..F-27; emergent F-09, F-28, F-29. QA not approved (owner). |
+| 2026-09-26 | iterate | `karvey-iterate` rev. 2 under D-21: spec-gaps F-08, F-21..F-27 resolved by requirements rev. 2 (REQ-UP-003, 006, 012, 013, 016, 020, 023, 026, 031 rewritten; recommended option taken, listed in `requirements.md` § Revision history for the owner), architecture rev. 2, tasks E1.F9.T1..T5 with red-first regression tests; F-01, F-02 folded into architecture §1.8 / §1.4; emergent F-09, F-28 fixed, F-29 deferred (docstring fixed), F-04 left to karvey-deploy. QA dimensions D1–D4 re-run on the new diff: 9 more findings F-31..F-39 (0 critical/high, 3 medium) all fixed with regression tests; security gate PASS; converged (appended to the REVISION_PR). QA approval is the owner's. |
 
 ## QA Review
 
-Document: `qa/REVISION_PR_feature-project-upgrade_20260925.md` (2026-09-25). Security gate: PASS. Verdict: not approved: convergence needs the spec-gaps routed.
+Document: `qa/REVISION_PR_feature-project-upgrade_20260925.md` (2026-09-25, re-run 2026-09-26). Security gate: PASS.
+Verdict: converged — no open or routed bug/spec-gap; emergent F-04, F-29 deferred with reason. Awaiting the owner's
+QA approval (not recorded by the agent).
 
-| Finding | Severity | Type | Pending action |
+| Finding | Severity | Type | Resolution |
 |---|---|---|---|
-| F-08 | low | spec-gap | `branch` when `origin/chore/karvey-upgrade-<v>` already exists (two clones) → `/karvey-iterate` |
-| F-21 | medium | spec-gap | REQ-UP-005 vs REQ-UP-023: no statusline must not keep the offer alive → `/karvey-iterate` |
-| F-22 | medium | spec-gap | archived `spec.json` migrated vs E-22 / D-14 → `/karvey-iterate` |
-| F-23 | medium | spec-gap | karvey-init does not write `plan_marker_ttl_min` → first-session offer → `/karvey-iterate` |
-| F-24 | low | spec-gap | dry-run base vs upgrade-branch base → `/karvey-iterate` |
-| F-25 | low | spec-gap | probe size cap / deadline-bound glob / hook watchdog → `/karvey-iterate` |
-| F-26 | low | spec-gap | L-38 scan gaps → `/karvey-iterate` |
-| F-27 | low | spec-gap | XDG state under `$HOME` outside git vs REQ-UP-016 → `/karvey-iterate` |
-| F-09, F-28, F-29 | low | emergent | backlog via `/karvey-iterate` |
+| F-08, F-21..F-27 | low–medium | spec-gap | requirements rev. 2 (recommended option each, listed for the owner), implemented, closed |
+| F-09, F-28 | low | emergent | fixed (cheap and clearly right), closed |
+| F-31..F-39 | low–medium | bug / spec-gap | QA re-run findings, fixed with regression tests, closed |
+| F-04, F-29 | low | emergent | deferred with reason → backlog (orchestrator) |
