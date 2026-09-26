@@ -283,7 +283,7 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F16.T1 [Backend] | ✅ done | 30 | 15 | 0 | `[Unreleased]` → `[3.12.0] - 2026-09-26` (Why, behaviour change, compatibility, 3.10.0 correction); plugin/marketplace/project.json 3.12.0; `pre_3_12_history.released_on`; method page 3.12.0 current in 5 languages; lint 0 errors |
 | E1.F16.T2 [human] | ⬜ todo | — | — | — | [human] revision 1 (F-49): auto mode refuses the agent's copy of the live files |
 | E1.F16.T3 [human] | ⬜ todo | — | — | — | [human] |
-| E1.F16.T4 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F16.T4 [Backend] | 👀 review | 20 | — | — | `advance … deploying`; PR #24 out of draft; blocked-merge evidence and CI result in the PR body; required checks await the owner's branch protection (T3) |
 | E1.F16.T5 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F16.T6 [Backend] | ⬜ todo | 20 | — | — |  |
 | E1.F16.T7 [human] | ⬜ todo | — | — | — | [human] |
