@@ -422,6 +422,25 @@ def semantic_project(data, strict, file):
     return out
 
 
+GATE_MODES = ("granular", "merged")
+
+
+def gate_mode(root, granular_flag=False, project=None, version=None):
+    """``(mode, source)`` of the human gates: ``--granular-gates`` wins for one invocation, else
+    ``project.json:gates`` through the check-mode registry (``gates.merged``: 3.13 granular, 4.0 merged).
+    An invalid project value is refused, never silently defaulted (REQ-W2-039)."""
+    if granular_flag:
+        return "granular", "--granular-gates"
+    if project is None:
+        project, _ = pj.load_project_json(root)
+    val = project.get("gates") if isinstance(project, dict) else None
+    if val is not None and val not in GATE_MODES:
+        raise Refused("project.json:gates must be one of %s (got %r)" % (", ".join(GATE_MODES), val),
+                      code="state.gates")
+    res = modes.resolve(root, "gates.merged", project=project, version=version)
+    return res["mode"], res["source"]
+
+
 PRE_312_REASON = "pre-3.12 recorded history (D-14)"
 _DATE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}")
 
@@ -1873,6 +1892,31 @@ def cmd_approve_gate(args, root):
     return kl.EXIT_OK, res, [], warnings, human
 
 
+def cmd_gate(args, root):
+    """``gate <change> <phase> [--granular-gates]``: the gate mode and whether this phase closes its gate —
+    the question the one closing block of ``rules/gates.md`` asks before presenting a gate."""
+    pdef = phase_def(args.phase)
+    if pdef is None or not pdef.get("approval"):
+        raise Refused("unknown or non-approvable phase %r" % args.phase, code="state.unknown_phase")
+    mode, source = gate_mode(root, args.granular_gates)
+    _, loaded = load_change(root, args.change)
+    gate = pdef.get("gate")
+    later = []
+    if gate:
+        ids = gate_phases(gate)
+        after = ids[ids.index(args.phase) + 1:]
+        later = [p for p in after if _key_of(p) != "prod" and approval_state(loaded.data, p) != "skipped"]
+    closes = mode == "granular" or not later
+    ask = ("approve-gate %s %s" % (args.change, gate)) if mode == "merged" and closes else \
+        ("approve %s %s" % (args.change, args.phase)) if closes else None
+    res = {"change": args.change, "phase": args.phase, "gate": gate, "mode": mode, "source": source,
+           "closes_gate": closes, "pending_in_gate": later, "record_with": ask}
+    human = ("%s: gates %s (%s); %s %s" % (args.change, mode, source, args.phase,
+             "closes the %s gate: ask the one gate question, record with %s" % (gate, ask) if closes else
+             "does not close the %s gate: record generated and continue (next in gate: %s)" % (gate, later[0])))
+    return kl.EXIT_OK, res, [], [], human
+
+
 def cmd_outcome(args, root):
     """``outcome <change> <phase|gate> changes_requested``: the human asked for changes (REQ-W2-001, 042)
     or answered a plan-rule question (``--kind plan-exception``, REQ-W2-038). The phase is not changed."""
@@ -1908,6 +1952,7 @@ def cmd_outcome(args, root):
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
             "check-prod": cmd_check_prod, "outcome": cmd_outcome, "approve-gate": cmd_approve_gate,
+            "gate": cmd_gate,
             "deploy-record": cmd_deploy_record, "lane": cmd_lane, "lane-evidence": cmd_lane_evidence,
             "lane-check": cmd_lane_check, "judge-run": cmd_judge_run}
 
@@ -1974,6 +2019,10 @@ def build_parser():
     ag.add_argument("--role")
     ag.add_argument("--ref")
     ag.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
+    gm = sub.add_parser("gate", parents=[common], help="gate mode and whether a phase closes its gate")
+    gm.add_argument("change")
+    gm.add_argument("phase")
+    gm.add_argument("--granular-gates", action="store_true", help="force granular gates for this invocation")
     oc = sub.add_parser("outcome", parents=[common], help="record changes_requested at a gate (the phase stays)")
     oc.add_argument("change")
     oc.add_argument("target", metavar="PHASE|GATE")

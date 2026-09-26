@@ -178,5 +178,47 @@ class Imported(Base):
                      "not human")
 
 
+class Mode(Base):
+    """@req REQ-W2-039"""
+    def spec(self):
+        return {"phase": "architecture", "skipped": {"infra": "no cloud"},
+                "approvals": {"requirements": ok(), "architecture": {"generated": True, "approved": False}},
+                "phase_history": hist("init", "requirements", "architecture")}
+
+    def test_REQ_W2_039_313_without_setting_is_granular(self):
+        self.put(self.spec())
+        c, env = self.st("gate", "feat-a", "architecture")
+        self.assertEqual(c, 0, env)
+        self.assertEqual((env["result"]["mode"], env["result"]["closes_gate"]), ("granular", True))
+        self.assertEqual(env["result"]["record_with"], "approve feat-a architecture")
+
+    def test_merged_architecture_does_not_close_how(self):
+        self.put(self.spec(), project=dict(PROJECT, gates="merged"))
+        c, env = self.st("gate", "feat-a", "architecture")
+        self.assertEqual((env["result"]["mode"], env["result"]["closes_gate"]), ("merged", False))
+        self.assertEqual(env["result"]["pending_in_gate"], ["tasks"])
+        c, env = self.st("gate", "feat-a", "tasks")
+        self.assertEqual((env["result"]["closes_gate"], env["result"]["record_with"]),
+                         (True, "approve-gate feat-a how"))
+
+    def test_granular_flag_wins_over_merged(self):
+        self.put(self.spec(), project=dict(PROJECT, gates="merged"))
+        c, env = self.st("gate", "feat-a", "architecture", "--granular-gates")
+        self.assertEqual((env["result"]["mode"], env["result"]["source"]), ("granular", "--granular-gates"))
+
+    def test_REQ_W2_039_invalid_value_refused(self):
+        self.put(self.spec(), project=dict(PROJECT, gates="fused"))
+        c, env = self.st("gate", "feat-a", "architecture")
+        self.assertEqual(c, 3, env)
+        self.assertIn("fused", env["errors"][0]["message"])
+        c, env = self.st("validate", str(self.root / "docs/spec/project.json"))
+        self.assertNotEqual(c, 0, env)
+
+    def test_40_default_from_the_registry_is_merged(self):
+        from _state import state
+        self.assertEqual(state.gate_mode(self.root, project={}, version="4.0.0"), ("merged", "default 4.0"))
+        self.assertEqual(state.gate_mode(self.root, project={}, version="3.13.0"), ("granular", "default 3.13"))
+
+
 if __name__ == "__main__":
     unittest.main()
