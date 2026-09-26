@@ -360,6 +360,12 @@ class StrictModeFromRegistry(Base):
         code, env = run_json("validate", str(f), "--root", str(self.root))
         self.assertIn(("state.lane_missing", "$.lane"), codes(env, "errors"), env)
         self.assertNotEqual(code, 0)
+        # BUG-72 (F-43): the remedy works outside init (lane set is refused there)
+        msg = [i["message"] for i in env["errors"] if i["code"] == "state.lane_missing"][0]
+        self.assertIn("--accept-proposed", msg)
+        c2, env2 = run_json("validate", str(f), "--root", str(self.root), "--fix", "--accept-proposed")
+        self.assertEqual(c2, 0, env2)
+        self.assertIn("lane", json.loads(f.read_text(encoding="utf-8")))
 
     def test_advisory_keeps_validate_quiet_about_lane(self):
         code, env = self.validate(spec())

@@ -135,6 +135,26 @@ class Release(Base):
         self.refused(("approve-gate", "feat-a", "release", "--by", "agent", "--role", "auto", "--ref", "D-1"),
                      "never automatic")
 
+    def test_project_wide_prod_marker_does_not_approve_prod_at_the_release_gate(self):
+        """BUG-70 (F-41): the release gate followed the `_project` fallback, so one project-wide prod phrase
+        approved production of any change (the rule BUG-41 set for `approve prod`)."""
+        self.put(self.spec())
+        ap.write_marker(self.root, "prod", "_project", "aprobado, pasa a prod")
+        c, env = self.gate("release")
+        self.assertEqual(c, 0, env)
+        self.assertIn("pending", env["result"]["prod"])
+        self.assertIsNone(ap.read_ledger(self.root, "feat-a")[0])
+
+    def test_release_gate_consumes_the_prod_marker(self):
+        """BUG-70 (F-41): one approval, one change — the marker is consumed once prod is written."""
+        self.put(self.spec())
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
+        c, env = self.gate("release")
+        self.assertEqual(c, 0, env)
+        m, status = ap.read_marker(self.root, "feat-a")
+        self.assertEqual(status, "ok")
+        self.assertIsNotNone(m["consumed_at"])
+
     def test_auto_release_without_prod_marker_records_qa(self):
         self.put(self.spec())
         c, env = self.gate("release", role="auto")

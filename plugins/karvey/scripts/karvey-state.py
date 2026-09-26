@@ -527,7 +527,8 @@ def validate_data(data, kind, strict, file=None):
         issues += semantic_spec(data, strict, file)
         if strict and "lane" not in data and data.get("phase") != "archived" and not is_archived_path(file):
             # BUG-61: architecture §1.2 — a missing lane is an error under strict (4.0); `next` warns in advisory
-            issues.append(kl.issue("state.lane_missing", "no lane in spec.json: set one with lane set",
+            issues.append(kl.issue("state.lane_missing", "no lane in spec.json: propose one with `karvey-state.py "
+                                   "validate --fix` and apply it with `--accept-proposed` (REQ-W2-087)",
                                    severity="error", file=file, path="$.lane"))
         issues = _downgrade_pre_312(issues, data, file)
     else:
@@ -1629,7 +1630,8 @@ def cmd_approve(args, root):
             raise Refused("prod --ref must be a D-NN or a PR approval URL (got %r)" % ref, code="state.ref")
         if getattr(args, "manifest", False):
             return _approve_prod_manifest(args, root, by, date, ref)
-        marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root))
+        marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root),
+                                                     project_scope=False)  # BUG-41
         if marker is None:
             raise Refused("production approval needs a prod-kind approval marker: the human's own message must "
                           "contain an approval word and a production word (D-10); none is valid for %s (%s)"
@@ -1637,6 +1639,7 @@ def cmd_approve(args, root):
                           code="state.no_prod_marker")
         rec = {"by": by, "role": "human", "date": date, "ref": ref, "evidence": approval.evidence(marker, scope)}
         approval.record_prod(root, args.change, rec)
+        approval.consume(root, scope, created_at=marker.get("created_at"))  # BUG-41: one approval, one change
         res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
         return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s); spec.json " \
                                         "untouched (D-03)" % (args.change, ref)
@@ -2013,7 +2016,9 @@ def cmd_approve_gate(args, root):
                       result={"missing": missing})
     pmarker = None
     if prod_in_gate:
-        pmarker, pscope, _ = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root))
+        # BUG-70 (F-41): the release gate records prod only from the change's own prod marker (BUG-41)
+        pmarker, pscope, _ = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root),
+                                                 project_scope=False)
         if pmarker is not None and args.role == "auto":
             raise Refused("production approval is never automatic: the release gate would record prod; answer "
                           "it as a human", code="state.auto_prod")
@@ -2049,6 +2054,7 @@ def cmd_approve_gate(args, root):
     if write_prod:  # after the spec.json write: the ledger never runs ahead of the phases it closes
         approval.record_prod(root, args.change, {"by": by, "role": "human", "date": date, "ref": ref,
                                                  "evidence": approval.evidence(pmarker, pscope)})
+        approval.consume(root, pscope, created_at=pmarker.get("created_at"))  # BUG-70: one approval, one change
     res = {"change": args.change, "gate": args.gate, "approved": covered, "already_approved": already,
            "skipped": passed, "prod": res_prod, "file": rel(root, path)}
     human = "%s: %s gate approved by %s (%s, ref %s): %s" % (args.change, args.gate, by, args.role, ref,

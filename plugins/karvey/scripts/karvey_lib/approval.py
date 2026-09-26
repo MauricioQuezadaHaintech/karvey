@@ -221,13 +221,15 @@ def check_marker(marker, root, scope=None, ttl_min=None, now=None, kinds=KINDS):
     return True, "ok"
 
 
-def find_valid(root, change=None, kinds=KINDS, ttl_min=None, now=None):
-    """The first valid marker for ``(repo, change)`` then ``(repo, _project)``.
+def find_valid(root, change=None, kinds=KINDS, ttl_min=None, now=None, project_scope=True):
+    """The first valid marker for ``(repo, change)`` then ``(repo, _project)`` (the latter only with
+    ``project_scope``; a production approval is always of one change, BUG-41).
 
     Returns ``(marker, scope, reasons)``; ``marker`` is None when none is valid, and
     ``reasons`` maps each scope tried to why it did not count. A corrupt file is audited.
     """
-    scopes = ([change] if change and valid_scope(change) and change != SCOPE_PROJECT else []) + [SCOPE_PROJECT]
+    scopes = ([change] if change and valid_scope(change) and change != SCOPE_PROJECT else []) + \
+        ([SCOPE_PROJECT] if project_scope else [])
     reasons = {}
     for scope in scopes:
         m, status = read_marker(root, scope)

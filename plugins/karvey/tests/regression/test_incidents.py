@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-22, BUG-48..BUG-69 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-22, BUG-48..BUG-72 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -211,6 +211,18 @@ INDEX = {
     ],
     "BUG-69": [  # The evidence wrapper wrote the user's home path into committed evidenc (F-40)
         ('unit', 'test_evidence.py', 'Evidence.test_home_directory_is_collapsed'),
+    ],
+    "BUG-70": [  # The release gate recorded production from a project-wide prod marker a (F-41)
+        ('unit', 'test_state_gates.py', 'Release.test_project_wide_prod_marker_does_not_approve_prod_at_the_release_gate'),
+        ('unit', 'test_state_gates.py', 'Release.test_release_gate_consumes_the_prod_marker'),
+        ('unit', 'test_state_approve.py', 'ProdMarkerScope.test_project_wide_prod_marker_is_not_a_prod_approval_of_a_change'),
+        ('unit', 'test_state_approve.py', 'ProdMarkerScope.test_prod_marker_is_consumed_by_the_approval'),
+    ],
+    "BUG-71": [  # Evidence redaction hid ordinary flags' arguments (`--passWithNoTests < (F-42)
+        ('unit', 'test_evidence.py', 'Evidence.test_ordinary_flags_that_contain_a_secret_word_are_kept'),
+    ],
+    "BUG-72": [  # Under strict mode a missing lane named a remedy that is refused outsid (F-43)
+        ('unit', 'test_state_validate.py', 'StrictModeFromRegistry.test_registry_blocking_is_strict_and_missing_lane_errors'),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

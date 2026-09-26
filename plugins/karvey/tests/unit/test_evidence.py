@@ -77,6 +77,19 @@ class Evidence(unittest.TestCase):
         self.assertIn("DB_SECRET=***", argv)
         self.assertIn("https://***@host.example/x", argv)
 
+    def test_ordinary_flags_that_contain_a_secret_word_are_kept(self):
+        """@req REQ-W2-073 — BUG-71 (F-42): `--passWithNoTests` or `--author` are not secrets; the argument after
+        them (a test file the trace must see) stays."""
+        args = [sys.executable, "-c", "pass", "--passWithNoTests", "src/auth/login.test.js", "--author", "someone",
+                "--authToken", "tk777", "--db-pass", "pw888"]
+        p = run(self.t.path, *args)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        argv = json.loads(self.ev.read_text().splitlines()[0])["argv"]
+        for keep in ("src/auth/login.test.js", "someone"):
+            self.assertIn(keep, argv)
+        for s in ("tk777", "pw888"):
+            self.assertNotIn(s, argv)
+
     def test_home_directory_is_collapsed(self):
         """@req REQ-W2-073 — BUG-69 (F-40): a user's home path never reaches the committed evidence (it names
         the user); it is written as ``~``. The file name stays, so the trace still matches test files."""

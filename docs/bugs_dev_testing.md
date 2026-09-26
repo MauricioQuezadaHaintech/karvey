@@ -1350,3 +1350,93 @@ Files: `plugins/karvey/tests/unit/test_evidence.py`. `test_evidence.py` `Evidenc
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-40 |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-70 — The release gate recorded production from a project-wide prod marker and never consumed it
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`approve-gate … release`), plugins/karvey/scripts/karvey_lib/approval.py (`find_valid`)
+- **Change / origin:** wave2-structural — finding F-41 (QA D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+No single active change; the human types a prod phrase (marker scope `_project`); `approve-gate feat-a release --role human --ref D-NN`, then the same for another change.
+
+### Actual vs expected
+- Actual: both changes got a prod record in the ledger from the one marker, which stayed live.
+- Expected (D-10, REQ-W1-023, the rule BUG-41 set for `approve prod`): prod is the human's approval of that change; one approval, one change.
+
+### Root cause
+The new release-gate path used `find_valid` with the `_project` fallback and did not consume the marker.
+
+### Fix
+`find_valid(…, project_scope=False)` for prod (same signature as the Wave 1 fix) in `approve prod` and in the release gate, and the marker is consumed after the ledger write. The manifest path (`approve prod --manifest`) keeps one approval for every change of the manifest (REQ-W2-052) and consumes it once.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_state_gates.py`, `plugins/karvey/tests/unit/test_state_approve.py`. `test_state_gates.py` `Release` (two cases) and `test_state_approve.py` `ProdMarkerScope` (two cases), red on the pre-fix scripts. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-41 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-71 — Evidence redaction hid ordinary flags' arguments (`--passWithNoTests <test>`)
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-evidence.py (`redact_argv`)
+- **Change / origin:** wave2-structural — finding F-42 (QA D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`karvey-evidence.py -- npx jest --passWithNoTests src/auth/login.test.js`.
+
+### Actual vs expected
+- Actual: the test path became `***`, so the trace reported the test as not run (a regression of BUG-55).
+- Expected: only secret names hide their value.
+
+### Root cause
+The secret-word regex matched substrings (`pass`, `auth`).
+
+### Fix
+A name is secret when one of its `-`/`_`/`.` words is a secret word or ends with one (`authToken`); `--passWithNoTests` and `--author` are not.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_evidence.py`. `test_evidence.py` `Evidence.test_ordinary_flags_that_contain_a_secret_word_are_kept`, red before the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-42 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-72 — Under strict mode a missing lane named a remedy that is refused outside init
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`validate_data`)
+- **Change / origin:** wave2-structural — finding F-43 (QA D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`checks.schema.strict: blocking`; an in-flight change without `lane`; follow the error's advice (`lane set`).
+
+### Actual vs expected
+- Actual: "set one with lane set", which refuses outside init; `lane raise` refuses too (legacy → any lane is a lower).
+- Expected: a remedy that works — the REQ-W2-087 migration.
+
+### Root cause
+The BUG-61 message named the init-only command.
+
+### Fix
+The error names `validate --fix` and `--accept-proposed`, which applies the proposed lane at any phase.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_state_validate.py`. `test_state_validate.py` `StrictModeFromRegistry.test_registry_blocking_is_strict_and_missing_lane_errors` (runs the named remedy). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-43 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |

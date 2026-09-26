@@ -33,7 +33,22 @@ from karvey_lib.manifest import CHANGE_ID, NOT_A_CHANGE  # noqa: E402
 
 EVIDENCE_FILE = "evidence.jsonl"
 REDACTED = "***"
-_SECRET_WORD = re.compile(r"pass|secret|token|api[-_]?key|auth|credential|(^|[-_])key$", re.I)
+_SECRET_TOKENS = {"pass", "password", "passwd", "pwd", "passphrase", "secret", "secrets", "token", "apikey", "auth",
+                  "credential", "credentials", "key"}
+_SECRET_ENDINGS = ("password", "passwd", "passphrase", "secret", "token", "apikey", "credential", "credentials")
+
+
+class _SecretName:
+    """BUG-55 / BUG-71 (F-42): a flag or variable name is secret when one of its ``-``/``_``/``.`` words is a secret
+    word (or ends with one: ``authToken``); ``--passWithNoTests`` or ``--author`` are not."""
+
+    @staticmethod
+    def search(name):
+        words = [w for w in re.split(r"[-_.]+", (name or "").lower()) if w]
+        return any(w in _SECRET_TOKENS or w.endswith(_SECRET_ENDINGS) for w in words)
+
+
+_SECRET_WORD = _SecretName()
 _LONG_FLAG = re.compile(r"^--([A-Za-z0-9][A-Za-z0-9_.-]*)$")
 _LONG_FLAG_EQ = re.compile(r"^(--[A-Za-z0-9][A-Za-z0-9_.-]*)=(.*)$", re.S)
 _ENV_ARG = re.compile(r"^([A-Za-z_][A-Za-z0-9_.-]*)=(.*)$", re.S)

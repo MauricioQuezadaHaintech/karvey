@@ -203,5 +203,24 @@ class Consumption(Base):
         self.assertEqual(env["result"]["consumed"], [])
         self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
 
+
+class ProdMarkerScope(Base):
+    """BUG-41: one project-wide prod marker ("aprobado, pasa a prod" with no single active change) approved
+    production for every change, and ``approve prod`` left it live for the next change."""
+
+    def test_project_wide_prod_marker_is_not_a_prod_approval_of_a_change(self):
+        ap.write_marker(self.root, "prod", "_project", "aprobado, pasa a prod")
+        self.refused(("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20"),
+                     "prod-kind approval marker")
+
+    def test_prod_marker_is_consumed_by_the_approval(self):
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
+        c, env = self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        self.assertEqual(c, 0, env)
+        m, status = ap.read_marker(self.root, "feat-a")
+        self.assertEqual(status, "ok")
+        self.assertIsNotNone(m["consumed_at"])
+
+
 if __name__ == "__main__":
     unittest.main()
