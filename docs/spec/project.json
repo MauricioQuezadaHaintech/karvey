@@ -16,7 +16,8 @@
   "branch_flow": {
     "feature_prefix": "feature/",
     "integration": "main",
-    "production": "main"
+    "production": "main",
+    "mode": "trunk"
   },
   "enforcement": {
     "git_flow_hook": false,
@@ -41,5 +42,11 @@
     },
     "hierarchy": "epic>feature>task",
     "via": "file"
+  },
+  "gates": "merged",
+  "judges": {
+    "enabled": true,
+    "mode": "advisory",
+    "cross_model": "prefer"
   }
 }

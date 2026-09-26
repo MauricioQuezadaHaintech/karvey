@@ -210,10 +210,6 @@
       "generated": false,
       "approved": false
     },
-    "deploy": {
-      "generated": false,
-      "approved": false
-    },
     "prod": {
       "by": "",
       "date": "",
