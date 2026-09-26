@@ -139,7 +139,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 
 ### Feature E1.F8: Deterministic security tools
 
-- [ ] E1.F8.T1 [Backend] `security_tools.json` (fixed argv templates per category) + `karvey-security-scan.py run` (applies?, first tool, timeout, cap, evidence wrapper, `not evaluated` / `not applicable`) — est: 15min (depends E1.F9.T4)
+- [x] E1.F8.T1 [Backend] `security_tools.json` (fixed argv templates per category) + `karvey-security-scan.py run` (applies?, first tool, timeout, cap, evidence wrapper, `not evaluated` / `not applicable`) — est: 15min (depends E1.F9.T4)
 - [ ] E1.F8.T2 [Backend] Suppressions (`validate-suppressions`), QA Dimension 1 cites tool lines and reviews what tools miss, infra `security-scan` CI stage — est: 10min (depends E1.F8.T1)
 - [ ] E1.F8.T3 [Test] Manual script `security-tools-present.md` (real tools installed) — est: 5min (depends E1.F8.T2) (P)
 
@@ -231,7 +231,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F7.T1 [Backend] | ✅ done | 15 | 11 | 0 | covered also by a task with Tests added (the repo convention), besides [Test] tasks |
 | E1.F7.T2 [Backend] | ✅ done | 12 | 9 | 0 |  |
 | E1.F7.T3 [Backend] | ⬜ todo | 12 | — | — |  |
-| E1.F8.T1 [Backend] | ⬜ todo | 15 | — | — |  |
+| E1.F8.T1 [Backend] | ✅ done | 15 | 10 | 0 |  |
 | E1.F8.T2 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F8.T3 [Test] | ⬜ todo | 5 | — | — |  |
 | E1.F9.T1 [Backend] | ✅ done | 15 | 10 | 0 | investigate mints no ID in its text: not changed |

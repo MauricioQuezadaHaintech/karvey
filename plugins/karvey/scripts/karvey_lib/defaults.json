@@ -20,5 +20,6 @@
   "judge_price_table": {"$comment": "US$ per 1M tokens, input/output: an ESTIMATE used only when the runtime does not report usage (the run is marked estimated: true). Never a budget (D-30).",
                         "default": {"in": 3.0, "out": 15.0}},
   "health_weights": {"types": 0.30, "tests": 0.30, "lint": 0.25, "deadcode": 0.15},
-  "deployed_stall_days": 7
+  "deployed_stall_days": 7,
+  "security_tool_timeout_s": 300
 }

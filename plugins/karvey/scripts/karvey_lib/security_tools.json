@@ -1,0 +1,56 @@
+{
+  "$comment": "The fixed security-tool catalogue (architecture §1.13 C-15, wave2-structural; REQ-W2-064..067). Per category: the files that make it apply and the tools tried in order (the first on PATH runs). Every command is an argv template whose ONLY placeholders are {repo} (the realpath-checked repository top level) and {out} (the report path under changes/{id}/qa/). A project may choose among these ids (project.json:security.tools.{category}: [id]); it can never supply a command. findings_exit: the exit codes the tool documents for 'findings found'; any other non-zero exit is 'not evaluated (tool error)'.",
+  "version": 1,
+  "categories": {
+    "secrets": {
+      "applies_if_globs": ["*"],
+      "tools": [
+        {"id": "gitleaks", "detect": "gitleaks", "version_argv": ["gitleaks", "version"],
+         "run_argv": ["gitleaks", "detect", "--no-banner", "--source", "{repo}", "--report-format", "json",
+                      "--report-path", "{out}", "--exit-code", "1"],
+         "output": "file", "parser": "gitleaks", "findings_exit": [1]},
+        {"id": "trufflehog", "detect": "trufflehog", "version_argv": ["trufflehog", "--version"],
+         "run_argv": ["trufflehog", "filesystem", "{repo}", "--json", "--no-update"],
+         "output": "stdout", "parser": "trufflehog", "findings_exit": []}
+      ]
+    },
+    "sast": {
+      "applies_if_globs": ["*.py", "*.js", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.jsx", "*.vue", "*.go", "*.java",
+                           "*.kt", "*.rb", "*.php", "*.cs", "*.rs", "*.c", "*.cpp", "*.scala", "*.swift"],
+      "tools": [
+        {"id": "semgrep", "detect": "semgrep", "version_argv": ["semgrep", "--version"],
+         "run_argv": ["semgrep", "scan", "--config", "auto", "--json", "--output", "{out}", "--quiet", "{repo}"],
+         "output": "file", "parser": "semgrep", "findings_exit": [1]},
+        {"id": "bandit", "detect": "bandit", "version_argv": ["bandit", "--version"],
+         "run_argv": ["bandit", "-r", "{repo}", "-f", "json", "-o", "{out}", "-q"],
+         "output": "file", "parser": "bandit", "findings_exit": [1]}
+      ]
+    },
+    "sca": {
+      "applies_if_globs": ["requirements*.txt", "pyproject.toml", "poetry.lock", "Pipfile.lock", "package.json",
+                           "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "go.mod", "go.sum", "pom.xml",
+                           "build.gradle", "Gemfile.lock", "Cargo.lock", "composer.lock", "*.csproj"],
+      "tools": [
+        {"id": "osv-scanner", "detect": "osv-scanner", "version_argv": ["osv-scanner", "--version"],
+         "run_argv": ["osv-scanner", "--recursive", "--format", "json", "--output", "{out}", "{repo}"],
+         "output": "file", "parser": "osv", "findings_exit": [1]},
+        {"id": "npm-audit", "detect": "npm", "version_argv": ["npm", "--version"],
+         "run_argv": ["npm", "audit", "--json", "--prefix", "{repo}"], "requires_globs": ["package-lock.json"],
+         "output": "stdout", "parser": "npm_audit", "findings_exit": [1]}
+      ]
+    },
+    "iac": {
+      "applies_if_globs": ["*.tf", "*.tfvars", "*.bicep", "Dockerfile", "Dockerfile.*", "*.dockerfile",
+                           "docker-compose*.yml", "docker-compose*.yaml", "*/k8s/*.yaml", "*/k8s/*.yml",
+                           "*/helm/*", "*/charts/*", "*.template.json", "serverless.yml"],
+      "tools": [
+        {"id": "checkov", "detect": "checkov", "version_argv": ["checkov", "--version"],
+         "run_argv": ["checkov", "-d", "{repo}", "-o", "json", "--quiet", "--compact"],
+         "output": "stdout", "parser": "checkov", "findings_exit": [1]},
+        {"id": "trivy-config", "detect": "trivy", "version_argv": ["trivy", "--version"],
+         "run_argv": ["trivy", "config", "--format", "json", "--output", "{out}", "--exit-code", "0", "{repo}"],
+         "output": "file", "parser": "trivy", "findings_exit": []}
+      ]
+    }
+  }
+}
