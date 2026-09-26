@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "change_id": "wave3-optimization",
+  "capability": "method",
+  "description": "Wave 3 of the 2026-09-23 expert panel (4.1.0, optimisation): a per-phase context budget with a hard-contracts core and closed load lists (R-15, reorganising every skill on top of the Wave 2 content), a per-change HTML page for the sponsor and 'your turn' events (R-19, D-31), open questions Q-NN and a risk register with owner and date (R-24), cost per change with a single agent (R-25, D-30), a project design system with design-graphic as a delta (R-26), an unambiguous WBS (R-27), an organisation-wide read-only portfolio (R-28, D-32), a WSJF-scored backlog with done-direct (R-29), a portability guide for Claude Code only (R-30, D-32) — plus the emergent backlog items that fit, and last the method page in four more languages (B-06).",
+  "goal": "Every phase loads only the instructions it declares, and the sponsor of any change can read — from one page produced from the change's own artifacts — its scope, state, measured cost, open risks and the decisions it waits for, while the organisation sees every Karvey repo in one read-only portfolio; the per-phase instruction size and the cost per change are measured before and after, never capped.",
+  "layers": [
+    "Backend",
+    "Frontend",
+    "Infra"
+  ],
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 2,
+  "security_tier_reason": "the sponsor page and the portfolio read several repositories and publish a summary outside the team (information must not leak across clients or include secrets, internal paths or personal data); new scripts read project.json values (stakeholder, portfolio paths) into file reads and commands; the context reorganisation can drop a hard rule from a phase (a guard contract must survive the move)",
+  "type": "feature",
+  "links": {
+    "parent": "",
+    "children": []
+  },
+  "decisions": [
+    "D-31",
+    "D-32"
+  ],
+  "inputs": {
+    "panel_review": "karvey docs/spec/reviews/2026-09-23-panel-review.md @f16679b",
+    "judge_dev_methods": "karvey docs/spec/reviews/2026-09-23-judge-dev-methods.md @f16679b",
+    "judge_project_mgmt": "karvey docs/spec/reviews/2026-09-23-judge-project-mgmt.md @f16679b",
+    "judge_agents": "karvey docs/spec/reviews/2026-09-23-judge-agents.md @f16679b",
+    "decisions": "karvey docs/spec/decisions.md @f16679b",
+    "backlog": "karvey docs/spec/backlog.md @f16679b",
+    "board": "karvey docs/spec/agent/board.md @f16679b",
+    "wave1_spec_delta": "karvey docs/spec/changes/wave1-hardening/spec-delta.md @f16679b",
+    "wave2_spec_delta": "karvey docs/spec/changes/wave2-structural/spec-delta.md @f16679b"
+  },
+  "iteration_count": 0,
+  "revision_history": [],
+  "seed_backlog_id": [
+    "BL-18",
+    "BL-22",
+    "BL-27",
+    "BL-28",
+    "BL-29",
+    "BL-30",
+    "BL-31",
+    "BL-32",
+    "BL-33",
+    "BL-37",
+    "BL-38",
+    "BL-39",
+    "BL-40",
+    "BL-42",
+    "BL-43"
+  ],
+  "clickup": {
+    "epic_id": "",
+    "feature_ids": [],
+    "backlog_list_id": "",
+    "client_tag": ""
+  },
+  "phase": "requirements",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-26T03:06:37+00:00",
+      "exited_at": "2026-09-26T03:08:11+00:00",
+      "by": "Mauricio Quezada Ibáñez"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-26T03:08:11+00:00"
+    }
+  ],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": false,
+      "generated_at": "2026-09-26T03:11:26+00:00"
+    }
+  },
+  "created_at": "2026-09-26T03:06:37+00:00",
+  "updated_at": "2026-09-26T03:11:26+00:00",
+  "lane": "feature-ui"
+}
