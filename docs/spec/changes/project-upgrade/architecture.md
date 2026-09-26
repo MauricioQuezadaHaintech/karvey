@@ -142,13 +142,17 @@ CHANGELOG.md                              ✎ [Unreleased] entries; release bloc
 1. `mode != "startup"` → silent (REQ-UP-002: not resume/compact/clear).
 2. `kp = pj.find_root(start)` (the same Karvey-project test as the settings notice, bounded by the git top
    level). If it is None, try `team_root` when it is a Karvey project. None → silent, **no record is created**
-   (REQ-UP-003). `state_dir(kp, create=False)` is used, so nothing is created by reading.
+   (REQ-UP-003). A Karvey project **outside git** is silent too (rev. 2, F-27): there is no clone to record the
+   answer in, and the fallback state dir would sit under the home. `state_dir(kp, create=False)` is used, so
+   nothing is created by reading.
 3. `installed = kl.__version__` (read from `plugin.json`). It must match `VERSION_RE`
    `^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[0-9A-Za-z.]{1,20})?$`, otherwise the one-line failure is printed.
 4. `seen = upgrade.read_seen(kp)`. A missing or malformed record counts as absent. `seen.version == installed` →
    silent.
-5. **Probe within budget** (REQ-UP-005): `upgrade.any_applicable(kp, deadline=now + upgrade_probe_ms)` loads
-   the catalogue and evaluates the steps in `cost` order (`low` first, then `scan`). It stops at the **first**
+5. **Probe within budget** (REQ-UP-005, REQ-UP-006): `upgrade.any_applicable(kp, deadline=now + upgrade_probe_ms)`
+   runs in a daemon thread that the hook waits for until the deadline plus `PROBE_WATCHDOG_GRACE_S` (0.25 s); a
+   probe still running then counts as `timeout` (rev. 2, F-25). Only the hook's own thread writes the `empty`
+   record, so a late probe can never record anything. The probe loads the catalogue and evaluates the steps in `cost` order (`low` first, then `scan`). It stops at the **first**
    step whose status is not `nothing`. Results:
    - `found` → offer.
    - `none` (every step evaluated, all `nothing`) → `write_seen(kp, installed, "empty")`, silent.
@@ -156,10 +160,12 @@ CHANGELOG.md                              ✎ [Unreleased] entries; release bloc
      when the person accepts (REQ-UP-005 error scenario).
    - Catalogue missing or invalid → one line `[karvey] upgrade offer unavailable: <reason>`, record unchanged
      (REQ-UP-006 error scenario).
-6. Output, each line truncated to `offer_line_max` (300) characters:
+6. Output, each line truncated to `offer_line_max` (300) characters. Rev. 2 (F-09): phrased like the settings
+   notice — a signed notice saying what the user can do — not an imperative order naming a command, which a
+   model may take for a prompt injection:
    ```
-   Karvey (upgrade): installed 3.13.0, last resolved in this clone 3.12.0 — project upgrade steps may apply.
-   Ask the person ONE question now (AskUserQuestion, their language, recommended first): "Karvey 3.12.0 → 3.13.0: do you want a plan to upgrade this project?" — "Yes, show me the plan (Recommended)" → run /karvey:karvey-upgrade · "Not for this version" → run python3 '<plugin>/scripts/karvey-upgrade.py' seen --decline. If there is no answer or you cannot ask (non-interactive), record nothing.
+   Karvey (upgrade): installed 3.13.0, last resolved in this clone 3.12.0 — project upgrade steps may apply; the user can decline for this version with: python3 '<plugin>/scripts/karvey-upgrade.py' seen --decline
+   The user can get an upgrade plan; if you can ask, offer it (AskUserQuestion): "Karvey 3.12.0 → 3.13.0: do you want a plan to upgrade this project?" — "Yes, show me the plan (Recommended)": /karvey:karvey-upgrade · "Not for this version": the decline command. Unanswered: record nothing.
    ```
    With no record the first line reads `installed 3.13.0, no upgrade resolved yet in this clone` and the
    question reads `→ 3.13.0` (REQ-UP-002). `<plugin>` is `kl.PLUGIN_ROOT`, quoted with `shlex.quote` (plugin
@@ -168,15 +174,18 @@ CHANGELOG.md                              ✎ [Unreleased] entries; release bloc
    keeps its own outer catch. The session always starts (REQ-UP-006).
 
 **Budget.** `defaults.json:session.upgrade_probe_ms = 1500`. The hook timeout is 10 s. Today's session work (git
-reads for live state, 5 s timeout each) keeps well under that. The deadline is checked between steps, and a
-`scan` step also checks it between files, so the worst-case overrun is one file validation. Why short-circuit: in
+reads for live state, 5 s timeout each) keeps well under that. The deadline is checked between steps, a `scan`
+step also checks it between files, and `Probe.glob` checks it in every directory it walks (rev. 2, F-25). Project
+reads are capped at `PROJECT_READ_MAX` (2 MiB; a larger file is `check-failed`, never read), and the walk
+prunes `.git`, `node_modules` and nested work trees. The watchdog of step 5 bounds anything else (one blocking
+call) at the budget plus 0.25 s. Why short-circuit: in
 the common case (something applies) the hook stops at the first cheap hit, in a few ms.
 
 ### 1.3 The seen-version record and how the ask is answered
 
 | Component | Type | Responsibility | Security Tier |
 |---|---|---|---|
-| `<git-common-dir>/karvey/seen-version` | New file (0600, dir 0700) | `{"v":1,"version":"3.13.0","resolution":"accepted"\|"declined"\|"empty","at":"<iso-tz>","by":"<git user.name or null>","from":"3.12.0"\|null}`. One per clone; worktrees share it because it sits in the common git dir. Outside git: the existing XDG fallback of `project.state_dir` (§5 E-12). | Tier 2 |
+| `<git-common-dir>/karvey/seen-version` | New file (0600, dir 0700) | `{"v":1,"version":"3.13.0","resolution":"accepted"\|"declined"\|"empty","at":"<iso-tz>","by":"<git user.name or null>","from":"3.12.0"\|null}`. One per clone; worktrees share it because it sits in the common git dir. Outside git: **none** — the hook stays silent and `seen` refuses (rev. 2, F-27; §5 E-12), so nothing is written under the home. | Tier 2 |
 | `upgrade.read_seen / write_seen` | New functions | Read tolerant (malformed → absent). Write under `atomicio.lock` + `write_text_atomic` (mode 0600). | Tier 2 |
 | `karvey-upgrade.py seen --decline \| --accept \| --empty \| --show` | New CLI | The **only** way the agent resolves an offer. It refuses outside a Karvey project (exit 3) and records `installed`. | Tier 2 |
 
@@ -202,12 +211,12 @@ gate approval, so it does not need the approval marker (§10.1 A-03).
 | Component | Type | Responsibility | Security Tier |
 |---|---|---|---|
 | `load_catalogue(path=None)` | New | Reads `upgrade-steps.json` and validates it with `schema_lite` against `schemas/upgrade-steps.schema.json`. Then it adds semantic checks: unique ids, `check`/`fix` names present in `upgrade_steps.REGISTRY`, `human ⇒ fix null`, `report_only ⇒ fix null`, `writes` ⊆ {`project`,`git_dir`} unless `human`. Any failure raises `CatalogueError("step <id>: missing field <f>")` and nothing is evaluated (REQ-UP-008). | Tier 2 |
-| `Probe(root, overlay)` | New | The **read-only** view a step sees: `read_text`, `read_json`, `exists`, `glob` (under the root), `git_read(*args)` (allow-list: `rev-parse`, `symbolic-ref`, `show`, `status --porcelain`, `ls-files`, `config --get`; list argv, never a shell), `home_read(rel)` (only `.claude/settings.json`, `.claude/settings.local.json`, `.claude/CLAUDE.md`, under `$HOME`), `installed`, `state` (the `karvey-state.py` module loaded with importlib, as `karvey-context.py` does), `config` (`karvey-config.py`, same way). The `overlay` is a dict of pending edits: reads see the result of earlier steps in the same run, so a sequence previews exactly what it will apply. | Tier 2 |
+| `Probe(root, overlay)` | New | The **read-only** view a step sees: `read_text`, `read_json` (capped at `PROJECT_READ_MAX`, rev. 2), `exists`, `glob` (under the root; a pruned, deadline-checked walk from the pattern's literal prefix, rev. 2), `git_read(*args)` (allow-list: `rev-parse`, `symbolic-ref`, `show`, `status --porcelain`, `ls-files`, `config --get`; list argv, never a shell), `home_read(rel)` (only `.claude/settings.json`, `.claude/settings.local.json`, `.claude/CLAUDE.md`, under `$HOME`), `plugin_read(rel)` / `plugin_json(rel)` (read-only, confined to the installed plugin's root: the shipped shims and `project.schema.json`, F-02), `installed`, `state` (the `karvey-state.py` module loaded with importlib, as `karvey-context.py` does), `config` (`karvey-config.py`, same way). The `overlay` is a dict of pending edits: reads see the result of earlier steps in the same run, so a sequence previews exactly what it will apply. | Tier 2 |
 | `StepResult` | New dataclass | `status` ∈ `nothing` · `applies` · `human` · `report` · `needs-input` · `check-failed`; `summary` (the "what changes" cell); `edits: [Edit]`; `diff` (text, for human steps); `instructions`; `warnings`; `inputs_needed`. | — |
 | `Edit` | New dataclass | `op` ∈ `write` · `delete`; `path` (relative POSIX); `scope` ∈ `project` · `git_dir`; `before_sha256` (None = create); `text` (for `write`). | Tier 2 |
 | `plan(root)` | New | Evaluates **every** step in catalogue order over one overlay. A raising check becomes `check-failed: <reason>` and the rest go on (REQ-UP-009 error). Returns `Plan{from, to, computed_on (branch), steps:[…], exit}`. **It writes nothing**: no lock, no journal, no audit (REQ-UP-010). | Tier 2 |
 | `apply(root, ids, dry_run, preview, inputs, confirm_no_preview)` | New | See the flow below. | Tier 2 |
-| `ensure_branch(root)` | New | Creates or switches to the upgrade branch (§1.5 `branch`). | Tier 2 |
+| `ensure_branch(root)` / `branch_base(root)` | New | Creates or switches to the upgrade branch (§1.5 `branch`); `branch_base` says where it starts (the local upgrade branch, else the remote one, else the integration branch — rev. 2, F-08). | Tier 2 |
 | `commit(root, picked_by, picked_at, answer, trailers)` | New | Stages exactly the journal's files and commits (§1.5 `commit`). | Tier 2 |
 | journal `<git-common-dir>/karvey/upgrade-journal.json` | New file (0600) | `{v:1, branch, from, to, applied:[id], failed:{id:reason}, not_run:[id], files:[path], preview, at}`. `commit` reads it; `apply` reads it to allow a dirty tree made only of files it wrote itself. | Tier 2 |
 
@@ -236,7 +245,9 @@ gate approval, so it does not need the approval marker (§10.1 A-03).
 7. **Path confinement** (REQ-UP-016). Each edit's `realpath` must sit under `git rev-parse --show-toplevel`
    (scope `project`) or under the git common dir (scope `git_dir`). It must not traverse a symlink out of the
    tree, and it must not name `.git/karvey/{approvals,ledger}`. A failure refuses the step before any write.
-8. `dry_run` → print a unified diff per edit (`difflib`; a deletion is shown against `/dev/null`) and the
+8. `dry_run` → off the upgrade branch, the tree of `HEAD` must equal the tree of `branch_base` (rev. 2, F-24):
+   otherwise exit 3 "this dry-run would preview the current branch, but apply writes on <upgrade branch> …: run
+   `karvey-upgrade.py branch` first". Then print a unified diff per edit (`difflib`; a deletion is shown against `/dev/null`) and the
    **preview id** = sha256 of the canonical JSON of `[(step, op, path, before_sha256, sha256(text))]`. Exit 0,
    no write (REQ-UP-012).
 9. Not `dry_run`:
@@ -258,7 +269,7 @@ Exit codes: `karvey_lib`.
 | Subcommand | Writes | Behaviour |
 |---|---|---|
 | `plan [--json]` | nothing | The table (step · what changes · dry-run · risk · needs human), plus `from → to` and `computed_on`. `--json`: `result = {from, to, computed_on, steps:[{id, since, title, status, summary, dry_run, risk, human, report_only, inputs_needed, warnings}]}`. Exit 0 (`nothing to do` included), 1 when any check failed (REQ-UP-007, 009, 010). |
-| `branch [--json]` | git: branch create / switch | Validates the values, refuses a dirty tree, creates `chore/karvey-upgrade-<installed>` from `refs/remotes/origin/<integration>` when that ref exists locally, else from `refs/heads/<integration>`, then switches to it. **It never fetches.** The skill runs `git fetch origin <integration>` first, when a remote exists. When the branch exists, it only switches. |
+| `branch [--json]` | git: branch create / switch | Validates the values, refuses a dirty tree, creates `chore/karvey-upgrade-<installed>` from `refs/remotes/origin/<integration>` when that ref exists locally, else from `refs/heads/<integration>`, then switches to it. **It never fetches.** The skill runs `git fetch origin <integration>` first, when a remote exists, and fetches the remote upgrade branch of this version (tolerating its absence). When the branch exists, it only switches. Rev. 2 (F-08): when no local upgrade branch exists but `refs/remotes/origin/chore/karvey-upgrade-<installed>` does (another clone pushed the same upgrade), the branch starts **from it**; the result carries `remote: true` (a PR may already be open) and `integration` (the PR target). |
 | `apply --steps a,b [--dry-run] [--preview ID] [--confirm-no-preview ID…] [--values FILE] [--json]` | project tree, journal | §1.4 flow. `--values FILE` is JSON `{step_id: {key: value}}`, validated through `safe_values` per key kind. |
 | `commit --picked-by NAME [--picked-at ISO] [--answer TEXT] [--trailer K=V…] [--json]` | git: one commit | Refuses when the current branch is integration or production, or is not the upgrade branch named in the journal (REQ-UP-013). Runs `git add -- <journal files>` and then `git commit -F <tmp> -- <journal files>`. The message is `chore(karvey): project upgrade <from> → <to>`, then the body `Steps: a, b` · `Picked-by: NAME` · `Picked-at: ISO` · `Answer: "<≤200 chars>"`, then the trailers passed by the skill (the session's attribution lines) (REQ-UP-018, 028). It prints `pr_title` and `pr_body` in `--json` so the PR text is deterministic. |
 | `seen --decline\|--accept\|--empty\|--show` | seen record | §1.3. |
@@ -277,12 +288,12 @@ at release by `karvey-deploy`, which also sets the fingerprint (§1.8).
 
 | Order | id | REQ | check (reads) | fix (edits) | dry_run | human | risk | cost |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `schema-migrate` | 020 | `state.fix_spec` / `state.fix_project` in memory (exact tier) on `all_files(root)`; applies when any output differs. An unmigratable file is a per-file warning and stays listed as "needs a human" (§5 E-08). | write the migrated JSON (`atomicio.dumps`, preserving the detected format) | yes | no | low | scan |
+| 1 | `schema-migrate` | 020 | `state.fix_spec` / `state.fix_project` in memory (exact tier) on every `spec.json` under `docs/spec` **except `docs/spec/changes/archive/`** (history, D-14, E-22; rev. 2, F-22) and `project.json`; applies when any output differs. An unmigratable file is a per-file warning and stays listed as "needs a human" (§5 E-08). | write the migrated JSON (`atomicio.dumps`, preserving the detected format) | yes | no | low | scan |
 | 2 | `schema-migrate-proposed` | 020 | the same with `accept_proposed=True`, minus what step 1 already covers; applies only when the proposed tier adds something | write | yes | no | medium | scan |
 | 3 | `legacy-shims` | 022 | files `.claude/**/plan-gate.sh` and `git-flow-guard.sh`, plus `.claude/settings.json` hook entries whose command names them. A file byte-identical to a known shipped version (`params.known_sha256`: the current shims and the 3.11.x templates) applies. A file that differs is `human`, with the diff against the shipped shim. | delete the copies; remove the entries (an empty `hooks` array drops the key); set `enforcement.plan_gate_hook` / `git_flow_hook: true` for each guard removed (the behaviour is kept) | yes | no* | medium | low |
 | 4 | `team-settings` | 021 | `karvey_hooks._settings_gaps` on the working copy's `project.json` (missing or legacy `notifications` / `management`); preview = `config.propose_settings(settings, from_legacy=True)` | merge the block with the person's `--values`; `needs-input` while any `<…>` placeholder remains; each value checked through `safe_values.check_target` / `check_location` | yes | no | low | low |
 | 5 | `enforcement-defaults` | 026 | `enforcement` keys with `x-karvey-default` in `schemas/project.schema.json` that the project does not declare (an explicit value, default or not, is never listed). Standards: when `project.json` has no `standards` block it adds an informational line "no engineering standards declared → `/karvey:karvey-standards`" (the plugin ships no standard templates today; `params.standards` lists them when it does). | set the missing keys to their defaults | yes | no | low | low |
-| 6 | `statusline-launcher` | 023 | `statusLine.command` in `$HOME/.claude/settings.json`, then the project `.claude/settings.json` and `.claude/settings.local.json`: a Karvey statusline on a versioned path (`/karvey/<semver>/hooks/karvey-statusline.sh`), or no statusline at all → `human` with the stable command (§1.9). A non-Karvey command → `nothing`, with the note "own statusline, left as is". | none | — | yes | low | low |
+| 6 | `statusline-launcher` | 023 | `statusLine.command` in `$HOME/.claude/settings.json`, then the project `.claude/settings.json` and `.claude/settings.local.json`: a Karvey statusline on a versioned path (`/karvey/<semver>/hooks/karvey-statusline.sh`) → `human` with the stable command (§1.9). A non-Karvey command → `nothing`, with the note "own statusline, left as is". No statusline at all → `nothing`, with the note "no statusline: optional …" (rev. 2, F-21: it was `human`, which made every plan non-empty). | none | — | yes | low | low |
 | 7 | `global-config` | 025 | `$HOME/.claude/settings.json` and `CLAUDE.md` against `params.recommend`. Initial content: hook entries that name a Karvey shim or a versioned Karvey path; `env.KARVEY_COMPAT_MARKER` when the owner's compatibility hook is present (D-11); the `CLAUDE.md` destinations line (REQ-W1-099). Shows a unified diff. Unreadable → `check-failed: unreadable` (REQ-UP-025 error). | none | — | yes | low | low |
 | 8 | `changes-in-flight` | 024 | for every non-archived change (`pj.list_changes`, archive excluded): `state.validate_data(strict)` gate issues and `state.compute_next` blockers; lists the change with the unmet gate | none (`report_only: true`) | — | no | low | scan |
 
@@ -312,7 +323,9 @@ Steps (the skill never computes, adds or skips a step: REQ-UP-027):
    - Picks ≥ 1 → `seen --accept`.
 5. `needs-input` steps: ask for the values (one question per step) and write them to a temp `--values` file in
    the scratch or temp dir, never in the repo.
-6. `git fetch origin <integration>` (when a remote exists), then `branch`.
+6. `git fetch origin <integration>` and, tolerating its absence, the remote upgrade branch (when a remote exists),
+   then `branch`. `remote: true` → tell the person a PR may already be open; a dry-run that is then "nothing to
+   do" for every pick means the upgrade is already there: stop (rev. 2, F-08).
 7. `apply --dry-run --steps … --json`: show each diff and the human and report output. A step with `dry_run: false`
    gets its own confirmation question. Then one confirmation question: "Apply these changes?".
 8. `apply --steps … --preview <id> [--confirm-no-preview …]`. On failure: relay applied / failed / not run and
@@ -322,7 +335,7 @@ Steps (the skill never computes, adds or skips a step: REQ-UP-027):
     `pr_title`/`pr_body` from step 9, using `project.json:git_platform` (`gh pr create` · `az repos pr create` ·
     `glab mr create`, values through `karvey-config.py get --shell`). No PR tooling or no remote → print the
     exact commands (REQ-UP-018). **Never merge.** A rejected push → report it and the retry command; the commit
-    stays local.
+    stays local. An existing PR from the branch (`remote: true`) is not opened twice: the push updated it.
 
 It is invocable at any time and behaves the same with or without an offer (REQ-UP-029).
 
@@ -331,7 +344,7 @@ It is invocable at any time and behaves the same with or without an offer (REQ-U
 | Check | Severity | What it proves |
 |---|---|---|
 | **L-37** `release declares its project upgrade` (REQ-UP-030) | error, or warning during `[Unreleased]` | It hashes the **upgrade surface** (the globs in `upgrade-surface.json`, normalised: BOM stripped, LF). Equal to the recorded `files` → pass. Different: <br>• top CHANGELOG release **equals** the fingerprint's `release` (development under `[Unreleased]`) → **warning** listing the changed files: "the next release must add an upgrade step or declare none". <br>• top release **is newer** than the fingerprint → **error**, unless (a) some step has `since` equal to the top release, or (b) the release block has a line matching `^- No project upgrade needed: .{10,}` (reason required). In both cases it is also an error until the fingerprint is refreshed to that release (`karvey-upgrade.py surface --write`). The message names the release and the changed files. <br>• top release **older** than the fingerprint → error (inconsistent). |
-| **L-38** `the step catalogue is valid` (REQ-UP-031, 008, 010, 016) | error | `load_catalogue` (fields, names, invariants). It also walks the AST of every function in `upgrade_steps.REGISTRY` and forbids: `open(` in a write mode, `write_text`/`write_bytes`, `os.remove`/`unlink`/`rename`/`replace`/`mkdir`/`rmdir`, `shutil.*`, `subprocess.*`, and `atomicio.write_*`. Only `Probe` methods may do I/O. A non-human step whose `fix` references `probe.home_read`, or whose `writes` contains anything but `project`/`git_dir`, fails naming the step. Checks that `since` ≤ the plugin version. |
+| **L-38** `the step catalogue is valid` (REQ-UP-031, 008, 010, 016) | error | `load_catalogue` (fields, names, invariants). It also walks the AST of every function in `upgrade_steps.REGISTRY` and forbids: `open(` in a write mode, `write_text`/`write_bytes`, `os.remove`/`unlink`/`rename`/`replace`/`mkdir`/`rmdir`, `shutil.*`, `subprocess.*`, and `atomicio.write_*`. Rev. 2 (F-26): calls are resolved through the module's import aliases (`import os as o`, `from os import remove`), a forbidden module imported at module level fails, `.open()` in a write mode and `os.open` fail, and a name bound to `probe.state` / `probe.config` (also through a helper's parameter) may use only the tools' read-only names (`PROBE_TOOLS`). Only `Probe` methods may do I/O. A non-human step whose `fix` references `probe.home_read`, or whose `writes` contains anything but `project`/`git_dir`, fails naming the step. `since` newer than `plugin.json` is **one warning** naming the steps while `## [Unreleased]` holds entries (a working number, A-12) and an **error** once `[Unreleased]` is empty — `karvey-deploy` sets `since` to the release (F-01). |
 | **L-39** `upgrade documented` (REQ-UP-032) | error | `README.md` has an upgrade heading under "Update to the latest version" that mentions `/karvey:karvey-upgrade`, "Not for this version" and `plan`. `hooks/README.md` has "## The upgrade offer" with `<!-- guard-case: ss-24… -->` anchors (L-16 then checks them). From the release that ships this change on, the top release block mentions the project upgrade (the L-37 declaration or a step id). |
 | `--list` (modified) | — | `requirement_ids` collects `REQ-(W1\|UP)-\d{3}`. A claim written `"UP-030"` maps to `REQ-UP-030`, and a bare `"055"` keeps meaning `REQ-W1-055`, so existing claims are unchanged. |
 
@@ -598,12 +611,12 @@ flowchart TD
 | E-04 | Two sessions start at once in two worktrees | both may show the offer; `write_seen` is locked and atomic; the last writer wins with equivalent content | `write_seen` |
 | E-05 | Read-only git dir | the answer is not recorded; one line says the offer repeats (REQ-UP-001 error) | `write_seen`, `seen` |
 | E-06 | Catalogue missing or invalid in the installed plugin | one line `[karvey] upgrade offer unavailable: <reason>`; record unchanged; `plan` exits 4/5 naming the step and field | hook, `load_catalogue` |
-| E-07 | Probe exceeds its budget | offer shown; nothing recorded | `any_applicable` |
+| E-07 | Probe exceeds its budget (also one blocking read: the watchdog, rev. 2) | offer shown; nothing recorded | `any_applicable`, `_probe_with_watchdog` |
 | E-08 | A `spec.json` that cannot be migrated (unmappable phase, `42`) | that file is left out of the edits with the state tool's reason; the other files migrate; the step stays listed as "1 file needs a human" (REQ-UP-020 error) | `schema-migrate` |
 | E-09 | Empty or `{}` `project.json`, no `project.json` but `changes/` exists | `team-settings` applies (missing); `enforcement-defaults` creates keys only when `project.json` exists, otherwise it is `needs-input` → handed to `/karvey:karvey-init --settings` | steps 4, 5 |
 | E-10 | Dirty tree at `branch`/`apply` | refused, dirty paths named; a dirty tree made only of the journal's files on the upgrade branch is allowed (second apply) | engine |
-| E-11 | Upgrade branch already exists (earlier attempt) | `branch` switches to it; `plan` shows what is left; `commit` adds a new commit to the same branch and PR | `ensure_branch` |
-| E-12 | Karvey project outside git | `plan` works; `branch`/`apply`/`commit` refuse ("apply needs git: the upgrade goes through a branch"); the seen record uses the existing XDG fallback of `state_dir` | engine, `state_dir` |
+| E-11 | Upgrade branch already exists (earlier attempt) — locally, or only on the remote (another clone, rev. 2 F-08) | local: `branch` switches to it; remote only: `branch` creates it from `origin/<upgrade branch>` and says a PR may be open. `plan` shows what is left; `commit` adds a new commit to the same branch and PR; the push is a fast-forward | `ensure_branch`, `branch_base` |
+| E-12 | Karvey project outside git | `plan` works; `branch`/`apply`/`commit` refuse ("apply needs git: the upgrade goes through a branch"); the hook is silent and `seen` refuses, so no record is written (rev. 2, F-27) | engine, hook, `write_seen` |
 | E-13 | Integration branch undeclared and no `origin/HEAD` | `branch` refuses, naming `project.json:branch_flow.integration` | `ensure_branch` |
 | E-14 | Integration == production (trunk, like this repo) | the upgrade branch is created from it; the PR goes to it; `commit` refuses on it | `ensure_branch`, `commit` |
 | E-15 | Mixed selection: some ids already satisfied, others apply | exit 3 naming the satisfied ones; all satisfied → "nothing to do", exit 0 (REQ-UP-011 vs 014, §10.1 A-07) | `apply` |
@@ -611,13 +624,15 @@ flowchart TD
 | E-17 | Step 2 of 3 fails after step 1 wrote | step 1 is kept (atomic files); report failed/not run; the journal records it; re-`plan` lists steps 2 and 3 only (REQ-UP-017 error) | `apply` |
 | E-18 | A locally edited shim copy | `legacy-shims` returns `human` with the diff against the shipped shim; nothing is deleted | step 3 |
 | E-19 | A `team-settings` proposal with `<tool location>` placeholders | `needs-input`; apply refuses until `--values` supplies them (REQ-UP-021 error) | step 4 |
-| E-20 | An own (non-Karvey) statusline | `nothing`, note "own statusline, left as is" (REQ-UP-023 error) | step 6 |
+| E-20 | An own (non-Karvey) statusline, or none | `nothing`, note "own statusline, left as is" / "no statusline: optional …" (REQ-UP-023 error, rev. 2) | step 6 |
 | E-21 | Home settings unreadable or invalid JSON | `check-failed: unreadable`, rest computed (REQ-UP-025 error); counts as applicable for the hook | step 7 |
-| E-22 | Archived changes in a bad state | never reported (`list_changes` excludes `archive/`); D-14 pre-3.12 history untouched | step 8 |
+| E-22 | Archived changes in a bad state | never reported (`list_changes` excludes `archive/`) and never migrated (steps 1–2 skip `docs/spec/changes/archive/`, rev. 2 F-22); D-14 pre-3.12 history untouched | steps 1, 2, 8 |
 | E-23 | Non-interactive session (`claude -p`, CI) | the instruction says: if you cannot ask, record nothing; the next interactive session asks | hook text |
 | E-24 | `plugin.json` version not semver | one-line failure; no offer, no record; no branch name built from it | hook, `VERSION_RE` |
 | E-25 | Push rejected, or no PR tooling | commit stays local; the skill prints the exact retry / PR commands (REQ-UP-018 error) | skill |
 | E-26 | Board/handoff at their byte limits on the same startup | offer lines are separate and capped at 300 characters each; the existing bounds are unchanged (REQ-UP-006 success) | `session_text` |
+| E-28 | A dry-run off the upgrade branch on a tree that differs from the branch's base (a local integration branch ahead of `origin`) | refused, naming `branch` (rev. 2, F-24) | `check_preview_base` |
+| E-29 | A project string (a directory name, a `phase`) holding control characters | shown escaped (`\x0a`) in the plan rows and the report lines, never as a new line (F-28) | `one_line` |
 | E-27 | Existing session-table cases (ss-01..23) would now see an offer | the runner seeds the seen record equal to the installed version unless a case sets `given.seen_version` (`null` = absent); ss-01..23 unchanged | `run_tables.py` |
 
 ## 6. Test coverage plan (contract for `karvey-test`)
@@ -800,7 +815,7 @@ Component keys: **HK** hook offer (§1.2) · **SR** seen record + `seen` (§1.3)
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | The probe slows every startup in big repos (a large repository: 137 spec files) | Medium | Medium | short-circuit on the first hit; `scan` steps run last; 1.5 s deadline; `ms` logged to tune it |
-| The offer shows on every version because a human step never passes (e.g. the owner keeps a versioned statusline) | Medium | Low | once per version only; "Not for this version" is one answer; accepted as the intended nudge |
+| The offer shows on every version because a human step never passes (e.g. the owner keeps a versioned statusline) | Low (rev. 2: a missing statusline is no longer a human result, F-21) | Low | once per version only; "Not for this version" is one answer; accepted as the intended nudge |
 | Existing session tables change behaviour | High if unhandled | Medium | the runner seeds seen = installed by default (E-27) |
 | L-37 makes rule typo fixes noisy at release | Medium | Low | a one-line `No project upgrade needed: wording only` satisfies it; during `[Unreleased]` it is only a warning |
 | A future step needs a fix that is not file edits | Low | Medium | revalidation condition in §1.0; a new edit kind is a reviewed Tier 2 change |
@@ -823,3 +838,4 @@ None. See *Cloud infrastructure* after §1.10: `cloud.provider: none`, infra ski
 |---|---|---|
 | 2026-09-25 | 1 | First architecture from REQ-UP-001..032 (D-21); architect decisions A-01..A-14 recorded for the owner. |
 | 2026-09-25 | 1.1 | QA wording only: company names removed from §7 item 3 and §12 (public repo). Behaviour fixes F-05..F-20 are recorded in `findings.md`; the spec-gaps F-08, F-21..F-27 wait for karvey-iterate. |
+| 2026-09-26 | 2 | `karvey-iterate` (requirements rev. 2): F-21 §1.6 row 6 / E-20; F-22 §1.6 row 1 / E-22; F-23 through the init block (no architecture change); F-24 §1.4 step 8 / E-28; F-25 §1.2 budget and step 5, §1.4 Probe; F-26 §1.8 L-38; F-27 §1.2 step 2, §1.3, E-12; F-08 §1.4, §1.5 `branch`, §1.7, E-11; F-01 §1.8 `since` rule; F-02 §1.4 `plugin_read`; F-09 §1.2 output text; F-28 E-29. |

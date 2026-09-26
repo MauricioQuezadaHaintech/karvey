@@ -73,11 +73,12 @@ GIVEN the same project
 WHEN the session is a `resume` or `compact`
 THEN no offer instruction is emitted and the seen-version record is unchanged.
 
-### 1.3 REQ-UP-003 — Silent outside Karvey projects
-IF the start directory is not inside a Karvey project, THEN the session hook SHALL emit no upgrade offer and
-SHALL NOT create a seen-version record.
+### 1.3 REQ-UP-003 — Silent outside Karvey projects and outside git
+IF the start directory is not inside a Karvey project, or the Karvey project is not in a git repository, THEN
+the session hook SHALL emit no upgrade offer and SHALL NOT create a seen-version record.
 
-Traces to PRD: §Goal · REQ-TEAM-002, REQ-W1-050 (same project test as the settings notice)
+Traces to PRD: §Goal · REQ-TEAM-002, REQ-W1-050 (same project test as the settings notice) · F-27 (rev. 2:
+outside git there is no clone to record the answer in, and the upgrade needs a branch — REQ-UP-013)
 
 #### Scenario: Success
 GIVEN a git repo with no `docs/spec/project.json` and no `docs/spec/changes/`
@@ -85,9 +86,10 @@ WHEN a session starts on a new version
 THEN the hook output is identical to today's and no `karvey/seen-version` exists in its git dir.
 
 #### Scenario: Error
-GIVEN a directory with a bare `docs/spec/` (no project.json, no changes/)
+GIVEN a directory with a bare `docs/spec/` (no project.json, no changes/), or a Karvey project that is not in a
+git repository
 WHEN a session starts
-THEN no offer is emitted (it is not a Karvey project).
+THEN no offer is emitted and nothing is written, neither in the directory nor under the user's home.
 
 ### 1.4 REQ-UP-004 — A decline lasts until the next version
 WHEN the person declines the offer, the method SHALL record the installed version as seen, and the session
@@ -109,7 +111,9 @@ THEN the offer is shown again (an unanswered offer is not a decline).
 IF the plan for the project has no applicable step, THEN the session hook SHALL NOT show the offer and SHALL
 record the installed version as seen.
 
-Traces to PRD: §Goal, §Key idea · Interpretation of D-20 to be confirmed at this gate (an offer with an empty plan is noise)
+Traces to PRD: §Goal, §Key idea · Interpretation of D-20 to be confirmed at this gate (an offer with an empty plan is noise) ·
+reachable for a project without a statusline (REQ-UP-023 rev. 2, F-21) and for one created by the project
+initialisation (REQ-UP-026 rev. 2, F-23)
 
 #### Scenario: Success
 GIVEN a project created with `karvey-init` on the installed version
@@ -123,10 +127,14 @@ THEN the offer is shown (the hook does not guess "nothing applies") and the plan
 
 ### 1.6 REQ-UP-006 — The offer never costs the session
 The session hook SHALL keep the upgrade offer within its existing output and time bounds (one offer line plus
-one instruction; REQ-W1-045..047), SHALL NOT fetch from any remote to decide it, and IF anything in the
-offer path fails, THEN it SHALL still start the session and report the failure in at most one line.
+one instruction; REQ-W1-045..047), SHALL NOT fetch from any remote to decide it, and SHALL bound the probe
+that decides it: project files above a size cap are not read, directory walks skip dependency and nested
+repository trees and check the time bound as they go, and the hook stops waiting for the probe at the bound
+(the offer is then shown, as in REQ-UP-005's error scenario). IF anything in the offer path fails, THEN it
+SHALL still start the session and report the failure in at most one line.
 
-Traces to PRD: §Goal · REQ-W1-045..047 · Tier 2
+Traces to PRD: §Goal · REQ-W1-045..047 · Tier 2 · F-25 (rev. 2: a huge file or tree could cost the whole
+startup context up to the hook timeout)
 
 #### Scenario: Success
 GIVEN a Karvey project with a board of 40 rows and a handoff at its byte limit
@@ -134,9 +142,10 @@ WHEN a session starts on a new version
 THEN the offer is present and the other sections are bounded exactly as before.
 
 #### Scenario: Error
-GIVEN the step catalogue is missing or malformed in the installed plugin
+GIVEN the step catalogue is missing or malformed in the installed plugin, or a check that blocks past the time
+bound
 WHEN a session starts
-THEN the session starts, the output carries one line `[karvey] upgrade offer unavailable: <reason>`, and seen-version is unchanged.
+THEN the session starts within the bound plus a fixed grace; a bad catalogue gives one line `[karvey] upgrade offer unavailable: <reason>`, a blocked check gives the offer, and seen-version is unchanged.
 
 ---
 
@@ -231,9 +240,12 @@ THEN nothing changes and the output names `no-such-step`.
 
 ### 3.2 REQ-UP-012 — Dry-run before every apply
 WHEN a step that supports dry-run is applied, the method SHALL show its dry-run result to the person before
-the write; `apply --dry-run` SHALL show every selected step's result and write nothing.
+the write; `apply --dry-run` SHALL show every selected step's result and write nothing, and SHALL preview the
+tree `apply` writes: off the upgrade branch, IF the current tree differs from the tree the upgrade branch
+starts from, THEN it SHALL refuse and name the command that creates the upgrade branch.
 
-Traces to PRD: §Goal
+Traces to PRD: §Goal · F-24 (rev. 2: a dry-run on a local integration branch ahead of its remote previewed a
+tree `apply` never writes)
 
 #### Scenario: Success
 GIVEN `schema-migrate` selected
@@ -247,15 +259,23 @@ THEN the plan and the skill mark it "no preview" and the skill asks for a separa
 
 ### 3.3 REQ-UP-013 — On the upgrade branch, never on integration or production
 WHEN the upgrade tool applies steps, it SHALL do so on the upgrade branch created from the project's
-integration branch; IF the current branch is the integration or the production branch, THEN it SHALL switch
-to the upgrade branch before writing, and it SHALL NOT commit on integration or production.
+integration branch — or, IF another clone already pushed the upgrade branch of the same version (known from
+local refs), from that remote upgrade branch, saying that a PR for it may already be open; IF the current
+branch is the integration or the production branch, THEN it SHALL switch to the upgrade branch before writing,
+and it SHALL NOT commit on integration or production.
 
-Traces to PRD: §Goal ("on a branch, through one PR") · owner's global rules · D-03, D-15
+Traces to PRD: §Goal ("on a branch, through one PR") · owner's global rules · D-03, D-15 · F-08 (rev. 2: the
+offer is per clone, the branch per version; a second clone's push was rejected as non-fast-forward)
 
 #### Scenario: Success
 GIVEN a project on `dev` with integration `dev`
 WHEN `apply` runs for 3.13.0
 THEN the changes are on `chore/karvey-upgrade-3.13.0` and `dev` has no new commit.
+
+GIVEN a second clone where `origin/chore/karvey-upgrade-3.13.0` (pushed by the first clone) is fetched
+WHEN `branch` and `apply` run there
+THEN the branch starts from the remote upgrade branch, the steps the first clone applied are "nothing to do",
+and the push of the new commit is a fast-forward.
 
 #### Scenario: Error
 GIVEN the working tree has uncommitted changes
@@ -295,9 +315,11 @@ WHEN `apply` runs
 THEN it is still not performed and the output says it needs the person.
 
 ### 3.6 REQ-UP-016 — Nothing under the user's home is written
-The upgrade tool SHALL NOT write any file outside the project's working tree and the clone's git dir.
+The upgrade tool SHALL NOT write any file outside the project's working tree and the clone's git dir; for a
+project outside git it SHALL record nothing (the seen-version record lives only in a clone's git dir).
 
-Traces to PRD: §Out of scope · Decisions: D-01, D-11
+Traces to PRD: §Out of scope · Decisions: D-01, D-11 · F-27 (rev. 2: outside git the record fell back to a
+state directory under the home)
 
 #### Scenario: Success
 GIVEN every step selected on a fixture with a fixture home
@@ -366,14 +388,15 @@ THEN it refuses with `invalid branch name in project.json:branch_flow.integratio
 ### 4.1 REQ-UP-020 — Schema migration
 The step catalogue SHALL contain a step that applies the state tool's existing migration of `spec.json` and
 `project.json` legacy shapes, and applies the proposed-tier migrations only when the person selects them
-separately.
+separately; archived changes SHALL NOT be migrated (they are history, D-14).
 
-Traces to PRD: §Problem · REQ-W1-003 (`validate --fix`), D-09
+Traces to PRD: §Problem · REQ-W1-003 (`validate --fix`), D-09 · D-14 · F-22 (rev. 2: the migration rewrote
+archived `spec.json` files while REQ-UP-024 and the exclusions keep the archive untouched)
 
 #### Scenario: Success
-GIVEN a fixture with `approvals: null` and a string `management`
+GIVEN a fixture with `approvals: null` and a string `management`, and an archived change with legacy shapes
 WHEN the step is applied
-THEN both are migrated and a second `plan` no longer lists it.
+THEN both are migrated, the archived `spec.json` is byte-identical, and a second `plan` no longer lists it.
 
 #### Scenario: Error
 GIVEN a `spec.json` with an unmappable phase
@@ -414,10 +437,12 @@ WHEN `plan` runs
 THEN the step is listed as needing a human, with the diff against the shipped shim.
 
 ### 4.4 REQ-UP-023 — Statusline on a stable path
-The step catalogue SHALL contain a human step that detects a statusline command pointing to a versioned plugin
-path (or to no Karvey statusline) and shows the stable command to use instead.
+The step catalogue SHALL contain a human step that detects a Karvey statusline command pointing to a versioned
+plugin path and shows the stable command to use instead. A project without any statusline, or with the
+person's own, SHALL NOT make the step applicable: the plan only notes that the stable command is available.
 
-Traces to PRD: §Problem · F-51, BL-36, BL-41
+Traces to PRD: §Problem · F-51, BL-36, BL-41 · F-21 (rev. 2: "no statusline" was a human result, so the
+usual person got the offer on every version and REQ-UP-005 was unreachable)
 
 #### Scenario: Success
 GIVEN a user settings statusline `…/karvey/3.11.2/hooks/karvey-statusline.sh`
@@ -425,9 +450,9 @@ WHEN `plan` runs
 THEN the step is listed with the stable replacement command.
 
 #### Scenario: Error
-GIVEN a statusline that is not Karvey's (e.g. the person's own script)
+GIVEN a statusline that is not Karvey's (e.g. the person's own script), or no statusline at all
 WHEN `plan` runs
-THEN the step is reported as "own statusline, left as is" and not listed as applicable.
+THEN the step is reported as "own statusline, left as is" (or "no statusline: optional …") and not listed as applicable.
 
 ### 4.5 REQ-UP-024 — Changes in flight are reported, never reprocessed
 The step catalogue SHALL contain a report-only step that lists changes in flight whose recorded phases do not
@@ -464,9 +489,12 @@ THEN the step is reported `check failed: unreadable` and the rest of the plan is
 
 ### 4.7 REQ-UP-026 — New standards and enforcement
 The step catalogue SHALL contain a step that lists the `project.json:enforcement` keys and project standards
-the installed version adds and the project does not declare, proposing the version's defaults.
+the installed version adds and the project does not declare, proposing the version's defaults. The project
+initialisation SHALL declare every enforcement default of the installed version, so that a project created on
+that version does not list this step.
 
-Traces to PRD: §Problem ("new standards/controls never reach the project")
+Traces to PRD: §Problem ("new standards/controls never reach the project") · F-23 (rev. 2: a project created by
+the initialisation got the offer on its first session, contradicting REQ-UP-005's success scenario)
 
 #### Scenario: Success
 GIVEN a project without `enforcement.prod_gate`
@@ -552,9 +580,11 @@ THEN L-37 fails naming the changed files and the release.
 
 ### 6.2 REQ-UP-031 — The catalogue is linted
 The plugin linter SHALL validate the step catalogue against REQ-UP-008 (fields), REQ-UP-010 (read-only
-checks) and REQ-UP-016 (no non-human writes outside the project).
+checks) and REQ-UP-016 (no non-human writes outside the project); the read-only check SHALL hold under import
+aliases, method-style file opens and the tools a step reaches through the read-only view.
 
-Traces to PRD: §Goal
+Traces to PRD: §Goal · F-26 (rev. 2: the scan missed `Path.open("w")`, `os.open`, aliases and the state /
+config tools' writers)
 
 #### Scenario: Success
 GIVEN the shipped catalogue
@@ -594,3 +624,23 @@ THEN the missing section is reported.
 - **Merging the upgrade PR** — the skill opens it; merging stays with the project's normal review.
 - **Fetching remotes to decide the offer** — the hook decides from local state only (REQ-UP-006).
 - **Behaviour of the existing settings notice** — unchanged; the offer is additional to it.
+
+---
+
+## Revision history
+
+Revisions are made by `karvey-iterate` from `findings.md`; each rewrites the affected requirement in place (no
+contradicting text is appended). Under D-21 the recommended option of each spec-gap was taken without asking; the
+owner reviews this list.
+
+| Date | Rev. | Finding | Requirements | Option taken | Reason |
+|---|---|---|---|---|---|
+| 2026-09-25 | 1 | — | REQ-UP-001..032 | — | First version (D-21). |
+| 2026-09-26 | 2 | F-21 | REQ-UP-023 (REQ-UP-005 trace) | "no statusline" is `nothing` with a note (not: optional human hints ignored by the hook only) | One rule for plan and hook; a missing statusline is a choice, not debt, so an empty plan is reachable. |
+| 2026-09-26 | 2 | F-22 | REQ-UP-020 | the migration leaves `docs/spec/changes/archive/` out | D-14 and E-22 already say archived history is untouched; the step was the one contradiction. |
+| 2026-09-26 | 2 | F-23 | REQ-UP-026 (REQ-UP-005 trace) | the initialisation writes every enforcement default (not: the step ignores absent keys) | Keeps the step useful for real gaps and makes a new project current; a test ties the init block to the schema defaults. |
+| 2026-09-26 | 2 | F-24 | REQ-UP-012 | off the upgrade branch, a dry-run whose tree differs from the branch's base is refused, naming `branch` (not: dry-run on a temporary checkout of the base) | Cheapest way to keep "the preview is what apply writes" without touching the working tree. |
+| 2026-09-26 | 2 | F-25 | REQ-UP-006 | size cap on project reads, pruned and deadline-checked walks, a watchdog thread in the hook | Bounds the worst case at the budget plus a fixed grace instead of the 10 s hook timeout. |
+| 2026-09-26 | 2 | F-26 | REQ-UP-031 | extend the scan: aliases, `.open()` write modes, `os.open`, and an allow-list of the state / config tools' read functions | Makes "read-only by construction" hold for the cases the review found. |
+| 2026-09-26 | 2 | F-27 | REQ-UP-003, REQ-UP-016 | outside git: no offer and no record (not: allow the home state dir and guard it) | The record is per clone and the upgrade needs a branch (E-12); nothing is written under the home. |
+| 2026-09-26 | 2 | F-08 | REQ-UP-013 | base the branch on the remote upgrade branch when it exists locally, and say a PR may be open (not: a clone-unique suffix) | One PR per upgrade (REQ-UP-018) instead of one per clone; the second push becomes a fast-forward. |

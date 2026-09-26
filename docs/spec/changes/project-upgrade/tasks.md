@@ -9,9 +9,9 @@
 
 | Item | Value |
 |---|---|
-| Features | 8 |
-| Tasks | 25 (20 Backend, 3 Test, 2 human) |
-| Agent tasks / `[human]` tasks | 23 / 2 |
+| Features | 9 (E1.F9 added by karvey-iterate rev. 2) |
+| Tasks | 30 (25 Backend, 3 Test, 2 human) |
+| Agent tasks / `[human]` tasks | 28 / 2 |
 | Total estimate (agent tasks, AI + human review, calibrated) | **262 min** (≈ 4.4 h) |
 | Critical path (agent minutes; `[human]` waits not counted) | **144 min** (≈ 2.4 h), 12 agent tasks + 2 human waits |
 | REQ-UP coverage | 32/32 |
@@ -293,41 +293,88 @@ Total estimated time: 16 min (2 agent tasks + 2 `[human]`)
 **Requirements:** release gate (D-10); no REQ-UP of its own  
 **Executed:** (filled when done: name · YYYY-MM-DD HH:MM · evidence)
 
+## Feature E1.F9: Iteration rev. 2 — spec-gaps F-08, F-21..F-27 and emergent F-09, F-28
+
+Added by `karvey-iterate` (2026-09-26) after the QA review; requirements rev. 2 and architecture rev. 2 are the
+ripple set. Each task wrote its regression test first (red on the reviewed code), then the fix.  
+Requirements covered: 003, 005, 006, 012, 013, 016, 020, 023, 026, 031  
+Total estimated time: 40 min (5 tasks)
+
+### E1.F9.T1 [Backend] Steps: no statusline is a note (F-21), archive never migrated (F-22), init declares every enforcement default (F-23), project strings on one line (F-28) — _Depends: E1.F8.T3_
+
+**Estimate:** 10 min  
+**Files:** `plugins/karvey/scripts/karvey_lib/upgrade_steps.py`, `plugins/karvey/scripts/karvey_lib/upgrade.py` (`one_line`, `_row`), `plugins/karvey/skills/karvey-init/SKILL.md` (enforcement block)  
+**Requirements:** REQ-UP-005, REQ-UP-020, REQ-UP-023, REQ-UP-026  
+**Tests added:** `test_upgrade_steps.RegressionProjectUpgradeIterate` (`test_f21_…`, `test_f22_…`, `test_f23_…`, `test_f28_…`); `HumanSteps.test_no_statusline_is_a_note_not_work` and `SchemaMigrate.test_exact_tier_…` rewritten to the revised requirements  
+**Done when:** `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_upgrade_steps.py' -v` passes.
+
+### E1.F9.T2 [Backend] Branch and preview: the remote upgrade branch as base (F-08), dry-run refused off a differing base (F-24) — _Depends: E1.F9.T1_
+
+**Estimate:** 10 min  
+**Files:** `plugins/karvey/scripts/karvey_lib/upgrade.py` (`branch_base`, `ensure_branch`, `check_preview_base`), `plugins/karvey/scripts/karvey-upgrade.py` (`branch` text), `plugins/karvey/skills/karvey-upgrade/SKILL.md` (steps 6, 7, 10)  
+**Requirements:** REQ-UP-012, REQ-UP-013, REQ-UP-018  
+**Tests added:** `test_f08_a_second_clone_builds_on_the_remote_upgrade_branch`, `test_f24_a_dry_run_off_the_upgrade_branch_must_preview_its_base`  
+**Done when:** the same command passes and `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_upgrade_apply.py'` passes.
+
+### E1.F9.T3 [Backend] Bounded probe and hook: read cap, pruned deadline-checked walk, watchdog (F-25); silent outside git, no record (F-27) — _Depends: E1.F9.T2_
+
+**Estimate:** 8 min  
+**Files:** `plugins/karvey/scripts/karvey_lib/upgrade.py` (`PROJECT_READ_MAX`, `Probe.glob`, `write_seen`), `plugins/karvey/scripts/karvey_lib/karvey_hooks.py` (`_probe_with_watchdog`, git check)  
+**Requirements:** REQ-UP-003, REQ-UP-006, REQ-UP-016  
+**Tests added:** `test_f25_project_reads_are_capped_and_the_walk_honours_the_deadline`, `test_karvey_hooks.UpgradeOffer.test_f25_a_stuck_probe_is_cut_by_the_watchdog`, `…test_f27_a_karvey_project_outside_git_gets_no_offer_and_no_record`, `test_upgrade_seen.SeenCli.test_f27_outside_git_nothing_is_recorded`  
+**Done when:** `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_karvey_hooks.py'` and `-p 'test_upgrade_seen.py'` pass; `python3 plugins/karvey/tests/hooks/run_tables.py --only session` passes.
+
+### E1.F9.T4 [Backend] Offer wording as the plugin's notice (F-09) — _Depends: E1.F9.T3_
+
+**Estimate:** 4 min  
+**Files:** `plugins/karvey/scripts/karvey_lib/karvey_hooks.py` (`upgrade_offer` text)  
+**Requirements:** REQ-UP-002, REQ-UP-006 (line bounds)  
+**Tests added:** `test_karvey_hooks.UpgradeOffer.test_f09_the_offer_reads_as_the_plugins_own_notice`  
+**Done when:** `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_karvey_hooks.py'` passes and both lines stay ≤ 300 characters with the installed plugin path.
+
+### E1.F9.T5 [Backend] L-38 scan: aliases, `.open()` write modes, `os.open`, the state / config tools' allow-list (F-26) — _Depends: E1.F9.T1_ (P)
+
+**Estimate:** 8 min  
+**Files:** `plugins/karvey/scripts/lint-plugin.py`  
+**Requirements:** REQ-UP-031, REQ-UP-010  
+**Tests added:** `test_lint_plugin.L38.test_f26_path_open_os_open_aliases_and_state_writers_fail` (10 cases)  
+**Done when:** `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_lint_plugin.py'` passes and `python3 plugins/karvey/scripts/lint-plugin.py` reports 0 errors.
+
 ## Traceability matrix (REQ-UP → tasks)
 
 | REQ-UP | Tasks |
 |---|---|
 | 001 | E1.F1.T5, E1.F4.T1, E1.F5.T2 |
-| 002 | E1.F5.T1, E1.F5.T2, E1.F8.T2 |
-| 003 | E1.F5.T1, E1.F5.T2 |
+| 002 | E1.F5.T1, E1.F5.T2, E1.F8.T2, E1.F9.T4 |
+| 003 | E1.F5.T1, E1.F5.T2, E1.F9.T3 |
 | 004 | E1.F1.T5, E1.F4.T1, E1.F5.T2, E1.F6.T1 |
-| 005 | E1.F1.T4, E1.F5.T1, E1.F5.T2 |
-| 006 | E1.F5.T1, E1.F5.T2 |
+| 005 | E1.F1.T4, E1.F5.T1, E1.F5.T2, E1.F9.T1 |
+| 006 | E1.F5.T1, E1.F5.T2, E1.F9.T3 |
 | 007 | E1.F1.T4, E1.F4.T1 |
 | 008 | E1.F1.T1, E1.F7.T1 |
 | 009 | E1.F1.T4, E1.F4.T1 |
 | 010 | E1.F1.T2, E1.F1.T4, E1.F7.T1 |
 | 011 | E1.F2.T1 |
-| 012 | E1.F2.T1, E1.F6.T1 |
-| 013 | E1.F2.T2, E1.F2.T3, E1.F4.T1 |
+| 012 | E1.F2.T1, E1.F6.T1, E1.F9.T2 |
+| 013 | E1.F2.T2, E1.F2.T3, E1.F4.T1, E1.F9.T2 |
 | 014 | E1.F2.T1, E1.F2.T2 |
 | 015 | E1.F2.T1, E1.F3.T4 |
-| 016 | E1.F1.T2, E1.F2.T1, E1.F7.T1 |
+| 016 | E1.F1.T2, E1.F2.T1, E1.F7.T1, E1.F9.T3 |
 | 017 | E1.F2.T2 |
-| 018 | E1.F2.T3, E1.F4.T1, E1.F6.T1, E1.F8.T2 |
+| 018 | E1.F2.T3, E1.F4.T1, E1.F6.T1, E1.F8.T2, E1.F9.T2 |
 | 019 | E1.F2.T1, E1.F4.T1 |
-| 020 | E1.F3.T1 |
+| 020 | E1.F3.T1, E1.F9.T1 |
 | 021 | E1.F3.T3 |
 | 022 | E1.F1.T3, E1.F3.T2 |
-| 023 | E1.F3.T4, E1.F7.T3 |
+| 023 | E1.F3.T4, E1.F7.T3, E1.F9.T1 |
 | 024 | E1.F1.T3, E1.F3.T5 |
 | 025 | E1.F3.T4 |
-| 026 | E1.F3.T3 |
+| 026 | E1.F3.T3, E1.F9.T1 |
 | 027 | E1.F6.T1, E1.F6.T2, E1.F8.T2 |
 | 028 | E1.F2.T3, E1.F6.T1, E1.F6.T2, E1.F8.T2 |
 | 029 | E1.F6.T1, E1.F6.T2, E1.F8.T2 |
 | 030 | E1.F7.T2, E1.F8.T3 |
-| 031 | E1.F7.T1 |
+| 031 | E1.F7.T1, E1.F9.T5 |
 | 032 | E1.F7.T3, E1.F8.T3 |
 
 **Coverage:** 32/32. No REQ-UP is left without a task. Every component of the architecture's file plan (§1.1) has a task: schema, engine, steps, catalogue, fingerprint, CLI, `defaults.json`, `karvey_hooks.py`, bash hook, skill, linter, fixtures, runner and tables, unit suites, manual script, READMEs, versioning rule, deploy skill, CHANGELOG.
