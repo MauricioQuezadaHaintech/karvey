@@ -1316,6 +1316,12 @@ def cmd_advance(args, root):
         if to == "archived" and approval_state(data, "deployed") != "approved":
             raise Refused("archived needs approvals.prod in spec.json (by, role human, ref): run "
                           "approve %s prod --write-spec on the archive branch" % args.change, code="state.precondition")
+        if to == "archived":
+            # every risk closed or moved through the risk command before archive (wave3 §1.17, REQ-W3-034)
+            blockers = rk.archive_blockers(rk.read(change_spec_path(root, args.change).parent), data.get("risk_log"))
+            if blockers:
+                raise Refused("archived needs every risk closed or moved: " + "; ".join(blockers),
+                              code="state.risks_open", result={"risks": blockers})
         lane_skipped = record_lane_skips(data, ti)
         if lane_skipped:
             info["lane_skipped"] = lane_skipped

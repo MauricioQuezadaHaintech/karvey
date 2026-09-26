@@ -155,3 +155,18 @@ def gate_review(rows, since):
         if unrev:
             warns.append("risk %s unreviewed" % r["id"])
     return items, warns
+
+
+def archive_blockers(rows, risk_log):
+    """What stops ``advance archived`` (REQ-W3-034, F-75): a risk still ``open`` (named), and a risk in another
+    state with no ``spec.json:risk_log`` record reaching that state (``R-N: state without record`` — a hand edit)."""
+    logged = {(e.get("risk"), e.get("to")) for e in (risk_log or []) if isinstance(e, dict)}
+    out = []
+    for r in rows:
+        if r["state"] == "open":
+            out.append("%s: open — close it with a reason or move it to the backlog (karvey-state.py risk "
+                       "<change> %s close --reason … | move)" % (r["id"], r["id"]))
+        elif (r["id"], r["state"]) not in logged:
+            out.append("%s: state without record (%s set by hand; record it with karvey-state.py risk)"
+                       % (r["id"], r["state"]))
+    return out

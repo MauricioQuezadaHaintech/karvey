@@ -174,5 +174,69 @@ class GateReview(unittest.TestCase):
         self.assertNotIn("R-3", text)
 
 
+class Archive(unittest.TestCase):
+    """@req REQ-W3-034 — ``advance archived`` refuses an open risk and a state without a ``risk_log`` record."""
+
+    T0 = "2026-09-23T10:00:00-03:00"
+
+    def setUp(self):
+        import os
+        from unittest import mock
+        from karvey_lib import approval as ap
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-risk-arch-"))
+        self.root = g.init(self.tmp / "repo")
+        self.env = mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(self.tmp / "xdg"), ap.COMPAT_ENV: ""})
+        self.env.start()
+        ok = {"generated": True, "approved": True, "by": "M", "role": "human", "date": self.T0, "ref": "D-1"}
+        a = {k: dict(ok) for k in ("requirements", "architecture", "tasks", "qa", "prod")}
+        self.spec = make_project(self.root, spec={
+            "change_id": "feat-a", "phase": "deployed", "approvals": a,
+            "skipped": {"mockup": "a", "design_graphic": "a", "infra": "a"},
+            "phase_history": [{"phase": "init", "entered_at": self.T0, "exited_at": self.T0},
+                              {"phase": "deployed", "entered_at": self.T0}]})
+        self.reg = self.spec.parent / "risks.md"
+        self.reg.write_text(rk.HEADER + "| R-1 | Provider outage | Low | Medium | tech lead | outage notice | "
+                            "message on screen | open | 2026-10-13 tech lead |\n", encoding="utf-8")
+        g.run(["add", "-A"], self.root)
+        g.run(["commit", "-q", "-m", "fixture"], self.root)
+
+    def tearDown(self):
+        self.env.stop()
+        shutil.rmtree(str(self.tmp), ignore_errors=True)
+
+    def st(self, *argv):
+        return run_json(*(list(argv) + ["--root", str(self.root)]))
+
+    def test_REQ_W3_034_an_open_risk_stops_archive_naming_it(self):
+        before = self.spec.read_bytes()
+        code, env = self.st("advance", "feat-a", "archived")
+        self.assertEqual(code, 3, env)
+        self.assertIn("R-1: open", env["errors"][0]["message"])
+        self.assertEqual(self.spec.read_bytes(), before)
+
+    def test_a_hand_edit_to_closed_is_a_state_without_record(self):
+        self.reg.write_text(self.reg.read_text(encoding="utf-8").replace("| open |", "| closed |"), encoding="utf-8")
+        code, env = self.st("advance", "feat-a", "archived")
+        self.assertEqual(code, 3, env)
+        self.assertIn("R-1: state without record", env["errors"][0]["message"])
+
+    def test_REQ_W3_034_closed_through_the_command_archive_proceeds(self):
+        code, env = self.st("risk", "feat-a", "R-1", "close", "--reason", "provider replaced", "--by-role", "tech lead")
+        self.assertEqual(code, 0, env)
+        code, env = self.st("advance", "feat-a", "archived")
+        self.assertEqual(code, 0, env)
+
+    def test_moved_through_the_command_archive_proceeds(self):
+        code, env = self.st("risk", "feat-a", "R-1", "move", "--to", "BL-07", "--by-role", "tech lead")
+        self.assertEqual(code, 0, env)
+        code, env = self.st("advance", "feat-a", "archived")
+        self.assertEqual(code, 0, env)
+
+    def test_no_register_is_no_risk(self):
+        self.reg.unlink()
+        code, env = self.st("advance", "feat-a", "archived")
+        self.assertEqual(code, 0, env)
+
+
 if __name__ == "__main__":
     unittest.main()

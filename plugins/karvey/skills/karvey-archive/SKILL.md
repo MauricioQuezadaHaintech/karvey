@@ -70,6 +70,17 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-spec-merge.py" "{change-id}" --che
 - `conflict` → stop and route it through `/karvey-iterate` (the living spec and the delta disagree).
 The capability comes from `spec.json:capability` (`--capability` overrides). ADDED is appended, MODIFIED replaces the block, REMOVED leaves a deprecation comment (`../karvey/rules/living-specs.md`).
 
+### Step 3-bis — Close or move every open risk
+
+`advance … archived` refuses while a risk of `docs/spec/changes/{change-id}/risks.md` is still `open` (it names
+it), and while a risk's state was edited by hand (`R-N: state without record`). For each open risk, ask its owner and
+record the answer with the state tool — never edit the register by hand:
+```bash
+python3 "$S" risk "{change-id}" R-N close --reason "{why it no longer applies}" --by-role "{owner role}"
+python3 "$S" risk "{change-id}" R-N move --by-role "{owner role}"   # reserves BL-NN and writes the backlog row
+```
+A risk nobody closes or moves stops the archive (`../karvey/rules/risks.md`). No register = no risks.
+
 ### Step 4 — Archive the change directory
 
 ```bash
