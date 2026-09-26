@@ -783,6 +783,18 @@ def fix_spec(data, accept_proposed=False):
             notes.append("lane: %r (proposed tier: %s), applied" % (lane, why))
         else:
             notes.append("lane: %r proposed (%s): proposed tier, re-run with --accept-proposed" % (lane, why))
+
+    # wave3 §1.20 (REQ-W3-063): the tracker's client tag becomes the first-level client; the tag stays as the read
+    # fallback. A client already set is never overwritten: a different tag is only reported.
+    cu = new.get("clickup") if isinstance(new.get("clickup"), dict) else {}
+    tag = cu.get("client_tag") if isinstance(cu.get("client_tag"), str) else None
+    client = new.get("client")
+    if tag and tag.strip():
+        if not (isinstance(client, str) and client.strip()):
+            new["client"] = tag.strip()
+            notes.append("client: %r from clickup.client_tag (the tag is kept as a read fallback)" % tag.strip())
+        elif client.strip().lower() != tag.strip().lower():
+            notes.append("client %r kept; clickup.client_tag %r differs (not changed)" % (client, tag))
     return new, notes
 
 

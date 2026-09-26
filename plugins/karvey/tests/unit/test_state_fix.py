@@ -335,6 +335,34 @@ class LegacyCatalogue(Base):
         self.fix(f)
         self.assertEqual(load(f), before)
 
+class ClientTag(Base):
+    """@req REQ-W3-063 — ``clickup.client_tag`` proposed as the first-level ``client``."""
+    FIX = _path.PLUGIN_ROOT / "tests" / "fixtures" / "legacy" / "spec" / "clickup-client-tag.json"
+
+    def test_REQ_W3_063_tag_without_client_is_proposed_with_a_diff_then_idempotent(self):
+        f = self.spec_file(json.loads(self.FIX.read_text(encoding="utf-8")))
+        code, env = self.fix(f)
+        self.assertEqual(code, 0, env)
+        entry = env["result"]["files"][0]
+        self.assertIn('+  "client": "sample-client-a"', entry["diff"])
+        data = self.read(f)
+        self.assertEqual((data["client"], data["clickup"]["client_tag"]), ("sample-client-a", "sample-client-a"))
+        self.assertEqual(approved_values(data), {"requirements": False})  # never an approval
+        code, env = self.fix(f)
+        self.assertFalse(env["result"]["files"][0].get("changed"))
+
+    def test_REQ_W3_063_a_different_client_is_kept_and_both_reported(self):
+        data = json.loads(self.FIX.read_text(encoding="utf-8"))
+        data["client"] = "sample-client-b"
+        f = self.spec_file(data)
+        before = f.read_bytes()
+        code, env = self.fix(f)
+        notes = " ".join(env["result"]["files"][0].get("notes") or [])
+        self.assertIn("'sample-client-b' kept", notes)
+        self.assertIn("'sample-client-a' differs", notes)
+        self.assertEqual(f.read_bytes(), before)
+
+
 if __name__ == "__main__":
     unittest.main()
 
