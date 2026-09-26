@@ -10,7 +10,10 @@ Modified with the base value, components, or ``empty``) and reports every modifi
 not declare (``undeclared modification: --color-primary``) in the ``design.undeclared`` mode (warn in 4.1: exit 0;
 blocking: exit 1). Without a design system every token is an addition: the delta seeds it at archive.
 
-``apply`` (REQ-W3-076) runs at archive: see its docstring. Exit: 0 · 1 findings (blocking) · 2 usage ·
+``apply`` (REQ-W3-076) runs at archive: added tokens and components are written with ``Changed by``; a modified
+token whose design-system value is no longer the delta's base value stops (exit 3) naming the token, both values and
+the change that last modified it; ``--keep=TOKEN=current|new`` records the human's answer; ``--dry-run`` writes
+nothing. Exit: 0 · 1 findings (blocking) · 2 usage ·
 3 conflict (apply) · 4 not found. Stdlib only.
 """
 import argparse
@@ -81,7 +84,51 @@ def render_diff(res):
     return "\n".join(L)
 
 
-COMMANDS = {"diff": (cmd_diff, render_diff)}
+def cmd_apply(args, root):
+    """``apply <change> [--dry-run] [--keep TOKEN=current|new]`` at archive (REQ-W3-076): the delta's added tokens
+    and components are written to the design system with ``Changed by``; a modified token is written only when the
+    system still holds the delta's base value — otherwise it stops (exit 3) with both values and the change that
+    last modified it, and the archive skill asks the human which to keep (``--keep``). ``--dry-run`` writes
+    nothing."""
+    from karvey_lib import atomicio
+    cdir = Path(root) / pj.CHANGES_DIR / args.change
+    if not (cdir / "spec.json").is_file():
+        raise NotFound("change %r not found" % args.change)
+    delta = ds.parse_delta(_read(cdir / "design-delta.md"))
+    keep = {}
+    for k in args.keep or []:
+        tok, _, choice = k.partition("=")
+        if choice not in ("current", "new") or not tok.startswith("--"):
+            return kl.EXIT_USAGE, None, [kl.issue("usage", "--keep TOKEN=current|new, got %r" % k)], []
+        keep[tok] = choice
+    spath = Path(root) / SYSTEM
+    before = _read(spath, required=False)
+    text, applied, conflicts = ds.apply_delta(before, delta, args.change, keep)
+    changed = text != (before or "")
+    res = {"change": args.change, "applied": applied, "conflicts": conflicts, "dry_run": bool(args.dry_run),
+           "written": False, "file": SYSTEM.as_posix(), "empty": delta["empty"] or not applied and not conflicts}
+    if changed and not args.dry_run:
+        atomicio.write_text_atomic(str(spath), text, expected_sha256=atomicio.file_sha256(spath) if before else None)
+        res["written"] = True
+    if conflicts:
+        return kl.EXIT_REFUSED, res, [kl.issue("design.conflict", "%s (%s): design system has %s, the delta's base "
+                                               "was %s, new %s — last changed by %s" % (
+                                                   c["token"], c["scheme"], c["current"], c["base"], c["new"],
+                                                   c["last_change"] or "unknown")) for c in conflicts], []
+    return kl.EXIT_OK, res, [], []
+
+
+def render_apply(res):
+    L = ["design apply — %s%s" % (res["change"], " (dry run: nothing written)" if res["dry_run"] else "")]
+    L += ["  " + a for a in res["applied"]] or ["  nothing to apply"]
+    for c in res["conflicts"]:
+        L.append("  CONFLICT %s (%s): current %s · base %s · new %s · last changed by %s — ask the human which to "
+                 "keep, then --keep=%s=current|new" % (c["token"], c["scheme"], c["current"], c["base"], c["new"],
+                                                       c["last_change"] or "unknown", c["token"]))
+    return "\n".join(L)
+
+
+COMMANDS = {"diff": (cmd_diff, render_diff), "apply": (cmd_apply, render_apply)}
 
 
 def build_parser():
@@ -94,6 +141,8 @@ def build_parser():
         s.add_argument("--json", action="store_true")
         if name == "apply":
             s.add_argument("--dry-run", action="store_true")
+            s.add_argument("--keep", action="append", metavar="TOKEN=current|new",
+                           help="the human's answer for a conflicting token")
     return p
 
 

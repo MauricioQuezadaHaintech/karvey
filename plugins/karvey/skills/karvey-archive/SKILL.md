@@ -81,6 +81,18 @@ python3 "$S" risk "{change-id}" R-N move --by-role "{owner role}"   # reserves B
 ```
 A risk nobody closes or moves stops the archive (`../karvey/rules/risks.md`). No register = no risks.
 
+### Step 3-ter — Apply the design delta (UI changes)
+
+When the change has `design-delta.md`, write it into the project design system (`docs/spec/design-system.md`;
+the first UI change creates it):
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-design.py" apply "{change-id}" --dry-run   # review
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-design.py" apply "{change-id}"
+```
+Exit 3 = another change modified a token this delta also modifies: it prints the token, the current value, this
+delta's base and new value, and the change that last modified it. **Ask the human which value to keep** — never pick
+one — and re-run with `--keep=TOKEN=current` or `--keep=TOKEN=new`. Commit the design system with the archive.
+
 ### Step 4 — Archive the change directory
 
 ```bash

@@ -321,3 +321,105 @@ def diff(system, spec, delta):
             undeclared.append("undeclared component: %s" % c)
     empty = not (added or modified or comps or delta["added"] or delta["modified"] or delta["components"])
     return {"added": added, "modified": modified, "components": comps, "undeclared": undeclared, "empty": empty}
+
+
+# --------------------------------------------------------------------------- apply (REQ-W3-076)
+CATEGORIES = (("--color-", "Colour"), ("--font-", "Type"), ("--text-", "Type"), ("--space-", "Spacing"),
+              ("--radius-", "Radius"), ("--duration-", "Motion"), ("--ease-", "Motion"))
+TOKEN_HEAD = "| Token | Light | Dark | Changed by |\n|-------|-------|------|------------|"
+COMPONENT_HEAD = "| Component | Changed by |\n|-----------|------------|"
+
+
+def category(token):
+    return next((c for p, c in CATEGORIES if token.startswith(p)), "Other")
+
+
+def _block_head(lines, idx):
+    """Index of the header line of the table that holds line ``idx`` (0-based)."""
+    while idx > 0 and lines[idx - 1].lstrip().startswith("|"):
+        idx -= 1
+    return idx
+
+
+def _set_cells(lines, idx, values):
+    head = [c.lower() for c in _cells(lines[_block_head(lines, idx)])]
+    cells = _cells(lines[idx])
+    cells += [""] * (len(head) - len(cells))
+    for i, h in enumerate(head):
+        for key, v in values.items():
+            if h == key or h.startswith(key + " ") or h.startswith(key + "("):
+                cells[i] = v
+    lines[idx] = "| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |"
+
+
+def _append_row(lines, section, head_text, row):
+    """Append ``row`` to the table under heading ``section`` (created at the end when absent)."""
+    sec_idx = next((i for i, ln in enumerate(lines) if re.match(r"^#{2,6}\s+%s\s*$" % re.escape(section), ln)), None)
+    if sec_idx is not None:
+        j = sec_idx + 1
+        while j < len(lines) and not lines[j].lstrip().startswith("|") and not lines[j].startswith("#"):
+            j += 1
+        if j < len(lines) and lines[j].lstrip().startswith("|"):
+            while j < len(lines) and lines[j].lstrip().startswith("|"):
+                j += 1
+            lines.insert(j, row)
+            return
+        lines[sec_idx + 1:sec_idx + 1] = [""] + head_text.split("\n") + [row]
+        return
+    while lines and not lines[-1].strip():
+        lines.pop()
+    lines += ["", "## %s" % section, ""] + head_text.split("\n") + [row]
+
+
+def _cell(v):
+    return "`%s`" % v if v and not v.startswith("=") else (v or "=")
+
+
+def apply_delta(system_text, delta, change, keep=None):
+    """``(new_text, applied, conflicts)``: the delta written into the design system.
+
+    Added tokens and components are written with ``Changed by`` = ``change`` (an added token already present with
+    the same value is a no-op). A modified token is written only when the system's current value equals the delta's
+    base value; otherwise it is a conflict ``{token, scheme, base, current, new, last_change}`` and is left as it is,
+    unless ``keep[token]`` says ``current`` (nothing written) or ``new`` (the new value written)."""
+    keep = keep or {}
+    text = system_text if system_text is not None else "# Design system\n"
+    lines = text.rstrip("\n").split("\n")
+    applied, conflicts = [], []
+    rows = [dict(r, kind="added") for r in delta["added"]] + [dict(r, kind="modified") for r in delta["modified"]]
+    for r in rows:
+        tokens = parse("\n".join(lines))["tokens"]
+        name, schemes = r["token"], (SCHEMES if r["scheme"] == "both" else (r["scheme"],))
+        cur = tokens.get(name)
+        if cur is None:
+            vals = {s: r["new"] for s in schemes}
+            row = "| `%s` | %s | %s | %s |" % (name, _cell(vals.get("light")), _cell(vals.get("dark")), change)
+            _append_row(lines, category(name), TOKEN_HEAD, row)
+            applied.append("added %s" % name)
+            continue
+        write = {}
+        for s in schemes:
+            current = cur.get(s) if s == "light" or cur.get("dark") else cur.get("light")
+            if _norm(current) == _norm(r["new"]):
+                continue
+            expected = r["base"] if r["kind"] == "modified" else None
+            if r["kind"] == "modified" and _norm(current) == _norm(expected):
+                write[s] = r["new"]
+                continue
+            choice = keep.get(name)
+            if choice == "new":
+                write[s] = r["new"]
+            elif choice == "current":
+                continue
+            else:
+                conflicts.append({"token": name, "scheme": s, "base": expected, "current": current, "new": r["new"],
+                                  "last_change": cur.get("changed_by")})
+        if write:
+            _set_cells(lines, cur["line"] - 1, dict({k: _cell(v) for k, v in write.items()}, **{"changed by": change}))
+            applied.append("modified %s (%s)" % (name, ", ".join(sorted(write))))
+    have = {c["name"].lower() for c in parse("\n".join(lines))["components"]}
+    for c in delta["components"]:
+        if c["action"] == "added" and c["name"].lower() not in have:
+            _append_row(lines, "Components", COMPONENT_HEAD, "| %s | %s |" % (c["name"], change))
+            applied.append("component %s" % c["name"])
+    return "\n".join(lines) + "\n", applied, conflicts

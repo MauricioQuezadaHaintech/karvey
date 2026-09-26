@@ -132,5 +132,63 @@ class Diff(Project):
         self.assertIn("undeclared addition: --color-primary", env["result"]["undeclared"])
 
 
+class Apply(Project):
+    """@req REQ-W3-076"""
+
+    MOD = ("## Modified\n\n| Token | Scheme | Base value | New value |\n|---|---|---|---|\n"
+           "| `--color-primary` | light | `#2b4256` | `%s` |\n")
+
+    def test_REQ_W3_076_untouched_token_and_addition_written_without_question(self):
+        self.delta(self.MOD % "#1f4f7a" + "\n## Added\n\n| Token | Scheme | Base value | New value |\n|---|---|---|---|\n"
+                   "| `--color-info` | both | — | `#1c5d96` |\n\n## Components\n\n| Component | Action |\n|---|---|\n"
+                   "| Tag | added |\n")
+        code, env = self.tool("apply", "sample-change")
+        self.assertEqual(code, 0, env)
+        s = ds.parse(self.system.read_text(encoding="utf-8"))
+        self.assertEqual((s["tokens"]["--color-primary"]["light"], s["tokens"]["--color-primary"]["changed_by"]),
+                         ("#1f4f7a", "sample-change"))
+        self.assertEqual(s["tokens"]["--color-primary"]["dark"], "#a3bfd8")
+        self.assertEqual(s["tokens"]["--color-info"]["dark"], "#1c5d96")
+        self.assertIn("Tag", [c["name"] for c in s["components"]])
+        code, env = self.tool("apply", "sample-change")  # idempotent
+        self.assertEqual((code, env["result"]["applied"]), (0, []))
+
+    def test_REQ_W3_076_second_change_on_the_same_token_stops_with_both_values(self):
+        self.delta(self.MOD % "#1f4f7a")
+        self.assertEqual(self.tool("apply", "sample-change")[0], 0)  # the first change, archived
+        other = self.tmp / "docs/spec/changes/second-change"
+        other.mkdir()
+        (other / "spec.json").write_text('{"change_id": "second-change", "phase": "archived"}\n')
+        (other / "design-delta.md").write_text(self.MOD % "#335577", encoding="utf-8")
+        before = self.system.read_bytes()
+        code, env = self.tool("apply", "second-change")
+        self.assertEqual(code, 3, env)
+        msg = env["errors"][0]["message"]
+        for part in ("--color-primary", "#1f4f7a", "#2b4256", "#335577", "sample-change"):
+            self.assertIn(part, msg)
+        self.assertEqual(self.system.read_bytes(), before)
+        code, env = self.tool("apply", "second-change", "--keep=--color-primary=new")
+        self.assertEqual(code, 0, env)
+        self.assertEqual(ds.parse(self.system.read_text())["tokens"]["--color-primary"]["light"], "#335577")
+
+    def test_REQ_W3_076_dry_run_writes_nothing(self):
+        self.delta(self.MOD % "#1f4f7a")
+        before = self.system.read_bytes()
+        code, env = self.tool("apply", "sample-change", "--dry-run")
+        self.assertEqual(code, 0, env)
+        self.assertEqual(env["result"]["applied"], ["modified --color-primary (light)"])
+        self.assertEqual(self.system.read_bytes(), before)
+
+    def test_the_first_ui_change_seeds_the_design_system(self):
+        self.system.unlink()
+        self.delta("## Added\n\n| Token | Scheme | Base value | New value |\n|---|---|---|---|\n"
+                   "| `--color-primary` | both | — | `#2b4256` |\n| `--space-1` | both | — | `4px` |\n")
+        code, env = self.tool("apply", "sample-change")
+        self.assertEqual(code, 0, env)
+        s = ds.parse(self.system.read_text(encoding="utf-8"))
+        self.assertEqual(sorted(s["tokens"]), ["--color-primary", "--space-1"])
+        self.assertIn("## Colour", self.system.read_text())
+
+
 if __name__ == "__main__":
     unittest.main()
