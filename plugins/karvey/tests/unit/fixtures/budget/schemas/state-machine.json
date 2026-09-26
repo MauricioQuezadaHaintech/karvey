@@ -1,0 +1,7 @@
+{
+  "phases": [
+    {"id": "alpha", "skill": "karvey-alpha"},
+    {"id": "beta", "skill": "karvey-beta"},
+    {"id": "beta-close", "skill": "karvey-beta"}
+  ]
+}
