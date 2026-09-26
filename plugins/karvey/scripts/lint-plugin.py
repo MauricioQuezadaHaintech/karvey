@@ -2304,6 +2304,41 @@ def l63_no_cost_cap_text(ctx):
                 act.group(0).lower(), trig.group(0)))
 
 
+# --------------------------------------------------------------------------- L-65 (wave3-optimization)
+RISK_STATES = ("open", "mitigated", "accepted", "closed", "moved")
+
+
+@check("L-65", "schemas/wording.json gives every phase, lane, risk state and label a non-empty wording in every "
+               "listed language (REQ-W3-080)", reqs=("W3-080",))
+def l65_wording_complete(ctx):
+    path = ctx.schemas_dir() / "wording.json"
+    data = ctx.json(path)
+    if data is None:
+        if path.is_file() or (ctx.plugin / "templates" / "sponsor.html").is_file():
+            yield (path, 1, "wording.json is missing or not JSON")
+        return
+    langs = data.get("languages") or []
+    if not isinstance(langs, list) or not langs:
+        yield (path, 1, "wording.json lists no language")
+        return
+    required = {"phases": [p.get("id") for p in ctx.machine().get("phases", [])],
+                "risk_states": list(RISK_STATES)}
+    lanes_ = ctx.json(ctx.schemas_dir() / "lanes.json") or ctx.json(kl.SCHEMAS_DIR / "lanes.json") or {}
+    lane_ids = lanes_.get("lanes")
+    required["lanes"] = list(lane_ids.keys()) if isinstance(lane_ids, dict) else [
+        x if isinstance(x, str) else x.get("id") for x in (lane_ids or [])]
+    for cat in ("phases", "lanes", "risk_states", "labels"):
+        table = data.get(cat) if isinstance(data.get(cat), dict) else {}
+        keys = sorted(set(k for k in required.get(cat, []) if k) | set(table))
+        for key in keys:
+            entry = table.get(key) if isinstance(table.get(key), dict) else {}
+            for lang in langs:
+                v = entry.get(lang)
+                if not isinstance(v, str) or not v.strip():
+                    yield (path, line_of(ctx, path, '"%s"' % key),
+                           "%s %r has no wording in %r" % (cat.rstrip("s").replace("_state", " state"), key, lang))
+
+
 # --------------------------------------------------------------------------- L-47 (wave2-structural), L-73 (wave3)
 MODE_CALL_RE = re.compile(r"modes\.(?:resolve|record_hit|default|row|levels_of)\(([^)]*)\)")
 CHECK_ID_LITERAL_RE = re.compile(r"[\"']([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)[\"']")

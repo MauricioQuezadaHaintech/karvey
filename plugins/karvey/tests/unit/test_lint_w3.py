@@ -93,5 +93,37 @@ class L63(LintCase):
         self.assertFails("L-63", "ask to confirm", file=self.SKILL)
 
 
+WORDING = "plugins/karvey/schemas/wording.json"
+
+
+class L65(LintCase):
+    """@req REQ-W3-080 — the wording table is complete per listed language."""
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(WORDING, json.loads((_path.SCHEMAS_DIR / "wording.json").read_text(encoding="utf-8")))
+
+    def test_REQ_W3_080_english_risk_wording(self):
+        w = json.loads((_path.SCHEMAS_DIR / "wording.json").read_text(encoding="utf-8"))
+        self.assertEqual({k: v["en"] for k, v in w["risk_states"].items()},
+                         {"open": "being watched", "mitigated": "reduced", "accepted": "accepted as is",
+                          "closed": "no longer a risk", "moved": "carried to later work"})
+
+    def test_complete_table_passes(self):
+        self.assertPasses("L-65")
+
+    def test_REQ_W3_080_a_state_removed_from_es_names_state_and_language(self):
+        w = json.loads(self.t.read(WORDING))
+        del w["risk_states"]["moved"]["es"]
+        self.t.write(WORDING, w)
+        self.assertFails("L-65", "risk state 'moved' has no wording in 'es'", file=WORDING)
+
+    def test_a_phase_without_wording_fails(self):
+        w = json.loads(self.t.read(WORDING))
+        del w["phases"]["qa"]
+        self.t.write(WORDING, w)
+        self.assertFails("L-65", "phase 'qa' has no wording in 'en'")
+
+
 if __name__ == "__main__":
     unittest.main()

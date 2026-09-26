@@ -1,0 +1,292 @@
+{
+  "$comment": "Business wording of the sponsor page and the report (architecture §1.13, wave3-optimization; REQ-W3-080). Phases, lanes and risk states are shown only through this table; lint L-65 fails when a phase of state-machine.json, a lane of lanes.json, a risk state or a label lacks a non-empty wording in a listed language.",
+  "version": 1,
+  "languages": [
+    "en",
+    "es"
+  ],
+  "phases": {
+    "init": {
+      "en": "Started",
+      "es": "Iniciado"
+    },
+    "requirements": {
+      "en": "Agree what",
+      "es": "Acordar qué"
+    },
+    "mockup": {
+      "en": "Screens",
+      "es": "Pantallas"
+    },
+    "design_graphic": {
+      "en": "Design",
+      "es": "Diseño"
+    },
+    "architecture": {
+      "en": "Technical design",
+      "es": "Diseño técnico"
+    },
+    "infra": {
+      "en": "Infrastructure",
+      "es": "Infraestructura"
+    },
+    "tasks": {
+      "en": "Plan the work",
+      "es": "Planificar el trabajo"
+    },
+    "impl": {
+      "en": "Build",
+      "es": "Construcción"
+    },
+    "test": {
+      "en": "Check",
+      "es": "Verificación"
+    },
+    "qa": {
+      "en": "Review",
+      "es": "Revisión"
+    },
+    "deploying": {
+      "en": "Release",
+      "es": "Liberación"
+    },
+    "deployed": {
+      "en": "In production",
+      "es": "En producción"
+    },
+    "archived": {
+      "en": "Done",
+      "es": "Terminado"
+    }
+  },
+  "lanes": {
+    "patch": {
+      "en": "small fix",
+      "es": "arreglo menor"
+    },
+    "standard": {
+      "en": "standard",
+      "es": "estándar"
+    },
+    "feature-ui": {
+      "en": "standard with screens",
+      "es": "estándar con pantallas"
+    },
+    "ops": {
+      "en": "operations",
+      "es": "operación"
+    },
+    "hotfix": {
+      "en": "urgent fix",
+      "es": "arreglo urgente"
+    },
+    "docs": {
+      "en": "documentation",
+      "es": "documentación"
+    },
+    "legacy": {
+      "en": "earlier process",
+      "es": "proceso anterior"
+    }
+  },
+  "risk_states": {
+    "open": {
+      "en": "being watched",
+      "es": "en observación"
+    },
+    "mitigated": {
+      "en": "reduced",
+      "es": "reducido"
+    },
+    "accepted": {
+      "en": "accepted as is",
+      "es": "aceptado tal cual"
+    },
+    "closed": {
+      "en": "no longer a risk",
+      "es": "ya no es un riesgo"
+    },
+    "moved": {
+      "en": "carried to later work",
+      "es": "llevado a trabajo posterior"
+    }
+  },
+  "labels": {
+    "page_title": {
+      "en": "Change report for the sponsor",
+      "es": "Informe del cambio para quien lo patrocina"
+    },
+    "prepared_for": {
+      "en": "prepared for",
+      "es": "preparado para"
+    },
+    "updated": {
+      "en": "Updated",
+      "es": "Actualizado"
+    },
+    "waiting": {
+      "en": "Waiting for you",
+      "es": "Esperando tu respuesta"
+    },
+    "waiting_intro": {
+      "en": "The questions where you are the one who decides, and the approvals you give for this work.",
+      "es": "Las preguntas que decides tú y las aprobaciones que das para este trabajo."
+    },
+    "nothing_waiting": {
+      "en": "Nothing is waiting for you.",
+      "es": "Nada espera tu respuesta."
+    },
+    "your_approval": {
+      "en": "your approval",
+      "es": "tu aprobación"
+    },
+    "needed_by": {
+      "en": "needed by",
+      "es": "necesario para el"
+    },
+    "overdue_since": {
+      "en": "overdue since",
+      "es": "vencido desde el"
+    },
+    "options": {
+      "en": "Options the team sees",
+      "es": "Opciones que ve el equipo"
+    },
+    "scope": {
+      "en": "What is being built",
+      "es": "Qué se construye"
+    },
+    "progress": {
+      "en": "Progress",
+      "es": "Avance"
+    },
+    "step": {
+      "en": "Step",
+      "es": "Paso"
+    },
+    "work_size": {
+      "en": "Work size",
+      "es": "Tamaño del trabajo"
+    },
+    "since": {
+      "en": "since",
+      "es": "desde"
+    },
+    "approved": {
+      "en": "approved",
+      "es": "aprobado"
+    },
+    "changes_requested": {
+      "en": "changes requested",
+      "es": "cambios pedidos"
+    },
+    "planned": {
+      "en": "planned",
+      "es": "planificado"
+    },
+    "cost": {
+      "en": "Cost",
+      "es": "Costo"
+    },
+    "cost_to_date": {
+      "en": "Cost to date",
+      "es": "Costo a la fecha"
+    },
+    "ai_work": {
+      "en": "of AI work",
+      "es": "de trabajo de IA"
+    },
+    "review_time": {
+      "en": "of people's review time",
+      "es": "de revisión de personas"
+    },
+    "estimated_share": {
+      "en": "estimated",
+      "es": "estimado"
+    },
+    "judges_apart": {
+      "en": "Independent reviews, counted apart",
+      "es": "Revisiones independientes, contadas aparte"
+    },
+    "not_measured": {
+      "en": "Not measured",
+      "es": "No medido"
+    },
+    "cost_note": {
+      "en": "Figures come from the work sessions themselves; they are measured, never used to stop work.",
+      "es": "Las cifras vienen de las propias sesiones de trabajo; se miden, nunca se usan para detener el trabajo."
+    },
+    "risks": {
+      "en": "Risks",
+      "es": "Riesgos"
+    },
+    "open_risks": {
+      "en": "Open risks",
+      "es": "Riesgos abiertos"
+    },
+    "risk": {
+      "en": "Risk",
+      "es": "Riesgo"
+    },
+    "who_watches": {
+      "en": "Who watches it",
+      "es": "Quién lo vigila"
+    },
+    "state": {
+      "en": "State",
+      "es": "Estado"
+    },
+    "set_off_by": {
+      "en": "Set off by",
+      "es": "Se activa con"
+    },
+    "last_review": {
+      "en": "last review",
+      "es": "última revisión"
+    },
+    "no_open_risks": {
+      "en": "No open risks",
+      "es": "Sin riesgos abiertos"
+    },
+    "released": {
+      "en": "Released",
+      "es": "Liberado"
+    },
+    "nothing_released": {
+      "en": "Nothing has reached production yet.",
+      "es": "Nada ha llegado a producción todavía."
+    },
+    "reached_production": {
+      "en": "reached production on",
+      "es": "llegó a producción el"
+    },
+    "history": {
+      "en": "Page history",
+      "es": "Historial de la página"
+    },
+    "history_intro": {
+      "en": "This page is refreshed each time a step is closed.",
+      "es": "Esta página se actualiza cada vez que se cierra un paso."
+    },
+    "none": {
+      "en": "None",
+      "es": "Ninguno"
+    },
+    "none_recorded": {
+      "en": "none recorded",
+      "es": "nada registrado"
+    },
+    "as_of": {
+      "en": "as of",
+      "es": "al"
+    },
+    "footer": {
+      "en": "Produced from the change's own records. Contains no internal links or personal contact data.",
+      "es": "Generado desde los registros del propio cambio. No contiene enlaces internos ni datos de contacto personales."
+    },
+    "language_note": {
+      "en": "This page is shown in English: the change's language has no wording table yet.",
+      "es": "Esta página se muestra en español."
+    }
+  }
+}
