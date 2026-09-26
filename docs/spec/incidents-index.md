@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-77 RESUELTO; BUG-23..47 live on other branches, numbered by `karvey-id.py`). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
+Last updated: 2026-09-26 (wave2-structural test/QA: BUG-52 .. BUG-81 RESUELTO; BUG-23..47 live on other branches, numbered by `karvey-id.py`). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -30,10 +30,6 @@ Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-77 RESUELTO; B
 | BUG-20 | karvey | medium | False NOT FOUND drift when state.json names the repo itself | team-layer / agente-kloketen | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.4 |
 | BUG-21 | karvey | medium | Git worktrees reported NOT FOUND in the live-state check | team-layer / wave1 F-01 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.4 |
 | BUG-22 | karvey | medium | Committing state.json after a save reported as drift | wave1-hardening / F-40 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh (profile-only commits, BUG-22) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
-| BUG-48 | karvey | high | Merged gates could not be walked past their first phase | wave2-structural / F-06 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py (MergedGateAdvance) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
-| BUG-49 | karvey | high | Deploy asked for the rollback only on PROD; a DEV regression neither asked nor opened the incident | wave2-structural / F-10 | RESUELTO | lint L-53; plugins/karvey/tests/unit/test_lint_plugin.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
-| BUG-50 | karvey | medium | A retro action's backlog row carried no owner | wave2-structural / F-11 | RESUELTO | plugins/karvey/tests/unit/test_metrics.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
-| BUG-51 | karvey | high | Merged gate: a phase sent back by Request changes was still passed inside its gate | wave2-structural / F-12 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-52 | karvey | high | Post-deploy verification could pass while the service was down, and leaked URL credentials | wave2-structural / F-13 | RESUELTO | plugins/karvey/tests/unit/test_postdeploy.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-53 | karvey | high | Requirements written from the template gave coverage 0/0, read as a pass | wave2-structural / F-14 | RESUELTO | plugins/karvey/tests/unit/test_trace.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-54 | karvey | high | Timestamps with fractional seconds lost their zone (metrics crash, wrong intervals) | wave2-structural / F-15 | RESUELTO | plugins/karvey/tests/unit/test_metrics.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
@@ -60,6 +56,10 @@ Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-77 RESUELTO; B
 | BUG-75 | karvey | medium | Evidence kept URL query secrets, auth headers and a home path in `--junit` | wave2-structural / F-65, F-66 | RESUELTO | plugins/karvey/tests/unit/test_evidence.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-76 | karvey | medium | A judge could declare itself cross-model in its own output | wave2-structural / F-67 | RESUELTO | plugins/karvey/tests/unit/test_judges.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 | BUG-77 | karvey | medium | The security scan wrote absolute user paths into committed evidence and reports | wave2-structural / F-71 | RESUELTO | plugins/karvey/tests/unit/test_security_scan.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-78 | karvey | high | Merged gates could not be walked past their first phase | wave2-structural / F-06 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py (MergedGateAdvance) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-79 | karvey | high | Deploy asked for the rollback only on PROD; a DEV regression neither asked nor opened the incident | wave2-structural / F-10 | RESUELTO | lint L-53; plugins/karvey/tests/unit/test_lint_plugin.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-80 | karvey | medium | A retro action's backlog row carried no owner | wave2-structural / F-11 | RESUELTO | plugins/karvey/tests/unit/test_metrics.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
+| BUG-81 | karvey | high | Merged gate: a phase sent back by Request changes was still passed inside its gate | wave2-structural / F-12 | RESUELTO | plugins/karvey/tests/unit/test_state_gates.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave2-structural (ships in 3.13.0) |
 
 ## Summary by state
 
@@ -68,7 +68,7 @@ Last updated: 2026-09-26 (wave2-structural test/QA: BUG-48 .. BUG-77 RESUELTO; B
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 52 | BUG-01 .. BUG-22, BUG-48 .. BUG-77 |
+| RESUELTO | 52 | BUG-01 .. BUG-22, BUG-52 .. BUG-81 |
 | REABIERTO | 0 | — |
 
-Next number: from `karvey-id.py next BUG` (scans every branch); BUG-78 at this update.
+Next number: from `karvey-id.py next BUG` (scans every branch); BUG-82 at this update.

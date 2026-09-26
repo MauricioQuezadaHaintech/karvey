@@ -1,7 +1,7 @@
 # Manual script: deploy-postdeploy — 2026-09-26
 
 **Script:** `plugins/karvey/tests/manual/deploy-postdeploy.md` (REQ-W2-075, 076, 078) · **Result: FAIL on run 1 →
-BUG-49 fixed → PASS on run 2**
+BUG-79 fixed → PASS on run 2**
 
 ## Execution
 
@@ -76,6 +76,6 @@ Done. Nothing was rolled back: 0.1.0 stays on DEV, and production is blocked unt
 | reserves the number with `karvey-id.py next BUG`, proposes the `BUG-NN` row and a finding | **FAIL**: offered, not done | PASS |
 | PROD reports `not-evaluated` with the contract recommendation, never `pass`; `## prod` section says so | not reached | PASS (after the turn-4 prompt; the turn-3 refusal is the method's DEV-regression stop) |
 
-**Overall: PASS after the fix.** Run 1's failure is F-10 / BUG-49: `karvey-deploy` Step 2-bis limited the rollback
+**Overall: PASS after the fix.** Run 1's failure is F-10 / BUG-79: `karvey-deploy` Step 2-bis limited the rollback
 question to PROD, while REQ-W2-078 covers every `regression`; the step now shows the rollback and asks in every
 environment and reserves the incident at once, guarded by lint L-53 (`test_lint_plugin.py` `L53`, three cases).

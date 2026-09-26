@@ -2026,7 +2026,7 @@ PROD_ONLY_RE = re.compile(r"^\s*-\s*PROD\b")
 
 
 def _l53_regression(deploy, lines):
-    """BUG-49 (F-10, REQ-W2-078): the `regression` item shows the rollback and asks in every environment (not
+    """BUG-79 (F-10, REQ-W2-078): the `regression` item shows the rollback and asks in every environment (not
     only PROD) and reserves the incident number with karvey-id.py."""
     head = next((n for n, ln_ in enumerate(lines) if REGRESSION_HEAD_RE.search(ln_)), None)
     if head is None:

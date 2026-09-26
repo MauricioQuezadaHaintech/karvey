@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-22, BUG-48..BUG-77 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-22, BUG-52..BUG-81 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -97,25 +97,25 @@ INDEX = {
     "BUG-20": [("hooks", "state.json paths (BUG-20)")],
     "BUG-21": [("hooks", "worktrees (BUG-21)")],
     "BUG-22": [("hooks", "profile-only commits since the save (BUG-22)")],  # python and degraded paths
-    "BUG-48": [  # merged gates could not be walked past their first phase (wave2-structural F-06)
+    "BUG-78": [  # merged gates could not be walked past their first phase (wave2-structural F-06)
         ("unit", "test_state_gates.py", "MergedGateAdvance.test_merged_advances_inside_the_gate_without_a_second_question"),
         ("unit", "test_state_gates.py", "MergedGateAdvance.test_merged_leaving_the_gate_needs_the_gate_approval"),
         ("unit", "test_state_gates.py", "MergedGateAdvance.test_merged_needs_the_artifact_generated"),
         ("unit", "test_state_gates.py", "MergedGateAdvance.test_granular_keeps_the_per_phase_approval"),
     ],
-    "BUG-49": [  # Deploy asked for the rollback only on PROD; a DEV regression neither a (F-10)
+    "BUG-79": [  # Deploy asked for the rollback only on PROD; a DEV regression neither a (F-10)
         ('lint', 'L-53'),
         ('unit', 'test_lint_plugin.py', 'L53.test_rollback_question_limited_to_prod_fails'),
         ('unit', 'test_lint_plugin.py', 'L53.test_regression_without_reserved_incident_fails'),
         ('unit', 'test_lint_plugin.py', 'L53.test_no_regression_handling_fails'),
         ('manual', 'deploy-postdeploy.md'),
     ],
-    "BUG-50": [  # A retro action's backlog row carried no owner (F-11)
+    "BUG-80": [  # A retro action's backlog row carried no owner (F-11)
         ('unit', 'test_metrics.py', 'RetroActionOwner.test_retro_skill_writes_owner_in_the_row'),
         ('unit', 'test_metrics.py', 'RetroActionOwner.test_backlog_rule_documents_the_owner_cell'),
         ('manual', 'retro-from-metrics.md'),
     ],
-    "BUG-51": [  # Merged gate: a phase sent back by Request changes was still passed ins (F-12)
+    "BUG-81": [  # Merged gate: a phase sent back by Request changes was still passed ins (F-12)
         ('unit', 'test_state_gates.py', 'MergedGateChangesRequested.test_next_names_the_phase_that_was_sent_back'),
         ('unit', 'test_state_gates.py', 'MergedGateChangesRequested.test_generated_again_after_the_request_passes'),
         ('unit', 'test_state_gates.py', 'MergedGateChangesRequested.test_request_on_an_earlier_generation_only'),

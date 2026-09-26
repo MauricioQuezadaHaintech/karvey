@@ -41,7 +41,7 @@ table's case tags); the last result comes from the evidence line shown.
 | REQ-W2-005 | Read-only, reproducible, machine-readable | `test_metrics.py` · evidence.jsonl:11 | PASS |
 | REQ-W2-006 | Baseline before the process changes | `test_lint_plugin.py` · evidence.jsonl:11 | PASS |
 | REQ-W2-007 | Actual time through the tracker adapter | `test_lint_plugin.py` · evidence.jsonl:11 | PASS |
-| REQ-W2-008 | The retro works on the method's artifacts | manual: retro-from-metrics.md · `qa/manual/retro-from-metrics-2026-09-26.md` (run 2, after BUG-50) · `test_metrics.py` `RetroActionOwner` | PASS |
+| REQ-W2-008 | The retro works on the method's artifacts | manual: retro-from-metrics.md · `qa/manual/retro-from-metrics-2026-09-26.md` (run 2, after BUG-80) · `test_metrics.py` `RetroActionOwner` | PASS |
 | REQ-W2-009 | Actions are followed up; per-person analysis is optional | manual: retro-from-metrics.md · `qa/manual/retro-from-metrics-2026-09-26.md` | PASS |
 | REQ-W2-010 | 4.0 readiness report | `test_metrics.py`, `test_modes.py` · evidence.jsonl:11 | PASS |
 | REQ-W2-011 | Lanes as data | `test_lanes.py`, `test_lint_plugin.py` · evidence.jsonl:11 | PASS |
@@ -111,7 +111,7 @@ table's case tags); the last result comes from the evidence line shown.
 | REQ-W2-075 | A post-deploy contract per service | `test_context_gate.py`, `test_postdeploy.py` · evidence.jsonl:11 | PASS |
 | REQ-W2-076 | Deploy runs the contract and keeps evidence | `test_lint_plugin.py`, `test_postdeploy.py` · evidence.jsonl:11 | PASS |
 | REQ-W2-077 | No contract is "not evaluated" | `test_postdeploy.py` · evidence.jsonl:11 | PASS |
-| REQ-W2-078 | A regression proposes the rollback and opens the incident | manual: deploy-postdeploy.md · `qa/manual/deploy-postdeploy-2026-09-26.md` (run 2, after BUG-49) · lint L-53 · `test_postdeploy.py` | PASS |
+| REQ-W2-078 | A regression proposes the rollback and opens the incident | manual: deploy-postdeploy.md · `qa/manual/deploy-postdeploy-2026-09-26.md` (run 2, after BUG-79) · lint L-53 · `test_postdeploy.py` | PASS |
 | REQ-W2-079 | No text requires graphify | `test_lint_plugin.py` · evidence.jsonl:11 | PASS |
 | REQ-W2-080 | Import resumes through recorded gates | `test_state_gates.py` · evidence.jsonl:11 | PASS |
 | REQ-W2-081 | One decision-log shape | `test_id_tool.py` · evidence.jsonl:11 | PASS |

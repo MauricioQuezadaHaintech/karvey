@@ -26,7 +26,7 @@ manual-only ones closed by the headless agent runs under `qa/manual/`) and the t
 (`evidence.jsonl:44`, `--write --check`, which regenerated the committed `traceability.md`). This QA — the manual runs, subagent reviewers for dimensions 1–4, the second opinion and the
 two QA judges — found **30 defects** in the change (bugs and spec-gaps); **29 are fixed** with regression tests
 that were red on the pre-QA scripts (`evidence.jsonl:30`, transcribed in `qa/red-run-2026-09-26.md`: 66 of 69 red, the other three
-guard against over-matching) — 28 incidents, BUG-49 .. BUG-77 except BUG-66 (the impl finding F-05). **One High stays open for the owner: F-61** (whether one project-wide
+guard against over-matching) — 28 incidents, BUG-52 .. BUG-81 except BUG-66 and BUG-78 (the impl findings F-05, F-06). **One High stays open for the owner: F-61** (whether one project-wide
 production approval may cover every change of a release manifest, against the Wave 1 rule that a production
 approval is of one change). Sixteen emergent items are deferred as backlog candidates with their reasons.
 **Security gate: NOT passed while F-61 is open.** Second opinion: same model family (declared), FAIL on its first
@@ -89,15 +89,15 @@ All fixed with red-first tests (`evidence.jsonl:30`, `qa/red-run-2026-09-26.md`)
 the tools' "refused" / "regression" exit codes in `karvey-trace.py` and `karvey-postdeploy.py`, and crashes of
 `--metrics` (BUG-58, BUG-52, BUG-57); negative lead time and hidden zone-less deploys (BUG-57); wrong
 `evidence.jsonl:{line}` citations (BUG-59, BUG-55); non-ASCII digit cites (BUG-56); `karvey-id` numbers inflated
-or burnt (BUG-60); NaN costs (BUG-61); a merged gate that passed a phase the human sent back (BUG-51, a regression
-of BUG-48). Deferred: an unknown lane gives exit 5 in `karvey-judges.py` (F-38).
+or burnt (BUG-60); NaN costs (BUG-61); a merged gate that passed a phase the human sent back (BUG-81, a regression
+of BUG-78). Deferred: an unknown lane gives exit 5 in `karvey-judges.py` (F-38).
 
 ### 3. Consistency
 Fixed: lint L-47 declared in the architecture but missing (BUG-64); `schema.strict` from the registry ignored and a
 missing lane never an error under strict (BUG-61, remedy text BUG-72); the requirements template gave ids the trace
 cannot read, so `0/0` read as a pass (BUG-53); the incident rule's `### Regression` heading unread (BUG-68); the
-impl skill silent on `Karvey-Change` (BUG-67); the deploy skill's regression item against REQ-W2-078 (BUG-49); the
-retro skill without a place for the owner (BUG-50); a false contract gap on the *how* gate (BUG-65). Lint is green
+impl skill silent on `Karvey-Change` (BUG-67); the deploy skill's regression item against REQ-W2-078 (BUG-79); the
+retro skill without a place for the owner (BUG-80); a false contract gap on the *how* gate (BUG-65). Lint is green
 over all 51 checks (`evidence.jsonl:36`; the 51 are listed by `lint-plugin.py --list`, `evidence.jsonl:48`). The D3 reviewer also compared every script command a skill names with
 the scripts' `--help` and found no mismatch — that check is the reviewer's report, not a recorded run. Deferred:
 helpers duplicated in 3–4 scripts (F-33).
@@ -115,7 +115,7 @@ New in the diff: `KARVEY_ID_LOCK_WAIT_S` (lock wait of `karvey-id.py`, default f
 
 ### 6. Versioning
 - `unreleased-section`: `CHANGELOG.md` `[Unreleased]` carries one line per task / fix, the last one for this
-  test/QA iteration (BUG-49 .. BUG-77).
+  test/QA iteration (BUG-52 .. BUG-77, BUG-79 .. BUG-81).
 - `one-bump-per-release`: no bump in the diff (3.11.4 everywhere); the number is set at release.
 - `versions-agree`: lint L-12 checks the version files (green in the lint run, `evidence.jsonl:36`). For the
   release: the bump must also cover Wave 1's unreleased 3.12.0 and set `defaults.json:pre_3_12_history.released_on`.

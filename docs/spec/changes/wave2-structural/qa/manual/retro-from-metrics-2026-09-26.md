@@ -1,7 +1,7 @@
 # Manual script: retro-from-metrics — 2026-09-26
 
 **Script:** `plugins/karvey/tests/manual/retro-from-metrics.md` (REQ-W2-008, REQ-W2-009) · **Result: FAIL on run 1
-→ BUG-50 fixed → PASS on run 2**
+→ BUG-80 fixed → PASS on run 2**
 
 ## Execution
 
@@ -75,7 +75,7 @@ the owner lived only in the retro file.
 | `retro-2026-09-14.md` with period, commands and the Step 5 sections | PASS | PASS |
 | no per-author analysis (no `--per-person`) | PASS | PASS |
 
-**Overall: PASS after the fix.** Run 1's failure is F-11 / BUG-50: the backlog table has no owner column and the skill
+**Overall: PASS after the fix.** Run 1's failure is F-11 / BUG-80: the backlog table has no owner column and the skill
 did not say where the owner goes; `karvey-retro` Step 4 and `rules/backlog.md` now put it in the Origin cell
 (`retro-{to} · owner: {owner}`), guarded by `test_metrics.py` `RetroActionOwner`. Side note (F-28): the agent ran
 `karvey-id.py next BL` three times "to check" and each call reserved a number.

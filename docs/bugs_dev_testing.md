@@ -691,126 +691,6 @@ Architecture §1.4 revision 1 (D-19): a changed commit matches when the recorded
 | 2026-09-24 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-19): cause read in the hook's live-state block |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T1 (D-21): profile-only commits since the save match on both the python and the degraded path; case 1 red before the fix, cases 2-4 guard against over-matching |
 
-## BUG-48 — Merged gates could not be walked past their first phase
-- **Priority:** high
-- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`advance`, `next` in merged gate mode)
-- **Change / origin:** wave2-structural — finding F-06 (E1.F13.T3 `test_wave2_flow.py`)
-- **Tracker:** —
-- **Current state:** RESUELTO
-
-### Reproduction
-`project.json` with `"gates": "merged"`; a change with `requirements` approved through `approve-gate … what`. Generate `architecture` (which does not close the *how* gate) and run `karvey-state.py advance {id} infra` or `next {id}`.
-
-### Actual vs expected
-- Actual: `advance` refuses `architecture not approved or skipped`; `next` lists it as a blocker. The *how* gate, which spans architecture → infra → tasks, can never reach its last phase, so its single question is never asked.
-- Expected: in merged mode a phase that does not close its gate is recorded `generated` and passed; only leaving the gate needs its `approve-gate` (`rules/gates.md`).
-
-### Root cause
-`compute_next` and `advance` applied the granular precondition (every earlier phase approved or skipped) regardless of the gate mode; the merged mode only changed which question the skills ask, not the preconditions the state tool enforces.
-
-### Fix
-Commit 4347636 (E1.F13.T3): `open_in_merged_gate` — in merged mode a generated phase that does not close its gate no longer blocks a target inside the same gate; leaving the gate still needs `approve-gate`, and an ungenerated phase still blocks.
-
-### Regression test
-`plugins/karvey/tests/unit/test_state_gates.py` `MergedGateAdvance` (4 cases): advance inside the gate without a second question (red before the fix, run on 2026-09-26 against the pre-fix `karvey-state.py`), leaving the gate needs the gate approval, the artifact must be generated, granular mode keeps the per-phase approval. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
-
-### State history
-| Date | State | By (human + AI model) | Note |
-|------|-------|------------------------|------|
-| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-06, E1.F13.T3 end-to-end flow test |
-| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | precondition check ignored the gate mode |
-| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21): fix 4347636 with `MergedGateAdvance`; case 1 red on the pre-fix script, cases 2-4 guard against over-matching |
-
-## BUG-49 — Deploy asked for the rollback only on PROD; a DEV regression neither asked nor opened the incident
-- **Priority:** high
-- **Detected:** 2026-09-26 · **Component:** plugins/karvey/skills/karvey-deploy/SKILL.md (Step 2-bis, regression item)
-- **Change / origin:** wave2-structural — finding F-10 (manual script run)
-- **Tracker:** —
-- **Current state:** RESUELTO
-
-### Reproduction
-Manual script deploy-postdeploy, run 1: DEV verification `regression`, `observed.json` as given.
-
-### Actual vs expected
-- Actual: "It's a DEV problem, so no rollback is needed"; the incident was only offered.
-- Expected (REQ-W2-078): every `regression` shows the contract's rollback command, asks the human, records the answer and opens a `BUG-NN` with a reserved number.
-
-### Root cause
-The regression item of Step 2-bis split by environment and put the rollback question under PROD only.
-
-### Fix
-The item now applies in every environment (DEV stops before prod whatever the answer), reserves the incident at once with `karvey-id.py next BUG`, and 2.6 / the hard rules / the final output say the same.
-
-### Regression test
-Files: `plugins/karvey/tests/unit/test_lint_plugin.py`. lint L-53 (`test_lint_plugin.py` `L53`: rollback limited to PROD, no reserved incident, no regression item), red on the pre-fix skill; manual re-run PASS. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
-
-### State history
-| Date | State | By (human + AI model) | Note |
-|------|-------|------------------------|------|
-| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-10 |
-| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
-| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
-
-## BUG-50 — A retro action's backlog row carried no owner
-- **Priority:** medium
-- **Detected:** 2026-09-26 · **Component:** plugins/karvey/skills/karvey-retro/SKILL.md (Step 4), plugins/karvey/skills/karvey/rules/backlog.md
-- **Change / origin:** wave2-structural — finding F-11 (manual script run)
-- **Tracker:** —
-- **Current state:** RESUELTO
-
-### Reproduction
-Manual script retro-from-metrics, run 1: agree one action with an owner.
-
-### Actual vs expected
-- Actual: `| BL-03 | … | retro-2026-09-14 | process | … |` — the owner lived only in the retro file.
-- Expected (REQ-W2-008): the `process` row carries its owner.
-
-### Root cause
-The backlog table has no owner column and the skill did not say where the owner goes.
-
-### Fix
-The Origin cell holds it: `retro-{to} · owner: {owner}` (skill Step 4 and the backlog rule, with an example row).
-
-### Regression test
-Files: `plugins/karvey/tests/unit/test_metrics.py`. `test_metrics.py` `RetroActionOwner` (two cases), red before the text change; manual re-run PASS. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
-
-### State history
-| Date | State | By (human + AI model) | Note |
-|------|-------|------------------------|------|
-| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-11 |
-| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
-| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
-
-## BUG-51 — Merged gate: a phase sent back by Request changes was still passed inside its gate
-- **Priority:** high
-- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`open_in_merged_gate`, `generated`)
-- **Change / origin:** wave2-structural — finding F-12 (manual script run)
-- **Tracker:** —
-- **Current state:** RESUELTO
-
-### Reproduction
-`gates: merged`; imported architecture generated; `outcome … how changes_requested`; `karvey-state.py next`.
-
-### Actual vs expected
-- Actual: `next infra` with no blocker.
-- Expected (REQ-W2-080 / REQ-W2-042): the change resumes at architecture until it is reworked.
-
-### Root cause
-The F-06 fix (BUG-48) passed any generated phase inside an open merged gate, without looking at the gate's outcomes.
-
-### Fix
-A phase whose latest gate outcome is `changes_requested` is held until it is generated again after the request (`generated` now writes `regenerated_at` on later calls; `generated_at` keeps the first time).
-
-### Regression test
-Files: `plugins/karvey/tests/unit/test_state_gates.py`. `test_state_gates.py` `MergedGateChangesRequested` (three cases; the first two red before the fix); manual re-run PASS. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
-
-### State history
-| Date | State | By (human + AI model) | Note |
-|------|-------|------------------------|------|
-| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-12 |
-| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
-| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
-
 ## BUG-52 — Post-deploy verification could pass while the service was down, and leaked URL credentials
 - **Priority:** high
 - **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-postdeploy.py
@@ -1588,5 +1468,125 @@ Files: `plugins/karvey/tests/unit/test_security_scan.py`. `test_security_scan.py
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-71 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-78 — Merged gates could not be walked past their first phase
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`advance`, `next` in merged gate mode)
+- **Change / origin:** wave2-structural — finding F-06 (E1.F13.T3 `test_wave2_flow.py`)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`project.json` with `"gates": "merged"`; a change with `requirements` approved through `approve-gate … what`. Generate `architecture` (which does not close the *how* gate) and run `karvey-state.py advance {id} infra` or `next {id}`.
+
+### Actual vs expected
+- Actual: `advance` refuses `architecture not approved or skipped`; `next` lists it as a blocker. The *how* gate, which spans architecture → infra → tasks, can never reach its last phase, so its single question is never asked.
+- Expected: in merged mode a phase that does not close its gate is recorded `generated` and passed; only leaving the gate needs its `approve-gate` (`rules/gates.md`).
+
+### Root cause
+`compute_next` and `advance` applied the granular precondition (every earlier phase approved or skipped) regardless of the gate mode; the merged mode only changed which question the skills ask, not the preconditions the state tool enforces.
+
+### Fix
+Commit 4347636 (E1.F13.T3): `open_in_merged_gate` — in merged mode a generated phase that does not close its gate no longer blocks a target inside the same gate; leaving the gate still needs `approve-gate`, and an ungenerated phase still blocks.
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_gates.py` `MergedGateAdvance` (4 cases): advance inside the gate without a second question (red before the fix, run on 2026-09-26 against the pre-fix `karvey-state.py`), leaving the gate needs the gate approval, the artifact must be generated, granular mode keeps the per-phase approval. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-06, E1.F13.T3 end-to-end flow test |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | precondition check ignored the gate mode |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21): fix 4347636 with `MergedGateAdvance`; case 1 red on the pre-fix script, cases 2-4 guard against over-matching |
+
+## BUG-79 — Deploy asked for the rollback only on PROD; a DEV regression neither asked nor opened the incident
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/skills/karvey-deploy/SKILL.md (Step 2-bis, regression item)
+- **Change / origin:** wave2-structural — finding F-10 (manual script run)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Manual script deploy-postdeploy, run 1: DEV verification `regression`, `observed.json` as given.
+
+### Actual vs expected
+- Actual: "It's a DEV problem, so no rollback is needed"; the incident was only offered.
+- Expected (REQ-W2-078): every `regression` shows the contract's rollback command, asks the human, records the answer and opens a `BUG-NN` with a reserved number.
+
+### Root cause
+The regression item of Step 2-bis split by environment and put the rollback question under PROD only.
+
+### Fix
+The item now applies in every environment (DEV stops before prod whatever the answer), reserves the incident at once with `karvey-id.py next BUG`, and 2.6 / the hard rules / the final output say the same.
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_lint_plugin.py`. lint L-53 (`test_lint_plugin.py` `L53`: rollback limited to PROD, no reserved incident, no regression item), red on the pre-fix skill; manual re-run PASS. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-10 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-80 — A retro action's backlog row carried no owner
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/skills/karvey-retro/SKILL.md (Step 4), plugins/karvey/skills/karvey/rules/backlog.md
+- **Change / origin:** wave2-structural — finding F-11 (manual script run)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Manual script retro-from-metrics, run 1: agree one action with an owner.
+
+### Actual vs expected
+- Actual: `| BL-03 | … | retro-2026-09-14 | process | … |` — the owner lived only in the retro file.
+- Expected (REQ-W2-008): the `process` row carries its owner.
+
+### Root cause
+The backlog table has no owner column and the skill did not say where the owner goes.
+
+### Fix
+The Origin cell holds it: `retro-{to} · owner: {owner}` (skill Step 4 and the backlog rule, with an example row).
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_metrics.py`. `test_metrics.py` `RetroActionOwner` (two cases), red before the text change; manual re-run PASS. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-11 |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |
+
+## BUG-81 — Merged gate: a phase sent back by Request changes was still passed inside its gate
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`open_in_merged_gate`, `generated`)
+- **Change / origin:** wave2-structural — finding F-12 (manual script run)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`gates: merged`; imported architecture generated; `outcome … how changes_requested`; `karvey-state.py next`.
+
+### Actual vs expected
+- Actual: `next infra` with no blocker.
+- Expected (REQ-W2-080 / REQ-W2-042): the change resumes at architecture until it is reworked.
+
+### Root cause
+The F-06 fix (BUG-78) passed any generated phase inside an open merged gate, without looking at the gate's outcomes.
+
+### Fix
+A phase whose latest gate outcome is `changes_requested` is held until it is generated again after the request (`generated` now writes `regenerated_at` on later calls; `generated_at` keeps the first time).
+
+### Regression test
+Files: `plugins/karvey/tests/unit/test_state_gates.py`. `test_state_gates.py` `MergedGateChangesRequested` (three cases; the first two red before the fix); manual re-run PASS. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-12 |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-21) |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix with its regression test, red before the fix |

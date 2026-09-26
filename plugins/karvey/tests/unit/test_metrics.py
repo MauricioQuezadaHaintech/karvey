@@ -223,7 +223,7 @@ if __name__ == "__main__":
 
 
 class RetroActionOwner(unittest.TestCase):
-    """@req REQ-W2-008 — BUG-50 (F-11): an agreed retro action's backlog row carries its owner, in the row itself
+    """@req REQ-W2-008 — BUG-80 (F-11): an agreed retro action's backlog row carries its owner, in the row itself
     (the backlog table has no owner column, so the Origin cell holds it)."""
 
     def read(self, rel):

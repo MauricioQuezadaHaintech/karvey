@@ -346,7 +346,7 @@ class MergedGateAdvance(Base):
 
 
 class MergedGateChangesRequested(Base):
-    """BUG-51 (F-12, REQ-W2-080 / REQ-W2-001): *Request changes* at a merged gate holds its phases — the generated
+    """BUG-81 (F-12, REQ-W2-080 / REQ-W2-001): *Request changes* at a merged gate holds its phases — the generated
     artifact is not passed inside the open gate until it is generated again after the request."""
 
     MERGED = dict(PROJECT, gates="merged")

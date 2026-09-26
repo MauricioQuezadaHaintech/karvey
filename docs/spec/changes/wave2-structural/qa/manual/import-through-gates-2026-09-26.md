@@ -1,6 +1,6 @@
 # Manual script: import-through-gates — 2026-09-26
 
-**Script:** `plugins/karvey/tests/manual/import-through-gates.md` (REQ-W2-080) · **Result: FAIL on run 1 → BUG-51
+**Script:** `plugins/karvey/tests/manual/import-through-gates.md` (REQ-W2-080) · **Result: FAIL on run 1 → BUG-81
 fixed → PASS on run 2**
 
 ## Execution
@@ -78,7 +78,7 @@ auto` was refused, but by the "artifact not generated (infra, tasks)" check that
 | `next demo-import` names the *how* gate (architecture) as where the change resumes; `Resume at:` says the same | **FAIL**: `next infra` | PASS |
 | with `-y` the agent does not approve as the human; a `--role auto` attempt is refused (`state.imported_marker`) | PASS (refused, other code first) | PASS (not attempted; the agent names the refusal) |
 
-**Overall: PASS after the fix.** Run 1's failure is F-12 / BUG-51 (a regression of the F-06 fix): in merged mode a
+**Overall: PASS after the fix.** Run 1's failure is F-12 / BUG-81 (a regression of the F-06 fix): in merged mode a
 generated phase was passed inside its gate even after `changes_requested`. The state tool now holds a phase whose
 latest gate outcome is `changes_requested` until it is generated again (`regenerated_at`), guarded by
 `test_state_gates.py` `MergedGateChangesRequested` (three cases).

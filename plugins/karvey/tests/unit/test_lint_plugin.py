@@ -1128,18 +1128,18 @@ class L53(LintCase):
         self.assertFails("L-53", "PR body", file=self.F)
 
     def test_rollback_question_limited_to_prod_fails(self):
-        """@req REQ-W2-078 — BUG-49 (F-10): a DEV regression also shows the rollback and asks."""
+        """@req REQ-W2-078 — BUG-79 (F-10): a DEV regression also shows the rollback and asks."""
         self.t.replace(self.F, "   - Show the contract's `rollback.command`",
                        "   - DEV → stop before prod.\n   - PROD → show the contract's `rollback.command`")
         self.assertFails("L-53", "every environment", file=self.F)
 
     def test_regression_without_reserved_incident_fails(self):
-        """@req REQ-W2-078 — BUG-49 (F-10): the incident number is reserved, never counted."""
+        """@req REQ-W2-078 — BUG-79 (F-10): the incident number is reserved, never counted."""
         self.t.replace(self.F, "`karvey-id.py next BUG`", "the next row number")
         self.assertFails("L-53", "karvey-id.py", file=self.F)
 
     def test_no_regression_handling_fails(self):
-        """@req REQ-W2-078 — BUG-49 (F-10)."""
+        """@req REQ-W2-078 — BUG-79 (F-10)."""
         self.t.sub(self.F, r"4\. \*\*`regression`\*\*[^\n]*\n", "")
         self.assertFails("L-53", "regression", file=self.F)
 

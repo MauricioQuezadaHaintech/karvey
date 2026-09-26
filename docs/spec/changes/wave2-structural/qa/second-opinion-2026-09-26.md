@@ -17,7 +17,7 @@ The reviewer's findings, verbatim in substance, with the main QA's decision:
 | 5 | Medium | The prod-gate reads each manifest change's QA state from the working tree, not from the head | deferred → F-44 |
 | 6 | Low | A code commit can carry the trailer of an archived QA-approved change | deferred → F-44 |
 | 7 | Low | A window between rename and link in the BUG-60 stale-lock takeover | deferred → F-45 |
-| 8 | Low | Any repeat `generated` releases the BUG-51 hold | deferred → F-45 (the human still answers the gate) |
+| 8 | Low | Any repeat `generated` releases the BUG-81 hold | deferred → F-45 (the human still answers the gate) |
 | 9 | Low | `-y` approves QA without a marker | accepted as designed (REQ-W2-040) → F-45 |
 | 10 | Info | Checked and correct: BUG-62 `is_raise`, BUG-63 cluster parsing (`-am`, `-sF`, `-Cx`, `-uno`), BUG-52 connection failure as 5xx, BUG-61 NaN / infinity refusal | — |
 

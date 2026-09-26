@@ -270,7 +270,7 @@ def open_in_merged_gate(data, ph, to):
 
 
 def sent_back(data, ph, ap):
-    """BUG-51 (F-12): the latest gate outcome covering ``ph`` is ``changes_requested`` and the artifact was not
+    """BUG-81 (F-12): the latest gate outcome covering ``ph`` is ``changes_requested`` and the artifact was not
     generated again after it — the phase is held where the human sent it back."""
     outs = data.get("gate_outcomes") if isinstance(data.get("gate_outcomes"), list) else []
     last = None
@@ -1347,7 +1347,7 @@ def cmd_generated(args, root):
         if not cur.get("generated_at"):
             cur["generated_at"] = now  # first time only: the approval wait starts here (REQ-W2-001)
         else:
-            cur["regenerated_at"] = now  # BUG-51: a rework after "Request changes" re-opens the merged gate
+            cur["regenerated_at"] = now  # BUG-81: a rework after "Request changes" re-opens the merged gate
         if getattr(args, "imported", False):
             cur["imported"] = True  # brought in by karvey-import: its approval needs a human marker (REQ-W2-080)
         ap[key] = cur
