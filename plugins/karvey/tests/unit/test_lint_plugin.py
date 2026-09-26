@@ -1157,6 +1157,43 @@ class L50(LintCase):
         self.assertFails("L-50", "fall back", file=IMPL)
 
 
+class L41L52(LintCase):
+    """@req REQ-W2-034 REQ-W2-035 REQ-W2-040 — one gate question; -y = auto, never prod."""
+    RULE = RULES + "/gates.md"
+    PHASES = ("karvey-init", "karvey-requirements", "karvey-impl", "karvey-test", "karvey-qa", "karvey-deploy")
+    CLOSE = "\n## Advance to the next phase\n\nClose the phase per `../karvey/rules/gates.md`.\n"
+
+    def setUp(self):
+        super().setUp()
+        real = _path.PLUGIN_ROOT / "skills/karvey/rules/gates.md"
+        self.t.write(self.RULE, real.read_text(encoding="utf-8"))
+        for s in self.PHASES:
+            self.t.append(SKILLS + "/%s/SKILL.md" % s, self.CLOSE)
+
+    def test_pass(self):
+        self.assertPasses("L-41")
+        self.assertPasses("L-52")
+
+    def test_second_question_after_approval_fails(self):
+        f = SKILLS + "/karvey-qa/SKILL.md"
+        self.t.append(f, "\nAfter the approval, ask: \"Shall we advance to the Deploy phase now?\"\n")
+        self.assertFails("L-41", "second advance question", file=f)
+
+    def test_closing_without_gates_citation_fails(self):
+        f = SKILLS + "/karvey-requirements/SKILL.md"
+        self.t.replace(f, "Close the phase per `../karvey/rules/gates.md`.", "Ask the user whether to go on.")
+        self.assertFails("L-41", "does not cite rules/gates.md", file=f)
+
+    def test_y_approving_prod_fails(self):
+        f = SKILLS + "/karvey-deploy/SKILL.md"
+        self.t.append(f, "\nWith `-y` the agent approves the production release for the user.\n")
+        self.assertFails("L-52", "never approves production", file=f)
+
+    def test_gates_rule_without_role_auto_fails(self):
+        self.t.replace(self.RULE, "`--role auto`, and continues", "and continues")
+        self.assertFails("L-52", "--role auto", file=self.RULE)
+
+
 class ListAll(unittest.TestCase):
     def test_list_names_l01_to_l36(self):
         code, out, _ = run_cli("--root", str(_path.REPO_ROOT), "--list")

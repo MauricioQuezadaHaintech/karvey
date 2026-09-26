@@ -1903,6 +1903,71 @@ def l51_judge_rubrics(ctx):
         yield rule, line, "the judge template does not say 'Do not edit any file'"
 
 
+# --------------------------------------------------------------------------- L-41, L-52 (wave2-structural)
+SECOND_Q_RE = re.compile(r"shall we advance|advance to the \w+(?: \w+)? phase now\?", re.I)
+CLOSING_HEAD_RE = re.compile(r"^##\s+(Advance to the next phase|Close the phase)\s*$")
+Y_FLAG_RE = re.compile(r"`-y`|(?<![\w-])-y\b")
+PROD_WORD_RE = re.compile(r"\b(prod|production)\b", re.I)
+Y_NEGATION_RE = re.compile(r"\b(never|not|no|refus\w*|cannot)\b", re.I)
+
+
+def _closing_section(ctx, path):
+    """``(line, [text lines])`` of a skill's closing section, or ``(None, [])``."""
+    lines = ctx.lines(path)
+    for i, ln_ in enumerate(lines):
+        if CLOSING_HEAD_RE.match(ln_):
+            out = []
+            for x in lines[i + 1:]:
+                if x.startswith("## ") or x.strip() == "---":
+                    break
+                out.append(x)
+            return i + 1, out
+    return None, []
+
+
+@check("L-41", "No phase skill asks a second 'shall we advance?' question: its closing cites rules/gates.md, the one "
+               "closing block (REQ-W2-034, 035)", reqs=("W2-034", "W2-035"))
+def l41_one_gate_question(ctx):
+    if ctx.rule("gates.md") is None:
+        return  # a plugin tree without the merged gates (the lint fixtures)
+    for name, path in ctx.skills().items():
+        for n, line, lang in body_lines(ctx, path):
+            if lang is None and SECOND_Q_RE.search(line):
+                yield path, n, "%s asks a second advance question; close the phase per rules/gates.md instead" % name
+    for p in ctx.rules_dir.glob("*.md"):
+        for n, line in enumerate(ctx.lines(p), 1):
+            if SECOND_Q_RE.search(line) and p.name != "gates.md":
+                yield p, n, "rule asks 'shall we advance?'; the gate question is the one in rules/gates.md"
+    last = (ctx.machine().get("phases") or [{}])[-1].get("skill")  # archive closes the cycle: nothing to advance to
+    phases = set(phase_skills(ctx)) - {last}
+    for name in sorted(phases):
+        path = ctx.skills().get(name)
+        if path is None:
+            continue
+        head, body = _closing_section(ctx, path)
+        if head is None:
+            yield path, 1, "%s has no closing section ('## Advance to the next phase') citing rules/gates.md" % name
+        elif not any("rules/gates.md" in x for x in body):
+            yield path, head, "%s: the closing section does not cite rules/gates.md" % name
+
+
+@check("L-52", "-y records role auto and never production: no text describes -y as approving prod, and rules/gates.md "
+               "says -y = --role auto (REQ-W2-040)", reqs=("W2-040",))
+def l52_y_is_auto_never_prod(ctx):
+    rule = ctx.rule("gates.md")
+    if rule is None:
+        return
+    text = ctx.read(rule) or ""
+    m = re.search(r"^## `-y`\s*$(.*?)(?=^## |\Z)", text, re.M | re.S)
+    if not m or not re.search(r"`-y` (?:means|records)[^.]*`--role auto`", m.group(1)):
+        yield rule, 1, "rules/gates.md has no '## `-y`' section saying -y records --role auto"
+    files = list(ctx.skills().values()) + sorted(ctx.rules_dir.glob("*.md"))
+    for path in files:
+        for n, line in enumerate(ctx.lines(path), 1):
+            if Y_FLAG_RE.search(line) and PROD_WORD_RE.search(line) and not Y_NEGATION_RE.search(line):
+                yield path, n, "-y described with production and no 'never': -y never approves production"
+
+
 # --------------------------------------------------------------------------- L-48 (wave2-structural)
 W2_DEFAULT_KEYS = ("gates", "judges", "checks", "lanes")
 BASELINE_RE = re.compile(r"^baseline-(\d{4}-\d{2}-\d{2})\.json$")
