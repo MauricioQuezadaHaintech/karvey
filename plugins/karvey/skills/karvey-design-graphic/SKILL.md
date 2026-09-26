@@ -1,6 +1,6 @@
 ---
 name: karvey-design-graphic
-description: Karvey phase 4 — design-spec.md (color, type, layout, motion, scoring) and the styled mockup — after the mockup is approved. Triggers include "karvey design-graphic", "diseño gráfico karvey", "karvey visual spec", "especificación visual karvey".
+description: Karvey phase 4 — design-spec.md, its delta over the design system, computed contrast, a design judge — after the mockup. Triggers include "karvey design-graphic", "diseño gráfico karvey", "karvey visual spec", "especificación visual karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 argument-hint: <change-id>
 ---
@@ -9,7 +9,7 @@ argument-hint: <change-id>
 
 ## Purpose
 
-With the approved mockup as the structural wireframe, define the complete visual design specification: color, typography, layout, motion, and micro-interactions. Update the mockup HTML with the defined visual system.
+With the approved mockup as the structural wireframe, apply the **project design system** (`docs/spec/design-system.md`) to the change and record only what the change adds or modifies — its **design delta**. Contrast is computed by a tool, and the design score comes from a clean-context **design judge**, never from this phase (REQ-W3-035..039). Update the mockup HTML with the visual system.
 
 ## Execution steps
 
@@ -22,9 +22,9 @@ Read:
 
 Check the precondition: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" next "{change-id}" --json` (mockup approved; relay the blockers and stop if not), then `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" advance "{change-id}" design_graphic`.
 
-Check whether a `PRODUCT.md` or `DESIGN.md` exists in the project to understand the existing brand.
+**Read the project design system** `docs/spec/design-system.md` (tokens per scheme with `Changed by`, the component inventory, the pairs table with each pair's WCAG level). It is not redefined here: this phase maps it onto the change and declares only its delta. **No design system yet** → this is the first UI change: propose creating it — from this change's work (the delta becomes the seed at archive) or by importing a pinned `inputs.design_system` — and say which. Check whether a `PRODUCT.md` or `DESIGN.md` exists to understand the existing brand.
 
-**Design produced by another agent or repo** (see `../karvey/rules/multi-agent.md` §3): if `spec.json:inputs.design` or `inputs.design_system` is set, read them **at the pinned commit** (`git -C {repo} show {commit}:{path}`). The design system is a hard input: tokens, type and components come from it and are not re-invented here — this phase maps them onto the change and scores the result. If a designer agent delivers a new version, update the pin (`inputs.design = "{repo} {path} @{new-commit}"`) and record the re-pin in `revision_history`; `karvey-iterate` decides the ripple. When **this** phase is the one producing the design for other repos, finish by giving the consumers the reference to pin: `{repo} docs/spec/changes/{change-id}/design-spec.md @{commit}`.
+**Design produced by another agent or repo** (see `../karvey/rules/multi-agent.md` §3): if `spec.json:inputs.design` or `inputs.design_system` is set, read them **at the pinned commit** (`git -C {repo} show {commit}:{path}`). The design system is a hard input: tokens, type and components come from it and are not re-invented here — this phase maps them onto the change and declares its delta. If a designer agent delivers a new version, update the pin (`inputs.design = "{repo} {path} @{new-commit}"`) and record the re-pin in `revision_history`; `karvey-iterate` decides the ripple. When **this** phase is the one producing the design for other repos, finish by giving the consumers the reference to pin: `{repo} docs/spec/changes/{change-id}/design-spec.md @{commit}`.
 
 ### Step 2 — Identify the design register
 
@@ -56,7 +56,9 @@ The color, typography, layout, and motion dimensions in the following steps are 
 
 ### Step 3 — Define color system (OKLCH)
 
-Choose a palette strategy:
+With a design system, use its colour tokens and add or modify only what the mockup needs (each modification recorded
+with the system's current value as its base, Step 8). The strategies and starting values below apply only when there
+is no design system yet. Choose a palette strategy:
 
 **Restrained (recommended for B2B):**
 - 1 accent color, the rest neutrals
@@ -151,39 +153,17 @@ Before writing the design-spec, confirm the system does NOT include:
 - ❌ Backgrounds with noise patterns or excessive texture
 - ❌ Animations longer than 500ms on frequent interactions
 
-### Step 7B — Design scoring 0-10 by dimension
+### Step 7B — Contrast is computed, not judged
 
-Before finalizing the visual system, evaluate the design-spec/mockup with a **0-10 score for each relevant design dimension**. The dimensions are interpreted according to the target's guidance (Step 2): WCAG for web, HIG for iOS, Material for Android, desktop/terminal conventions as applicable. Not all dimensions apply to all targets (e.g., "color/contrast" in a CLI is assessed over ANSI color; "motion" may not apply in a terminal).
-
-Suggested dimensions (adjust to the target):
-
-- **Visual hierarchy** — the eye finds what matters first; clear emphasis between primary/secondary/tertiary
-- **Typography** — coherent scale, weights with purpose, legibility; on iOS respects Dynamic Type, in CLI monospaced legibility
-- **Color / contrast** — intentional palette; sufficient contrast (WCAG AA/AAA on web; the target's equivalent)
-- **Spacing / rhythm** — consistent base system, grouping by proximity, visual breathing room
-- **Consistency** — reused tokens, uniform components, no ad-hoc values
-- **Accessibility** — visible focus, keyboard navigation, touch targets, semantics; per the platform's checklist
-- **Motion** — functional and non-distracting, reasonable durations, respects `prefers-reduced-motion` (or the target's equivalent)
-
-For **each dimension**:
-
-1. Assign a **0-10 score**.
-2. **Explicitly explain what a 10 would be** in that dimension for this design and target (the concrete bar for excellence, not a generic one).
-3. State **what is missing to reach a 10** from the current score (actionable gap).
-
-Scoring table:
-
-| Dimension | Score (0-10) | What a 10 would be | What is missing to get there |
-|-----------|-------------|-----------------|-----------------------|
-| Visual hierarchy | | | |
-| Typography | | | |
-| Color / contrast | | | |
-| Spacing / rhythm | | | |
-| Consistency | | | |
-| Accessibility | | | |
-| Motion | | | |
-
-**Acceptable threshold:** average ≥ 8 and no dimension < 7. If not met, **iterate the design-spec/mockup** (return to steps 3-6 depending on the weak dimension) and re-evaluate. Repeat until the threshold is met or until the remaining gap is a conscious scope decision documented in the design-spec.
+Contrast is a number, not an opinion: after writing the delta (Step 8), run the contrast tool over the design
+system with the delta applied and keep its JSON beside the spec — it is the design judge's deterministic sub-score:
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-contrast-check.py" --delta "{change-id}" --json > "docs/spec/changes/{change-id}/contrast.json"
+```
+Every declared text/background pair is computed in both schemes against its level (AA normal when undeclared).
+A pair below its level is fixed in the delta (or its level is changed with a reason) before the gate; an
+unparseable token (exit 1) is fixed, never assumed. Cite the result in `design-spec.md` — do not recompute ratios by
+hand and **do not score the design yourself**: the design judge does (Step 9C).
 
 ### Step 8 — Write design-spec.md
 
@@ -239,37 +219,61 @@ Strategy: {Restrained | Committed | Full palette}
 ## Anti-patterns avoided
 (list of those that were checked)
 
-## Design scoring (0-10 by dimension)
-Target evaluated: {web (WCAG) | iOS (HIG) | Android (Material) | desktop | cli/terminal}
-
-| Dimension | Score (0-10) | What a 10 would be | What is missing to get there |
-|-----------|-------------|-----------------|-----------------------|
-| Visual hierarchy | | | |
-| Typography | | | |
-| Color / contrast | | | |
-| Spacing / rhythm | | | |
-| Consistency | | | |
-| Accessibility | | | |
-| Motion | | | |
-
-Average: {N}/10 — Threshold (≥8, none <7): {met | not met}
-Iterations performed: {N} — Consciously accepted gaps: {description or "none"}
+## Contrast
+Computed by `karvey-contrast-check.py --delta {change-id}` (`contrast.json`): {N} pairs × 2 schemes, {N} below level
+({list or "none"}).
 ```
 
-Write to `docs/spec/changes/{change-id}/design-spec.md`.
+Write to `docs/spec/changes/{change-id}/design-spec.md`. Its first paragraph starts with an `Applies to` sentence
+naming the mockup files it styles (the design judge reads exactly those).
+
+Then write the **design delta** `docs/spec/changes/{change-id}/design-delta.md` — only what this change adds to or
+modifies in the design system (a modified token carries the system's value now, so archive can detect a conflict):
+
+```markdown
+# Design delta: {change-id}
+
+## Added
+| Token | Scheme | Base value | New value |
+|-------|--------|------------|-----------|
+| `--color-info` | both | — | `#1c5d96` |
+
+## Modified
+| Token | Scheme | Base value | New value |
+|-------|--------|------------|-----------|
+
+## Components
+| Component | Action |
+|-----------|--------|
+| {component} | added |
+
+## Pairs
+| Text token | Background token | Level |
+|------------|------------------|-------|
+```
+
+A change that adds and modifies nothing writes a single line `empty`. Check that the delta tells the truth — every
+difference between the design-spec and the design system must be declared:
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-design.py" diff "{change-id}"
+```
+`undeclared modification: --color-…` → add the row to the delta (with its base value) or revert the value.
 
 ### Step 9 — Update mockup.html with the visual system
 
 Edit `mockup.html` to:
 1. Add the CSS custom properties (`:root { --color-primary: ...; ... }`)
 2. Replace hardcoded colors with the variables
-3. Add the font via Google Fonts `@import`
+3. Use system fonts, or a font the design system declares that ships with the product (no external request)
 4. Apply the motion system to existing transitions
 5. Update the banner: `🎨 MOCKUP WITH GRAPHIC DESIGN — {change-id} — {date}`
 
-### Step 9B — Generate the visual components catalog
+### Step 9B — Visual components catalog (only on an asset request)
 
-The `design-spec.md` defines the system at the **token** level (palette, type, spacing, key components with their treatment + scoring). It does **not** enumerate, screen by screen and component by component, the concrete visual assets an illustrator or an AI art agent must produce. That is what `design-components.md` is for: an **art brief per component**.
+**Opt-in.** Produce `design-components.md` **only when the change asks for illustrations or assets** (the PRD or a
+requirement says so). Otherwise skip this step and say so in the design-spec (`Art catalogue: not requested`).
+
+The `design-spec.md` defines the system at the **token** level (palette, type, spacing, key components with their treatment). It does **not** enumerate, screen by screen and component by component, the concrete visual assets an illustrator or an AI art agent must produce. That is what `design-components.md` is for: an **art brief per component**.
 
 **Derive it — do not invent it.** The catalog is derived from three sources and must cover them **exhaustively** — nothing invented, nothing omitted:
 - **`mockup.html`** (approved) — every screen, modal/bottom sheet, and state that actually appears.
@@ -309,7 +313,7 @@ Write to `docs/spec/changes/{change-id}/design-components.md` using this templat
 
 ## C. UI components
 
-Per component: description, states, and **required background/fill art**. Cover at least: primary button, secondary button, input/textbox (+ variants: text, number, masked RUT/phone, select, date picker, textarea, search), chip, card, tile, avatar, badge, progress bar, tabs, bottom-nav (or the target's navigation), global states (loading/empty/error/success), and any **target-specific** component that appears in the mockup.
+Per component: description, states, and **required background/fill art**. Cover at least: primary button, secondary button, input/textbox (+ variants: text, number, masked identifier/phone, select, date picker, textarea, search), chip, card, tile, avatar, badge, progress bar, tabs, bottom-nav (or the target's navigation), global states (loading/empty/error/success), and any **target-specific** component that appears in the mockup.
 
 ### C1. {component}
 - **What it is:** {description}.
@@ -345,6 +349,18 @@ For each component in sections C, D and E, **1 base illustration** is expected (
 
 Only include sections that the change actually has (drop E if there is no second surface; rename A's heading to the real target). Every screen/modal/state present in `mockup.html` must appear here.
 
+### Step 9C — Design judge before the gate
+
+The design score comes from a clean-context judge (lens `design`, `../karvey/rules/judges/design_graphic.md`), never
+from this phase. Build its closed inputs — the delta, the "Applies to" mockups (≤ 200 KB each) and `contrast.json` —
+run it as `../karvey/rules/judges.md` describes, and collect it:
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-judges.py" inputs "{change-id}" design_graphic --json
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-judges.py" collect "{change-id}" design_graphic --results "{dir}" --transcript auto --json
+```
+A lane that skips design, or judges disabled, prints why and nothing runs. The gate summary shows the judge's
+verdict and the contrast result side by side; the human decides.
+
 ### Step 10 — Output
 
 ```
@@ -352,7 +368,9 @@ Only include sections that the change actually has (drop E if there is no second
 
 Files created/updated:
   - docs/spec/changes/{change-id}/design-spec.md
-  - docs/spec/changes/{change-id}/design-components.md
+  - docs/spec/changes/{change-id}/design-delta.md ({N} added · {N} modified · {N} components | empty)
+  - docs/spec/changes/{change-id}/contrast.json
+  - docs/spec/changes/{change-id}/design-components.md (only on an asset request)
   - docs/spec/changes/{change-id}/mockup.html (updated with visual system)
 
 Design system:
@@ -360,8 +378,9 @@ Design system:
   - Color strategy: {name}
   - Typography: {font(s)}
   - Anti-patterns checked: ✅
-  - Design scoring: {N}/10 average (threshold ≥8, none <7) — {met | not met}
-  - Components catalog: {N} components briefed (light+dark, safe zones)
+  - Contrast: {N} pairs, {N} below level (karvey-contrast-check.py)
+  - Design judge: {verdict} · {N} findings (lens design)
+  - Components catalog: {not requested | N components briefed}
 
 Approve the design spec to continue to /karvey-architecture {change-id}.
 ```

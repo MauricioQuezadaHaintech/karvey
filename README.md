@@ -52,7 +52,7 @@ Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 19 support sk
 | 1 | `karvey-init` | `project.json`, `change-id`, `prd.md`, `spec.json`, Epic in the team's configured tracker or `PLAN.md` | project-config, clickup-protocol, living-specs, enforcement |
 | 2 | `karvey-requirements` | EARS `requirements.md` traced to the PRD + `spec-delta.md` | ears-format, living-specs, security-tiers |
 | 3 | `karvey-mockup` | Navigable mockup, 3–4 levels + spec↔mockup validation | targets |
-| 4 | `karvey-design-graphic` | `design-spec.md` (OKLCH, type, 0-10 scoring) + `design-components.md` | targets |
+| 4 | `karvey-design-graphic` | `design-spec.md` + `design-delta.md` over `design-system.md` (contrast computed, design judge; art catalogue on request) | targets |
 | 5 | `karvey-architecture` | `architecture.md`: boundaries, security tier, diagrams, cloud; standards conformance gate | security-tiers, engineering-standards |
 | 6 | `karvey-infra` | IaC + CI/CD pipelines with infra security review → `infra.md` | project-config, deploy-workflow |
 | 7 | `karvey-tasks` | `tasks.md`: 10–30 min AI tasks `E{n}.F{n}.T{n}` with dependencies | clickup-protocol |
@@ -113,7 +113,7 @@ Requires python ≥ 3.9. Every hook is table-tested; the full list is in `plugin
 ## Features
 
 - **PRD as the base** + traceable EARS requirements.
-- **Navigable mockup** (with shotgun variant mode) and **design** with 0-10 scoring per platform (WCAG/HIG/Material).
+- **Navigable mockup** (with shotgun variant mode) and **design** as a delta over one project design system, with computed contrast and a design judge per platform (WCAG/HIG/Material).
 - **Architecture** with diagrams, edge cases, trust boundaries and a **Cloud Infrastructure** section.
 - **IaC + CI/CD pipelines** (Terraform/Bicep/Pulumi · GitHub Actions/Azure Pipelines) with security review.
 - **9-dimension QA** with a **blocking security gate** (OWASP + STRIDE), a **standards-conformance** dimension (golden path + approved deviations) and cross-model second opinion.

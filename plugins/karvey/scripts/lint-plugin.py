@@ -2323,6 +2323,44 @@ def l64_no_external_request(ctx):
                     yield (path, n, "%s makes an external request: the page must be self-contained" % what)
 
 
+# --------------------------------------------------------------------------- L-66 / L-67 (wave3-optimization)
+COUNTRY_ID_RE = re.compile(r"\b(RUT|DNI|CPF|CNPJ|CURP|NIF|NIE|SSN|CUIT|CUIL|RUC|NIT|PESEL|Aadhaar|NINO)\b")
+
+
+def _template_files(ctx):
+    """The shipped templates: ``templates/*`` and the skills (their output templates and field lists)."""
+    tdir = ctx.plugin / "templates"
+    files = sorted(p for p in tdir.rglob("*") if p.is_file()) if tdir.is_dir() else []
+    return files + [p for _, p in sorted(ctx.skills().items())]
+
+
+@check("L-66", "No template carries a country-specific identifier as a field example or default (REQ-W3-037)",
+       reqs=("W3-037",))
+def l66_no_country_identifier(ctx):
+    for path in _template_files(ctx):
+        for n, line in enumerate(ctx.lines(path), 1):
+            m = COUNTRY_ID_RE.search(line)
+            if m:
+                yield (path, n, "country-specific identifier %r in a template: use a neutral field (identifier, "
+                                "phone) — the method serves every country" % m.group(1))
+
+
+SELF_SCORE_RE = re.compile(r"^\s*\|.*\bscore\b[^|]*\(?\s*0\s*[-\u2013]\s*10\s*\)?", re.I)
+SELF_SCORE_HEAD_RE = re.compile(r"^\s*#{1,6}.*\bscoring\b.*\b0\s*[-\u2013]\s*10\b", re.I)
+
+
+@check("L-67", "design-graphic does not score its own output: no 0-10 score table or scoring section in its "
+               "instructions — the design judge scores (REQ-W3-039)", reqs=("W3-039",))
+def l67_no_design_self_score(ctx):
+    path = ctx.skills().get("karvey-design-graphic")
+    if path is None:
+        return
+    for n, line in enumerate(ctx.lines(path), 1):
+        if SELF_SCORE_RE.search(line) or SELF_SCORE_HEAD_RE.search(line):
+            yield (path, n, "a self-assigned design score in karvey-design-graphic: the design judge scores the "
+                            "design (rules/judges/design_graphic.md)")
+
+
 # --------------------------------------------------------------------------- L-65 (wave3-optimization)
 RISK_STATES = ("open", "mitigated", "accepted", "closed", "moved")
 

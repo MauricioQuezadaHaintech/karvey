@@ -147,5 +147,40 @@ class L64(LintCase):
         self.assertFails("L-64", "external request", file="docs/karvey.html")
 
 
+DESIGN_SKILL = SKILLS + "/karvey-design-graphic/SKILL.md"
+
+
+class L66(LintCase):
+    """@req REQ-W3-037 — no country-specific identifier as a template example."""
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-66")
+
+    def test_shipped_skill_passes(self):
+        self.t.write(DESIGN_SKILL, (_path.PLUGIN_ROOT / "skills/karvey-design-graphic/SKILL.md").read_text(
+            encoding="utf-8"))
+        self.assertPasses("L-66")
+
+    def test_REQ_W3_037_a_country_identifier_example_fails(self):
+        self.t.write("plugins/karvey/templates/form.md", "| Field | Example |\n|---|---|\n| RUT | 12.345.678-5 |\n")
+        self.assertFails("L-66", "country-specific identifier 'RUT'", file="plugins/karvey/templates/form.md")
+
+
+class L67(LintCase):
+    """@req REQ-W3-039 — design-graphic does not score itself."""
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(DESIGN_SKILL, (_path.PLUGIN_ROOT / "skills/karvey-design-graphic/SKILL.md").read_text(
+            encoding="utf-8"))
+
+    def test_shipped_skill_passes(self):
+        self.assertPasses("L-67")
+
+    def test_REQ_W3_039_a_score_table_in_the_output_fails(self):
+        self.t.append(DESIGN_SKILL, "\n| Dimension | Score (0-10) | What a 10 would be |\n|---|---|---|\n")
+        self.assertFails("L-67", "self-assigned design score", file=DESIGN_SKILL)
+
+
 if __name__ == "__main__":
     unittest.main()

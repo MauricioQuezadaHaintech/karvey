@@ -21,7 +21,7 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **PRD as foundation**: every change is born from a Product Requirements Document (`prd.md`); the EARS requirements trace back to it
 - **EARS requirements + living specs** (openspec/kiro style): formal, cumulative specifications
 - **Navigable mockup** (with shotgun mode for variants): validate UX before designing
-- **Systemic graphic design** with 0-10 scoring: OKLCH colors, typography, spacing, per platform (WCAG/HIG/Material)
+- **Systemic graphic design** over one project design system: a per-change delta, computed contrast and a design judge; OKLCH colors, typography, spacing, per platform (WCAG/HIG/Material)
 - **Enterprise architecture**: layered security Tiers 1–4, diagrams, edge cases, trust boundaries, cloud infrastructure
 - **Infrastructure as code + CI/CD**: IaC and pipelines per cloud and git platform, with a security review
 - **10–30 min AI tasks** + management in the **team's tracker** (ClickUp, Jira, Linear, Azure Boards, GitHub Projects, spreadsheet) or Markdown `PLAN.md` — tool and status flow are **team settings** in `project.json`, spoken as logical states `todo | in_progress | review | done | blocked` (`rules/management-adapters.md`); notifications go to the **team's channel** (`rules/notifications.md`)
@@ -152,7 +152,7 @@ EARS requirements, each one **traced to a section of the PRD**. `requirements.md
 Navigable **3–4 levels** (deeper when the flow warrants it), adapted to the target. Shotgun mode (N variants + board). Includes a **spec↔mockup validation** pass: walk the mockup against `requirements.md` to catch spec-gaps *before* design/architecture/impl (cheap correction). `mockup.html` (or the target's equivalent).
 
 ### PHASE 4: /karvey-design-graphic
-OKLCH system + 0-10 scoring per dimension (what a 10 would be). Per-platform guidance (WCAG/HIG/Material). Derives a **visual components catalog** (art brief per screen/modal/component: states + background art, light+dark, safe zones) exhaustively from the mockup. `design-spec.md`, `design-components.md`.
+Reads the project design system and records only the change's **design delta**; contrast computed by `karvey-contrast-check.py`; the score comes from a **design judge**, not the phase. Per-platform guidance (WCAG/HIG/Material). The **visual components catalog** (art brief per screen/modal/component) only on an asset request. `design-spec.md`, `design-delta.md`, `contrast.json`.
 
 ### PHASE 5: /karvey-architecture
 Boundaries, security per Tier, diagrams (mermaid), edge cases, trust boundaries, test coverage plan, **Cloud Infrastructure** section. `architecture.md`.
