@@ -1,6 +1,6 @@
 """Dashboard lane column, lane skips and automatic approvals (architecture §1.6 of wave2-structural).
 
-@req REQ-W2-021 REQ-W2-040 REQ-W2-027 REQ-W2-037 REQ-W2-056 REQ-W2-068
+@req REQ-W2-021 REQ-W2-040 REQ-W2-027 REQ-W2-037 REQ-W2-056 REQ-W2-068 REQ-W2-075
 """
 import contextlib
 import importlib.util
@@ -151,6 +151,21 @@ class GateSummary(unittest.TestCase):
         (self.d / "infra.md").write_text("# Infra\n\n## CI/CD\n- build, test, security-scan, deploy\n")
         g_, _ = self.gate()
         self.assertEqual(g_["sections"]["deviations"], ["none (no deviations.md)"])
+
+    def test_REQ_W2_075_contract_without_rollback_listed_incomplete(self):
+        block = {"service": "web", "env": "prod", "health": ["https://example.org/health"],
+                 "thresholds": {"error_rate_pct": 1}, "metrics_source": {"kind": "apm", "how": "x"}}
+        (self.d / "infra.md").write_text("# Infra\nsecurity-scan\n\n```karvey-postdeploy\n%s\n```\n" % json.dumps(block))
+        g_, _ = self.gate()
+        self.assertEqual(g_["sections"]["contract_gaps"],
+                         ["post-deploy contract web/prod: incomplete (no rollback command)"])
+        block["rollback"] = {"command": "platform rollback web", "doc": "runbook"}
+        (self.d / "infra.md").write_text("# Infra\nsecurity-scan\n\n```karvey-postdeploy\n%s\n```\n" % json.dumps(block))
+        g_, _ = self.gate()
+        self.assertEqual(g_["sections"]["contract_gaps"], ["none"])
+        (self.d / "infra.md").write_text("# Infra\nsecurity-scan\n")
+        g_, _ = self.gate()
+        self.assertEqual(g_["sections"]["contract_gaps"], ["post-deploy contract: no karvey-postdeploy block in infra.md"])
 
     def test_missing_source_named(self):
         (self.d / "tasks.md").unlink()

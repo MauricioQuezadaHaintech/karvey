@@ -843,6 +843,27 @@ _HUMAN_TASK = re.compile(r"^###\s+(\S+)\s+\[human\]\s*(.*)$", re.M)
 _REQ_ID = re.compile(r"\bREQ-[A-Z0-9]+-\d+\b")
 
 
+def _postdeploy_gaps(infra_text):
+    """REQ-W2-075: every ``karvey-postdeploy`` contract of ``infra.md`` that is incomplete (C-19 rules)."""
+    spec = importlib.util.spec_from_file_location("karvey_postdeploy_ctx", str(Path(__file__).resolve().parent /
+                                                                             "karvey-postdeploy.py"))
+    pd = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(pd)
+    found = pd.contracts(infra_text)
+    if not found:
+        return ["post-deploy contract: no karvey-postdeploy block in infra.md"]
+    out = []
+    for c, err in found:
+        if err:
+            out.append("post-deploy contract: %s" % err)
+            continue
+        probs = pd.contract_problems(c)
+        if probs:
+            out.append("post-deploy contract %s/%s: incomplete (%s)" % (c.get("service", "?"), c.get("env", "?"),
+                                                                        "; ".join(probs)))
+    return out
+
+
 def _section_lines(text, rx, limit=12):
     """Non-empty lines under the first heading matching ``rx`` (up to the next heading of that level)."""
     lines = text.split("\n")
@@ -961,6 +982,10 @@ def gate_summary(rd, ctx):
             for did in sorted(set(_DEV_ID.findall(dev)) - shown):
                 res["omissions"].append("deviations.md: %s is not shown by this summary (no heading or table row)" % did)
         infra = rd.text(cdir / "infra.md")
+        if infra is not None:
+            gaps = [x for x in res["sections"].get("contract_gaps", []) if x != "none"]
+            gaps += _postdeploy_gaps(infra)
+            res["sections"]["contract_gaps"] = gaps or ["none"]
         if infra is not None and not re.search(r"security-scan", infra, re.I):
             # REQ-W2-068: the PR pipeline carries the same security-tool categories as QA
             devs = [x for x in res["sections"]["deviations"] if not x.startswith("none")]

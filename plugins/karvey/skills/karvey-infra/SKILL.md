@@ -141,6 +141,23 @@ Format of the block to write in `infra.md`:
 - Status:            {just configured | already configured (verified)}
 ```
 
+**Post-deploy contract, per deployable service and environment** (REQ-W2-075). Below the block, write one fenced `karvey-postdeploy` block (JSON) per service and environment; `karvey-postdeploy.py` reads it at deploy and **never executes anything from it** (the rollback command is only shown to the human):
+
+````markdown
+```karvey-postdeploy
+{"service": "{service}", "env": "prod",
+ "health": ["https://{host}/health"],
+ "routes": [{"url": "https://{host}/{critical-route}", "expect_status": 200}],
+ "thresholds": {"error_rate_pct": 1, "p95_ms_vs_baseline_pct": 20, "new_5xx": 0},
+ "window_min": 10,
+ "metrics_source": {"kind": "{platform metrics | APM | logs}", "how": "{the query or dashboard the deploy skill reads}"},
+ "rollback": {"command": "{the pipeline or platform rollback command}", "doc": "{runbook link}"}}
+```
+````
+- URLs are `https://` (plain `http://localhost` only for a local dev environment); thresholds are compared with the **production baseline**, not with an absolute number, for latency.
+- A contract without a rollback command is **incomplete**: the *how* gate summary lists it (`karvey-context.py --section gate --gate how`). A deployable service with no contract is verified as `not-evaluated` at deploy, never `pass`.
+- A target without HTTP endpoints (a library, an app-store build) states `"health": []` with the channel's own check in `metrics_source.how`.
+
 ### Step 5 — Infra security review (gate)
 
 Generate a **findings checklist** by reviewing:

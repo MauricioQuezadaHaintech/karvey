@@ -1,6 +1,6 @@
 ---
 name: karvey-deploy
-description: Karvey phase 11 — pipeline-triggered release (feature → integration → PR to production), PR gates, prod OK in the release ledger, canary. After karvey-qa. Triggers include "karvey deploy", "karvey release", "desplegar con karvey".
+description: Karvey phase 11 — pipeline-triggered release (feature → integration → PR to production), PR gates, prod OK in the release ledger, post-deploy verification. After karvey-qa. Triggers include "karvey deploy", "karvey release", "desplegar con karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 argument-hint: <change-id>
 ---
@@ -47,7 +47,7 @@ If the diff touches only docs/specs (`git diff --name-only "origin/$I"...HEAD`),
 ### Step 1 — Repos, order, platform, git host
 
 - **Repos and order:** `project.json:repos`; honor the dependency order of `architecture.md` (e.g. **DB → backend → frontend**) and apply Step 2 per repo in that order.
-- **Deploy platform** (only to know **where to monitor**, never to deploy): use `project.json:deploy` (`platform`, `prod_url`, `dev_url`, `health_check`) or detect it from evidence — `fly.toml`, `render.yaml`, `vercel.json`, `netlify.toml`, `host.json` + pipeline, `.github/workflows/`, `azure-pipelines.yml`, `Dockerfile` + `k8s/`/`helm/`. Health: `/health`, `/healthz`, the root page, or the target's runtime equivalent (`../karvey/rules/targets.md`). Unknown URL → do not invent it; ask before the prod canary.
+- **Deploy platform** (only to know **where to monitor**, never to deploy): use `project.json:deploy` (`platform`, `prod_url`, `dev_url`, `health_check`) or detect it from evidence — `fly.toml`, `render.yaml`, `vercel.json`, `netlify.toml`, `host.json` + pipeline, `.github/workflows/`, `azure-pipelines.yml`, `Dockerfile` + `k8s/`/`helm/`. Health: `/health`, `/healthz`, the root page, or the target's runtime equivalent (`../karvey/rules/targets.md`). Unknown URL → do not invent it; ask before the production post-deploy verification.
 - **Git host** (`project.json:git_platform`, else from `git remote get-url origin`): `github.com` → `gh pr` · `dev.azure.com`/`visualstudio.com` → `az repos pr` · `gitlab.com` → `glab mr` · other → ask. The remote wins over a stale config, and it is reported.
 
 Propose any detected value as a settings change on a docs branch (`project-config.md`); do not write `project.json` on the integration branch.
@@ -105,7 +105,7 @@ gh pr checks "{pr}"                  # wait: green before the merge
 gh pr merge "{pr}" --merge           # ⇒ DEV pipeline (Azure Repos: az repos pr update --id "{pr}" --status completed)
 ```
 
-**2.6 — DEV canary (Step 2-bis).** Wait for the green pipeline and run the canary over the real DEV runtime. No advance to prod if DEV is unhealthy. With a UI, DEV must show `-dev` of the version just released; anything else is a finding.
+**2.6 — DEV post-deploy verification (Step 2-bis).** Wait for the green pipeline and run the post-deploy verification over the real DEV runtime with `--env dev`. No advance to prod unless it is `pass` (or `not-evaluated`, stated as such, when DEV has no contract). With a UI, DEV must show `-dev` of the version just released; anything else is a finding.
 
 **2.7 — Pull production and draft the PR body.** The production PR carries **every change of the release manifest** (REQ-W2-045, 047), not only this one. Compute the manifest of `origin/$P..{head}` (`{head}` = `$I`, or the feature branch in trunk flow) and write the body to a file: one line per change with its id, version, lane and QA state, the unmapped commits (if any) named, and a line for the production OK, which is filled in 2.9.
 ```bash
@@ -163,7 +163,7 @@ Bypassing a policy is the human's call and responsibility — never the agent's 
    az repos pr update --id "{pr}" --status completed   # Azure Repos ⇒ PROD pipeline
    ```
 
-**2.10 — PROD canary (Step 2-bis).** Wait for the PROD pipeline and run the canary over production. A regression → **alert and recommend an immediate rollback** (via pipeline). With a UI, PROD shows exactly `{version}`. Keep the green pipeline run URL and the canary result: archive records them (`advance … deployed --pipeline-run <url> --post-deploy-check pass`). **Another clone** than the one that deployed has no release ledger: it records the deploy as attested, with the decision and the run (REQ-W2-053):
+**2.10 — PROD post-deploy verification (Step 2-bis).** Wait for the PROD pipeline and run the post-deploy verification over production with `--env prod`, then record its result in `deploys` with the `deploy-record` command the tool prints. A `regression` → the rollback path of Step 2-bis. With a UI, PROD shows exactly `{version}`. Keep the green pipeline run URL and the result: archive records them (`advance … deployed --pipeline-run <url> --post-deploy-check pass`). **Another clone** than the one that deployed has no release ledger: it records the deploy as attested, with the decision and the run (REQ-W2-053):
 ```bash
 python3 "$S" advance "{change-id}" deployed --attested --ref "D-NN" --pipeline-run "{url}"
 ```
@@ -177,14 +177,23 @@ git branch -d "feature/{change-id}"
 ```
 Absorbed non-protected branches are deleted (closing their PR with a comment); **not absorbed ones are listed** with their unique commits and PR for the human. Report the counts.
 
-### Step 2-bis — Post-deploy canary loop
+### Step 2-bis — Post-deploy verification
 
-After each deploy (DEV in 2.6, PROD in 2.10), over the just-deployed environment and the target's real runtime (`targets.md`, eyes via `karvey-browse`: browser, simulator, HTTP client or terminal). Several spaced iterations, not one shot, each recorded:
-1. **Console/log errors** new since the deploy.
-2. **Performance** of health and key endpoints against the pre-deploy baseline.
-3. **Page/endpoint failures** on the change's critical routes and the product's main ones (5xx, timeout, broken page).
-
-Result: OK, or REGRESSION with what failed. DEV regression → stop before prod. PROD regression → alert and recommend a rollback (always via pipeline).
+After each deploy (DEV in 2.6, PROD in 2.10), against the post-deploy contract `karvey-infra` wrote in `infra.md` (REQ-W2-075..078). The word "canary" is kept only where the platform really splits traffic between two versions; everything else is **post-deploy verification**.
+```bash
+PD="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-postdeploy.py"
+python3 "$PD" probe "{change-id}" --env "{env}" --json        # health + routes, spread over the window
+# gather error rate, p95, the production baseline p95 and new 5xx from the contract's metrics_source into
+# observed.json — a presented command, under the plan gate (platform-specific; the script only compares numbers)
+python3 "$PD" evaluate "{change-id}" --env "{env}" --observed observed.json --version "{version}" --json
+```
+1. The result is `pass`, `regression` or `not-evaluated` — **say it as the tool says it**. The probe table and the thresholds go to `docs/spec/changes/{change-id}/deploy_evidence.md`.
+2. **No contract, or no thresholds** → `not-evaluated`, with the recommendation to add the contract to `infra.md`; it is never reported as a pass.
+3. Record every result with the printed command: `python3 "$S" deploy-record "{change-id}" --env "{env}" --version "{version}" --verification {result} --evidence docs/spec/changes/{change-id}/deploy_evidence.md`.
+4. **`regression`** (REQ-W2-078):
+   - DEV → stop before prod.
+   - PROD → show the contract's `rollback.command` and **ask the human** with `AskUserQuestion` (*Roll back now (recommended)* / *Keep and investigate*). The rollback affects production: it runs only after that answer, through the plan gate, never on the agent's initiative. Then record it: `python3 "$S" deploy-record "{change-id}" --env prod --version "{version}" --verification regression --rollback "{what was run}" --evidence …`.
+   - Open the incident with a reserved number: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG`, then the `BUG-NN` row in `docs/bugs_dev_testing.md` and a finding in the change's `findings.md` (`../karvey/rules/incident-tracking.md`).
 
 ### Step 3 — Hard rules (NEVER skip)
 
@@ -199,12 +208,12 @@ Result: OK, or REGRESSION with what failed. DEV regression → stop before prod.
 - **`patch` / `hotfix` = fix + BUG-NN + finding + regression test in the same PR** (`lane_triplet`).
 - **One version bump per release**, from `[Unreleased]`, in Step 2.3.
 - **Branches:** absorbed → deleted; not absorbed → never deleted, reported.
-- **Zero downtime**: the canary reinforces it; a prod regression → rollback recommended.
+- **Zero downtime**: the post-deploy verification reinforces it; a prod regression → the rollback is proposed to the human, never run without the answer.
 - In multi-repo, the dependency order of `architecture.md`.
 
 ### Step 4 — Record in the tracker
 
-Resolve the tracker with `python3 "$C" resolve management --change "{change-id}" --json` (`../karvey/rules/management-adapters.md`, including its missing-map clause). If `external` is true: `create_task("[Deploy] {change-id}")` with the checklist as subtasks, `set_status(…, in_progress)` while it runs, `link(…, PR)`, `set_status(…, done)` on the PROD confirmation, `blocked` if the gate or the canary stops it; a failed call goes to the outbox (`karvey-config.py outbox add`). Otherwise add to `PLAN.md` the deploy status per repo and environment:
+Resolve the tracker with `python3 "$C" resolve management --change "{change-id}" --json` (`../karvey/rules/management-adapters.md`, including its missing-map clause). If `external` is true: `create_task("[Deploy] {change-id}")` with the checklist as subtasks, `set_status(…, in_progress)` while it runs, `link(…, PR)`, `set_status(…, done)` on the PROD confirmation, `blocked` if the gate or the post-deploy verification stops it; a failed call goes to the outbox (`karvey-config.py outbox add`). Otherwise add to `PLAN.md` the deploy status per repo and environment:
 
 ```markdown
 ## Deploy — {change-id}
@@ -215,17 +224,17 @@ Resolve the tracker with `python3 "$C" resolve management --change "{change-id}"
 
 ### Step 5 — Notify the team + final output
 
-Send the `deploy` notification per `../karvey/rules/notifications.md`: `python3 "$C" resolve notifications --json`; `none` or `deploy` not in `events` → skip and say so. Run `python3 "$C" notify-check` first: exit 10 (destination changed) → show old and new destination and ask the human before sending. Post in the channel's own markup: repos + versions, DEV/PROD state, canary, branches. A failed send is reported, not swallowed.
+Send the `deploy` notification per `../karvey/rules/notifications.md`: `python3 "$C" resolve notifications --json`; `none` or `deploy` not in `events` → skip and say so. Run `python3 "$C" notify-check` first: exit 10 (destination changed) → show old and new destination and ask the human before sending. Post in the channel's own markup: repos + versions, DEV/PROD state, post-deploy verification, branches. A failed send is reported, not swallowed.
 
 ```
 ✅ Deploy complete — {change-id}
 
 Repos (dependency order):
-  - {repo1}: v{version} · DEV ✅ canary OK | PROD {✅ merged, canary OK / 👀 PR open, awaiting the human's OK}
+  - {repo1}: v{version} · DEV ✅ verification pass | PROD {✅ merged, verification pass / 👀 PR open, awaiting the human's OK}
 Checklist: verified · QA: OK (0 critical, 0 high) · Tests: PASS · Release: [Unreleased] → [x.y.z]
 Prod approval: {by} · {D-NN} · ledger ✅ (check-prod)   Type: {feature | ops | hotfix (BUG-NN)}
 Platform: {…} · Prod URL: {prod_url} · Pipeline run: {url}
-Canary: DEV {OK / REGRESSION} · PROD {OK / REGRESSION → rollback recommended}
+Post-deploy verification: DEV {pass / regression / not-evaluated} · PROD {pass / regression → rollback asked / not-evaluated} · deploy_evidence.md
 Branches: deleted {N} ({list}) · kept {N} ({branch}: not absorbed, PR #{n})
 {UI} Visible version: {yes / recommended}
 Management: {[Deploy] in {tool} → {status} | PLAN.md updated} · Notification: {channel → target | skipped}
