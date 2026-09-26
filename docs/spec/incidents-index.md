@@ -54,6 +54,9 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | BUG-44 | karvey | medium | `validate --fix` dropped fields of legacy transitions and of `gates_skipped` | wave1-hardening / F-73 | RESUELTO | plugins/karvey/tests/unit/test_state_fix.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-45 | karvey | high | spec-merge deleted neighbouring requirements on a duplicated REMOVED id | wave1-hardening / F-74 | RESUELTO | plugins/karvey/tests/unit/test_spec_merge.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-46 | karvey | medium | L-06 let hand-edit instructions through in other words | wave1-hardening / F-75 | RESUELTO | L-06; plugins/karvey/tests/unit/test_lint_plugin.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-47 | karvey | high | prod-gate missed wildcard/matching/mirror/`push.default matching` pushes, a tag shadowing the branch and a second production destination | wave1-hardening / F-92 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-01..07 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-48 | karvey | medium | a deferred merge (`--auto`, auto-complete, glab) could land a later commit | wave1-hardening / F-93 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-08..12 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-49 | karvey | low | `reopen` superseded the ledger prod approval after writing spec.json | wave1-hardening / F-94 | RESUELTO | plugins/karvey/tests/unit/test_state_approve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 
 ## Summary by state
 
@@ -62,7 +65,7 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 46 | BUG-01 .. BUG-46 |
+| RESUELTO | 49 | BUG-01 .. BUG-49 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-47**.
+Next number: **BUG-50**.

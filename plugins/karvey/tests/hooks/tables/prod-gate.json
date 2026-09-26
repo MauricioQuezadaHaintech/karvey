@@ -1323,7 +1323,7 @@
    "input": {
     "tool_name": "Bash",
     "tool_input": {
-     "command": "glab mr merge 7 --squash"
+     "command": "glab mr merge 7 --squash --sha {{head}}"
     }
    },
    "expect": {
@@ -4776,7 +4776,7 @@
     "decision": "block",
     "stderr_contains": [
      "[karvey] prod-gate BLOCK",
-     "earlier command"
+     "another command"
     ]
    },
    "tags": [
@@ -4841,7 +4841,7 @@
     "decision": "block",
     "stderr_contains": [
      "[karvey] prod-gate BLOCK",
-     "earlier command"
+     "another command"
     ]
    },
    "tags": [
@@ -5016,6 +5016,758 @@
     "REQ-W1-023",
     "D-35",
     "F-77"
+   ]
+  },
+  {
+   "id": "pg5-12-background-writer-after-the-push",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin HEAD:main & git commit -q --allow-empty -m later"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "another command"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "D-35",
+    "F-77"
+   ]
+  },
+  {
+   "id": "pg6-01-wildcard-refspec-into-main",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git branch -q wip && git checkout -q wip && git commit -q --allow-empty -m B && git branch -f main wip && git checkout -q feature/feat-a"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin 'refs/heads/*:refs/heads/*'"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "wildcard"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-47"
+   ]
+  },
+  {
+   "id": "pg6-02-matching-colon-refspec",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git checkout -q main && git commit -q --allow-empty -m B && git checkout -q feature/feat-a"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin :"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "matching"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-47"
+   ]
+  },
+  {
+   "id": "pg6-03-configured-mirror",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git checkout -q main && git commit -q --allow-empty -m B && git checkout -q feature/feat-a && git config remote.origin.mirror true"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "mirror"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-47"
+   ]
+  },
+  {
+   "id": "pg6-04-configured-push-default-matching",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git checkout -q main && git commit -q --allow-empty -m B && git checkout -q feature/feat-a && git config push.default matching"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "matching"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-47"
+   ]
+  },
+  {
+   "id": "pg6-05-tag-shadows-the-pushed-branch",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git tag feature/feat-a HEAD && git commit -q --allow-empty -m B"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin refs/heads/feature/feat-a:main"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "missing=sha",
+     "not the approved commit"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-47"
+   ]
+  },
+  {
+   "id": "pg6-06-second-production-destination",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev",
+      "master"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git branch -q wip && git checkout -q wip && git commit -q --allow-empty -m B && git checkout -q feature/feat-a"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin HEAD:main wip:master"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "more than one"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-47"
+   ]
+  },
+  {
+   "id": "pg6-07-configured-wildcard-push-refspec",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "setup": [
+     "git checkout -q main && git commit -q --allow-empty -m B && git checkout -q feature/feat-a && git config remote.origin.push 'refs/heads/*:refs/heads/*'"
+    ]
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git push origin"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "wildcard"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-47"
+   ]
+  },
+  {
+   "id": "pg6-08-gh-auto-merge-unbound",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "main",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12,
+       "headRefOid": "{{head}}"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 30 --auto --merge"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "deferred"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-48"
+   ]
+  },
+  {
+   "id": "pg6-09-gh-auto-merge-bound-to-the-approved-commit",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "main",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12,
+       "headRefOid": "{{head}}"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 30 --auto --merge --match-head-commit {{head}}"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": "[karvey] prod-gate ALLOW change=feat-a"
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-48"
+   ]
+  },
+  {
+   "id": "pg6-10-gh-auto-merge-bound-to-another-commit",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "main",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12,
+       "headRefOid": "{{head}}"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 30 --auto --merge --match-head-commit 0123456789abcdef0123456789abcdef01234567"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "deferred"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-48"
+   ]
+  },
+  {
+   "id": "pg6-11-az-auto-complete-deferred",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "stubs": {
+     "az": {
+      "stdout": {
+       "targetRefName": "refs/heads/main",
+       "sourceRefName": "refs/heads/feature/feat-a",
+       "title": "x",
+       "lastMergeSourceCommit": {
+        "commitId": "{{head}}"
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "az repos pr update --id 12 --auto-complete true"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "deferred"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-48"
+   ]
+  },
+  {
+   "id": "pg6-12-glab-merge-without-sha",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      }
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "stubs": {
+     "glab": {
+      "stdout": {
+       "target_branch": "main",
+       "source_branch": "feature/feat-a",
+       "title": "x",
+       "sha": "{{head}}"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "glab mr merge 7 --squash"
+    }
+   },
+   "expect": {
+    "decision": "block",
+    "stderr_contains": [
+     "[karvey] prod-gate BLOCK",
+     "deferred"
+    ]
+   },
+   "tags": [
+    "prod-gate",
+    "REQ-W1-023",
+    "BUG-48"
    ]
   }
  ]

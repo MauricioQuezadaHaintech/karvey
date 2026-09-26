@@ -1417,3 +1417,93 @@ L-06; `plugins/karvey/tests/unit/test_lint_plugin.py` L06.test_hand_edits_in_oth
 | 2026-09-25 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-75, karvey-qa D7 second opinion (X-9) |
 | 2026-09-25 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 4c9b7c0, green after |
+
+## BUG-47 — The prod-gate missed push forms that reach production: wildcard and matching refspecs, a configured mirror or `push.default matching`, a tag shadowing the pushed branch, a second production destination
+- **Priority:** high
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_evaluate_candidate`, `implicit_push_dests`)
+- **Change / origin:** wave1-hardening — finding F-92 (QA re-run, D7 second opinion (X-1..X-7))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With a prod approval for commit A and local `main` moved to an unapproved B: `git push origin 'refs/heads/*:refs/heads/*'`; `git push origin :`; `git config remote.origin.mirror true` then `git push origin`; `git config push.default matching` then `git push`; `git config remote.origin.push 'refs/heads/*:refs/heads/*'` then `git push origin`. With a tag `feature/feat-a` at A and the branch at B: `git push origin refs/heads/feature/feat-a:main`. With `main` and `master`: `git push origin HEAD:main wip:master`.
+
+### Actual vs expected
+- Actual: the gate allowed each one (most silently, the tag case as `ALLOW … commit=A`), and `origin/main` (or `master`) ended at B.
+- Expected: a push that can reach production names one commit, that commit is the approved one, and anything else blocks.
+
+### Root cause
+the destination was compared literally with the production set, so `*` and the empty `:` never matched; the implicit-push resolution read neither `remote.<r>.mirror` nor a persistent `push.default`; the source short name was resolved with `rev-parse`, which prefers a tag; the loop stopped at the first production destination.
+
+### Fix
+wildcard destinations are matched with `fnmatch` against the production set, `:` is a matching push, a configured mirror and `push.default matching` count as bulk pushes, and all of them block; the source is resolved as `refs/heads/<name>` first (`resolve_push_source`); every production destination is resolved and more than one commit blocks.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg6-01-wildcard-refspec-into-main, pg6-02-matching-colon-refspec, pg6-03-configured-mirror, pg6-04-configured-push-default-matching, pg6-05-tag-shadows-the-pushed-branch, pg6-06-second-production-destination, pg6-07-configured-wildcard-push-refspec; red on 7e110f3. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-92, karvey-qa re-run D7 second opinion (X-1..X-7) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 7e110f3, green after |
+
+## BUG-48 — A deferred merge (`gh pr merge --auto`, `az … --auto-complete true`, `glab mr merge`) was checked against the PR head once and could land a later commit
+- **Priority:** medium
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`prod_candidates`, `_gh_candidate`, `_evaluate_candidate`)
+- **Change / origin:** wave1-hardening — finding F-93 (QA re-run, D7 second opinion (X-9))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With a prod approval for the PR head A: `gh pr merge 12 --auto --merge` (allowed), then `git push origin wip:feature/feat-a` (a feature push, allowed); the host would merge B when the checks pass.
+
+### Actual vs expected
+- Actual: the deferred merge was allowed without a binding to A.
+- Expected: a deferred merge is allowed only when the host itself is bound to the approved commit (`gh --match-head-commit`, `glab --sha`); `az --auto-complete` blocks.
+
+### Root cause
+the gate compared the PR head at command time and treated every merge command as immediate; glab merges when the pipeline succeeds by default.
+
+### Fix
+candidates carry `deferred` and `bound`; after the approval check, a deferred merge whose binding is not the released commit blocks.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/prod-gate.json` pg6-08-gh-auto-merge-unbound, pg6-10-gh-auto-merge-bound-to-another-commit, pg6-11-az-auto-complete-deferred, pg6-12-glab-merge-without-sha (block) and pg6-09-gh-auto-merge-bound-to-the-approved-commit (bound: allow); pg1-23 now passes `--sha`; red on 7e110f3. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-93, karvey-qa re-run D7 second opinion (X-9) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 7e110f3, green after |
+
+## BUG-49 — `reopen` wrote spec.json before superseding the ledger prod approval, so a failure in between left it live
+- **Priority:** low
+- **Detected:** 2026-09-26 · **Component:** plugins/karvey/scripts/karvey-state.py (`cmd_reopen`)
+- **Change / origin:** wave1-hardening — finding F-94 (QA re-run, D7 second opinion (X-10))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Make `approval.supersede_prod` fail (a full disk, a corrupt write) during `reopen feat-a requirements` on a change with a ledger prod approval.
+
+### Actual vs expected
+- Actual: spec.json was reopened and the ledger kept its prod approval.
+- Expected: the ledger first; if it fails, nothing is reopened.
+
+### Root cause
+the ledger was written after the spec.json transaction had committed.
+
+### Fix
+the supersede runs inside the reopen transaction, after the refusals and before spec.json is written; a failure refuses the reopen (`state.ledger`).
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_approve.py` ReopenSupersedesProd.test_ledger_failure_leaves_the_spec_unreopened (red on 7e110f3) and .test_refused_reopen_keeps_the_ledger. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-94, karvey-qa re-run D7 second opinion (X-10) |
+| 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
+| 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on 7e110f3, green after |

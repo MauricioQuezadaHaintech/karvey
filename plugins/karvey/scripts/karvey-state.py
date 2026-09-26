@@ -1158,6 +1158,12 @@ def cmd_reopen(args, root):
                 ap[key] = {"generated": ap[key].get("generated", False) is True, "approved": False}
         if ledger_prod is not None:  # D-36: the release-ledger prod approval is superseded too
             superseded["prod"] = copy.deepcopy(ledger_prod)
+            # BUG-49: the ledger first, under the change lock; if it fails, spec.json is not reopened
+            try:
+                approval.supersede_prod(root, args.change, now, "reopen %s: %s" % (args.phase, reason), args.ref)
+            except (approval.ApprovalError, atomicio.AtomicIOError, OSError) as exc:
+                raise Refused("cannot supersede the release-ledger prod approval (%s); nothing reopened" % exc,
+                              code="state.ledger")
         rh = data.get("revision_history")
         if not isinstance(rh, list):
             rh = []
@@ -1174,8 +1180,6 @@ def cmd_reopen(args, root):
 
     path, res, _ = transact(root, args.change, mutate)
     res["file"] = rel(root, path)
-    if ledger_prod is not None:
-        approval.supersede_prod(root, args.change, now, "reopen %s: %s" % (args.phase, reason), args.ref)
     return kl.EXIT_OK, res, [], [], "%s: reopened %s (from %s); superseded: %s" % (
         args.change, res["to"], res["from"], ", ".join(res["superseded"]) or "none")
 

@@ -373,6 +373,25 @@ class ReopenSupersedesProd(Base):
         c, env = self.st("check-prod", "feat-a")
         self.assertEqual(c, 1)
 
+    def test_ledger_failure_leaves_the_spec_unreopened(self):
+        """BUG-49: the spec was written before the ledger, so a failure in between reopened the change
+        and left the prod approval live."""
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod", session_id="s9")
+        self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        before = self.f.read_bytes()
+        with mock.patch.object(ap, "supersede_prod", side_effect=ap.ApprovalError("disk full")):
+            c, env = self.st("reopen", "feat-a", "requirements", "--reason", "spec-gap F-9")
+        self.assertNotEqual(c, 0, env)
+        self.assertEqual(self.f.read_bytes(), before)
+        self.assertIn("prod", ap.read_ledger(self.root, "feat-a")[0])
+
+    def test_refused_reopen_keeps_the_ledger(self):
+        ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod", session_id="s9")
+        self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        c, env = self.st("reopen", "feat-a", "deploying", "--reason", "x")
+        self.assertEqual(c, 3, env)
+        self.assertIn("prod", ap.read_ledger(self.root, "feat-a")[0])
+
     def test_reopen_without_ledger_is_unchanged(self):
         c, env = self.st("reopen", "feat-a", "requirements", "--reason", "spec-gap F-9")
         self.assertEqual(c, 0, env)

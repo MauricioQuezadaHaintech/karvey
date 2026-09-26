@@ -372,3 +372,13 @@
 - **Origin:** change `wave1-hardening`, QA finding F-86 (emergent), deferred: out of the fix scope of the QA micro-loop.
 - **Why:** Duplicated helpers (`now_iso` ×3, `parse_dt` ×2 disagreeing on fractional seconds on Python 3.9/3.10, `git()` ×2, an unreachable inline copy of `profile_only_since` in the session hook's no-python branch) and the plan-marker TTL values written in three places.
 - **Status:** open
+
+## BL-62 — Bind the human's prod OK to the commit at the approval hook; close the check-to-run window
+- **Origin:** change `wave1-hardening`, QA re-run finding F-90 (spec-gap (deferred)); needs the owner's decision.
+- **Why:** `approve … prod --sha` records the commit the agent names; neither the marker nor its audit line ties the human's words to a commit, so the agent can pick any existing commit (D-35 says "the head shown when the owner approved"). Candidate: the approval hook stores the SHAs written in the human's message (or the local HEAD at prompt time) in the marker and its audit line, and `approve --sha` must match one of them. Related residual: a writer started in an earlier tool call can move the pushed ref in the milliseconds between the gate's check and the push; `gh pr merge --match-head-commit` or a push by explicit SHA closes it.
+- **Status:** open
+
+## BL-63 — A reopen from `deploying` (D-36 in the documented flow)
+- **Origin:** change `wave1-hardening`, QA re-run finding F-91 (spec-gap (deferred)).
+- **Why:** The deploy skill records the prod approval in `deploying`, where `reopen` is refused ("allowed up to qa"), so D-36 only supersedes approvals recorded earlier. The SHA binding and the 24 h expiry limit the damage (a rework is a new commit and needs a new OK). Decide whether a spec-gap found in `deploying` reopens (and supersedes), or whether `approve prod` is restricted to `deploying` and documented as such.
+- **Status:** open

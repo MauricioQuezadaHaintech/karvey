@@ -857,11 +857,11 @@ _STATE_MOD = None
 class Candidate:
     """A production-merge candidate: the command, the repo it acts on and how to find its base."""
 
-    __slots__ = ("kind", "seg", "dir", "selector", "repo_arg", "dst", "src", "target", "fail")
+    __slots__ = ("kind", "seg", "dir", "selector", "repo_arg", "dst", "src", "target", "fail", "deferred", "bound")
 
     def __init__(self, kind, seg, **kw):
         self.kind, self.seg = kind, seg
-        for k in ("dir", "selector", "repo_arg", "dst", "src", "target", "fail"):
+        for k in ("dir", "selector", "repo_arg", "dst", "src", "target", "fail", "deferred", "bound"):
             setattr(self, k, kw.get(k))
 
 
@@ -938,7 +938,8 @@ def _gh_candidate(seg, a, env, depth=0):
         rest = a[2:]
         pos = _positional(rest, {"-R", "--repo", "-t", "--subject", "-b", "--body", "-F", "--body-file",
                                  "--match-head-commit", "-A", "--author-email"})
-        return Candidate("gh", seg, dir=seg.cwd, selector=pos[0] if pos else None, repo_arg=_opt(rest, "-R", "--repo"))
+        return Candidate("gh", seg, dir=seg.cwd, selector=pos[0] if pos else None, repo_arg=_opt(rest, "-R", "--repo"),
+                         deferred="--auto" in rest, bound=_opt(rest, "--match-head-commit"))  # BUG-48
     if a[:1] == ["api"]:
         joined = " ".join(a[1:])
         m = _PULL_MERGE.search(joined)
@@ -996,7 +997,9 @@ def _wrapped_command(seg):
 
 def implicit_push_dests(ctx, t, head):
     """BUG-28: where a push with no refspec goes, from the repository config: the remote's ``push``
-    refspecs, else ``<branch>@{push}`` (push.default, upstream, pushRemote)."""
+    refspecs, else ``<branch>@{push}`` (push.default, upstream, pushRemote). Returns ``(dests, bulk)``;
+    ``bulk`` names a configuration that pushes every matching branch (a configured mirror, ``push.default
+    matching``; BUG-47), which names no single commit."""
     remote, _specs, _flags = _push_parse(t.args)
     if not remote and head:
         for key in ("branch.%s.pushRemote" % head, "remote.pushDefault", "branch.%s.remote" % head):
@@ -1005,15 +1008,21 @@ def implicit_push_dests(ctx, t, head):
                 remote = val
                 break
     remote = remote or "origin"
+    rc, mirror = t.git(ctx, "config", "--bool", "--get", "remote.%s.mirror" % remote)
+    if rc == 0 and mirror.strip() == "true":
+        return [], "a configured mirror (remote.%s.mirror)" % remote
     rc, specs = t.git(ctx, "config", "--get-all", "remote.%s.push" % remote)
     if rc == 0 and specs:
-        return push_destinations(["_remote"] + specs.split(), head)[0]
+        return push_destinations(["_remote"] + specs.split(), head)[0], None
+    rc, pdef = t.git(ctx, "config", "--get", "push.default")
+    if rc == 0 and pdef.strip().lower() == "matching":
+        return [], "push.default matching"
     if not head:
-        return []
+        return [], None
     rc, up = t.git(ctx, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "%s@{push}" % head)
     if rc == 0 and up and "/" in up:
-        return [(head, up.split("/", 1)[1], False, False)]
-    return []
+        return [(head, up.split("/", 1)[1], False, False)], None
+    return [], None
 
 
 def prod_candidates(ctx):
@@ -1037,11 +1046,13 @@ def prod_candidates(ctx):
         elif seg.argv0 == "az" and a[:3] == ["repos", "pr", "update"]:
             status, auto = _opt(a, "--status"), _opt(a, "--auto-complete")
             if (status or "").lower() == "completed" or (auto or "").lower() in ("true", "yes", "1"):
-                out.append(Candidate("az", seg, dir=seg.cwd, selector=_opt(a, "--id")))
+                out.append(Candidate("az", seg, dir=seg.cwd, selector=_opt(a, "--id"),
+                                     deferred=(status or "").lower() != "completed"))  # BUG-48
         elif seg.argv0 == "glab" and a[:2] == ["mr", "merge"]:
             pos = _positional(a[2:], {"-m", "--message", "--sha", "-R", "--repo"})
+            # BUG-48: glab merges when the pipeline succeeds by default; only --sha binds the merged commit
             out.append(Candidate("glab", seg, dir=seg.cwd, selector=pos[0] if pos else None,
-                                 repo_arg=_opt(a[2:], "-R", "--repo")))
+                                 repo_arg=_opt(a[2:], "-R", "--repo"), deferred=True, bound=_opt(a[2:], "--sha")))
     return out
 
 
@@ -1132,28 +1143,35 @@ READ_ONLY_HOST = {"gh": (("pr", "view"), ("pr", "list"), ("pr", "status"), ("pr"
                   "az": (("repos", "pr", "show"), ("repos", "pr", "list"), ("account", "show"))}
 
 
-def _seg_index(segs, seg):
-    return next((i for i, x in enumerate(segs) if x is seg), None)
+def resolve_push_source(ctx, t, src):
+    """The commit a push source names, as git push reads it (BUG-47): ``HEAD``, a full ref or a SHA
+    as given; a short name as the branch ``refs/heads/<name>`` first, so a tag of the same name cannot
+    stand in for the pushed branch. None when it does not resolve."""
+    if not src or src.startswith("-") or "$" in src or "`" in src:
+        return None
+    tries = [src] if src == "HEAD" or src.startswith("refs/") else ["refs/heads/" + src, src]
+    for rev in tries:
+        rc, out = t.git(ctx, "rev-parse", "--verify", "--quiet", rev + "^{commit}")
+        if rc == 0 and _SHA.match(out or ""):
+            return out
+    return None
 
 
-def earlier_writer(ctx, c):
-    """D-35: an earlier command of the same call that can move the commit this candidate releases
-    (``git branch -f X work && git push origin X:main``, ``git push … && gh pr merge``): the gate
-    resolves the commit before anything runs, so such a call cannot be verified. Returns its name."""
+def other_writer(ctx, c):
+    """D-35: another command of the same call that can move the commit this candidate releases
+    (``git branch -f X work && git push origin X:main``, ``git push … && gh pr merge``, or a writer
+    backgrounded with ``&`` after it): the gate resolves the commit before anything runs, so such a
+    call cannot be verified. Returns its name, or None."""
     segs = ctx.parsed.segments
     anchor = (c.target.origin if c.target is not None and c.target.origin is not None else c.seg)
-    ai = _seg_index(segs, anchor)
-    if ai is None:
-        return None
     for s2, t in git_targets(ctx):
-        if s2 is c.seg:
-            break
-        oi = _seg_index(segs, t.origin or s2)
-        if oi is None or oi > ai or (oi == ai and t.origin is None):
+        if s2 is c.seg or (t.origin is None and s2 is anchor):
             continue
         if (t.sub or "") not in READ_ONLY_GIT:
             return "git " + (t.via_alias or t.sub or "?")
-    for s in segs[:ai]:
+    for s in segs:
+        if s is anchor:
+            continue
         ro = READ_ONLY_HOST.get(s.argv0)
         if ro is not None and not any(tuple(s.argv[1:1 + len(w)]) == w for w in ro):
             return " ".join(s.argv[:3])
@@ -1246,38 +1264,55 @@ def _evaluate_candidate(ctx, c, deadline):
         dests, flags = push_destinations(t.args, head_branch)
         if "--dry-run" in flags or "-n" in flags:
             return None
-        hit = None
         if not dests and "--tags" in flags:
             return None  # BUG-29: only tags are pushed, no branch
-        if "--all" in flags or "--mirror" in flags:
-            hit = (head_branch, sorted(prods)[0] if prods else "?", None)
-        elif not dests:
-            dests = implicit_push_dests(ctx, t, head_branch) if t.sub == "push" else []
-            if not dests and head_branch in prods:
-                hit = (head_branch, head_branch, "HEAD")
+        bulk = None
+        if "--mirror" in flags:
+            bulk = "--mirror"
+        elif "--all" in flags or "--branches" in flags:
+            bulk = "--all"
+        elif not dests and t.sub == "push":
+            dests, bulk = implicit_push_dests(ctx, t, head_branch)
+        hits = []
+        if bulk is None and not dests and head_branch in prods:
+            hits.append((head_branch, head_branch, "HEAD"))
         for src, dst, _f, delete in dests:
             if "$" in dst or "`" in dst:
                 return _pg_block(None, "target", "cannot verify the production approval: the push destination "
                                                  "cannot be resolved; rewrite without variables")
-            if dst in prods:
-                hit = (head_branch if src in ("HEAD", "") else src, dst,
-                       None if delete else ("HEAD" if src in ("HEAD", "") else src))
+            if dst == "":  # BUG-47: `git push origin :` pushes every matching branch
+                bulk = "a matching refspec (:)"
                 break
-        if hit is None:
+            if "*" in dst:  # BUG-47: a wildcard refspec reaches every branch it matches
+                if any(fnmatch.fnmatchcase(p, dst) for p in prods):
+                    bulk = "a wildcard refspec (%s)" % dst
+                    break
+                continue
+            if dst in prods:
+                hits.append((head_branch if src in ("HEAD", "") else src, dst,
+                             None if delete else ("HEAD" if src in ("HEAD", "") else src)))
+        if bulk is not None:  # D-35, BUG-47: which commit reaches production must be known
+            return _pg_block(None, "sha", "cannot verify the production approval: %s can push any branch into "
+                                          "production and names no single commit; push an explicit <commit>:<branch>"
+                             % bulk)
+        if not hits:
             return None
-        head, base, title = hit[0], hit[1], ""
-        if hit[2] is None:  # D-35: which commit reaches production must be known
-            return _pg_block(None, "sha", "cannot verify the production approval: a push with --all, --mirror or a "
-                                          "delete into %s names no single commit; push an explicit <commit>:%s"
-                             % (base, base))
-        if "$" in hit[2] or "`" in hit[2]:
-            return _pg_block(None, "sha", "cannot verify the production approval: the pushed commit cannot be "
-                                          "resolved; rewrite without variables")
-        rc, released = t.git(ctx, "rev-parse", "--verify", "--quiet", hit[2] + "^{commit}") \
-            if not hit[2].startswith("-") else (1, "")
-        if rc != 0 or not _SHA.match(released or ""):
-            return _pg_block(None, "sha", "cannot verify the production approval: %s does not resolve to a commit"
-                             % hit[2])
+        head, base, title = hits[0][0], hits[0][1], ""
+        shas = set()
+        for _h, dst, rev in hits:
+            if rev is None:
+                return _pg_block(None, "sha", "cannot verify the production approval: a delete of %s names no "
+                                              "commit" % dst)
+            sha = resolve_push_source(ctx, t, rev)
+            if sha is None:
+                return _pg_block(None, "sha", "cannot verify the production approval: %s does not resolve to a "
+                                              "commit" % rev)
+            shas.add(sha)
+        if len(shas) > 1:  # BUG-47: every production destination must receive the approved commit
+            return _pg_block(None, "sha", "cannot verify the production approval: the push sends more than one "
+                                          "commit into production (%s); push one <commit>:<branch> at a time"
+                             % ", ".join(sorted(d for _h, d, _r in hits)))
+        released = shas.pop()
     else:
         budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
         info, err = pr_info(c, str(root), budget)
@@ -1288,9 +1323,9 @@ def _evaluate_candidate(ctx, c, deadline):
             return None  # e.g. a PR into the integration branch: allow, silent
         head, base, title = info["head"], info["base"], info["title"]
         released = info["sha"]  # None: checked after the change is known (D-35)
-    moved = earlier_writer(ctx, c)
+    moved = other_writer(ctx, c)
     if moved:  # D-35
-        return _pg_block(None, "sha", "cannot verify the production approval: an earlier command in this call "
+        return _pg_block(None, "sha", "cannot verify the production approval: another command in this call "
                                       "(%s) can move the commit it releases; run the release command on its own"
                          % moved)
     cid, others = released_change(root, head, title, prefix)
@@ -1320,6 +1355,11 @@ def _evaluate_candidate(ctx, c, deadline):
     if released is None and res.get("ok"):  # D-35
         res = dict(res, ok=False, missing=["sha"], reason="cannot verify the production approval: the %s answer "
                                                           "has no head commit" % c.kind)
+    if res.get("ok") and c.deferred and (c.bound or "").strip().lower() != released:  # BUG-48
+        res = dict(res, ok=False, missing=["sha"],
+                   reason="cannot verify the production approval: a deferred merge (%s) lands later, when the head "
+                          "may have moved; bind it to the approved commit (gh: --match-head-commit <sha>, glab: "
+                          "--sha <sha>) or merge now" % c.kind)
     if not res.get("ok"):
         how = (". To release: the human approves production in their own message (the hook prints '[karvey] approval "
                "recorded (prod, %s, …)'), then run: karvey-state.py approve %s prod --by \"<human>\" --role human "

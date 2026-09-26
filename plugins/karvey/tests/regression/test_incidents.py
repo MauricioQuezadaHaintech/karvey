@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-46 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-49 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -215,6 +215,26 @@ INDEX = {
     "BUG-46": [  # F-75 (QA D7 second opinion (X-9))
         ("lint", "L-06"),
         ("unit", "test_lint_plugin.py", "L06.test_hand_edits_in_other_words_fail"),
+    ],
+    "BUG-47": [  # F-92 (QA re-run D7 second opinion (X-1..X-7))
+        ("table", "prod-gate", "pg6-01-wildcard-refspec-into-main"),
+        ("table", "prod-gate", "pg6-02-matching-colon-refspec"),
+        ("table", "prod-gate", "pg6-03-configured-mirror"),
+        ("table", "prod-gate", "pg6-04-configured-push-default-matching"),
+        ("table", "prod-gate", "pg6-05-tag-shadows-the-pushed-branch"),
+        ("table", "prod-gate", "pg6-06-second-production-destination"),
+        ("table", "prod-gate", "pg6-07-configured-wildcard-push-refspec"),
+    ],
+    "BUG-48": [  # F-93 (QA re-run D7 second opinion (X-9))
+        ("table", "prod-gate", "pg6-08-gh-auto-merge-unbound"),
+        ("table", "prod-gate", "pg6-09-gh-auto-merge-bound-to-the-approved-commit"),
+        ("table", "prod-gate", "pg6-10-gh-auto-merge-bound-to-another-commit"),
+        ("table", "prod-gate", "pg6-11-az-auto-complete-deferred"),
+        ("table", "prod-gate", "pg6-12-glab-merge-without-sha"),
+    ],
+    "BUG-49": [  # F-94 (QA re-run D7 second opinion (X-10))
+        ("unit", "test_state_approve.py", "ReopenSupersedesProd.test_ledger_failure_leaves_the_spec_unreopened"),
+        ("unit", "test_state_approve.py", "ReopenSupersedesProd.test_refused_reopen_keeps_the_ledger"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
