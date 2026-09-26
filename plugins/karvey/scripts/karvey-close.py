@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import project as pj  # noqa: E402
+from karvey_lib import risks as rsk  # noqa: E402
 
 TOOL = "karvey-close"
 HERE = Path(__file__).resolve().parent
@@ -141,7 +142,19 @@ def step_risks(args, root, gate):
     if gate not in RISK_GATES and args.phase != "qa":
         out["note"] = "no risk review at this gate"
         return out
-    out["note"] = "risk review: the register is read here once karvey_lib/risks.py exists (C-17)"
+    cdir = Path(root) / pj.CHANGES_DIR / args.change
+    try:
+        with open(cdir / "spec.json", encoding="utf-8-sig") as fh:
+            spec = json.load(fh)
+    except (OSError, ValueError) as exc:
+        out.update(ok=False, error="risks: spec.json unreadable (%s)" % exc)
+        return out
+    items, warns = rsk.gate_review(rsk.read(cdir), rsk.phase_start(spec, "qa"))
+    out["ask"] = [{"risk": r["id"], "owner": r["owner"] or "?", "trigger": r["trigger"],
+                   "last_review": r["last_review"]} for r in items]
+    out["warnings"] = warns
+    out["note"] = ("ask each owner for a state, then record it with karvey-state.py risk %s R-N "
+                   "review|close|mitigate|accept|move" % args.change) if items else "no open risk"
     return out
 
 
@@ -201,6 +214,11 @@ def render(res):
             L.append("   send: %s" % json.dumps(p, ensure_ascii=False, sort_keys=True))
         for sk in s.get("skipped") or []:
             L.append("   skipped: %s" % sk)
+        for a in s.get("ask") or []:
+            L.append("   ask %s: %s (trigger %s · last review %s)" % (a["owner"], a["risk"], a["trigger"] or "?",
+                                                                  a["last_review"]))
+        for w in s.get("warnings") or []:
+            L.append("   WARNING " + w)
         if s.get("note"):
             L.append("   " + s["note"])
         if s["step"] == "effort" and s["ok"]:

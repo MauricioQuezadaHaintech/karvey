@@ -91,5 +91,21 @@ class Close(unittest.TestCase):
         self.assertIn("already sent", " ".join(b["steps"][1]["skipped"]))
 
 
+    def test_REQ_W3_033_qa_close_lists_the_owners_to_ask_in_order(self):
+        reg = self.cdir / "risks.md"
+        reg.write_text(reg.read_text(encoding="utf-8").rstrip("\n") + "\n| R-3 | Late import | Medium | High | "
+                       "data owner | import fails twice | retry | open | 2026-10-02 |\n", encoding="utf-8")
+        res = self.close("approved", "qa", "--verdict", "pass")
+        step = res["steps"][2]
+        self.assertEqual(step["step"], "risks")
+        self.assertEqual([(a["risk"], a["owner"]) for a in step["ask"]],
+                         [("R-1", "security officer"), ("R-3", "data owner")])
+        self.assertIn("karvey-state.py risk", step["note"])
+
+    def test_no_risk_review_outside_qa_and_release(self):
+        res = self.close()
+        self.assertEqual(res["steps"][2]["ask"], [])
+        self.assertEqual(res["steps"][2]["note"], "no risk review at this gate")
+
 if __name__ == "__main__":
     unittest.main()

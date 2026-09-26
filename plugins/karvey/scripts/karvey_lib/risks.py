@@ -133,3 +133,25 @@ def open_work_lines(root, today, active_ids, cap=None):
     if cap:
         return qs.capped(ql, cap), qs.capped(rl, cap)
     return ql, rl
+
+
+def phase_start(spec, phase="qa"):
+    """The date (``YYYY-MM-DD``) the change last entered ``phase``, from ``spec.json:phase_history``; else None."""
+    days = [str(e.get("entered_at") or "")[:10] for e in (spec or {}).get("phase_history") or []
+            if isinstance(e, dict) and e.get("phase") == phase and e.get("entered_at")]
+    return max(days) if days else None
+
+
+def gate_review(rows, since):
+    """The gate's risk review (REQ-W3-033): every ``open`` risk with owner, trigger and last review, and
+    ``risk R-N unreviewed`` for each whose last review predates ``since`` (the qa phase entry) or is missing.
+
+    Returns ``(items, warnings)``; items keep the register order, which is the order the owners are asked."""
+    items, warns = [], []
+    for r in open_risks(rows):
+        unrev = bool(since) and (r["reviewed_on"] is None or r["reviewed_on"] < since)
+        items.append({"id": r["id"], "risk": r["risk"], "owner": r["owner"], "trigger": r["trigger"],
+                      "last_review": r["last_review"] or "never", "unreviewed": unrev})
+        if unrev:
+            warns.append("risk %s unreviewed" % r["id"])
+    return items, warns

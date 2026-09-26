@@ -127,5 +127,52 @@ class Command(unittest.TestCase):
         self.assertEqual(code, 0, env["errors"])
 
 
+class GateReview(unittest.TestCase):
+    """@req REQ-W3-033 — the risk review at the qa / release gate."""
+
+    TWO = rk.HEADER + (
+        "| R-1 | Provider outage | Low | Medium | tech lead | outage notice | message on screen | open | "
+        "2026-10-13 tech lead |\n"
+        "| R-2 | Late import | Medium | High | data owner | import fails twice | retry | open | 2026-10-02 |\n"
+        "| R-3 | Old one | Low | Low | tech lead | — | — | closed | 2026-10-02 |\n")
+
+    def test_REQ_W3_033_unreviewed_since_the_qa_entry_warns(self):
+        items, warns = rk.gate_review(rk.parse(self.TWO), "2026-10-10")
+        self.assertEqual([(r["id"], r["owner"], r["trigger"]) for r in items],
+                         [("R-1", "tech lead", "outage notice"), ("R-2", "data owner", "import fails twice")])
+        self.assertEqual(warns, ["risk R-2 unreviewed"])
+
+    def test_phase_start_is_the_last_qa_entry(self):
+        spec = {"phase_history": [{"phase": "qa", "entered_at": "2026-10-05T10:00:00-03:00"},
+                                  {"phase": "impl", "entered_at": "2026-10-06T10:00:00-03:00"},
+                                  {"phase": "qa", "entered_at": "2026-10-10T10:00:00-03:00"}]}
+        self.assertEqual(rk.phase_start(spec, "qa"), "2026-10-10")
+        self.assertIsNone(rk.phase_start({}, "qa"))
+
+    def test_REQ_W3_033_release_gate_summary_lists_both_with_owner_and_trigger(self):
+        import contextlib
+        import importlib.util
+        import io
+        tmp = Path(tempfile.mkdtemp(prefix="karvey-risk-gate-"))
+        self.addCleanup(shutil.rmtree, str(tmp), True)
+        spec = dict(GOOD_SPEC, phase="qa", phase_history=[
+            {"phase": "init", "entered_at": "2026-09-23T10:00:00-03:00", "exited_at": "2026-09-23T10:00:00-03:00"},
+            {"phase": "qa", "entered_at": "2026-10-10T10:00:00-03:00"}])
+        sp = make_project(tmp, spec=spec)
+        (sp.parent / "risks.md").write_text(self.TWO, encoding="utf-8")
+        m = importlib.util.spec_from_file_location("karvey_context_rg", str(_path.SCRIPTS_DIR / "karvey-context.py"))
+        mod = importlib.util.module_from_spec(m)
+        m.loader.exec_module(mod)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = mod.main(["--root", str(tmp), "--section", "gate", "--change", "feat-a", "--gate", "release"])
+        text = out.getvalue()
+        self.assertEqual(code, 0, text)
+        self.assertIn("R-1 Provider outage · owner tech lead · trigger outage notice · last review 2026-10-13", text)
+        self.assertIn("R-2 Late import · owner data owner · trigger import fails twice", text)
+        self.assertIn("WARNING risk R-2 unreviewed (warn)", text)
+        self.assertNotIn("R-3", text)
+
+
 if __name__ == "__main__":
     unittest.main()

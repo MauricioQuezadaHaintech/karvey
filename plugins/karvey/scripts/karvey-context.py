@@ -1019,6 +1019,13 @@ def gate_summary(rd, ctx):
             unc = sorted(set(_REQ_ID.findall(req)) - set(_REQ_ID.findall(tasks_t)))
             res["sections"]["uncovered_requirements"] = unc or ["none"]
     if args.gate == "release":
+        # the risk review asked at the qa / release gate (REQ-W3-033): every open risk with owner, trigger and
+        # last review; `risk R-N unreviewed` (risks.unreviewed, warn in 4.1) when reviewed before the qa entry
+        items, warns = rsk.gate_review(rsk.parse(rd.text(cdir / rsk.FILE) or ""), rsk.phase_start(data, "qa"))
+        mode = modes.resolve(root=rd.root, check_id="risks.unreviewed", project=ctx.get("project"))["mode"]
+        res["sections"]["open_risks"] = ["%s %s · owner %s · trigger %s · last review %s" % (
+            r["id"], r["risk"], r["owner"] or "?", r["trigger"] or "?", r["last_review"]) for r in items] or ["none"]
+        res["risk_warnings"] = ["%s (%s)" % (w, mode) for w in warns] if mode != "off" else []
         hits = modes.read_hits(cdir / modes.HITS_FILE)
         for key, check in (("lane_check", "lane.diff"), ("coverage", "coverage.requirements"),
                            ("security", "security.tools"), ("manifest", "release.manifest")):
@@ -1039,6 +1046,8 @@ def _render_gate(g, L):
     for k, v in g["sections"].items():
         L.append("%s:" % k.replace("_", " "))
         L.extend("  " + x for x in v)
+    for w in g.get("risk_warnings") or []:
+        L.append("WARNING " + w)
     for o in g["omissions"]:
         L.append("OMISSION " + o)
     L.extend(g["missing"])
