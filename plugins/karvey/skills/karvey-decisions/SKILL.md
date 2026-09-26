@@ -32,6 +32,18 @@ Both live in **one decision log** in the ops repo, `{ops_repo}/docs/spec/decisio
 **once, never reused, never renumbered**. A decision is immutable: it is superseded by a later one that cites
 it, never edited into something else.
 
+**Per-period files** (`docs/spec/decisions/*.md`, e.g. one file per month) are an older shape. They are **read**
+by `cross` and `show` and counted by `karvey-id.py`, but new decisions are **written only** to
+`docs/spec/decisions.md`. The first time a run finds per-period files, show this migration note **once** (then record
+that it was shown, e.g. a `<!-- decisions-migration-note-shown -->` line at the top of `docs/spec/decisions.md`):
+
+> *This project also keeps per-period decision files (`docs/spec/decisions/*.md`). They are still read; new
+> decisions go to `docs/spec/decisions.md`. To migrate, move their entries into `docs/spec/decisions.md` unchanged (same
+> numbers, same text) in one reviewed commit, then delete the old files.*
+
+The same `D-NN` in both shapes (or twice in one) is a **duplicate**: report it with both locations and never pick
+one silently; the owner decides which entry stands and the other is superseded.
+
 ## Execution steps
 
 ### `log` — record a decision
@@ -55,7 +67,8 @@ it, never edited into something else.
 
 **Mandatory before any deliverable says "waiting on a decision".**
 
-1. Search `{ops_repo}/docs/spec/decisions.md` for the question's subject — by concept, not only by keyword.
+1. Search `{ops_repo}/docs/spec/decisions.md` **and** `{ops_repo}/docs/spec/decisions/*.md` for the question's
+   subject — by concept, not only by keyword. Report any duplicate `D-NN` found on the way.
 2. Search the **product/offer material** too (pricing, plans, commercial docs). Roughly half of what
    decides a product lives there rather than in the decision log, and crossing only one of the two
    sources is how the 13-out-of-14 happened.

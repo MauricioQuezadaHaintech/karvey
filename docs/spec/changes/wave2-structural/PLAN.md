@@ -162,7 +162,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 ### Feature E1.F12: Deferred Wave 1 backlog
 
 - [ ] E1.F12.T1 [Backend] Import: `generated --imported` per artifact, gate questions in order (merged when enabled), resume at the first unapproved gate + manual script — est: 6min (depends E1.F4.T1)
-- [ ] E1.F12.T2 [Backend] Decisions: one log written, per-period files read with a migration note once, duplicates reported — est: 5min (depends E1.F9.T1) (P)
+- [x] E1.F12.T2 [Backend] Decisions: one log written, per-period files read with a migration note once, duplicates reported — est: 5min (depends E1.F9.T1) (P)
 - [ ] E1.F12.T3 [Test] Statusline failure-line table case + hooks README anchor + L-54 — est: 8min (P)
 
 ### Feature E1.F13: Rollout 3.13 → 4.0, dogfooding and release
@@ -242,7 +242,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F10.T2 [Backend] | ⬜ todo | 8 | — | — |  |
 | E1.F11.T1 [Backend] | ✅ done | 8 | 7 | 0 |  |
 | E1.F12.T1 [Backend] | ⬜ todo | 6 | — | — |  |
-| E1.F12.T2 [Backend] | ⬜ todo | 5 | — | — |  |
+| E1.F12.T2 [Backend] | ✅ done | 5 | 4 | 0 |  |
 | E1.F12.T3 [Test] | ⬜ todo | 8 | — | — |  |
 | E1.F13.T1 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F13.T2 [Test] | ⬜ todo | 10 | — | — |  |

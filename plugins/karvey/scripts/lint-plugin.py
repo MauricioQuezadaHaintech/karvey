@@ -1595,6 +1595,8 @@ def l30_minor_consistency(ctx):
             for n, line in enumerate(ctx.lines(f), 1):
                 for m in DECISION_PATH_RE.finditer(line):
                     p = re.sub(r"^(\{[^}]+\}|<[^>]+>)/", "", m.group(1))
+                    if re.search(r"decisions/\*\.md$", p):
+                        continue  # the per-period files: read-only legacy shape (wave2 REQ-W2-081), not a log path
                     paths.setdefault(p, (f, n))
         if len(paths) > 1:
             for p, (f, n) in sorted(paths.items()):
