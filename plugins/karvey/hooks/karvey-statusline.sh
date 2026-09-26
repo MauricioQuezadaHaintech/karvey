@@ -12,7 +12,7 @@
 #                   KARVEY_ROTATE_CTX_YELLOW · KARVEY_ROTATE_CTX_RED (`context_tokens`): tokens, only when the
 #                   window size is unknown
 #                   KARVEY_ROTATE_HOURS (`rotation_hours` of defaults.json, D-06; `rot?` is shown when that file cannot be found)
-#                   KARVEY_TZ (IANA zone for the reset clock, e.g. America/Santiago; def. the system's;
+#                   KARVEY_TZ (IANA zone for the reset clock, as Area/City; def. the system's;
 #                   an invalid zone shows the system time marked `(TZ?)`, REQ-W1-100)
 # Each account window shows when it resets and how long is left: `5h 29% ↻18:05 (1h31m)`.
 # A percentage scales with the window (200k or 1M); the token pair is the fallback. Cost grows with

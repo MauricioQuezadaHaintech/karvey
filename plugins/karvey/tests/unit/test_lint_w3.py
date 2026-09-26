@@ -240,5 +240,23 @@ class L70(LintCase):
         self.assertEqual(len(fs), 2)
 
 
+
+class L71(LintCase):
+    """@req REQ-W3-056 — no fixed country time or IANA zone literal."""
+    RULE = "plugins/karvey/skills/karvey/rules/sample-dates.md"
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-71")
+
+    def test_the_neutral_text_passes(self):
+        self.t.write(self.RULE, "Dates use project.json:time_zone (an IANA name as Area/City), ISO 8601 with offset.\n")
+        self.assertPasses("L-71")
+
+    def test_REQ_W3_056_a_country_time_or_a_zone_literal_fails(self):
+        self.t.write(self.RULE, "- **date**: local date (Chile, CLT/CLST) of the change.\n\nTZ=Europe/Madrid\n")
+        fs = self.assertFails("L-71", "a fixed time zone or country time", file=self.RULE)
+        self.assertEqual(len(fs), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

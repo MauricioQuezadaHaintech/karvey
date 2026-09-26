@@ -2417,6 +2417,30 @@ def l70_os_neutral_open(ctx):
                                 "<path>` (stdlib on every OS)" % name)
 
 
+# --------------------------------------------------------------------------- L-71 (wave3-optimization)
+IANA_ZONE_RE = re.compile(r"\b(?:Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/[A-Z][A-Za-z_]+")
+ZONE_ABBR_RE = re.compile(r"\b(?:CLT|CLST|BRT|ART|PST|PDT|EDT|CEST)\b")  # upper case only: "art" is a word
+COUNTRY_TIME_RE = re.compile(r"\b(?:Chile|Chilean|Argentin\w*|Mexic\w*|Spain|Spanish|Brazil\w*|Peru\w*|"
+                             r"Colombia\w*)\b[^.\n]{0,20}\b(?:time|date|hour|clock)\b", re.I)
+
+
+@check("L-71", "No rule, skill or hook fixes a country's time or an IANA zone literal: dates use the project's "
+               "time_zone or the environment's (REQ-W3-056)", reqs=("W3-056",))
+def l71_no_fixed_country_time(ctx):
+    files = [p for _, p in sorted(ctx.skills().items())] + sorted(ctx.rules_dir.rglob("*.md")) + \
+        sorted((ctx.plugin / "hooks").glob("*.sh"))
+    seen = set()
+    for path in files:
+        if path in seen:
+            continue
+        seen.add(path)
+        for n, line in enumerate(ctx.lines(path), 1):
+            m = IANA_ZONE_RE.search(line) or ZONE_ABBR_RE.search(line) or COUNTRY_TIME_RE.search(line)
+            if m:
+                yield (path, n, "a fixed time zone or country time (%r): use project.json:time_zone or the "
+                                "environment's, ISO 8601 with offset" % m.group(0))
+
+
 # --------------------------------------------------------------------------- L-65 (wave3-optimization)
 RISK_STATES = ("open", "mitigated", "accepted", "closed", "moved")
 

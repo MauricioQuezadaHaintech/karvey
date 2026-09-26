@@ -26,7 +26,8 @@ It applies to ALL code: application (`karvey-impl`), infrastructure as code and 
 
 ### Fields
 - **version**: project version after the bump.
-- **date**: local date (Chile, CLT/CLST) of the change.
+- **date**: the date of the change in the project's time zone — `project.json:time_zone` (an IANA name), else the
+  environment's — written ISO 8601; a time, when one is given, carries its UTC offset (`2026-10-14T10:00:00-03:00`).
 - **what + why**: one line per relevant change; the "why" is mandatory, not just the "what".
 - **Human owner**: the person directing the work. Obtain from, in order of preference:
   1. `git config user.name` / `git config user.email` of the repo.

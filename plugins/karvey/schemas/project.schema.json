@@ -229,6 +229,11 @@
       "minLength": 1,
       "x-karvey-note": "the client this project serves; every new change inherits it (wave3 §1.20, REQ-W3-044)"
     },
+    "time_zone": {
+      "type": "string",
+      "pattern": "^(UTC|[A-Z][A-Za-z_]+(/[A-Z][A-Za-z0-9_+-]+){1,2})$",
+      "x-karvey-note": "the project's IANA time zone (Area/City) for dates in the changelog and reports; absent → the environment's (wave3 §1.22, REQ-W3-056)"
+    },
     "browse": {
       "type": "object",
       "properties": {
