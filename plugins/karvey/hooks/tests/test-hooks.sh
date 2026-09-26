@@ -20,7 +20,9 @@ mkdir -p "$T/plain"; out=$(ctx "$T/plain");                      [ -z "$out" ] &
 mkdir -p "$T/openapi/docs/spec"; out=$(ctx "$T/openapi");        [ -z "$out" ] && ok "bare docs/spec (not Karvey) → silent" || bad "bare docs/spec → silent" "$out"
 mkdir -p "$T/k1/docs/spec/changes"; out=$(ctx "$T/k1");          [[ "$out" == *"no project.json"* ]] && ok "changes/ without project.json → notice" || bad "changes/ without project.json" "$out"
 mkdir -p "$T/k2/docs/spec"; echo '{"management":{"tool":"jira"}}' > "$T/k2/docs/spec/project.json"
-out=$(ctx "$T/k2");                                               [[ "$out" == *"notifications"* && "$out" != *"management"* ]] && ok "missing notifications only" || bad "missing notifications only" "$out"
+# the nudge line itself (a jira block without location/statuses also gets the REQ-W3-059 "settings invalid" line)
+out=$(ctx "$T/k2");                                               [[ "$out" == *"team settings not set (notifications)."* ]] && ok "missing notifications only" || bad "missing notifications only" "$out"
+out=$(ctx "$T/k2");                                               [[ "$out" == *"settings invalid (management.location missing"* ]] && ok "incomplete management named (REQ-W3-059)" || bad "incomplete management named" "$out"
 echo '{"management":"markdown","notifications":{"channel":"none"}}' > "$T/k2/docs/spec/project.json"
 out=$(ctx "$T/k2");                                               [[ "$out" == *"management"* ]] && ok "management as legacy string → notice" || bad "legacy string" "$out"
 echo '{"management":{},"notifications":{"channel":"none"}}' > "$T/k2/docs/spec/project.json"
