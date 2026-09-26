@@ -7,7 +7,7 @@ argument-hint: <change-id>
 
 # Karvey Deploy
 
-Load: _core.md, gates.md, deploy-workflow.md, versioning.md, changelog-policy.md, notifications.md, management-adapters.md, adapters/{tool}.md
+Load: _core.md, gates.md, deploy-workflow.md, versioning.md, changelog-policy.md, notifications.md, management-adapters.md, adapters/{tool}.md, references/docs-only.md?, references/hotfix.md?, references/postdeploy.md?, references/branch-hygiene.md?
 
 ## Purpose
 
@@ -39,12 +39,13 @@ Items: `qa_gate` · `tests` · `changelog` · `version_match` · `lane_triplet` 
 1. **QA approved, no open critical/high** (`qa_gate`). Read the review from `docs/spec/changes/{change-id}/qa/` (`REVISION_PR_*.md`, the one QA wrote for this change — never the newest file at a repo root). Its security gate must show **0 critical and 0 unresolved high**.
 2. **Tests PASS** (`tests`): the latest run in `docs/spec/changes/{change-id}/evidence.jsonl` is green and the coverage line is shown; the evidence of the test phase is `docs/spec/changes/{change-id}/test_evidence.md`. No run → `not evaluated`, never "pass".
 3. **CHANGELOG `[Unreleased]`** in each affected repo (`changelog`, `../karvey/rules/changelog-policy.md`): one line per commit of the change, with the **responsible human** (never empty nor "AI"), the **AI model** and the **why**. It becomes the release entry in Step 2.3.
-4. **`patch` / `hotfix` lane** (`lane_triplet`, `spec.json:lane`, `lanes`[^r-lanes]): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three, recorded with `karvey-state.py lane-evidence`, the test green in CI. Missing any → stop.
+4. **`patch` / `hotfix` lane** (`lane_triplet`): lane `patch` or `hotfix` → load `references/hotfix.md`; the PR carries fix + `BUG-NN` + regression test, or the deploy stops.
 5. **Parent/child** (`links`): a **child** deploys only its repo and reports to the parent; a **parent** has no deploy of its own — verify every child is deployed.
 
 ### Step 0-bis — Documentation-only PRs
 
-If the diff touches only docs/specs (`git diff --name-only "origin/$I"...HEAD`), it follows the **docs-only lane** (`multi-agent`[^r-multi-agent] §8): light CI only (the plugin linter / spec validation), merged by `project.json:docs_pr.merged_by`, no version bump, no deploy, no prod approval. If code sneaks in, it is not docs-only.
+Lane `docs`, or the diff touches only docs/specs (`git diff --name-only "origin/$I"...HEAD`) → load
+`references/docs-only.md` and follow it: light CI, no version bump, no deploy, no prod approval.
 
 ### Step 1 — Repos, order, platform, git host
 
@@ -170,32 +171,16 @@ Bypassing a policy is the human's call and responsibility — never the agent's 
 python3 "$S" advance "{change-id}" deployed --attested --ref "D-NN" --pipeline-run "{url}"
 ```
 
-**2.11 — Branch hygiene** (`deploy-workflow.md` → *Branch hygiene*). Delete what production absorbed; never delete what it did not:
-```bash
-git fetch origin --prune
-git branch -r --merged "origin/$P"             # + the cherry / tree checks of the rule
-git push origin --delete "feature/{change-id}"   # only if absorbed
-git branch -d "feature/{change-id}"
-```
-Absorbed non-protected branches are deleted (closing their PR with a comment); **not absorbed ones are listed** with their unique commits and PR for the human. Report the counts.
+**2.11 — Branch hygiene** (`deploy-workflow.md` → *Branch hygiene*). After the production merge → load
+`references/branch-hygiene.md`: absorbed branches are deleted, not absorbed ones are never deleted, only reported.
 
 ### Step 2-bis — Post-deploy verification
 
-After each deploy (DEV in 2.6, PROD in 2.10), against the post-deploy contract `karvey-infra` wrote in `infra.md` (REQ-W2-075..078). The word "canary" is kept only where the platform really splits traffic between two versions; everything else is **post-deploy verification**.
-```bash
-PD="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-postdeploy.py"
-python3 "$PD" probe "{change-id}" --env "{env}" --json        # health + routes, spread over the window
-# gather error rate, p95, the production baseline p95 and new 5xx from the contract's metrics_source into
-# observed.json — a presented command, under the plan gate (platform-specific; the script only compares numbers)
-python3 "$PD" evaluate "{change-id}" --env "{env}" --observed observed.json --version "{version}" --json
-```
-1. The result is `pass`, `regression` or `not-evaluated` — **say it as the tool says it**. The probe table and the thresholds go to `docs/spec/changes/{change-id}/deploy_evidence.md`.
-2. **No contract, or no thresholds** → `not-evaluated`, with the recommendation to add the contract to `infra.md`; it is never reported as a pass.
-3. Record every result with the printed command: `python3 "$S" deploy-record "{change-id}" --env "{env}" --version "{version}" --verification {result} --evidence docs/spec/changes/{change-id}/deploy_evidence.md`.
-4. **`regression`** (REQ-W2-078):
-   - DEV → stop before prod.
-   - PROD → show the contract's `rollback.command` and **ask the human** with `AskUserQuestion` (*Roll back now (recommended)* / *Keep and investigate*). The rollback affects production: it runs only after that answer, through the plan gate, never on the agent's initiative. Then record it: `python3 "$S" deploy-record "{change-id}" --env prod --version "{version}" --verification regression --rollback "{what was run}" --evidence …`.
-   - Open the incident with a reserved number: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next BUG`, then the `BUG-NN` row in `docs/bugs_dev_testing.md` and a finding in the change's `findings.md` (`incident-tracking`[^r-incident-tracking]).
+After each deploy (DEV in 2.6, PROD in 2.10): `infra.md` has a post-deploy contract → load
+`references/postdeploy.md` and run it (probe, evaluate, `deploy-record`, the rollback question on a production
+`regression`). Without a contract the post-deploy verification is `not-evaluated`, recorded with
+`python3 "$S" deploy-record "{change-id}" --env "{env}" --version "{version}" --verification not-evaluated`, and
+never reported as a pass.
 
 ### Step 3 — Hard rules (NEVER skip)
 
@@ -252,9 +237,6 @@ Close the phase per `../karvey/rules/gates.md` (§ Phases without a gate): this 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
 
-[^r-incident-tracking]: ../karvey/rules/incident-tracking.md — context only, not opened.
-[^r-lanes]: ../karvey/rules/lanes.md — context only, not opened.
-[^r-multi-agent]: ../karvey/rules/multi-agent.md — context only, not opened.
 [^r-project-config]: ../karvey/rules/project-config.md — context only, not opened.
 [^r-state-machine]: ../karvey/rules/state-machine.md — context only, not opened.
 [^r-targets]: ../karvey/rules/targets.md — context only, not opened.

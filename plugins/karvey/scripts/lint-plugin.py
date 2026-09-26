@@ -2386,6 +2386,39 @@ def l58_tracker_detail_in_adapters(ctx):
                                 "adapter" % m.group(0))
 
 
+# --------------------------------------------------------------------------- L-59 (wave3-optimization)
+# The closed list of references (REQ-W3-007 rare paths + the orchestrator's, C-06): a further move needs a spec revision.
+REFERENCES_CLOSED = {
+    "karvey-init": ("settings.md", "team-settings.md"),
+    "karvey-deploy": ("branch-hygiene.md", "docs-only.md", "hotfix.md", "postdeploy.md"),
+    "karvey": ("equivalences.md", "overview.md"),
+}
+
+
+@check("L-59", "Every skill reference is named by its skill's Load: line (else orphaned) and the references are "
+               "exactly the closed list (REQ-W3-007)", reqs=("W3-007",))
+def l59_references_closed_list(ctx):
+    if not ctx.skills_dir.is_dir():
+        return
+    for d in sorted(ctx.skills_dir.glob("*/references")):
+        if not d.is_dir():
+            continue
+        skill = d.parent.name
+        allowed = set(REFERENCES_CLOSED.get(skill, ()))
+        present = {p.name for p in d.glob("*.md")}
+        sk = ctx.skill(skill)
+        entries = {e.rstrip("?") for e in (loadlist.declared(ctx.read(sk) or "") or [])} if sk else set()
+        for name in sorted(present):
+            ref = d / name
+            if name not in allowed:
+                yield (ref, 1, "reference %s/references/%s is outside the closed list of rare paths: moving a section "
+                               "needs a spec revision" % (skill, name))
+            if "references/%s" % name not in entries:
+                yield (ref, 1, "reference %s/references/%s is orphaned: no Load: line names it" % (skill, name))
+        for name in sorted(allowed - present):
+            yield (d, 1, "reference %s/references/%s of the closed list is missing" % (skill, name))
+
+
 # --------------------------------------------------------------------------- L-62 (wave3-optimization)
 @check("L-62", "A skill's Load: line names only files that exist (blocking; REQ-W3-072)", reqs=("W3-072",))
 def l62_load_entries_exist(ctx):

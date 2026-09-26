@@ -330,6 +330,13 @@ class RareReferences(unittest.TestCase):
             self.assertNotIn(ref, row["closure_min_files"])
             self.assertIn(ref, row["closure_max_files"])
 
+    def test_deploy_rare_path_references(self):
+        row = self.row("karvey-deploy")
+        for name in ("docs-only", "hotfix", "postdeploy", "branch-hygiene"):
+            ref = "skills/karvey-deploy/references/%s.md" % name
+            self.assertNotIn(ref, row["closure_min_files"])
+            self.assertIn(ref, row["closure_max_files"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -381,5 +381,28 @@ class L56(LintCase):
         self.assertPasses("L-56")
 
 
+class L59(LintCase):
+    """@req REQ-W3-007 — references: named by the Load: line, and only the closed list."""
+    SKILL = SKILLS + "/karvey-init/SKILL.md"
+
+    def setUp(self):
+        super().setUp()
+        for name in ("settings.md", "team-settings.md"):
+            self.t.write(SKILLS + "/karvey-init/references/" + name, "# Ref\n")
+        self.t.sub(self.SKILL, r"(?m)^(# .*)$",
+                   r"\1\nLoad: references/team-settings.md?, references/settings.md?")
+
+    def test_listed_references_pass(self):
+        self.assertPasses("L-59")
+
+    def test_REQ_W3_007_a_reference_no_skill_points_to_is_orphaned(self):
+        self.t.sub(self.SKILL, r"(?m)^Load: .*$", "Load: references/team-settings.md?")
+        self.assertFails("L-59", "references/settings.md is orphaned")
+
+    def test_a_reference_outside_the_closed_list_fails(self):
+        self.t.write(SKILLS + "/karvey-init/references/extra.md", "# Extra\n")
+        self.assertFails("L-59", "outside the closed list")
+
+
 if __name__ == "__main__":
     unittest.main()
