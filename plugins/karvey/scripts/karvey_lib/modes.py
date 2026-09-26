@@ -1,6 +1,7 @@
 """Check-mode registry (architecture §1.5, wave2-structural).
 
-``schemas/check-modes.json`` lists every check Wave 2 introduces with its 3.13 and 4.0 default.
+``schemas/check-modes.json`` lists every check Wave 2 introduces with its 3.13, 4.0 and 4.1 default, and every
+check Wave 3 introduces with its 4.1 default (wave3-optimization §1.23).
 ``resolve`` returns the mode a project runs a check in; ``record_hit`` appends the evidence that a
 check *would* have refused to ``docs/spec/changes/{id}/checks.jsonl`` (the readiness report reads it,
 REQ-W2-010). Standard library only.
@@ -47,18 +48,35 @@ def levels_of(check_id):
     return reg["strictness"][row(check_id).get("levels", "levels")]
 
 
+LINES = ("3.13", "4.0", "4.1")
+
+
 def release_line(version=None):
-    """``"3.13"`` for a 3.x plugin, ``"4.0"`` from major 4 on."""
+    """``"3.13"`` for a 3.x plugin, ``"4.0"`` for 4.0.x, ``"4.1"`` from 4.1 on (wave3-optimization, §1.23)."""
     v = version or __version__
+    parts = str(v).split(".")
     try:
-        major = int(str(v).split(".", 1)[0])
+        major = int(parts[0])
     except ValueError:
         major = 3
-    return "4.0" if major >= 4 else "3.13"
+    try:
+        minor = int(parts[1]) if len(parts) > 1 else 0
+    except ValueError:
+        minor = 0
+    if major < 4:
+        return "3.13"
+    return "4.0" if (major == 4 and minor == 0) else "4.1"
 
 
 def default(check_id, line=None):
-    return row(check_id)["defaults"][line or release_line()]
+    """The check's default on a release line; a check introduced after that line (a Wave 3 row declares only
+    ``4.1``) takes its first declared default."""
+    defaults = row(check_id)["defaults"]
+    line = line or release_line()
+    if line in defaults:
+        return defaults[line]
+    later = [x for x in LINES if x in defaults and LINES.index(x) > LINES.index(line)] if line in LINES else []
+    return defaults[later[0]] if later else defaults[sorted(defaults)[-1]]
 
 
 def _project_value(project, check_id):
@@ -100,9 +118,10 @@ def resolve(root=None, check_id=None, project=None, version=None):
             check_id, val, ", ".join(levels), dflt)
         return res
     res["mode"], res["source"] = val, "project.json"
-    four = default(check_id, "4.0")
+    ref_line = "4.0" if "4.0" in row(check_id)["defaults"] else "4.1"
+    four = default(check_id, ref_line)
     if levels.index(val) < levels.index(four):
-        res["warning"] = "%s: project mode %r is laxer than the 4.0 default %r" % (check_id, val, four)
+        res["warning"] = "%s: project mode %r is laxer than the %s default %r" % (check_id, val, ref_line, four)
     return res
 
 

@@ -2280,6 +2280,77 @@ def l62_load_entries_exist(ctx):
             yield (path, line, "skill %s: Load: names %s, which does not exist" % (name, entry))
 
 
+# --------------------------------------------------------------------------- L-47 (wave2-structural), L-73 (wave3)
+MODE_CALL_RE = re.compile(r"modes\.(?:resolve|record_hit|default|row|levels_of)\(([^)]*)\)")
+CHECK_ID_LITERAL_RE = re.compile(r"[\"']([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)[\"']")
+W2_FLIPS = ("schema.strict", "gates.merged", "release.manifest")
+
+
+def _mode_registry(ctx):
+    p = ctx.schemas_dir() / "check-modes.json"
+    data = ctx.json(p)
+    if data is None:
+        p = kl.SCHEMAS_DIR / "check-modes.json"
+        data = ctx.json(p)
+    return p, data or {"checks": [], "strictness": {"levels": []}}
+
+
+def _registry_line(ctx, path, cid):
+    return line_of(ctx, path, '"id": "%s"' % cid)
+
+
+@check("L-47", "check-modes.json: every Wave 2 check has a 3.13 and a 4.0 mode; no 3.13 default is blocking; 4.0 "
+               "differs from 3.13 only for schema.strict, gates.merged, release.manifest unless the row has a "
+               "decision (REQ-W2-083, 085)", reqs=("W2-083", "W2-085"))
+def l47_check_modes_w2(ctx):
+    path, reg = _mode_registry(ctx)
+    for c in reg.get("checks", []):
+        d = c.get("defaults") or {}
+        if "3.13" not in d and "4.0" not in d:
+            continue  # a Wave 3 row (L-73)
+        cid = c.get("id")
+        ln = _registry_line(ctx, path, cid)
+        if set(("3.13", "4.0")) - set(d):
+            yield (path, ln, "%s: a Wave 2 check needs both a 3.13 and a 4.0 default" % cid)
+            continue
+        if d["3.13"] in ("blocking", "merged"):
+            yield (path, ln, "%s: the 3.13 default %r refuses; no 3.13 default may (REQ-W2-084)" % (cid, d["3.13"]))
+        if d["3.13"] != d["4.0"] and cid not in W2_FLIPS and not c.get("decision"):
+            yield (path, ln, "%s: 4.0 differs from 3.13 without a decision reference" % cid)
+
+
+def _mode_calls(ctx):
+    """``(file, line, check_id)`` of every literal check id passed to a ``modes.*`` call in the scripts."""
+    base = ctx.plugin / "scripts"
+    files = sorted(base.rglob("*.py")) if base.is_dir() else []
+    for f in files:
+        if f.name == "modes.py" or "tests" in f.parts:
+            continue
+        text = ctx.read(f) or ""
+        for m in MODE_CALL_RE.finditer(text):
+            for lit in CHECK_ID_LITERAL_RE.finditer(m.group(1)):
+                yield f, text.count("\n", 0, m.start()) + 1, lit.group(1)
+
+
+@check("L-73", "Every check id a script passes to karvey_lib.modes is registered in check-modes.json, and every row "
+               "declares a valid 4.1 default (REQ-W3-061)", reqs=("W3-061",))
+def l73_check_ids_registered(ctx):
+    path, reg = _mode_registry(ctx)
+    rows = {c.get("id"): c for c in reg.get("checks", [])}
+    strict = reg.get("strictness") or {}
+    for cid, c in sorted(rows.items(), key=lambda kv: str(kv[0])):
+        levels = strict.get(c.get("levels", "levels")) or []
+        v = (c.get("defaults") or {}).get("4.1")
+        if v is None:
+            yield (path, _registry_line(ctx, path, cid), "%s: no 4.1 default" % cid)
+        elif levels and v not in levels:
+            yield (path, _registry_line(ctx, path, cid), "%s: 4.1 default %r is not one of %s" % (
+                cid, v, ", ".join(levels)))
+    for f, ln, cid in _mode_calls(ctx):
+        if cid not in rows:
+            yield (f, ln, "check id %r is used here but absent from check-modes.json" % cid)
+
+
 # --------------------------------------------------------------------------- L-50 (wave2-structural)
 def _cells(line):
     return [c.strip() for c in line.strip().strip("|").split("|")]

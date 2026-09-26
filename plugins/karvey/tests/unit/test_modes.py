@@ -10,36 +10,78 @@ import _gitrepo as g
 from karvey_lib import modes
 
 FOUR_ZERO_FLIPS = {"schema.strict", "gates.merged", "release.manifest"}
+W3_BLOCKING = {"sponsor.leak", "loadlist.missing"}
+W3_CHECKS = {"effort.record", "effort.mixed", "sponsor.leak", "loadlist.missing", "risks.owner", "risks.unreviewed",
+             "questions.overdue", "design.undeclared", "design.contrast", "wbs.split", "wbs.legacy",
+             "client.mismatch", "backlog.stale", "settings.valid", "incident.state", "cost.cap_key"}
+
+
+def w2_ids():
+    """The Wave 2 rows: those that declare a 3.13 default."""
+    return [c for c in modes.check_ids() if "3.13" in modes.row(c)["defaults"]]
 
 
 class Registry(unittest.TestCase):
     def test_REQ_W2_083_nine_checks_each_with_both_defaults(self):
-        ids = modes.check_ids()
+        ids = w2_ids()
         self.assertEqual(len(ids), 9)
-        self.assertEqual(len(set(ids)), 9)
+        self.assertEqual(len(set(modes.check_ids())), len(modes.check_ids()))
         for cid in ids:
             r = modes.row(cid)
-            self.assertEqual(set(r["defaults"]), {"3.13", "4.0"}, cid)
-            for line in ("3.13", "4.0"):
+            self.assertEqual(set(r["defaults"]), {"3.13", "4.0", "4.1"}, cid)
+            for line in ("3.13", "4.0", "4.1"):
                 self.assertIn(r["defaults"][line], modes.levels_of(cid), cid)
 
     def test_REQ_W2_084_no_313_default_is_blocking(self):
-        for cid in modes.check_ids():
+        for cid in w2_ids():
             self.assertNotEqual(modes.default(cid, "3.13"), "blocking", cid)
             self.assertNotEqual(modes.default(cid, "3.13"), "merged", cid)
 
     def test_REQ_W2_085_40_differs_only_for_the_three(self):
-        flipped = {c for c in modes.check_ids() if modes.default(c, "3.13") != modes.default(c, "4.0")}
+        flipped = {c for c in w2_ids() if modes.default(c, "3.13") != modes.default(c, "4.0")}
         self.assertEqual(flipped, FOUR_ZERO_FLIPS)
 
     def test_release_line(self):
         self.assertEqual(modes.release_line("3.13.0"), "3.13")
         self.assertEqual(modes.release_line("3.11.4"), "3.13")
         self.assertEqual(modes.release_line("4.0.0"), "4.0")
+        self.assertEqual(modes.release_line("4.0.3"), "4.0")
+        self.assertEqual(modes.release_line("4.1.0"), "4.1")
+        self.assertEqual(modes.release_line("4.1.7"), "4.1")
+        self.assertEqual(modes.release_line("4.2.0"), "4.1")
 
     def test_unknown_check(self):
         with self.assertRaises(modes.ModeError):
             modes.resolve(project={}, check_id="nope")
+
+
+class Wave3Registry(unittest.TestCase):
+    """@req REQ-W3-061 — every Wave 3 check has a 4.1 mode; only two are blocking."""
+
+    def test_REQ_W3_061_the_sixteen_rows_declare_41(self):
+        w3 = {c for c in modes.check_ids() if "3.13" not in modes.row(c)["defaults"]}
+        self.assertEqual(w3, W3_CHECKS)
+        for cid in w3:
+            self.assertEqual(set(modes.row(cid)["defaults"]), {"4.1"}, cid)
+            self.assertIn(modes.default(cid, "4.1"), modes.levels_of(cid), cid)
+
+    def test_REQ_W3_061_no_41_default_blocking_but_two(self):
+        blocking = {c for c in W3_CHECKS if modes.default(c, "4.1") == "blocking"}
+        self.assertEqual(blocking, W3_BLOCKING)
+        for cid in W3_CHECKS - W3_BLOCKING:
+            self.assertIn(modes.default(cid, "4.1"), ("advisory", "warn"), cid)
+
+    def test_wave2_rows_keep_their_40_values_under_41(self):
+        for cid in w2_ids():
+            self.assertEqual(modes.default(cid, "4.1"), modes.default(cid, "4.0"), cid)
+            self.assertEqual(modes.resolve(project={}, check_id=cid, version="4.1.0")["mode"],
+                             modes.default(cid, "4.0"), cid)
+
+    def test_a_wave3_check_on_an_older_line_takes_its_first_default(self):
+        self.assertEqual(modes.default("risks.owner", "3.13"), "warn")
+        r = modes.resolve(project={"checks": {"risks.owner": "off"}}, check_id="risks.owner", version="4.1.0")
+        self.assertEqual(r["mode"], "off")
+        self.assertIn("4.1 default", r["warning"])
 
 
 class Resolve(unittest.TestCase):
