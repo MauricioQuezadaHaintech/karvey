@@ -200,7 +200,10 @@
             "enum": [
               "qa",
               "deploy",
-              "incident"
+              "incident",
+              "approval_requested",
+              "awaiting_human",
+              "blocked"
             ]
           }
         },
@@ -214,6 +217,10 @@
         "deferred": {
           "type": "boolean",
           "x-karvey-note": "'not now' at init (REQ-W1-095)"
+        },
+        "qa_every_run": {
+          "type": "boolean",
+          "x-karvey-note": "notify qa on every run, not only on the first run and a verdict change (wave3 §1.15)"
         }
       }
     },

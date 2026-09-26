@@ -12,6 +12,7 @@
   "target": "{space id / #channel / team+channel / address or list / name of the secret holding a webhook}",
   "via": "mcp | cli | webhook | api",
   "events": ["qa", "deploy"],
+  "qa_every_run": false,
   "detail": "counts",
   "deferred": false
 }
@@ -24,7 +25,8 @@
   (`.connections.json`, an env var or a vault, as in `clickup-protocol.md`).
 - **`via`** — how this session reaches it (MCP server, the team's CLI, an incoming webhook, REST). The skill
   uses what is available and **says so if it is not**.
-- **`events`** — which moments notify. Default `["qa", "deploy"]`.
+- **`events`** — which moments notify. Default `["qa", "deploy"]`; also `incident` and the "your turn" events
+  `approval_requested`, `awaiting_human`, `blocked`.
 - **`detail`** — `counts` (default: severity counts, ids and the link) or `full` (the findings text too).
 - **`deferred`** — `true` records a "not now" at init, so the question is not repeated; set it later with
   `/karvey:karvey-init --settings`.
@@ -53,6 +55,21 @@ sent to.
 | `qa` | `karvey-qa` | change-id, source → target, findings by severity, manual-testing areas, review document |
 | `deploy` | `karvey-deploy` (final output) | repos + versions, DEV/PROD state, canary result, branches cleaned |
 | `incident` (opt-in) | `karvey-iterate` | a `BUG-NN` reaching `DIAGNOSTICADO` or `REABIERTO` |
+| `approval_requested` (opt-in) | the phase asking a gate question | change, gate, what is expected — to the **approver** |
+| `awaiting_human` (opt-in) | `karvey-impl` (a `[human]` task) | change, task, command to run — to the **executor** |
+| `blocked` (opt-in) | the phase that blocks (a judge verdict in blocking mode included) | change, item, the verdict line — to whoever unblocks (the **executor**) |
+
+### "Your turn" events — the person who must act
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" resolve notifications --event approval_requested \
+  --change "{change-id}" --item "{gate or task}" [--verdict "{judge verdict line}"] [--run-id "{run id}"] --json
+```
+
+The destination is the `project.json:stakeholders` entry of the acting role (a change may override it in its
+`spec.json`): `approver` for `approval_requested`, `executor` for `awaiting_human` and `blocked`. Without one it is
+the team destination and the payload says `no approver declared` / `no executor declared`. Send the printed
+payload as it is; it names the change, the item and what is expected, with a run id and a timestamp.
 
 ## Message format per channel
 

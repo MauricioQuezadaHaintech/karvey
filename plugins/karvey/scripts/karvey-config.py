@@ -57,7 +57,12 @@ CHANNELS = ("google-chat", "slack", "teams", "email", "webhook", "none")
 LEGACY_CHANNELS = pj.LEGACY_CHANNELS
 VIAS = ("mcp", "cli", "webhook", "api", "")
 MGMT_VIAS = ("mcp", "cli", "api", "file")
-EVENTS = ("qa", "deploy", "incident")
+EVENTS = ("qa", "deploy", "incident", "approval_requested", "awaiting_human", "blocked")
+# "your turn" events (wave3 §1.15, REQ-W3-026): who must act, and what is expected of them
+EVENT_ACTOR = {"approval_requested": "approver", "awaiting_human": "executor", "blocked": "executor"}
+EVENT_EXPECTED = {"approval_requested": "approve or request changes at the %s gate",
+                  "awaiting_human": "run the step %s and report it done",
+                  "blocked": "unblock %s"}
 DETAILS = ("counts", "full")
 DEFAULT_DETAIL = "counts"
 OVERRIDE_FIELDS = ("tool", "location", "statuses", "sprints")
@@ -308,6 +313,42 @@ def resolve_notifications(settings):
         res["target_error"] = exc.rule
         warnings.append(kl.issue("config.unsafe_value", str(exc), severity="warning", path="$.notifications.target"))
     return res, warnings
+
+
+def resolve_event(settings, notif, event, change=None, item=None, verdict=None, run_id=None, at=None):
+    """The destination and payload of a "your turn" event (REQ-W3-026): the stakeholder whose role acts
+    (``approver`` / ``executor``; whoever unblocks is the executor), else the team destination with ``no approver
+    declared`` / ``no executor declared``. A ``blocked`` raised by a judge carries the verdict line."""
+    if event not in EVENT_ACTOR:
+        raise Usage("--event must be one of %s" % ", ".join(EVENT_ACTOR))
+    spec = None
+    if change:
+        sp_ = Path(settings.root) / pj.CHANGES_DIR / change / "spec.json"
+        try:
+            spec = json.loads(sp_.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            spec = None
+    raw, _ = settings.block("stakeholders")
+    stake = pj.stakeholders({"stakeholders": raw} if isinstance(raw, dict) else {}, spec)
+    role = EVENT_ACTOR[event]
+    who = stake.get(role)
+    dest = who.get("destination") if isinstance(who, dict) and isinstance(who.get("destination"), dict) else None
+    note = None
+    if who and dest and dest.get("channel") not in (None, "none"):
+        destination = {"channel": dest["channel"], "target": dest.get("target", "")}
+        source = "stakeholder:%s" % role
+    else:
+        destination = {"channel": notif["channel"], "target": notif["target"]}
+        source = "team"
+        note = "no %s declared" % role
+    payload = {"event": event, "change": change, "item": item, "expected": EVENT_EXPECTED[event] % (item or "the"),
+               "to": (who or {}).get("name") or role, "run_id": run_id, "at": at}
+    if note:
+        payload["note"] = note
+    if event == "blocked" and verdict:
+        payload["verdict"] = verdict
+    return {"event": event, "enabled": event in notif["events"], "actor_role": role, "destination": destination,
+            "source": source, "note": note, "payload": payload}
 
 
 # --------------------------------------------------------------------------- get --shell
@@ -637,9 +678,15 @@ def cmd_resolve(args, root):
         human = json.dumps({k: res[k] for k in ("tool", "location", "statuses", "sprints", "source",
                                                 "external", "missing")}, ensure_ascii=False)
     else:
-        if args.change:
-            raise Usage("--change applies to 'resolve management' only")
+        if args.change and not args.event:
+            raise Usage("--change applies to 'resolve management' or to 'resolve notifications --event'")
         res, warnings = resolve_notifications(settings)
+        if args.event:
+            at = datetime.now().astimezone().isoformat(timespec="seconds")
+            res["event"] = resolve_event(settings, res, args.event, args.change, args.item, args.verdict,
+                                         args.run_id, at)
+            human = json.dumps(res["event"], ensure_ascii=False, sort_keys=True)
+            return kl.EXIT_OK, res, [], warnings, human
         human = json.dumps({k: res[k] for k in ("channel", "target", "via", "events", "detail")},
                            ensure_ascii=False)
     return kl.EXIT_OK, res, [], warnings, human
@@ -695,7 +742,11 @@ def build_parser():
     sub = p.add_subparsers(dest="command")
     r = sub.add_parser("resolve", parents=[common], help="resolve management or notifications")
     r.add_argument("what", choices=["management", "notifications"])
-    r.add_argument("--change", help="change id whose spec.json override applies (management)")
+    r.add_argument("--change", help="change id whose spec.json override applies (management; notifications --event)")
+    r.add_argument("--event", help="notifications: a 'your turn' event (approval_requested, awaiting_human, blocked)")
+    r.add_argument("--item", help="--event: the gate or task the event is about")
+    r.add_argument("--verdict", help="--event blocked: the judge's verdict line that raised it")
+    r.add_argument("--run-id", dest="run_id", help="--event: the run or iteration id carried by the payload")
     g = sub.add_parser("get", parents=[common], help="one setting; --shell validates it for a command")
     g.add_argument("key", help="dotted key, e.g. management.location")
     g.add_argument("--change", help="change id whose spec.json override applies")

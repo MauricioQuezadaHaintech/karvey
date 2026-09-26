@@ -232,7 +232,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F4.T5 [Frontend] | ✅ done | 15 | 10 | 0 |  |
 | E1.F4.T6 [Backend] | ✅ done | 15 | 15 | 0 |  |
 | E1.F4.T7 [Backend] | ✅ done | 12 | 10 | 0 |  |
-| E1.F4.T8 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F4.T8 [Backend] | ✅ done | 12 | 10 | 0 |  |
 | E1.F4.T9 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F4.T10 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F4.T11 [Test] | ⬜ todo | 5 | — | — |  |
