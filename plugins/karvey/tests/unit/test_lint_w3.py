@@ -198,5 +198,29 @@ class L68(LintCase):
         self.assertFails("L-68", "pipeline phase mapped to a Feature", file=self.RULE)
 
 
+GUIDE = "docs/portability.md"
+
+
+class L69(LintCase):
+    """@req REQ-W3-053 — the portability guide covers every hook event and allowed tool."""
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(GUIDE, (_path.REPO_ROOT / "docs" / "portability.md").read_text(encoding="utf-8"))
+
+    def test_the_guide_passes(self):
+        self.assertPasses("L-69")
+
+    def test_REQ_W3_053_a_new_hook_event_without_an_entry_fails(self):
+        hj = json.loads(self.t.read("plugins/karvey/hooks/hooks.json"))
+        (hj["hooks"] if "hooks" in hj else hj)["Notification"] = []
+        self.t.write("plugins/karvey/hooks/hooks.json", hj)
+        self.assertFails("L-69", "hook event Notification", file=GUIDE)
+
+    def test_REQ_W3_053_an_allowed_tool_without_an_entry_fails(self):
+        self.t.sub(SKILLS + "/karvey-qa/SKILL.md", r"(?m)^allowed-tools: (.*)$", r"allowed-tools: \1, NotebookEdit")
+        self.assertFails("L-69", "tool NotebookEdit", file=GUIDE)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -2380,6 +2380,27 @@ def l68_phase_is_not_a_feature(ctx):
                                 "a checklist or field of the Epic (management-adapters.md)" % m.group(0))
 
 
+# --------------------------------------------------------------------------- L-69 (wave3-optimization)
+@check("L-69", "docs/portability.md has an entry for every hook event of hooks.json and every tool in any "
+               "allowed-tools (REQ-W3-053)", reqs=("W3-053",))
+def l69_portability_guide(ctx):
+    guide = ctx.root / "docs" / "portability.md"
+    text = ctx.read(guide)
+    if text is None:
+        return  # a plugin tree without the guide (the lint fixtures)
+    have = set(re.findall(r"`([A-Za-z][\w-]*)`", text))
+    hj = ctx.json(ctx.plugin / "hooks" / "hooks.json")
+    events = sorted((hj.get("hooks") if isinstance(hj.get("hooks"), dict) else hj).keys()) \
+        if isinstance(hj, dict) else []
+    for ev in events:
+        if not ev.startswith("$") and ev not in have:
+            yield (guide, 1, "hook event %s (hooks.json) has no entry in the portability guide" % ev)
+    for name, path in sorted(ctx.skills().items()):
+        for tool in sorted(allowed_tools(ctx.frontmatter(path)[0])):
+            if tool not in have:
+                yield (guide, 1, "tool %s (allowed-tools of %s) has no entry in the portability guide" % (tool, name))
+
+
 # --------------------------------------------------------------------------- L-65 (wave3-optimization)
 RISK_STATES = ("open", "mitigated", "accepted", "closed", "moved")
 
