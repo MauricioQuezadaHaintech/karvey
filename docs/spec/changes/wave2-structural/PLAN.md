@@ -91,7 +91,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F2.T6 [Backend] Init lane questions → `lane set`; QA / QA-lite lane check (`measure_diff` + finding + `lane.diff` hit) — est: 10min (depends E1.F2.T4, E1.F1.T2)
 - [x] E1.F2.T7 [Backend] Dashboard: `lane` column, `skipped (lane)`, `auto` approvals apart — est: 8min (depends E1.F2.T3, E1.F1.T7)
 - [x] E1.F2.T8 [Backend] `global-instructions.diff` for the `patch` lane (one bullet, neutral header, A-11) — est: 5min (P)
-- [ ] E1.F2.T9 [Test] Integration `test_patch_lane_flow.py` (AC-2) — est: 10min (depends E1.F2.T4, E1.F5.T3)
+- [x] E1.F2.T9 [Test] Integration `test_patch_lane_flow.py` (AC-2) — est: 10min (depends E1.F2.T4, E1.F5.T3)
 
 ### Feature E1.F3: Advisory judges
 
@@ -201,7 +201,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F2.T6 [Backend] | ✅ done | 10 | 8 | 0 | deviation: lane-check CLI added to karvey-state.py so the QA text is executable |
 | E1.F2.T7 [Backend] | ✅ done | 8 | 5 | 0 |  |
 | E1.F2.T8 [Backend] | ✅ done | 5 | 3 | 0 | hunk header (@@) omitted: it conflicts with the done-when no-@ check; the owner applies the bullet by hand |
-| E1.F2.T9 [Test] | ⬜ todo | 10 | — | — |  |
+| E1.F2.T9 [Test] | ✅ done | 10 | 6 | 0 |  |
 | E1.F3.T1 [Backend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F3.T2 [Backend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F3.T3 [Backend] | ✅ done | 15 | 10 | 0 |  |
