@@ -1858,6 +1858,100 @@ def l49_deployed_spec_merged(ctx):
                                                                          ", ".join(ids[:5]) or "-"))
 
 
+# --------------------------------------------------------------------------- L-42, L-43, L-53 (wave2-structural)
+INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
+COMMIT_WITH_MSG_RE = re.compile(r"\bgit\s+commit\b[^\n]*?(?:\s-[a-zA-Z]*[mF]\b|\s--message\b|\s--file\b)")
+GIT_MERGE_RE = re.compile(r"\bgit\s+merge(?!-)\b(?!\s+--abort)")
+PUSH_INTEGRATION_RE = re.compile(r"\bgit\s+push\b[^\n]*(?:\$\{?I\b|\{integration\}|\$INTEGRATION\b|\bintegration\b)")
+
+
+def command_examples(ctx, path):
+    """``(lineno, text)`` of every command example: a fenced line (continuations joined) or an inline code span."""
+    out, buf, start = [], "", None
+    for n, line, lang in iter_lines(ctx.lines(path)):
+        if lang is not None and not FENCE_RE.match(line):
+            if start is None:
+                start = n
+            buf += " " + line.strip().rstrip("\\")
+            if not line.rstrip().endswith("\\"):
+                out.append((start, buf.strip()))
+                buf, start = "", None
+            continue
+        if buf:
+            out.append((start, buf.strip()))
+            buf, start = "", None
+        if lang is None:
+            out += [(n, m.group(1)) for m in INLINE_CODE_RE.finditer(line)]
+    if buf:
+        out.append((start, buf.strip()))
+    return out
+
+
+@check("L-42", "Every git commit example with a message in skill or rule text carries the Karvey-Change trailer "
+               "(REQ-W2-043)", reqs=("W2-043",))
+def l42_commit_examples_trailer(ctx):
+    for path in ctx.text_files():
+        for n, text in command_examples(ctx, path):
+            if COMMIT_WITH_MSG_RE.search(text) and "Karvey-Change" not in text:
+                yield path, n, "git commit example without the Karvey-Change trailer: %s" % text[:80]
+
+
+@check("L-43", "No instruction merges locally into the integration branch and then pushes it: integration goes "
+               "through a PR (REQ-W2-048)", reqs=("W2-048",))
+def l43_no_local_merge_push(ctx):
+    for path in ctx.text_files():
+        ex = command_examples(ctx, path)
+        for i, (n, text) in enumerate(ex):
+            if not GIT_MERGE_RE.search(text):
+                continue
+            window = [t for m, t in ex[i:i + 6] if m - n <= 8]
+            tail = text[GIT_MERGE_RE.search(text).end():]
+            if PUSH_INTEGRATION_RE.search(tail) or any(PUSH_INTEGRATION_RE.search(t) for t in window[1:]):
+                yield (path, n, "local merge followed by a push into the integration branch; integrate by a PR "
+                                "to {integration} (its CI is the DEV gate)")
+
+
+PROD_PR_RE = re.compile(r"(?:\bpr\s+create\b|\bmr\s+create\b)[^\n]*(?:--base|--target-branch)\s+\"?\$\{?P\b")
+CANARY_RE = re.compile(r"\bcanary\b", re.I)
+TRAFFIC_RE = re.compile(r"traffic", re.I)
+
+
+@check("L-53", "Deploy text: the living-spec merge (2.4-bis) and the release gate (2.8-bis) come before the "
+               "production PR; the prod OK is in the PR body at deploy and a D-NN at archive; the step is named "
+               "post-deploy verification ('canary' only where traffic is split) (REQ-W2-045, 052, 054, 076)",
+       reqs=("W2-045", "W2-052", "W2-054", "W2-076"))
+def l53_deploy_order_and_naming(ctx):
+    deploy = ctx.skill("karvey-deploy")
+    if deploy is None:
+        return
+    lines = ctx.lines(deploy)
+
+    def first(rx):
+        return next((n for n, ln_ in enumerate(lines, 1) if rx.search(ln_)), None)
+    spec = first(re.compile(r"karvey-spec-merge\.py"))
+    gate = first(re.compile(r"karvey-release-gate\.py[\"']?\s+check\b"))
+    pr = first(PROD_PR_RE)
+    for label, rx, n in (("2.4-bis", re.compile(r"\b2\.4-bis\b"), spec), ("2.8-bis", re.compile(r"\b2\.8-bis\b"), gate)):
+        what = "the living-spec merge" if label == "2.4-bis" else "the release gate"
+        if first(rx) is None or n is None:
+            yield deploy, 1, "karvey-deploy has no step %s (%s)" % (label, what)
+        elif pr is not None and n > pr:
+            yield deploy, n, "%s (line %d) comes after the production PR (line %d)" % (what, n, pr)
+    if pr is None:
+        yield deploy, 1, "karvey-deploy opens no production PR (pr create --base \"$P\")"
+    text = "\n".join(lines)
+    if not re.search(r"PR body", text):
+        yield deploy, 1, "karvey-deploy does not say the prod OK lives in the PR body at deploy"
+    if not re.search(r"at archive", text, re.I) or "chore/archive-" not in text:
+        yield deploy, 1, "karvey-deploy does not say the prod OK becomes a D-NN on chore/archive-{id} at archive"
+    if "post-deploy verification" not in text:
+        yield deploy, 1, "karvey-deploy does not name the step 'post-deploy verification'"
+    for path in [deploy] + [x for x in (ctx.rule("deploy-workflow.md"),) if x is not None]:
+        for n, ln_ in enumerate(ctx.lines(path), 1):
+            if CANARY_RE.search(ln_) and not TRAFFIC_RE.search(ln_):
+                yield path, n, "'canary' outside traffic splitting; the step is 'post-deploy verification'"
+
+
 # --------------------------------------------------------------------------- L-45 (wave2-structural)
 EPIC_RANGE_RES = (re.compile(r"\bE\{\d+\.\.\d+\}"), re.compile(r"\bE\d+\s*\.\.\s*E?\d+\b"),
                   re.compile(r"\bEpics?\b[^.\n]{0,40}?\b\d+\s*\.\.\s*\d+\b", re.I))

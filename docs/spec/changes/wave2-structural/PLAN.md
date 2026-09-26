@@ -122,7 +122,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F5.T5 [Backend] Prod gate: manifest verdict after the Wave 1 allow (warn → allow + line; blocking → block; not computable), every manifest change through `check_prod`; `approve prod --manifest` — est: 15min (depends E1.F5.T2, E1.F4.T1)
 - [x] E1.F5.T6 [Backend] Deploy flow text: 2.4-bis spec merge on the change branch, 2.5 integration by PR, 2.8-bis manifest + release gate, prod OK in PR body at deploy → D-NN at archive, attested fallback, `release/*` offer — est: 15min (depends E1.F5.T3)
 - [x] E1.F5.T7 [Backend] `branch_flow.mode` derived (trunk when integration = production), contradiction reported, trunk recommended by `karvey-init --settings` — est: 6min (depends E1.F1.T1) (P)
-- [ ] E1.F5.T8 [Backend] L-42 (commit examples carry the trailer), L-43 (no local merge + push into integration), L-53 (deploy order and naming) — est: 12min (depends E1.F5.T6, E1.F10.T2)
+- [x] E1.F5.T8 [Backend] L-42 (commit examples carry the trailer), L-43 (no local merge + push into integration), L-53 (deploy order and naming) — est: 12min (depends E1.F5.T6, E1.F10.T2)
 - [x] E1.F5.T9 [Backend] Inherited base commits: map `390e6cb`, `02b460b`, `62ffc6d`, `38f42bf` (wave1-hardening decision commits on the base branch) to `wave1-hardening` — no rewrite — est: 5min (depends E1.F5.T2)
 
 ### Feature E1.F6: Living spec merged before production
@@ -223,7 +223,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F5.T5 [Backend] | ✅ done | 15 | 12 | 0 |  |
 | E1.F5.T6 [Backend] | ✅ done | 15 | 11 | 0 |  |
 | E1.F5.T7 [Backend] | ✅ done | 6 | 5 | 0 |  |
-| E1.F5.T8 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F5.T8 [Backend] | ✅ done | 12 | 10 | 0 | the archive and checkpoint commit examples and the orchestrator's deploy summary were brought in line |
 | E1.F5.T9 [Backend] | ✅ done | 5 | 3 | 0 |  |
 | E1.F6.T1 [Backend] | ✅ done | 10 | 5 | 0 |  |
 | E1.F6.T2 [Backend] | ✅ done | 6 | 4 | 0 |  |

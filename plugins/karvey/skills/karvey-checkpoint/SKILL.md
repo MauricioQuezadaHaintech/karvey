@@ -95,7 +95,8 @@ The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`
 8. **Commit the handoff by explicit path**, before the capture:
    ```bash
    git pull --rebase --autostash
-   git commit -- docs/spec/agent/handoff.md docs/spec/agent/board.md -m "handoff: <one line>"
+   git commit -- docs/spec/agent/handoff.md docs/spec/agent/board.md -m "handoff: <one line>" \
+     --trailer "Karvey-Change: {change-id}"   # the active change (spec bookkeeping)
    ```
    In a **shared** ops repo this is mandatory, not stylistic: agents sharing a working copy share one
    index, and a bare commit carries away whatever someone else left staged, possibly half-written.

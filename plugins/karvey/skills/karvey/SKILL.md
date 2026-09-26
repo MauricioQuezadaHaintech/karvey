@@ -27,7 +27,7 @@ Karvey is a spec-driven development (SDD) method for enterprise projects, **stac
 - **10–30 min AI tasks** + management in the **team's tracker** (ClickUp, Jira, Linear, Azure Boards, GitHub Projects, spreadsheet) or Markdown `PLAN.md` — tool and status flow are **team settings** in `project.json`, spoken as logical states `todo | in_progress | review | done | blocked` (`rules/management-adapters.md`); notifications go to the **team's channel** (`rules/notifications.md`)
 - **DB/Backend/Frontend + E2E testing** in the target's real runtime, with benchmark and regression
 - **9-dimension QA**: includes a blocking security gate (OWASP+STRIDE), cross-model second opinion, visual audit, and standards conformance (golden path + approved deviations)
-- **Orderly deployment**: feature branch → dev → PR to master, triggered by the pipeline, verifying the PR's gates (CI + branch policies) before the prod OK, with post-deploy canary
+- **Orderly deployment**: feature branch → living spec on the branch → PR to integration → release manifest and release gate → PR to production, triggered by the pipeline, verifying the PR's gates (CI + branch policies) before the prod OK, with post-deploy verification against thresholds
 - **Branch hygiene — nothing left in branches**: once a branch is absorbed into production it is deleted (remote + local); a branch still carrying unreleased work is never deleted, it is reported — see `rules/deploy-workflow.md` → *Branch hygiene*
 - **Semver versioning + CHANGELOG** per component/repo, with human + AI model traceability
 - **Persistent goal**: a north star that every phase re-reads so it never stops until the result is achieved, while respecting the gates
@@ -55,7 +55,7 @@ PHASE 7 ─── /karvey-tasks          → 10–30 min tasks, E{n}.F{n}.T{n}, 
 PHASE 8 ─── /karvey-impl           → Implementation DB→Backend→Frontend, commits + CHANGELOG
 PHASE 9 ─── /karvey-test           → Unit + E2E in the target's real runtime, benchmark, regression
 PHASE 10 ── /karvey-qa             → QA 9D + blocking security gate, REVISION_PR
-PHASE 11 ── /karvey-deploy         → Orderly deployment feature→dev→PR master + canary
+PHASE 11 ── /karvey-deploy         → Orderly deployment feature→PR dev→release gate→PR master + post-deploy verification
 PHASE 12 ── /karvey-archive        → Merge spec-deltas, retro, docs, close Epic + backlog sweep
 ```
 
@@ -179,7 +179,7 @@ Unit + E2E in the target's **real runtime**, performance benchmark, regression t
 **Rules:** `changelog-policy.md`, `versioning.md`, `iteration-loop.md`, `phase-close.md`, `management-adapters.md`, `notifications.md`
 
 ### PHASE 11: /karvey-deploy
-Orderly per-repo flow: pull → feature → pull → merge dev (DEV pipeline) → canary → pull → PR dev→master → verify the PR's gates (CI + branch policies) → PROD with human OK → canary → **branch hygiene** (delete absorbed branches, report the rest). Detects the git host (`gh` / `az repos` / `glab`). Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended): **dev version in DEV** (`x.y.z-dev.N+sha`), **release version in PROD**, checked by the canary. Never deploy manually. Notifies the team's channel (event `deploy`).
+Orderly per-repo flow: pull → feature → living spec merged on the branch → PR to dev, merged by the host (DEV pipeline) → post-deploy verification → pull → release manifest + release gate → PR dev→master listing every change → verify the PR's gates (CI + branch policies) → PROD with human OK → post-deploy verification → **branch hygiene** (delete absorbed branches, report the rest). Detects the git host (`gh` / `az repos` / `glab`). Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended): **dev version in DEV** (`x.y.z-dev.N+sha`), **release version in PROD**, checked by the post-deploy verification. Never deploy manually. Notifies the team's channel (event `deploy`).
 **Rules:** `deploy-workflow.md`, `versioning.md`, `changelog-policy.md`, `project-config.md`, `management-adapters.md`, `notifications.md`
 
 ### PHASE 12: /karvey-archive

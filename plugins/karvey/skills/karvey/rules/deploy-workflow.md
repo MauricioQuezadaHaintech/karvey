@@ -68,7 +68,7 @@ the D-NN.
 A branch that outlives its merge is noise at best and a trap at worst: someone rebases on it, reopens it, or
 reads it as pending work. The method closes that loop explicitly instead of leaving it to discipline.
 
-**When:** right after the merge to `{production}` and its canary (`karvey-deploy` 2.12), and again as a
+**When:** right after the merge to `{production}` and its post-deploy verification (`karvey-deploy` 2.11), and again as a
 sweep at `karvey-archive` (Step 7F). Long-lived branches (`{integration}`, `{production}`, and any listed
 in `project.json:branch_flow.protected_branches`) are never candidates.
 

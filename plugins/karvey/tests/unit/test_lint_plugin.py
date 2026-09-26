@@ -1021,6 +1021,83 @@ class L46(LintCase):
         self.assertFails("L-46", "default", file=RULES + "/knowledge-sync.md")
 
 
+class L42(LintCase):
+    """@req REQ-W2-043 — commit examples carry the Karvey-Change trailer."""
+
+    def test_pass(self):
+        self.assertPasses("L-42")
+
+    def test_commit_example_without_trailer_fails(self):
+        f = SKILLS + "/karvey-impl/SKILL.md"
+        self.t.append(f, '\n```bash\ngit commit -m "feat: task E1.F1.T1"\n```\n')
+        self.assertFails("L-42", "without the Karvey-Change trailer", file=f)
+
+    def test_trailer_on_a_continuation_line_passes(self):
+        self.t.append(SKILLS + "/karvey-impl/SKILL.md",
+                      '\n```bash\ngit commit -m "feat: x" \\\n  --trailer "Karvey-Change: {change-id}"\n```\n')
+        self.assertPasses("L-42")
+
+    def test_path_form_without_message_passes(self):
+        self.t.append(SKILLS + "/karvey-impl/SKILL.md", "\nCommit by explicit path (`git commit -- <paths>`).\n")
+        self.assertPasses("L-42")
+
+
+class L43(LintCase):
+    """@req REQ-W2-048 — integration by PR, no local merge + push."""
+
+    def test_pass(self):
+        self.assertPasses("L-43")
+
+    def test_local_merge_then_push_integration_fails(self):
+        f = SKILLS + "/karvey-deploy/SKILL.md"
+        self.t.append(f, '\n```bash\ngit checkout "$I"\ngit merge "feature/{change-id}"\ngit push origin "$I"\n```\n')
+        self.assertFails("L-43", "integrate by a PR", file=f)
+
+    def test_same_line_form_fails(self):
+        f = RULES + "/versioning.md"
+        self.t.append(f, '\n```bash\ngit checkout "$I" && git merge --no-ff "feature/x" && git push origin "$I"\n```\n')
+        self.assertFails("L-43", file=f)
+
+    def test_merge_tree_is_not_a_merge(self):
+        self.t.append(RULES + "/versioning.md",
+                      '\n```bash\ngit merge-tree --write-tree "origin/$P" "origin/$B"\ngit push origin "$I"\n```\n')
+        self.assertPasses("L-43")
+
+
+class L53(LintCase):
+    """@req REQ-W2-045 REQ-W2-052 REQ-W2-054 REQ-W2-076 — deploy order and naming."""
+
+    F = SKILLS + "/karvey-deploy/SKILL.md"
+
+    def test_pass(self):
+        self.assertPasses("L-53")
+
+    def test_pr_before_spec_merge_fails(self):
+        self.t.replace(self.F, '```bash\ngh pr create --base "$P"', '```bash\ngh pr create --base "$P" --x\n```\n\n'
+                       '**early** `gh pr create --base "$P"`\n```bash\ngh pr create --base "$P"')
+        s = self.t.read(self.F)
+        i = s.index("**2.4-bis**")
+        early = s.index("**early**")
+        self.t.write(self.F, s[:i] + s[early:early + 40] + "\n\n" + s[i:early] + s[early + 40:])
+        self.assertFails("L-53", "comes after the production PR", file=self.F)
+
+    def test_missing_release_gate_fails(self):
+        self.t.sub(self.F, r"\*\*2\.8-bis\*\*[^\n]*\n", "")
+        self.assertFails("L-53", "2.8-bis", file=self.F)
+
+    def test_canary_outside_traffic_splitting_fails(self):
+        self.t.append(self.F, "\nThen run the canary over production.\n")
+        self.assertFails("L-53", "canary", file=self.F)
+
+    def test_canary_with_traffic_split_passes(self):
+        self.t.append(self.F, "\nA canary is kept only where the platform splits traffic.\n")
+        self.assertPasses("L-53")
+
+    def test_prod_ok_not_in_pr_body_fails(self):
+        self.t.replace(self.F, "At deploy its text is in the PR body;", "At deploy its text is in the PR;")
+        self.assertFails("L-53", "PR body", file=self.F)
+
+
 class L54(LintCase):
     """@req REQ-W2-082 — the statusline failure line is anchored to a table case."""
     README = "plugins/karvey/hooks/README.md"

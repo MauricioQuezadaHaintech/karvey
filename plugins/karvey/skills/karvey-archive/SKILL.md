@@ -77,7 +77,7 @@ python3 "$S" advance "{change-id}" archived
 TIMESTAMP=$(date +%Y-%m-%d)
 mkdir -p docs/spec/changes/archive
 git mv "docs/spec/changes/{change-id}" "docs/spec/changes/archive/${TIMESTAMP}-{change-id}"
-git commit -m "chore: archive {change-id}"
+git commit -m "chore: archive {change-id}" --trailer "Karvey-Change: {change-id}"
 ```
 
 ### Step 5 — Close the Epic and calibrate
