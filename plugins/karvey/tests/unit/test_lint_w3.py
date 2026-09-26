@@ -357,5 +357,29 @@ class L57(LintCase):
         self.assertPasses("L-57")
 
 
+class L56(LintCase):
+    """@req REQ-W3-004 — a skill reads only what its Load: line lists."""
+    SKILL = SKILLS + "/karvey-qa/SKILL.md"
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(SKILLS + "/karvey/rules/gates.md", "# Gates\n")
+        self.t.write(SKILLS + "/karvey/rules/x.md", "# X\n")
+        self.t.write(self.SKILL, "---\nname: karvey-qa\n---\n# QA\nLoad: gates.md\n\nClose per `../karvey/rules/gates.md`.\n")
+
+    def test_listed_citation_passes(self):
+        self.assertPasses("L-56")
+
+    def test_REQ_W3_004_read_a_rule_missing_from_load_fails_with_skill_line_rule(self):
+        self.t.append(self.SKILL, "Read `../karvey/rules/x.md` first.\n")
+        fs = self.assertFails("L-56", "cites ../karvey/rules/x.md", file=self.SKILL)
+        self.assertIn("skill karvey-qa", fs[0]["message"])
+        self.assertEqual(fs[0]["line"], 8)
+
+    def test_a_footnote_citation_passes(self):
+        self.t.append(self.SKILL, "Context[^r-x].\n\n[^r-x]: ../karvey/rules/x.md — context only.\n")
+        self.assertPasses("L-56")
+
+
 if __name__ == "__main__":
     unittest.main()

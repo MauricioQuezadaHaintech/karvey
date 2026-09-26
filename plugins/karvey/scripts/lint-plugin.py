@@ -2318,6 +2318,33 @@ def l55_core_contracts(ctx):
             yield (reg_path, 1, "contract %s: anchor must be #contract-%s (got %r)" % (cid, cid, c.get("anchor")))
 
 
+# --------------------------------------------------------------------------- L-56 (wave3-optimization)
+@check("L-56", "Every rule or reference a skill body cites (outside footnotes and code fences) is on its Load: line, "
+               "and every phase skill has one (REQ-W3-004)", reqs=("W3-004",))
+def l56_citations_in_load_list(ctx):
+    # a Load: line is required once the plugin ships its core (the 4.1 layout)
+    phase_skills = {ph.get("skill") for ph in ctx.machine().get("phases", []) if isinstance(ph, dict)} \
+        if (ctx.rules_dir / "_core.md").is_file() else set()
+    for name, path in sorted(ctx.skills().items()):
+        text = ctx.read(path) or ""
+        entries = loadlist.declared(text)
+        if entries is None:
+            if name in phase_skills:
+                yield (path, 1, "phase skill %s has no Load: line in its first lines" % name)
+            continue
+        loaded = set()
+        for e in entries:
+            loaded.update(a.resolve() for a in loadlist.resolve(e, ctx.rules_dir, path.parent))
+        for n, line in loadlist.prose_lines(text):
+            if loadlist.LOAD_RE.match(line):
+                continue
+            for tok in loadlist.TOKEN_RE.findall(line):
+                alts = loadlist.resolve(tok, ctx.rules_dir, path.parent)
+                if alts and not all(a.resolve() in loaded for a in alts):
+                    yield (path, n, "skill %s cites %s, which is not on its Load: line (add it, or make it a "
+                                    "footnote)" % (name, tok))
+
+
 # --------------------------------------------------------------------------- L-57 (wave3-optimization)
 LOAD_VERB_RE = re.compile(r"\b(?:load|read|open|see first|consult)\b", re.I)
 
