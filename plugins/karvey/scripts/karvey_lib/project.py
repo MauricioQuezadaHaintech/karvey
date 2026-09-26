@@ -131,6 +131,28 @@ def branch_flow(project):
     return fp, integ, prod
 
 
+BRANCH_MODES = ("trunk", "env-branches")
+
+
+def branch_mode(project):
+    """``(mode, source, contradiction)`` of ``branch_flow.mode`` (REQ-W2-049): the declared mode, else derived —
+    ``trunk`` when integration equals production (or no integration branch is set), ``env-branches`` otherwise.
+    ``contradiction`` names a declared ``trunk`` with integration ≠ production (or ``env-branches`` with them
+    equal); it is None when the declaration agrees with the branches."""
+    bf = project.get("branch_flow") if isinstance(project, dict) else None
+    bf = bf if isinstance(bf, dict) else {}
+    _, integ, prod = branch_flow(project)
+    derived = "trunk" if (integ is None or prod is None or integ == prod) else "env-branches"
+    declared = bf.get("mode")
+    if declared not in BRANCH_MODES:
+        return derived, "derived", None
+    contradiction = None
+    if declared != derived and integ is not None and prod is not None:
+        contradiction = ("branch_flow.mode is %r but integration %r %s production %r" % (
+            declared, integ, "differs from" if declared == "trunk" else "equals", prod))
+    return declared, "project.json", contradiction
+
+
 def list_changes(root):
     """Change directories under ``docs/spec/changes`` (not ``archive/``), sorted by name.
 

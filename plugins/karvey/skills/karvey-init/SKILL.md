@@ -44,7 +44,7 @@ If `$ARGUMENTS` includes the change-id, use it. If not, generate it from the des
 - **`cloud.provider`**: `azure` | `gcp` | `aws` | `mixed` | `none`. **`iac_tool`**: `terraform` | `bicep` | `pulumi` | `none`.
 - **`knowledge_sync`** (`../karvey/rules/knowledge-sync.md`): `obsidian` if an Obsidian MCP is in the session, `graphify` if graphify is installed, otherwise `none` — say once that the sync then does not run. It runs only at archive or on demand.
 - **`repos`**: MINIMUM 1 element. **`spec_repo`**: the one repo, or ask which holds `docs/spec/`.
-- **`branch_flow`**: default `{ "feature_prefix": "feature/", "integration": "dev", "production": "master" }`.
+- **`branch_flow`**: recommend **trunk** — `{ "feature_prefix": "feature/", "integration": "main", "production": "main", "mode": "trunk" }`: each change reaches production through its own PR. `env-branches` (integration ≠ production, e.g. `dev` → `master`) only when the team deploys an integration environment from its own branch. Without `mode` it is derived (trunk when integration = production); a declared mode that contradicts the branches fails `validate`.
 
 ### Step 3.2 — Team settings (first use, or `--settings`)
 
@@ -63,6 +63,10 @@ Ask with `AskUserQuestion`, one block at a time, with examples — never assume 
 3. **Status flow**: map the team's real statuses to `todo · in_progress · review · done · blocked`. For a
    tracker, read the statuses from the tool and propose the map; the user confirms. For `Markdown` the
    markers are fixed: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked · 🙋 awaiting-human (a blocked qualifier)`.
+
+4. **Branch mode** (`branch_flow.mode`): `trunk (recommended)` — integration = production, one PR per change ·
+   `env-branches` — an integration branch deployed to its own environment. Offer trunk first; keep an existing
+   `env-branches` project as it is unless the team asks to move.
 
 Credentials go to `.connections.json` (git-ignored) or the team's vault — never into `project.json`.
 

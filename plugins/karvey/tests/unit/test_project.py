@@ -281,5 +281,37 @@ class LegacyStatusFlow(unittest.TestCase):
         self.assertEqual(pj.LEGACY_CHANNELS, {"google_chat": "google-chat"})
 
 
+
+class BranchMode(unittest.TestCase):
+    """@req REQ-W2-049"""
+
+    def test_REQ_W2_049_main_main_is_trunk(self):
+        self.assertEqual(pj.branch_mode({"branch_flow": {"integration": "main", "production": "main"}}),
+                         ("trunk", "derived", None))
+
+    def test_dev_master_is_env_branches(self):
+        self.assertEqual(pj.branch_mode({"branch_flow": {"integration": "dev", "production": "master"}})[0],
+                         "env-branches")
+
+    def test_REQ_W2_049_trunk_with_dev_master_is_a_contradiction(self):
+        mode, src, why = pj.branch_mode({"branch_flow": {"integration": "dev", "production": "master",
+                                                         "mode": "trunk"}})
+        self.assertEqual((mode, src), ("trunk", "project.json"))
+        self.assertIn("differs from", why)
+
+    def test_validate_reports_the_contradiction(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from _state import run_json
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "docs/spec/project.json"
+            p.parent.mkdir(parents=True)
+            p.write_text(json.dumps({"branch_flow": {"integration": "dev", "production": "master", "mode": "trunk"}}))
+            code, env = run_json("validate", str(p), "--root", d)
+            self.assertNotEqual(code, 0)
+            self.assertTrue(any(e["code"] == "state.branch_mode" for e in env["errors"]), env)
+
+
 if __name__ == "__main__":
     unittest.main()

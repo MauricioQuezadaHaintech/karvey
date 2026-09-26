@@ -418,6 +418,10 @@ def semantic_project(data, strict, file):
     if isinstance(data.get("management"), str) and data["management"] == "none":
         out.append(kl.issue("state.legacy_management", "management 'none' is a legacy alias of 'markdown'; "
                             "run validate --fix", severity="warning", file=file, path="$.management"))
+    _, _, contradiction = pj.branch_mode(data)
+    if contradiction:
+        out.append(kl.issue("state.branch_mode", contradiction + " (REQ-W2-049)", severity="error", file=file,
+                            path="$.branch_flow.mode"))
     # safe_values (§3.1) joins here when karvey_lib/safe_values.py lands (E1.F7.T1).
     return out
 
