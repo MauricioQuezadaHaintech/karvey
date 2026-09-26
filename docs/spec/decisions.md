@@ -280,3 +280,8 @@ corrected, not annotated at the end.
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-26. **Answer, verbatim:** «Sí, reopen lo invalida (Recomendado)»
 - **What:** `reopen` marks the ledger's prod approval as superseded; the owner gives it again after the rework.
+
+## D-37 — Release manifest: one prod OK for the whole manifest, bound and consumed once (F-61, Wave 2)
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-26. **Answer, verbatim:** «Manifiesto con OK único, atado (Recomendado)»
+- **What:** only on the release-manifest path, one production approval covers every change the manifest (and the PR body) lists; it is consumed once and bound to the reviewed head SHA with a 24 h expiry (D-35). Every other production path stays one approval per change (BUG-41).
