@@ -101,7 +101,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [x] E1.F3.T4 [Backend] State tool: `judge-run` append + judge `blocking` refusal in `approve` — est: 10min (depends E1.F3.T3, E1.F2.T4, E1.F1.T2)
 - [x] E1.F3.T5 [Backend] Skill `karvey-judges` + calls in `karvey-requirements`, `karvey-architecture`, `karvey-qa` (fiscal before `approve qa`) + README/`plugin.json` counts (L-11) — est: 10min (depends E1.F3.T4)
 - [x] E1.F3.T6 [Backend] Iterate: `accepted:{type} {ref}` / `rejected: {reason}` for judge rows; convergence lists `unresolved (no routing or reason)` — est: 8min (depends E1.F3.T3) (P)
-- [ ] E1.F3.T7 [Test] Manual script `judges-gate.md` (real subagents, verdicts at the gate, intra-model declared) — est: 5min (depends E1.F3.T5) (P)
+- [x] E1.F3.T7 [Test] Manual script `judges-gate.md` (real subagents, verdicts at the gate, intra-model declared) — est: 5min (depends E1.F3.T5) (P)
 
 ### Feature E1.F4: Three merged human gates
 
@@ -208,7 +208,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F3.T4 [Backend] | ✅ done | 10 | 6 | 0 |  |
 | E1.F3.T5 [Backend] | ✅ done | 10 | 7 | 0 | docs/karvey.html counts (32/18) left for the release docs task |
 | E1.F3.T6 [Backend] | ✅ done | 8 | 6 | 0 |  |
-| E1.F3.T7 [Test] | ⬜ todo | 5 | — | — |  |
+| E1.F3.T7 [Test] | ✅ done | 5 | 3 | 0 |  |
 | E1.F4.T1 [Backend] | ⬜ todo | 15 | — | — |  |
 | E1.F4.T2 [Backend] | ⬜ todo | 6 | — | — |  |
 | E1.F4.T3 [Backend] | ⬜ todo | 15 | — | — |  |
