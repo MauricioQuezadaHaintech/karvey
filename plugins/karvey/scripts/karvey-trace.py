@@ -2,6 +2,7 @@
 """karvey-trace.py — requirement → task → commit → test traceability of a change (architecture §1.12 C-14).
 
     karvey-trace.py <change> [--base REF] [--write] [--check] [--root DIR] [--json]
+    karvey-trace.py <change> --wbs [--root DIR] [--json]
 
 - **Requirements**: the ``REQ-…-NNN`` headings of ``requirements.md`` and the ADDED / MODIFIED ids of
   ``spec-delta.md``.
@@ -23,6 +24,10 @@
 - ``--check`` is the coverage gate (REQ-W2-062): every requirement needs a green test (last result ``pass``) or
   a ``manual`` exception. Its mode is ``coverage.requirements`` (warn in 3.13): one ``checks.jsonl`` hit per
   uncovered requirement; ``blocking`` exits 1.
+
+- ``--wbs`` (wave3 §1.19, REQ-W3-043): every task of ``tasks.md`` under exactly one ``## Feature E{n}.F{n}`` (or
+  the Epic items ``## Epic item E{n}.QA`` / ``E{n}.DEPLOY``) whose id it carries; a requirement whose tasks span two
+  Features needs a ``Split:`` line in the later Feature. Issues are reported in the ``wbs.split`` mode.
 
 Exit: 0 · 1 coverage gate refused (blocking) · 2 usage · 4 not found. Python >= 3.9, stdlib only.
 """
@@ -430,12 +435,97 @@ def check(root, res, project=None):
             "missing": missing, "hits": hits, "warning": m["warning"]}
 
 
+# --------------------------------------------------------------------------- WBS (wave3 §1.19, REQ-W3-043)
+_WBS_SECTION = re.compile(r"^##\s+(?:Feature\s+(E\d+\.F\d+)\b|Epic item\s+(E\d+\.(?:QA|DEPLOY))\b)", re.I)
+_WBS_TASK = re.compile(r"^###\s+(E\d+\.(?:F\d+|QA|DEPLOY))\.T\d+\b")
+
+
+def wbs(text):
+    """``{tasks, features, issues}`` of a ``tasks.md``: every task under exactly one Feature (or the Epic items
+    ``E{n}.QA`` / ``E{n}.DEPLOY``) whose id it carries; a requirement whose tasks span two Features needs a
+    ``Split:`` line (naming it, or naming none) in the later Feature."""
+    section, order, tasks, issues = None, [], {}, []
+    splits = {}
+    body_req = None
+    cur_task = None
+    for n, line in enumerate((text or "").splitlines(), 1):
+        if line.startswith("## "):
+            m = _WBS_SECTION.match(line)
+            section = (m.group(1) or m.group(2)).upper().replace(".F", ".F") if m else None
+            if section and section not in order:
+                order.append(section)
+            cur_task = None
+            continue
+        m = _WBS_TASK.match(line)
+        if m:
+            tid = line.split()[1]
+            parent = m.group(1)
+            cur_task = tid
+            if section is None:
+                issues.append("%s: outside any Feature (line %d)" % (tid, n))
+            elif section.upper() != parent.upper():
+                issues.append("%s: under %s but its id names %s (line %d)" % (tid, section, parent, n))
+            if tid in tasks:
+                issues.append("%s: listed twice (line %d)" % (tid, n))
+            tasks[tid] = {"parent": section, "reqs": []}
+            continue
+        if cur_task and re.match(r"^\*\*Requirements:\*\*", line):
+            # an id the requirement MODIFIES is another change's requirement, not one this plan places
+            tasks[cur_task]["reqs"] = REQ_ID.findall(re.sub(r"MODIFIES\s+(?:REQ-[A-Z0-9]+-\d{3}[,\s]*)+", "", line))
+        if section and re.search(r"\bSplit:", line):
+            ids = REQ_ID.findall(line)
+            splits.setdefault(section, set()).update(ids or {"*"})
+    by_req = {}
+    for tid, t in tasks.items():
+        if t["parent"] and ".F" in t["parent"]:
+            for r in t["reqs"]:
+                by_req.setdefault(r, [])
+                if t["parent"] not in by_req[r]:
+                    by_req[r].append(t["parent"])
+    for r, feats in sorted(by_req.items()):
+        if len(feats) < 2:
+            continue
+        feats = sorted(feats, key=order.index)
+        for later in feats[1:]:
+            sp = splits.get(later, set())
+            if r not in sp and "*" not in sp:
+                issues.append("%s: tasks in %s without a Split: line in %s" % (r, " and ".join(feats), later))
+    return {"tasks": len(tasks), "features": [x for x in order if ".F" in x],
+            "epic_items": [x for x in order if ".F" not in x], "issues": issues}
+
+
+def wbs_main(root, args):
+    cdir = Path(root) / pj.CHANGES_DIR / args.change
+    text = _read(cdir / "tasks.md")
+    if text is None:
+        return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue(
+            "trace.not_found", "no tasks.md for %s" % args.change)]), args.json)
+    res = wbs(text)
+    res["change"] = args.change
+    mode = modes.resolve(root=root, check_id="wbs.split")["mode"]
+    res["mode"] = mode
+    lines = ["%s: WBS — %d task(s) under %d Feature(s)%s · %d issue(s) (wbs.split: %s)" % (
+        args.change, res["tasks"], len(res["features"]),
+        (" + " + ", ".join(res["epic_items"])) if res["epic_items"] else "", len(res["issues"]), mode)]
+    lines += ["  " + i for i in res["issues"]]
+    code, warnings, errors = kl.EXIT_OK, [], []
+    for i in res["issues"]:
+        if modes.would_refuse(mode):
+            errors.append(kl.issue("trace.wbs", i))
+            code = kl.EXIT_FINDINGS
+        elif mode != "off":
+            warnings.append(kl.issue("trace.wbs", i, severity="warning"))
+    return kl.emit(kl.envelope(TOOL, code, result=res, warnings=warnings, errors=errors), args.json,
+                   human="\n".join(lines))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="karvey-trace.py", description="requirement → task → commit → test")
     ap.add_argument("change")
     ap.add_argument("--base", help="default origin/{branch_flow.production}")
     ap.add_argument("--write", action="store_true", help="render changes/{id}/traceability.md")
     ap.add_argument("--check", action="store_true", help="coverage gate (coverage.requirements mode)")
+    ap.add_argument("--wbs", action="store_true", help="the work breakdown of tasks.md (REQ-W3-043)")
     ap.add_argument("--root")
     ap.add_argument("--json", action="store_true")
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -450,6 +540,8 @@ def main(argv=None):
     try:
         if root is None:
             raise NotFound("not a Karvey project (no docs/spec)")
+        if args.wbs:
+            return wbs_main(root, args)
         res = build(root, args.change, args.base)
     except NotFound as exc:
         return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue("trace.not_found", str(exc))]), args.json)
