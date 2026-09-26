@@ -55,4 +55,4 @@ closed cleanly.
 ## Credentials
 
 Tracker credentials come from `.connections.json` (never committed), env vars or a vault — see
-`management-adapters.md` (ClickUp: `clickup-protocol.md`).
+`management-adapters.md` and the tool's adapter.

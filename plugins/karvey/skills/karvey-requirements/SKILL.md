@@ -165,7 +165,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" approve "{change-id}" re
 
 Resolve the tool with `karvey-config.py resolve management` (`external: true` → tracker; otherwise Step 8B) and read the Epic id from the tracker-ids block of `spec.json` (`clickup.epic_id`, historical key for every tool).
 Create one Feature per functional area, found by its natural key first so a re-run does not duplicate it: `create_feature(epic, area)`
-(skip the level if `management.hierarchy` has no feature level; Jira/ADO: issue/work item of type Feature, Linear: sub-issue or project milestone, GitHub Projects: issue added to the project, spreadsheet: a `feature` row).
+(skip the level if `management.hierarchy` has no feature level; the item type per tool is in `../karvey/rules/adapters/{tool}.md`).
 
 Feature description format:
 ```
@@ -188,7 +188,7 @@ Tasks: (pending — karvey-tasks)
 Estimated time: (pending)
 ```
 
-Link Epic ← Feature (parent/child or dependency, per tool; ClickUp detail in `../karvey/rules/clickup-protocol.md`). Store the ids in `spec.json:clickup.feature_ids`.
+Link Epic ← Feature (parent/child, or the parent field when the tool has none — `../karvey/rules/adapters/{tool}.md`). Store the ids in `spec.json:clickup.feature_ids`.
 
 ### Step 8B — Update PLAN.md (Markdown)
 

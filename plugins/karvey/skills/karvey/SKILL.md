@@ -142,7 +142,7 @@ Pre-spec interrogation + "10-star product" reframe (optional). Produces a synthe
 
 ### PHASE 1: /karvey-init
 Creates/reads `docs/spec/project.json` (git, cloud, IaC, knowledge_sync, targets, repos, spec_repo, branch_flow, enforcement) plus the **team settings** asked once — `notifications` (channel) and `management` (tool + status map); `/karvey-init --settings` re-runs only that step. Captures the **goal**. Generates `change-id`, `prd.md`, `spec.json`. Epic in the team's tracker or `PLAN.md`.
-**Rules:** `project-config.md`, `management-adapters.md`, `notifications.md`, `clickup-protocol.md`, `living-specs.md`, `knowledge-sync.md`, `enforcement.md`
+**Rules:** `project-config.md`, `management-adapters.md`, `notifications.md`, `adapters/{tool}.md`, `living-specs.md`, `knowledge-sync.md`, `enforcement.md`
 
 ### PHASE 2: /karvey-requirements
 EARS requirements, each one **traced to a section of the PRD**. `requirements.md`, `spec-delta.md`.
@@ -164,7 +164,7 @@ IaC (Terraform/Bicep/Pulumi) + CI/CD pipelines (GitHub Actions/Azure Pipelines),
 
 ### PHASE 7: /karvey-tasks
 10–30 min tasks, `E{n}.F{n}.T{n} [DB/Backend/Frontend/Infra]`. Reads `architecture.md` + `infra.md`. `tasks.md`.
-**Rules:** `management-adapters.md`, `clickup-protocol.md`
+**Rules:** `management-adapters.md`, `adapters/{tool}.md`
 
 ### PHASE 8: /karvey-impl
 Executes tasks on `feature/{change-id}` (never dev/master). One CHANGELOG `[Unreleased]` line per commit (human + AI model + why); the version is bumped once, at the release.
@@ -226,7 +226,7 @@ The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incid
 | `rules/state-machine.md` | every phase skill (via `karvey-state.py`), orchestrator |
 | `rules/management-adapters.md` | init, requirements, tasks, impl, qa, deploy, archive, iterate, context, phase-close |
 | `rules/notifications.md` | init, qa, deploy, iterate |
-| `rules/clickup-protocol.md` | init, tasks, impl, qa, deploy, archive (ClickUp adapter + estimation) |
+| `rules/adapters/{tool}.md` | init, requirements, tasks, impl, qa, deploy, archive (one tracker's calls, loaded alone) |
 | `rules/ears-format.md` | requirements |
 | `rules/security-tiers.md` | requirements, architecture, infra, qa |
 | `rules/living-specs.md` | init, requirements, archive |

@@ -1,8 +1,19 @@
-# ClickUp Protocol — Karvey Method
+# Tracker adapter: ClickUp
 
-> This is the **ClickUp adapter** of `management-adapters.md` (used when `project.json:management.tool = clickup`).
-> Other trackers (Jira, Linear, Azure Boards, GitHub Projects, spreadsheet, Markdown) are described there;
-> the estimation rules below apply to every tool.
+Loaded only when `karvey-config.py resolve management` returns `tool: clickup`. The logical operations, states,
+natural keys, outbox, work breakdown, cascade and estimation are tool-neutral and live in the management
+adapters rule[^r-ma]; this file holds only how ClickUp does them.
+
+<!-- karvey:generated load-lists:adapter-used-by -->
+<!-- /karvey:generated load-lists:adapter-used-by -->
+
+| Operation | ClickUp | log_time |
+|---|---|---|
+| `create_epic` / `create_feature` / `create_task` | `clickup_create_task` (MCP) with `task_type` Epic / Feature, or REST | — |
+| `set_status` | `clickup_update_task(id, status=…)` | — |
+| `comment` | `clickup_create_task_comment` | — |
+| `log_time` | time entry: start/stop tracking, or `POST /task/{id}/time` | time entry |
+| estimate | `time_estimate` via REST only (the MCP does not save it), written once | — |
 
 ## Credentials — `.connections.json`
 
@@ -130,43 +141,34 @@ curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
 | 30min | 1,800,000 |
 | 60min | 3,600,000 |
 
-## Estimation — AI times, in minutes (not hours)
+## Creating a change's tasks (`karvey-tasks` Step 6A)
 
-> **Estimates reflect AI execution time + human review, expressed in MINUTES — not human coding hours.**
-> An AI develops a whole 30-SP API in ~15 min; a single endpoint in ~30 s. The real bottleneck is human
-> review and the cross-layer dependencies (BD → Backend → Frontend), not the AI.
-
-- **A task is estimated in minutes. Typical task: 10–30 min. Cap: ~60 min → if it exceeds, split it.**
-- The legacy "6-hour rule" assumed *human* coding time; under AI-driven development the effective cap is **~60 min**.
-- Splitting keeps progress traceable, commits atomic/reviewable, and surfaces blockers early.
-
-| Work type | AI dev | + Human review | **Estimate** |
-|---|---|---|---|
-| SP simple (basic CRUD) | ~1min | 5min | **10min** |
-| SP with business logic | 2–3min | 5–10min | **15min** |
-| SP complex + new table | 3–5min | 10min | **20min** |
-| Endpoint simple (calls SP, returns) | ~30s | 5min | **10min** |
-| Endpoint with logic (validation, integration) | 1–2min | 5–10min | **15min** |
-| Complex service (queue, external integration) | 5–10min | 10–15min | **25–30min** |
-| UI simple form/component | 2–3min | 10min | **20min** |
-| UI complex (state, preview, drag&drop) | 5–10min | 10–15min | **25–30min** |
-| Parser / data processing | 5–10min | 10min | **25min** |
-| Test plan + run with evidence | 5–10min | 5min | **15min** |
-
-**Aggregation:** Feature = sum of its tasks (typ. 1–3 h) · Epic = sum of its features (typ. 3–8 h). A whole API
-can be one Epic (~15 min–2 h of pure AI, ~1 day with review). Testing is included in "AI dev" (the AI writes
-and runs tests as part of development).
+For each task, after the find-by-key search:
+```
+clickup_create_task
+  name: "E{n}.F{n}.T{n} [Layer] {Description}"
+  list_id: "{location}"
+  tags: ["{client}"]
+  description: (the task description format of karvey-tasks)
+  priority: "normal"
+  start_date: "YYYY-MM-DD"
+  due_date: "YYYY-MM-DD"
+```
+Immediately after creating each task: `clickup_add_tag_to_task(task_id, "{client}")`, then the estimate through
+REST (`time_estimate` = minutes × 60,000, written once, never overwritten with an actual) and the dependencies
+through REST (task B waits for task A: `POST /task/{B_ID}/dependency` with `{"depends_on":"{A_ID}"}`). Add the
+tasks to the active sprint list when the team uses one (`POST /list/{SPRINT_LIST_ID}/task/{TASK_ID}`).
 
 ## Status flow
 
 ClickUp statuses are the **team's** — mapped in `project.json:management.statuses` to the logical states
-`todo | in_progress | review | done | blocked` (see `management-adapters.md`). HainTech example:
+`todo | in_progress | review | done | blocked`. An example flow a team might declare:
 ```
-to do → in progress → listo! para pap → complete
+to do → in progress → ready for review → complete
 ```
 Below, `{status:in_progress}` / `{status:review}` mean "the ClickUp status the team mapped to that logical state".
 
-> **Mandatory, not optional.** Status changes per task; the comment and the cascade run per Feature and at every phase close: the `phase-close.md` ritual — a numbered step, not a "should". Tasks left stale (work done but ClickUp not moved) are a process defect. See `phase-close.md`.
+> **Mandatory, not optional.** Status changes per task; the comment and the cascade run per Feature and at every phase close (the phase-close ritual[^r-pc]) — a numbered step, not a "should". Tasks left stale (work done but ClickUp not moved) are a process defect.
 
 ### When starting a task
 ```
@@ -180,19 +182,19 @@ clickup_stop_time_tracking()                              # the actual, as a tim
 clickup_update_task(task_id, status="{status:review}")   # set_status(task, review)
 ```
 When the last task of a Feature closes: one summary comment on the Feature (what was done · files · result)
-and the cascade (`phase-close.md`).
+and the cascade (the phase-close ritual[^r-pc]).
 
 ### Status cascade
-The one cascade is defined in `management-adapters.md` → *The cascade*; ClickUp applies it with
+The one cascade is defined in the management adapters rule[^r-ma] → *The cascade*; ClickUp applies it with
 `clickup_update_task(<feature or epic id>, status=…)`.
 
 ### Phase-level status (not just leaf tasks)
 
-The pipeline phases are a **checklist of the Epic** (a ClickUp checklist on the Epic task, one item per phase), never Features — Features are the change's functional areas (`management-adapters.md` → *One work breakdown*). Closing a phase ticks its item, so the board reflects pipeline progress (`requirements → … → deploy`), not only leaf impl tasks. QA and deploy items are the subtasks `E{n}.QA` and `E{n}.DEPLOY` of the Epic. Run this at every phase close, per `phase-close.md`.
+The pipeline phases are a **checklist of the Epic** (a ClickUp checklist on the Epic task, one item per phase), never Features — Features are the change's functional areas (*One work breakdown*[^r-ma]). Closing a phase ticks its item, so the board reflects pipeline progress (`requirements → … → deploy`), not only leaf impl tasks. QA and deploy items are the subtasks `E{n}.QA` and `E{n}.DEPLOY` of the Epic. Run this at every phase close[^r-pc].
 
 ### Incident & backlog mirroring
-- A `BUG-NN` (see `incident-tracking.md`) created during test/qa is mirrored to a ClickUp task; the `BUG-NN` records the task id and vice-versa.
-- An `emergent` finding goes to the ClickUp backlog list (`backlog_list_id`) and to `docs/spec/backlog.md` (see `backlog.md`). Status is kept in sync at phase close.
+- A `BUG-NN`[^r-inc] created during test/qa is mirrored to a ClickUp task; the `BUG-NN` records the task id and vice-versa.
+- An `emergent` finding goes to the ClickUp backlog list (`backlog_list_id`) and to `docs/spec/backlog.md`[^r-bl]. Status is kept in sync at phase close.
 
 ## Backlogs per project
 
@@ -216,3 +218,8 @@ clickup_get_list
   list_name: "Sprint XX"
 ```
 Find it in the workspace's sprints folder (e.g. "Dev Sprints").
+
+[^r-ma]: management-adapters.md — the tool-neutral contract; context only, not opened.
+[^r-pc]: phase-close.md — the close ritual; context only, not opened.
+[^r-inc]: incident-tracking.md — the incident tracker; context only, not opened.
+[^r-bl]: backlog.md — the backlog format; context only, not opened.

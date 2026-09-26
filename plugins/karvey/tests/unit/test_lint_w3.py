@@ -316,5 +316,27 @@ class L55(LintCase):
         self.assertFails("L-55", "contract prod-gate is not anchored in the core", file=CONTRACTS)
 
 
+class L58(LintCase):
+    """@req REQ-W3-006 — tracker API detail only in rules/adapters/."""
+    SKILL = SKILLS + "/karvey-tasks/SKILL.md"
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-58")
+
+    def test_an_adapter_may_hold_the_call(self):
+        self.t.write(SKILLS + "/karvey/rules/adapters/clickup.md",
+                     "curl -s -X PUT https://api.clickup.com/api/v2/task/{id}\n")
+        self.assertPasses("L-58")
+
+    def test_REQ_W3_006_an_api_call_in_the_tasks_skill_fails(self):
+        self.t.write(self.SKILL, "---\nname: karvey-tasks\n---\n# Tasks\n```bash\n"
+                                 "curl -s https://api.clickup.com/api/v2/task/{id}\n```\n")
+        self.assertFails("L-58", "api.clickup.com", file=self.SKILL)
+
+    def test_an_mcp_call_in_a_shared_rule_fails(self):
+        self.t.write(SKILLS + "/karvey/rules/phase-close.md", "# Close\nclickup_update_task(id, status=x)\n")
+        self.assertFails("L-58", "clickup_update_task")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -22,7 +22,7 @@
 - **`target`** — the concrete destination: a Google Chat space (`spaces/XXXX`), a Slack channel
   (`#dev-releases`), a Teams team/channel, an e-mail list, or the **name of the secret** that holds a webhook
   URL. A value containing `://` is refused: URLs and tokens never live in `project.json`
-  (`.connections.json`, an env var or a vault, as in `clickup-protocol.md`).
+  (`.connections.json`, an env var or a vault, as for the tracker).
 - **`via`** — how this session reaches it (MCP server, the team's CLI, an incoming webhook, REST). The skill
   uses what is available and **says so if it is not**.
 - **`events`** — which moments notify. Default `["qa", "deploy"]`; also `incident` and the "your turn" events

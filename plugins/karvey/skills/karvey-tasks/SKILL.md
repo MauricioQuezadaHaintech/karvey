@@ -20,7 +20,7 @@ Read:
 - `docs/spec/changes/{change-id}/requirements.md`
 - `docs/spec/changes/{change-id}/architecture.md`
 - `docs/spec/changes/{change-id}/infra.md` (absent when infra was skipped)
-- `../karvey/rules/management-adapters.md` and `../karvey/rules/clickup-protocol.md` (estimation rules for every tool; the ClickUp adapter)
+- `../karvey/rules/management-adapters.md` (estimation rules for every tool) and the adapter of the resolved tool, `../karvey/rules/adapters/{tool}.md`
 
 Preconditions (the tasks gate):
 
@@ -157,24 +157,11 @@ Do you approve the tasks to continue?
 The tracker ids come from `resolve management` (the spec override, then the project). **Find or create by natural key:**
 the key of a task is its id `E{n}.F{n}.T{n}`; search the Feature for it first and reuse the item when it exists, so a re-run
 never duplicates. For each missing task: `create_task(feature, E{n}.F{n}.T{n}, estimate_min)`, initial state `todo`, then the
-dependencies below with the tool's own mechanism (Jira issue links, Linear relations, ADO predecessor/successor links, GitHub
-"blocked by", spreadsheet `depends_on` column). A failed call goes to the outbox (`python3 "$C" outbox add "{change-id}" --op
+dependencies below with the tool's own mechanism (the adapter's dependency row). A failed call goes to the outbox (`python3 "$C" outbox add "{change-id}" --op
 create_task --key E{n}.F{n}.T{n} …`) and is retried, never dropped. Credentials from `.connections.json` (git-ignored), env
 vars or a vault — never in the repo.
 
-**ClickUp adapter example:**
-
-Credentials per `clickup-protocol.md`. For each task:
-```
-clickup_create_task
-  name: "E{n}.F{n}.T{n} [Layer] {Description}"
-  list_id: "{backlog_list_id}"
-  tags: ["{client_tag}"]
-  description: (see format)
-  priority: "normal"
-  start_date: "YYYY-MM-DD"
-  due_date: "YYYY-MM-DD"
-```
+The tool's own calls (creation, estimate, dependencies, sprint) are in `../karvey/rules/adapters/{tool}.md`.
 
 Task description format:
 ```
@@ -203,25 +190,7 @@ When finished:
 Done with the Karvey Method
 ```
 
-Immediately after creating each task:
-```
-clickup_add_tag_to_task(task_id, "{client_tag}")
-```
-
-Set the estimate via the REST API (the MCP does not save it); it is written once and never overwritten with an actual:
-```bash
-curl -s -X PUT "https://api.clickup.com/api/v2/task/{TASK_ID}" \
-  -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
-  -d '{"time_estimate": {MIN * 60000}}'
-```
-
-Create dependencies via the REST API:
-```bash
-# Task B depends on Task A: B waits for A
-curl -s -X POST "https://api.clickup.com/api/v2/task/{B_ID}/dependency" \
-  -H "Authorization: $API_KEY" -H "Content-Type: application/json" \
-  -d '{"depends_on":"{A_ID}"}'
-```
+Write the estimate once, in the tool's estimate field (`adapters/{tool}.md`); it is never overwritten with an actual.
 
 Dependencies to create (every tool):
 - Feature ← its Tasks (the Feature depends on all its Tasks finishing)
@@ -229,11 +198,7 @@ Dependencies to create (every tool):
 - [Backend] → [DB] within each Feature
 - [Frontend] → [Backend] within each Feature
 
-Check the active sprint and add the tasks (ClickUp; other tools: their sprint/iteration/cycle, if the team uses one):
-```bash
-curl -s -X POST "https://api.clickup.com/api/v2/list/{SPRINT_LIST_ID}/task/{TASK_ID}" \
-  -H "Authorization: $API_KEY" -H "Content-Type: application/json"
-```
+When the team uses a sprint, iteration or cycle (`management.sprints`), add the tasks to the active one, as the adapter says.
 
 Record the created ids in `spec.json` under `clickup.task_ids` (keyed by the natural key); these are tracker ids, not state fields.
 

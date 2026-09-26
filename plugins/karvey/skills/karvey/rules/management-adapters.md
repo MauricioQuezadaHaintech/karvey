@@ -39,7 +39,6 @@ double-quoted:
 
 ```bash
 LOC="$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get management.location --change "{change-id}" --shell)" || exit 1
-jira issue list --project "$LOC"
 ```
 
 **Tracker ids** of a change live in `spec.json:clickup` (historical name, any tool): `epic_id`,
@@ -48,13 +47,13 @@ jira issue list --project "$LOC"
 
 ## The 5 logical states
 
-| Logical | Meaning | Example — ClickUp | Example — Jira | Markdown |
-|---|---|---|---|---|
-| `todo` | planned, not started | `to do` | `To Do` | ⬜ |
-| `in_progress` | being worked on | `in progress` | `In Progress` | 🔄 |
-| `review` | implemented, awaiting validation | `listo! para pap` | `In Review` | 👀 |
-| `done` | validated / released | `complete` | `Done` | ✅ |
-| `blocked` | cannot advance | `blocked` | `Blocked` | ⛔ |
+| Logical | Meaning | Example team status | Markdown |
+|---|---|---|---|
+| `todo` | planned, not started | `To Do` | ⬜ |
+| `in_progress` | being worked on | `In Progress` | 🔄 |
+| `review` | implemented, awaiting validation | `In Review` | 👀 |
+| `done` | validated / released | `Done` | ✅ |
+| `blocked` | cannot advance | `Blocked` | ⛔ |
 
 **`awaiting-human` (🙋)** is a qualifier, not a sixth state: a `[human]` task waiting for its executor is
 `blocked` plus the `awaiting-human` tag (🙋 next to ⛔ in `PLAN.md`); only its dependents are held.
@@ -76,7 +75,7 @@ as a precondition of its gate.
 |---|---|---|
 | `create_epic(change)` | init | the unit that represents the change |
 | `create_feature(epic, functional area)` | requirements, tasks | a functional area of the change (skip if `hierarchy` has none) |
-| `create_task(feature, E{n}.F{n}.T{n}, estimate_min)` | tasks | a 10–30 min AI task (`clickup-protocol.md` → Estimation) |
+| `create_task(feature, E{n}.F{n}.T{n}, estimate_min)` | tasks | a 10–30 min AI task (*Estimation* below) |
 | `set_status(item, logical_state)` | impl, qa, deploy, archive, phase-close | resolved via `statuses` |
 | `comment(item, text)` | phase-close, qa, deploy | factual close comment |
 | `cascade(parent)` | phase-close, impl | the one cascade (below) |
@@ -110,7 +109,7 @@ The tracker holds **one** hierarchy per change, the same in every tool (REQ-W3-0
 - A tool **without parent/child** (a flat list, a spreadsheet, some boards) records the parent key in a field or
   label (`parent: E1.F2`) and the skill says so in its report.
 - Items in the 4.0 shape (a Feature per phase, QA or deploy items at the root) are **reported, never rewritten**:
-  `legacy shape` / `outside the hierarchy` (`phase-close.md`, `karvey-trace.py --wbs`).
+  `legacy shape` / `outside the hierarchy` (the phase-close ritual[^r-pc], `karvey-trace.py --wbs`).
 
 ## The cascade (the only statement of it)
 
@@ -120,18 +119,48 @@ The tracker holds **one** hierarchy per change, the same in every tool (REQ-W3-0
 - The Epic moves to `review` at impl once every Feature is at `review`; it reaches `done` **only at archive**,
   which first checks that nothing is left in `review` and lists what is.
 
-## Adapters
+## Estimation — AI times, in minutes (not hours)
 
-| Tool | How the session does it | log_time | Notes |
+> **Estimates reflect AI execution time + human review, expressed in MINUTES — not human coding hours.**
+> An AI develops a whole 30-SP API in ~15 min; a single endpoint in ~30 s. The real bottleneck is human
+> review and the cross-layer dependencies (BD → Backend → Frontend), not the AI.
+
+- **A task is estimated in minutes. Typical task: 10–30 min. Cap: ~60 min → if it exceeds, split it.**
+- The legacy "6-hour rule" assumed *human* coding time; under AI-driven development the effective cap is **~60 min**.
+- Splitting keeps progress traceable, commits atomic/reviewable, and surfaces blockers early.
+
+| Work type | AI dev | + Human review | **Estimate** |
 |---|---|---|---|
-| **ClickUp** | ClickUp MCP or REST — `clickup-protocol.md` | time entry (`POST /task/{id}/time`) | `time_estimate` only via REST |
-| **Jira** | Atlassian MCP, `jira` CLI or REST | worklog (`POST /issue/{key}/worklog`) | status change = **transition** (look up its id) |
-| **Linear** | Linear MCP or GraphQL | none | states are per team (`workflowStates`) |
-| **Azure Boards** | `az boards work-item create/update` | `Completed Work` field of the Task | Epic/Feature/Task per process template |
-| **GitHub Projects** | `gh project item-add/item-edit`, issues | none | status is a single-select field |
-| **Spreadsheet** | a file under `docs/spec/` or a Sheet via CLI/MCP | none | row: `id, level, title, layer, estimate_min, actual_ai_min, actual_review_min, status, updated_at, link` |
-| **Markdown** | `PLAN.md` in the change directory | none | the fallback; legend in the states table |
-| **Other** | ask how the team tracks work; record `location` + `via` | none unless the team names one | no programmatic path → `PLAN.md` |
+| SP simple (basic CRUD) | ~1min | 5min | **10min** |
+| SP with business logic | 2–3min | 5–10min | **15min** |
+| SP complex + new table | 3–5min | 10min | **20min** |
+| Endpoint simple (calls SP, returns) | ~30s | 5min | **10min** |
+| Endpoint with logic (validation, integration) | 1–2min | 5–10min | **15min** |
+| Complex service (queue, external integration) | 5–10min | 10–15min | **25–30min** |
+| UI simple form/component | 2–3min | 10min | **20min** |
+| UI complex (state, preview, drag&drop) | 5–10min | 10–15min | **25–30min** |
+| Parser / data processing | 5–10min | 10min | **25min** |
+| Test plan + run with evidence | 5–10min | 5min | **15min** |
+
+**Aggregation:** Feature = sum of its tasks (typ. 1–3 h) · Epic = sum of its features (typ. 3–8 h). A whole API
+can be one Epic (~15 min–2 h of pure AI, ~1 day with review). Testing is included in "AI dev" (the AI writes
+and runs tests as part of development).
+
+## Adapters (one per tool, loaded alone)
+
+The tool-specific detail — how the session reaches the tool, the operation calls, the `log_time` object and the
+tool's quirks — lives in one file per tool under `adapters/`, named after the tool: `clickup`, `jira`,
+`linear`, `azure-boards`, `github-projects`, `spreadsheet`, `markdown`. A phase skill lists the adapter
+placeholder on its `Load:` line and loads **only** the file of the tool that `resolve management` returns; no skill body carries a
+tool's API calls or examples (lint L-58).
+
+| Tool | log_time |
+|---|---|
+| ClickUp | time entry |
+| Jira | worklog |
+| Azure Boards | `Completed Work` field |
+| Linear, GitHub Projects, Spreadsheet, Markdown | none |
+| Other | ask how the team tracks work; record `location` + `via`; no programmatic path → Markdown |
 
 `log_time: none` means the tool has no time object the method writes: the actual goes to the task record's
 `actual_ai_min` / `actual_review_min` columns (`PLAN.md`, the spreadsheet row), never over the estimate.
@@ -143,3 +172,5 @@ The tracker holds **one** hierarchy per change, the same in every tool (REQ-W3-0
 3. **A failed tracker update is reported** and queued in the outbox (phase-close gate).
 4. **`PLAN.md` is always a valid fallback** when the tracker is unreachable — say so and keep going.
 5. **Subagents never write `project.json`**; settings travel as a reviewed change.
+
+[^r-pc]: phase-close.md — the close ritual; context only, not opened.

@@ -275,5 +275,24 @@ class Order(unittest.TestCase):
             shutil.rmtree(str(tmp), ignore_errors=True)
 
 
+class AdapterBinding(unittest.TestCase):
+    """@req REQ-W3-006 — a Markdown-tracker project loads only the Markdown adapter."""
+
+    def test_markdown_project_loads_only_its_adapter(self):
+        plugin = _path.SCRIPTS_DIR.parent
+        rules = plugin / "skills" / "karvey" / "rules"
+        text = "---\nname: x\n---\nLoad: _core.md, management-adapters.md, adapters/{tool}.md\n# X\n"
+        refs = loadlist.refs_of(text, rules, plugin / "skills" / "karvey-tasks", bindings={"tool": "markdown"})
+        files = loadlist.closure(refs, loadlist.graph(rules), "max")
+        adapters = [loadlist.rel(f, plugin) for f in files if f.parent.name == "adapters"]
+        self.assertEqual(adapters, ["skills/karvey/rules/adapters/markdown.md"])
+
+    def test_unbound_placeholder_takes_the_largest_adapter(self):
+        plugin = _path.SCRIPTS_DIR.parent
+        rules = plugin / "skills" / "karvey" / "rules"
+        refs = loadlist.refs_of("Load: adapters/{tool}.md\n", rules)
+        self.assertEqual(len(refs[0][0]), 7)
+
+
 if __name__ == "__main__":
     unittest.main()

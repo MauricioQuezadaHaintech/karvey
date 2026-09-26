@@ -100,14 +100,14 @@ Write the answer as flags (only what the user accepted is `true`):
 
 ### Step 4 — Management for this change
 
-Resolve the tool, never ask "ClickUp or not?":
+Resolve the tool, never ask "which tracker?":
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" resolve management --json
 ```
 
 `external: true` → the Epic goes to the resolved tool and location (Step 9A, logical operations of
-`../karvey/rules/management-adapters.md`; ClickUp detail in `../karvey/rules/clickup-protocol.md`).
+`../karvey/rules/management-adapters.md`; the tool's calls in `../karvey/rules/adapters/{tool}.md`).
 `external: false` → `PLAN.md` (Step 9B). Ask only if this change must be tracked somewhere else than the
 project default; then write the override into `spec.json:management`.
 

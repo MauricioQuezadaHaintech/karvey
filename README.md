@@ -49,13 +49,13 @@ Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 19 support sk
 | # | Skill | Produces | Key rules |
 |---|---|---|---|
 | 0 | `karvey-grill` | Pre-spec interview + "10-star" reframe → synthesis that seeds the PRD | — |
-| 1 | `karvey-init` | `project.json`, `change-id`, `prd.md`, `spec.json`, Epic in the team's configured tracker or `PLAN.md` | project-config, clickup-protocol, living-specs, enforcement |
+| 1 | `karvey-init` | `project.json`, `change-id`, `prd.md`, `spec.json`, Epic in the team's configured tracker or `PLAN.md` | project-config, management-adapters, living-specs, enforcement |
 | 2 | `karvey-requirements` | EARS `requirements.md` traced to the PRD + `spec-delta.md` | ears-format, living-specs, security-tiers |
 | 3 | `karvey-mockup` | Navigable mockup, 3–4 levels + spec↔mockup validation | targets |
 | 4 | `karvey-design-graphic` | `design-spec.md` + `design-delta.md` over `design-system.md` (contrast computed, design judge; art catalogue on request) | targets |
 | 5 | `karvey-architecture` | `architecture.md`: boundaries, security tier, diagrams, cloud; standards conformance gate | security-tiers, engineering-standards |
 | 6 | `karvey-infra` | IaC + CI/CD pipelines with infra security review → `infra.md` | project-config, deploy-workflow |
-| 7 | `karvey-tasks` | `tasks.md`: 10–30 min AI tasks `E{n}.F{n}.T{n}` with dependencies | clickup-protocol |
+| 7 | `karvey-tasks` | `tasks.md`: 10–30 min AI tasks `E{n}.F{n}.T{n}` with dependencies | management-adapters |
 | 8 | `karvey-impl` | Code on `feature/{change-id}`, per-task commit + a CHANGELOG `[Unreleased]` line | deploy-workflow, versioning, engineering-standards |
 | 9 | `karvey-test` | Unit + E2E in the real runtime → `test_evidence.md`, findings, `BUG-NN` | targets, iteration-loop, incident-tracking |
 | 10 | `karvey-qa` | 9-dimension review (security gate, standards conformance…) → `docs/spec/changes/{change-id}/qa/REVISION_PR_*.md` | changelog-policy, versioning, iteration-loop |

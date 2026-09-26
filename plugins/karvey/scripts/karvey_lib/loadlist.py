@@ -98,13 +98,20 @@ def _rules_rel(token):
     return None
 
 
-def resolve(token, rules_dir, base_dir=None):
+def bind(token, bindings=None):
+    """``token`` with its ``{name}`` placeholders replaced from ``bindings`` (e.g. ``{"tool": "markdown"}``)."""
+    for k, v in (bindings or {}).items():
+        token = token.replace("{%s}" % k, v)
+    return token
+
+
+def resolve(token, rules_dir, base_dir=None, bindings=None):
     """The files a citation token can name (sorted tuple, empty when none exists).
 
     ``…rules/x.md`` and bare ``x.md`` / ``judges/x.md`` are relative to ``rules_dir``; ``adapters/…`` too;
     ``references/…`` to ``base_dir`` (the citing skill's folder). A ``{placeholder}`` matches any name."""
     rules_dir = Path(rules_dir)
-    tok = token.strip().rstrip("?").strip("`")
+    tok = bind(token.strip().rstrip("?").strip("`"), bindings)
     rel = _rules_rel(tok)
     if rel is not None:
         base, rel_path = rules_dir, rel
@@ -121,18 +128,20 @@ def resolve(token, rules_dir, base_dir=None):
     return (p,) if p.is_file() else ()
 
 
-def refs_of(text, rules_dir, base_dir=None):
-    """``[(alternatives, conditional)]`` of a text: prose citations (unconditional) and ``Load:`` entries."""
+def refs_of(text, rules_dir, base_dir=None, bindings=None):
+    """``[(alternatives, conditional)]`` of a text: prose citations (unconditional) and ``Load:`` entries.
+
+    ``bindings`` resolves a placeholder to one value (``{"tool": "markdown"}``: only that adapter)."""
     out = {}
     for _, line in prose_lines(text):
         if LOAD_RE.match(line):
             continue
         for tok in TOKEN_RE.findall(line):
-            alts = resolve(tok, rules_dir, base_dir)
+            alts = resolve(tok, rules_dir, base_dir, bindings)
             if alts:
                 out[alts] = False
     for e in declared(text) or []:
-        alts = resolve(e, rules_dir, base_dir)
+        alts = resolve(e, rules_dir, base_dir, bindings)
         if alts:
             cond = e.endswith("?")
             out[alts] = out.get(alts, cond) and cond

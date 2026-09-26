@@ -256,7 +256,7 @@ Structure:
 
 Find or create the QA item **`E{n}.QA`** under the change's Epic — `QA Review {change-id} ({source} → {target})`, priority high; never at the root of the list (`../karvey/rules/management-adapters.md` → *One work breakdown*) — and one child per critical/high
 finding (`create_task`, state `todo`, estimate per the table below, assignee = the file's author per git log), in
-the tool `karvey-config.py resolve management` returns (only when `external: true`) — in the active sprint/iteration if the team uses one. `link(parent, REVISION_PR)`. Tool-specific calls live in the adapter (`../karvey/rules/clickup-protocol.md` for ClickUp).
+the tool `karvey-config.py resolve management` returns (only when `external: true`) — in the active sprint/iteration if the team uses one. `link(parent, REVISION_PR)`. Tool-specific calls live in the adapter (`../karvey/rules/adapters/{tool}.md`).
 
 Fix estimation:
 - Simple fix (null check, typo): 5-10min

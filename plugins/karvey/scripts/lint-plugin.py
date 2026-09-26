@@ -2318,6 +2318,25 @@ def l55_core_contracts(ctx):
             yield (reg_path, 1, "contract %s: anchor must be #contract-%s (got %r)" % (cid, cid, c.get("anchor")))
 
 
+# --------------------------------------------------------------------------- L-58 (wave3-optimization)
+TRACKER_API_RE = re.compile(r"api\.clickup\.com|\bclickup_[a-z]\w*|\bjira issue\b|\baz boards\b|\bgh project\b|"
+                            r"linear\.app|api\.linear\b|/rest/api/\d", re.I)
+
+
+@check("L-58", "Tracker-specific API calls and examples appear only in rules/adapters/{tool}.md, never in a skill "
+               "body, a skill reference or a shared rule (REQ-W3-006)", reqs=("W3-006",))
+def l58_tracker_detail_in_adapters(ctx):
+    files = list(ctx.text_files())
+    if ctx.skills_dir.is_dir():
+        files += sorted(ctx.skills_dir.glob("*/references/*.md"))
+    for path in files:
+        for n, line in enumerate(ctx.lines(path), 1):
+            m = TRACKER_API_RE.search(line)
+            if m:
+                yield (path, n, "tool-specific tracker detail %r outside rules/adapters/: move it to the tool's "
+                                "adapter" % m.group(0))
+
+
 # --------------------------------------------------------------------------- L-62 (wave3-optimization)
 @check("L-62", "A skill's Load: line names only files that exist (blocking; REQ-W3-072)", reqs=("W3-072",))
 def l62_load_entries_exist(ctx):
