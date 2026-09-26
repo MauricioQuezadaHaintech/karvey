@@ -2401,6 +2401,22 @@ def l69_portability_guide(ctx):
                 yield (guide, 1, "tool %s (allowed-tools of %s) has no entry in the portability guide" % (tool, name))
 
 
+# --------------------------------------------------------------------------- L-70 (wave3-optimization)
+OS_OPEN_RE = re.compile(r"(?:^|[\s`(:;])(open|xdg-open|start)\s+(?!-)(?:\"[^\"]+\"|'[^']+'|[^\s`)]+)"
+                        r"\.(?:html?|pdf|png|svg|md)\b|(?:^|[\s`(:;])xdg-open\b")
+
+
+@check("L-70", "Skills open a file OS-neutrally (the path, or python3 -m webbrowser <path>) — no bare open, "
+               "xdg-open or start (REQ-W3-055)", reqs=("W3-055",))
+def l70_os_neutral_open(ctx):
+    for name, path in sorted(ctx.skills().items()):
+        for n, line in enumerate(ctx.lines(path), 1):
+            m = OS_OPEN_RE.search(line)
+            if m:
+                yield (path, n, "an OS-specific file-opening command in %s: give the path, or `python3 -m webbrowser "
+                                "<path>` (stdlib on every OS)" % name)
+
+
 # --------------------------------------------------------------------------- L-65 (wave3-optimization)
 RISK_STATES = ("open", "mitigated", "accepted", "closed", "moved")
 

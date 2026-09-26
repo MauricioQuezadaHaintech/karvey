@@ -222,5 +222,23 @@ class L69(LintCase):
         self.assertFails("L-69", "tool NotebookEdit", file=GUIDE)
 
 
+
+class L70(LintCase):
+    """@req REQ-W3-055 — no OS-specific file-opening command in skills."""
+    SKILL = SKILLS + "/karvey-qa/SKILL.md"
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-70")
+
+    def test_webbrowser_passes(self):
+        self.t.append(self.SKILL, "\nOpen it: docs/x.html (or `python3 -m webbrowser docs/x.html`).\n")
+        self.assertPasses("L-70")
+
+    def test_REQ_W3_055_open_and_xdg_open_fail(self):
+        self.t.append(self.SKILL, "\nOpen with: open docs/x.html\n\nor run `xdg-open x`\n")
+        fs = self.assertFails("L-70", "OS-specific file-opening command", file=self.SKILL)
+        self.assertEqual(len(fs), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

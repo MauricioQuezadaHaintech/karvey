@@ -149,7 +149,7 @@ Replaces Step 3/4 when shotgun mode is active. Instead of a single mockup, gener
 3. **Generate a comparison board** `docs/spec/changes/{change-id}/mockup-board.html`: a self-contained page that shows the N variants side by side in `<iframe>`s (or cards with a screenshot/link to each file), each with its approach name and a 1-line summary of how it differs. The board lets you open each variant full size.
 4. Record the files as in Step 4; the board names the N variants.
 
-**Choice and taste:** offer the user to open the board (`open docs/spec/changes/{change-id}/mockup-board.html`) and ask them to choose a variant or indicate what to combine ("the navigation from #1 with the tables from #3"). On receiving the choice:
+**Choice and taste:** offer the user to open the board (`docs/spec/changes/{change-id}/mockup-board.html`, or `python3 -m webbrowser docs/spec/changes/{change-id}/mockup-board.html` — stdlib on every OS) and ask them to choose a variant or indicate what to combine ("the navigation from #1 with the tables from #3"). On receiving the choice:
 - Consolidate the chosen variant (or the combination) as `mockup.html`, which becomes the working mockup for the normal iteration cycle (Step 6).
 - **Remember the taste**: append to `docs/spec/changes/{change-id}/taste.md` which approach/elements they preferred and which they discarded, in short bullets, to guide future iterations and future shotgun runs for this change.
 
@@ -178,7 +178,7 @@ Document the validation outcome briefly in the presentation (Step 5): "Spec↔mo
 
 ### Step 5 — Present to the user
 
-**Shotgun mode:** present the comparison board instead of a single file (`open docs/spec/changes/{change-id}/mockup-board.html`), list the N variants with their approach, and ask the user to choose one or indicate what to combine. After the choice, continue with the normal iteration cycle (Step 6) on the consolidated `mockup.html`.
+**Shotgun mode:** present the comparison board instead of a single file (`docs/spec/changes/{change-id}/mockup-board.html`, or `python3 -m webbrowser <path>`), list the N variants with their approach, and ask the user to choose one or indicate what to combine. After the choice, continue with the normal iteration cycle (Step 6) on the consolidated `mockup.html`.
 
 **Normal mode:**
 
@@ -186,7 +186,7 @@ Document the validation outcome briefly in the presentation (Step 5): "Spec↔mo
 🖥️ Mockup generated — Iteration {N}
 
 File: docs/spec/changes/{change-id}/mockup.html
-Open with: open docs/spec/changes/{change-id}/mockup.html
+Open it: docs/spec/changes/{change-id}/mockup.html (or python3 -m webbrowser docs/spec/changes/{change-id}/mockup.html)
 
 Screens included ({N} total):
   Level 1 — Navigation:
