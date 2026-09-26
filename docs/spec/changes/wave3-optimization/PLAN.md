@@ -1,7 +1,7 @@
 # Plan: wave3-optimization
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend, Frontend, Infra
-**Created:** 2026-09-26 | **Status:** 🔄 impl — batch 1: 30 of 100 agent tasks done (F1, F11.T1, F3, F4, F5.T1–T4); next E1.F5.T5
+**Created:** 2026-09-26 | **Status:** 🔄 impl — batch 2: 65 of 100 agent tasks done (F1, F3..F10, F11.T1, T2, T5); next E1.F2.T1 (then F2, E1.F11.T4, F11.T3, T6, T7, F12 last)
 **Lane:** feature-ui (the sponsor page and the method page are UI: mockup and design-graphic run)
 **Release target:** 4.1.0 (minor, backward compatible with 4.0.0)
 **Flow:** trunk (`feature/wave3-optimization` → PR → `main`) · **Decisions:** D-30, D-31, D-32 (D-01..D-29 hold)
@@ -51,12 +51,12 @@ F11 rollout; **F12 last** (B-06).
 | F2 | Context budget: core, load lists, adapters, references, routing-only orchestrator, contract coverage, generated lists, one phase per session | REQ-W3-003..009, 012, 013 | R-15 · AG-04 · BL-18, BL-39 | ⬜ |
 | F3 | Cost per change with a single agent | REQ-W3-014..019, 077 | R-25 · PM-08 · D-30 · BL-28, BL-37 | ⬜ |
 | F4 | Sponsor page, report, "your turn" events, deduplication | REQ-W3-020..027, 080 | R-19 · PM-07 · D-31 · BL-22, BL-43 | ⬜ |
-| F5 | Open questions Q-NN and risk register | REQ-W3-028..034 | R-24 · PM-11 · BL-27 | ⬜ |
-| F6 | Project design system, design delta, contrast tool, design judge | REQ-W3-035..039, 076 | R-26 · DM-13, AG-12 · D-23, D-30 · BL-29 | ⬜ |
-| F7 | One work breakdown (WBS) | REQ-W3-040..043 | R-27 · PM-10 · BL-30 | ⬜ |
-| F8 | Organisation portfolio | REQ-W3-044..048, 078, 079 | R-28 · PM-14 · D-32 · BL-31, BL-40 | ⬜ |
-| F9 | Backlog ranked by WSJF, `done-direct` | REQ-W3-049..052 | R-29 · PM-15 · BL-32 | ⬜ |
-| F10 | Portability (guide, browse.via, OS/time neutrality, neutral states, loaded version, settings validation) | REQ-W3-053..060 | R-30 · AG-14 · D-32 · BL-33, BL-38 | ⬜ |
+| F5 | Open questions Q-NN and risk register | REQ-W3-028..034 | R-24 · PM-11 · BL-27 | ✅ |
+| F6 | Project design system, design delta, contrast tool, design judge | REQ-W3-035..039, 076 | R-26 · DM-13, AG-12 · D-23, D-30 · BL-29 | ✅ |
+| F7 | One work breakdown (WBS) | REQ-W3-040..043 | R-27 · PM-10 · BL-30 | ✅ |
+| F8 | Organisation portfolio | REQ-W3-044..048, 078, 079 | R-28 · PM-14 · D-32 · BL-31, BL-40 | ✅ |
+| F9 | Backlog ranked by WSJF, `done-direct` | REQ-W3-049..052 | R-29 · PM-15 · BL-32 | ✅ |
+| F10 | Portability (guide, browse.via, OS/time neutrality, neutral states, loaded version, settings validation) | REQ-W3-053..060 | R-30 · AG-14 · D-32 · BL-33, BL-38 | ✅ |
 | F11 | Rollout 4.1.0 and dogfooding | REQ-W3-061..065, 073, 074, 075 (064, 065, 073..075 change-scoped) | Ola 3 plan · D-24, D-26, D-31 | ⬜ |
 | F12 | **Last:** method page in it / ja / fr / ko, alias table | REQ-W3-066..070 | B-06 · BL-42 | ⬜ |
 
@@ -325,3 +325,4 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | 2026-09-26 | infra | skipped — no cloud resources (`cloud.provider: none`); the one CI step is an impl task (A-16) |
 | 2026-09-26 | tasks | tasks.md: 101 tasks (100 agent, 1 `[human]`), 1,059 min calibrated, critical path 242 min; REQ-W3 80/80 (`karvey-trace.py`: 0 uncovered); method-page translations last (F12); generated — awaiting the merged *how* gate |
 | 2026-09-26 | impl | Batch 1 (30 tasks): F1 ✅ (size tool, baseline `context-size-4.0.0.json` committed before any move, CI size step), E1.F11.T1 ✅ (check-modes `4.1`, 16 Wave 3 rows), F3 ✅ (effort capture/record, judge cost from the transcript, cost metrics and outliers), F4 ✅ (stakeholders, wording, leak check, sponsor model/template/CLI, `--report`, "your turn" events, sent-log, `karvey-close.py`, manual script), F5.T1–T4 (questions, dangling Q-NN, risk register, `risk` command). Deviations (no requirement changed): the size tool also got an `order` sub-command so the REQ-W3-002 order check is a command the test phase can run, committed with the baseline (T4); the sponsor page's 360/1440 px check is static CSS analysis in node:test (no browser, D-09), the rendered check is the manual script; the Wave 2 `judges.budget` schema node no longer promotes to an error under `--strict` (F-62 required it, reported now as `cost.cap_key`); `rules/judges.md` cost bullet updated with E1.F3.T6 (its text contradicted the new source rule); `dangling Q-NN` runs only once `docs/spec/questions.md` exists (this repo's log cites a Wave 1 `Q-01` kept elsewhere); the gate-close risk step is a placeholder until E1.F5.T6. Finding F-82 (L-47 never registered in Wave 2) implemented with E1.F11.T1. |
+| 2026-09-26 | impl | Batch 2 (35 tasks): F5.T5–T8 ✅ (open questions and risks in the dashboard and the session hook, risk review at the qa/release gate and in `karvey-close.py`, archive refuses an open or unrecorded risk, judges propose risks), F6 ✅ (design system and delta parsers, contrast tool, `karvey-design.py diff/apply`, design judge, design-graphic over the design system, L-66/L-67, manual script), F7 ✅ (one WBS text + L-68, `karvey-trace.py --wbs`, tracker reconciliation, manual script), F8 ✅ (first-level `client`, both spec layouts, portfolio reader and view, `--client`, dashboard command, offline proof), F9 ✅ (WSJF, `done-direct`, `--backlog`, refinement cadence), F10 ✅ (portability guide + L-69, `browse.via`, L-70, `time_zone` + L-71, neutral incident states, loaded version, settings-invalid line, L-72), E1.F11.T2 ✅ (`client_tag` → `client`), E1.F11.T5 ✅ (14 declared upgrade steps). Deviations (no requirement changed): the *what*-gate summary gained the `contrast` section (F-83, REQ-W3-039's scenario had no task); the design delta rows carry a `Scheme` column (light/dark/both) beside the architecture's `Token | Base value | New value`; `karvey-design.py apply` takes `--keep=TOKEN=current|new` for the human's answer; the incident-state mapping lives in a new `karvey_lib/incidents.py`; the gate risk review runs on the merged *release* gate (it holds qa and prod); the portfolio shows the phase id (not its wording) and its default file looks for `{ops_repo}` beside the repository first; the offline proof caught a `git` call and the view now skips the project lookup with `--file` (F-84); the session hook's bash fallback was not extended (F-85); `test-hooks.sh` and `test_schemas.py` expectations updated for the new settings line and the portfolio schema. The CI size step warns `karvey-design-graphic` grew 18.3% (median -5.5%): expected before F2's reorganisation. |
