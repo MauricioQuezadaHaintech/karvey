@@ -41,6 +41,7 @@ import importlib.util
 import json
 import os
 import re
+import shlex
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -55,6 +56,7 @@ from karvey_lib import questions as qs, risks as rsk  # noqa: E402
 from karvey_lib import portfolio as pfl  # noqa: E402
 
 TOOL = "karvey-context"
+CHANGE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 SECTIONS = ("overview", "open-work", "approvals", "enforcement", "close-report", "calibration", "convergence")
 DEFAULT_SECTIONS = SECTIONS[:-1]
 ROW_MAX = 10 * 1024
@@ -1435,8 +1437,12 @@ def portfolio_view(args, root):
         entries, problems = pfl.load(f)
     except pfl.NotRead as exc:
         raise NotFound("portfolio file %s: %s" % (f.name, exc))
-    clients = {}
+    want = (args.client or "").strip().lower()
+    clients, others = {}, set()
     for e in entries:
+        if want and e["client"].lower() != want:  # REQ-W3-078: case-insensitive, the others not even read
+            others.add(e["client"])
+            continue
         row = {"path": pfl.sanitise(e["path"], 120), "owner": e["owner"], "state": e["state"], "layout": None,
                "active": [], "waiting": [], "released": [], "cost": None}
         if e["state"] == "ok":
@@ -1444,19 +1450,30 @@ def portfolio_view(args, root):
                 row.update(pfl.read_repo(e["abs"], frm, to, as_of))
             except pfl.NotRead as exc:
                 row["state"] = pfl.NOT_KARVEY if str(exc) == pfl.NOT_KARVEY else "not read: %s" % exc
+            for a in row["active"]:  # REQ-W3-079: printed, never run; a foreign id is checked first (F-69)
+                rid = a.pop("id_raw", None)
+                if isinstance(rid, str) and CHANGE_ID_RE.match(rid):
+                    a["dashboard"] = "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/karvey-context.py\" --root %s --change %s" % (
+                        shlex.quote(e["abs"]), rid)
+                else:
+                    a["dashboard"] = None
+                    a["note"] = "invalid change id"
         clients.setdefault(e["client"], []).append(row)
     out = []
     for client in sorted(clients, key=str.lower):
         repos = sorted(clients[client], key=lambda r: r["path"])
-        for r in repos:
-            for a in r["active"]:
-                a.pop("id_raw", None)
         tot = {"active": sum(len(r["active"]) for r in repos), "waiting": sum(len(r["waiting"]) for r in repos),
                "released": sum(len(r["released"]) for r in repos),
                "usd": round(sum((r["cost"] or {}).get("usd", 0) for r in repos), 2)}
         out.append({"client": client, "repos": repos, "totals": tot})
-    return {"period": {"from": frm, "to": to, "as_of": as_of}, "file": f.name, "problems": problems,
-            "clients": out, "repositories": len(entries)}
+    res = {"period": {"from": frm, "to": to, "as_of": as_of}, "file": f.name, "problems": problems,
+           "clients": out, "repositories": sum(len(c["repos"]) for c in out), "client": args.client or None,
+           "note": None}
+    if want and not out:
+        res["note"] = "no repositories for client %s" % pfl.sanitise(args.client, 80)
+    elif want and others:
+        res["note"] = "other clients: not shown"
+    return res
 
 
 def render_portfolio(res):
@@ -1464,6 +1481,8 @@ def render_portfolio(res):
     L = ["== PORTFOLIO %s .. %s (as of %s) · %d repositories · %d clients ==" % (
         p["from"], p["to"], p["as_of"], res["repositories"], len(res["clients"]))]
     L += ["portfolio file: %s" % x for x in res["problems"]]
+    if res.get("note"):
+        L.append(res["note"])
     for c in res["clients"]:
         L.append("client %s" % c["client"])
         for r in c["repos"]:
@@ -1475,7 +1494,9 @@ def render_portfolio(res):
             L.append(head + ((" · %s" % r["note"]) if r.get("note") else ""))
             L += ["    active   %s · %s · lane %s · %s d (%s d in step)" % (
                 a["change"], a["phase"], a["lane"], "?" if a["age_days"] is None else a["age_days"],
-                "?" if a["in_phase_days"] is None else a["in_phase_days"]) for a in r["active"]] or \
+                "?" if a["in_phase_days"] is None else a["in_phase_days"]) + (
+                "\n             dashboard: %s" % a["dashboard"] if a.get("dashboard") else
+                "\n             %s: no dashboard command" % a.get("note", "")) for a in r["active"]] or \
                 ["    active   none"]
             for w in r["waiting"]:
                 if w["kind"] == "approval":

@@ -130,8 +130,10 @@ class View(unittest.TestCase):
         self.assertEqual([c["client"] for c in res["clients"]], ["sample-client-a", "sample-client-b"])
         a = res["clients"][0]
         repo_a = a["repos"][0]
-        self.assertEqual(repo_a["active"][0], {"change": "feat-a", "phase": "tasks", "lane": "standard",
-                                                "age_days": 13, "in_phase_days": 4})
+        act = dict(repo_a["active"][0])
+        act.pop("dashboard")
+        self.assertEqual(act, {"change": "feat-a", "phase": "tasks", "lane": "standard", "age_days": 13,
+                               "in_phase_days": 4})
         self.assertEqual([(w["kind"], w["item"]) for w in repo_a["waiting"]], [("approval", "tasks"),
                                                                                 ("question", "Q-01")])
         self.assertEqual(repo_a["waiting"][1]["flag"], "overdue")
@@ -153,6 +155,68 @@ class View(unittest.TestCase):
     def test_byte_identical_across_runs(self):
         self.assertEqual(run_view("--json")[1], run_view("--json")[1])
         self.assertEqual(run_view()[1], run_view()[1])
+
+
+class ClientAndCommand(unittest.TestCase):
+    """@req REQ-W3-078 REQ-W3-079"""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-portfolio-client-"))
+        repos = []
+        for i in range(6):
+            client = "Sample-Client-A" if i % 2 == 0 else "sample-client-b"
+            name = "repo %d" % i if i == 0 else "repo-%d" % i  # the first path has a space
+            cid = "x;rm" if i == 2 else "feat-%d" % i
+            karvey_repo(self.tmp / name, changes=[(cid, {"change_id": cid, "phase": "impl", "lane": "standard",
+                                                         "effort": [{"kind": "phase", "phase": "tasks",
+                                                                     "at": "2026-10-10T10:00:00-03:00",
+                                                                     "usd": {"value": 1.5, "quality": "exact"}}]})])
+            repos.append({"path": name, "client": client, "owner": "team"})
+        (self.tmp / "portfolio.json").write_text(json.dumps({"repos": repos}), encoding="utf-8")
+
+    def tearDown(self):
+        shutil.rmtree(str(self.tmp), ignore_errors=True)
+
+    def view(self, *argv):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = CTX.main(["--portfolio", "--file", str(self.tmp / "portfolio.json")] + PERIOD + list(argv))
+        return code, out.getvalue()
+
+    def test_REQ_W3_078_one_client_its_three_repositories_and_totals(self):
+        code, out = self.view("--client", "sample-client-a", "--json")
+        res = json.loads(out)["result"]
+        self.assertEqual(code, 0)
+        self.assertEqual([c["client"] for c in res["clients"]], ["Sample-Client-A"])
+        self.assertEqual(len(res["clients"][0]["repos"]), 3)
+        self.assertEqual(res["clients"][0]["totals"]["usd"], 4.5)
+        self.assertEqual(res["note"], "other clients: not shown")
+
+    def test_REQ_W3_078_unknown_client_exit_0_with_the_line(self):
+        code, out = self.view("--client", "sample-client-z")
+        self.assertEqual(code, 0)
+        self.assertIn("no repositories for client sample-client-z", out)
+
+    def test_REQ_W3_079_invalid_change_id_prints_no_command(self):
+        code, out = self.view("--client", "sample-client-a", "--json")
+        repos = json.loads(out)["result"]["clients"][0]["repos"]
+        bad = [a for r in repos for a in r["active"] if a["change"] == "x;rm"][0]
+        self.assertIsNone(bad["dashboard"])
+        self.assertEqual(bad["note"], "invalid change id")
+        code, text = self.view("--client", "sample-client-a")
+        self.assertIn("invalid change id: no dashboard command", text)
+        self.assertNotIn("--change x;rm", text)
+
+    def test_REQ_W3_079_a_path_with_a_space_is_quoted(self):
+        code, out = self.view("--client", "sample-client-a", "--json")
+        repos = json.loads(out)["result"]["clients"][0]["repos"]
+        cmd = [a for r in repos for a in r["active"] if a["change"] == "feat-0"][0]["dashboard"]
+        import shlex
+        argv = shlex.split(cmd)
+        self.assertEqual(argv[argv.index("--root") + 1], os.path.realpath(str(self.tmp / "repo 0")))
+        self.assertEqual(argv[-2:], ["--change", "feat-0"])
 
 
 if __name__ == "__main__":
