@@ -268,6 +268,64 @@
           },
           "at": {
             "type": "string"
+          },
+          "tokens_total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "usd_estimated": {
+            "type": "boolean"
+          },
+          "source": {
+            "enum": [
+              "runtime",
+              "agent-reported",
+              "estimate"
+            ],
+            "x-karvey-note": "runtime = read from the session transcript; agent-reported = a figure the model wrote (estimated); estimate = chars/4 over the prompt and every closed input (wave3 §1.10)"
+          }
+        }
+      }
+    },
+    "effort": {
+      "type": "array",
+      "x-karvey-note": "per-phase AI cost and review minutes, appended by karvey-state.py effort (wave3 §1.9, REQ-W3-014); judge cost stays in judge_runs (REQ-W3-016)",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "phase",
+          "at",
+          "usd",
+          "tokens",
+          "review_min"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string",
+            "x-karvey-format": "datetime-tz"
+          },
+          "session": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "usd": {
+            "$ref": "#/$defs/effort_value"
+          },
+          "tokens": {
+            "$ref": "#/$defs/effort_tokens"
+          },
+          "review_min": {
+            "$ref": "#/$defs/effort_value"
           }
         }
       }
@@ -650,6 +708,84 @@
           "$ref": "karvey:project.schema.json#/$defs/statuses"
         },
         "sprints": {
+          "type": "string"
+        }
+      }
+    },
+    "effort_value": {
+      "type": "object",
+      "required": [
+        "value",
+        "quality"
+      ],
+      "properties": {
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "quality": {
+          "enum": [
+            "exact",
+            "estimated",
+            "n/a"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "effort_tokens": {
+      "type": "object",
+      "required": [
+        "quality"
+      ],
+      "properties": {
+        "in": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "out": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cache": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "total": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "quality": {
+          "enum": [
+            "exact",
+            "estimated",
+            "n/a"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "reason": {
           "type": "string"
         }
       }
