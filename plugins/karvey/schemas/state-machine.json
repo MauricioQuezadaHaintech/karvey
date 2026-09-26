@@ -19,6 +19,7 @@
       "approval": "requirements",
       "skippable": false,
       "skill": "karvey-requirements",
+      "gate": "what",
       "produces": [
         "requirements.md",
         "spec-delta.md"
@@ -32,6 +33,7 @@
       "approval": "mockup",
       "skippable": true,
       "skill": "karvey-mockup",
+      "gate": "what",
       "produces": [
         "mockup/"
       ],
@@ -45,6 +47,7 @@
       "approval": "design_graphic",
       "skippable": true,
       "skill": "karvey-design-graphic",
+      "gate": "what",
       "produces": [
         "design-spec.md"
       ],
@@ -58,6 +61,7 @@
       "approval": "architecture",
       "skippable": false,
       "skill": "karvey-architecture",
+      "gate": "how",
       "produces": [
         "architecture.md"
       ],
@@ -71,6 +75,7 @@
       "approval": "infra",
       "skippable": true,
       "skill": "karvey-infra",
+      "gate": "how",
       "produces": [
         "infra.md"
       ],
@@ -83,6 +88,7 @@
       "approval": "tasks",
       "skippable": false,
       "skill": "karvey-tasks",
+      "gate": "how",
       "produces": [
         "tasks.md"
       ],
@@ -116,6 +122,7 @@
       "approval": "qa",
       "skippable": false,
       "skill": "karvey-qa",
+      "gate": "release",
       "produces": [
         "qa/REVISION_PR_*.md"
       ]
@@ -133,7 +140,8 @@
       "id": "deployed",
       "approval": "prod",
       "skippable": false,
-      "skill": "karvey-deploy"
+      "skill": "karvey-deploy",
+      "gate": "release"
     },
     {
       "id": "archived",

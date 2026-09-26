@@ -1223,9 +1223,12 @@ def cmd_generated(args, root):
         now = now_iso()
         if not cur.get("generated_at"):
             cur["generated_at"] = now  # first time only: the approval wait starts here (REQ-W2-001)
+        if getattr(args, "imported", False):
+            cur["imported"] = True  # brought in by karvey-import: its approval needs a human marker (REQ-W2-080)
         ap[key] = cur
         data["updated_at"] = now
-        return {"change": args.change, "approval": key, "generated": True, "generated_at": cur["generated_at"]}
+        return {"change": args.change, "approval": key, "generated": True, "generated_at": cur["generated_at"],
+                "imported": bool(cur.get("imported"))}
 
     path, res, changed = transact(root, args.change, mutate)
     res["file"] = rel(root, path)
@@ -1465,15 +1468,10 @@ def cmd_approve(args, root):
         res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
         return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s); spec.json " \
                                         "untouched (D-03)" % (args.change, ref)
-    jmode = modes.resolve(root, "judges.mode")["mode"]
-    if jmode == "blocking":
-        fpath = change_spec_path(root, args.change).parent / "findings.md"
-        blocking = jd.open_blocking(fpath, key)
-        if blocking:
-            raise Refused("judges are blocking in this project: %s has open Critical/High judge finding(s) %s; "
-                          "route them with karvey-iterate first" % (key, ", ".join(blocking)),
-                          code="state.judge_blocking", result={"findings": blocking})
+    refuse_judge_blocking(root, args.change, [key])
     marker, scope, _ = approval.find_valid(root, args.change, kinds=("plan", "prod"), ttl_min=reviewed_ttl(root))
+    _, loaded = load_change(root, args.change)
+    refuse_imported_without_marker(loaded.data, [key], marker, args.role)
     warnings = []
     if marker is None:
         warnings.append(kl.issue("state.no_marker", "no valid approval marker for %s: recorded with "
@@ -1483,13 +1481,7 @@ def cmd_approve(args, root):
 
     def mutate(data):
         aps = _approvals(data)
-        old = aps.get(key) if isinstance(aps.get(key), dict) else {}
-        rec = {"generated": old.get("generated", True) if isinstance(old.get("generated"), bool) else True,
-               "approved": True, "by": by, "role": args.role, "date": date, "ref": ref, "evidence": ev}
-        for k in ("generated_at", "imported"):
-            if k in old:
-                rec[k] = old[k]
-        aps[key] = rec
+        aps[key] = approval_record(aps.get(key), by, args.role, date, ref, ev)
         append_outcome(data, {"outcome": "approved", "kind": "gate", "gate": "phase", "phases": [key],
                               "by": by, "role": args.role, "ref": ref, "at": date})
         data["updated_at"] = now_iso()
@@ -1499,6 +1491,41 @@ def cmd_approve(args, root):
     res["file"] = rel(root, path)
     return kl.EXIT_OK, res, [], warnings, "%s: approvals.%s approved by %s (%s, ref %s)" % (
         args.change, key, by, args.role, ref)
+
+
+def approval_record(old, by, role, date, ref, ev):
+    """One phase's approval record; ``generated_at`` and ``imported`` are carried over, never rewritten."""
+    old = old if isinstance(old, dict) else {}
+    rec = {"generated": old.get("generated", True) if isinstance(old.get("generated"), bool) else True,
+           "approved": True, "by": by, "role": role, "date": date, "ref": ref, "evidence": ev}
+    for k in ("generated_at", "imported"):
+        if k in old:
+            rec[k] = old[k]
+    return rec
+
+
+def refuse_judge_blocking(root, change, keys):
+    """``judges.mode: blocking`` → refuse while an open Critical/High judge finding of these phases exists."""
+    if modes.resolve(root, "judges.mode")["mode"] != "blocking":
+        return
+    fpath = change_spec_path(root, change).parent / "findings.md"
+    for key in keys:
+        blocking = jd.open_blocking(fpath, key)
+        if blocking:
+            raise Refused("judges are blocking in this project: %s has open Critical/High judge finding(s) %s; "
+                          "route them with karvey-iterate first" % (key, ", ".join(blocking)),
+                          code="state.judge_blocking", result={"findings": blocking})
+
+
+def refuse_imported_without_marker(data, keys, marker, role):
+    """An imported phase (``generated --imported``) is approved only by a human with a valid approval marker,
+    even in 3.13 (REQ-W2-080): an imported artifact was never presented at this project's gate."""
+    aps = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
+    imported = [k for k in keys if isinstance(aps.get(k), dict) and aps[k].get("imported") is True]
+    if imported and (marker is None or role != "human"):
+        raise Refused("imported phase(s) %s need a human approval with a valid approval marker (the human's own "
+                      "message); %s" % (", ".join(imported), "none is valid" if marker is None
+                                        else "--role %s is not human" % role), code="state.imported_marker")
 
 
 def append_outcome(data, entry):
@@ -1762,6 +1789,90 @@ def gate_phases(gate):
     return [p["id"] for p in machine()["phases"] if p.get("gate") == gate]
 
 
+def cmd_approve_gate(args, root):
+    """``approve-gate <change> what|how|release``: one human answer approves every phase the merged gate
+    covers (REQ-W2-034, 036). One approval record per phase, one ``gate_outcomes`` entry for the gate. Prod is
+    never written here unless the Wave 1 prod path's own conditions hold (human, prod-kind marker)."""
+    _require(args, ("by", "role", "ref"))
+    if args.role not in ROLES:
+        raise Refused("--role must be human, ceo-delegate or auto", code="state.role")
+    date = _date_arg(args.date)
+    by, ref = args.by.strip(), args.ref.strip()
+    _, loaded = load_change(root, args.change)
+    data = loaded.data
+    aps = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
+    covered, passed, already, missing = [], [], [], []
+    prod_in_gate = False
+    for pid in gate_phases(args.gate):
+        key = _key_of(pid)
+        st = approval_state(data, pid)
+        if key == "prod":
+            ledger, _ = approval.read_ledger(root, args.change)
+            prod_in_gate = st != "approved" and not (isinstance(ledger, dict) and ledger.get("prod"))
+            continue
+        if st == "skipped":
+            passed.append(pid)
+            continue
+        if st == "approved":
+            already.append(key)
+            continue
+        cur = aps.get(key) if isinstance(aps.get(key), dict) else {}
+        if cur.get("generated") is not True:
+            pdef = phase_def(pid)
+            missing.append("%s (%s)" % (key, ", ".join(pdef.get("produces") or [pid])))
+            continue
+        covered.append(key)
+    if missing:
+        raise Refused("the %s gate covers phase(s) whose artifact is not generated: %s — generate them first"
+                      % (args.gate, "; ".join(missing)), code="state.gate_not_generated",
+                      result={"missing": missing})
+    pmarker = None
+    if prod_in_gate:
+        pmarker, pscope, _ = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root))
+        if pmarker is not None and args.role == "auto":
+            raise Refused("production approval is never automatic: the release gate would record prod; answer "
+                          "it as a human", code="state.auto_prod")
+    if not covered and not (pmarker is not None and args.role == "human" and PROD_REF.match(ref)):
+        raise Refused("nothing to approve at the %s gate (already approved: %s; skipped: %s)" % (
+            args.gate, ", ".join(already) or "none", ", ".join(passed) or "none"), code="state.gate_empty")
+    refuse_judge_blocking(root, args.change, covered)
+    marker, scope, _ = approval.find_valid(root, args.change, kinds=("plan", "prod"), ttl_min=reviewed_ttl(root))
+    refuse_imported_without_marker(data, covered, marker, args.role)
+    warnings = []
+    if marker is None:
+        warnings.append(kl.issue("state.no_marker", "no valid approval marker for %s: recorded with "
+                                 "evidence.marker = none (a warning in 3.13)" % args.change, severity="warning",
+                                 path="$.approvals"))
+    ev = approval.evidence(marker, scope)
+    write_prod = prod_in_gate and pmarker is not None and args.role == "human" and bool(PROD_REF.match(ref))
+    res_prod = "not in this gate"
+    if prod_in_gate:
+        res_prod = "recorded in the release ledger" if write_prod else \
+            "pending (needs the human's prod approval: a prod-kind marker and a D-NN or PR URL ref)"
+
+    def mutate(d):
+        a = _approvals(d)
+        for key in covered:
+            a[key] = approval_record(a.get(key), by, args.role, date, ref, ev)
+        if covered:
+            append_outcome(d, {"outcome": "approved", "kind": "gate", "gate": args.gate, "phases": list(covered),
+                               "by": by, "role": args.role, "ref": ref, "at": date})
+            d["updated_at"] = now_iso()
+        return {}
+
+    path, _, _ = transact(root, args.change, mutate)
+    if write_prod:  # after the spec.json write: the ledger never runs ahead of the phases it closes
+        approval.record_prod(root, args.change, {"by": by, "role": "human", "date": date, "ref": ref,
+                                                 "evidence": approval.evidence(pmarker, pscope)})
+    res = {"change": args.change, "gate": args.gate, "approved": covered, "already_approved": already,
+           "skipped": passed, "prod": res_prod, "file": rel(root, path)}
+    human = "%s: %s gate approved by %s (%s, ref %s): %s" % (args.change, args.gate, by, args.role, ref,
+                                                            ", ".join(covered) or "no phase")
+    if prod_in_gate:
+        human += "; prod %s" % res_prod
+    return kl.EXIT_OK, res, [], warnings, human
+
+
 def cmd_outcome(args, root):
     """``outcome <change> <phase|gate> changes_requested``: the human asked for changes (REQ-W2-001, 042)
     or answered a plan-rule question (``--kind plan-exception``, REQ-W2-038). The phase is not changed."""
@@ -1796,7 +1907,7 @@ def cmd_outcome(args, root):
 
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
-            "check-prod": cmd_check_prod, "outcome": cmd_outcome,
+            "check-prod": cmd_check_prod, "outcome": cmd_outcome, "approve-gate": cmd_approve_gate,
             "deploy-record": cmd_deploy_record, "lane": cmd_lane, "lane-evidence": cmd_lane_evidence,
             "lane-check": cmd_lane_check, "judge-run": cmd_judge_run}
 
@@ -1837,6 +1948,8 @@ def build_parser():
     gnr = sub.add_parser("generated", parents=[common], help="approvals.<phase>.generated = true")
     gnr.add_argument("change")
     gnr.add_argument("phase")
+    gnr.add_argument("--imported", action="store_true", help="the artifact was imported (karvey-import): its "
+                     "approval will need a human marker")
     sk = sub.add_parser("skip", parents=[common], help="record a skipped phase with its reason")
     sk.add_argument("change")
     sk.add_argument("phase")
@@ -1854,6 +1967,13 @@ def build_parser():
     apv.add_argument("--ref")
     apv.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
     apv.add_argument("--write-spec", action="store_true", help="prod only: copy the ledger/D-NN approval into spec.json")
+    ag = sub.add_parser("approve-gate", parents=[common], help="approve every phase a merged gate covers (one answer)")
+    ag.add_argument("change")
+    ag.add_argument("gate", choices=list(GATES))
+    ag.add_argument("--by")
+    ag.add_argument("--role")
+    ag.add_argument("--ref")
+    ag.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
     oc = sub.add_parser("outcome", parents=[common], help="record changes_requested at a gate (the phase stays)")
     oc.add_argument("change")
     oc.add_argument("target", metavar="PHASE|GATE")
