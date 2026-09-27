@@ -2503,6 +2503,79 @@ def l75_anchor_aliases(ctx):
                 yield page, n, "anchor alias %r -> %r: no id %s-%s in the %s block" % (old, new, lang, new, lang)
 
 
+# --------------------------------------------------------------------------- L-74 (wave3-optimization)
+PAGE_LANGS_RE = re.compile(r"var LANGS=\[([^\]]*)\]")
+PAGE_UI_RE = re.compile(r"var UI=\{(.*?)\n  \};", re.S)
+PAGE_UI_LANG_RE = re.compile(r"^\s*([a-z]{2}):\{(.*)\},?\s*$", re.M)
+PAGE_UI_KEY_RE = re.compile(r"([A-Za-z_]+):'((?:[^'\\]|\\.)*)'")
+PAGE_SECTION_RE = re.compile(r'<section class="(?:block|hero)" id="([a-z]{2})-([a-z0-9-]+)"')
+PAGE_ATTR_RE = re.compile(r'\b(placeholder|aria-label|data-tpl|title)="([^"]*)"')
+
+
+@check("L-74", "The method page carries every translatable key and section in every language it offers, none "
+               "empty (REQ-W3-067)", reqs=("W3-067",))
+def l74_page_languages(ctx):
+    page = ctx.root / "docs" / "karvey.html"
+    text = ctx.read(page)
+    if text is None:
+        return
+    m = PAGE_LANGS_RE.search(text)
+    if m is None:
+        return  # a page without the language list (the lint fixtures)
+    langs = re.findall(r"'([a-z]{2})'", m.group(1))
+    n_langs = text.count("\n", 0, m.start()) + 1
+    ui = PAGE_UI_RE.search(text)
+    if ui is not None:
+        n_ui = text.count("\n", 0, ui.start()) + 1
+        table = {l: dict(PAGE_UI_KEY_RE.findall(body)) for l, body in PAGE_UI_LANG_RE.findall(ui.group(1))}
+        keys = sorted(table.get("en", {}))
+        for lang in langs:
+            got = table.get(lang)
+            if got is None:
+                yield page, n_ui, "UI strings: language %s has no entry" % lang
+                continue
+            for k in keys:
+                if k not in got:
+                    yield page, n_ui, "UI strings: key %s missing in %s" % (k, lang)
+                elif not got[k].strip():
+                    yield page, n_ui, "UI strings: key %s is empty in %s" % (k, lang)
+    blocks = {lang: (start, end) for lang, start, end in page_blocks(text)}
+    if "en" not in blocks:
+        return
+    en_text = text[slice(*blocks["en"])]
+    sections = [s for _, s in PAGE_SECTION_RE.findall(en_text)]
+    for lang in langs:
+        if lang not in blocks:
+            yield page, n_langs, "language %s is offered but the page has no %s block" % (lang, lang)
+            continue
+        start, end = blocks[lang]
+        body = text[start:end]
+        have = {s: None for l, s in PAGE_SECTION_RE.findall(body) if l == lang}
+        for s in sections:
+            if s not in have:
+                yield page, text.count("\n", 0, start) + 1, "section %s missing in the %s block" % (s, lang)
+        for sm in PAGE_SECTION_RE.finditer(body):
+            open_end = body.find(">", sm.end()) + 1
+            nxt = body.find("</section>", open_end)
+            inner = re.sub(r"<[^>]+>", "", body[open_end:nxt if nxt != -1 else len(body)])
+            if not inner.strip():
+                yield (page, text.count("\n", 0, start + sm.start()) + 1,
+                       "section %s is empty in the %s block" % (sm.group(2), lang))
+        own = set(re.findall(r'id="([^"]+)"', body))
+        for ref in sorted(set(re.findall(r"url\(#([^)]+)\)", body))):
+            if ref not in own:
+                yield (page, text.count("\n", 0, start) + 1,
+                       "the %s block references url(#%s), which is not an id of that block" % (lang, ref))
+        attrs = PAGE_ATTR_RE.findall(body)
+        if len(attrs) != len(PAGE_ATTR_RE.findall(en_text)):
+            yield (page, text.count("\n", 0, start) + 1, "the %s block has %d translatable attributes, en has %d"
+                   % (lang, len(attrs), len(PAGE_ATTR_RE.findall(en_text))))
+        else:
+            for (a, v), (ea, ev) in zip(attrs, PAGE_ATTR_RE.findall(en_text)):
+                if ev.strip() and not v.strip():
+                    yield page, text.count("\n", 0, start) + 1, "attribute %s is empty in the %s block" % (a, lang)
+
+
 # --------------------------------------------------------------------------- L-62 (wave3-optimization)
 @check("L-62", "A skill's Load: line names only files that exist (blocking; REQ-W3-072)", reqs=("W3-072",))
 def l62_load_entries_exist(ctx):

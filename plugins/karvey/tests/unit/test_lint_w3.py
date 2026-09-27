@@ -468,5 +468,54 @@ class L75(LintCase):
         self.assertFails("L-75", "in the ko block", file=self.PAGE)
 
 
+class L74(LintCase):
+    """@req REQ-W3-067 — every translatable key and section in every offered language, none empty."""
+    PAGE = "docs/karvey.html"
+    LANGS = ("en", "es", "pt", "de", "zh", "it", "ja", "fr", "ko")
+
+    def page(self, drop_ui=None, empty_ui=None, drop_block=None, empty_section=None):
+        ui = []
+        for l in self.LANGS:
+            vals = {"title": "T-" + l, "skip": "S-" + l}
+            if (l, "skip") == drop_ui:
+                del vals["skip"]
+            if (l, "title") == empty_ui:
+                vals["title"] = ""
+            ui.append("    %s:{%s}" % (l, ",".join("%s:'%s'" % kv for kv in vals.items())))
+        blocks = "".join(
+            '<div class="lang-block" data-lang="%s" lang="%s"><section class="block" id="%s-rules">'
+            '<input placeholder="q-%s"><p>%s</p></section></div>\n'
+            % (l, l, l, l, "" if l == empty_section else "Rules " + l)
+            for l in self.LANGS if l != drop_block)
+        script = ("<script>\n  var LANGS=[%s], KEY='k';\n  var UI={\n%s\n  };\n</script>\n"
+                  % (",".join("'%s'" % l for l in self.LANGS), ",\n".join(ui)))
+        self.t.write(self.PAGE, "<html><body>\n" + blocks + "<!-- LANG-BLOCKS-END -->\n" + script + "</body></html>\n")
+
+    def test_complete_page_passes(self):
+        self.page()
+        self.assertPasses("L-74")
+
+    def test_REQ_W3_067_a_japanese_key_removed_names_key_and_language(self):
+        self.page(drop_ui=("ja", "skip"))
+        self.assertFails("L-74", "key skip missing in ja", file=self.PAGE)
+
+    def test_an_empty_value_fails(self):
+        self.page(empty_ui=("ko", "title"))
+        self.assertFails("L-74", "key title is empty in ko", file=self.PAGE)
+
+    def test_a_missing_block_fails(self):
+        self.page(drop_block="fr")
+        self.assertFails("L-74", "no fr block", file=self.PAGE)
+
+    def test_a_marker_reference_into_another_block_fails(self):
+        self.page()
+        self.t.replace(self.PAGE, '<p>Rules ja</p>', '<p>Rules ja</p><svg><path marker-end="url(#en-arr)"/></svg>')
+        self.assertFails("L-74", "the ja block references url(#en-arr)", file=self.PAGE)
+
+    def test_an_empty_section_fails(self):
+        self.page(empty_section="it")
+        self.assertFails("L-74", "section rules is empty in the it block", file=self.PAGE)
+
+
 if __name__ == "__main__":
     unittest.main()
