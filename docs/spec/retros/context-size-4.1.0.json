@@ -1,0 +1,733 @@
+{
+  "errors": [],
+  "exit": 0,
+  "ok": true,
+  "result": {
+    "date": "2026-09-27",
+    "measure": "closure_max bytes",
+    "method_version": "4.1.0",
+    "plugin_files_sha": "e094521d969ccbdc7178b069ab5a49cdb1d8dfe5a1ccacfcbd50b55da58fecf2",
+    "rows": [
+      {
+        "closure_max": {
+          "bytes": 30870,
+          "tokens_est": 7718,
+          "tokens_quality": "estimated",
+          "words": 4217
+        },
+        "closure_max_files": [
+          "skills/karvey/references/equivalences.md",
+          "skills/karvey/references/overview.md",
+          "skills/karvey/rules/_core.md"
+        ],
+        "closure_min": {
+          "bytes": 12735,
+          "tokens_est": 3184,
+          "tokens_quality": "estimated",
+          "words": 1908
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md"
+        ],
+        "direct": {
+          "bytes": 23611,
+          "tokens_est": 5903,
+          "tokens_quality": "estimated",
+          "words": 3161
+        },
+        "direct_files": [
+          "skills/karvey/references/equivalences.md",
+          "skills/karvey/references/overview.md",
+          "skills/karvey/rules/_core.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 7259,
+          "tokens_est": 1815,
+          "tokens_quality": "estimated",
+          "words": 1056
+        },
+        "phases": [],
+        "skill": "karvey"
+      },
+      {
+        "closure_max": {
+          "bytes": 45667,
+          "tokens_est": 11417,
+          "tokens_quality": "estimated",
+          "words": 6662
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/security-tiers.md"
+        ],
+        "closure_min": {
+          "bytes": 45667,
+          "tokens_est": 11417,
+          "tokens_quality": "estimated",
+          "words": 6662
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/security-tiers.md"
+        ],
+        "direct": {
+          "bytes": 29654,
+          "tokens_est": 7414,
+          "tokens_quality": "estimated",
+          "words": 4384
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/security-tiers.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 16013,
+          "tokens_est": 4004,
+          "tokens_quality": "estimated",
+          "words": 2278
+        },
+        "phases": [
+          "architecture"
+        ],
+        "skill": "karvey-architecture"
+      },
+      {
+        "closure_max": {
+          "bytes": 55415,
+          "tokens_est": 13854,
+          "tokens_quality": "estimated",
+          "words": 7805
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/risks.md"
+        ],
+        "closure_min": {
+          "bytes": 48547,
+          "tokens_est": 12137,
+          "tokens_quality": "estimated",
+          "words": 6924
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/linear.md",
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/risks.md"
+        ],
+        "direct": {
+          "bytes": 45562,
+          "tokens_est": 11391,
+          "tokens_quality": "estimated",
+          "words": 6562
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/backlog.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/knowledge-sync.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/risks.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 9853,
+          "tokens_est": 2464,
+          "tokens_quality": "estimated",
+          "words": 1243
+        },
+        "phases": [
+          "archived"
+        ],
+        "skill": "karvey-archive"
+      },
+      {
+        "closure_max": {
+          "bytes": 76156,
+          "tokens_est": 19039,
+          "tokens_quality": "estimated",
+          "words": 10988
+        },
+        "closure_max_files": [
+          "skills/karvey-deploy/references/branch-hygiene.md",
+          "skills/karvey-deploy/references/docs-only.md",
+          "skills/karvey-deploy/references/hotfix.md",
+          "skills/karvey-deploy/references/postdeploy.md",
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 64819,
+          "tokens_est": 16205,
+          "tokens_quality": "estimated",
+          "words": 9499
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/linear.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 56051,
+          "tokens_est": 14013,
+          "tokens_quality": "estimated",
+          "words": 8173
+        },
+        "direct_files": [
+          "skills/karvey-deploy/references/branch-hygiene.md",
+          "skills/karvey-deploy/references/docs-only.md",
+          "skills/karvey-deploy/references/hotfix.md",
+          "skills/karvey-deploy/references/postdeploy.md",
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 20105,
+          "tokens_est": 5027,
+          "tokens_quality": "estimated",
+          "words": 2815
+        },
+        "phases": [
+          "deploying",
+          "deployed"
+        ],
+        "skill": "karvey-deploy"
+      },
+      {
+        "closure_max": {
+          "bytes": 36777,
+          "tokens_est": 9195,
+          "tokens_quality": "estimated",
+          "words": 5230
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "closure_min": {
+          "bytes": 36777,
+          "tokens_est": 9195,
+          "tokens_quality": "estimated",
+          "words": 5230
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "direct": {
+          "bytes": 17905,
+          "tokens_est": 4477,
+          "tokens_quality": "estimated",
+          "words": 2617
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 18872,
+          "tokens_est": 4718,
+          "tokens_quality": "estimated",
+          "words": 2613
+        },
+        "phases": [
+          "design_graphic"
+        ],
+        "skill": "karvey-design-graphic"
+      },
+      {
+        "closure_max": {
+          "bytes": 57645,
+          "tokens_est": 14412,
+          "tokens_quality": "estimated",
+          "words": 8376
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/phase-close.md"
+        ],
+        "closure_min": {
+          "bytes": 50777,
+          "tokens_est": 12695,
+          "tokens_quality": "estimated",
+          "words": 7495
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/linear.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/phase-close.md"
+        ],
+        "direct": {
+          "bytes": 47360,
+          "tokens_est": 11840,
+          "tokens_quality": "estimated",
+          "words": 6978
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/changelog-policy.md",
+          "skills/karvey/rules/engineering-standards.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/phase-close.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 10285,
+          "tokens_est": 2572,
+          "tokens_quality": "estimated",
+          "words": 1398
+        },
+        "phases": [
+          "impl"
+        ],
+        "skill": "karvey-impl"
+      },
+      {
+        "closure_max": {
+          "bytes": 43720,
+          "tokens_est": 10930,
+          "tokens_quality": "estimated",
+          "words": 6128
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "closure_min": {
+          "bytes": 43720,
+          "tokens_est": 10930,
+          "tokens_quality": "estimated",
+          "words": 6128
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "direct": {
+          "bytes": 23597,
+          "tokens_est": 5900,
+          "tokens_quality": "estimated",
+          "words": 3446
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/deploy-workflow.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/security-tiers.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 20123,
+          "tokens_est": 5031,
+          "tokens_quality": "estimated",
+          "words": 2682
+        },
+        "phases": [
+          "infra"
+        ],
+        "skill": "karvey-infra"
+      },
+      {
+        "closure_max": {
+          "bytes": 60211,
+          "tokens_est": 15053,
+          "tokens_quality": "estimated",
+          "words": 8554
+        },
+        "closure_max_files": [
+          "skills/karvey-init/references/settings.md",
+          "skills/karvey-init/references/team-settings.md",
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/project-config.md"
+        ],
+        "closure_min": {
+          "bytes": 49726,
+          "tokens_est": 12432,
+          "tokens_quality": "estimated",
+          "words": 7155
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/linear.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/project-config.md"
+        ],
+        "direct": {
+          "bytes": 47124,
+          "tokens_est": 11781,
+          "tokens_quality": "estimated",
+          "words": 6867
+        },
+        "direct_files": [
+          "skills/karvey-init/references/settings.md",
+          "skills/karvey-init/references/team-settings.md",
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/lanes.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/project-config.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 13087,
+          "tokens_est": 3272,
+          "tokens_quality": "estimated",
+          "words": 1687
+        },
+        "phases": [
+          "init"
+        ],
+        "skill": "karvey-init"
+      },
+      {
+        "closure_max": {
+          "bytes": 25834,
+          "tokens_est": 6459,
+          "tokens_quality": "estimated",
+          "words": 3700
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "closure_min": {
+          "bytes": 25834,
+          "tokens_est": 6459,
+          "tokens_quality": "estimated",
+          "words": 3700
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "direct": {
+          "bytes": 12131,
+          "tokens_est": 3033,
+          "tokens_quality": "estimated",
+          "words": 1812
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 13703,
+          "tokens_est": 3426,
+          "tokens_quality": "estimated",
+          "words": 1888
+        },
+        "phases": [
+          "mockup"
+        ],
+        "skill": "karvey-mockup"
+      },
+      {
+        "closure_max": {
+          "bytes": 71620,
+          "tokens_est": 17905,
+          "tokens_quality": "estimated",
+          "words": 10325
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "closure_min": {
+          "bytes": 64752,
+          "tokens_est": 16188,
+          "tokens_quality": "estimated",
+          "words": 9444
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/linear.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "direct": {
+          "bytes": 48501,
+          "tokens_est": 12126,
+          "tokens_quality": "estimated",
+          "words": 7152
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/notifications.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/versioning.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 23119,
+          "tokens_est": 5780,
+          "tokens_quality": "estimated",
+          "words": 3173
+        },
+        "phases": [
+          "qa"
+        ],
+        "skill": "karvey-qa"
+      },
+      {
+        "closure_max": {
+          "bytes": 56290,
+          "tokens_est": 14073,
+          "tokens_quality": "estimated",
+          "words": 7866
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/ears-format.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/security-tiers.md"
+        ],
+        "closure_min": {
+          "bytes": 49422,
+          "tokens_est": 12356,
+          "tokens_quality": "estimated",
+          "words": 6985
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/linear.md",
+          "skills/karvey/rules/ears-format.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/security-tiers.md"
+        ],
+        "direct": {
+          "bytes": 46718,
+          "tokens_est": 11680,
+          "tokens_quality": "estimated",
+          "words": 6620
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/ears-format.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/judges.md",
+          "skills/karvey/rules/living-specs.md",
+          "skills/karvey/rules/management-adapters.md",
+          "skills/karvey/rules/security-tiers.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 9572,
+          "tokens_est": 2393,
+          "tokens_quality": "estimated",
+          "words": 1246
+        },
+        "phases": [
+          "requirements"
+        ],
+        "skill": "karvey-requirements"
+      },
+      {
+        "closure_max": {
+          "bytes": 40605,
+          "tokens_est": 10152,
+          "tokens_quality": "estimated",
+          "words": 5898
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md"
+        ],
+        "closure_min": {
+          "bytes": 33737,
+          "tokens_est": 8435,
+          "tokens_quality": "estimated",
+          "words": 5017
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/linear.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md"
+        ],
+        "direct": {
+          "bytes": 28848,
+          "tokens_est": 7212,
+          "tokens_quality": "estimated",
+          "words": 4264
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/adapters/clickup.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/management-adapters.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 11757,
+          "tokens_est": 2940,
+          "tokens_quality": "estimated",
+          "words": 1634
+        },
+        "phases": [
+          "tasks"
+        ],
+        "skill": "karvey-tasks"
+      },
+      {
+        "closure_max": {
+          "bytes": 38612,
+          "tokens_est": 9653,
+          "tokens_quality": "estimated",
+          "words": 5598
+        },
+        "closure_max_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "closure_min": {
+          "bytes": 38612,
+          "tokens_est": 9653,
+          "tokens_quality": "estimated",
+          "words": 5598
+        },
+        "closure_min_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "direct": {
+          "bytes": 21182,
+          "tokens_est": 5296,
+          "tokens_quality": "estimated",
+          "words": 3137
+        },
+        "direct_files": [
+          "skills/karvey/rules/_core.md",
+          "skills/karvey/rules/gates.md",
+          "skills/karvey/rules/iteration-loop.md",
+          "skills/karvey/rules/phase-close.md",
+          "skills/karvey/rules/targets.md"
+        ],
+        "has_load_line": true,
+        "own": {
+          "bytes": 17430,
+          "tokens_est": 4358,
+          "tokens_quality": "estimated",
+          "words": 2461
+        },
+        "phases": [
+          "test"
+        ],
+        "skill": "karvey-test"
+      }
+    ],
+    "session_hook": {
+      "bytes": 879,
+      "lines": 27,
+      "sha256": "70d27c3159b260afa7bd9781c0de0867b9c8fa737704cbae3c25e8d9d2f98e6e"
+    }
+  },
+  "tool": "karvey-context-budget",
+  "version": "3.11.4",
+  "warnings": []
+}
