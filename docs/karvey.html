@@ -7767,15 +7767,15 @@ claude plugin update karvey@karvey-methods</code></pre>
 
 <!-- 5. ITERATION -->
 <section class="block" id="ko-iteration" aria-labelledby="ko-t-iter">
-  <p class="eyebrow">05 · The spiral</p>
-  <h2 id="ko-t-iter">The iteration loop</h2>
-  <p class="lede"><em>Afán</em> — zeal: you do not stop until the result is truly achieved. <code>test</code>, <code>qa</code> and <code>browse</code> only <strong>observe and classify</strong> (they log to <code>findings.md</code>); <code>karvey-iterate</code> is the only one that <strong>routes</strong>.</p>
+  <p class="eyebrow">05 · 나선</p>
+  <h2 id="ko-t-iter">반복 루프</h2>
+  <p class="lede"><em>Afán</em>, 즉 열의: 결과를 진정으로 이룰 때까지 멈추지 않습니다. <code>test</code>, <code>qa</code>, <code>browse</code>는 <strong>관찰하고 분류</strong>만 하며(<code>findings.md</code>에 기록), <code>karvey-iterate</code>만이 유일하게 <strong>라우팅</strong>합니다.</p>
 
   <figure>
     <div class="figure-wrap">
       <svg viewBox="0 0 820 330" role="img" aria-labelledby="ko-loop-title ko-loop-desc">
-        <title id="ko-loop-title">Karvey iteration loop</title>
-        <desc id="ko-loop-desc">Findings from test, qa and browse land in findings.md. karvey-iterate classifies and routes them: a bug goes to the BUG-NN tracker and the impl, test, qa micro-loop; a spec-gap reopens requirements and ripples only to the affected phases; an emergent item goes to the discovery backlog and becomes a future change-id, swept at archive.</desc>
+        <title id="ko-loop-title">Karvey 반복 루프</title>
+        <desc id="ko-loop-desc">test, qa, browse에서 나온 발견 사항은 findings.md에 모입니다. karvey-iterate가 이를 분류하고 라우팅합니다. bug는 BUG-NN 트래커와 impl, test, qa 마이크로 루프로 가고, spec-gap은 요구사항을 다시 열어 영향받는 단계에만 파급되며, emergent 항목은 디스커버리 백로그로 가서 향후 change-id가 되고 아카이브 시 정리됩니다.</desc>
         <defs>
           <marker id="ko-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah"/></marker>
         </defs>
@@ -7785,49 +7785,49 @@ claude plugin update karvey@karvey-methods</code></pre>
 
         <rect x="200" y="135" width="140" height="60" rx="10" class="n-s"/>
         <text x="270" y="162" text-anchor="middle" class="tb">findings.md</text>
-        <text x="270" y="181" text-anchor="middle" class="tm">single inbox</text>
+        <text x="270" y="181" text-anchor="middle" class="tm">단일 수신함</text>
 
         <rect x="380" y="130" width="160" height="70" rx="10" class="n-o"/>
         <text x="460" y="160" text-anchor="middle" class="tb">karvey-iterate</text>
-        <text x="460" y="180" text-anchor="middle" class="tm">classifies and routes</text>
+        <text x="460" y="180" text-anchor="middle" class="tm">분류하고 라우팅</text>
 
         <path d="M160 165 H196" class="e" marker-end="url(#ko-arr)"/>
         <path d="M340 165 H376" class="e" marker-end="url(#ko-arr)"/>
 
         <rect x="600" y="20" width="210" height="80" rx="10" class="n-r"/>
         <text x="705" y="46" text-anchor="middle" class="tb">bug</text>
-        <text x="705" y="66" text-anchor="middle" class="t">BUG-NN (tracker)</text>
-        <text x="705" y="86" text-anchor="middle" class="tm">micro-loop impl → test → qa</text>
+        <text x="705" y="66" text-anchor="middle" class="t">BUG-NN(트래커)</text>
+        <text x="705" y="86" text-anchor="middle" class="tm">마이크로 루프 impl → test → qa</text>
 
         <rect x="600" y="125" width="210" height="80" rx="10" class="n-s"/>
         <text x="705" y="151" text-anchor="middle" class="tb">spec-gap</text>
-        <text x="705" y="171" text-anchor="middle" class="t">reopens requirements</text>
-        <text x="705" y="191" text-anchor="middle" class="tm">ripple only to affected phases</text>
+        <text x="705" y="171" text-anchor="middle" class="t">요구사항 재개</text>
+        <text x="705" y="191" text-anchor="middle" class="tm">영향받는 단계에만 파급</text>
 
         <rect x="600" y="230" width="210" height="80" rx="10" class="n-m"/>
         <text x="705" y="256" text-anchor="middle" class="tb">emergent</text>
-        <text x="705" y="276" text-anchor="middle" class="t">discovery backlog</text>
-        <text x="705" y="296" text-anchor="middle" class="tm">future change-id (archive)</text>
+        <text x="705" y="276" text-anchor="middle" class="t">디스커버리 백로그</text>
+        <text x="705" y="296" text-anchor="middle" class="tm">향후 change-id(아카이브)</text>
 
         <path d="M540 150 C 570 150, 570 60, 596 60" class="e" marker-end="url(#ko-arr)"/>
         <path d="M540 165 H596" class="e" marker-end="url(#ko-arr)"/>
         <path d="M540 180 C 570 180, 570 270, 596 270" class="e" marker-end="url(#ko-arr)"/>
 
         <path d="M600 40 C 300 0, 110 40, 85 131" class="e-d" marker-end="url(#ko-arr)"/>
-        <text x="300" y="30" text-anchor="middle" class="tm">re-tests the affected scope</text>
+        <text x="300" y="30" text-anchor="middle" class="tm">영향 범위를 다시 테스트</text>
       </svg>
     </div>
-    <figcaption>The 0→12 pipeline is the happy path; these three edges are reality. A change is only <strong>ready</strong> when <code>findings.md</code> has no open <code>bug</code> or <code>spec-gap</code> and every <code>emergent</code> item has been captured in the backlog.</figcaption>
+    <figcaption>0→12 파이프라인은 해피 패스이고, 이 세 경로가 현실입니다. 변경이 <strong>준비</strong>되었다고 할 수 있는 것은 <code>findings.md</code>에 미해결 <code>bug</code>나 <code>spec-gap</code>이 없고 모든 <code>emergent</code> 항목이 백로그에 기록되었을 때뿐입니다.</figcaption>
   </figure>
 
   <div class="table-wrap">
     <table>
-      <caption class="sr">Finding types and their edge</caption>
-      <thead><tr><th scope="col">Type</th><th scope="col">Litmus test</th><th scope="col">Edge</th><th scope="col">Blocks?</th></tr></thead>
+      <caption class="sr">발견 사항 유형과 경로</caption>
+      <thead><tr><th scope="col">유형</th><th scope="col">판별 기준</th><th scope="col">경로</th><th scope="col">차단 여부</th></tr></thead>
       <tbody>
-        <tr><td><span class="tag r">bug</span></td><td>“The spec is right, the code is wrong.”</td><td><code>BUG-NN</code> tracker with a state history (DETECTADO → DIAGNOSTICADO → EN FIX → RESUELTO → REABIERTO — detected, diagnosed, fixing, resolved, reopened) → impl→test→qa micro-loop.</td><td>Yes, until resolved.</td></tr>
-        <tr><td><span class="tag s">spec-gap</span></td><td>“Had we specified it properly, the implementation would have been different.”</td><td>Revision sub-cycle: <code>approvals.requirements</code> set to false, +1 <code>iteration_count</code>, an entry in <code>revision_history</code>; only the affected requirement is amended and re-approved.</td><td>Yes, until resolved.</td></tr>
-        <tr><td><span class="tag m">emergent</span></td><td>“Good idea, but it is another change.”</td><td><code>docs/spec/backlog.md</code> (source of truth) + a mirror in the tracker → a new change-id at the archive sweep.</td><td>No; it only has to be captured.</td></tr>
+        <tr><td><span class="tag r">bug</span></td><td>“스펙은 맞고 코드가 틀렸다.”</td><td>상태 이력이 있는 <code>BUG-NN</code> 트래커(DETECTADO → DIAGNOSTICADO → EN FIX → RESUELTO → REABIERTO — 감지, 진단, 수정 중, 해결, 재개) → impl→test→qa 마이크로 루프.</td><td>예, 해결될 때까지.</td></tr>
+        <tr><td><span class="tag s">spec-gap</span></td><td>“제대로 명세했다면 구현이 달라졌을 것이다.”</td><td>개정 하위 주기: <code>approvals.requirements</code>를 false로 설정, <code>iteration_count</code> +1, <code>revision_history</code>에 항목 추가. 영향받는 요구사항만 수정하고 다시 승인합니다.</td><td>예, 해결될 때까지.</td></tr>
+        <tr><td><span class="tag m">emergent</span></td><td>“좋은 아이디어지만 다른 변경이다.”</td><td><code>docs/spec/backlog.md</code>(단일 진실 공급원) + 트래커의 미러 → 아카이브 정리 시 새 change-id.</td><td>아니요, 기록만 하면 됩니다.</td></tr>
       </tbody>
     </table>
   </div>
@@ -7835,62 +7835,62 @@ claude plugin update karvey@karvey-methods</code></pre>
 
 <!-- 6. SUPPORT LAYER -->
 <section class="block" id="ko-support" aria-labelledby="ko-t-sup">
-  <p class="eyebrow">06 · At any time</p>
-  <h2 id="ko-t-sup">Support layer · 19 support skills</h2>
-  <p class="lede">They are not phases: they do not push <code>spec.json:phase</code> forward. The one exception is <code>karvey-iterate</code>, which may make the controlled <em>backward</em> transition of the revision sub-cycle. They honour the same gates and hooks.</p>
+  <p class="eyebrow">06 · 언제든지</p>
+  <h2 id="ko-t-sup">지원 레이어 · 지원 스킬 19개</h2>
+  <p class="lede">이들은 단계가 아닙니다. <code>spec.json:phase</code>를 앞으로 진행시키지 않습니다. 유일한 예외는 <code>karvey-iterate</code>로, 개정 하위 주기의 통제된 <em>역방향</em> 전이를 수행할 수 있습니다. 동일한 게이트와 훅을 따릅니다.</p>
 
   <div class="filter" id="ko-sup-filter" data-filter="sup" hidden>
-    <label for="ko-sup-q">Filter skills</label>
-    <input id="ko-sup-q" type="search" placeholder="e.g. handoff, model, PDF…" autocomplete="off">
-    <output id="ko-sup-count" for="ko-sup-q" aria-live="polite" data-tpl="{n} of {total} skills"></output>
+    <label for="ko-sup-q">스킬 필터</label>
+    <input id="ko-sup-q" type="search" placeholder="예: handoff, 모델, PDF…" autocomplete="off">
+    <output id="ko-sup-count" for="ko-sup-q" aria-live="polite" data-tpl="스킬 {total}개 중 {n}개"></output>
   </div>
 
   <div class="grid" id="ko-sup-grid" data-filter-list="sup" data-filter-items="[data-f]">
-    <article class="card" data-f><h3><code>karvey-iterate</code></h3><span class="tag o">iteration</span><p>The iteration engine: reads <code>findings.md</code>, confirms the type and routes each finding to bug, spec-gap or emergent. The only place where the loop’s logic lives.</p><p class="small muted"><b>When:</b> findings turned up, or the spec proved wrong or incomplete.</p></article>
-    <article class="card" data-f><h3><code>karvey-investigate</code></h3><span class="tag o">diagnosis</span><p>Root-cause debugging. <strong>Iron Law: no fix without investigating.</strong> Dates the symptom, asks what changed before asking what is wrong, follows the data across repos and separates the cause from latent fragility.</p><p class="small muted"><b>When:</b> something fails and nobody understands why.</p></article>
-    <article class="card" data-f><h3><code>karvey-second-opinion</code></h3><span class="tag s">review</span><p>Adversarial review with <em>another</em> model (Claude vs GPT/Codex/Gemini). Review (PASS/FAIL), Challenge and Consult modes. It complements QA’s security gate; it never approves on its own.</p><p class="small muted"><b>When:</b> before releasing something sensitive.</p></article>
-    <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">quality</span><p>A 0–10 quality score (type-check, lint, tests, dead code) with a trend, plus method readiness: skills installed and pinned inputs (<code>repo path @commit</code>) still current.</p><p class="small muted"><b>When:</b> periodic check-ups or multi-repo work.</p></article>
-    <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">review</span><p>Reviews the developer experience: walks the real onboarding, measures time-to-hello-world and finds friction and “docs that lie”. Plan and live modes.</p><p class="small muted"><b>When:</b> auditing onboarding or DX.</p></article>
-    <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">review</span><p>Cycle retrospective: velocity, test health, per-person breakdown, streaks and improvement opportunities from the commit history.</p><p class="small muted"><b>When:</b> closing a cycle (recommended at archive).</p></article>
-    <article class="card" data-f><h3><code>karvey-judges</code></h3><span class="tag s">review</span><p>Advisory judges at the cheap end of the cycle: clean-context subagents with Read/Grep/Glob only read a closed list of inputs and a rubric per lens (requirements, architecture, and QA with the fiscal); a script collects their verdicts, citations and cost into <code>findings.md</code> and <code>judge_runs</code>.</p><p class="small muted"><b>When:</b> before the gate of requirements, architecture and QA; never a substitute for the human.</p></article>
-    <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">eyes</span><p>Gives the agent eyes in the real runtime: browser (web), simulator or device (mobile), terminal (CLI). Click, screenshot, inspect; imports cookies for authenticated views.</p><p class="small muted"><b>When:</b> to see what the user sees; it also writes to <code>findings.md</code>.</p></article>
-    <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">state / handoff</span><p><code>save</code> / <code>restore</code> of the change’s checkpoint <strong>and the agent’s handoff</strong>: identity, manifest, board, checklist, measured repo state (<code>state.json</code>), standing decisions and scheduled tasks.</p><p class="small muted"><b>When:</b> rotating a session or handing work over, with one agent or several.</p></article>
-    <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">documentation</span><p>Documentation engineer: generates Diátaxis docs (tutorial, how-to, reference, explanation) from the code, updates stale docs and exports Markdown to PDF.</p><p class="small muted"><b>When:</b> after a release (recommended at archive).</p></article>
-    <article class="card" data-f><h3><code>karvey-diagram</code></h3><span class="tag">diagrams</span><p>Natural language to diagram: mermaid source + editable <code>.excalidraw</code> + rendered SVG/PNG. Works offline.</p><p class="small muted"><b>When:</b> flow, sequence, architecture or ER.</p></article>
-    <article class="card" data-f><h3><code>karvey-guard</code></h3><span class="tag r">guardrails</span><p>Installs or removes the enforcement hooks, grants a temporary plan-gate override, applies an edit-lock to a directory (<code>--freeze</code>) and runs the verification checklist (<code>--verify</code>, read-only).</p><p class="small muted"><b>When:</b> sensitive work, or to enforce the flow.</p></article>
-    <article class="card" data-f><h3><code>karvey-team</code></h3><span class="tag">team · optional</span><p>Opt-in team layer: <code>init</code>, <code>census</code>, <code>relay</code>, <code>cost</code>. Roles, manifests, boards, census, relay and <strong>spend measurement</strong>.</p><p class="small muted"><b>When:</b> only after reading <code>rules/team.md</code>; Karvey is complete with a single agent.</p></article>
-    <article class="card" data-f><h3><code>karvey-decisions</code></h3><span class="tag">team · decisions</span><p>A single numbered log (<code>D-NN</code> business, <code>C-NN</code> direction) that changes cite. <code>cross</code> checks a question against the log <strong>before</strong> declaring anything blocked.</p><p class="small muted"><b>When:</b> making, looking up or citing a decision.</p></article>
-    <article class="card" data-f><h3><code>karvey-standards</code></h3><span class="tag">standards</span><p>Extracts the team’s golden paths (db, backend, frontend…) from the <strong>real system</strong> into the team’s standards repo. Re-runnable; <code>--refresh</code> promotes recurring deviations. It never writes to the public plugin.</p><p class="small muted"><b>When:</b> bootstrapping or refreshing the standards.</p></article>
-    <article class="card" data-f><h3><code>karvey-import</code></h3><span class="tag">import</span><p>Converts Kiro specs (<code>.kiro/specs/*</code>) or gstack specs into the <code>docs/spec/</code> structure. Non-destructive towards the source; gates come in unapproved so they are revalidated.</p><p class="small muted"><b>When:</b> migrating from Kiro or gstack.</p></article>
-    <article class="card" data-f><h3><code>karvey-benchmark-models</code></h3><span class="tag">benchmark</span><p>Compares models side by side on a skill or task: latency, tokens, cost and LLM-judged quality (optional).</p><p class="small muted"><b>When:</b> deciding which model to use.</p></article>
-    <article class="card" data-f><h3><code>karvey-scrape</code></h3><span class="tag">scrape</span><p>Extracts data from a website: the first time it prototypes the extraction, then encodes it as a reusable, tested script or skill.</p><p class="small muted"><b>When:</b> extracting web data repeatably.</p></article>
-    <article class="card" data-f><h3><code>karvey-context</code></h3><span class="tag">context · read-only</span><p>Dashboard: project config, capabilities, active and archived changes, sprint, deploy queue / landing report (what is in dev, in prod, ready to release), backlog and live branches.</p><p class="small muted"><b>When:</b> at any time; it never writes.</p></article>
+    <article class="card" data-f><h3><code>karvey-iterate</code></h3><span class="tag o">반복</span><p>반복 엔진: <code>findings.md</code>를 읽고 유형을 확정한 뒤 각 발견 사항을 bug, spec-gap 또는 emergent로 라우팅합니다. 루프의 로직이 존재하는 유일한 곳입니다.</p><p class="small muted"><b>사용 시점:</b> 발견 사항이 나왔거나, 스펙이 틀렸거나 불완전한 것으로 드러났을 때.</p></article>
+    <article class="card" data-f><h3><code>karvey-investigate</code></h3><span class="tag o">진단</span><p>근본 원인 디버깅. <strong>철칙: 조사 없이 수정 없음.</strong> 증상의 시점을 특정하고, 무엇이 잘못되었는지 묻기 전에 무엇이 바뀌었는지 묻고, 저장소를 넘나들며 데이터를 추적하고, 원인과 잠재적 취약성을 구분합니다.</p><p class="small muted"><b>사용 시점:</b> 무언가가 실패하는데 아무도 이유를 모를 때.</p></article>
+    <article class="card" data-f><h3><code>karvey-second-opinion</code></h3><span class="tag s">리뷰</span><p><em>다른</em> 모델(Claude vs GPT/Codex/Gemini)을 사용한 적대적 리뷰. Review(PASS/FAIL), Challenge, Consult 모드. QA의 보안 게이트를 보완하며, 단독으로 승인하지 않습니다.</p><p class="small muted"><b>사용 시점:</b> 민감한 것을 릴리스하기 전.</p></article>
+    <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">품질</span><p>추세를 포함한 0–10 품질 점수(타입 체크, 린트, 테스트, 데드 코드)와 방법론 준비 상태: 설치된 스킬과 고정된 입력(<code>repo path @commit</code>)이 여전히 최신인지.</p><p class="small muted"><b>사용 시점:</b> 정기 점검 또는 다중 저장소 작업.</p></article>
+    <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">리뷰</span><p>개발자 경험을 리뷰합니다. 실제 온보딩을 따라가 보고, hello world까지의 시간을 측정하며, 마찰과 “거짓말하는 문서”를 찾아냅니다. 계획 모드와 라이브 모드.</p><p class="small muted"><b>사용 시점:</b> 온보딩이나 DX를 감사할 때.</p></article>
+    <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">리뷰</span><p>주기 회고: 커밋 이력에서 속도, 테스트 건강도, 인원별 분석, 연속 기록, 개선 기회를 도출합니다.</p><p class="small muted"><b>사용 시점:</b> 주기를 마무리할 때(아카이브 시 권장).</p></article>
+    <article class="card" data-f><h3><code>karvey-judges</code></h3><span class="tag s">리뷰</span><p>주기의 저렴한 쪽 끝에 배치된 자문 심사관: Read/Grep/Glob만 가진 깨끗한 컨텍스트의 서브에이전트가 닫힌 입력 목록과 관점별 루브릭(요구사항, 아키텍처, 그리고 fiscal이 포함된 QA)만 읽습니다. 스크립트가 판정, 인용, 비용을 <code>findings.md</code>와 <code>judge_runs</code>에 수집합니다.</p><p class="small muted"><b>사용 시점:</b> 요구사항, 아키텍처, QA 게이트 전. 사람을 대체하지 않습니다.</p></article>
+    <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">눈</span><p>에이전트에게 실제 런타임을 보는 눈을 줍니다: 브라우저(웹), 시뮬레이터 또는 기기(모바일), 터미널(CLI). 클릭, 스크린샷, 검사를 하며, 인증된 화면을 위해 쿠키를 가져옵니다.</p><p class="small muted"><b>사용 시점:</b> 사용자가 보는 것을 보려 할 때. <code>findings.md</code>에도 기록합니다.</p></article>
+    <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">상태 / 인수인계</span><p><code>save</code> / <code>restore</code>로 변경의 체크포인트 <strong>및 에이전트의 인수인계</strong>를 저장하고 복원합니다: 정체성, 매니페스트, 보드, 체크리스트, 측정된 저장소 상태(<code>state.json</code>), 유효한 결정 사항, 예약된 태스크.</p><p class="small muted"><b>사용 시점:</b> 세션을 교체하거나 작업을 넘길 때, 에이전트가 하나든 여럿이든.</p></article>
+    <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">문서</span><p>문서 엔지니어: 코드에서 Diátaxis 문서(튜토리얼, 하우투, 레퍼런스, 설명)를 생성하고, 오래된 문서를 갱신하며, Markdown을 PDF로 내보냅니다.</p><p class="small muted"><b>사용 시점:</b> 릴리스 후(아카이브 시 권장).</p></article>
+    <article class="card" data-f><h3><code>karvey-diagram</code></h3><span class="tag">다이어그램</span><p>자연어에서 다이어그램으로: mermaid 소스 + 편집 가능한 <code>.excalidraw</code> + 렌더링된 SVG/PNG. 오프라인에서 동작합니다.</p><p class="small muted"><b>사용 시점:</b> 흐름, 시퀀스, 아키텍처 또는 ER.</p></article>
+    <article class="card" data-f><h3><code>karvey-guard</code></h3><span class="tag r">가드레일</span><p>강제 훅을 설치하거나 제거하고, plan-gate 임시 우회를 허용하며, 디렉터리에 편집 잠금(<code>--freeze</code>)을 걸고, 검증 체크리스트(<code>--verify</code>, 읽기 전용)를 실행합니다.</p><p class="small muted"><b>사용 시점:</b> 민감한 작업이나 흐름을 강제할 때.</p></article>
+    <article class="card" data-f><h3><code>karvey-team</code></h3><span class="tag">팀 · 선택</span><p>옵트인 팀 레이어: <code>init</code>, <code>census</code>, <code>relay</code>, <code>cost</code>. 역할, 매니페스트, 보드, 인원 현황, 교대와 <strong>지출 측정</strong>.</p><p class="small muted"><b>사용 시점:</b> <code>rules/team.md</code>를 읽은 후에만. Karvey는 단일 에이전트로도 완전합니다.</p></article>
+    <article class="card" data-f><h3><code>karvey-decisions</code></h3><span class="tag">팀 · 결정</span><p>변경이 인용하는 번호가 매겨진 단일 로그(<code>D-NN</code> 비즈니스, <code>C-NN</code> 방향). <code>cross</code>는 무엇이든 차단되었다고 선언하기 <strong>전에</strong> 질문을 로그와 대조합니다.</p><p class="small muted"><b>사용 시점:</b> 결정을 내리거나, 찾거나, 인용할 때.</p></article>
+    <article class="card" data-f><h3><code>karvey-standards</code></h3><span class="tag">표준</span><p><strong>실제 시스템</strong>에서 팀의 골든 패스(db, backend, frontend…)를 추출해 팀의 표준 저장소에 넣습니다. 재실행 가능하며, <code>--refresh</code>는 반복되는 편차를 승격합니다. 공개 플러그인에는 절대 쓰지 않습니다.</p><p class="small muted"><b>사용 시점:</b> 표준을 처음 구축하거나 갱신할 때.</p></article>
+    <article class="card" data-f><h3><code>karvey-import</code></h3><span class="tag">가져오기</span><p>Kiro 스펙(<code>.kiro/specs/*</code>)이나 gstack 스펙을 <code>docs/spec/</code> 구조로 변환합니다. 원본을 훼손하지 않으며, 게이트는 미승인 상태로 들어와 다시 검증됩니다.</p><p class="small muted"><b>사용 시점:</b> Kiro나 gstack에서 이전할 때.</p></article>
+    <article class="card" data-f><h3><code>karvey-benchmark-models</code></h3><span class="tag">벤치마크</span><p>스킬이나 태스크에서 모델을 나란히 비교합니다: 지연 시간, 토큰, 비용, LLM이 평가한 품질(선택).</p><p class="small muted"><b>사용 시점:</b> 어떤 모델을 쓸지 결정할 때.</p></article>
+    <article class="card" data-f><h3><code>karvey-scrape</code></h3><span class="tag">스크래핑</span><p>웹사이트에서 데이터를 추출합니다. 처음에는 추출을 프로토타이핑하고, 이후 재사용 가능하고 테스트된 스크립트나 스킬로 코드화합니다.</p><p class="small muted"><b>사용 시점:</b> 웹 데이터를 반복적으로 추출할 때.</p></article>
+    <article class="card" data-f><h3><code>karvey-context</code></h3><span class="tag">컨텍스트 · 읽기 전용</span><p>대시보드: 프로젝트 설정, 기능, 활성 및 아카이브된 변경, 스프린트, 배포 대기열 / 반영 보고서(dev에 있는 것, prod에 있는 것, 릴리스 준비된 것), 백로그와 살아 있는 브랜치.</p><p class="small muted"><b>사용 시점:</b> 언제든지. 아무것도 쓰지 않습니다.</p></article>
   </div>
-  <p class="small muted" id="ko-sup-empty" data-filter-empty="sup" hidden>No skill matches the filter.</p>
+  <p class="small muted" id="ko-sup-empty" data-filter-empty="sup" hidden>필터와 일치하는 스킬이 없습니다.</p>
 
   <details>
-    <summary>Coming from Kiro or gstack: equivalents</summary>
+    <summary>Kiro나 gstack에서 오셨다면: 대응표</summary>
     <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Kiro / gstack</th><th scope="col">In Karvey</th></tr></thead>
+        <thead><tr><th scope="col">Kiro / gstack</th><th scope="col">Karvey에서</th></tr></thead>
         <tbody>
-          <tr><td>kiro <code>/spec</code>, <code>/kiro-spec-*</code></td><td>grill + PRD + EARS requirements (phases 0–2)</td></tr>
-          <tr><td>office-hours, plan-ceo-review</td><td>10-star reframe in <code>karvey-grill</code></td></tr>
-          <tr><td>plan-design-review, design-consultation, design-shotgun</td><td><code>karvey-design-graphic</code> + <code>karvey-mockup</code> (shotgun)</td></tr>
+          <tr><td>kiro <code>/spec</code>, <code>/kiro-spec-*</code></td><td>grill + PRD + EARS 요구사항(0–2단계)</td></tr>
+          <tr><td>office-hours, plan-ceo-review</td><td><code>karvey-grill</code>의 10점 만점 재구성</td></tr>
+          <tr><td>plan-design-review, design-consultation, design-shotgun</td><td><code>karvey-design-graphic</code> + <code>karvey-mockup</code>(shotgun)</td></tr>
           <tr><td>plan-eng-review, diagram</td><td><code>karvey-architecture</code> + <code>karvey-diagram</code></td></tr>
           <tr><td>setup-deploy</td><td><code>karvey-infra</code></td></tr>
-          <tr><td>review, cso, codex, design-review</td><td><code>karvey-qa</code> (9 dim.) + <code>karvey-second-opinion</code></td></tr>
+          <tr><td>review, cso, codex, design-review</td><td><code>karvey-qa</code>(9개 차원) + <code>karvey-second-opinion</code></td></tr>
           <tr><td>qa, browse, benchmark</td><td><code>karvey-test</code> + <code>karvey-browse</code> + <code>karvey-health</code></td></tr>
           <tr><td>ship, land-and-deploy, canary</td><td><code>karvey-deploy</code></td></tr>
           <tr><td>investigate · health · retro</td><td><code>karvey-investigate</code> · <code>karvey-health</code> · <code>karvey-retro</code></td></tr>
-          <tr><td>(no equivalent: feedback loop)</td><td><code>karvey-iterate</code></td></tr>
+          <tr><td>(대응 없음: 피드백 루프)</td><td><code>karvey-iterate</code></td></tr>
           <tr><td>context-save/restore</td><td><code>karvey-checkpoint</code></td></tr>
           <tr><td>document-generate/release, make-pdf</td><td><code>karvey-docs</code></td></tr>
-          <tr><td>learn, gbrain</td><td><code>knowledge-sync</code> (graphify / obsidian)</td></tr>
-          <tr><td>careful, freeze, guard</td><td><code>karvey-guard</code> + <code>enforcement.md</code> hooks</td></tr>
+          <tr><td>learn, gbrain</td><td><code>knowledge-sync</code>(graphify / obsidian)</td></tr>
+          <tr><td>careful, freeze, guard</td><td><code>karvey-guard</code> + <code>enforcement.md</code> 훅</td></tr>
           <tr><td>devex-review · scrape, skillify · benchmark-models</td><td><code>karvey-devex</code> · <code>karvey-scrape</code> · <code>karvey-benchmark-models</code></td></tr>
-          <tr><td>ios-qa, ios-fix, ios-design-review</td><td>generalised via <code>targets.md</code> (real runtime per target)</td></tr>
-          <tr><td>existing <code>.kiro/specs/*</code> / gstack specs</td><td><code>karvey-import --from kiro|gstack</code></td></tr>
+          <tr><td>ios-qa, ios-fix, ios-design-review</td><td><code>targets.md</code>로 일반화(타깃별 실제 런타임)</td></tr>
+          <tr><td>기존 <code>.kiro/specs/*</code> / gstack 스펙</td><td><code>karvey-import --from kiro|gstack</code></td></tr>
         </tbody>
       </table>
     </div>
@@ -7899,52 +7899,52 @@ claude plugin update karvey@karvey-methods</code></pre>
 
 <!-- 7. RULES -->
 <section class="block" id="ko-rules" aria-labelledby="ko-t-rules">
-  <p class="eyebrow">07 · Common contract</p>
-  <h2 id="ko-t-rules">Shared rules · 27</h2>
-  <p class="lede">They live in <code>plugins/karvey/skills/karvey/rules/</code>. Skills cite them instead of repeating them; local copies must be byte-for-byte identical to the canonical one.</p>
+  <p class="eyebrow">07 · 공통 계약</p>
+  <h2 id="ko-t-rules">공유 규칙 · 27개</h2>
+  <p class="lede"><code>plugins/karvey/skills/karvey/rules/</code>에 있습니다. 스킬은 규칙을 반복하지 않고 인용합니다. 로컬 사본은 정본과 바이트 단위로 동일해야 합니다.</p>
 
   <div class="filter" id="ko-rules-filter" data-filter="rules" hidden>
-    <label for="ko-rules-q">Filter rules</label>
-    <input id="ko-rules-q" type="search" placeholder="e.g. deploy, qa, states…" autocomplete="off">
-    <output id="ko-rules-count" for="ko-rules-q" aria-live="polite" data-tpl="{n} of {total} rules"></output>
+    <label for="ko-rules-q">규칙 필터</label>
+    <input id="ko-rules-q" type="search" placeholder="예: deploy, qa, 상태…" autocomplete="off">
+    <output id="ko-rules-count" for="ko-rules-q" aria-live="polite" data-tpl="규칙 {total}개 중 {n}개"></output>
   </div>
   <div class="table-wrap">
     <table id="ko-rules-table" data-filter-list="rules" data-filter-items="tbody tr">
-      <caption class="sr">Shared rules of the Karvey method</caption>
-      <thead><tr><th scope="col">Rule</th><th scope="col">What it governs</th><th scope="col">Applies in</th></tr></thead>
+      <caption class="sr">Karvey 방법론의 공유 규칙</caption>
+      <thead><tr><th scope="col">규칙</th><th scope="col">관장하는 내용</th><th scope="col">적용 위치</th></tr></thead>
       <tbody>
-        <tr><td><code>_core.md</code> <span class="tag o">4.1</span></td><td>The seven hard contracts every phase loads: the state tool, the gate and approval, the production gate, branches and commits, verification, the finding router and neutral text. Everything else is on the phase's <code>Load:</code> line.</td><td>every phase</td></tr>
-        <tr><td><code>project-config.md</code></td><td>The project’s <code>project.json</code>: git, cloud, IaC, knowledge_sync, targets, repos (1 or more, never zero), spec_repo, branch_flow, enforcement, standards and the team blocks.</td><td>init, architecture, infra, deploy, context</td></tr>
-        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>The team’s management tool and its status flow: 5 logical states, logical operations (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) and one adapter per tool. Since 4.1 each tool's adapter lives in <code>rules/adapters/</code> and a phase loads only the one the project uses.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
-        <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>The team’s notification channel (never an assumed one): target, route, events (<code>qa</code>, <code>deploy</code>, optional <code>incident</code>) and per-channel formatting.</td><td>init, qa, deploy, iterate</td></tr>
-        <tr><td><code>engineering-standards.md</code></td><td>The golden paths per layer (the third source of truth), the conformance gate in design mode and <code>deviations.md</code>; separation between the public method and the team’s standards.</td><td>init, architecture, impl, qa, archive, guard</td></tr>
-        <tr><td><code>ears-format.md</code></td><td>EARS syntax: ubiquitous, event-driven (WHEN), state-driven (WHILE), unwanted behaviour (IF/THEN), optional feature (WHERE) and complex.</td><td>requirements</td></tr>
-        <tr><td><code>security-tiers.md</code></td><td>Tiers 1–4 (public, authenticated, privileged, critical) with their minimum controls per layer.</td><td>requirements, architecture, infra, qa</td></tr>
-        <tr><td><code>living-specs.md</code></td><td>The <code>docs/spec/</code> structure, cumulative living specs per capability and the spec-delta protocol.</td><td>init, requirements, archive</td></tr>
-        <tr><td><code>knowledge-sync.md</code></td><td>A knowledge graph across iterations: Obsidian if there is an MCP; otherwise graphify as the minimum floor. Never without sync.</td><td>every phase (at close)</td></tr>
-        <tr><td><code>targets.md</code></td><td>Stack agnosticism: how each phase adapts to web, iOS, Android, desktop, CLI, API, embedded and others.</td><td>mockup, design-graphic, architecture, test, qa, deploy</td></tr>
-        <tr><td><code>deploy-workflow.md</code></td><td>The pipeline-triggered feature → dev → PR master flow, the 6-step checklist, PR gates, human OK, zero downtime and branch hygiene.</td><td>infra, impl, deploy, archive (sweep), context (live branches)</td></tr>
-        <tr><td><code>changelog-policy.md</code></td><td>Every line of code in a CHANGELOG: who, when and why, with the AI model made explicit and always an accountable human.</td><td>impl, infra, deploy, qa</td></tr>
-        <tr><td><code>versioning.md</code></td><td>Semver <code>major.minor.rev</code> per component and repo. Hard rule: never deploy without bumping the version.</td><td>impl, deploy, qa</td></tr>
-        <tr><td><code>enforcement.md</code></td><td>Opt-in <code>PreToolUse</code> hooks that actually block (git-flow-guard, plan-gate), override and rollback, per project.</td><td>init, guard</td></tr>
-        <tr><td><code>support-skills.md</code></td><td>The support-layer catalogue and its invocation rules (they do not advance the phase; they honour the gates).</td><td>support layer</td></tr>
-        <tr><td><code>iteration-loop.md</code></td><td>The three feedback edges, <code>findings.md</code>, the spec revision sub-cycle and the convergence rule.</td><td>test, qa, browse, iterate</td></tr>
-        <tr><td><code>incident-tracking.md</code></td><td>A <code>BUG-NN</code> tracker per repo (<code>docs/bugs_dev_testing.md</code>) + a global index, numbering that never resets, and a state history.</td><td>test, qa, iterate, investigate</td></tr>
-        <tr><td><code>backlog.md</code></td><td>A dual discovery backlog: Markdown as the source of truth, mirrored in the tracker; swept at archive.</td><td>iterate, archive, context</td></tr>
-        <tr><td><code>risks.md</code> <span class="tag o">4.1</span></td><td>One risk register per change: owner, probability, impact, trigger, mitigation, state and last review; reviewed at the qa and release gates.</td><td>architecture, iterate, qa, archive</td></tr>
-        <tr><td><code>phase-close.md</code></td><td>A mandatory 4-action ritual when closing every phase and task: comment, change status (+ cascade), sweep findings and backlog, update <code>spec.json</code> + knowledge.</td><td>every phase (at close), impl, iterate</td></tr>
-        <tr><td><code>verification.md</code></td><td>18 failure modes that make a green report false (a citation is not the thing cited, exit 0 is not success, a green test on code nobody calls…).</td><td>every phase (before saying “done”), guard, qa, health</td></tr>
-        <tr><td><code>multi-agent.md</code></td><td>Multi-agent and multi-repo work: parent/child changes, <code>D-NN</code> decisions, <code>@commit</code>-pinned inputs, approvals with who and where, <code>[human]</code> tasks, <code>ops</code> and <code>hotfix</code> types, docs-only PRs.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health and every gate</td></tr>
-        <tr><td><code>team.md</code> <span class="tag">optional</span></td><td>The agent-team layer: <code>team.json</code>, roles, rotation, addressing, minimal communication and measured cost.</td><td>checkpoint (handoff), team, decisions, context</td></tr>
-        <tr><td><code>gates.md</code></td><td>The one closing block of every phase skill: three merged human gates (<em>what</em>, <em>how</em>, <em>release</em>) or seven granular ones, one question per gate, <code>-y</code> = <code>role: auto</code> and never production.</td><td>every phase</td></tr>
-        <tr><td><code>judges.md</code></td><td>The judge prompt template (Read/Grep/Glob only, no edits), the output contract and the rubric per lens under <code>rules/judges/</code>.</td><td>requirements, architecture, qa</td></tr>
-        <tr><td><code>lanes.md</code></td><td>The six lanes (patch, standard, feature-ui, ops, hotfix, docs): which phases each runs or skips, objective admission criteria and the official <code>patch</code> path.</td><td>init, every phase</td></tr>
-        <tr><td><code>state-machine.md</code></td><td>The phase table as data: skill, approval key, gate, skippable, produces and reads; edges and reopen targets.</td><td>every phase</td></tr>
+        <tr><td><code>_core.md</code> <span class="tag o">4.1</span></td><td>모든 단계가 로드하는 일곱 가지 강제 계약: 상태 도구, 게이트와 승인, 프로덕션 게이트, 브랜치와 커밋, 검증, 발견 사항 라우터, 중립적 텍스트. 나머지는 모두 단계의 <code>Load:</code> 줄에 있습니다.</td><td>모든 단계</td></tr>
+        <tr><td><code>project-config.md</code></td><td>프로젝트의 <code>project.json</code>: git, cloud, IaC, knowledge_sync, targets, repos(1개 이상, 0개는 불가), spec_repo, branch_flow, enforcement, standards와 팀 블록.</td><td>init, architecture, infra, deploy, context</td></tr>
+        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>팀의 관리 도구와 상태 흐름: 논리 상태 5개, 논리 연산(<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…)과 도구별 어댑터 하나. 4.1부터 각 도구의 어댑터는 <code>rules/adapters/</code>에 있으며, 단계는 프로젝트가 사용하는 어댑터만 로드합니다.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
+        <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>팀의 알림 채널(절대 가정하지 않음): 대상, 경로, 이벤트(<code>qa</code>, <code>deploy</code>, 선택적으로 <code>incident</code>)와 채널별 서식.</td><td>init, qa, deploy, iterate</td></tr>
+        <tr><td><code>engineering-standards.md</code></td><td>레이어별 골든 패스(세 번째 진실 공급원), 설계 모드의 준수 게이트와 <code>deviations.md</code>. 공개 방법론과 팀 표준의 분리.</td><td>init, architecture, impl, qa, archive, guard</td></tr>
+        <tr><td><code>ears-format.md</code></td><td>EARS 문법: 보편(ubiquitous), 이벤트 기반(WHEN), 상태 기반(WHILE), 원치 않는 동작(IF/THEN), 선택 기능(WHERE)과 복합.</td><td>requirements</td></tr>
+        <tr><td><code>security-tiers.md</code></td><td>Tier 1–4(공개, 인증, 특권, 핵심)와 레이어별 최소 통제.</td><td>requirements, architecture, infra, qa</td></tr>
+        <tr><td><code>living-specs.md</code></td><td><code>docs/spec/</code> 구조, 기능별 누적 리빙 스펙과 spec-delta 프로토콜.</td><td>init, requirements, archive</td></tr>
+        <tr><td><code>knowledge-sync.md</code></td><td>반복을 가로지르는 지식 그래프: MCP가 있으면 Obsidian, 없으면 최소 기준으로 graphify. 동기화 없이는 절대 안 됩니다.</td><td>모든 단계(마무리 시)</td></tr>
+        <tr><td><code>targets.md</code></td><td>스택 무관성: 각 단계가 웹, iOS, Android, 데스크톱, CLI, API, 임베디드 등에 맞춰 어떻게 조정되는지.</td><td>mockup, design-graphic, architecture, test, qa, deploy</td></tr>
+        <tr><td><code>deploy-workflow.md</code></td><td>파이프라인으로 트리거되는 feature → dev → PR master 흐름, 6단계 체크리스트, PR 게이트, 사람의 승인, 무중단, 브랜치 정리.</td><td>infra, impl, deploy, archive(정리), context(살아 있는 브랜치)</td></tr>
+        <tr><td><code>changelog-policy.md</code></td><td>모든 코드 줄을 CHANGELOG에: 누가, 언제, 왜. AI 모델을 명시하며 항상 책임지는 사람이 있습니다.</td><td>impl, infra, deploy, qa</td></tr>
+        <tr><td><code>versioning.md</code></td><td>컴포넌트와 저장소별 Semver <code>major.minor.rev</code>. 강제 규칙: 버전을 올리지 않고는 절대 배포하지 않습니다.</td><td>impl, deploy, qa</td></tr>
+        <tr><td><code>enforcement.md</code></td><td>실제로 차단하는 옵트인 <code>PreToolUse</code> 훅(git-flow-guard, plan-gate), 우회와 롤백, 프로젝트별.</td><td>init, guard</td></tr>
+        <tr><td><code>support-skills.md</code></td><td>지원 레이어 카탈로그와 호출 규칙(단계를 진행시키지 않으며 게이트를 따름).</td><td>지원 레이어</td></tr>
+        <tr><td><code>iteration-loop.md</code></td><td>세 가지 피드백 경로, <code>findings.md</code>, 스펙 개정 하위 주기와 수렴 규칙.</td><td>test, qa, browse, iterate</td></tr>
+        <tr><td><code>incident-tracking.md</code></td><td>저장소별 <code>BUG-NN</code> 트래커(<code>docs/bugs_dev_testing.md</code>) + 전역 인덱스, 초기화되지 않는 번호 체계와 상태 이력.</td><td>test, qa, iterate, investigate</td></tr>
+        <tr><td><code>backlog.md</code></td><td>이중 디스커버리 백로그: Markdown이 단일 진실 공급원이며 트래커에 미러링됩니다. 아카이브 시 정리합니다.</td><td>iterate, archive, context</td></tr>
+        <tr><td><code>risks.md</code> <span class="tag o">4.1</span></td><td>변경별 리스크 등록부 하나: 담당자, 확률, 영향, 트리거, 완화책, 상태, 마지막 검토. qa와 릴리스 게이트에서 검토합니다.</td><td>architecture, iterate, qa, archive</td></tr>
+        <tr><td><code>phase-close.md</code></td><td>모든 단계와 태스크를 닫을 때의 필수 4단계 절차: 코멘트, 상태 변경(+ 연쇄), 발견 사항과 백로그 정리, <code>spec.json</code> + 지식 갱신.</td><td>모든 단계(마무리 시), impl, iterate</td></tr>
+        <tr><td><code>verification.md</code></td><td>녹색 보고를 거짓으로 만드는 18가지 실패 모드(인용은 인용된 대상이 아니다, exit 0은 성공이 아니다, 아무도 호출하지 않는 코드에 대한 녹색 테스트…).</td><td>모든 단계(“완료”라고 말하기 전), guard, qa, health</td></tr>
+        <tr><td><code>multi-agent.md</code></td><td>다중 에이전트·다중 저장소 작업: 상위/하위 변경, <code>D-NN</code> 결정, <code>@commit</code>으로 고정된 입력, 누가 어디서 했는지가 담긴 승인, <code>[human]</code> 태스크, <code>ops</code>와 <code>hotfix</code> 유형, 문서 전용 PR.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health와 모든 게이트</td></tr>
+        <tr><td><code>team.md</code> <span class="tag">선택</span></td><td>에이전트 팀 레이어: <code>team.json</code>, 역할, 교대, 주소 지정, 최소한의 소통과 측정된 비용.</td><td>checkpoint(인수인계), team, decisions, context</td></tr>
+        <tr><td><code>gates.md</code></td><td>모든 단계 스킬의 단일 마무리 블록: 병합된 세 가지 사람 게이트(<em>무엇을</em>, <em>어떻게</em>, <em>릴리스</em>) 또는 세분화된 일곱 가지, 게이트당 질문 하나, <code>-y</code> = <code>role: auto</code>, 프로덕션에는 절대 적용 안 됨.</td><td>모든 단계</td></tr>
+        <tr><td><code>judges.md</code></td><td>심사관 프롬프트 템플릿(Read/Grep/Glob만, 편집 없음), 출력 계약과 <code>rules/judges/</code> 아래의 관점별 루브릭.</td><td>requirements, architecture, qa</td></tr>
+        <tr><td><code>lanes.md</code></td><td>여섯 개의 레인(patch, standard, feature-ui, ops, hotfix, docs): 각 레인이 실행하거나 건너뛰는 단계, 객관적인 진입 기준과 공식 <code>patch</code> 경로.</td><td>init, 모든 단계</td></tr>
+        <tr><td><code>state-machine.md</code></td><td>데이터로 표현된 단계 표: 스킬, 승인 키, 게이트, 건너뛰기 가능 여부, 산출물과 입력. 경로와 재개 대상.</td><td>모든 단계</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="small muted" id="ko-rules-empty" data-filter-empty="rules" hidden>No rule matches the filter.</p>
-  <p class="small muted">The “Applies in” column follows the orchestrator’s table; for <code>management-adapters</code> and <code>notifications</code> (not yet listed there) it is taken from the rule itself.</p>
+  <p class="small muted" id="ko-rules-empty" data-filter-empty="rules" hidden>필터와 일치하는 규칙이 없습니다.</p>
+  <p class="small muted">“적용 위치” 열은 오케스트레이터의 표를 따릅니다. <code>management-adapters</code>와 <code>notifications</code>(아직 그 표에 없음)는 규칙 자체에서 가져왔습니다.</p>
 </section>
 
 <!-- 8. HOOKS -->
