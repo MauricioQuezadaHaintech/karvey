@@ -404,5 +404,21 @@ class L59(LintCase):
         self.assertFails("L-59", "outside the closed list")
 
 
+class L60(LintCase):
+    """@req REQ-W3-008 — the orchestrator: at most 1,200 words once the core ships."""
+    ORCH = SKILLS + "/karvey/SKILL.md"
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(SKILLS + "/karvey/rules/_core.md", "# Core\n")
+
+    def test_good_fixture_passes(self):
+        self.assertPasses("L-60")
+
+    def test_REQ_W3_008_an_orchestrator_of_1300_words_fails(self):
+        self.t.append(self.ORCH, "\n" + ("word " * 1300) + "\n")
+        self.assertFails("L-60", "over the 1200-word limit", file=self.ORCH)
+
+
 if __name__ == "__main__":
     unittest.main()

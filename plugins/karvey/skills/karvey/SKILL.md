@@ -7,41 +7,33 @@ argument-hint: [<change-id>] [--phase <fase>] [--autoplan]
 
 # Karvey — Method Orchestrator
 
-> **Karvey** is an **ona/selknam** word meaning ***Afán*** ('Afán' = zeal/drive).
-> A **stack-agnostic** business development method (web, mobile/iOS/Android, desktop, CLI, API, embedded…). Created by **Mauricio Quezada Ibáñez** (HainTech). See "Authorship, license, and trademark" at the end.
+Load: _core.md, references/overview.md?, references/equivalences.md?
 
 ## Purpose
 
-The entry point to the Karvey Method. It shows the complete pipeline, the current state of a specific change, and guides the engineer toward the next skill to run. It works for **any stack**: the project declares its `targets` and each phase adapts (see `rules/targets.md`).
+The entry point of the Karvey Method: it says where a change is and which skill runs next. It **only routes**:
+the state tool decides the phase, the lane decides which phases run, the skill does the work.
 
-## The Karvey Method
+## Route a change
 
-Karvey is a spec-driven development (SDD) method for enterprise projects, **stack-agnostic**. It combines:
-- **Pre-spec interrogation** (grill-me style) + "10-star product" reframe: discover and improve what's going to be built before specifying it
-- **PRD as foundation**: every change is born from a Product Requirements Document (`prd.md`); the EARS requirements trace back to it
-- **EARS requirements + living specs** (openspec/kiro style): formal, cumulative specifications
-- **Navigable mockup** (with shotgun mode for variants): validate UX before designing
-- **Systemic graphic design** over one project design system: a per-change delta, computed contrast and a design judge; OKLCH colors, typography, spacing, per platform (WCAG/HIG/Material)
-- **Enterprise architecture**: layered security Tiers 1–4, diagrams, edge cases, trust boundaries, cloud infrastructure
-- **Infrastructure as code + CI/CD**: IaC and pipelines per cloud and git platform, with a security review
-- **10–30 min AI tasks** + management in the **team's tracker** (ClickUp, Jira, Linear, Azure Boards, GitHub Projects, spreadsheet) or Markdown `PLAN.md` — tool and status flow are **team settings** in `project.json`, spoken as logical states `todo | in_progress | review | done | blocked` (`rules/management-adapters.md`); notifications go to the **team's channel** (`rules/notifications.md`)
-- **DB/Backend/Frontend + E2E testing** in the target's real runtime, with benchmark and regression
-- **9-dimension QA**: includes a blocking security gate (OWASP+STRIDE), cross-model second opinion, visual audit, and standards conformance (golden path + approved deviations)
-- **Orderly deployment**: feature branch → living spec on the branch → PR to integration → release manifest and release gate → PR to production, triggered by the pipeline, verifying the PR's gates (CI + branch policies) before the prod OK, with post-deploy verification against thresholds
-- **Branch hygiene — nothing left in branches**: once a branch is absorbed into production it is deleted (remote + local); a branch still carrying unreleased work is never deleted, it is reported — see `rules/deploy-workflow.md` → *Branch hygiene*
-- **Semver versioning + CHANGELOG** per component/repo, with human + AI model traceability
-- **Persistent goal**: a north star that every phase re-reads so it never stops until the result is achieved, while respecting the gates
-- **Spiral, not a line — iteration loop**: testing/QA/real-runtime surface defects and new ideas; the **iteration engine** (`karvey-iterate`) routes each finding back to its edge (`bug` → incident tracker + QA micro-loop · `spec-gap` → re-open requirements · `emergent` → discovery backlog) so **nothing is dropped**. See `rules/iteration-loop.md`.
-- **Incident tracker** (`BUG-NN` with state history) + **discovery backlog** (Markdown + the team's tracker) so bugs and post-cycle ideas stay traceable (`rules/incident-tracking.md`, `rules/backlog.md`)
-- **Phase-close ritual**: logical status per task; tracker comment + cascade per Feature, so tasks never go stale — see `rules/phase-close.md`
-- **Multi-agent and multi-repo work**: parent/child changes across repos, business decisions (`D-NN`) and pinned inputs from design/copy/legal agents (`repo path @commit`) in `spec.json`, approvals that cite who approved and where, `[human]` tasks for steps only a person may run, `ops` and `hotfix` change types, light CI for docs-only PRs — see `rules/multi-agent.md`
-- **Cross-cutting layer of support skills** (investigate, second-opinion, health, browse, etc.) callable at any time
-- **Agent handoff on every rotation** (`karvey-checkpoint`): identity, standing rules, board, closing checklist, **measured** repo state and scheduled tasks — for a single agent as much as for a team, and reinjected by the plugin's session hook, which also contrasts it against the live repos
-- **Optional team layer** (`rules/team.md`): roles, census, decision log and **cost measurement** for work split across several agent sessions. **Opt-in and not the default** — Karvey is complete with one agent, and the measured run behind this layer cost ≈US$1,000 in 3 days before going back to one.
-- **Verification rules before reporting "done"** (`rules/verification.md`): the failure modes that make a green report false
-- **Enforcement by hooks**: prod-gate on by default, git-flow and plan-gate opt-in (`rules/enforcement.md`); the phase graph is data (`rules/state-machine.md`) and **archive** merges the spec-delta with a script
+Ask the state tool (`karvey-state.py next`):
 
-## Complete pipeline
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" next "{change-id}" --json
+```
+
+Relay `status` (`in-progress | awaiting-approval | ready | invalid`), the next `skill` and its `blockers`; never
+infer the phase from `spec.json` by hand. On `invalid`, show the validation errors and offer
+`karvey-state.py validate --fix --dry-run`; do not guess a next step. Then:
+
+- **Findings first:** an open `bug` or `spec-gap` in `findings.md`, or an `emergent` item not yet in the backlog →
+  the next step is `/karvey-iterate`, not forward (convergence).
+- **`awaiting-human` tasks** block only their dependents: show each first, with its executor and verification.
+- **Parent change** (`links.children` not empty): show each child's phase (`{change-id}@{repo}`); the parent reaches
+  `deployed` only when every child is deployed or descoped by a decision.
+- Show the status line: capability, lane, phase, Tier, goal, approvals (with `by`/`ref`), open findings, next skill.
+
+## The pipeline
 
 ```
 PHASE 0 ─── /karvey-grill          → Pre-spec + 10-star reframe (+ platform/cloud)
@@ -59,243 +51,53 @@ PHASE 11 ── /karvey-deploy         → Orderly deployment feature→PR dev�
 PHASE 12 ── /karvey-archive        → Merge spec-deltas, retro, docs, close Epic + backlog sweep
 ```
 
-### Feedback edges — the spiral (not part of the linear count)
+`/karvey-grill` (phase 0) is optional and runs before `init`. Which phases a change runs depends on its lane
+(`spec.json:lane`, `${CLAUDE_PLUGIN_ROOT}/schemas/lanes.json`): `m` runs, `o` optional, `s` skipped (recorded by the state tool).
 
-Findings from `test`/`qa`/`browse` land in `findings.md` and are routed by `/karvey-iterate`:
+<!-- karvey:generated routing -->
+| Phase | Skill | patch | standard | feature-ui | ops | hotfix | docs |
+|---|---|---|---|---|---|---|---|
+| `init` | `/karvey-init` | m | m | m | m | m | m |
+| `requirements` | `/karvey-requirements` | s | m | m | m | s | o |
+| `mockup` | `/karvey-mockup` | s | s | m | s | s | s |
+| `design_graphic` | `/karvey-design-graphic` | s | s | m | s | s | s |
+| `architecture` | `/karvey-architecture` | s | m | m | s | s | s |
+| `infra` | `/karvey-infra` | s | o | o | m | s | s |
+| `tasks` | `/karvey-tasks` | s | m | m | m | s | o |
+| `impl` | `/karvey-impl` | m | m | m | m | m | m |
+| `test` | `/karvey-test` | m | m | m | m | m | o |
+| `qa` | `/karvey-qa` | m | m | m | o | o | m |
+| `deploying` | `/karvey-deploy` | m | m | m | m | m | m |
+| `deployed` | `/karvey-deploy` | m | m | m | m | m | m |
+| `archived` | `/karvey-archive` | m | m | m | m | m | m |
+<!-- /karvey:generated routing -->
 
-```
-   test · qa · browse ──→ findings.md ──→ /karvey-iterate (the engine)
-                                              ├─ bug      → BUG-NN tracker → impl→test→qa micro-loop
-                                              ├─ spec-gap → re-open PHASE 2 requirements (ripple only affected phases)
-                                              └─ emergent → discovery backlog → future change-id (swept at archive)
-```
+## Arguments
 
-A change is **done** only when `findings.md` has no open `bug`/`spec-gap` and all `emergent` are captured (convergence rule, `rules/iteration-loop.md`).
+- **No arguments:** show the pipeline, then run `/karvey-context` (capabilities, active changes, queue).
+- **`<change-id>`:** *Route a change* above.
+- **`--phase <phase>`:** what a phase does and its rules → load `references/overview.md`.
+- **`--autoplan`:** run the planning phases in sequence (grill → architecture), grouping the gate questions and
+  escalating only the substantive decisions (taste, scope, security). It never skips a gate.
+- **The user asks what Karvey is**, its features, files or authorship → load `references/overview.md`.
+- **The user comes from Kiro or gstack** and asks where a command lives → load `references/equivalences.md`.
 
-## Cross-cutting layer — support skills (callable at any time)
+## Support skills (callable at any time; they never advance the phase)
 
-These are not phases; they do not advance `spec.json:phase` forward. See `rules/support-skills.md`.
+`/karvey-iterate` (route findings) · `/karvey-investigate` (root cause first) · `/karvey-judges` (independent
+verdict before a gate) · `/karvey-second-opinion` · `/karvey-health` · `/karvey-browse` · `/karvey-checkpoint`
+(save/restore, handoff; one phase per session) · `/karvey-context` (dashboard, report, portfolio, backlog) ·
+`/karvey-decisions` · `/karvey-diagram` · `/karvey-docs` · `/karvey-guard` · `/karvey-devex` · `/karvey-retro` ·
+`/karvey-scrape` · `/karvey-benchmark-models` · `/karvey-import` · `/karvey-standards` · `/karvey-team` (optional
+team layer; one agent is the default).
 
-```
-/karvey-iterate            → Iteration engine: route findings (bug/spec-gap/emergent) to their edge
-/karvey-investigate        → Root-cause debugging (Iron Law: no fix without investigating)
-/karvey-second-opinion     → Adversarial cross-model review (Claude vs another model)
-/karvey-judges             → Independent judges per lens before a gate (advisory, cited findings)
-/karvey-health             → 0-10 dashboard (type/lint/tests/dead-code) + trend
-/karvey-browse             → "Give it eyes": the target's real runtime (browser/sim/CLI)
-/karvey-checkpoint         → Save/restore work state + the agent's handoff (who I am, rules, board, checklist, state)
-/karvey-diagram            → Text → mermaid + excalidraw + SVG/PNG
-/karvey-docs               → Diataxis + update stale docs + PDF
-/karvey-guard              → Install/remove enforcement hooks; edit-lock
-/karvey-devex              → Onboarding/DX review (time-to-hello-world)
-/karvey-retro              → Retrospective (velocity, test health, per person)
-/karvey-scrape             → Extract web data + encode it as a skill
-/karvey-benchmark-models   → Compare models (latency/tokens/cost/quality)
-/karvey-import             → Convert Kiro/gstack specs into Karvey (docs/spec/)
-/karvey-standards          → Uplift engineering standards (golden paths) from the real system → standards repo
-/karvey-team               → OPTIONAL team layer: roles, census, relay, cost (one agent is the default)
-/karvey-decisions          → Decision log (D-NN / C-NN) + cross-check before declaring a block
-```
+## Rules each phase loads
 
-Support view: `/karvey-context [--capability X] [--change Y]` → dashboard + deployment queue + live branches (read-only; one of the 19 support skills).
+Each phase skill declares its closed list on its `Load:` line; this table is generated from those lines
+(`karvey-context-budget.py render`).
 
-## Execution by argument
-
-### No arguments — Show the pipeline and project context
-
-Show the pipeline above, then run the steps of `/karvey-context` (capabilities, active changes, archived ones, sprint, deployment queue).
-
-### With `<change-id>` — Show the change's current phase
-
-Ask the state tool (`karvey-state.py next`); never infer the phase from `spec.json` by hand (`rules/state-machine.md`):
-
-```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" next "{change-id}" --json
-```
-
-Relay `status` (`in-progress | awaiting-approval | ready | invalid`), the next `skill` and its `blockers`. On `invalid`, show the validation errors and offer `karvey-state.py validate --fix --dry-run`; do not guess a next step. Before running the suggested skill, apply the gates below.
-
-**Change type (`spec.json:type`, see `rules/multi-agent.md`):**
-- `ops` → short pipeline: `init → requirements (lite) → infra (command plan) → tasks ([human]/[Infra]) → execution + verification → archive`. mockup and design-graphic are recorded as skipped (`karvey-state.py skip`); architecture runs only if trust boundaries change.
-- `hotfix` → `iterate` (BUG-NN) → `impl` → `test` (regression) → `deploy`, with fix + BUG-NN + regression test in the **same PR**. Requirements re-open only if the defect is a `spec-gap`.
-- A **parent** change (`links.children` not empty) has no code of its own: show each child's phase (`{change-id}@{repo}`) and advance the parent to `deployed` only when every child is deployed or descoped by a decision.
-- Any task in `awaiting-human` blocks only its dependents: show it first, with its executor and verification command.
-
-**Convergence gate:** before advancing from `test`/`qa` to deploy, `findings.md` must have no open `bug`/`spec-gap` and all `emergent` must be captured in the backlog (`rules/iteration-loop.md`). If not, the next step is `/karvey-iterate`, not forward.
-
-Show the user the status (capability, **type**, phase, Tier, management, **goal**, approvals including `infra`, `qa`, `deploy`, `prod` — each with `by`/`ref` when present —, `links` parent/children, `decisions`, pinned `inputs`, tasks `awaiting-human`, plus `iteration_count` and open findings/backlog counts) and the next step.
-
-### With `--phase <fase>` — Detailed description of a phase
-
-Valid phases: `grill`, `init`, `requirements`, `mockup`, `design-graphic`, `architecture`, `infra`, `tasks`, `impl`, `test`, `qa`, `deploy`, `archive`.
-
-### With `--autoplan` — Planning chain
-
-Run the planning phases (0→5) in sequence, chaining approvals, escalating to the user only the substantive decisions (taste, scope, security). Inspired by gstack's `autoplan`. It does not skip the approval gates; it groups them.
-
----
-
-## Description of each phase
-
-### PHASE 0: /karvey-grill
-Pre-spec interrogation + "10-star product" reframe (optional). Produces a synthesis (input to the PRD). Asks about git platform, cloud, IaC.
-
-### PHASE 1: /karvey-init
-Creates/reads `docs/spec/project.json` (git, cloud, IaC, knowledge_sync, targets, repos, spec_repo, branch_flow, enforcement) plus the **team settings** asked once — `notifications` (channel) and `management` (tool + status map); `/karvey-init --settings` re-runs only that step. Captures the **goal**. Generates `change-id`, `prd.md`, `spec.json`. Epic in the team's tracker or `PLAN.md`.
-**Rules:** `project-config.md`, `management-adapters.md`, `notifications.md`, `adapters/{tool}.md`, `living-specs.md`, `knowledge-sync.md`, `enforcement.md`
-
-### PHASE 2: /karvey-requirements
-EARS requirements, each one **traced to a section of the PRD**. `requirements.md`, `spec-delta.md`.
-**Rules:** `ears-format.md`, `living-specs.md`, `security-tiers.md`
-
-### PHASE 3: /karvey-mockup
-Navigable **3–4 levels** (deeper when the flow warrants it), adapted to the target. Shotgun mode (N variants + board). Includes a **spec↔mockup validation** pass: walk the mockup against `requirements.md` to catch spec-gaps *before* design/architecture/impl (cheap correction). `mockup.html` (or the target's equivalent).
-
-### PHASE 4: /karvey-design-graphic
-Reads the project design system and records only the change's **design delta**; contrast computed by `karvey-contrast-check.py`; the score comes from a **design judge**, not the phase. Per-platform guidance (WCAG/HIG/Material). The **visual components catalog** (art brief per screen/modal/component) only on an asset request. `design-spec.md`, `design-delta.md`, `contrast.json`.
-
-### PHASE 5: /karvey-architecture
-Boundaries, security per Tier, diagrams (mermaid), edge cases, trust boundaries, test coverage plan, **Cloud Infrastructure** section. `architecture.md`.
-**Rules:** `security-tiers.md`
-
-### PHASE 6: /karvey-infra
-IaC (Terraform/Bicep/Pulumi) + CI/CD pipelines (GitHub Actions/Azure Pipelines), idempotent + platform auto-detection + infra security review. `infra.md`.
-**Rules:** `project-config.md`, `deploy-workflow.md`, `security-tiers.md`, `changelog-policy.md`
-
-### PHASE 7: /karvey-tasks
-10–30 min tasks, `E{n}.F{n}.T{n} [DB/Backend/Frontend/Infra]`. Reads `architecture.md` + `infra.md`. `tasks.md`.
-**Rules:** `management-adapters.md`, `adapters/{tool}.md`
-
-### PHASE 8: /karvey-impl
-Executes tasks on `feature/{change-id}` (never dev/master). One CHANGELOG `[Unreleased]` line per commit (human + AI model + why); the version is bumped once, at the release.
-**Rules:** `deploy-workflow.md`, `changelog-policy.md`, `versioning.md`
-
-### PHASE 9: /karvey-test
-Unit + E2E in the target's **real runtime**, performance benchmark, regression tests. Writes observations to `findings.md` (classified bug/spec-gap/emergent) and promotes confirmed bugs to the `BUG-NN` incident tracker. `test_evidence.md`.
-**Rules:** `targets.md`, `iteration-loop.md`, `incident-tracking.md`, `phase-close.md`
-
-### PHASE 10: /karvey-qa
-9-dimension QA: Security (blocking gate, OWASP+STRIDE), Errors, Consistency, Impact, Env vars, Versioning (CHANGELOG), cross-model Second-opinion, Visual audit, Standards conformance (golden path + `deviations.md`). Appends findings to `findings.md`; on open `bug`/`spec-gap` it routes via `/karvey-iterate` instead of advancing. `REVISION_PR_{n}_{date}.md`. Notifies the team's channel (event `qa`).
-**Rules:** `changelog-policy.md`, `versioning.md`, `iteration-loop.md`, `phase-close.md`, `management-adapters.md`, `notifications.md`
-
-### PHASE 11: /karvey-deploy
-Orderly per-repo flow: pull → feature → living spec merged on the branch → PR to dev, merged by the host (DEV pipeline) → post-deploy verification → pull → release manifest + release gate → PR dev→master listing every change → verify the PR's gates (CI + branch policies) → PROD with human OK → post-deploy verification → **branch hygiene** (delete absorbed branches, report the rest). Detects the git host (`gh` / `az repos` / `glab`). Semver bump + CHANGELOG per component/repo. Version visible in the front end (recommended): **dev version in DEV** (`x.y.z-dev.N+sha`), **release version in PROD**, checked by the post-deploy verification. Never deploy manually. Notifies the team's channel (event `deploy`).
-**Rules:** `deploy-workflow.md`, `versioning.md`, `changelog-policy.md`, `project-config.md`, `management-adapters.md`, `notifications.md`
-
-### PHASE 12: /karvey-archive
-Merge spec-deltas into living specs, archive, close the Epic. **Backlog sweep:** review open `emergent` items from this change and offer to promote them into new `change-id`s (so post-cycle discoveries don't evaporate). Recommended optional: `/karvey-retro` + `/karvey-docs`.
-**Rules:** `living-specs.md`, `backlog.md`, `phase-close.md`
-
----
-
-## Method directory structure
-
-`docs/spec/` lives in the project's **main repo** (`spec_repo`). A project has 1 or more repos, never zero.
-
-In multi-repo work each repo with its own code keeps its own `docs/spec/` with **child** changes; the **parent** change and the business decision log (`D-NN`) live in the operations repo. Cross-repo references are always `{change-id}@{repo}`, `D-NN@{repo}` or `{repo} {path} @{commit}` (see `rules/multi-agent.md`).
-
-```
-docs/spec/
-├── project.json                       ← Config (git, cloud, IaC, targets, knowledge_sync, repos, enforcement, notifications, management)
-├── backlog.md                         ← Discovery backlog (emergent items → future change-ids)
-├── incidents-index.md                 ← Global index of all BUG-NN across repos + current state
-├── standards/                         ← Engineering golden paths ("how we build here", per layer)
-│   ├── _index.md  · db.md · backend.md · frontend.md   ← loaded as a hard constraint by architecture/impl
-├── specs/{capability}/spec.md         ← Living specs (cumulative per capability)
-└── changes/{change-id}/
-    ├── spec.json                      ← Metadata, type, phase, approvals (+ by/ref, prod), goal, links, decisions, inputs, iteration_count, revision_history
-    ├── prd.md                         ← Product Requirements Document
-    ├── requirements.md                ← EARS (trace to the PRD)
-    ├── spec-delta.md  · mockup.* · design-spec.md
-    ├── architecture.md                ← + Cloud Infrastructure
-    ├── infra.md  · tasks.md  · checkpoint.md
-    ├── findings.md                    ← Triage inbox (bug/spec-gap/emergent) routed by karvey-iterate
-    ├── deviations.md                  ← Approved departures from engineering standards (design mode)
-    ├── PLAN.md (Markdown tracker)  · IMPLEMENTED
-    └── archive/{YYYY-MM-DD}-{change-id}/
-```
-
-The code (incl. IaC and pipelines), each repo's `docs/bugs_dev_testing.md` incident tracker, the per-component/repo `CHANGELOG.md`, and the `settings.json` hooks live in each repo of `project.json:repos`.
-
-## Shared rules
-
-| File | Applies in |
-|---------|-----------|
-| `rules/project-config.md` | init, architecture, infra, deploy, context |
-| `rules/engineering-standards.md` | init, architecture, impl, qa, archive, guard |
-| `rules/state-machine.md` | every phase skill (via `karvey-state.py`), orchestrator |
-| `rules/management-adapters.md` | init, requirements, tasks, impl, qa, deploy, archive, iterate, context, phase-close |
-| `rules/notifications.md` | init, qa, deploy, iterate |
-| `rules/adapters/{tool}.md` | init, requirements, tasks, impl, qa, deploy, archive (one tracker's calls, loaded alone) |
-| `rules/ears-format.md` | requirements |
-| `rules/security-tiers.md` | requirements, architecture, infra, qa |
-| `rules/living-specs.md` | init, requirements, archive |
-| `rules/knowledge-sync.md` | archive (and on demand) |
-| `rules/targets.md` | mockup, design-graphic, architecture, test, qa, deploy |
-| `rules/deploy-workflow.md` | infra, impl, deploy, archive (branch sweep), context (live branches) |
-| `rules/changelog-policy.md` | impl, infra, deploy, qa |
-| `rules/versioning.md` | impl, deploy, qa |
-| `rules/enforcement.md` | init, guard |
-| `rules/support-skills.md` | cross-cutting layer |
-| `rules/iteration-loop.md` | test, qa, browse, iterate |
-| `rules/incident-tracking.md` | test, qa, iterate, investigate |
-| `rules/backlog.md` | iterate, archive, context |
-| `rules/phase-close.md` | impl, test, qa, iterate |
-| `rules/multi-agent.md` | init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health — and every approval gate |
-| `rules/team.md` | **optional** team layer: checkpoint (handoff), team, decisions, context |
-| `rules/verification.md` | all phases (before reporting "done"), guard, qa, health |
-
-## If you come from Kiro or gstack — equivalences
-
-Karvey absorbs the value of both. What in gstack are standalone commands lives here in a **phase** or in the **cross-cutting layer**.
-
-| Kiro / gstack | In Karvey |
-|---------------|-----------|
-| kiro `/spec`, `/kiro-spec-*` | grill + PRD + EARS requirements (PHASE 0–2) |
-| office-hours, plan-ceo-review | 10-star reframe in `karvey-grill` |
-| plan-design-review, design-consultation, design-shotgun | `karvey-design-graphic` + `karvey-mockup` (shotgun) |
-| plan-eng-review, diagram | `karvey-architecture` + `karvey-diagram` |
-| setup-deploy | `karvey-infra` (platform auto-detection) |
-| review, cso (OWASP+STRIDE), codex, design-review | `karvey-qa` (9 dim) + `karvey-second-opinion` |
-| qa, browse, benchmark | `karvey-test` + `karvey-browse` + `karvey-health` |
-| ship, land-and-deploy, canary | `karvey-deploy` |
-| investigate | `karvey-investigate` |
-| (no direct equivalent — feedback loop) | `karvey-iterate` (route findings: bug/spec-gap/emergent) |
-| health | `karvey-health` |
-| context-save/restore | `karvey-checkpoint` |
-| document-generate/release, make-pdf | `karvey-docs` |
-| retro | `karvey-retro` / PHASE 12 |
-| learn, gbrain | `knowledge-sync` (graphify/obsidian) |
-| careful, freeze, guard | `karvey-guard` + `enforcement.md` hooks |
-| devex-review | `karvey-devex` |
-| scrape, skillify | `karvey-scrape` |
-| benchmark-models | `karvey-benchmark-models` |
-| ios-qa, ios-fix, ios-design-review | generalized via `targets.md` (real runtime per target) |
-| existing `.kiro/specs/*` / gstack specs (migration) | `karvey-import --from kiro\|gstack` |
-
-N/A (gstack-proprietary, with a generic equivalent): `open-gstack-browser` → `karvey-browse` runtime; `gstack-upgrade` → N/A; `pair-agent`/`gbrain` → `knowledge-sync`.
-
-## Quick reference commands
-
-```
-/karvey [<change-id>] [--phase <f>] [--autoplan]   → State / pipeline / chained planning
-/karvey-context                                     → Dashboard + deployment queue
-Phases: grill init requirements mockup design-graphic architecture infra
-        tasks impl test qa deploy archive
-Support: iterate investigate second-opinion health browse checkpoint diagram
-        docs guard devex retro scrape benchmark-models import standards
-        team decisions   (optional team layer — see rules/team.md)
-```
-
----
-
-## Authorship, license, and trademark
-
-- **Etymology:** *Karvey* is an **ona/selknam** word meaning ***Afán*** ('Afán' = zeal/drive).
-- **Author:** A business development model created by **Mauricio Quezada Ibáñez**, **HainTech**. Owned by HainTech.
-- **License:** **Apache License 2.0** — see `LICENSE` and `NOTICE`. Anyone may use, modify, and adapt it (incl. commercial use) while respecting the license.
-- **Trademark:** "Karvey" and the `karvey-*` convention are a trademark of HainTech. Adaptations permitted with attribution; see `TRADEMARK.md`.
-- **Credits / inspiration:** Karvey synthesizes the **first-hand experience** of Mauricio Quezada Ibáñez (HainTech) with conceptual ideas from **Kiro** (spec-driven / cc-sdd) and **gstack** (Garry Tan). It is synthesis and conceptual inspiration; it **does not incorporate code** from those projects.
+<!-- karvey:generated load-lists:orchestrator -->
+<!-- /karvey:generated load-lists:orchestrator -->
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `TRADEMARK.md`. Karvey = Afán, an ona/selknam word.*

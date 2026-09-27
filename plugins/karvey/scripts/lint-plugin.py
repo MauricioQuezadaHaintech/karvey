@@ -474,9 +474,16 @@ def l07_orchestrator_next(ctx):
     calls_next = False
     table, start = [], 0
     rows = list(iter_lines(lines)) + [(len(lines) + 1, "", None)]
-    for n, line, lang in rows:
+    generated = False  # the routing table generated from state-machine.json + lanes.json (C-06) is data, not a
+    for n, line, lang in rows:  # hand-kept phase→next table
+        if re.match(r"^<!--\s*karvey:generated routing\s*-->", line):
+            generated = True
+        elif re.match(r"^<!--\s*/karvey:generated routing\s*-->", line):
+            generated = False
         if lang is None and re.search(r"karvey-state(\.py)?[\"'`]?\s+next\b", line):
             calls_next = True
+        if generated:
+            continue
         if lang is None and line.lstrip().startswith("|"):
             if not table:
                 start = n
@@ -2417,6 +2424,22 @@ def l59_references_closed_list(ctx):
                 yield (ref, 1, "reference %s/references/%s is orphaned: no Load: line names it" % (skill, name))
         for name in sorted(allowed - present):
             yield (d, 1, "reference %s/references/%s of the closed list is missing" % (skill, name))
+
+
+# --------------------------------------------------------------------------- L-60 (wave3-optimization)
+ORCHESTRATOR_WORDS_MAX = 1200
+
+
+@check("L-60", "The orchestrator only routes: at most 1,200 words, counted as for the core (REQ-W3-008)",
+       reqs=("W3-008",))
+def l60_orchestrator_routing_only(ctx):
+    path = ctx.skill("karvey")
+    if path is None or not (ctx.rules_dir / "_core.md").is_file():
+        return
+    words = loadlist.size(path)["words"]
+    if words > ORCHESTRATOR_WORDS_MAX:
+        yield (path, 1, "the orchestrator has %d words, over the %d-word limit: move feature lists, phase "
+                        "descriptions and equivalences to its references" % (words, ORCHESTRATOR_WORDS_MAX))
 
 
 # --------------------------------------------------------------------------- L-62 (wave3-optimization)
