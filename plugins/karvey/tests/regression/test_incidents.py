@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-22 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-22 and BUG-84 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -97,6 +97,10 @@ INDEX = {
     "BUG-20": [("hooks", "state.json paths (BUG-20)")],
     "BUG-21": [("hooks", "worktrees (BUG-21)")],
     "BUG-22": [("hooks", "profile-only commits since the save (BUG-22)")],  # python and degraded paths
+    "BUG-84": [  # the sponsor page is rebuilt at every gate close (REQ-W3-022)
+        ("unit", "test_sponsor.py", "Cli.test_BUG_84_the_page_is_rebuilt_at_a_later_gate"),
+        ("unit", "test_sponsor.py", "Cli.test_BUG_84_a_page_changed_by_another_writer_is_refused_not_overwritten"),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 

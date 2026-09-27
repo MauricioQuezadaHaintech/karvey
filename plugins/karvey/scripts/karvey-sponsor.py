@@ -153,6 +153,7 @@ def cmd_build(args):
     if args.gate not in GATES:
         raise Usage("--gate must be one of %s" % ", ".join(GATES))
     at = now_iso()
+    before = atomicio.file_sha256(cdir / PAGE)  # the page as read now: rewritten at every later gate (BUG-84)
     model, page, verdict, _, _ = checked(root, args.change)
     if model is None:
         if any(h.get("outcome") == "no-sponsor" for h in _history(cdir)):
@@ -164,7 +165,11 @@ def cmd_build(args):
         return kl.EXIT_REFUSED, {"change": args.change, "written": False, "hits": verdict["hits"],
                                  "notes": verdict["notes"]}, [kl.issue("sponsor.leak", lines[0])], "\n".join(lines)
     data = page.encode("utf-8")
-    atomicio.write_text_atomic(str(cdir / PAGE), page)
+    try:
+        atomicio.write_text_atomic(str(cdir / PAGE), page, expected_sha256=before)
+    except (atomicio.CASConflict, atomicio.LockBusy) as exc:
+        return kl.EXIT_REFUSED, {"change": args.change, "written": False}, [kl.issue("sponsor.write", str(exc))], \
+            "sponsor page: not written — %s" % exc
     sha = hashlib.sha256(data).hexdigest()
     _append(cdir / HISTORY, {"at": at, "gate": args.gate, "outcome": args.outcome, "sha256": sha})
     rel = (pj.CHANGES_DIR / args.change / PAGE).as_posix()

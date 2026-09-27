@@ -156,6 +156,35 @@ class Cli(unittest.TestCase):
         self.assertIn("Waiting for you", html)
         self.assertEqual(html.count("<table>"), html.count('<div class="table-scroll"><table>'))
 
+    def test_BUG_84_the_page_is_rebuilt_at_a_later_gate(self):
+        """@req REQ-W3-022 — regression_wave3-optimization_sponsor_page_rebuilt (BUG-84)."""
+        code1, out1, _ = self.build("what")
+        first = self.page.read_bytes()
+        (self.t.cdir / "risks.md").write_text((self.t.cdir / "risks.md").read_text(encoding="utf-8").replace(
+            "Sign-in records kept longer than allowed", "Sign-in records kept too long"), encoding="utf-8")
+        code2, out2, err2 = self.build("how")
+        self.assertEqual((code1, code2), (0, 0), out2 + err2)
+        self.assertNotEqual(self.page.read_bytes(), first, "the second gate close did not rewrite the page")
+        h = self.lines("sponsor-history.jsonl")
+        self.assertEqual([x["gate"] for x in h], ["what", "how"])
+        self.assertEqual(h[-1]["sha256"], hashlib.sha256(self.page.read_bytes()).hexdigest())
+
+    def test_BUG_84_a_page_changed_by_another_writer_is_refused_not_overwritten(self):
+        self.build("what")
+        from karvey_lib import atomicio
+        real = atomicio.file_sha256
+        calls = []
+
+        def racing(path):
+            calls.append(path)
+            return "0" * 64 if len(calls) == 1 else real(path)
+        before = self.page.read_bytes()
+        with mock.patch.object(atomicio, "file_sha256", side_effect=racing):
+            code, out, err = self.build("how")
+        self.assertEqual(code, 3)
+        self.assertIn("not written", out + err)
+        self.assertEqual(self.page.read_bytes(), before)
+
     def test_REQ_W3_023_a_leaked_connection_string_refuses_and_keeps_the_last_page(self):
         self.build()
         before = self.page.read_bytes()

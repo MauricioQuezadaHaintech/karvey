@@ -690,3 +690,35 @@ Architecture §1.4 revision 1 (D-19): a changed commit matches when the recorded
 | 2026-09-24 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-40, first agente-karvey save (da3d70a → cb3946e) |
 | 2026-09-24 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate (D-19): cause read in the hook's live-state block |
 | 2026-09-25 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | E1.F17.T1 (D-21): profile-only commits since the save match on both the python and the degraded path; case 1 red before the fix, cases 2-4 guard against over-matching |
+
+## BUG-84 — The sponsor page is not rebuilt at the second gate close
+- **Priority:** high
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-sponsor.py (`build`)
+- **Change / origin:** wave3-optimization — finding F-104 (test phase, the change's own sponsor page)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A change with a declared sponsor. Close one gate (`karvey-sponsor.py build {change} --gate what`), then close the next one (`--gate how`), directly or through `karvey-close.py`.
+
+### Actual vs expected
+- Actual: the second build stops with `CASConflict: changed by another writer, re-run: …/sponsor.html` (a traceback; through `karvey-close.py` the sponsor step is reported failed), the page keeps the first gate's content and no history line is added.
+- Expected: the page is regenerated at every gate close (REQ-W3-022) and `sponsor-history.jsonl` gains one line per build.
+
+### Root cause
+`cmd_build` called `atomicio.write_text_atomic(path, page)` without `expected_sha256`; its default (`None`) means "the file must not exist yet", so only the first page could ever be written. The unit tests and the close tests each built one page on a fresh fixture.
+
+### Fix
+`cmd_build` reads the page's hash before building the model and passes it as `expected_sha256`: a later gate rewrites the page, while a page changed by another writer in between is still refused (exit 3, `sponsor page: not written — …`), never overwritten and never a traceback.
+
+### Regression test
+`plugins/karvey/tests/unit/test_sponsor.py`, `Cli.test_BUG_84_the_page_is_rebuilt_at_a_later_gate` and `Cli.test_BUG_84_a_page_changed_by_another_writer_is_refused_not_overwritten` — both fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | wave3-optimization test phase: rebuilding this change's own sponsor page (evidence.jsonl:32, exit 1) |
+| 2026-09-27 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | `write_text_atomic` called without the hash it read |
+| 2026-09-27 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix + two regression tests, red before and green after |
+
