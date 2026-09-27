@@ -306,7 +306,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F12.T11 [Frontend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F12.T12 [Frontend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F12.T13 [Frontend] | ✅ done | 12 | 7 | 0 |  |
-| E1.F12.T14 [Frontend] | ⬜ todo | 12 | — | — |  |
+| E1.F12.T14 [Frontend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F12.T15 [Backend] | ⬜ todo | 8 | — | — |  |
 | E1.F12.T16 [Frontend] | ✅ done | 10 | 12 | 0 |  |
 | E1.F12.T17 [Backend] | ✅ done | 6 | 7 | 0 |  |
