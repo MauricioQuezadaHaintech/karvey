@@ -172,6 +172,14 @@
       "en": "since",
       "es": "desde"
     },
+    "step_done": {
+      "en": "done",
+      "es": "hecho"
+    },
+    "in_progress": {
+      "en": "in progress",
+      "es": "en curso"
+    },
     "approved": {
       "en": "approved",
       "es": "aprobado"

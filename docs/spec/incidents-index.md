@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-27 (wave3-optimization test phase: BUG-84 RESUELTO). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
+Last updated: 2026-09-27 (wave3-optimization test phase: BUG-86..BUG-89 RESUELTO from the design judge). Before: 2026-09-27 (BUG-84 RESUELTO). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -31,6 +31,10 @@ Last updated: 2026-09-27 (wave3-optimization test phase: BUG-84 RESUELTO). Befor
 | BUG-21 | karvey | medium | Git worktrees reported NOT FOUND in the live-state check | team-layer / wave1 F-01 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh | 3.11.4 |
 | BUG-22 | karvey | medium | Committing state.json after a save reported as drift | wave1-hardening / F-40 | RESUELTO | plugins/karvey/hooks/tests/test-hooks.sh (profile-only commits, BUG-22) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-84 | karvey | high | The sponsor page is not rebuilt at the second gate close | wave3-optimization / F-104 | RESUELTO | plugins/karvey/tests/unit/test_sponsor.py (BUG_84) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave3-optimization (done on feature/wave3-optimization, ships in 4.1.0) |
+| BUG-86 | karvey | medium | On a phone the overdue tag squeezes the question text of the sponsor page | wave3-optimization / F-95 | RESUELTO | plugins/karvey/tests/page/test_sponsor_page.mjs (BUG-86) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave3-optimization (done on feature/wave3-optimization, ships in 4.1.0) |
+| BUG-87 | karvey | medium | Sponsor page progress steps show done by colour only | wave3-optimization / F-98 | RESUELTO | plugins/karvey/tests/unit/test_sponsor.py (BUG_87) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave3-optimization (done on feature/wave3-optimization, ships in 4.1.0) |
+| BUG-88 | karvey | low | Touch targets under 44 px on the phone surfaces | wave3-optimization / F-100 | RESUELTO | plugins/karvey/tests/page/test_sponsor_page.mjs, test_page.mjs (BUG-88) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave3-optimization (done on feature/wave3-optimization, ships in 4.1.0) |
+| BUG-89 | karvey | medium | The sponsor page prints light-grey text on white in the dark scheme | wave3-optimization / F-92 | RESUELTO | plugins/karvey/tests/page/test_sponsor_page.mjs (BUG-89) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave3-optimization (done on feature/wave3-optimization, ships in 4.1.0) |
 
 ## Summary by state
 
@@ -39,7 +43,7 @@ Last updated: 2026-09-27 (wave3-optimization test phase: BUG-84 RESUELTO). Befor
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 23 | BUG-01 .. BUG-22, BUG-84 |
+| RESUELTO | 27 | BUG-01 .. BUG-22, BUG-84, BUG-86, BUG-87, BUG-88, BUG-89 |
 | REABIERTO | 0 | — |
 
 Next number: from `karvey-id.py next BUG` (ids are reserved across branches and worktrees; BUG-23..BUG-83 are held elsewhere, BUG-85 was reserved and left unused).

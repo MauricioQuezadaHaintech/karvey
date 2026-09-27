@@ -165,6 +165,35 @@
         "mockup (index, portfolio, sponsor; iteration 2)",
         "design-spec.md"
       ]
+    },
+    {
+      "at": "2026-09-27T12:00:00+00:00",
+      "by": "agent (karvey-iterate, test phase; owner standing instruction D-21 — recommended option taken, no approval recorded)",
+      "reason": "design judge findings on the design_graphic artifacts (dogfooding of REQ-W3-039): every value the pages use is declared in the design delta (soft semantic fills, scrim, print colours, shadows, font stacks, type/spacing/radius scales, touch size, print page width), five components added, 13 more contrast pairs declared and computed (27 pairs, 0 below); product defects found on the way fixed as BUG-86..BUG-89",
+      "findings": [
+        "F-86",
+        "F-87",
+        "F-88",
+        "F-89",
+        "F-90",
+        "F-91",
+        "F-92",
+        "F-94",
+        "F-97",
+        "F-101",
+        "F-103"
+      ],
+      "modified": [
+        "design-delta.md",
+        "design-spec.md (colour table, contrast table, components, iteration 3)",
+        "contrast.json (recomputed)"
+      ],
+      "ripple": [
+        "mockup (tokens used, phone preview, toast live region)",
+        "sponsor template (print tokens, touch size, step words)",
+        "method page (phone select 44 px)"
+      ],
+      "requirements_changed": []
     }
   ],
   "seed_backlog_id": [

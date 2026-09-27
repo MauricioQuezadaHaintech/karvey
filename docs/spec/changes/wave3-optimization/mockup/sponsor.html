@@ -16,6 +16,9 @@
   --color-semantic-error:#973a1e; --color-semantic-error-soft:#f1d5c9;
   --color-semantic-warning:#8f5312; --color-semantic-warning-soft:#ecd3a4;
   --color-focus:#1c5d96;
+  --color-scrim:rgba(16,22,28,.55); --shadow-2:0 20px 50px -20px rgba(0,0,0,.5);
+  --color-print-paper:#ffffff; --color-print-ink:#000000; --color-print-rule:#cccccc;
+  --size-touch:44px; --size-print-page:794px;
   --shadow-1:0 1px 0 rgba(40,30,10,.05),0 6px 18px -12px rgba(40,30,10,.25);
   --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
   --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
@@ -77,7 +80,7 @@ p{margin:var(--space-1) 0 var(--space-3)}
 .mk-tools{background:var(--color-surface-2);border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-4);display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;font-size:var(--text-sm)}
 .mk-tools .lbl{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em}
 .seg{display:inline-flex;flex-wrap:wrap;gap:2px}
-button,.btn{font:inherit;font-size:var(--text-sm);cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);min-height:32px;transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
+button,.btn{font:inherit;font-size:var(--text-sm);cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-3);min-height:var(--size-touch);transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
 button:hover,.btn:hover{background:var(--color-surface-2)}
 button[aria-pressed="true"],.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-background);font-weight:600}
 .req-note{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);border:1px solid var(--color-semantic-success);color:var(--color-semantic-success);border-radius:var(--radius-sm);padding:0 var(--space-1);margin-left:var(--space-1);vertical-align:middle}
@@ -101,7 +104,7 @@ tbody tr:hover{background:var(--color-surface-2)}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 .table-scroll{overflow-x:auto;max-width:100%}
 details{border-top:1px solid var(--color-border);padding:var(--space-2) 0}
-summary{cursor:pointer;font-weight:600;list-style-position:outside;min-height:32px;display:list-item}
+summary{cursor:pointer;font-weight:600;list-style-position:outside;min-height:var(--size-touch);display:list-item}
 details[open] > summary{margin-bottom:var(--space-2)}
 /* terminal */
 .term{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:.84rem;line-height:1.55;padding:var(--space-3) var(--space-4);overflow-x:auto;white-space:pre;margin:var(--space-2) 0 var(--space-4)}
@@ -117,15 +120,16 @@ details[open] > summary{margin-bottom:var(--space-2)}
 .tabs{display:flex;flex-wrap:wrap;gap:var(--space-1);border-bottom:1px solid var(--color-border);margin-bottom:var(--space-4)}
 .tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:var(--space-2) var(--space-3);color:var(--color-text-secondary)}
 .tabs button[aria-selected="true"]{color:var(--color-text-primary);border-bottom-color:var(--color-accent);font-weight:600;background:none}
-.overlay{position:fixed;inset:0;background:rgba(16,22,28,.55);display:none;align-items:center;justify-content:center;padding:var(--space-4);z-index:50}
+.overlay{position:fixed;inset:0;background:var(--color-scrim);display:none;align-items:center;justify-content:center;padding:var(--space-4);z-index:50}
 .overlay.open{display:flex;animation:fade var(--duration-slow) var(--ease-enter)}
-.modal{background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-lg);max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:var(--space-6);box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.modal{background:var(--color-surface);color:var(--color-text-primary);border-radius:var(--radius-lg);max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:var(--space-6);box-shadow:var(--shadow-2)}
 .modal header{display:flex;justify-content:space-between;align-items:start;gap:var(--space-4);margin-bottom:var(--space-3)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 [hidden]{display:none!important}
 
 .sp{max-width:880px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
+body.phone .steps{grid-template-columns:repeat(2,1fr)}
 body.phone .sp{max-width:360px;border-left:1px dashed var(--color-border);border-right:1px dashed var(--color-border)}
 .sp-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-4)}
 .status{display:inline-flex;align-items:center;gap:var(--space-2);font-weight:600;border-radius:var(--radius-full);padding:var(--space-1) var(--space-3);background:var(--color-accent-soft)}
@@ -141,14 +145,15 @@ body.phone .sp{max-width:360px;border-left:1px dashed var(--color-border);border
 .steps li.done{border-top-color:var(--color-semantic-success)}
 .steps li.now{border-top-color:var(--color-accent);font-weight:700}
 .steps small{display:block;color:var(--color-text-secondary);font-weight:400}
-.ask{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-3) 0;border-top:1px solid var(--color-border)}
+.ask{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:flex-start;padding:var(--space-3) 0;border-top:1px solid var(--color-border)}
 .ask:first-of-type{border-top:0}
+.ask>div{flex:1 1 16rem;min-width:0}
 .ask .when{font-family:var(--font-mono);font-size:var(--text-xs);white-space:nowrap}
 .stamp{font-size:var(--text-xs);color:var(--color-text-secondary)}
 .outside{max-width:880px;margin:var(--space-6) auto;padding:0 var(--space-4)}
 @media (max-width:520px){.steps{grid-template-columns:repeat(2,1fr)}}
-@media print{.mk-banner,.mk-tools,.toc{display:none!important}body{background:#fff;color:#000}.card{box-shadow:none;break-inside:avoid}details{display:block}details>*{display:block}}
-body.printpv .sp{background:#fff;color:#000;max-width:794px;box-shadow:0 0 0 1px #ccc;margin-top:var(--space-4)}
+@media print{.mk-banner,.mk-tools,.toc{display:none!important}body{background:var(--color-print-paper);color:var(--color-print-ink)}.card{box-shadow:none;break-inside:avoid}details{display:block}details>*{display:block}}
+body.printpv .sp{background:var(--color-print-paper);color:var(--color-print-ink);max-width:var(--size-print-page);box-shadow:0 0 0 1px var(--color-print-rule);margin-top:var(--space-4)}
 body.printpv .toc{display:none}
 </style>
 </head>
@@ -240,7 +245,7 @@ sponsor page: regenerated · leak check <span class="ok">PASS</span>
     <h2>Progress</h2>
     <ol class="steps" aria-label="Steps">
       <li class="done">Agree what<small>approved 2026-10-02</small></li>
-      <li class="now" data-hide="released">Design<small>since 2026-10-09</small></li>
+      <li class="now" data-hide="released">Design<small>in progress since 2026-10-09</small></li>
       <li class="done" data-show="released">Design<small>approved 2026-10-16</small></li>
       <li data-hide="released">Build and check<small>planned</small></li>
       <li class="done" data-show="released">Build and check<small>passed 2026-10-28</small></li>

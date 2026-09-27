@@ -39,6 +39,13 @@ computed from them.
 | `--color-semantic-success` | `#44632f` · oklch(46.2% 0.086 134) | `#a1c487` · oklch(77.9% 0.091 132) | pass, done step |
 | `--color-semantic-error` | `#973a1e` · oklch(47.4% 0.132 37) | `#eb937a` · oklch(74.8% 0.113 37) | fail, overdue, refused |
 | `--color-semantic-warning` | = accent | = accent | warn, stale, not read |
+| `--color-semantic-success-soft` | `#dbe6cf` · oklch(90.6% 0.036 131) | `#243420` · oklch(29.5% 0.040 138) | done tag, released status pill |
+| `--color-semantic-error-soft` | `#f1d5c9` · oklch(89.2% 0.035 44) | `#3f2219` · oklch(28.1% 0.044 39) | overdue and refused tags |
+| `--color-semantic-warning-soft` | = accent-soft | = accent-soft | warn tag, "needed by" tag |
+| `--color-scrim` | `rgba(16, 22, 28, 0.55)` | `rgba(16, 22, 28, 0.55)` | modal overlay behind the dialog (mockup review chrome) |
+| `--color-print-paper` | `#ffffff` | `#ffffff` | print background (`@media print`) |
+| `--color-print-ink` | `#000000` | `#000000` | print text (`@media print`) |
+| `--color-print-rule` | `#cccccc` | `#cccccc` | print preview frame (mockup) |
 | `--color-focus` | `#1c5d96` · oklch(46.8% 0.112 249) | `#7fb6ea` · oklch(75.8% 0.095 248) | 3 px focus ring |
 
 The skill's default semantic values (`oklch(62% 0.17 145)`, `oklch(55% 0.22 25)`, `oklch(75% 0.18 80)`) are **not**
@@ -68,9 +75,12 @@ from the hex values (not self-judged). Target: AA normal text 4.5:1; UI componen
 | error on surface / surface-2 | 6.74 / 5.60 | 7.04 / 6.15 | AA |
 | background on primary (selected language, primary button) | 9.00 | 9.54 | AAA |
 | text-primary on accent-soft / success-soft / error-soft / primary-soft (tags) | 10.30 / 11.59 / 10.79 / 11.20 | 9.99 / 10.54 / 11.51 / 10.47 | AAA |
-| focus ring on background / surface (non-text) | 5.94 / 6.48 | 8.48 / 7.66 | ≥ 3:1 |
+| focus ring on background / surface / surface-2 (non-text) | 5.94 / 6.48 / 5.38 | 8.48 / 7.66 / 6.70 | ≥ 3:1 |
+| accent (eyebrows, link hover) / primary (links, TOC) on background | 5.32 / 9.00 | 8.86 / 9.54 | AA / AAA |
+| background on text-primary (inverted banner, toast) | 12.96 | 14.50 | AAA |
+| print ink on print paper | 21.00 | 21.00 | AAA |
 
-All 40 text checks (20 pairs × 2 schemes) pass AA; 29 reach AAA. `--color-border` (1.6:1) is decorative only; every control uses
+All 27 declared pairs × 2 schemes pass their target (text AA 4.5:1, focus 3:1) — computed by `karvey-contrast-check.py --delta` into `contrast.json` (iteration 3). `--color-border` (1.6:1) is decorative only; every control uses
 `--color-border-strong` (5.96–7.57:1).
 
 ## Typography
@@ -149,9 +159,14 @@ works fully with no JavaScript (sections and `details` are native).
 | "Your approval" tag | surface-2 | border | none | marks a gate awaiting the sponsor as approver inside *Waiting for you* (REQ-W3-021) |
 | Table row | transparent | border bottom | none | surface-2 |
 | Terminal block | surface-2 | border 1 px | none | scroll inside |
-| Modal overlay | surface on 55% scrim | none | large | Esc and scrim click close |
+| Modal overlay | surface on `--color-scrim` | none | `--shadow-2` | Esc and scrim click close |
 | Tabs | none | 3 px accent underline when selected | none | text-primary |
 | Language switch | none | transparent / primary when current | none | surface-2 |
+| Progress steps | none | 4 px top border: border (planned), success (done), accent (current) | none | always a word: "done", "in progress since", "planned" |
+| Summary fact tile | surface | border 1 px | none | label in text-secondary, value in text-lg |
+| Section TOC | none | border bottom | none | links in primary; hidden in print |
+| Details expander | none | border top | none | summary at least `--size-touch` high; opened in print |
+| Toast | text-primary | none | none | text in background colour; `role="status"` (announced) |
 
 ## Revision — iteration 2 (2026-09-26)
 
@@ -168,6 +183,21 @@ Screens changed by the resolved spec-gaps; no token, type, spacing or motion val
 | F-41 | sponsor › state Leak check refused | the page is not written; the transcript names field and rule without the value and says the last written page is unchanged (REQ-W3-023) |
 
 The score below is unchanged: the new elements reuse existing components (tag, dim terminal line) and tokens.
+
+## Revision — iteration 3 (2026-09-27)
+
+The design judge's findings F-86..F-101 (design_graphic dogfooding, REQ-W3-039). No existing value changed: the values
+the mockup and the pages already used are now declared, in this spec and in `design-delta.md`.
+
+| Finding | Change |
+|---|---|
+| F-86 | soft semantic fills declared (success-soft, error-soft, warning-soft = accent-soft) |
+| F-87 | font stacks, type, spacing and radius scales and `--shadow-1` declared in the delta (the tables above already listed them) |
+| F-88..F-91, F-101 | 13 more pairs declared and computed: tags on soft fills, semantic text on surface-2, accent and primary on background, the inverted banner/toast, focus on every surface |
+| F-92 | print colours and the print page width are tokens; the sponsor template's print style uses them |
+| F-94 | `--color-scrim` and `--shadow-2` for the modal overlay |
+| F-97 | progress steps, summary fact tile, section TOC, details expander and toast added to the component list |
+| F-98, F-100 | step states carry a word; summaries and the phone language select are at least 44 px high (`--size-touch`) |
 
 ## Art catalogue
 

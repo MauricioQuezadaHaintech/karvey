@@ -128,6 +128,41 @@ class Model(unittest.TestCase):
         self.assertTrue(m["language_note"])
 
 
+class Page(unittest.TestCase):
+    """@req REQ-W3-021 REQ-W3-024 — the rendered progress steps."""
+
+    def setUp(self):
+        self.t = Tree()
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def steps(self):
+        page = sponsor.render(sponsor.build_model(self.t.root, CHANGE, today=TODAY))
+        ol = re.search(r'<ol class="steps">(.*?)</ol>', page, re.S).group(1)
+        return re.findall(r'<li class="([^"]*)">[^<]*<small>([^<]*)</small></li>', ol)
+
+    def test_BUG_87_every_step_state_is_a_word_not_only_a_colour(self):
+        rows = self.steps()
+        self.assertTrue(rows)
+        for cls, words in rows:
+            if cls == "done":
+                self.assertRegex(words, r"^done \d{4}-\d{2}-\d{2}$")
+            elif cls == "now":
+                self.assertRegex(words, r"^in progress since \d{4}-\d{2}-\d{2}$")
+            else:
+                self.assertEqual(words, "planned")
+        self.assertEqual(sum(1 for c, _ in rows if c == "now"), 1)
+
+    def test_BUG_87_spanish_step_words(self):
+        s = self.t.spec()
+        s["language"] = "es"
+        self.t.write_spec(s)
+        words = [w for c, w in self.steps() if c in ("done", "now")]
+        self.assertTrue(any(w.startswith("en curso desde ") for w in words))
+        self.assertTrue(all(w.startswith(("hecho ", "en curso desde ")) for w in words))
+
+
 class Cli(unittest.TestCase):
     """@req REQ-W3-022 REQ-W3-023 — ``karvey-sponsor.py build|deliver``."""
 

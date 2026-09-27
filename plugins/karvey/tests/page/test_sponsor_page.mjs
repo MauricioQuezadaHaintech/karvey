@@ -36,7 +36,7 @@ test('REQ-W3-024: no external request (src, link href, @import, url())', () => {
 });
 
 test('REQ-W3-024: light and dark schemes from prefers-color-scheme', () => {
-  assert.match(css, /@media \(prefers-color-scheme: dark\)/);
+  assert.match(css, /@media screen and \(prefers-color-scheme: dark\)/);
   assert.match(css, /color-scheme:light dark/);
 });
 
@@ -65,4 +65,29 @@ test('REQ-W3-024: nothing is wider than a 360 px viewport', () => {
   assert.match(css, /\.table-scroll\{overflow-x:auto;max-width:100%\}/);
   assert.match(css, /body\{[^}]*overflow-wrap:anywhere/);
   assert.match(css, /\.sp\{max-width:880px/);
+});
+
+test('BUG-89: print keeps the light scheme and uses the print tokens, no literal colour', () => {
+  // the dark scheme applies to the screen only: a dark-scheme reader prints dark text on paper
+  assert.doesNotMatch(css, /@media \(prefers-color-scheme: dark\)/);
+  assert.match(css, /--color-print-paper:#ffffff;--color-print-ink:#000000;/);
+  const print = block(css, css.indexOf('@media print'));
+  assert.match(print, /body\{background:var\(--color-print-paper\);color:var\(--color-print-ink\)\}/);
+  assert.doesNotMatch(print, /#[0-9a-f]{3,6}\b/i, 'no hex colour in the print style');
+});
+
+test('BUG-88: summaries meet the 44 px touch target', () => {
+  assert.match(css, /--size-touch:44px;/);
+  for (const m of css.matchAll(/min-height\s*:\s*([^;}]+)/g)) {
+    const v = m[1].trim();
+    assert.ok(v === 'var(--size-touch)' || (v.endsWith('px') && Number.parseFloat(v) >= 44), `min-height:${v} is below 44 px`);
+  }
+  assert.match(css, /summary\{[^}]*min-height:var\(--size-touch\)/);
+});
+
+test('BUG-86: at 360 px the question text wraps under a wide tag instead of being squeezed', () => {
+  // .ask is a wrapping flex row; the text block asks for 16rem, more than a 360 px row leaves next to the tag
+  assert.match(css, /\.ask\{display:flex;flex-wrap:wrap/);
+  assert.match(css, /\.ask>div\{flex:1 1 16rem;min-width:0\}/);
+  assert.match(css, /@media \(max-width:520px\)\{\.steps\{grid-template-columns:repeat\(2,1fr\)\}\}/);
 });

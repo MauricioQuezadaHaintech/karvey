@@ -371,3 +371,9 @@ for (const lang of ['en', 'ko']) {
 test('REQ-W3-069: every alias target is a section of the English block', () => {
   for (const target of Object.values(P.ANCHOR_ALIASES)) assert.match(html, new RegExp('id="en-' + target + '"'), target);
 });
+
+test('BUG-88: the phone language select meets the 44 px touch target', () => {
+  const m = html.match(/\.lang-select\{[^}]*min-height:(\d+)px/);
+  assert.ok(m, '.lang-select declares a min-height');
+  assert.ok(Number(m[1]) >= 44, `.lang-select min-height ${m[1]}px is below 44 px`);
+});

@@ -26,9 +26,10 @@
   --text-xs:.75rem;--text-sm:.875rem;--text-base:1rem;--text-lg:1.125rem;--text-xl:1.25rem;--text-3xl:1.875rem;
   --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-12:48px;
   --radius-sm:4px;--radius-md:8px;--radius-lg:12px;--radius-full:9999px;
+  --size-touch:44px;--color-print-paper:#ffffff;--color-print-ink:#000000;
   color-scheme:light dark;
 }
-@media (prefers-color-scheme: dark){
+@media screen and (prefers-color-scheme: dark){
   :root{
     --color-background:#10161c;--color-surface:#17202a;--color-surface-2:#202b36;
     --color-text-primary:#ebe5d8;--color-text-secondary:#a8b1ba;
@@ -78,6 +79,7 @@ p{margin:var(--space-1) 0 var(--space-3)}
 .steps small{display:block;color:var(--color-text-secondary);font-weight:400}
 .ask{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:flex-start;padding:var(--space-3) 0;border-top:1px solid var(--color-border)}
 .ask:first-of-type{border-top:0}
+.ask>div{flex:1 1 16rem;min-width:0}
 .tag{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);padding:1px var(--space-2);border-radius:var(--radius-full);background:var(--color-surface-2);color:var(--color-text-primary);border:1px solid var(--color-border);white-space:nowrap}
 .tag.ok{background:var(--color-semantic-success-soft);border-color:transparent}
 .tag.err{background:var(--color-semantic-error-soft);border-color:transparent}
@@ -88,12 +90,12 @@ th{font-weight:600;color:var(--color-text-secondary);font-size:var(--text-xs);te
 .num{text-align:right;font-variant-numeric:tabular-nums}
 .table-scroll{overflow-x:auto;max-width:100%}
 details{border-top:1px solid var(--color-border);padding:var(--space-2) 0}
-summary{cursor:pointer;font-weight:600;min-height:32px;display:list-item}
+summary{cursor:pointer;font-weight:600;min-height:var(--size-touch);display:list-item}
 @media (max-width:520px){.steps{grid-template-columns:repeat(2,1fr)}}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 @media print{
   nav.toc{display:none!important}
-  body{background:#fff;color:#000}
+  body{background:var(--color-print-paper);color:var(--color-print-ink)}
   .card,.facts li{box-shadow:none;break-inside:avoid}
   details>*{display:block!important}
   details>summary{list-style:none}

@@ -385,9 +385,14 @@ def render(model, template=None):
     scope_html = '<section id="scope"><h2>%s</h2><p>%s</p>%s%s<p class="stamp">%s %s</p></section>' % (
         _e(L("scope")), _e(sc["summary"]), lists, areas, _e(L("as_of")), _e(sc["as_of"]))
     # progress
+    def step_words(s):  # the state is always a word, never the border colour alone (WCAG 1.4.1, BUG-87)
+        if not s["date"]:
+            return L("planned")
+        if s["state"] == "now":
+            return "%s %s %s" % (L("in_progress"), L("since"), s["date"])
+        return "%s %s" % (L("step_done"), s["date"]) if s["state"] == "done" else s["date"]
     steps = "".join('<li class="%s">%s<small>%s</small></li>' % (
-        s["state"] if s["state"] in ("done", "now") else "", _e(s["step"]),
-        _e(("%s %s" % (L("since") if s["state"] == "now" else "", s["date"])).strip() if s["date"] else L("planned")))
+        s["state"] if s["state"] in ("done", "now") else "", _e(s["step"]), _e(step_words(s)))
         for s in prog["steps"])
     progress_html = ('<section id="progress"><h2>%s</h2><ol class="steps">%s</ol><p class="small">%s: <strong>%s'
                      '</strong></p><p class="stamp">%s %s</p></section>' % (

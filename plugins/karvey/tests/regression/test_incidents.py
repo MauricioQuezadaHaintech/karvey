@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-22 and BUG-84 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-22 and BUG-84 onwards (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -100,6 +100,20 @@ INDEX = {
     "BUG-84": [  # the sponsor page is rebuilt at every gate close (REQ-W3-022)
         ("unit", "test_sponsor.py", "Cli.test_BUG_84_the_page_is_rebuilt_at_a_later_gate"),
         ("unit", "test_sponsor.py", "Cli.test_BUG_84_a_page_changed_by_another_writer_is_refused_not_overwritten"),
+    ],
+    "BUG-86": [  # On a phone the overdue tag squeezes the question text of the sponsor page
+        ('node', 'test_sponsor_page.mjs', 'BUG-86: at 360 px the question text wraps under a wide tag instead of being squeezed'),
+    ],
+    "BUG-87": [  # Sponsor page progress steps show done by colour only
+        ('unit', 'test_sponsor.py', 'Page.test_BUG_87_every_step_state_is_a_word_not_only_a_colour'),
+        ('unit', 'test_sponsor.py', 'Page.test_BUG_87_spanish_step_words'),
+    ],
+    "BUG-88": [  # Touch targets under 44 px on the phone surfaces
+        ('node', 'test_sponsor_page.mjs', 'BUG-88: summaries meet the 44 px touch target'),
+        ('node', 'test_page.mjs', 'BUG-88: the phone language select meets the 44 px touch target'),
+    ],
+    "BUG-89": [  # The sponsor page prints light-grey text on white in the dark scheme
+        ('node', 'test_sponsor_page.mjs', 'BUG-89: print keeps the light scheme and uses the print tokens, no literal colour'),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

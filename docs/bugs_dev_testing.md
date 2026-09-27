@@ -722,3 +722,126 @@ A change with a declared sponsor. Close one gate (`karvey-sponsor.py build {chan
 | 2026-09-27 | EN FIX | Mauricio Quezada Ibáñez / Claude Opus 5.5 | feature/wave3-optimization |
 | 2026-09-27 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix + two regression tests, red before and green after |
 
+## BUG-86 — On a phone the overdue tag squeezes the question text of the sponsor page
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/templates/sponsor.html (`.ask`)
+- **Change / origin:** wave3-optimization — finding F-95 (design judge, design_graphic dogfooding)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Render a sponsor page with a question overdue since a date and open it 360 px wide (or the mockup's Phone 360 preview).
+
+### Actual vs expected
+- Actual: the tag (`white-space:nowrap`) keeps its full width and the question block shrinks to its longest word; in the mockup preview the progress steps also kept 4 columns because `body.phone` narrowed only the page.
+- Expected: the question takes its own line under the tag when both do not fit, and the steps drop to 2 columns under 520 px (design-spec §Layout).
+
+### Root cause
+The `.ask` flex row wrapped, but its text block had no flex basis, so it shrank instead of wrapping; the mockup preview simulated the phone by width only, which does not trigger the 520 px media query.
+
+### Fix
+`.ask>div{flex:1 1 16rem;min-width:0}` in the template (and the mockup); the mockup's phone preview also sets the steps to 2 columns.
+
+### Regression test
+`plugins/karvey/tests/page/test_sponsor_page.mjs`, test `BUG-86: at 360 px the question text wraps under a wide tag instead of being squeezed` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-95: design judge, design_graphic dogfooding |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | text block of `.ask` had no flex basis |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-87 — Sponsor page progress steps show done by colour only
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/sponsor.py (`render`, progress)
+- **Change / origin:** wave3-optimization — finding F-98 (design judge, design_graphic dogfooding)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Build a sponsor page for a change past its first gates and read the Progress steps without colour (screen reader, greyscale print).
+
+### Actual vs expected
+- Actual: a done step shows only its date; only the border colour says it is done. The current step says "since {date}" with no state word.
+- Expected: every state is a word (design-spec: no colour-only meaning, WCAG 1.4.1): "done {date}", "in progress since {date}", "planned".
+
+### Root cause
+The step caption was built from the date alone for every state but the current one; the state lived in the CSS class.
+
+### Fix
+`render` writes the state word from the wording table (`step_done`, `in_progress`, English and Spanish) before the date.
+
+### Regression test
+`plugins/karvey/tests/unit/test_sponsor.py`, `Page.test_BUG_87_every_step_state_is_a_word_not_only_a_colour` and `Page.test_BUG_87_spanish_step_words` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-98: design judge, design_graphic dogfooding |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | step caption built from the date only |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-88 — Touch targets under 44 px on the phone surfaces
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/templates/sponsor.html (`summary`), docs/karvey.html (`.lang-select`)
+- **Change / origin:** wave3-optimization — finding F-100 (design judge, design_graphic dogfooding)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Open the sponsor page or the method page 360 px wide and measure the expanders and the language select.
+
+### Actual vs expected
+- Actual: `min-height:32px` on the sponsor page's summaries and on the method page's phone language select.
+- Expected: at least 44 px (`--size-touch`) on the surfaces a sponsor reads on a phone.
+
+### Root cause
+The 32 px control height of the desktop mockup was reused on the phone surfaces.
+
+### Fix
+`--size-touch:44px` token; the sponsor page's `summary` and the method page's `.lang-select` use it (44 px).
+
+### Regression test
+`plugins/karvey/tests/page/test_sponsor_page.mjs`, test `BUG-88: summaries meet the 44 px touch target`, and `plugins/karvey/tests/page/test_page.mjs`, test `BUG-88: the phone language select meets the 44 px touch target` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-100: design judge, design_graphic dogfooding |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | desktop control height reused on phone |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-89 — The sponsor page prints light-grey text on white in the dark scheme
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/templates/sponsor.html (`@media print`, dark scheme)
+- **Change / origin:** wave3-optimization — finding F-92 (design judge, design_graphic dogfooding; found while declaring the print pair)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Set the system to dark and print the sponsor page.
+
+### Actual vs expected
+- Actual: the print style whitens the page but the dark-scheme tokens still apply, so secondary text (#a8b1ba) and links print at about 2:1 on white; the print colours were literals, outside the design delta.
+- Expected: print always uses the light scheme and the print tokens (`--color-print-paper`, `--color-print-ink`, 21:1).
+
+### Root cause
+The dark scheme was `@media (prefers-color-scheme: dark)`, which also matches print; the print style only reset the body colours.
+
+### Fix
+The dark scheme is `@media screen and (prefers-color-scheme: dark)`; the print style uses `var(--color-print-paper)` and `var(--color-print-ink)`.
+
+### Regression test
+`plugins/karvey/tests/page/test_sponsor_page.mjs`, test `BUG-89: print keeps the light scheme and uses the print tokens, no literal colour` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-92: design judge, design_graphic dogfooding; found while declaring the print pair |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | dark-scheme media query also matched print |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
