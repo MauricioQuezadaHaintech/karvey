@@ -65,9 +65,40 @@
         "F-31"
       ],
       "note": "runtime reported about 100k subagent tokens per judge; the recorded judge cost is the prompt-based estimate (collect found no transcript usage)"
+    },
+    {
+      "at": "2026-09-27T23:05:00+00:00",
+      "by": "agent (judges routed in place, pre-approval; owner standing instruction D-21)",
+      "reason": "architecture judges (security, methods; intra-model) — right findings fixed in place before the how gate: report recomputed at every gate, absent hash/approved_under defined, per-clone deviation ledger with tracked log, deploy refused through check-prod, L-87 skill-text anchors, development-host allow-list, text-layer leak check, restricted CLI patterns bound to the mockup hash, build-commit meta, size caps, trust boundaries, risks R-10/R-11",
+      "findings": [
+        "F-32",
+        "F-33",
+        "F-34",
+        "F-35",
+        "F-36",
+        "F-37",
+        "F-38",
+        "F-39",
+        "F-40",
+        "F-41",
+        "F-42",
+        "F-43",
+        "F-44",
+        "F-45",
+        "F-46",
+        "F-47",
+        "F-48",
+        "F-49",
+        "F-50",
+        "F-51",
+        "F-52",
+        "F-53",
+        "F-54"
+      ],
+      "note": "runtime reported about 115k subagent tokens per judge; the recorded judge cost is the prompt-based estimate"
     }
   ],
-  "phase": "requirements",
+  "phase": "tasks",
   "phase_history": [
     {
       "phase": "init",
@@ -77,7 +108,17 @@
     },
     {
       "phase": "requirements",
-      "entered_at": "2026-09-27T21:47:13+00:00"
+      "entered_at": "2026-09-27T21:47:13+00:00",
+      "exited_at": "2026-09-27T21:59:47+00:00"
+    },
+    {
+      "phase": "architecture",
+      "entered_at": "2026-09-27T21:59:47+00:00",
+      "exited_at": "2026-09-27T22:07:52+00:00"
+    },
+    {
+      "phase": "tasks",
+      "entered_at": "2026-09-27T22:07:52+00:00"
     }
   ],
   "approvals": {
@@ -92,10 +133,20 @@
         "marker": "none"
       },
       "generated_at": "2026-09-27T21:58:05+00:00"
+    },
+    "architecture": {
+      "generated": true,
+      "approved": false,
+      "generated_at": "2026-09-27T22:04:16+00:00"
+    },
+    "tasks": {
+      "generated": true,
+      "approved": false,
+      "generated_at": "2026-09-27T22:12:19+00:00"
     }
   },
   "created_at": "2026-09-27T21:47:10+00:00",
-  "updated_at": "2026-09-27T21:58:36+00:00",
+  "updated_at": "2026-09-27T22:12:19+00:00",
   "lane": "standard",
   "judge_runs": [
     {
@@ -139,6 +190,48 @@
       "usd_estimated": true,
       "source": "estimate",
       "phase": "requirements"
+    },
+    {
+      "lens": "methods",
+      "model": "claude-opus-5-5",
+      "intra_model": true,
+      "verdict": "concerns",
+      "findings": {
+        "High": 3,
+        "Medium": 3,
+        "Low": 4
+      },
+      "discarded": 0,
+      "at": "2026-09-27T22:05:52+00:00",
+      "tokens_in": 33084,
+      "tokens_out": 958,
+      "tokens_total": 34042,
+      "usd": 0.113622,
+      "estimated": true,
+      "usd_estimated": true,
+      "source": "estimate",
+      "phase": "architecture"
+    },
+    {
+      "lens": "security",
+      "model": "claude-opus-5-5",
+      "intra_model": true,
+      "verdict": "concerns",
+      "findings": {
+        "High": 1,
+        "Medium": 8,
+        "Low": 4
+      },
+      "discarded": 0,
+      "at": "2026-09-27T22:05:52+00:00",
+      "tokens_in": 33084,
+      "tokens_out": 1340,
+      "tokens_total": 34424,
+      "usd": 0.119352,
+      "estimated": true,
+      "usd_estimated": true,
+      "source": "estimate",
+      "phase": "architecture"
     }
   ],
   "gate_outcomes": [
@@ -154,5 +247,10 @@
       "ref": "D-21",
       "at": "2026-09-27T21:58:36+00:00"
     }
-  ]
+  ],
+  "skipped": {
+    "mockup": "lane:standard",
+    "design_graphic": "lane:standard",
+    "infra": "no cloud: project.json cloud.provider = none; CI only runs the new unit suites in its existing test step (architecture A-13)"
+  }
 }
