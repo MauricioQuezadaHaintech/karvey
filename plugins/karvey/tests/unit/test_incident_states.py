@@ -1,6 +1,6 @@
 """Incident states: neutral names and localized aliases (architecture §1.22, C-22).
 
-@req REQ-W3-057
+@req REQ-W3-057 REQ-W1-068
 """
 import unittest
 

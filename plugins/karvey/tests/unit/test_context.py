@@ -450,7 +450,7 @@ class Tables(unittest.TestCase):
 
 
 class Layout(unittest.TestCase):
-    """@req REQ-W3-048 — both spec layouts are found; with both, docs/spec/ is used."""
+    """@req REQ-W3-048 REQ-W1-045 — both spec layouts are found; with both, docs/spec/ is used."""
 
     def setUp(self):
         self.t = g.TempDir()

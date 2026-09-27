@@ -1,6 +1,6 @@
 """'Your turn' events and the sent-log (architecture §1.15, C-15).
 
-@req REQ-W3-026 REQ-W3-027
+@req REQ-W3-026 REQ-W3-027 REQ-ADP-011
 """
 import contextlib
 import importlib.util

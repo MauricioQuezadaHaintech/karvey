@@ -1,7 +1,7 @@
 # Plan: wave3-optimization
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend, Frontend, Infra
-**Created:** 2026-09-26 | **Status:** 🔄 impl — batch 3: 83 of 100 agent tasks done (F1..F11); next E1.F12.T1 (the method page, last)
+**Created:** 2026-09-26 | **Status:** 👀 Implementation complete — 100 of 100 agent tasks done (F1..F12); E1.DEPLOY.T1 `[human]` at release; next /karvey-test
 **Lane:** feature-ui (the sponsor page and the method page are UI: mockup and design-graphic run)
 **Release target:** 4.1.0 (minor, backward compatible with 4.0.0)
 **Flow:** trunk (`feature/wave3-optimization` → PR → `main`) · **Decisions:** D-30, D-31, D-32 (D-01..D-29 hold)
@@ -58,7 +58,7 @@ F11 rollout; **F12 last** (B-06).
 | F9 | Backlog ranked by WSJF, `done-direct` | REQ-W3-049..052 | R-29 · PM-15 · BL-32 | ✅ |
 | F10 | Portability (guide, browse.via, OS/time neutrality, neutral states, loaded version, settings validation) | REQ-W3-053..060 | R-30 · AG-14 · D-32 · BL-33, BL-38 | ✅ |
 | F11 | Rollout 4.1.0 and dogfooding | REQ-W3-061..065, 073, 074, 075 (064, 065, 073..075 change-scoped) | Ola 3 plan · D-24, D-26, D-31 | ✅ |
-| F12 | **Last:** method page in it / ja / fr / ko, alias table | REQ-W3-066..070 | B-06 · BL-42 | ⬜ |
+| F12 | **Last:** method page in it / ja / fr / ko, alias table | REQ-W3-066..070 | B-06 · BL-42 | ✅ |
 
 Coverage: 80 of 80 REQ-W3 in exactly one Feature.
 
@@ -310,7 +310,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F12.T15 [Backend] | ✅ done | 8 | 10 | 0 |  |
 | E1.F12.T16 [Frontend] | ✅ done | 10 | 12 | 0 |  |
 | E1.F12.T17 [Backend] | ✅ done | 6 | 7 | 0 |  |
-| E1.F12.T18 [Test] | ⬜ todo | 8 | — | — |  |
+| E1.F12.T18 [Test] | ✅ done | 8 | 10 | 0 | plan order checked on this change's commits (`feat(wave3)`): F11.T7 is commit 175, the first F12 commit 176 |
 | E1.DEPLOY.T1 [human] | ⬜ todo | — | — | — | human: the owner |
 
 `estimate_min` is written here once; impl fills the two actual columns and never edits the estimate.

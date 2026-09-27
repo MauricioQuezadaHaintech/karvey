@@ -1,5 +1,7 @@
 // Method page docs/karvey.html: the inline script's pure functions and init(window) against a stub
-// window (E1.F11.T2; BUG-10..13, REQ-W1-102..105; nine languages: REQ-W3-066, 068). node:test only, no npm (Q-A7 / D-09):
+// window (E1.F11.T2; BUG-10..13, REQ-W1-102..105; nine languages: REQ-W3-066, 068). node:test only, no npm (Q-A7 / D-09).
+// @req REQ-W3-066 REQ-W3-068 REQ-W3-069 REQ-ADP-031
+// Run:
 //   node --test plugins/karvey/tests/page/
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
