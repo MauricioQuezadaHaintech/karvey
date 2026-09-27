@@ -15,3 +15,6 @@
 | B-11 | high | New change `project-upgrade` (D-20): once-per-version ask → project upgrade plan | requirements generated; **awaiting owner approval** | 2026-09-25 12:07 | worktree ~/Dev/karvey-wt-project-upgrade, branch feature/project-upgrade @877f82b; 32 REQ-UP; D-20 + BL-51 recorded; REQ-UP-005 (no offer when plan empty) to confirm |
 | B-12 | medium | AG-12 cheap pieces (evidence wrapper, clean-context "fiscal" before qa.approved/done) | proposed, not decided | 2026-09-25 | owner asked about agent autonomy; propose as backlog after 3.12.0 |
 | B-13 | low | F-51 statusline stable launcher (README suggests a versioned path that goes stale) | folded into project-upgrade | 2026-09-25 | |
+| B-14 | high | Release chain 3.13.0 → wave2 → wave3 → living-docs → mockup-conformance | awaiting-human (prod OK 3.13.0) | 2026-09-27 | see handoff §4 |
+| B-15 | medium | Final neutrality cleanup + git-history exposure report | todo (at the end, owner's order) | 2026-09-27 | |
+| B-16 | low | team-adapters archive (old gates never approved) | awaiting-human | 2026-09-27 | owner decision |

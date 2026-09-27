@@ -1,7 +1,7 @@
 # Plan: wave1-hardening
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend, Infra
-**Created:** 2026-09-23 | **Status:** 🔄 in_progress
+**Created:** 2026-09-23 | **Status:** ✅ Completed and archived
 **Lane:** standard (recorded workaround — no lanes until R-09) · **Skipped:** mockup, design_graphic (no UI)
 **Release target:** 3.12.0 · **Flow:** trunk (`feature/wave1-hardening` → PR → `main`) · **Decisions:** D-01..D-04
 
@@ -42,22 +42,22 @@ failure mode that let two changes ship without QA.
 
 | Feature | Area | Requirements covered | Panel / sources | Status |
 |---------|------|----------------------|-----------------|--------|
-| F1 | Single phase state machine | REQ-W1-001..013 | R-01 · H-01, H-02, H-03, H-07, H-22, H-24, H-25 · BUG-06, F-40 · BL-04 | ⬜ |
-| F2 | Guards with table tests, prod-gate, approval hook | REQ-W1-014..030 | R-02 · H-10..H-15 · BUG-15 · D-01, D-02 · BL-05 | ⬜ |
-| F3 | Deploy and archive off integration/production | REQ-W1-031..035 | R-03 · H-18, H-19, H-20 · D-03 · BL-06 | ⬜ |
-| F4 | One versioning moment | REQ-W1-036..041 | R-04 · H-17 · F-20, F-38, F-43 · BL-07 | ⬜ |
-| F5 | Estimate never overwritten | REQ-W1-042..044 | R-05 · H-16 · BL-08 | ⬜ |
-| F6 | Session hook: archive, bounded injection, state.json, threshold, settings notice | REQ-W1-045..051 | R-06 · H-08, H-09, H-32 · F-34, BUG-16 · BL-09 | ⬜ |
-| F7 | Plugin as code + CI linter | REQ-W1-052..060 | R-07 · H-23, H-24, H-26, H-27, H-33 · F-44, BUG-07, BUG-17 · BL-10 | ⬜ |
-| F8 | Graphify and tracker ritual off the hot path | REQ-W1-061..064 | R-16 · H-31 · BL-19 | ⬜ |
-| F9 | Spec-delta merge tool | REQ-W1-065..067 | R-17 (script) · BL-20 | ⬜ |
-| F10 | Open-work dashboard | REQ-W1-068..072 | R-18 · H-30 · BL-21 | ⬜ |
-| F11 | QA observes only; review inside the change | REQ-W1-073..076 | R-21 · H-28, H-29 · BL-24 | ⬜ |
-| F12 | Short descriptions, no generic triggers | REQ-W1-077..079 | R-22 · H-23 · BL-25 | ⬜ |
-| F13 | Tracker adapters converged (team-adapters) | REQ-W1-080..096 | F-05, F-06, F-10, F-12..F-19, F-36, F-37, F-39..F-41, BUG-05, BUG-06, F-01 (verify) | ⬜ |
-| F14 | Notifications converged (team-adapters) | REQ-W1-097..099 | F-11, F-32, F-33 | ⬜ |
-| F15 | Statusline and method-page defects | REQ-W1-100..106 | BUG-08..BUG-14, F-35 | ⬜ |
-| F16 | Convergence and dogfooding | REQ-W1-107..109 | D-04 · BUG-05..BUG-17 · H-22 | ⬜ |
+| F1 | Single phase state machine | REQ-W1-001..013 | R-01 · H-01, H-02, H-03, H-07, H-22, H-24, H-25 · BUG-06, F-40 · BL-04 | ✅ |
+| F2 | Guards with table tests, prod-gate, approval hook | REQ-W1-014..030 | R-02 · H-10..H-15 · BUG-15 · D-01, D-02 · BL-05 | ✅ |
+| F3 | Deploy and archive off integration/production | REQ-W1-031..035 | R-03 · H-18, H-19, H-20 · D-03 · BL-06 | ✅ |
+| F4 | One versioning moment | REQ-W1-036..041 | R-04 · H-17 · F-20, F-38, F-43 · BL-07 | ✅ |
+| F5 | Estimate never overwritten | REQ-W1-042..044 | R-05 · H-16 · BL-08 | ✅ |
+| F6 | Session hook: archive, bounded injection, state.json, threshold, settings notice | REQ-W1-045..051 | R-06 · H-08, H-09, H-32 · F-34, BUG-16 · BL-09 | ✅ |
+| F7 | Plugin as code + CI linter | REQ-W1-052..060 | R-07 · H-23, H-24, H-26, H-27, H-33 · F-44, BUG-07, BUG-17 · BL-10 | ✅ |
+| F8 | Graphify and tracker ritual off the hot path | REQ-W1-061..064 | R-16 · H-31 · BL-19 | ✅ |
+| F9 | Spec-delta merge tool | REQ-W1-065..067 | R-17 (script) · BL-20 | ✅ |
+| F10 | Open-work dashboard | REQ-W1-068..072 | R-18 · H-30 · BL-21 | ✅ |
+| F11 | QA observes only; review inside the change | REQ-W1-073..076 | R-21 · H-28, H-29 · BL-24 | ✅ |
+| F12 | Short descriptions, no generic triggers | REQ-W1-077..079 | R-22 · H-23 · BL-25 | ✅ |
+| F13 | Tracker adapters converged (team-adapters) | REQ-W1-080..096 | F-05, F-06, F-10, F-12..F-19, F-36, F-37, F-39..F-41, BUG-05, BUG-06, F-01 (verify) | ✅ |
+| F14 | Notifications converged (team-adapters) | REQ-W1-097..099 | F-11, F-32, F-33 | ✅ |
+| F15 | Statusline and method-page defects | REQ-W1-100..106 | BUG-08..BUG-14, F-35 | ✅ |
+| F16 | Convergence and dogfooding | REQ-W1-107..109 | D-04 · BUG-05..BUG-17 · H-22 | ✅ |
 
 ---
 
@@ -183,9 +183,9 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 - [x] E1.F16.T1 [Backend] Release docs and the single version bump to 3.12.0 — est: 30min (depends E1.F13.T2, E1.F14.T2, E1.F14.T4)
 - [ ] E1.F16.T2 [human] Prepare the owner's global-config diffs from architecture §7.3 (D-01, D-11) — executor: owner (revision 1, F-49) (depends E1.F5.T2) (P)
 - [ ] E1.F16.T3 [human] Branch protection on `main`: require the CI checks (Q-A8, D-09) — executor: owner (depends E1.F13.T2)
-- [ ] E1.F16.T4 [Backend] Release PR ready; `advance deploying` on the feature branch; the unapproved merge is blocked (E2E evidence) — est: 20min (depends E1.F16.T1, E1.F16.T3)
-- [ ] E1.F16.T5 [human] The prod OK for 3.12.0 (D-10) and the D-NN answer — executor: owner (depends E1.F16.T4)
-- [ ] E1.F16.T6 [Backend] `approve prod` (ledger), merge through the prod-gate, release facts in the ledger — est: 20min (depends E1.F16.T5)
+- [x] E1.F16.T4 [Backend] Release PR ready; `advance deploying` on the feature branch; the unapproved merge is blocked (E2E evidence) — est: 20min (depends E1.F16.T1, E1.F16.T3)
+- [x] E1.F16.T5 [human] The prod OK for 3.12.0 (D-10) and the D-NN answer — executor: owner (depends E1.F16.T4)
+- [x] E1.F16.T6 [Backend] `approve prod` (ledger), merge through the prod-gate, release facts in the ledger — est: 20min (depends E1.F16.T5)
 - [ ] E1.F16.T7 [human] Apply the diffs to `~/.claude/CLAUDE.md` and `~/.claude/settings.json` after seeing them (D-01, D-11) — executor: owner (depends E1.F16.T6, E1.F16.T2)
 
 ### Feature E1.F17: Test-phase iteration (revision 1, D-19)
@@ -283,9 +283,9 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | E1.F16.T1 [Backend] | ✅ done | 30 | 15 | 0 | `[Unreleased]` → `[3.12.0] - 2026-09-26` (Why, behaviour change, compatibility, 3.10.0 correction); plugin/marketplace/project.json 3.12.0; `pre_3_12_history.released_on`; method page 3.12.0 current in 5 languages; lint 0 errors |
 | E1.F16.T2 [human] | ⬜ todo | — | — | — | [human] revision 1 (F-49): auto mode refuses the agent's copy of the live files |
 | E1.F16.T3 [human] | ⬜ todo | — | — | — | [human] |
-| E1.F16.T4 [Backend] | 👀 review | 20 | — | — | `advance … deploying`; PR #24 out of draft; blocked-merge evidence and CI result in the PR body; required checks await the owner's branch protection (T3) |
-| E1.F16.T5 [human] | ⬜ todo | — | — | — | [human] |
-| E1.F16.T6 [Backend] | ⬜ todo | 20 | — | — |  |
+| E1.F16.T4 [Backend] | ✅ done | 20 | — | — | `advance … deploying`; PR #24 out of draft; blocked-merge evidence and CI result in the PR body; required checks await the owner's branch protection (T3) |
+| E1.F16.T5 [human] | ✅ done | — | — | — | [human] «ok, merge a prod wave1-hardening 3.12.0» — D-39 |
+| E1.F16.T6 [Backend] | ✅ done | 20 | — | — | ledger approve (D-39, head f6666d2); PR #24 merged `e2acfab`; CI on main run 36249074745 green |
 | E1.F16.T7 [human] | ⬜ todo | — | — | — | [human] |
 | E1.F17.T1 [Backend] | ✅ done | 30 | 6 | 0 | BUG-22 RESUELTO: `livestate.profile_only_since` (python path) + the same rule in the degraded bash block; test-hooks.sh 4 cases × 2 paths (case 1 red before the fix, 2-4 over-matching guards); regression index BUG-22 |
 | E1.F17.T2 [Backend] | ✅ done | 20 | 3 | 0 | F-19: `KIND_EXEMPTIONS["status"] = ( )`; test_safe_values.py: accepted by `check_status` and `get … --shell`, `a$(b)` / backtick / `"` / `;` refused, exemption per kind (red before the fix) |
@@ -339,6 +339,8 @@ Full detail (files, REQs, tests, done criteria, dependencies) in [`tasks.md`](ta
 | 2026-09-25 | test | Test phase 2 (`advance … test`). Unit 711 · regression 10 · test-hooks 68 · tables 321 cases / 390 runs · page 22 — all green; lint 0 errors; `validate --all` 0 errors; manual scripts 10/10 PASS (four after re-run); every requirement area PASS (E2E release/archive still in deploy/archive). Benchmark: pre-bash slower than baseline under load (F-55, emergent). Evidence `docs/test_evidence.md` § Test phase 2. |
 | 2026-09-25 | qa | QA entered (`advance … qa`); 9 dimensions over `origin/main...4c9b7c0` (D1–D4 and D7 by review subagents, D7 intra-model). 20 bugs fixed in the micro-loop (BUG-27..46, each red on 4c9b7c0); 13 spec-gap/emergent F-76..F-88: F-76, F-77, F-79 open for the owner (prod approval evidence and binding), 10 deferred to BL-53..BL-61. Security gate FAIL on F-76/F-77; QA not approved. Review `qa/REVISION_PR_24_20260925.md`. After the fixes: unit 735 · regression 10 · test-hooks 68 · tables 363 cases / 438 runs · page 22 · lint 0 errors · validate 0 errors. |
 | 2026-09-26 | qa | karvey-iterate for D-34..D-36: spec revision (REQ-W1-017/023, architecture rev 4, E1.F18) and implementation, tests red first on c4d81cf; QA re-run D1 + D7 (4 passes) found BUG-47..51 (prod-gate push forms, deferred merges, reopen ordering), all RESUELTO; F-90 → BL-62, F-91 → BL-63; security gate PASS, QA ready for approval (not recorded). |
+| 2026-09-26 | deploy | 3.12.0 released: owner's prod OK D-39 recorded in the ledger (head `f6666d2`), PR #24 merged (`e2acfab`), CI on `main` run 36249074745 green; `advance … deployed`. |
+| 2026-09-26 | archive | Spec merged (specs/method: ADDED 121 · MODIFIED 4 · REMOVED 0) and archived; findings of wave1-hardening and team-adapters converged. Carried over as owner tasks: E1.F16.T2, E1.F16.T3 (required CI checks on `main`), E1.F16.T7. |
 
 ## QA Review (2026-09-25)
 
