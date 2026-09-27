@@ -6189,22 +6189,22 @@ claude plugin update karvey@karvey-methods</code></pre>
 
 <!-- 8. HOOKS -->
 <section class="block" id="ja-hooks" aria-labelledby="ja-t-hooks">
-  <p class="eyebrow">08 · What runs on its own and what you choose</p>
-  <h2 id="ja-t-hooks">Hooks</h2>
-  <p class="lede">A skill is guidance: the model follows it voluntarily and it guarantees nothing. A hook actually blocks. Karvey separates what comes active with the plugin from what each project decides to enable.</p>
+  <p class="eyebrow">08 · 自動で動くものと選択するもの</p>
+  <h2 id="ja-t-hooks">フック</h2>
+  <p class="lede">スキルはガイダンスです。モデルは自発的に従うだけで、何も保証しません。フックは実際にブロックします。Karvey は、プラグインとともに有効になるものと、各プロジェクトが有効化を決めるものを分けています。</p>
 
   <div class="split">
     <div class="card">
-      <h3>Active on install</h3>
-      <p><span class="tag m">automatic</span> <strong><code>SessionStart</code> · <code>karvey-session-context.sh</code></strong> (on <code>startup|resume|compact|clear</code>, 10 s timeout).</p>
+      <h3>インストール時に有効</h3>
+      <p><span class="tag m">自動</span> <strong><code>SessionStart</code> · <code>karvey-session-context.sh</code></strong>（<code>startup|resume|compact|clear</code> 時、タイムアウト 10 秒）。</p>
       <ul class="small">
-        <li>Re-injects identity, manifest, board, checklist and handoff (looks for <code>docs/spec/team.json</code>, a legacy <code>.ceo-agentes</code> or <code>docs/spec/agent/</code>).</li>
-        <li><strong>Measures</strong>: for each repo in <code>state.json</code> it compares branch, last commit and uncommitted changes against the live tree → <code>matches</code> or <code>DRIFT — branch X -&gt; Y</code>.</li>
-        <li>Says to run <code>/karvey-checkpoint restore</code> first if there is an active change, drift, or no handoff.</li>
-        <li><span class="tag o">3.10</span> In a Karvey project without team settings it prints one line pointing to <code>/karvey:karvey-init --settings</code>.</li>
-        <li>Outside a Karvey project it is <strong>inert</strong>: prints nothing and exits 0. The plugin’s hooks add to yours; they do not replace them.</li>
+        <li>アイデンティティ、マニフェスト、ボード、チェックリスト、引き継ぎを再注入します（<code>docs/spec/team.json</code>、レガシーの <code>.ceo-agentes</code>、または <code>docs/spec/agent/</code> を探します）。</li>
+        <li><strong>計測</strong>：<code>state.json</code> 内の各リポジトリについて、ブランチ、最新コミット、未コミットの変更を実際のツリーと比較します → <code>matches</code> または <code>DRIFT — branch X -&gt; Y</code>。</li>
+        <li>アクティブな変更がある場合、ドリフトがある場合、または引き継ぎがない場合は、まず <code>/karvey-checkpoint restore</code> を実行するよう促します。</li>
+        <li><span class="tag o">3.10</span> チーム設定のない Karvey プロジェクトでは、<code>/karvey:karvey-init --settings</code> を案内する 1 行を表示します。</li>
+        <li>Karvey プロジェクトの外では<strong>何もしません</strong>。何も表示せず、終了コード 0 で終わります。プラグインのフックはあなたのフックに追加されるもので、置き換えるものではありません。</li>
       </ul>
-      <p><span class="tag">by hand, once</span> <strong>Statusline · <code>karvey-statusline.sh</code></strong>: context, account limits with the <strong>time of the next reset and the time remaining</strong> for each window (e.g. <code>5h 29% ↻18:05 (1h31m) · 7d 35% ↻jue 21:20 (2d4h)</code>, clock per <code>KARVEY_TZ</code>, the system time zone by default), hours, cost and a “TIME TO ROTATE” warning. A plugin cannot declare a statusline, so you paste it into your <code>~/.claude/settings.json</code>. It runs outside the turn (costs no tokens) and needs <code>bash</code> + <code>python3</code>.</p>
+      <p><span class="tag">手動で一度だけ</span> <strong>Statusline · <code>karvey-statusline.sh</code></strong>：コンテキスト、アカウントの利用上限と、各ウィンドウの<strong>次回リセット時刻と残り時間</strong>（例：<code>5h 29% ↻18:05 (1h31m) · 7d 35% ↻jue 21:20 (2d4h)</code>。時刻は <code>KARVEY_TZ</code> に従い、デフォルトはシステムのタイムゾーン）、経過時間、コスト、そして「TIME TO ROTATE」の警告を表示します。プラグインは statusline を宣言できないため、<code>~/.claude/settings.json</code> に貼り付けます。ターンの外で動作し（トークンを消費しません）、<code>bash</code> + <code>python3</code> が必要です。</p>
       <pre><code>{
   "statusLine": {
     "type": "command",
@@ -6212,20 +6212,20 @@ claude plugin update karvey@karvey-methods</code></pre>
     "padding": 0
   }
 }</code></pre>
-      <p class="small muted">Thresholds: <code>KARVEY_ROTATE_CTX_YELLOW</code> (100000), <code>KARVEY_ROTATE_CTX_RED</code> (150000), <code>KARVEY_ROTATE_HOURS</code> (8). The 150k comes from measurement: at 588k of context a turn costs 7× what it costs at 80k.</p>
+      <p class="small muted">しきい値：<code>KARVEY_ROTATE_CTX_YELLOW</code>（100000）、<code>KARVEY_ROTATE_CTX_RED</code>（150000）、<code>KARVEY_ROTATE_HOURS</code>（8）。150k という値は計測に基づいています。コンテキストが 588k のときの 1 ターンのコストは、80k のときの 7 倍です。</p>
     </div>
     <div class="card">
-      <h3>Optional per project</h3>
-      <p><span class="tag r">opt-in</span> <code>karvey-init</code> asks whether to enable them (step 3.5) and <code>karvey-guard</code> manages them afterwards. They are written to the project’s <code>settings.json</code>, parameterised with <code>branch_flow</code>. Never imposed globally.</p>
+      <h3>プロジェクトごとに任意</h3>
+      <p><span class="tag r">オプトイン</span> <code>karvey-init</code> が有効化するかどうかを尋ね（ステップ 3.5）、その後は <code>karvey-guard</code> が管理します。プロジェクトの <code>settings.json</code> に書き込まれ、<code>branch_flow</code> でパラメーター化されます。グローバルに強制されることはありません。</p>
       <div class="table-wrap">
         <table>
-          <thead><tr><th scope="col">Hook</th><th scope="col">What it does</th></tr></thead>
+          <thead><tr><th scope="col">フック</th><th scope="col">内容</th></tr></thead>
           <tbody>
-            <tr><td><code>git-flow-guard</code><br><span class="tag m">bundled script</span></td><td class="wrap">Blocks a direct <code>git push</code> to production, <code>git commit</code> on dev/master and manual deploys. Allowed flow: <code>feature/* → dev → PR → master</code>.</td></tr>
-            <tr><td><code>plan-gate</code><br><span class="tag m">bundled script</span></td><td class="wrap">Blocks Edit/Write or destructive commands without an approved-plan marker; the marker is created when the plan is approved.</td></tr>
-            <tr><td><code>standards-guard</code><br><span class="tag">described in the rule</span></td><td class="wrap">Warns or blocks when impl touches a <code>MUST NOT</code> pattern (or a <code>deprecated</code> one under migration) without an approved deviation in <code>deviations.md</code>.</td></tr>
-            <tr><td><code>clickup-sync-guard</code><br><span class="tag">described in the rule</span></td><td class="wrap">Tool-agnostic despite its name: warns when the phase advances without the corresponding closing comment/status.</td></tr>
-            <tr><td><code>--freeze &lt;dir&gt;</code></td><td class="wrap">Edit-lock: blocks every write outside the boundary directory until <code>--unfreeze</code>.</td></tr>
+            <tr><td><code>git-flow-guard</code><br><span class="tag m">同梱スクリプト</span></td><td class="wrap">本番への直接の <code>git push</code>、dev/master での <code>git commit</code>、手動デプロイをブロックします。許可されるフロー：<code>feature/* → dev → PR → master</code>。</td></tr>
+            <tr><td><code>plan-gate</code><br><span class="tag m">同梱スクリプト</span></td><td class="wrap">承認済みプランのマーカーがない状態での Edit/Write や破壊的なコマンドをブロックします。マーカーはプランが承認されたときに作成されます。</td></tr>
+            <tr><td><code>standards-guard</code><br><span class="tag">ルール内で説明</span></td><td class="wrap">impl が <code>deviations.md</code> に承認済みの逸脱がないまま <code>MUST NOT</code> パターン（または移行中の <code>deprecated</code> パターン）に触れた場合に、警告またはブロックします。</td></tr>
+            <tr><td><code>clickup-sync-guard</code><br><span class="tag">ルール内で説明</span></td><td class="wrap">名前に反してツール非依存です。対応するクローズのコメント／ステータスなしにフェーズが進んだ場合に警告します。</td></tr>
+            <tr><td><code>--freeze &lt;dir&gt;</code></td><td class="wrap">編集ロック：<code>--unfreeze</code> まで、境界ディレクトリ外へのすべての書き込みをブロックします。</td></tr>
           </tbody>
         </table>
       </div>
@@ -6234,79 +6234,79 @@ claude plugin update karvey@karvey-methods</code></pre>
 /karvey:karvey-guard --override       # one-off plan-gate override
 /karvey:karvey-guard --freeze &lt;dir&gt;   # edit-lock   ·  --unfreeze
 /karvey:karvey-guard --verify         # verification checklist (read-only)</code></pre>
-      <p class="small muted">The only opt-in scripts the plugin ships are <code>git-flow-guard.sh</code> and <code>plan-gate.sh</code> (in <code>skills/karvey/hooks/</code>). <code>standards-guard</code> and <code>clickup-sync-guard</code> are <strong>described in the rule</strong> (<code>enforcement.md</code>, with detail in <code>engineering-standards.md</code> and <code>phase-close.md</code>); they are not shipped as scripts.</p>
+      <p class="small muted">プラグインが同梱するオプトインのスクリプトは <code>git-flow-guard.sh</code> と <code>plan-gate.sh</code>（<code>skills/karvey/hooks/</code> 内）だけです。<code>standards-guard</code> と <code>clickup-sync-guard</code> は<strong>ルール内で説明されている</strong>もの（<code>enforcement.md</code>。詳細は <code>engineering-standards.md</code> と <code>phase-close.md</code>）で、スクリプトとしては提供されません。</p>
     </div>
   </div>
 </section>
 
 <!-- 9. TEAM SETTINGS -->
 <section class="block" id="ja-team-config" aria-labelledby="ja-t-cfg">
-  <p class="eyebrow">09 · New in 3.10</p>
-  <h2 id="ja-t-cfg">Team settings</h2>
-  <p class="lede">Karvey used to assume Google Chat for notifications and ClickUp with one team’s own status (<code>listo! para pap</code>). Now the channel, the tool and its status flow are <strong>team settings</strong> stored in <code>project.json</code>, and every phase speaks in <strong>logical states</strong>. HainTech’s flow keeps working because it declares it, not because it is the default.</p>
+  <p class="eyebrow">09 · 3.10 の新機能</p>
+  <h2 id="ja-t-cfg">チーム設定</h2>
+  <p class="lede">以前の Karvey は、通知には Google Chat を、管理には特定のチーム独自のステータス（<code>ready for review</code>）を持つ ClickUp を前提としていました。現在は、チャネル、ツール、そのステータスフローは<strong>チーム設定</strong>として <code>project.json</code> に保存され、すべてのフェーズが<strong>論理ステータス</strong>で扱います。チームの既存のフローが引き続き動作するのは、それがデフォルトだからではなく、チームがそれを宣言しているからです。</p>
 
   <div class="note">
-    <strong>Why on first use and not on install?</strong> A Claude Code plugin has no install hook: nothing can run when it is installed. The earliest possible moment is first use: the session hook <em>warns</em> and <code>karvey-init</code> <em>asks</em>.
+    <strong>なぜインストール時ではなく初回利用時なのか？</strong> Claude Code のプラグインにはインストールフックがなく、インストール時には何も実行できません。可能な最も早いタイミングは初回利用時です。セッションフックが<em>警告</em>し、<code>karvey-init</code> が<em>質問</em>します。
   </div>
 
-  <ol class="lane" aria-label="Settings flow on first use">
-    <li><b>1 · Session</b>The hook detects <code>docs/spec/</code> without <code>notifications</code> or <code>management</code> and leaves a one-line notice.</li>
-    <li><b>2 · karvey-init</b>Step 3.2: asks one block at a time, with examples, without assuming the answer.</li>
-    <li><b>3 · Notifications</b>Channel, target, route (<code>mcp · cli · webhook · api</code>) and events (<code>qa</code>, <code>deploy</code> by default).</li>
-    <li><b>4 · Management</b>Tool, location and route.</li>
-    <li><b>5 · States</b>Reads the tool’s real statuses, proposes the mapping to the 5 logical ones and you confirm it once.</li>
-    <li class="prod"><b>6 · project.json</b>Writes both blocks; credentials go to <code>.connections.json</code> or a vault. With the blocks present it does not ask again, except with <code>--settings</code>.</li>
+  <ol class="lane" aria-label="初回利用時の設定フロー">
+    <li><b>1 · セッション</b>フックが <code>notifications</code> や <code>management</code> のない <code>docs/spec/</code> を検出し、1 行の通知を残します。</li>
+    <li><b>2 · karvey-init</b>ステップ 3.2：例を示しながら、答えを決めつけずに 1 ブロックずつ質問します。</li>
+    <li><b>3 · 通知</b>チャネル、宛先、ルート（<code>mcp · cli · webhook · api</code>）、イベント（デフォルトは <code>qa</code>、<code>deploy</code>）。</li>
+    <li><b>4 · 管理</b>ツール、場所、ルート。</li>
+    <li><b>5 · ステータス</b>ツールの実際のステータスを読み取り、5 つの論理ステータスへの対応付けを提案し、あなたが一度だけ確認します。</li>
+    <li class="prod"><b>6 · project.json</b>両方のブロックを書き込みます。認証情報は <code>.connections.json</code> またはボールトに保存されます。ブロックが存在すれば、<code>--settings</code> を使わない限り再度質問はしません。</li>
   </ol>
 
   <div class="split">
     <div class="card">
-      <h3>Notification channel · <code>notifications.channel</code></h3>
+      <h3>通知チャネル · <code>notifications.channel</code></h3>
       <div class="table-wrap">
         <table>
-          <thead><tr><th scope="col">Value</th><th scope="col">Target (<code>target</code>) and format</th></tr></thead>
+          <thead><tr><th scope="col">値</th><th scope="col">宛先（<code>target</code>）と書式</th></tr></thead>
           <tbody>
-            <tr><td><code>google-chat</code></td><td class="wrap">space id (<code>spaces/XXXX</code>); <code>*bold*</code>, no Markdown tables.</td></tr>
-            <tr><td><code>slack</code></td><td class="wrap">channel (<code>#dev-releases</code>); mrkdwn, tables as a code block.</td></tr>
-            <tr><td><code>teams</code></td><td class="wrap">team/channel; a Markdown subset or an Adaptive Card via webhook.</td></tr>
-            <tr><td><code>email</code></td><td class="wrap">address or list; simple HTML, subject <code>[Karvey] {evento} — {change-id}</code>.</td></tr>
-            <tr><td><code>webhook</code></td><td class="wrap">the <em>name</em> of the secret holding the URL, never the URL itself; generic JSON.</td></tr>
-            <tr><td><code>none</code></td><td class="wrap">a valid, explicit answer: the notice is skipped and that is stated.</td></tr>
+            <tr><td><code>google-chat</code></td><td class="wrap">スペース ID（<code>spaces/XXXX</code>）。<code>*bold*</code>、Markdown の表は不可。</td></tr>
+            <tr><td><code>slack</code></td><td class="wrap">チャネル（<code>#dev-releases</code>）。mrkdwn、表はコードブロックで。</td></tr>
+            <tr><td><code>teams</code></td><td class="wrap">チーム／チャネル。Markdown のサブセット、または Webhook 経由の Adaptive Card。</td></tr>
+            <tr><td><code>email</code></td><td class="wrap">アドレスまたはリスト。シンプルな HTML、件名は <code>[Karvey] {evento} — {change-id}</code>。</td></tr>
+            <tr><td><code>webhook</code></td><td class="wrap">URL そのものではなく、URL を保持するシークレットの<em>名前</em>。汎用 JSON。</td></tr>
+            <tr><td><code>none</code></td><td class="wrap">有効かつ明示的な回答：通知はスキップされ、その旨が明記されます。</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="small muted">Targets are never read from tables in <code>CLAUDE.md</code>; a failed send is reported, not swallowed.</p>
+      <p class="small muted">宛先を <code>CLAUDE.md</code> 内の表から読み取ることはありません。送信に失敗した場合は、握りつぶさずに報告します。</p>
     </div>
     <div class="card">
-      <h3>Tool · <code>management.tool</code></h3>
+      <h3>ツール · <code>management.tool</code></h3>
       <div class="table-wrap">
         <table>
-          <thead><tr><th scope="col">Value</th><th scope="col">How the session does it</th></tr></thead>
+          <thead><tr><th scope="col">値</th><th scope="col">セッションでの操作方法</th></tr></thead>
           <tbody>
-            <tr><td><code>clickup</code></td><td class="wrap">MCP or REST (<code>time_estimate</code> only via REST).</td></tr>
-            <tr><td><code>jira</code></td><td class="wrap">Atlassian MCP, the <code>jira</code> CLI or REST; changing status is a <em>transition</em>.</td></tr>
-            <tr><td><code>linear</code></td><td class="wrap">MCP or GraphQL; statuses per team.</td></tr>
-            <tr><td><code>azure-boards</code></td><td class="wrap"><code>az boards work-item create/update</code>.</td></tr>
-            <tr><td><code>github-projects</code></td><td class="wrap"><code>gh project item-add/item-edit</code>; status = a single-select field.</td></tr>
-            <tr><td><code>spreadsheet</code></td><td class="wrap">CSV/xlsx in the repo or a Sheet; one row per item.</td></tr>
-            <tr><td><code>markdown</code></td><td class="wrap"><code>PLAN.md</code>; always valid as a fallback.</td></tr>
-            <tr><td><code>other</code></td><td class="wrap">asks how the team tracks work; if there is no programmatic route, <code>PLAN.md</code>.</td></tr>
+            <tr><td><code>clickup</code></td><td class="wrap">MCP または REST（<code>time_estimate</code> は REST のみ）。</td></tr>
+            <tr><td><code>jira</code></td><td class="wrap">Atlassian MCP、<code>jira</code> CLI、または REST。ステータスの変更は<em>トランジション</em>です。</td></tr>
+            <tr><td><code>linear</code></td><td class="wrap">MCP または GraphQL。ステータスはチームごと。</td></tr>
+            <tr><td><code>azure-boards</code></td><td class="wrap"><code>az boards work-item create/update</code>。</td></tr>
+            <tr><td><code>github-projects</code></td><td class="wrap"><code>gh project item-add/item-edit</code>。ステータス = 単一選択フィールド。</td></tr>
+            <tr><td><code>spreadsheet</code></td><td class="wrap">リポジトリ内の CSV/xlsx またはシート。1 項目につき 1 行。</td></tr>
+            <tr><td><code>markdown</code></td><td class="wrap"><code>PLAN.md</code>。フォールバックとして常に有効。</td></tr>
+            <tr><td><code>other</code></td><td class="wrap">チームが作業をどう管理しているかを質問し、プログラムから操作する手段がなければ <code>PLAN.md</code>。</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <h3 style="margin-top:1.4rem">The 5 logical states</h3>
-  <p>Skills write <code>status → review</code>, never a literal name. The examples are <strong>values a team declares</strong>, not defaults. If the map is missing (projects older than 3.10), the real statuses are read before the first change, the mapping is proposed and confirmed once; it is never guessed.</p>
+  <h3 style="margin-top:1.4rem">5 つの論理ステータス</h3>
+  <p>スキルは <code>status → review</code> と書き、具体的な名前は決して書きません。例は<strong>チームが宣言する値</strong>であり、デフォルトではありません。対応表がない場合（3.10 より前のプロジェクト）は、最初の変更の前に実際のステータスを読み取り、対応付けを提案して一度だけ確認します。推測することは決してありません。</p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th scope="col">Logical</th><th scope="col">Meaning</th><th scope="col">ClickUp (HainTech)</th><th scope="col">Jira</th><th scope="col">Spreadsheet</th><th scope="col">Markdown</th></tr></thead>
+      <thead><tr><th scope="col">論理ステータス</th><th scope="col">意味</th><th scope="col">ClickUp（チームの例）</th><th scope="col">Jira</th><th scope="col">スプレッドシート</th><th scope="col">Markdown</th></tr></thead>
       <tbody>
-        <tr><td><code>todo</code></td><td>planned, not started</td><td><code>to do</code></td><td><code>To Do</code></td><td><code>Pending</code></td><td>⬜</td></tr>
-        <tr><td><code>in_progress</code></td><td>being worked on</td><td><code>in progress</code></td><td><code>In Progress</code></td><td><code>In progress</code></td><td>🔄</td></tr>
-        <tr><td><code>review</code></td><td>implemented, awaiting validation or human review</td><td><code>listo! para pap</code></td><td><code>In Review</code></td><td><code>Review</code></td><td>👀</td></tr>
-        <tr><td><code>done</code></td><td>validated / released</td><td><code>complete</code></td><td><code>Done</code></td><td><code>Done</code></td><td>✅</td></tr>
-        <tr><td><code>blocked</code></td><td>cannot move forward</td><td><code>blocked</code></td><td><code>Blocked</code></td><td><code>Blocked</code></td><td>⛔</td></tr>
+        <tr><td><code>todo</code></td><td>計画済み、未着手</td><td><code>to do</code></td><td><code>To Do</code></td><td><code>Pending</code></td><td>⬜</td></tr>
+        <tr><td><code>in_progress</code></td><td>作業中</td><td><code>in progress</code></td><td><code>In Progress</code></td><td><code>In progress</code></td><td>🔄</td></tr>
+        <tr><td><code>review</code></td><td>実装済み、検証または人間のレビュー待ち</td><td><code>ready for review</code></td><td><code>In Review</code></td><td><code>Review</code></td><td>👀</td></tr>
+        <tr><td><code>done</code></td><td>検証済み／リリース済み</td><td><code>complete</code></td><td><code>Done</code></td><td><code>Done</code></td><td>✅</td></tr>
+        <tr><td><code>blocked</code></td><td>先に進めない</td><td><code>blocked</code></td><td><code>Blocked</code></td><td><code>Blocked</code></td><td>⛔</td></tr>
       </tbody>
     </table>
   </div>
@@ -6315,152 +6315,152 @@ claude plugin update karvey@karvey-methods</code></pre>
   "tool": "jira", "location": "PAY", "via": "cli", "hierarchy": "epic&gt;feature&gt;task",
   "statuses": { "todo": "To Do", "in_progress": "In Progress", "review": "In Review", "done": "Done", "blocked": "Blocked" }
 }</code></pre>
-  <p class="small muted">The result in one line, for example: <code>Settings: notifications slack #dev-releases (webhook) · management jira PAY (5 states mapped)</code>.</p>
+  <p class="small muted">結果は 1 行で示されます。例：<code>Settings: notifications slack #dev-releases (webhook) · management jira PAY (5 states mapped)</code>。</p>
 </section>
 
 <!-- 10. DEPLOY -->
 <section class="block" id="ja-deploy" aria-labelledby="ja-t-dep">
-  <p class="eyebrow">10 · Delivery</p>
-  <h2 id="ja-t-dep">Deploy and branches</h2>
-  <p class="lede">Deployment is triggered by the pipeline, never by hand by a person or an agent: a push to <code>dev</code> deploys dev; a merge to <code>master</code> deploys prod. The names come from <code>project.json:branch_flow</code>.</p>
+  <p class="eyebrow">10 · デリバリー</p>
+  <h2 id="ja-t-dep">デプロイとブランチ</h2>
+  <p class="lede">デプロイはパイプラインによってトリガーされ、人間やエージェントが手動で行うことは決してありません。<code>dev</code> への push で dev にデプロイされ、<code>master</code> へのマージで prod にデプロイされます。ブランチ名は <code>project.json:branch_flow</code> から取得されます。</p>
 
-  <ol class="lane" aria-label="Branch flow">
-    <li><b>feature/{change-id}</b>Development and one commit per task. Never commit on dev or master.</li>
-    <li><b>dev</b>pull → merge → push ⇒ DEV pipeline → canary.</li>
-    <li><b>PR dev → master</b>pull first; the PR’s gates (CI + branch policies) green.</li>
-    <li class="prod"><b>master</b>Merge only with a human OK ⇒ PROD pipeline → canary.</li>
-    <li><b>Hygiene</b>Absorbed branches deleted (remote + local); unabsorbed ones are reported.</li>
+  <ol class="lane" aria-label="ブランチのフロー">
+    <li><b>feature/{change-id}</b>開発とタスクごとに 1 コミット。dev や master には決してコミットしません。</li>
+    <li><b>dev</b>pull → merge → push ⇒ DEV パイプライン → カナリア。</li>
+    <li><b>PR dev → master</b>まず pull。PR のゲート（CI + ブランチポリシー）がグリーン。</li>
+    <li class="prod"><b>master</b>人間の OK がある場合のみマージ ⇒ PROD パイプライン → カナリア。</li>
+    <li><b>整理</b>取り込み済みのブランチは削除（リモート + ローカル）。取り込まれていないものは報告します。</li>
   </ol>
 
   <div class="grid">
     <div class="card">
-      <h3>6-step checklist</h3>
+      <h3>6 ステップのチェックリスト</h3>
       <ol class="steps small">
-        <li>Am I on a feature branch?</li>
-        <li>Did I update <code>CHANGELOG.md</code>?</li>
-        <li>Did I commit everything pending?</li>
-        <li>Did I push the branch?</li>
-        <li>Did I merge to <code>dev</code>?</li>
-        <li>Did I push <code>dev</code>?</li>
+        <li>フィーチャーブランチにいるか？</li>
+        <li><code>CHANGELOG.md</code> を更新したか？</li>
+        <li>保留中のものをすべてコミットしたか？</li>
+        <li>ブランチを push したか？</li>
+        <li><code>dev</code> にマージしたか？</li>
+        <li><code>dev</code> を push したか？</li>
       </ol>
-      <p class="small muted">Only then does the pipeline deploy dev. For prod the verification is repeated, and the PR goes through with approval.</p>
+      <p class="small muted">これらを満たしてはじめて、パイプラインが dev にデプロイします。prod では検証を繰り返し、PR は承認を経て通ります。</p>
     </div>
     <div class="card">
-      <h3>PR gates and human OK</h3>
-      <p class="small">CI and branch policies (build validation, required reviewers, status checks) run on the merge commit and see what the local check does not. <strong>Approval is never requested on a red gate</strong>: that turns approval into a rubber stamp. Skipping a policy is the human’s decision and responsibility.</p>
-      <p class="small">The OK is recorded in git: <code>approvals.prod = { by, date, ref: D-NN }</code>. The production gate is never delegated to an agent.</p>
+      <h3>PR のゲートと人間の OK</h3>
+      <p class="small">CI とブランチポリシー（ビルド検証、必須レビュアー、ステータスチェック）はマージコミット上で実行され、ローカルのチェックでは見えないものを捉えます。<strong>ゲートがレッドの状態で承認を求めることは決してありません</strong>。それでは承認が単なる形式的な押印になってしまいます。ポリシーをスキップするかどうかは、人間の判断と責任です。</p>
+      <p class="small">OK は git に記録されます：<code>approvals.prod = { by, date, ref: D-NN }</code>。本番ゲートがエージェントに委ねられることは決してありません。</p>
     </div>
     <div class="card">
-      <h3>Post-deploy canary</h3>
-      <p class="small">After every deploy (dev and prod), several spaced-out iterations against the real runtime: console, performance, pages/endpoints, with evidence. In dev a regression stops promotion to prod; in prod it raises an alert and recommends a rollback, also via pipeline. It reinforces <strong>zero downtime</strong>.</p>
+      <h3>デプロイ後のカナリア</h3>
+      <p class="small">各デプロイ（dev と prod）の後、実ランタイムに対して間隔を空けて複数回の確認を行います：コンソール、パフォーマンス、ページ／エンドポイント、証拠付きで。dev でリグレッションがあれば prod への昇格を止め、prod ではアラートを上げてロールバックを推奨します（ロールバックもパイプライン経由です）。<strong>ゼロダウンタイム</strong>を補強します。</p>
     </div>
     <div class="card">
-      <h3>Branch hygiene</h3>
-      <p class="small">Absorption is <strong>verified</strong>: <code>git branch -r --merged</code>, <code>git cherry</code> and the tree test with <code>git merge-tree --write-tree</code> (squash). Absorbed → deleted (<code>git branch -d</code>, never <code>-D</code>). Not absorbed → never deleted: it is reported with its commits and the human decides. Counts are reported; nothing is ever cleaned up silently.</p>
+      <h3>ブランチの整理</h3>
+      <p class="small">取り込みは<strong>検証</strong>されます：<code>git branch -r --merged</code>、<code>git cherry</code>、そして <code>git merge-tree --write-tree</code> によるツリーテスト（squash）。取り込み済み → 削除（<code>git branch -d</code>、<code>-D</code> は決して使いません）。取り込まれていない → 決して削除せず、コミットとともに報告し、人間が判断します。件数を報告し、黙って整理することは決してありません。</p>
     </div>
     <div class="card">
-      <h3>Version bump and visible version</h3>
-      <p class="small">Every deploy <strong>bumps the version</strong> (semver <code>major.minor.rev</code>, never reused) and adds the <code>CHANGELOG.md</code> entry, per component and per repo. A front shows it <strong>by environment</strong>: DEV shows the <strong>dev version</strong> <code>v3.10.1-dev.42+74571ae</code> with a <code>DEV</code> mark; PROD shows the <strong>release version</strong> <code>v3.10.1</code>.</p>
-      <p class="small">The version is read from the version file (<code>package.json</code>, <code>pyproject.toml</code>…) at build time — never from a pipeline variable, which goes stale silently. The pipeline only provides environment, build number and commit. The canary checks that the visible version matches the environment.</p>
+      <h3>バージョンの引き上げと表示バージョン</h3>
+      <p class="small">すべてのデプロイで<strong>バージョンを上げ</strong>（semver <code>major.minor.rev</code>、再利用しない）、<code>CHANGELOG.md</code> にエントリを追加します。コンポーネントごと、リポジトリごとです。フロントエンドは<strong>環境ごとに</strong>表示します：DEV では<strong>開発バージョン</strong> <code>v3.10.1-dev.42+74571ae</code> を <code>DEV</code> マーク付きで、PROD では<strong>リリースバージョン</strong> <code>v3.10.1</code> を表示します。</p>
+      <p class="small">バージョンはビルド時にバージョンファイル（<code>package.json</code>、<code>pyproject.toml</code>…）から読み取ります。パイプライン変数からは決して読み取りません。パイプライン変数は気づかないうちに古くなるためです。パイプラインが提供するのは環境、ビルド番号、コミットだけです。カナリアは表示されたバージョンが環境と一致するかを確認します。</p>
     </div>
   </div>
-  <p class="small muted">Multi-repo: the flow applies in each repo following the dependency order in <code>architecture.md</code> (e.g. DB → backend → frontend). Semver + CHANGELOG before the push; version visible in the frontend (recommended).</p>
+  <p class="small muted">マルチリポジトリ：このフローは <code>architecture.md</code> の依存関係の順序（例：DB → backend → frontend）に従って各リポジトリに適用されます。push の前に semver + CHANGELOG。フロントエンドでのバージョン表示（推奨）。</p>
 </section>
 
 <!-- 11. AGENT TEAM -->
 <section class="block" id="ja-agent-team" aria-labelledby="ja-t-team">
-  <p class="eyebrow">11 · Optional</p>
-  <h2 id="ja-t-team">Agent-team layer</h2>
-  <p class="lede">The pipeline carries the axis of the <em>work</em>; this layer adds the axis of the <em>worker</em>: who carries it, what role they have, how they survive a context reset and how several coordinate without stepping on each other. <strong>It is opt-in and not the recommended default.</strong> Without <code>docs/spec/team.json</code>, the layer does not exist for the project.</p>
+  <p class="eyebrow">11 · 任意</p>
+  <h2 id="ja-t-team">エージェントチーム層</h2>
+  <p class="lede">パイプラインが<em>作業</em>の軸を担い、この層は<em>作業者</em>の軸を加えます。誰が担当するか、どのロールを持つか、コンテキストのリセットをどう乗り越えるか、複数のエージェントが互いに干渉せずにどう連携するか。<strong>これはオプトインであり、推奨されるデフォルトではありません。</strong><code>docs/spec/team.json</code> がなければ、そのプロジェクトにこの層は存在しません。</p>
 
   <div class="note warn">
-    <strong>An honest cost warning (measured, not theoretical).</strong> The run that gave rise to the rule: a team of 6 agents on a real product, 3 days, <strong>≈ US$1,000</strong>, and it ended up <strong>going back to a single agent with good instructions</strong>. A turn at 588k of context cost 7× one at 80k; 31% of the turns accounted for 48% of the spend. Every hop between agents is fresh context for the receiver: there is no shared cache across sessions, and the same background is re-read and paid for on each side.
+    <strong>コストについての率直な警告（理論ではなく計測値）。</strong> このルールのきっかけとなった実例：実際のプロダクトで 6 エージェントのチームを 3 日間動かし、<strong>約 US$1,000</strong> かかった結果、<strong>適切な指示を与えた単一エージェントに戻す</strong>ことになりました。コンテキスト 588k のターンは 80k のターンの 7 倍のコストがかかり、31% のターンが支出の 48% を占めていました。エージェント間の受け渡しのたびに、受け手にとっては新しいコンテキストとなります。セッションをまたいだ共有キャッシュはなく、同じ背景情報が双方で読み直され、その分の料金が発生します。
   </div>
   <div class="grid">
     <div class="card">
-      <h3>Don’t use a team when…</h3>
+      <h3>チームを使うべきでないのは…</h3>
       <ul class="small">
-        <li>the budget matters;</li>
-        <li>the work fits in one context;</li>
-        <li>the split would be by <em>topic</em> rather than by <em>repo with a real owner</em>;</li>
-        <li>nobody is measuring the spend.</li>
+        <li>予算が重要なとき</li>
+        <li>作業が 1 つのコンテキストに収まるとき</li>
+        <li>分担が<em>実際のオーナーがいるリポジトリ</em>単位ではなく<em>トピック</em>単位になるとき</li>
+        <li>誰も支出を計測していないとき</li>
       </ul>
     </div>
     <div class="card">
-      <h3>It earns its cost with…</h3>
+      <h3>コストに見合うのは…</h3>
       <ul class="small">
-        <li>truly parallel work in separate repos;</li>
-        <li>long, independent workstreams;</li>
-        <li>roles that need other tools or permissions (a machine with a browser, a console operated by a person).</li>
+        <li>別々のリポジトリでの真に並行した作業</li>
+        <li>長期にわたる独立したワークストリーム</li>
+        <li>別のツールや権限が必要なロール（ブラウザのあるマシン、人間が操作するコンソール）</li>
       </ul>
     </div>
     <div class="card">
-      <h3>If it is on, measure it</h3>
-      <p class="small"><code>karvey-team cost</code> writes the report into the repo. Also: <code>init</code> (shows the cost table and confirms before writing), <code>census</code> (an inventory, not an address book) and <code>relay</code> (sessions ready to rotate). Rotation by threshold: 150k of context or 24 h by default.</p>
+      <h3>有効にするなら計測する</h3>
+      <p class="small"><code>karvey-team cost</code> はレポートをリポジトリに書き込みます。ほかに、<code>init</code>（コスト表を表示し、書き込む前に確認）、<code>census</code>（アドレス帳ではなく一覧）、<code>relay</code>（ローテーション準備のできたセッション）があります。しきい値によるローテーション：デフォルトはコンテキスト 150k または 24 時間。</p>
     </div>
   </div>
-  <p class="small muted">The handoff and the session hook work the same with a single agent (<code>docs/spec/agent/</code>); with a team only its location changes (<code>{ops_repo}/agents/&lt;rol&gt;/</code>).</p>
+  <p class="small muted">引き継ぎとセッションフックは、単一エージェントでも同じように動作します（<code>docs/spec/agent/</code>）。チームの場合は保存場所が変わるだけです（<code>{ops_repo}/agents/&lt;rol&gt;/</code>）。</p>
 </section>
 
 <!-- 12. INSTALL -->
 <section class="block" id="ja-wave3" aria-labelledby="ja-t-wave3">
-  <p class="eyebrow">New in 4.1 · Wave 3</p>
-  <h2 id="ja-t-wave3">Smaller phases, informed sponsors</h2>
-  <p class="lede">Each phase loads only the rules it declares, and the sponsor of a change gets one page with its scope, state, cost, open risks and the decisions it waits for. Cost is measured, never capped.</p>
+  <p class="eyebrow">4.1 の新機能 · Wave 3</p>
+  <h2 id="ja-t-wave3">より小さなフェーズ、情報を得たスポンサー</h2>
+  <p class="lede">各フェーズは自身が宣言したルールだけを読み込み、変更のスポンサーはスコープ、状態、コスト、未解決のリスク、そして判断待ちの事項をまとめた 1 ページを受け取ります。コストは計測されますが、上限が設けられることはありません。</p>
   <div class="grid">
     <div class="card">
-      <h3>Load lists</h3>
-      <p class="small">Every phase skill names its closed list on a <code>Load:</code> line: the core contracts (<code>_core.md</code>) plus the rules it needs, and only the tracker adapter the project uses. Rules cite other rules in footnotes that are never opened. Measured: the median phase loads 56% less text than in 4.0.</p>
+      <h3>読み込みリスト</h3>
+      <p class="small">すべてのフェーズスキルは <code>Load:</code> 行に閉じたリストを記載します：コアの契約（<code>_core.md</code>）と必要なルール、そしてプロジェクトが使うトラッカーのアダプターだけです。ルールは他のルールを脚注で引用し、その脚注が開かれることはありません。計測結果：フェーズの中央値で、4.0 と比べて読み込むテキストが 56% 減りました。</p>
     </div>
     <div class="card">
-      <h3>Sponsor page</h3>
-      <p class="small">At every gate close <code>karvey-close.py</code> builds <code>sponsor.html</code> from the change's own artifacts: scope, state, cost, open risks and what waits for the sponsor. An allow-list and a leak check refuse secrets, paths, hosts and personal data; it goes only to the destination the project declares.</p>
+      <h3>スポンサーページ</h3>
+      <p class="small">各ゲートのクローズ時に、<code>karvey-close.py</code> が変更自体の成果物から <code>sponsor.html</code> を生成します：スコープ、状態、コスト、未解決のリスク、スポンサーの判断待ちの事項。許可リストと漏えいチェックにより、シークレット、パス、ホスト、個人データを拒否します。送付先はプロジェクトが宣言したものだけです。</p>
     </div>
     <div class="card">
-      <h3>Questions and risks</h3>
-      <p class="small">Open questions <code>Q-NN</code> carry an owner and a needed-by date (<code>/karvey-decisions ask</code>). Each change keeps a risk register with owner, trigger and last review; archive refuses an open risk.</p>
+      <h3>質問とリスク</h3>
+      <p class="small">未解決の質問 <code>Q-NN</code> にはオーナーと回答期限が付きます（<code>/karvey-decisions ask</code>）。各変更はオーナー、トリガー、最終レビューを含むリスク登録簿を保持し、アーカイブは未解決のリスクがあると拒否します。</p>
     </div>
     <div class="card">
-      <h3>Cost per change</h3>
-      <p class="small">The statusline captures the session cost without a model turn; <code>karvey-state.py effort</code> records it per phase and judges take their tokens from the transcript. Metrics per lane, client and period; an outlier is input for the retro, never a stop.</p>
+      <h3>変更ごとのコスト</h3>
+      <p class="small">statusline はモデルのターンを使わずにセッションのコストを取得し、<code>karvey-state.py effort</code> がそれをフェーズごとに記録し、ジャッジはトランスクリプトからトークン数を取得します。レーン、クライアント、期間ごとのメトリクス。外れ値はふりかえりのインプットであり、停止の理由にはなりません。</p>
     </div>
     <div class="card">
-      <h3>Design system</h3>
-      <p class="small">The project keeps one <code>design-system.md</code>; design-graphic writes only a delta. <code>karvey-contrast-check.py</code> computes WCAG contrast and a design judge reads the delta before the gate.</p>
+      <h3>デザインシステム</h3>
+      <p class="small">プロジェクトは 1 つの <code>design-system.md</code> を保持し、design-graphic は差分だけを書き込みます。<code>karvey-contrast-check.py</code> が WCAG のコントラストを計算し、ゲートの前にデザインのジャッジが差分を読みます。</p>
     </div>
     <div class="card">
-      <h3>Portfolio</h3>
-      <p class="small"><code>karvey-context.py --portfolio</code> reads every Karvey repository of the organisation from one file, offline and read-only: active changes, decisions awaited, releases and cost, per client.</p>
+      <h3>ポートフォリオ</h3>
+      <p class="small"><code>karvey-context.py --portfolio</code> は、組織内のすべての Karvey リポジトリを 1 つのファイルから、オフラインかつ読み取り専用で読み取ります：アクティブな変更、判断待ちの決定事項、リリース、コストをクライアントごとに示します。</p>
     </div>
     <div class="card">
-      <h3>WSJF backlog</h3>
-      <p class="small">Value, effort, cost of delay and the needed-by date rank the backlog (<code>karvey-context.py --backlog</code>); <code>done-direct</code> closes an item with its commit; a refinement cadence keeps it fresh.</p>
+      <h3>WSJF バックログ</h3>
+      <p class="small">価値、工数、遅延コスト、期限によってバックログを順位付けします（<code>karvey-context.py --backlog</code>）。<code>done-direct</code> はコミットとともに項目をクローズし、定期的なリファインメントで鮮度を保ちます。</p>
     </div>
     <div class="card">
-      <h3>Portability guide</h3>
-      <p class="small"><code>docs/portability.md</code> lists what depends on the runtime (Claude Code is the only supported one); browser work can go to another agent (<code>browse.via</code>); no fixed country, time zone or language.</p>
+      <h3>ポータビリティガイド</h3>
+      <p class="small"><code>docs/portability.md</code> はランタイムに依存する部分を列挙しています（サポートされているのは Claude Code のみ）。ブラウザでの作業は別のエージェントに任せることができます（<code>browse.via</code>）。国、タイムゾーン、言語は固定されていません。</p>
     </div>
   </div>
-  <p class="small" data-counts="wave3">In this release: <span data-count="skills">33</span> skills (1 orchestrator, <span data-count="phase">13</span> phases, <span data-count="support">19</span> support), <span data-count="rules">27</span> shared rules, <span data-count="adapters">7</span> tracker adapters and <span data-count="scripts">19</span> scripts.</p>
+  <p class="small" data-counts="wave3">このリリースには、<span data-count="skills">33</span> のスキル（オーケストレーター 1、フェーズ <span data-count="phase">13</span>、サポート <span data-count="support">19</span>）、<span data-count="rules">27</span> の共有ルール、<span data-count="adapters">7</span> のトラッカーアダプター、<span data-count="scripts">19</span> のスクリプトが含まれます。</p>
 </section>
 
 <section class="block" id="ja-install" aria-labelledby="ja-t-inst">
-  <p class="eyebrow">12 · Get started</p>
-  <h2 id="ja-t-inst">Install and update</h2>
+  <p class="eyebrow">12 · はじめに</p>
+  <h2 id="ja-t-inst">インストールと更新</h2>
   <div class="grid">
     <div class="card">
-      <h3>Install (inside Claude Code)</h3>
+      <h3>インストール（Claude Code 内）</h3>
       <pre><code>/plugin marketplace add MauricioQuezadaHaintech/karvey
 /plugin install karvey@karvey-methods</code></pre>
     </div>
     <div class="card">
-      <h3>Update (terminal)</h3>
+      <h3>更新（ターミナル）</h3>
       <pre><code>claude plugin marketplace update karvey-methods
 claude plugin update karvey@karvey-methods</code></pre>
-      <p class="small">Then <code>/reload-plugins</code> or restart the session to load the new version. Check with <code>claude plugin list</code> (or <code>/plugin</code>).</p>
+      <p class="small">その後、<code>/reload-plugins</code> を実行するかセッションを再起動して、新しいバージョンを読み込みます。<code>claude plugin list</code>（または <code>/plugin</code>）で確認できます。</p>
     </div>
     <div class="card">
-      <h3>First use</h3>
+      <h3>初回利用</h3>
       <pre><code>/karvey:karvey-grill        # pre-spec interview
 /karvey:karvey-init &lt;id&gt;    # creates the change + team settings
 /karvey:karvey &lt;id&gt;         # status and next step
@@ -6471,27 +6471,27 @@ claude plugin update karvey@karvey-methods</code></pre>
 
 <!-- 13. VERSIONS -->
 <section class="block" id="ja-versions" aria-labelledby="ja-t-ver">
-  <p class="eyebrow">13 · History</p>
-  <h2 id="ja-t-ver">Version history</h2>
-  <p class="lede">Why does the history start at <strong>3.0.0</strong>? Pure whim: our flagship software, <strong>Paáutin</strong>, was at version 3 when we built the plugin, so Karvey was born as a 3 too. There never was a 1.x or a 2.x.</p>
+  <p class="eyebrow">13 · 履歴</p>
+  <h2 id="ja-t-ver">バージョン履歴</h2>
+  <p class="lede">なぜ履歴は <strong>3.0.0</strong> から始まるのでしょうか？ 単なる気まぐれです。プラグインを作ったとき、<strong>私たちの主力製品</strong>がバージョン 3 だったので、Karvey も 3 として生まれました。1.x や 2.x は存在しません。</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>Hotfix: the live-state check finds the repo when the team lives inside it, and recognises git worktrees — no more false "not found" drift.</li>
-    <li><span class="ver">3.11.3</span><span class="date">2026-09-23</span><br>Hotfix: the session hook runs again (a quoting error in <code>hooks.json</code> had disabled it since 3.8.0); a <code>team.json</code> inside the repo resolves the right profile. Regression tests run the hook exactly as declared.</li>
-    <li><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>Hotfix: <code>karvey-init --settings</code> only configures the team and stops (it no longer creates a change or a tracker Epic); the session notice only appears in real Karvey projects; the statusline survives odd reset values; its debug copy is private per user. Regression tests for the hooks.</li>
-    <li><span class="ver">3.11.1</span><span class="date">2026-09-23</span><br>The page picks the browser’s language on a first visit; the tab title follows the language; hero decoration behind the figures.</li>
-    <li><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>Multilingual method page (EN by default · ES · PT · DE · 中文); the version shown in a front differs by environment — dev version in DEV, release version in PROD — read from the version file and checked by the canary.</li>
-    <li><span class="ver">3.10.0</span><span class="date">2026-09-22 · change team-adapters</span><br>Team settings on first use: notification channel, management tool and status flow; 5 logical states; <code>notifications.md</code> and <code>management-adapters.md</code> rules; session-hook notice; this page.</li>
-    <li><span class="ver">3.9.1</span><span class="date">2026-09-22</span><br>Documentation drift fix: counts (13 phases, 18 support, 32 skills), active vs opt-in hooks, 9-dimension QA; skills catalogue in the README; re-sync of local rule copies.</li>
-    <li><span class="ver">3.9.0</span><span class="date">2026-09-22</span><br>Branch hygiene (nothing is left on branches); standards conformance in QA; PR gates and git host detection in deploy.</li>
-    <li><span class="ver">3.8.0</span><span class="date">2026-09-22</span><br>Agent handoff for one or many; optional team layer (<code>team.md</code>, <code>karvey-team</code>, <code>karvey-decisions</code>); verification rules; <code>SessionStart</code> hook and rotation statusline; <code>karvey-guard --verify</code>.</li>
-    <li><span class="ver">3.7.0</span><span class="date">2026-09-18</span><br>Multi-agent and multi-repo work: parent/child changes, <code>D-NN</code> decisions, pinned inputs, <code>approvals.prod</code>, <code>[human]</code> tasks, <code>ops</code> and <code>hotfix</code> types, docs-only PRs, readiness checks in health.</li>
-    <li><span class="ver">3.6.0</span><span class="date">2026-09-08</span><br>Causal discipline in <code>karvey-investigate</code>: date the symptom, what changed before what is wrong, causal-coherence gate, trace across repos.</li>
-    <li><span class="ver">3.5.0</span><span class="date">2026-07-05</span><br>Visual component catalogue (<code>design-components.md</code>) in design-graphic.</li>
-    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Estimation in AI minutes (10–30 min, cap ~60) in <code>rules/adapters/clickup.md</code>.</li>
-    <li><span class="ver">3.3.0</span><span class="date">2026-06-23</span><br>Engineering-standards layer (golden paths), conformance gate in design mode, <code>deviations.md</code>, <code>karvey-standards</code>.</li>
-    <li><span class="ver">3.2.0</span><span class="date">2026-06-17</span><br>Karvey becomes a spiral: <code>karvey-iterate</code>, iteration loop, <code>BUG-NN</code> tracker, dual backlog, phase-close ritual; 3–4-level mockup with validation.</li>
-    <li><span class="ver">3.1.0</span><span class="date">2026-06-14</span><br><code>karvey-import</code>: migration from Kiro and gstack.</li>
-    <li><span class="ver">3.0.0</span><span class="date">2026-06-14</span><br>First release as a Claude Code plugin/marketplace: pipeline 0–12, 12 support skills, stack agnosticism, security gate, ordered deploy with canary, semver, optional enforcement, Apache 2.0 licence.</li>
+    <li class="now"><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>ホットフィックス：チームがリポジトリ内にある場合でもライブ状態のチェックがリポジトリを見つけられるようになり、git worktree も認識するようになりました。誤った「not found」のドリフトはもう発生しません。</li>
+    <li><span class="ver">3.11.3</span><span class="date">2026-09-23</span><br>ホットフィックス：セッションフックが再び動作するようになりました（<code>hooks.json</code> のクォートの誤りにより 3.8.0 以降無効になっていました）。リポジトリ内の <code>team.json</code> で正しいプロファイルが解決されます。リグレッションテストは、宣言されたとおりにフックを実行します。</li>
+    <li><span class="ver">3.11.2</span><span class="date">2026-09-23</span><br>ホットフィックス：<code>karvey-init --settings</code> はチームの設定だけを行って終了します（変更やトラッカーの Epic は作成しなくなりました）。セッションの通知は実際の Karvey プロジェクトでのみ表示されます。statusline は想定外のリセット値でも動作し、そのデバッグ用コピーはユーザーごとに非公開です。フックのリグレッションテスト。</li>
+    <li><span class="ver">3.11.1</span><span class="date">2026-09-23</span><br>初回訪問時にページがブラウザの言語を選択し、タブのタイトルが言語に追従し、ヒーローの装飾が数値の背後に配置されました。</li>
+    <li><span class="ver">3.11.0</span><span class="date">2026-09-22</span><br>多言語対応の手法ページ（デフォルトは EN · ES · PT · DE · 中文）。フロントエンドに表示されるバージョンは環境ごとに異なり（DEV では開発バージョン、PROD ではリリースバージョン）、バージョンファイルから読み取られ、カナリアで確認されます。</li>
+    <li><span class="ver">3.10.0</span><span class="date">2026-09-22 · 変更 team-adapters</span><br>初回利用時のチーム設定：通知チャネル、管理ツール、ステータスフロー。5 つの論理ステータス。<code>notifications.md</code> と <code>management-adapters.md</code> のルール。セッションフックの通知。このページ。</li>
+    <li><span class="ver">3.9.1</span><span class="date">2026-09-22</span><br>ドキュメントのずれの修正：件数（13 フェーズ、18 サポート、32 スキル）、有効なフックとオプトインのフック、9 観点の QA。README のスキルカタログ。ルールのローカルコピーの再同期。</li>
+    <li><span class="ver">3.9.0</span><span class="date">2026-09-22</span><br>ブランチの整理（ブランチに何も残さない）。QA での標準適合。deploy での PR のゲートと Git ホストの検出。</li>
+    <li><span class="ver">3.8.0</span><span class="date">2026-09-22</span><br>単一または複数エージェントの引き継ぎ。任意のチーム層（<code>team.md</code>、<code>karvey-team</code>、<code>karvey-decisions</code>）。検証ルール。<code>SessionStart</code> フックとローテーション用の statusline。<code>karvey-guard --verify</code>。</li>
+    <li><span class="ver">3.7.0</span><span class="date">2026-09-18</span><br>マルチエージェント・マルチリポジトリでの作業：親子の変更、<code>D-NN</code> の決定事項、固定された入力、<code>approvals.prod</code>、<code>[human]</code> タスク、<code>ops</code> と <code>hotfix</code> の種類、ドキュメントのみの PR、health での準備状況チェック。</li>
+    <li><span class="ver">3.6.0</span><span class="date">2026-09-08</span><br><code>karvey-investigate</code> における因果の規律：症状の発生時期の特定、何が悪いかの前に何が変わったか、因果の整合性ゲート、リポジトリをまたいだ追跡。</li>
+    <li><span class="ver">3.5.0</span><span class="date">2026-07-05</span><br>design-graphic におけるビジュアルコンポーネントカタログ（<code>design-components.md</code>）。</li>
+    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br><code>rules/adapters/clickup.md</code> における AI 分単位での見積もり（10–30 分、上限約 60 分）。</li>
+    <li><span class="ver">3.3.0</span><span class="date">2026-06-23</span><br>エンジニアリング標準の層（ゴールデンパス）、設計モードでの適合ゲート、<code>deviations.md</code>、<code>karvey-standards</code>。</li>
+    <li><span class="ver">3.2.0</span><span class="date">2026-06-17</span><br>Karvey がスパイラルに：<code>karvey-iterate</code>、イテレーションループ、<code>BUG-NN</code> トラッカー、二重構成のバックログ、フェーズクローズの手順。検証付きの 3–4 階層のモックアップ。</li>
+    <li><span class="ver">3.1.0</span><span class="date">2026-06-14</span><br><code>karvey-import</code>：Kiro と gstack からの移行。</li>
+    <li><span class="ver">3.0.0</span><span class="date">2026-06-14</span><br>Claude Code のプラグイン／マーケットプレイスとしての初回リリース：パイプライン 0–12、12 のサポートスキル、スタック非依存性、セキュリティゲート、カナリア付きの順序立てたデプロイ、semver、任意の強制機能、Apache 2.0 ライセンス。</li>
   </ol>
 </section>
 
@@ -6499,9 +6499,9 @@ claude plugin update karvey@karvey-methods</code></pre>
 
 <footer class="site">
   <div class="in">
-    <p style="margin:0">The <strong>Karvey</strong> Method — <em>Afán</em> (zeal, the drive to get things done), an Ona (Selknam) word. Created by Mauricio Quezada Ibáñez · HainTech.</p>
-    <p style="margin:0">Code under the <strong>Apache License 2.0</strong>. “Karvey” and the <code>karvey-*</code> convention are trademarks of <strong>HainTech</strong>; adaptations keep the attribution.</p>
-    <p style="margin:0">Repo: <a href="https://github.com/MauricioQuezadaHaintech/karvey">github.com/MauricioQuezadaHaintech/karvey</a></p>
+    <p style="margin:0"><strong>Karvey</strong> 手法 — <em>Afán</em>（熱意、物事をやり遂げようとする意欲）を意味するオナ（セルクナム）語の言葉。作成：Mauricio Quezada Ibáñez · HainTech。</p>
+    <p style="margin:0">コードは <strong>Apache License 2.0</strong> のもとで提供されます。「Karvey」および <code>karvey-*</code> の命名規則は <strong>HainTech</strong> の商標です。改変物でもこの帰属表示を保持してください。</p>
+    <p style="margin:0">リポジトリ：<a href="https://github.com/MauricioQuezadaHaintech/karvey">github.com/MauricioQuezadaHaintech/karvey</a></p>
   </div>
 </footer>
 </div>
