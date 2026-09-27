@@ -40,7 +40,7 @@ def parse(text):
     out, head = [], None
     for n, line in enumerate((text or "").splitlines(), 1):
         if not line.lstrip().startswith("|"):
-            head = None if out else head
+            head = None  # any non-table line ends the table: a row-less table never lends its header (BUG-115)
             continue
         cells = _cells(line)
         if head is None:
@@ -98,9 +98,11 @@ def rewrite(text, rid, state_cell=None, last_review=None):
     rows = {r["id"]: r for r in parse(text)}
     if rid not in rows:
         raise KeyError(rid)
-    head_line = next(ln for ln in lines if ln.lstrip().startswith("|") and "ID" in ln and "Owner" in ln)
-    head = [c.lower() for c in _cells(head_line)]
     n = rows[rid]["line"] - 1
+    top = n  # the header is the first line of the row's own table, whatever its case (BUG-123)
+    while top > 0 and lines[top - 1].lstrip().startswith("|"):
+        top -= 1
+    head = [c.lower() for c in _cells(lines[top])]
     cells = _cells(lines[n])
     for i, h in enumerate(head):
         if h == "state" and state_cell is not None and i < len(cells):

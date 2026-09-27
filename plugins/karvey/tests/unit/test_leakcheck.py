@@ -84,5 +84,25 @@ class Contract(unittest.TestCase):
                          {"risks[0].description": "d", "scope.summary": "s"})
 
 
+
+class QaDimension1(unittest.TestCase):
+    """Leak rules added after the wave3-optimization security review."""
+
+    def test_BUG_109_a_hex_secret_is_caught_and_short_commit_ids_are_not(self):
+        self.assertEqual(rules_of("key " + "3f2a9c01b7e4d6a5" + "8c3f2a9c01b7e4d6"), ["secret"])
+        self.assertEqual(rules_of("fixed in commit 1a2b3c4 and 1a2b3c4d5e6f"), [])
+
+    def test_BUG_112_paths_in_urls_and_forward_slash_drives_are_caught(self):
+        for t in ("see C:/" + "Users/someone/notes.md", "file:///" + "srv/share/x.md",
+                  "https://example.org/" + "home" + "/someone/doc"):
+            self.assertEqual(rules_of(t), ["path"], t)
+
+    def test_BUG_112_only_a_plausible_date_exempts_eight_digits_and_dotted_ids_are_pii(self):
+        self.assertEqual(rules_of("on 20261014"), [])
+        self.assertEqual(rules_of("ref 99999999"), ["pii"])
+        self.assertEqual(rules_of("id 12.345.678"), ["pii"])
+        self.assertEqual(rules_of("release 3.11.4 costs US$ 1,234,567.50"), [])
+
+
 if __name__ == "__main__":
     unittest.main()

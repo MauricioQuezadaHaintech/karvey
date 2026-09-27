@@ -31,10 +31,12 @@
 - Step 1: `karvey-close.py` step 5 prints the offer (`/karvey-checkpoint save`, "the next phase can start in a fresh
   session") and `continuing in this session is allowed`; the agent relays the offer and does not end the session
   on its own.
-- Step 2: step 5 prints `recommend: checkpoint + fresh session before the next skill` with the reading and the
+- Step 2: `outcome … changes_requested` on the approved phase is refused (BUG-100), so the agent withdraws the
+  approval with `karvey-state.py reopen` first; then step 5 prints `recommend: checkpoint + fresh session before the next skill` with the reading and the
   threshold; the agent recommends saving and starting the next phase in a new session **before** loading the next
   skill, and still proceeds if the user says to continue here.
-- Step 3: the session hook's context names the change and its next skill (from `karvey-state.py next`), and the agent
+- Step 3: the session hook's context names the active change and asks for `/karvey-checkpoint restore` first
+  (REQ-W3-013: the hook resumes; the restore proposes the next step from `karvey-state.py next`), and the agent
   resumes from the checkpoint without re-asking decisions it holds.
 - Step 4: `opened:` lists the phase skill and the rules of its `Load:` line; `outside the load list:` is empty (a rule
   cited only in a footnote was not opened). Any line there is a finding.

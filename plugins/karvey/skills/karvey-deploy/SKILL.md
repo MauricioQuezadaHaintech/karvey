@@ -200,13 +200,12 @@ never reported as a pass.
 
 ### Step 4 — Record in the tracker
 
-Resolve the tracker with `python3 "$C" resolve management --change "{change-id}" --json` (`../karvey/rules/management-adapters.md`, including its missing-map clause). If `external` is true: find or create **`E{n}.DEPLOY`** under the change's Epic, then `create_task("[Deploy] {change-id}")` as its child (never at the root of the list) with the checklist as subtasks, `set_status(…, in_progress)` while it runs, `link(…, PR)`, `set_status(…, done)` on the PROD confirmation, `blocked` if the gate or the post-deploy verification stops it; a failed call goes to the outbox (`karvey-config.py outbox add`). Otherwise add to `PLAN.md` the deploy status per repo and environment:
+Resolve the tracker with `python3 "$C" resolve management --change "{change-id}" --json` (`../karvey/rules/management-adapters.md`, including its missing-map clause). If `external` is true: find or create **`E{n}.DEPLOY`** under the change's Epic, then `create_task("[Deploy] {change-id}")` as its child (never at the root of the list) with the checklist as subtasks, `set_status(…, in_progress)` while it runs, `link(…, PR)`, `set_status(…, done)` on the PROD confirmation, `blocked` if the gate or the post-deploy verification stops it; a failed call goes to the outbox (`karvey-config.py outbox add`). Otherwise fill the `### Epic item E{n}.DEPLOY` section of `PLAN.md` (found and reused, never a root-level section) with the child `- [ ] [Deploy] {change-id}@{version}` and, under it, the status per repo and environment:
 
 ```markdown
-## Deploy — {change-id}
-| Repo | DEV | PROD |
-|------|-----|------|
-| {repo1} | ✅ deployed | 👀 PR open / ✅ merged |
+### Epic item E1.DEPLOY
+- [ ] [Deploy] {change-id}@{version}
+  - {repo1}: DEV ✅ deployed · PROD 👀 PR open / ✅ merged
 ```
 
 ### Step 5 — Notify the team + final output

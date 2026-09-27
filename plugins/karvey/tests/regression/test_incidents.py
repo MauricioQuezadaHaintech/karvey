@@ -115,6 +115,121 @@ INDEX = {
     "BUG-89": [  # The sponsor page prints light-grey text on white in the dark scheme
         ('node', 'test_sponsor_page.mjs', 'BUG-89: print keeps the light scheme and uses the print tokens, no literal colour'),
     ],
+    "BUG-90": [  # Sponsor page landmarks carry the wrong accessible names
+        ('unit', 'test_sponsor.py', 'Page.test_BUG_90_landmarks_are_named_for_what_they_hold'),
+    ],
+    "BUG-91": [  # Accepted and carried risks shown with the success fill
+        ('unit', 'test_sponsor.py', 'Page.test_BUG_91_risk_state_tag_fill_follows_the_design_spec'),
+    ],
+    "BUG-92": [  # A long change goal is cut mid-word in the sponsor page title
+        ('unit', 'test_sponsor.py', 'Page.test_BUG_92_a_long_goal_is_cut_at_a_word_with_an_ellipsis'),
+    ],
+    "BUG-93": [  # The portfolio view does not say it is read-only and offline
+        ('unit', 'test_portfolio.py', 'View.test_BUG_93_the_text_view_ends_with_the_read_only_footer'),
+    ],
+    "BUG-94": [  # The security scan records absolute local paths in committed evidence
+        ('unit', 'test_security_scan.py', 'Run.test_BUG_94_the_recorded_command_carries_no_absolute_path'),
+    ],
+    "BUG-95": [  # The gate summary's judge line omits the discarded count and the tokens
+        ('unit', 'test_context_gate.py', 'GateSummary.test_BUG_95_judge_line_has_discarded_and_tokens_with_their_source'),
+    ],
+    "BUG-96": [  # The gate close drops the leak check's field and rule
+        ('unit', 'test_close.py', 'Close.test_BUG_96_a_leak_refusal_names_each_field_and_rule_never_the_value'),
+    ],
+    "BUG-97": [  # `karvey-trace.py --wbs` misses root-level QA and deploy sections
+        ('unit', 'test_wbs.py', 'Legacy.test_BUG_97_root_qa_and_deploy_sections_with_table_rows_are_outside'),
+        ('unit', 'test_wbs.py', 'Legacy.test_BUG_97_an_epic_item_twice_is_a_duplicate_and_children_inside_are_fine'),
+    ],
+    "BUG-98": [  # QA and deploy write root-level sections on the Markdown tracker
+        ('unit', 'test_wbs.py', 'SkillText.test_BUG_98_qa_deploy_and_the_markdown_adapter_name_the_epic_item_shape'),
+    ],
+    "BUG-99": [  # With browse.via agent the session fetched an undeclared URL itself
+        ('unit', 'test_browse_via.py', 'SkillText.test_BUG_99_the_session_opens_no_url_itself'),
+    ],
+    "BUG-100": [  # Changes requested after an approval leave the phase approved
+        ('unit', 'test_state_outcomes.py', 'Outcomes.test_BUG_100_changes_requested_on_an_approved_phase_is_refused_with_the_way_out'),
+    ],
+    "BUG-101": [  # `observed` is blind to Skill loads and shell reads
+        ('unit', 'test_close.py', 'Observed.test_BUG_101_skill_loads_and_shell_reads_count_as_opened'),
+    ],
+    "BUG-102": [  # The sponsor fixture fails validation with an "expected = got" message
+        ('unit', 'test_schema_w2.py', 'SkippedLane.test_BUG_102_a_lane_reason_for_a_phase_the_lane_makes_optional_says_so'),
+        ('unit', 'test_sponsor.py', 'FixtureValid.test_BUG_102_the_sponsor_fixture_validates_without_errors'),
+    ],
+    "BUG-103": [  # The gate close is skipped after an approval
+        ('unit', 'test_close.py', 'AdvanceText.test_BUG_103_every_gated_phase_skill_names_karvey_close'),
+    ],
+    "BUG-104": [  # `observed` reads a shell brace list as one file
+        ('unit', 'test_close.py', 'Observed.test_BUG_101_skill_loads_and_shell_reads_count_as_opened'),
+    ],
+    "BUG-105": [  # Writing tools on a spec/ project create a second spec root
+        ('unit', 'test_context.py', 'SpecLayoutIsReadOnly.test_BUG_105_writers_refuse_the_spec_layout_and_create_no_second_root'),
+    ],
+    "BUG-126": [  # `observed` flags the tracker adapter in use as outside the load list
+        ('unit', 'test_close.py', 'ObservedAlternatives.test_BUG_126_any_tracker_adapter_of_the_load_list_is_inside_it'),
+    ],
+    "BUG-106": [  # Sponsor delivery sends a page other than the one the leak check passed
+        ('unit', 'test_sponsor.py', 'Security.test_BUG_106_deliver_refuses_a_page_changed_after_the_checked_build'),
+    ],
+    "BUG-107": [  # Stakeholder destination not checked where it is used
+        ('unit', 'test_notify_events.py', 'Events.test_BUG_107_an_unsafe_stakeholder_destination_is_refused_at_use'),
+        ('unit', 'test_sponsor.py', 'Security.test_BUG_107_a_change_override_with_an_unsafe_destination_is_refused_at_use'),
+    ],
+    "BUG-108": [  # Portfolio follows symlinks out of a listed repository
+        ('unit', 'test_portfolio.py', 'Containment.test_BUG_108_symlinks_out_of_the_repository_are_not_read'),
+    ],
+    "BUG-109": [  # Hex secrets pass the leak check
+        ('unit', 'test_leakcheck.py', 'QaDimension1.test_BUG_109_a_hex_secret_is_caught_and_short_commit_ids_are_not'),
+    ],
+    "BUG-110": [  # Unreadable declared portfolio disables the other-clients rule
+        ('unit', 'test_sponsor.py', 'Security.test_BUG_110_an_unreadable_declared_portfolio_fails_closed'),
+    ],
+    "BUG-111": [  # Braces in free text crash the sponsor render
+        ('unit', 'test_sponsor.py', 'Security.test_BUG_111_braces_in_free_text_neither_crash_nor_fill_a_slot'),
+    ],
+    "BUG-112": [  # Leak check misses some paths and exempts formatted ids
+        ('unit', 'test_leakcheck.py', 'QaDimension1.test_BUG_112_paths_in_urls_and_forward_slash_drives_are_caught'),
+        ('unit', 'test_leakcheck.py', 'QaDimension1.test_BUG_112_only_a_plausible_date_exempts_eight_digits_and_dotted_ids_are_pii'),
+    ],
+    "BUG-113": [  # Event change id and foreign text not constrained
+        ('unit', 'test_portfolio.py', 'Containment.test_BUG_113_sanitise_strips_bidi_and_zero_width'),
+        ('unit', 'test_notify_events.py', 'Events.test_BUG_113_change_must_be_an_id_and_no_item_reads_naturally'),
+    ],
+    "BUG-114": [  # Moving a risk half-applies when the backlog exists
+        ('unit', 'test_risks.py', 'Command.test_BUG_114_move_with_an_existing_backlog_writes_everything_once'),
+        ('unit', 'test_risks.py', 'Command.test_BUG_114_a_failed_spec_write_puts_register_and_backlog_back'),
+    ],
+    "BUG-115": [  # A row-less table hides the risk register, questions or backlog
+        ('unit', 'test_risks.py', 'Archive.test_BUG_115_a_row_less_table_before_the_register_does_not_hide_an_open_risk'),
+        ('unit', 'test_backlog_wsjf.py', 'StaleHeader.test_BUG_115_a_row_less_table_before_does_not_hide_the_backlog'),
+        ('unit', 'test_questions.py', 'Parse.test_BUG_115_a_row_less_table_before_does_not_hide_the_questions'),
+    ],
+    "BUG-116": [  # The qa notification is re-sent: two sources for its state
+        ('unit', 'test_close.py', 'Close.test_BUG_116_the_qa_notification_state_is_the_verdict_only'),
+    ],
+    "BUG-117": [  # Four new validate warnings ignore their check modes
+        ('unit', 'test_stakeholders.py', 'Client.test_BUG_117_the_mismatch_warning_follows_its_check_mode'),
+    ],
+    "BUG-118": [  # Applying a design delta can traceback or half-write
+        ('unit', 'test_design_delta.py', 'Apply.test_BUG_118_an_empty_design_system_file_is_applied_not_a_traceback'),
+        ('unit', 'test_design_delta.py', 'Apply.test_BUG_118_a_conflict_stops_and_writes_nothing_not_even_the_additions'),
+    ],
+    "BUG-119": [  # New scripts end in a traceback on an unexpected error
+        ('unit', 'test_design_delta.py', 'Apply.test_BUG_119_an_internal_error_is_an_envelope_exit_5'),
+        ('unit', 'test_close.py', 'Close.test_BUG_119_an_internal_error_is_an_envelope_exit_5'),
+    ],
+    "BUG-120": [  # A malformed deploys entry crashes the report
+        ('unit', 'test_context_report.py', 'Report.test_BUG_120_a_non_object_deploys_entry_is_skipped_not_a_crash'),
+    ],
+    "BUG-121": [  # Concurrent closes can charge the same interval twice
+        ('unit', 'test_effort.py', 'Command.test_BUG_121_the_interval_is_read_stored_and_charged_under_one_lock'),
+    ],
+    "BUG-123": [  # Risk rewrite fails on a differently cased header
+        ('unit', 'test_risks.py', 'Command.test_BUG_123_rewrite_finds_its_header_whatever_the_case'),
+    ],
+    "BUG-127": [  # `observed` misses files read relative to a `cd`
+        ('unit', 'test_close.py', 'Observed.test_BUG_101_skill_loads_and_shell_reads_count_as_opened'),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 

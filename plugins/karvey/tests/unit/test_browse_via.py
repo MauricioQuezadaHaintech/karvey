@@ -55,5 +55,17 @@ class BrowseVia(unittest.TestCase):
         self.assertEqual((code, env["result"]["via"], env["result"]["source"]), (0, "local", "default"))
 
 
+
+class SkillText(unittest.TestCase):
+    """The browse skill forbids the session's own request to an undeclared URL (manual browse-via-agent step 2)."""
+
+    def test_BUG_99_the_session_opens_no_url_itself(self):
+        text = (_path.PLUGIN_ROOT / "skills" / "karvey-browse" / "SKILL.md").read_text(encoding="utf-8")
+        via = text[text.index("### Where it runs"):text.index("### Capabilities")]
+        self.assertIn("This session opens **no URL itself** (no fetch, no `curl`)", via)
+        self.assertIn("an undeclared URL is declined, never tried", via)
+        self.assertIn("Do not browse or fetch", via)
+
+
 if __name__ == "__main__":
     unittest.main()

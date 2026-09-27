@@ -98,6 +98,24 @@ class Client(unittest.TestCase):
         self.assertIn("'sample-client-a'", msgs[0])
         self.assertIn("'sample-client-b'", msgs[0])
 
+    def test_BUG_117_the_mismatch_warning_follows_its_check_mode(self):
+        import json
+        from _state import run_json
+        spec = dict(GOOD_SPEC, client="sample-client-a", clickup={"client_tag": "sample-client-b"})
+        d = self.tmp / "docs/spec/changes/feat-a"
+        d.mkdir(parents=True)
+        (d / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
+        pjf = self.tmp / "docs/spec/project.json"
+        for mode, code_, where in (("off", 0, None), ("blocking", 1, "errors"), ("warn", 0, "warnings")):
+            data = json.loads(pjf.read_text(encoding="utf-8"))
+            data["checks"] = {"client.mismatch": mode}
+            pjf.write_text(json.dumps(data), encoding="utf-8")
+            code, env = run_json("validate", "--all", "--root", str(self.tmp))
+            self.assertEqual(code, code_, (mode, env["errors"]))
+            got = {k: [i for i in env[k] if i["code"] == "client.mismatch"] for k in ("errors", "warnings")}
+            for k in ("errors", "warnings"):
+                self.assertEqual(len(got[k]), 1 if k == where else 0, (mode, k))
+
     def test_client_is_a_valid_first_level_field(self):
         self.assertEqual(errors(dict(PROJECT, client="sample-client-a")), [])
         self.assertEqual(errors(dict(GOOD_SPEC, client="sample-client-a"), "spec"), [])

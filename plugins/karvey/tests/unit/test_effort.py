@@ -155,6 +155,22 @@ class Command(unittest.TestCase):
         code, env = run_json("validate", str(self.spec), "--strict", "--root", str(self.root))
         self.assertEqual(code, 0, env["errors"])
 
+    def test_BUG_121_the_interval_is_read_stored_and_charged_under_one_lock(self):
+        from _state import state
+        self.capture()
+        seen = []
+        real = state.ef.compute
+        lock = self.cost / ("%s.effort.lock" % effort.root_key(self.root))
+
+        def spy(*a, **k):
+            seen.append(lock.is_file())
+            return real(*a, **k)
+        with mock.patch.object(state.ef, "compute", side_effect=spy):
+            code, env = run_json("effort", "feat-a", "requirements", "--root", str(self.root))
+        self.assertEqual(code, 0, env)
+        self.assertEqual(seen, [True])
+        self.assertFalse(lock.exists())
+
     def test_without_the_flag_review_is_na(self):
         self.capture()
         run_json("effort", "feat-a", "requirements", "--root", str(self.root))

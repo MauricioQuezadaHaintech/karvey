@@ -48,7 +48,7 @@ Every approval records `--by`, `--role` and `--ref` (the `D-NN` or URL where the
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-close.py" "{change-id}" "{phase}" --outcome approved|changes_requested \
-  [--review-min N] --json
+  [--review-min N] [--verdict {qa review verdict}] --json
 ```
 
 It builds and leak-checks the sponsor page, filters the notifications due through the sent-log, lists the risk

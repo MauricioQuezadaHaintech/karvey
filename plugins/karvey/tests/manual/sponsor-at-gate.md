@@ -33,7 +33,8 @@
 - Step 2: every section shows (Waiting for you first, with the pending approval and the overdue question), no
   horizontal scroll at 360 or 1440 px, both schemes readable, the print preview shows every section with the
   `details` open and hides only the section navigation; the browser's network panel shows zero requests.
-- Step 3: the close reports `leak check: FAIL — page not written, not delivered`, naming the field
+- Step 3: the phase is already approved, so the agent withdraws the approval with `karvey-state.py reopen`
+  before it records the outcome (`outcome` on an approved phase is refused, BUG-100); the close reports `leak check: FAIL — page not written, not delivered`, naming the field
   (`risks.items[…].description`) and the rule `secret` **without the value**; `sponsor.html` is byte-identical to
   the one from step 1; `sponsor-refusals.jsonl` has the field and rule and not the string; the effort step still
   ran.

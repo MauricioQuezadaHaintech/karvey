@@ -964,10 +964,11 @@ def _judges_block(rd, c, phases, gate_res):
             counts = r.get("findings") if isinstance(r.get("findings"), dict) else {}
             out.append({"phase": ph, "lens": lens, "verdict": r.get("verdict"), "model": r.get("model"),
                         "intra_model": r.get("intra_model"),
-                        "line": "judge %s: %s · %s · model %s%s" % (
+                        "line": "judge %s: %s · %s · %s discarded · model %s%s · %s" % (
                             lens, r.get("verdict") or "?",
                             ", ".join("%s %s" % (k, counts[k]) for k in jd.SEVERITIES if counts.get(k)) or "no findings",
-                            r.get("model") or "?", " (intra-model)" if r.get("intra_model") else "")})
+                            r.get("discarded", "?"), r.get("model") or "?",
+                            " (intra-model)" if r.get("intra_model") else "", _judge_tokens(r))})
         if len(verdicts) > 1:
             out.append({"phase": ph, "line": "judges disagree at %s: %s" % (ph, " vs ".join(sorted(v for v in verdicts if v)))})
         for f in rows:
@@ -976,6 +977,18 @@ def _judges_block(rd, c, phases, gate_res):
                 out.append({"phase": ph, "line": "  %s %s %s [%s]: %s" % (
                     f.get("id") or f.get("#"), f.get("severity"), f.get("origin"), f.get("status"), f.get("finding"))})
     return out
+
+
+def _judge_tokens(r):
+    """``{n} tokens ({source})`` of a judge run record; ``tokens n/a`` when the record has no figure (BUG-95)."""
+    tt = r.get("tokens_total")
+    if not isinstance(tt, int):
+        ti, to = r.get("tokens_in"), r.get("tokens_out")
+        tt = ti + to if isinstance(ti, int) and isinstance(to, int) else None
+    if tt is None:
+        return "tokens n/a"
+    src = r.get("source") or ("estimate" if r.get("estimated") else "n/a")
+    return "%d tokens (%s)" % (tt, src)
 
 
 def gate_summary(rd, ctx):
@@ -1337,8 +1350,11 @@ def report_view(args, rd):
             continue
         cid = spec.get("change_id") if isinstance(spec.get("change_id"), str) else d.name
         ids.add(cid)
-        for dep in spec.get("deploys") or []:
-            day = spx._day(dep.get("at")) if isinstance(dep, dict) else None
+        deps = spec.get("deploys") if isinstance(spec.get("deploys"), list) else []
+        for dep in deps:
+            if not isinstance(dep, dict):  # a malformed entry is skipped, never a crash (BUG-120)
+                continue
+            day = spx._day(dep.get("at"))
             if dep.get("env") == "prod" and day and frm <= day <= to:
                 res["released"].append({"change": cid, "version": str(dep.get("version") or ""), "date": day})
         phase = spec.get("phase")
@@ -1559,6 +1575,10 @@ def portfolio_view(args, root):
     return res
 
 
+PORTFOLIO_FOOTER = ("read-only: no file written · no network request (never fetches, pulls or clones) · "
+                    "output not published")
+
+
 def render_portfolio(res):
     p = res["period"]
     L = ["== PORTFOLIO %s .. %s (as of %s) · %d repositories · %d clients ==" % (
@@ -1594,6 +1614,7 @@ def render_portfolio(res):
         t = c["totals"]
         L.append("  totals: %d active · %d waiting · %d released · US$ %.2f" % (t["active"], t["waiting"],
                                                                                t["released"], t["usd"]))
+    L.append(PORTFOLIO_FOOTER)  # design-spec F-37: the reader sees that nothing was written or fetched
     return "\n".join(L)
 
 
@@ -1618,10 +1639,10 @@ def build_context(args, rd):
 
 def run(args):
     if args.portfolio:  # with --file no project lookup at all: the view starts no process (REQ-W3-047)
-        root = None if args.file else pj.find_root(start=os.getcwd(), root=args.root)
+        root = None if args.file else pj.find_root(start=os.getcwd(), root=args.root, read_only=True)
         res = portfolio_view(args, root)
         return kl.EXIT_OK, res, [], render_portfolio(res)
-    root = pj.find_root(start=os.getcwd(), root=args.root)
+    root = pj.find_root(start=os.getcwd(), root=args.root, read_only=True)
     if root is None or not pj.spec_dir(root).is_dir():
         raise NotFound("no docs/spec or spec here (not a Karvey project): %s" % (args.root or os.getcwd()))
     rd = Reader(root)

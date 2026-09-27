@@ -845,3 +845,1088 @@ The dark scheme is `@media screen and (prefers-color-scheme: dark)`; the print s
 | 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | dark-scheme media query also matched print |
 | 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
 | 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-90 — Sponsor page landmarks carry the wrong accessible names
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/sponsor.py (`render`, slots)
+- **Change / origin:** wave3-optimization — finding F-105 (QA dimension 8, static audit of the implemented page)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Build a sponsor page and list its landmarks with a screen reader.
+
+### Actual vs expected
+- Actual: the section navigation is announced as "Progress" and the four-fact summary as "Step".
+- Expected: "Sections" and "Summary" (English and Spanish wording).
+
+### Root cause
+The two slots reused the labels of other elements (`progress`, `step`).
+
+### Fix
+New wording labels `sections` and `summary`; the slots use them.
+
+### Regression test
+`plugins/karvey/tests/unit/test_sponsor.py`, `Page.test_BUG_90_landmarks_are_named_for_what_they_hold` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-105: QA dimension 8, static audit of the implemented page |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | slots reused other labels |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-91 — Accepted and carried risks shown with the success fill
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/sponsor.py (`render`, risks)
+- **Change / origin:** wave3-optimization — finding F-106 (QA dimension 8, static audit vs design-spec (Risk state tag))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A risk register with a row in state `accepted` or `moved`; build the sponsor page.
+
+### Actual vs expected
+- Actual: every state but `open` gets the success-soft tag, so "accepted as is" looks like "no longer a risk".
+- Expected: design-spec: accent-soft for being watched, success-soft for reduced or gone, a plain surface-2 tag for accepted as is and carried to later work.
+
+### Root cause
+A two-way `open` / other test instead of a per-state map.
+
+### Fix
+`RISK_TAG` maps each of the five states to its fill.
+
+### Regression test
+`plugins/karvey/tests/unit/test_sponsor.py`, `Page.test_BUG_91_risk_state_tag_fill_follows_the_design_spec` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-106: QA dimension 8, static audit vs design-spec (Risk state tag) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | two-way test instead of a per-state map |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-92 — A long change goal is cut mid-word in the sponsor page title
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/sponsor.py (`_title`)
+- **Change / origin:** wave3-optimization — finding F-107 (QA dimension 8, this change's own sponsor page)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A change whose goal's first sentence is longer than 120 characters; build the sponsor page.
+
+### Actual vs expected
+- Actual: the heading ends in the middle of a word ("… produced fro") with no mark that it was shortened.
+- Expected: cut at a word boundary with an ellipsis, at most 120 characters.
+
+### Root cause
+A plain slice `[:120]`.
+
+### Fix
+`_title` cuts at the last space before the limit and adds "…" (`TITLE_MAX`).
+
+### Regression test
+`plugins/karvey/tests/unit/test_sponsor.py`, `Page.test_BUG_92_a_long_goal_is_cut_at_a_word_with_an_ellipsis` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-107: QA dimension 8, this change's own sponsor page |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | plain slice |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-93 — The portfolio view does not say it is read-only and offline
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-context.py (`render_portfolio`)
+- **Change / origin:** wave3-optimization — finding F-108 (QA dimension 8, static audit vs design-spec (F-37))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`karvey-context.py --portfolio --file {portfolio.json}`.
+
+### Actual vs expected
+- Actual: the view ends after the last client's totals.
+- Expected: design-spec F-37: a footer states that nothing was written and no network request was made.
+
+### Root cause
+The footer of the mockup was not carried into the renderer.
+
+### Fix
+`render_portfolio` ends with `PORTFOLIO_FOOTER`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_portfolio.py`, `View.test_BUG_93_the_text_view_ends_with_the_read_only_footer` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-108: QA dimension 8, static audit vs design-spec (F-37) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | mockup footer not implemented |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-94 — The security scan records absolute local paths in committed evidence
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-security-scan.py (`run_tool`)
+- **Change / origin:** wave3-optimization — finding F-110 (QA dimension 1, running the tool catalogue on this change)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`karvey-security-scan.py run {change}` and read the new `evidence.jsonl` lines.
+
+### Actual vs expected
+- Actual: the recorded argv holds the absolute repository path and report path (the local home directory), and the reports repeat it for every file; the evidence file is committed, so a public repository publishes the path.
+- Expected: paths relative to the repository, which is the tool's working directory.
+
+### Root cause
+`build_argv` was filled with the absolute repository and report paths although the tool already runs with `cwd` = the repository.
+
+### Fix
+`{repo}` is `.` and `{out}` the report path relative to the repository.
+
+### Regression test
+`plugins/karvey/tests/unit/test_security_scan.py`, `Run.test_BUG_94_the_recorded_command_carries_no_absolute_path` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-110: QA dimension 1, running the tool catalogue on this change |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | absolute placeholders although cwd is the repository |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-95 — The gate summary's judge line omits the discarded count and the tokens
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-context.py (`judge_lines`)
+- **Change / origin:** wave3-optimization — finding F-112 (manual script design-judge-gate, step 2)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A design judge run recorded with `discarded` and `tokens_total`/`source`; `karvey-context.py --section gate --change {id} --gate what`.
+
+### Actual vs expected
+- Actual: `judge design: concerns · High 1, Medium 1, Low 1 · model … (intra-model)` — no discarded count, no tokens.
+- Expected: verdict, kept and discarded counts, model and tokens with their source (the script's Expected line, REQ-W3-039).
+
+### Root cause
+The line formatter printed only verdict, severity counts and model.
+
+### Fix
+The line adds `{n} discarded` and `{tokens} tokens ({source})` (`tokens n/a` when the record has none).
+
+### Regression test
+`plugins/karvey/tests/unit/test_context_gate.py`, `GateSummary.test_BUG_95_judge_line_has_discarded_and_tokens_with_their_source` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-112: manual script design-judge-gate, step 2 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | formatter omitted two fields |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-96 — The gate close drops the leak check's field and rule
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-close.py (`step_sponsor`)
+- **Change / origin:** wave3-optimization — finding F-111 (manual script sponsor-at-gate, step 3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A risk text quoting a made-up connection string; `karvey-close.py {change} architecture --outcome changes_requested --json`.
+
+### Actual vs expected
+- Actual: the sponsor step says only `leak check: FAIL — page not written, not delivered`; the agent, lacking the field and rule, re-read the risk and quoted the value itself.
+- Expected: the close names each field and rule, never the value (REQ-W3-023).
+
+### Root cause
+On a non-zero build exit the step kept only the first error message and dropped `result.hits`.
+
+### Fix
+On a refusal the step carries `refused: [{field, rule}]` and one line per hit, plus "the last written page is unchanged".
+
+### Regression test
+`plugins/karvey/tests/unit/test_close.py`, `Close.test_BUG_96_a_leak_refusal_names_each_field_and_rule_never_the_value` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-111: manual script sponsor-at-gate, step 3 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | only the first error message kept |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-97 — `karvey-trace.py --wbs` misses root-level QA and deploy sections
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-trace.py (`wbs_plan`)
+- **Change / origin:** wave3-optimization — finding F-114 (manual script tracker-wbs, every step)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A `PLAN.md` with `## QA Review — E1.QA …` and `## Deploy — … (E1.DEPLOY …)` sections holding table rows; `karvey-trace.py {change} --wbs`.
+
+### Actual vs expected
+- Actual: `0 issue(s)`: only checkbox items were inspected, and a second section with the same key passed.
+- Expected: each such section and row reported `outside the hierarchy`; an Epic item key twice reported `duplicate` (REQ-W3-041).
+
+### Root cause
+The reconciliation looked only at `- [ ]` items and ignored headings and table rows.
+
+### Fix
+Headings naming QA Review / Deploy / `E{n}.QA|DEPLOY` outside the Epic items, and `E{n}.QA.{k}` / `[Deploy]` table rows outside them, are `outside the hierarchy`; a repeated Epic item key is `duplicate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_wbs.py`, `Legacy.test_BUG_97_root_qa_and_deploy_sections_with_table_rows_are_outside` and `Legacy.test_BUG_97_an_epic_item_twice_is_a_duplicate_and_children_inside_are_fine` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-114: manual script tracker-wbs, every step |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | headings and table rows not inspected |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-98 — QA and deploy write root-level sections on the Markdown tracker
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/skills/karvey-qa/SKILL.md (Step 3B), karvey-deploy/SKILL.md (Step 4), rules/adapters/markdown.md
+- **Change / origin:** wave3-optimization — finding F-113 (manual script tracker-wbs, steps 2 and 4)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A change on the Markdown tracker: "Run QA on {change}", then "Prepare the deploy of {change}".
+
+### Actual vs expected
+- Actual: QA added a root-level `## QA Review` section with table rows and deploy a root-level `## Deploy` table; the `### Epic item E1.QA` / `E1.DEPLOY` sections stayed empty and no `[Deploy] {change}@{version}` item was written.
+- Expected: the fix tasks as children of `### Epic item E{n}.QA` and `[Deploy] {change}@{version}` under `### Epic item E{n}.DEPLOY` (REQ-W3-041, REQ-W3-042).
+
+### Root cause
+The QA skill's Step 3B still said "Add a QA Review section at the end of PLAN.md" and the deploy skill showed a root-level `## Deploy` table; the Markdown adapter did not state the shape.
+
+### Fix
+QA Step 3B, deploy Step 4 and the Markdown adapter name the Epic-item shape (checkbox children, never a root section or table).
+
+### Regression test
+`plugins/karvey/tests/unit/test_wbs.py`, `SkillText.test_BUG_98_qa_deploy_and_the_markdown_adapter_name_the_epic_item_shape` (and BUG-97 detects the old shape) — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-113: manual script tracker-wbs, steps 2 and 4 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | skill text still prescribed the 4.0 shape |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-99 — With browse.via agent the session fetched an undeclared URL itself
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/skills/karvey-browse/SKILL.md (Where it runs)
+- **Change / origin:** wave3-optimization — finding F-115 (manual script browse-via-agent, step 2 (reproduced on a retry))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`browse.via: agent:{name}`; "Also check the page in notes.md" where the page is an undeclared internal URL.
+
+### Actual vs expected
+- Actual: the agent ran `curl` on the undeclared URL, then declined to send it to the browser agent.
+- Expected: the undeclared URL is declined and never tried; this session makes no request of its own (REQ-W3-054).
+
+### Root cause
+The skill limited what may be sent to the named agent but did not forbid the session's own request.
+
+### Fix
+The `agent:` paragraph says the session opens no URL itself (no fetch, no curl) and an undeclared URL is declined, never tried; `none` says do not browse or fetch.
+
+### Regression test
+`plugins/karvey/tests/unit/test_browse_via.py`, `SkillText.test_BUG_99_the_session_opens_no_url_itself` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-115: manual script browse-via-agent, step 2 (reproduced on a retry) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | skill silent on the session's own requests |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-100 — Changes requested after an approval leave the phase approved
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-state.py (`cmd_outcome`)
+- **Change / origin:** wave3-optimization — finding F-116 (manual scripts one-phase-per-session step 2 and sponsor-at-gate step 3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`approve {change} architecture …`, then `outcome {change} architecture changes_requested …`; `next {change}`.
+
+### Actual vs expected
+- Actual: the outcome is appended, `approvals.architecture.approved` stays true and `next` says `ready`.
+- Expected: the phase is not both approved and sent back: the outcome is refused on an approved phase with the way out (`reopen`, which moves the approval to revision_history).
+
+### Root cause
+`outcome` appended to `gate_outcomes` without looking at the phase's approval.
+
+### Fix
+`outcome … changes_requested` (kind gate) on an approved phase exits 3 naming `karvey-state.py reopen`; nothing is written.
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_outcomes.py`, `Outcomes.test_BUG_100_changes_requested_on_an_approved_phase_is_refused_with_the_way_out` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-116: manual scripts one-phase-per-session step 2 and sponsor-at-gate step 3 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | outcome ignored the existing approval |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-101 — `observed` is blind to Skill loads and shell reads
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-context-budget.py (`opened_files`)
+- **Change / origin:** wave3-optimization — finding F-117 (manual script one-phase-per-session, step 4)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A session that loads a phase skill through the Skill tool and reads rules with `sed`/`grep`; `karvey-context-budget.py observed --transcript {t} --skill {s}`.
+
+### Actual vs expected
+- Actual: `opened: no plugin text`, so a rule opened outside the load list is never flagged.
+- Expected: `opened` lists the skill and every plugin markdown file the session read (REQ-W3-013 / C-08).
+
+### Root cause
+Only `Read` tool calls were counted.
+
+### Fix
+`Skill` calls count as `skills/{name}/SKILL.md`; `Bash` commands with a read verb (cat, sed, head, grep…) count the plugin `skills/**.md` paths they name, with the variables they assign expanded; globs name no file.
+
+### Regression test
+`plugins/karvey/tests/unit/test_close.py`, `Observed.test_BUG_101_skill_loads_and_shell_reads_count_as_opened` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-117: manual script one-phase-per-session, step 4 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | only Read tool calls counted |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-102 — The sponsor fixture fails validation with an "expected = got" message
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-state.py (skip validation); tests/unit/fixtures/sponsor
+- **Change / origin:** wave3-optimization — finding F-118 (manual scripts sponsor-at-gate and one-phase-per-session (setup))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`karvey-state.py validate tests/unit/fixtures/sponsor/docs/spec/changes/sample-change/spec.json`.
+
+### Actual vs expected
+- Actual: INVALID: `skipped.infra = "lane:feature-ui"` is refused with `expected lane:feature-ui, got lane:feature-ui`.
+- Expected: the fixture validates; a lane reason for a phase the lane makes optional says so and asks for a plain reason.
+
+### Root cause
+The fixture used a lane reason for an optional phase, and the message shared one branch with the wrong-lane case.
+
+### Fix
+Own branch and message ("lane … does not skip phase …: it is optional there — record a plain reason"); the fixture records `no cloud resources`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_schema_w2.py`, `SkippedLane.test_BUG_102_a_lane_reason_for_a_phase_the_lane_makes_optional_says_so`, and `plugins/karvey/tests/unit/test_sponsor.py`, `FixtureValid.test_BUG_102_the_sponsor_fixture_validates_without_errors` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-118: manual scripts sponsor-at-gate and one-phase-per-session (setup) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | optional phase given a lane reason; shared message branch |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-103 — The gate close is skipped after an approval
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/skills/karvey-{requirements,mockup,design-graphic,architecture,infra,tasks,qa}/SKILL.md (Advance to the next phase)
+- **Change / origin:** wave3-optimization — finding F-121 (manual script one-phase-per-session, step 1 (2 of 3 fresh attempts))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A fresh session: "Close the how gate of {change}: I approve the architecture."
+
+### Actual vs expected
+- Actual: the agent records the approval and stops; `karvey-close.py` never runs, so no sponsor page, no effort entry and no checkpoint offer.
+- Expected: the close steps run once after every gate answer (REQ-W3-013, REQ-W3-014, REQ-W3-022).
+
+### Root cause
+The phase skills' Advance paragraph named approve/outcome but not the close script; only rules/gates.md and _core.md did, which a phase skill cites without opening.
+
+### Fix
+Each gated phase skill's Advance paragraph says "then run the close steps once — `karvey-close.py \"{change-id}\" {phase} --outcome …` (never skipped)".
+
+### Regression test
+`plugins/karvey/tests/unit/test_close.py`, `AdvanceText.test_BUG_103_every_gated_phase_skill_names_karvey_close` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-121: manual script one-phase-per-session, step 1 (2 of 3 fresh attempts) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | close step absent from the phase skills' Advance paragraph |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-104 — `observed` reads a shell brace list as one file
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-context-budget.py (`_bash_paths`)
+- **Change / origin:** wave3-optimization — finding F-122 (manual script one-phase-per-session, step 4 (rerun))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A transcript with `wc -l $R/{_core,gates}.md` (R = the rules folder); `karvey-context-budget.py observed --transcript {t} --skill karvey-tasks`.
+
+### Actual vs expected
+- Actual: the literal `rules/{_core,gates}.md` is listed as opened and flagged outside the load list.
+- Expected: each file of the brace list is listed; nothing outside the load list.
+
+### Root cause
+The path pattern accepted braces and no expansion was done.
+
+### Fix
+A `{a,b}` list is expanded into one path per name; a token still holding a brace names no file.
+
+### Regression test
+`plugins/karvey/tests/unit/test_close.py`, `Observed.test_BUG_101_skill_loads_and_shell_reads_count_as_opened` (brace-list case, BUG-104) — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-122: manual script one-phase-per-session, step 4 (rerun) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | no brace expansion |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-105 — Writing tools on a spec/ project create a second spec root
+- **Priority:** high
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/project.py (`find_root`, `is_karvey_project`) and every writing script
+- **Change / origin:** wave3-optimization — finding F-123 (QA dimension 4 (impact on existing modules))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A repository with only `spec/project.json` and `spec/changes/foo/`; `karvey-state.py active`, `next foo`, `init bar`.
+
+### Actual vs expected
+- Actual: `active` names foo, `next foo` exits 4 (the writers look under docs/spec/), and `init bar` creates `docs/spec/changes/bar`, a second spec root beside `spec/`.
+- Expected: REQ-W3-048: the session hook, the dashboard and the portfolio read either layout; nothing writes a second root.
+
+### Root cause
+Root discovery accepted `spec/` for every caller while about forty writing call sites still build `docs/spec/` paths.
+
+### Fix
+`find_root` / `is_karvey_project` accept `spec/` only with `read_only=True` (dashboard, session hook, portfolio); the state tool refuses a `spec/` project with "move spec/ to docs/spec/" and writes nothing.
+
+### Regression test
+`plugins/karvey/tests/unit/test_context.py`, `SpecLayoutIsReadOnly.test_BUG_105_writers_refuse_the_spec_layout_and_create_no_second_root` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-123: QA dimension 4 (impact on existing modules) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | spec/ accepted by writers that only know docs/spec/ |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-126 — `observed` flags the tracker adapter in use as outside the load list
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-context-budget.py (`cmd_observed`)
+- **Change / origin:** wave3-optimization — finding F-124 (manual script one-phase-per-session, step 4 (second rerun))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A session on the Markdown tracker runs `/karvey-tasks` and reads `rules/adapters/markdown.md`; `observed --skill karvey-tasks`.
+
+### Actual vs expected
+- Actual: `outside the load list: skills/karvey/rules/adapters/markdown.md`, although the skill's `Load:` names `adapters/{tool}.md`.
+- Expected: any alternative of a `{tool}` entry is inside the load list.
+
+### Root cause
+The allowed set came from the size closure, which keeps only the largest alternative of each entry.
+
+### Fix
+`_allowed_files` walks the load list with every alternative of each entry.
+
+### Regression test
+`plugins/karvey/tests/unit/test_close.py`, `ObservedAlternatives.test_BUG_126_any_tracker_adapter_of_the_load_list_is_inside_it` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-124: manual script one-phase-per-session, step 4 (second rerun) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | allowed set kept one alternative |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-106 — Sponsor delivery sends a page other than the one the leak check passed
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-sponsor.py (`cmd_deliver`)
+- **Change / origin:** wave3-optimization — finding F-125 (QA dimension 1, finding 1)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: deliver attached `sponsor.html` from disk while the leak check ran on a freshly rendered page, so a page edited after the build left unchecked.
+
+### Actual vs expected
+- Actual: deliver attached `sponsor.html` from disk while the leak check ran on a freshly rendered page, so a page edited after the build left unchecked.
+- Expected: the bytes sent are the bytes checked and recorded in `sponsor-history.jsonl`.
+
+### Root cause
+two sources for one payload.
+
+### Fix
+exit 3 when the page is missing, unbuilt or its sha256 differs from the last history entry; the on-disk text is leak-checked before sending.
+
+### Regression test
+`plugins/karvey/tests/unit/test_sponsor.py`, `Security.test_BUG_106_deliver_refuses_a_page_changed_after_the_checked_build` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-125: QA dimension 1, finding 1 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | two sources for one payload |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-107 — Stakeholder destination not checked where it is used
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-sponsor.py (`safe_destination`), karvey-config.py (`resolve_event`)
+- **Change / origin:** wave3-optimization — finding F-126 (QA dimension 1, finding 2)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: a `spec.json` stakeholder override such as `x@evil.test.
+
+### Actual vs expected
+- Actual: a `spec.json` stakeholder override such as `x@evil.test; rm -rf ~` was printed as the destination with exit 0.
+- Expected: every destination passes `check_target` at the point of use.
+
+### Root cause
+validation only when project.json was written.
+
+### Fix
+`check_target` at use: deliver exits 3 without the value; the event resolves to `none`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_notify_events.py`, `Events.test_BUG_107_an_unsafe_stakeholder_destination_is_refused_at_use`, `plugins/karvey/tests/unit/test_sponsor.py`, `Security.test_BUG_107_a_change_override_with_an_unsafe_destination_is_refused_at_use` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-126: QA dimension 1, finding 2 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | validation only when project.json was written |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-108 — Portfolio follows symlinks out of a listed repository
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/portfolio.py
+- **Change / origin:** wave3-optimization — finding F-127 (QA dimension 1, finding 3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: only the repository root was resolved, so a symlinked change or `questions.md` read another client's data under `--client`.
+
+### Actual vs expected
+- Actual: only the repository root was resolved, so a symlinked change or `questions.md` read another client's data under `--client`.
+- Expected: every file read stays inside the repository and is a regular file.
+
+### Root cause
+containment checked for the root only.
+
+### Fix
+`read_text`/`read_json` take `within=`; symlinked change folders are skipped.
+
+### Regression test
+`plugins/karvey/tests/unit/test_portfolio.py`, `Containment.test_BUG_108_symlinks_out_of_the_repository_are_not_read` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-127: QA dimension 1, finding 3 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | containment checked for the root only |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-109 — Hex secrets pass the leak check
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/leakcheck.py, leak_patterns.json
+- **Change / origin:** wave3-optimization — finding F-128 (QA dimension 1, finding 4)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: a 40-character hex token never reaches the 4.2 bits/char entropy threshold.
+
+### Actual vs expected
+- Actual: a 40-character hex token never reaches the 4.2 bits/char entropy threshold.
+- Expected: hex secrets are caught; short commit ids are not.
+
+### Root cause
+one entropy threshold for every alphabet.
+
+### Fix
+a hex rule for 32+ characters at 3.0 bits/char.
+
+### Regression test
+`plugins/karvey/tests/unit/test_leakcheck.py`, `QaDimension1.test_BUG_109_a_hex_secret_is_caught_and_short_commit_ids_are_not` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-128: QA dimension 1, finding 4 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | one entropy threshold for every alphabet |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-110 — Unreadable declared portfolio disables the other-clients rule
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-sponsor.py (`other_clients`, `checked`)
+- **Change / origin:** wave3-optimization — finding F-129 (QA dimension 1, finding 5)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: the page was written with other clients' names unchecked.
+
+### Actual vs expected
+- Actual: the page was written with other clients' names unchecked.
+- Expected: fail closed: page not written, reason stated.
+
+### Root cause
+read errors returned an empty client list.
+
+### Fix
+`PortfolioUnreadable` refuses with the hit `portfolio.file` / `client-unchecked`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_sponsor.py`, `Security.test_BUG_110_an_unreadable_declared_portfolio_fails_closed` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-129: QA dimension 1, finding 5 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | read errors returned an empty client list |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-111 — Braces in free text crash the sponsor render
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/sponsor.py (`_e`)
+- **Change / origin:** wave3-optimization — finding F-130 (QA dimension 1, finding 8)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: `{{word}}` in a question or risk text raised ValueError (no page) or could fill a slot.
+
+### Actual vs expected
+- Actual: `{{word}}` in a question or risk text raised ValueError (no page) or could fill a slot.
+- Expected: free text renders as text.
+
+### Root cause
+slot filling ran after escaping without escaping braces.
+
+### Fix
+braces are escaped as HTML entities.
+
+### Regression test
+`plugins/karvey/tests/unit/test_sponsor.py`, `Security.test_BUG_111_braces_in_free_text_neither_crash_nor_fill_a_slot` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-130: QA dimension 1, finding 8 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | slot filling ran after escaping without escaping braces |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-112 — Leak check misses some paths and exempts formatted ids
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/leakcheck.py, leak_patterns.json
+- **Change / origin:** wave3-optimization — finding F-131 (QA dimension 1, findings 6 and 7)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: `C:/Users/…`, `file:///home/…` and home paths inside URLs passed.
+
+### Actual vs expected
+- Actual: `C:/Users/…`, `file:///home/…` and home paths inside URLs passed; any 8-digit number was exempt as a date and dotted ids passed as amounts.
+- Expected: those paths refused; only plausible YYYYMMDD dates and real amounts exempt.
+
+### Root cause
+patterns written for back-slash drives and bare paths.
+
+### Fix
+new path rules; date and amount exemptions narrowed.
+
+### Regression test
+`plugins/karvey/tests/unit/test_leakcheck.py`, `QaDimension1.test_BUG_112_paths_in_urls_and_forward_slash_drives_are_caught`, `plugins/karvey/tests/unit/test_leakcheck.py`, `QaDimension1.test_BUG_112_only_a_plausible_date_exempts_eight_digits_and_dotted_ids_are_pii` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-131: QA dimension 1, findings 6 and 7 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | patterns written for back-slash drives and bare paths |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-113 — Event change id and foreign text not constrained
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-config.py (`resolve_event`), karvey_lib/portfolio.py (`sanitise`)
+- **Change / origin:** wave3-optimization — finding F-132 (QA dimension 1, finding 9 (and dimension 3, finding 13))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: `resolve_event --change ../..` accepted.
+
+### Actual vs expected
+- Actual: `resolve_event --change ../..` accepted; bidi and zero-width characters kept in foreign text; "at the the gate" with no item.
+- Expected: a plain change id; invisible controls stripped; natural wording.
+
+### Root cause
+no id check; incomplete sanitiser; one message template.
+
+### Fix
+exit 2 on a non-id; `sanitise` strips bidi/zero-width; `EVENT_NO_ITEM` default word.
+
+### Regression test
+`plugins/karvey/tests/unit/test_portfolio.py`, `Containment.test_BUG_113_sanitise_strips_bidi_and_zero_width`, `plugins/karvey/tests/unit/test_notify_events.py`, `Events.test_BUG_113_change_must_be_an_id_and_no_item_reads_naturally` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-132: QA dimension 1, finding 9 (and dimension 3, finding 13) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | no id check; incomplete sanitiser; one message template |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-114 — Moving a risk half-applies when the backlog exists
+- **Priority:** high
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-state.py (`_backlog_row`, `cmd_risk`)
+- **Change / origin:** wave3-optimization — finding F-133 (QA dimension 2, finding 2)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: `risk … move` wrote spec.json:risk_log and risks.md, then always failed the backlog write (compare-and-swap expecting no file).
+
+### Actual vs expected
+- Actual: `risk … move` wrote spec.json:risk_log and risks.md, then always failed the backlog write (compare-and-swap expecting no file); a rerun duplicated risk_log.
+- Expected: all three files written once, or none.
+
+### Root cause
+no read-time hash for the backlog and spec.json written first.
+
+### Fix
+hash at read; register, backlog, then spec.json last; a failure restores the earlier files and exits 3.
+
+### Regression test
+`plugins/karvey/tests/unit/test_risks.py`, `Command.test_BUG_114_move_with_an_existing_backlog_writes_everything_once`, `plugins/karvey/tests/unit/test_risks.py`, `Command.test_BUG_114_a_failed_spec_write_puts_register_and_backlog_back` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-133: QA dimension 2, finding 2 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | no read-time hash for the backlog and spec.json written first |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-115 — A row-less table hides the risk register, questions or backlog
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/risks.py, questions.py, backlog.py (`parse`)
+- **Change / origin:** wave3-optimization — finding F-134 (QA dimension 2, finding 3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: a previous table's header was kept, so the register read empty and `advance archived` passed with open risks.
+
+### Actual vs expected
+- Actual: a previous table's header was kept, so the register read empty and `advance archived` passed with open risks.
+- Expected: the archive sees every open risk.
+
+### Root cause
+the header was reset only after a data row.
+
+### Fix
+any non-table line ends the table.
+
+### Regression test
+`plugins/karvey/tests/unit/test_risks.py`, `Archive.test_BUG_115_a_row_less_table_before_the_register_does_not_hide_an_open_risk`, `plugins/karvey/tests/unit/test_backlog_wsjf.py`, `StaleHeader.test_BUG_115_a_row_less_table_before_does_not_hide_the_backlog`, `plugins/karvey/tests/unit/test_questions.py`, `Parse.test_BUG_115_a_row_less_table_before_does_not_hide_the_questions` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-134: QA dimension 2, finding 3 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | the header was reset only after a data row |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-116 — The qa notification is re-sent: two sources for its state
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-close.py, skills/karvey-qa/SKILL.md, rules/gates.md
+- **Change / origin:** wave3-optimization — finding F-135 (QA dimension 3, finding 4)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: the close keyed the sent-log on the outcome, the skill on the verdict, so the same verdict was sent twice.
+
+### Actual vs expected
+- Actual: the close keyed the sent-log on the outcome, the skill on the verdict, so the same verdict was sent twice.
+- Expected: one key: the verdict.
+
+### Root cause
+two call paths with different state fields.
+
+### Fix
+the close uses `--verdict` only; the skill defers to the close; gates.md shows `--verdict`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_close.py`, `Close.test_BUG_116_the_qa_notification_state_is_the_verdict_only` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-135: QA dimension 3, finding 4 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | two call paths with different state fields |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-117 — Four new validate warnings ignore their check modes
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-state.py (validate)
+- **Change / origin:** wave3-optimization — finding F-136 (QA dimension 4, finding 5)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: effort.mixed, cost.cap_key, client.mismatch and risks.owner always warned.
+
+### Actual vs expected
+- Actual: effort.mixed, cost.cap_key, client.mismatch and risks.owner always warned.
+- Expected: each follows its registry mode (off, advisory/warn, blocking).
+
+### Root cause
+fixed-severity issues.
+
+### Fix
+resolved through `modes.resolve` like design.undeclared.
+
+### Regression test
+`plugins/karvey/tests/unit/test_stakeholders.py`, `Client.test_BUG_117_the_mismatch_warning_follows_its_check_mode` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-136: QA dimension 4, finding 5 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | fixed-severity issues |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-118 — Applying a design delta can traceback or half-write
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-design.py (`cmd_apply`)
+- **Change / origin:** wave3-optimization — finding F-137 (QA dimension 2, finding 6)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: hash taken at write time.
+
+### Actual vs expected
+- Actual: hash taken at write time; an empty design-system.md raised CASConflict (traceback, exit 1); a conflict still wrote the additions.
+- Expected: hash at read; exit 3 and nothing written on a conflict.
+
+### Root cause
+hash read late, `is None` confusion, exceptions uncaught.
+
+### Fix
+hash at read, empty file handled, CAS/LockBusy → exit 3, nothing written.
+
+### Regression test
+`plugins/karvey/tests/unit/test_design_delta.py`, `Apply.test_BUG_118_an_empty_design_system_file_is_applied_not_a_traceback`, `plugins/karvey/tests/unit/test_design_delta.py`, `Apply.test_BUG_118_a_conflict_stops_and_writes_nothing_not_even_the_additions` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-137: QA dimension 2, finding 6 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | hash read late, `is None` confusion, exceptions uncaught |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-119 — New scripts end in a traceback on an unexpected error
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-design.py, karvey-close.py (`main`)
+- **Change / origin:** wave3-optimization — finding F-138 (QA dimension 2, finding 7)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: exit 1 with a Python traceback.
+
+### Actual vs expected
+- Actual: exit 1 with a Python traceback.
+- Expected: the JSON envelope with exit 5.
+
+### Root cause
+no catch-all.
+
+### Fix
+catch-all to the envelope, exit 5 (karvey-sponsor.py already reports through its own handlers).
+
+### Regression test
+`plugins/karvey/tests/unit/test_design_delta.py`, `Apply.test_BUG_119_an_internal_error_is_an_envelope_exit_5`, `plugins/karvey/tests/unit/test_close.py`, `Close.test_BUG_119_an_internal_error_is_an_envelope_exit_5` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-138: QA dimension 2, finding 7 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | no catch-all |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-120 — A malformed deploys entry crashes the report
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-context.py (`report_view`)
+- **Change / origin:** wave3-optimization — finding F-139 (QA dimension 2, finding 8)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: a non-object `deploys` entry → exit 5.
+
+### Actual vs expected
+- Actual: a non-object `deploys` entry → exit 5.
+- Expected: skipped.
+
+### Root cause
+no type check.
+
+### Fix
+non-dict entries skipped.
+
+### Regression test
+`plugins/karvey/tests/unit/test_context_report.py`, `Report.test_BUG_120_a_non_object_deploys_entry_is_skipped_not_a_crash` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-139: QA dimension 2, finding 8 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | no type check |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-121 — Concurrent closes can charge the same interval twice
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-state.py (`cmd_effort`), karvey_lib/effort.py
+- **Change / origin:** wave3-optimization — finding F-140 (QA dimension 2, finding 10)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: two effort writes read the same uncharged interval.
+
+### Actual vs expected
+- Actual: two effort writes read the same uncharged interval.
+- Expected: each interval charged once.
+
+### Root cause
+no lock around compute/store/charge.
+
+### Fix
+one lock per project root.
+
+### Regression test
+`plugins/karvey/tests/unit/test_effort.py`, `Command.test_BUG_121_the_interval_is_read_stored_and_charged_under_one_lock` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-140: QA dimension 2, finding 10 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | no lock around compute/store/charge |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-123 — Risk rewrite fails on a differently cased header
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/risks.py (`rewrite`)
+- **Change / origin:** wave3-optimization — finding F-141 (QA dimension 2, finding 9)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: StopIteration with an "Id" header.
+
+### Actual vs expected
+- Actual: StopIteration with an "Id" header.
+- Expected: any case accepted.
+
+### Root cause
+literal "ID"/"Owner" match.
+
+### Fix
+the row's own table header, any case.
+
+### Regression test
+`plugins/karvey/tests/unit/test_risks.py`, `Command.test_BUG_123_rewrite_finds_its_header_whatever_the_case` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-141: QA dimension 2, finding 9 |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | literal "ID"/"Owner" match |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-127 — `observed` misses files read relative to a `cd`
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-context-budget.py (`_bash_paths`)
+- **Change / origin:** wave3-optimization — finding F-144 (manual script one-phase-per-session, step 4 (third rerun))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A session reads rules with `cd {plugin}/skills/karvey/rules; cat _core.md gates.md`; `observed --skill karvey-tasks`.
+
+### Actual vs expected
+- Actual: `opened:` lists only the skill; the rules read after the `cd` are not counted.
+- Expected: every plugin markdown file the session read is listed.
+
+### Root cause
+Only paths naming `skills/` were matched; relative names after a `cd` were ignored.
+
+### Fix
+The command is split into segments; a `cd DIR` segment sets the directory and relative `*.md` read targets are resolved against it.
+
+### Regression test
+`plugins/karvey/tests/unit/test_close.py`, `Observed.test_BUG_101_skill_loads_and_shell_reads_count_as_opened` (the `cd` case, BUG-127) — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-144: manual script one-phase-per-session, step 4 (third rerun) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | relative paths after cd ignored |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |

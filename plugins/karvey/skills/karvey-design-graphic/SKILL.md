@@ -392,7 +392,7 @@ Record the artifact: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" ge
 
 ## Advance to the next phase
 
-Close the phase per `../karvey/rules/gates.md` (phase `design_graphic`, gate *what*): `generated`, then `karvey-state.py gate {change-id} design_graphic` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; *Approve and advance* runs the skill `next` names with no second question. In a new session, `karvey-state.py next {change-id}` says where the change is.
+Close the phase per `../karvey/rules/gates.md` (phase `design_graphic`, gate *what*): `generated`, then `karvey-state.py gate {change-id} design_graphic` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; then run the close steps once — `karvey-close.py "{change-id}" design_graphic --outcome approved|changes_requested` (never skipped); *Approve and advance* runs the skill `next` names with no second question. In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

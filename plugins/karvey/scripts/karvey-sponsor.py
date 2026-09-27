@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import atomicio, leakcheck, project as pj, sponsor as sp  # noqa: E402
+from karvey_lib import atomicio, leakcheck, project as pj, safe_values as sv, sponsor as sp  # noqa: E402
 
 TOOL = "karvey-sponsor"
 PAGE = "sponsor.html"
@@ -37,6 +37,7 @@ HISTORY = "sponsor-history.jsonl"
 REFUSALS = "sponsor-refusals.jsonl"
 NO_SPONSOR = "sponsor page: no sponsor declared"
 GATES = ("what", "how", "release")
+PORTFOLIO_UNREADABLE = "portfolio file declared but not readable: other-client names cannot be checked"
 
 
 class Usage(Exception):
@@ -92,8 +93,13 @@ def _history(cdir):
     return out
 
 
+class PortfolioUnreadable(Exception):
+    """A declared portfolio file that cannot be read: the other-clients rule fails closed (BUG-110)."""
+
+
 def other_clients(root, project):
-    """Other clients' names from the portfolio file (``project.json:portfolio.file``), or None when unreadable."""
+    """Other clients' names from the portfolio file (``project.json:portfolio.file``); None when none is declared.
+    A declared file that cannot be read (or is not a JSON object) raises :class:`PortfolioUnreadable`."""
     pf = (project or {}).get("portfolio") if isinstance((project or {}).get("portfolio"), dict) else None
     f = pf.get("file") if pf else None
     if not isinstance(f, str) or not f:
@@ -102,7 +108,9 @@ def other_clients(root, project):
     try:
         data = json.loads(p.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
-        return None
+        raise PortfolioUnreadable(PORTFOLIO_UNREADABLE)
+    if not isinstance(data, dict):
+        raise PortfolioUnreadable(PORTFOLIO_UNREADABLE)
     own = (project or {}).get("client")
     names = set()
     for r in data.get("repos", []) if isinstance(data, dict) else []:
@@ -112,10 +120,23 @@ def other_clients(root, project):
     return sorted(names)
 
 
+def safe_destination(dest, role="sponsor"):
+    """``(dest, rule)``: the destination when its target passes ``check_target`` for its channel at the point of use
+    (a ``spec.json`` override included), else ``(None, rule)`` — never sent to (BUG-107)."""
+    if not isinstance(dest, dict):
+        return None, None
+    ch = dest.get("channel") or "none"
+    try:
+        sv.check_target(ch, dest.get("target", ""), key="stakeholders.%s.destination.target" % role)
+    except sv.UnsafeValue as exc:
+        return None, exc.rule
+    return dest, None
+
+
 def leak_ctx(root, project, stake):
     emails = [s["destination"]["target"] for s in stake.values()
               if isinstance(s.get("destination"), dict) and s["destination"].get("channel") == "email"
-              and isinstance(s["destination"].get("target"), str)]
+              and isinstance(s["destination"].get("target"), str) and safe_destination(s["destination"])[0]]
     leak = (project or {}).get("leak") if isinstance((project or {}).get("leak"), dict) else {}
     deny = [t for t in leak.get("deny_terms") or [] if isinstance(t, str)]
     return {"allowed_emails": emails, "other_clients": other_clients(root, project), "deny_terms": deny}
@@ -132,7 +153,12 @@ def checked(root, change, today=None):
     page = sp.render(model)
     fields = leakcheck.flatten(model)
     fields["page"] = leakcheck.text_of_html(page)
-    verdict = leakcheck.check(fields, leak_ctx(root, project, stake))
+    try:
+        ctx = leak_ctx(root, project, stake)
+    except PortfolioUnreadable as exc:  # fail closed: the other-clients rule cannot run (BUG-110)
+        return model, page, {"ok": False, "hits": [{"field": "portfolio.file", "rule": "client-unchecked"}],
+                             "notes": [str(exc)]}, stake, project
+    verdict = leakcheck.check(fields, ctx)
     return model, page, verdict, stake, project
 
 
@@ -211,6 +237,28 @@ def cmd_deliver(args):
     if body["channel"] == "none":
         return kl.EXIT_OK, {"change": args.change, "delivered": False, "payload": None}, [], \
             "not delivered: no destination declared"
+    _, bad = safe_destination(dest)
+    if bad:  # checked where it is used, the change's override included (BUG-107)
+        msg = "not delivered: the sponsor destination is refused (%s; value not shown)" % bad
+        return kl.EXIT_REFUSED, {"change": args.change, "delivered": False, "reason": "destination"}, \
+            [kl.issue("sponsor.destination", msg)], msg
+    # what is attached is the page on disk: it must be the page the last build checked and wrote (BUG-106)
+    try:
+        disk = (cdir / PAGE).read_bytes()
+    except OSError:
+        disk = None
+    built = [h for h in _history(cdir) if h.get("sha256")]
+    if disk is None or not built or hashlib.sha256(disk).hexdigest() != built[-1]["sha256"]:
+        msg = "not delivered: %s is %s — rebuild it with karvey-sponsor.py build" % (
+            PAGE, "missing" if disk is None else ("not the last checked build" if built else "never built"))
+        return kl.EXIT_REFUSED, {"change": args.change, "delivered": False, "reason": "page"}, \
+            [kl.issue("sponsor.page_changed", msg)], msg
+    dv = leakcheck.check({"page": leakcheck.text_of_html(disk.decode("utf-8", "replace"))},
+                         leak_ctx(root, project, stake))
+    if not dv["ok"]:
+        lines = refuse(cdir, "deliver", dv, now_iso())
+        return kl.EXIT_REFUSED, {"change": args.change, "delivered": False}, [kl.issue("sponsor.leak", lines[0])], \
+            "\n".join(lines)
     pv = leakcheck.check(leakcheck.flatten(body), leak_ctx(root, project, stake))
     if not pv["ok"]:
         lines = refuse(cdir, "deliver", pv, now_iso())

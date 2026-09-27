@@ -156,6 +156,10 @@ def resolve_root(args):
     root = pj.find_root(start=os.getcwd(), root=getattr(args, "root", None))
     if root is None:
         where = args.root if getattr(args, "root", None) else os.getcwd()
+        ro = pj.find_root(start=os.getcwd(), root=getattr(args, "root", None), read_only=True)
+        if ro is not None:  # a spec/ project: read by the views, never written here (BUG-105)
+            raise NotFound("%s uses the spec/ layout: 4.1 reads it (dashboard, session hook, portfolio) but writes "
+                           "only docs/spec/ — move spec/ to docs/spec/ to use this command" % ro)
         raise NotFound("not a Karvey project (no docs/spec/project.json or docs/spec/changes/): %s" % where)
     return root
 
@@ -368,7 +372,13 @@ def semantic_spec(data, strict, file):
         if not is_lane and lane_optional(data, ph):
             continue  # an optional phase of the lane, skipped with a reason
         lane_reason = "lane:%s" % data.get("lane") if isinstance(data.get("lane"), str) else None
-        if skipped[ph] != lane_reason or not lane_skips(data, ph):
+        if skipped[ph] == lane_reason and not lane_skips(data, ph):  # the right lane, not a skip of it (BUG-102)
+            out.append(kl.issue("state.skip_not_lane", "lane %r does not skip phase %r%s" % (
+                                data.get("lane"), ph, ": it is optional there — record a plain reason instead of %r"
+                                % skipped[ph] if lane_optional(data, ph) else ""),
+                                severity="error", file=file, path="$.skipped.%s" % ph,
+                                expected="a plain reason" if lane_optional(data, ph) else "no skip", got=skipped[ph]))
+        elif skipped[ph] != lane_reason or not lane_skips(data, ph):
             out.append(kl.issue("state.skip_not_lane", "phase %r is not skippable: only a lane skip of this "
                                 "change's lane is accepted (reason %r, lane %r)" % (ph, skipped[ph], data.get("lane")),
                                 severity="error", file=file, path="$.skipped.%s" % ph,
@@ -873,6 +883,7 @@ def cmd_validate(args, root):
     if (args.dry_run or args.accept_proposed) and not args.fix:
         raise Usage("--dry-run and --accept-proposed need --fix")
     errors, warnings, report = [], [], []
+    mode_cache = {}
     worst = kl.EXIT_OK
     refused = False
     for f in files:
@@ -920,6 +931,7 @@ def cmd_validate(args, root):
         if kind_of(f) == "spec":
             issues += risk_register_issues(root, Path(f).parent)
             issues += client_issues(data, name)
+        issues = apply_check_modes(issues, root, mode_cache)
         e = [i for i in issues if i["severity"] == "error"]
         w = [i for i in issues if i["severity"] == "warning"]
         entry["errors"], entry["warnings"] = len(e), len(w)
@@ -956,6 +968,32 @@ def cmd_validate(args, root):
     lines.append("mode: %s · %d files · %d errors · %d warnings" % (strict_mode, len(report), len(errors),
                                                                    len(warnings)))
     return worst, result, errors, warnings, "\n".join(lines)
+
+
+# issue codes whose severity follows a check of the mode registry (BUG-117): off drops them, advisory and warn
+# keep a warning, blocking makes them an error — like design.undeclared
+MODED_CODES = {"effort.kind": "effort.mixed", "effort.mixed": "effort.mixed", "cost.cap_key": "cost.cap_key",
+               "client.mismatch": "client.mismatch", "risks.owner": "risks.owner", "risks.state": "risks.owner",
+               "risks.id": "risks.owner"}
+
+
+def apply_check_modes(issues, root, cache):
+    out = []
+    for i in issues:
+        check = MODED_CODES.get(i.get("code"))
+        if check is None:
+            out.append(i)
+            continue
+        if check not in cache:
+            try:
+                cache[check] = modes.resolve(root=root, check_id=check)["mode"]
+            except Exception:  # an unreadable registry keeps the 4.1 default: a warning
+                cache[check] = "warn"
+        mode = cache[check]
+        if mode == "off":
+            continue
+        out.append(dict(i, severity="error") if modes.would_refuse(mode) else dict(i, severity="warning"))
+    return out
 
 
 def client_issues(data, file):
@@ -2246,6 +2284,13 @@ def cmd_outcome(args, root):
              "role": args.role, "ref": args.ref.strip(), "at": _date_arg(args.date), "reason": reason}
 
     def mutate(data):
+        if args.kind == "gate":  # changes requested on an approved phase would leave it approved (BUG-100)
+            appr = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
+            done = [p for p in phases if isinstance(appr.get(p), dict) and appr[p].get("approved") is True]
+            if done:
+                raise Refused("%s already approved: withdraw it first with `karvey-state.py reopen %s %s "
+                              "--reason … --ref …`, then record the outcome" % (", ".join(done), args.change, done[0]),
+                              code="state.outcome_after_approval")
         append_outcome(data, entry)
         data["updated_at"] = now_iso()
         return {"change": args.change, "outcome": entry}
@@ -2266,18 +2311,25 @@ def cmd_effort(args, root):
     cost_dir = pj.state_dir(root) / ef.CAPTURE_DIR
     rkey = ef.root_key(root)
     now = now_iso()
-    entry, charge = ef.compute(cost_dir, rkey, args.phase, now, args.review_min)
+    try:
+        cost_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    except OSError:
+        pass
+    # read the charged record, store the entry and move the charge under one lock: two closes at once never
+    # charge the same interval twice (BUG-121)
+    with atomicio.lock(str(cost_dir / ("%s.effort" % rkey)), wait_s=30.0):
+        entry, charge = ef.compute(cost_dir, rkey, args.phase, now, args.review_min)
 
-    def mutate(data):
-        log = data.get("effort") if isinstance(data.get("effort"), list) else []
-        log.append(entry)
-        data["effort"] = log
-        data["updated_at"] = now
-        return {"change": args.change, "phase": args.phase, "entry": entry}
+        def mutate(data):
+            log = data.get("effort") if isinstance(data.get("effort"), list) else []
+            log.append(entry)
+            data["effort"] = log
+            data["updated_at"] = now
+            return {"change": args.change, "phase": args.phase, "entry": entry}
 
-    path, res, _ = transact(root, args.change, mutate)
-    if charge is not None and entry.get("session"):
-        ef.write_charged(cost_dir, entry["session"], charge)
+        path, res, _ = transact(root, args.change, mutate)
+        if charge is not None and entry.get("session"):
+            ef.write_charged(cost_dir, entry["session"], charge)
     res["file"] = rel(root, path)
     red = (kl.defaults().get("context_pct") or {}).get("red")
     res["advice"] = ef.rotation_advice(cost_dir, rkey, red)
@@ -2296,24 +2348,41 @@ def cmd_effort(args, root):
 
 
 def _backlog_row(root, bl, change, risk, day):
-    """Append the backlog row of a moved risk to ``docs/spec/backlog.md`` (created with its header when absent)."""
+    """``(path, old_text or None, old_sha256 or None, new_text)`` of the backlog row of a moved risk in
+    ``docs/spec/backlog.md`` (created with its header when absent). Nothing is written here: the hash is taken at
+    read time so the caller writes with compare-and-swap (BUG-114)."""
     p = Path(root) / pj.SPEC_DIR / "backlog.md"
     head = ("| ID | Date | Origin | Type | Priority | Title | Status | Tracker | Promoted to change-id |\n"
             "|----|------|--------|------|----------|-------|--------|---------|-----------------------|\n")
     title = re.sub(r"\s+", " ", risk["risk"]).replace("|", "\\|").strip()
     row = "| %s | %s | %s / %s | risk | med | %s | open | — | — |" % (bl, day, change, risk["id"], title)
+    old_sha = atomicio.file_sha256(p)
     try:
-        text = p.read_text(encoding="utf-8-sig")
+        old = p.read_text(encoding="utf-8-sig") if old_sha is not None else None
     except FileNotFoundError:
-        text = "# Discovery Backlog\n\n" + head
+        old, old_sha = None, None
+    text = old if old is not None else "# Discovery Backlog\n\n" + head
     lines = text.rstrip("\n").split("\n")
+    if any(ln.lstrip().startswith("| %s |" % bl) for ln in lines):
+        return p, old, old_sha, None  # already there (a re-run): nothing to add
     rows = [i for i, ln in enumerate(lines) if ln.lstrip().startswith("|")]
     if rows:
         lines.insert(rows[-1] + 1, row)
     else:
         lines += ["", head.rstrip("\n"), row]
-    atomicio.write_text_atomic(str(p), "\n".join(lines) + "\n")
-    return rel(root, p)
+    return p, old, old_sha, "\n".join(lines) + "\n"
+
+
+def _restore(path, old_text, written_sha):
+    """Put back a file this command wrote (compensation of a later failed step); best effort, never raises."""
+    try:
+        if old_text is None:
+            if atomicio.file_sha256(path) == written_sha:
+                os.unlink(str(path))
+        else:
+            atomicio.write_text_atomic(str(path), old_text, expected_sha256=written_sha)
+    except (OSError, atomicio.CASConflict, atomicio.LockBusy):
+        pass
 
 
 def _reserve_bl(root):
@@ -2373,10 +2442,28 @@ def cmd_risk(args, root):
             data["updated_at"] = now
             return {"change": args.change, "entry": entry}
 
-        _, res, _ = transact(root, args.change, mutate)
-        atomicio.write_text_atomic(str(reg), new_text, expected_sha256=expected)
-        if args.action == "move":
-            backlog = _backlog_row(root, ref, args.change, risk, now[:10])
+        # order (BUG-114): register, then backlog, then spec.json last; a failed later step puts the earlier
+        # files back, so a refusal never leaves the change half-applied and a re-run logs the move once
+        bl = _backlog_row(root, ref, args.change, risk, now[:10]) if args.action == "move" else None
+        try:
+            reg_sha = atomicio.write_text_atomic(str(reg), new_text, expected_sha256=expected)
+        except (atomicio.CASConflict, atomicio.LockBusy) as exc:
+            raise Refused("risk register not written: %s" % exc, code="state.risk")
+        bl_sha = None
+        try:
+            if bl and bl[3] is not None:
+                bl_sha = atomicio.write_text_atomic(str(bl[0]), bl[3], expected_sha256=bl[2])
+            _, res, _ = transact(root, args.change, mutate)
+        except BaseException as exc:
+            if bl_sha is not None:
+                _restore(bl[0], bl[1], bl_sha)
+            _restore(reg, text, reg_sha)
+            if isinstance(exc, (atomicio.CASConflict, atomicio.LockBusy)):
+                raise Refused("risk %s not changed (a file changed during the command, re-run): %s"
+                              % (args.risk, exc), code="state.risk")
+            raise
+        if bl:
+            backlog = rel(root, bl[0])
     res["register"] = rel(root, reg)
     if backlog:
         res["backlog"] = backlog

@@ -12,6 +12,7 @@ sequences removed, 200 characters at most) before it is printed. Stdlib only.
 import json
 import os
 import re
+import stat
 from pathlib import Path
 
 from . import project as pj
@@ -22,7 +23,7 @@ READ_MAX = 2 * 1024 * 1024
 TEXT_MAX = 200
 NOT_KARVEY = "not a Karvey project"
 _ANSI = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])")
-_CTRL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+_CTRL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]")  # + bidi, zero-width
 
 
 class NotRead(Exception):
@@ -37,8 +38,24 @@ def sanitise(text, limit=TEXT_MAX):
     return t if len(t) <= limit else t[:limit - 1] + "…"
 
 
-def read_text(path, limit=READ_MAX):
-    """A file's text, at most ``limit`` bytes; ``NotRead`` with the reason otherwise."""
+def read_text(path, limit=READ_MAX, within=None):
+    """A file's text, at most ``limit`` bytes; ``NotRead`` with the reason otherwise. With ``within`` (a repository's
+    real path) the file's real path must stay inside it and be a regular file: a symlink to another client's
+    repository or to a device is not read (BUG-108)."""
+    if within is not None:
+        real = os.path.realpath(str(path))
+        if not real.startswith(str(within).rstrip(os.sep) + os.sep):
+            raise NotRead("outside the repository")
+        try:
+            if not stat.S_ISREG(os.stat(real).st_mode):
+                raise NotRead("not a regular file")
+        except FileNotFoundError:
+            raise NotRead("missing")
+        except PermissionError:
+            raise NotRead("permission denied")
+        except OSError as exc:
+            raise NotRead(exc.strerror or type(exc).__name__)
+        path = real
     try:
         size = os.stat(str(path)).st_size
         if size > limit:
@@ -56,9 +73,9 @@ def read_text(path, limit=READ_MAX):
     return raw.decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
 
 
-def read_json(path, limit=READ_MAX):
+def read_json(path, limit=READ_MAX, within=None):
     try:
-        return json.loads(read_text(path, limit))
+        return json.loads(read_text(path, limit, within))
     except ValueError:
         raise NotRead("invalid JSON")
 
@@ -109,8 +126,9 @@ def repo_changes(abs_path):
     """``(layout, note, changes)`` of a repository by file reads only; ``NotRead`` when it cannot be read.
     ``changes`` = ``[{id, spec}]`` for the active ones (not archived, not implemented), sorted by id."""
     root = Path(abs_path)
+    within = os.path.realpath(str(root))
     try:
-        if not pj.is_karvey_project(root):
+        if not pj.is_karvey_project(root, read_only=True):
             raise NotRead(NOT_KARVEY)
         rel, layout, note = pj.spec_layout(root)
         base = root / rel / "changes"
@@ -119,12 +137,12 @@ def repo_changes(abs_path):
         raise NotRead("permission denied")
     out = []
     for d in entries:
-        if not d.is_dir() or d.name == pj.ARCHIVE_NAME or d.name.startswith("."):
+        if d.is_symlink() or not d.is_dir() or d.name == pj.ARCHIVE_NAME or d.name.startswith("."):
             continue
         if os.path.exists(os.path.join(d.path, pj.IMPLEMENTED_MARKER)):
             continue
         try:
-            spec = read_json(os.path.join(d.path, "spec.json"))
+            spec = read_json(os.path.join(d.path, "spec.json"), within=within)
         except NotRead as exc:
             out.append({"id": d.name, "spec": None, "error": str(exc)})
             continue
@@ -146,8 +164,9 @@ def _days(a, b):
         return None
 
 
-def _all_change_specs(spec_root):
-    """``[(change id, spec dict, archived)]`` of every change (archive included), by file reads only."""
+def _all_change_specs(spec_root, within):
+    """``[(change id, spec dict, archived)]`` of every change (archive included), by file reads only; nothing
+    outside ``within`` (the repository's real path) is read."""
     out = []
     base = spec_root / "changes"
     for parent, archived in ((base, False), (base / pj.ARCHIVE_NAME, True)):
@@ -156,10 +175,11 @@ def _all_change_specs(spec_root):
         except OSError:
             continue
         for d in dirs:
-            if not d.is_dir() or d.name.startswith(".") or (not archived and d.name == pj.ARCHIVE_NAME):
+            if d.is_symlink() or not d.is_dir() or d.name.startswith(".") or \
+                    (not archived and d.name == pj.ARCHIVE_NAME):
                 continue
             try:
-                spec = read_json(os.path.join(d.path, "spec.json"))
+                spec = read_json(os.path.join(d.path, "spec.json"), within=within)
             except NotRead:
                 continue
             if isinstance(spec, dict):
@@ -179,8 +199,9 @@ def read_repo(abs_path, frm, to, as_of):
     layout, note, _active = repo_changes(abs_path)
     root = Path(abs_path)
     sroot = root / pj.spec_layout(root)[0]
+    within = os.path.realpath(str(root))
     try:
-        project = read_json(sroot / "project.json")
+        project = read_json(sroot / "project.json", within=within)
     except NotRead:
         project = {}
     who = set()
@@ -193,7 +214,7 @@ def read_repo(abs_path, frm, to, as_of):
                     who.add(v[k].lower())
     active, waiting, released = [], [], []
     usd, est, n_cost = 0.0, 0.0, set()
-    for cid, spec, done in _all_change_specs(sroot):
+    for cid, spec, done in _all_change_specs(sroot, within):
         cid_s = sanitise(cid, 80)
         for dep in spec.get("deploys") or []:
             if isinstance(dep, dict) and dep.get("env") == "prod":
@@ -223,13 +244,13 @@ def read_repo(abs_path, frm, to, as_of):
             if isinstance(a, dict) and a.get("generated") and not a.get("approved"):
                 waiting.append({"kind": "approval", "change": cid_s, "item": sanitise(k, 40)})
     try:
-        qrows = qs.parse(read_text(sroot / "questions.md"))
+        qrows = qs.parse(read_text(sroot / "questions.md", within=within))
     except NotRead:
         qrows = []
     for q in qs.open_questions(qrows, as_of):
         if who and q["owner"].strip().lower() not in who:
             continue
-        waiting.append({"kind": "question", "item": q["id"], "owner": sanitise(q["owner"], 60),
+        waiting.append({"kind": "question", "item": sanitise(q["id"], 20), "owner": sanitise(q["owner"], 60),
                         "needed_by": sanitise(q["needed_by"], 20),
                         "flag": "overdue" if q["overdue"] else ("date invalid" if q["date_invalid"] else "")})
     released.sort(key=lambda r: (r["date"], r["change"]))

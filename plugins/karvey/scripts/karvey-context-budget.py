@@ -49,6 +49,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -477,8 +478,55 @@ def cmd_render(args):
 
 
 # --------------------------------------------------------------------------- observed (C-08, REQ-W3-013)
+_READ_VERB = re.compile(r"(?:^|[\s;&|(])(?:cat|sed|head|tail|grep|egrep|rg|awk|less|more|nl|wc)\b")
+_ASSIGN = re.compile(r"(?:^|[\s;&(])([A-Za-z_][A-Za-z0-9_]*)=(\"[^\"]*\"|'[^']*'|[^\s;&|]+)")
+
+
+def _plugin_rel(fp):
+    fp = fp.replace("\\", "/")
+    if "/skills/" in "/" + fp and fp.endswith(".md"):
+        return "skills/" + ("/" + fp).rsplit("/skills/", 1)[1]
+    return None
+
+
+def _expand_braces(token):
+    b = re.search(r"\{([^{}]*)\}", token)
+    return [token[:b.start()] + x + token[b.end():] for x in b.group(1).split(",")] if b else [token]
+
+
+def _bash_paths(command):
+    """Plugin ``skills/**.md`` paths a shell command reads (``cat``/``sed``/``grep``…), with the variables it
+    assigns itself expanded (``R=…/rules; sed -n 1,5p $R/x.md``), brace lists split (BUG-104) and paths relative
+    to a ``cd`` of the same command resolved (BUG-127) — BUG-101."""
+    if not _READ_VERB.search(command):
+        return []
+    env = {}
+    for name, val in _ASSIGN.findall(command):
+        env[name] = val.strip("\"'")
+    for name in sorted(env, key=len, reverse=True):
+        command = re.sub(r"\$\{%s\}|\$%s\b" % (name, name), lambda _m, v=env[name]: v, command)
+    out, cwd = [], None
+    for seg in re.split(r"&&|\|\||;|\n", command):
+        m = re.match(r"\s*cd\s+([\"']?)([^\s\"';&|]+)\1\s*$", seg)
+        if m:
+            cwd = m.group(2).rstrip("/")
+            continue
+        if not _READ_VERB.search(seg):
+            continue
+        for tok in re.findall(r"[^\s\"'<>|;&()*]+\.md", seg):
+            for name in _expand_braces(tok):
+                if "{" in name or "}" in name:
+                    continue
+                full = name if (name.startswith("/") or "skills/" in name or cwd is None) else cwd + "/" + name
+                rp = _plugin_rel(full)
+                if rp:
+                    out.append(rp)
+    return out
+
+
 def opened_files(transcript):
-    """Sorted plugin-relative ``skills/…/*.md`` paths opened by ``Read`` tool calls in a JSONL transcript."""
+    """Sorted plugin-relative ``skills/…/*.md`` paths a JSONL transcript opened: ``Read`` calls, ``Skill`` loads
+    (``skills/{name}/SKILL.md``) and shell reads of a plugin markdown file (BUG-101)."""
     seen = set()
     with open(transcript, encoding="utf-8-sig", errors="replace") as fh:
         for raw in fh:
@@ -489,12 +537,39 @@ def opened_files(transcript):
             msg = rec.get("message") if isinstance(rec, dict) else None
             content = msg.get("content") if isinstance(msg, dict) else None
             for part in content if isinstance(content, list) else []:
-                if not isinstance(part, dict) or part.get("type") != "tool_use" or part.get("name") != "Read":
+                if not isinstance(part, dict) or part.get("type") != "tool_use":
                     continue
-                fp = str((part.get("input") or {}).get("file_path") or "").replace("\\", "/")
-                if "/skills/" in "/" + fp and fp.endswith(".md"):
-                    seen.add("skills/" + ("/" + fp).rsplit("/skills/", 1)[1])
+                inp = part.get("input") if isinstance(part.get("input"), dict) else {}
+                name = part.get("name")
+                if name == "Read":
+                    rp = _plugin_rel(str(inp.get("file_path") or ""))
+                    if rp:
+                        seen.add(rp)
+                elif name == "Skill":
+                    sk = str(inp.get("skill") or "").split(":")[-1].strip()
+                    if re.match(r"^[a-z0-9][a-z0-9-]*$", sk):
+                        seen.add("skills/%s/SKILL.md" % sk)
+                elif name == "Bash":
+                    seen.update(_bash_paths(str(inp.get("command") or "")))
     return sorted(seen)
+
+
+def _allowed_files(plugin, skill_md):
+    """Every file the skill's load list can reach, with **every** alternative of a ``{tool}`` entry (the tracker in
+    use may be any of them), not only the largest one the size closure keeps (BUG-126)."""
+    rules_dir = plugin / "skills" / "karvey" / "rules"
+    g = loadlist.graph(rules_dir)
+    seen, queue = set(), []
+    for alts, _cond in loadlist.refs_of(loadlist.read_text(skill_md), rules_dir, Path(skill_md).parent):
+        queue += [f for f in alts if f not in seen]
+        seen.update(alts)
+    while queue:
+        cur = queue.pop(0)
+        for alts, _cond in g.get(cur, []):
+            new = [f for f in alts if f not in seen]
+            seen.update(new)
+            queue += new
+    return {loadlist.rel(p, plugin) for p in seen}
 
 
 def cmd_observed(args):
@@ -511,8 +586,7 @@ def cmd_observed(args):
         if not md.is_file():
             return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue(
                 "budget.not_found", "skill %s not found" % args.skill)]), args.json)
-        row, _ = loadlist.measure_skill(plugin, md)
-        allowed = set(row["closure_max_files"]) | {"skills/%s/SKILL.md" % args.skill}
+        allowed = _allowed_files(plugin, md) | {"skills/%s/SKILL.md" % args.skill}
         outside = [f for f in opened if f.startswith("skills/karvey/rules/") and f not in allowed]
         res.update(skill=args.skill, outside_load_list=outside)
         lines += ["outside the load list: %s" % f for f in outside]

@@ -182,5 +182,13 @@ class Cadence(unittest.TestCase):
         self.assertEqual(line, "backlog refinement: 2026-09-24 (20 days ago)")
 
 
+
+class StaleHeader(unittest.TestCase):
+    def test_BUG_115_a_row_less_table_before_does_not_hide_the_backlog(self):
+        pre = [b["id"] for b in bk.parse(BACKLOG)]
+        self.assertTrue(pre)
+        self.assertEqual([b["id"] for b in bk.parse("| Note | Value |\n|------|-------|\n\n" + BACKLOG)], pre)
+
+
 if __name__ == "__main__":
     unittest.main()

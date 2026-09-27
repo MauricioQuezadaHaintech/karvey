@@ -122,6 +122,18 @@ class GateSummary(unittest.TestCase):
         self.assertTrue(any("F-01 High judge:security" in x for x in lines), lines)
         self.assertEqual(g_["judge_cost_usd"], 1.0)
 
+    def test_BUG_95_judge_line_has_discarded_and_tokens_with_their_source(self):
+        self.setruns([run_rec("security", "concerns", discarded=2, tokens_total=2648, source="estimate"),
+                      run_rec("methods", "pass")])
+        g_, _ = self.gate()
+        lines = [j["line"] for j in g_["judges"]]
+        sec = [x for x in lines if x.startswith("judge security:")][0]
+        self.assertIn("2 discarded", sec)
+        self.assertIn("2648 tokens (estimate)", sec)
+        met = [x for x in lines if x.startswith("judge methods:")][0]  # an older record: in + out, estimated
+        self.assertIn("0 discarded", met)
+        self.assertIn("15 tokens (estimate)", met)
+
     def test_REQ_W2_027_missing_judge_not_run(self):
         self.setruns([run_rec("security", "pass")])
         g_, _ = self.gate()

@@ -245,7 +245,7 @@ Next step:
 
 ## Advance to the next phase
 
-Close the phase per `../karvey/rules/gates.md` (phase `tasks`, gate *how*): `generated`, then `karvey-state.py gate {change-id} tasks` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; *Approve and advance* runs the skill `next` names with no second question. In a new session, `karvey-state.py next {change-id}` says where the change is.
+Close the phase per `../karvey/rules/gates.md` (phase `tasks`, gate *how*): `generated`, then `karvey-state.py gate {change-id} tasks` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; then run the close steps once — `karvey-close.py "{change-id}" tasks --outcome approved|changes_requested` (never skipped); *Approve and advance* runs the skill `next` names with no second question. In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

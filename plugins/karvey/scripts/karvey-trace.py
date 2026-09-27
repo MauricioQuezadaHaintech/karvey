@@ -500,13 +500,16 @@ PHASE_WORDS = ("requirements", "mockup", "design", "design graphic", "design_gra
 _PLAN_SECTION = re.compile(r"^#{2,4}\s+(Feature|Epic item)\b\s*([^:\s]*)\s*:?\s*(.*)$", re.I)
 _PLAN_ITEM = re.compile(r"^\s*[-*]\s+\[[ xX]\]\s+(.*)$")
 _QA_DEPLOY = re.compile(r"\bQA\b|\[Deploy\]|\bdeploy(?:ment)?\b", re.I)
+_PLAN_HEADING = re.compile(r"^#{1,4}\s")
+_PLAN_QA_HEAD = re.compile(r"^#{1,4}\s+(?:QA Review\b|Deploy\b|.*\bE\d+\.(?:QA|DEPLOY)\b)", re.I)
+_PLAN_ROW = re.compile(r"^\s*\|\s*((?:E\d+\.(?:QA|DEPLOY)\.\d+|\[Deploy\])[^|]*)\|")
 
 
 def wbs_plan(text):
     """Tracker reconciliation of a Markdown tracker (``PLAN.md``), read-only (REQ-W3-040, 041): a Feature named
     after a pipeline phase → ``legacy shape``; a QA or deploy item not under ``E{n}.QA`` / ``E{n}.DEPLOY`` →
     ``outside the hierarchy``. Nothing is rewritten."""
-    out, section = [], None
+    out, section, seen = [], None, {}
     for n, line in enumerate((text or "").splitlines(), 1):
         m = _PLAN_SECTION.match(line)
         if m:
@@ -516,9 +519,23 @@ def wbs_plan(text):
             if kind == "feature" and (label in PHASE_WORDS or re.sub(r"\s+phase$", "", label) in PHASE_WORDS):
                 out.append("legacy shape: Feature %s %r is a pipeline phase (line %d) — phases belong on the Epic"
                            % (key or "?", name, n))
+            if kind == "epic item" and key:  # one section per natural key (BUG-97)
+                if key.upper() in seen:
+                    out.append("duplicate: Epic item %s at line %d (first at line %d) — find and reuse it"
+                               % (key, n, seen[key.upper()]))
+                seen.setdefault(key.upper(), n)
             continue
-        if line.startswith("## "):
-            section = None
+        if _PLAN_HEADING.match(line):
+            if line.startswith("## ") or line.startswith("# "):
+                section = None
+            if _PLAN_QA_HEAD.search(line):  # a QA review or deploy section of its own, outside the Epic items
+                out.append("outside the hierarchy: section %r (line %d) — fill ### Epic item E{n}.QA / E{n}.DEPLOY"
+                           % (line.lstrip("#").strip()[:60], n))
+            continue
+        row = _PLAN_ROW.match(line)
+        if row and not (section and section[0] == "epic item"):
+            out.append("outside the hierarchy: row %r (line %d) — QA and deploy items live under E{n}.QA / "
+                       "E{n}.DEPLOY" % (row.group(1)[:60], n))
             continue
         it = _PLAN_ITEM.match(line)
         if not it:

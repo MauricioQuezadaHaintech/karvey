@@ -122,6 +122,23 @@ class Legacy(unittest.TestCase):
         self.assertTrue(out[1].startswith("outside the hierarchy: 'QA Review sample-change"))
         self.assertTrue(out[2].startswith("outside the hierarchy: '[Deploy] sample-change@1.2.0'"))
 
+    def test_BUG_97_root_qa_and_deploy_sections_with_table_rows_are_outside(self):
+        plan = ("# Plan: sample-wbs\n\n## Epic: sample\n\n### Feature E1.F1: Sign-in\n- [x] E1.F1.T1 login\n\n"
+                "### Epic item E1.QA\n\n### Epic item E1.DEPLOY\n\n## History\n| d | x |\n\n"
+                "## QA Review — E1.QA (feature/x → main)\n| ID | Task |\n|----|------|\n"
+                "| E1.QA.1 | parameterise the report query |\n\n"
+                "## Deploy — sample-wbs (E1.DEPLOY, 1.0.0)\n| [Deploy] sample-wbs@1.0.0 | blocked |\n")
+        out = trace.wbs_plan(plan)
+        self.assertEqual(sum(1 for x in out if x.startswith("outside the hierarchy: section")), 2, out)
+        self.assertTrue(any(x.startswith("outside the hierarchy: row 'E1.QA.1") for x in out), out)
+        self.assertTrue(any(x.startswith("outside the hierarchy: row '[Deploy] sample-wbs@1.0.0") for x in out), out)
+
+    def test_BUG_97_an_epic_item_twice_is_a_duplicate_and_children_inside_are_fine(self):
+        plan = ("## Epic: sample\n\n### Epic item E1.QA\n- [ ] E1.QA.1 parameterise the query\n"
+                "| E1.QA.2 | a table row inside is fine |\n\n### Epic item E1.QA\n")
+        out = trace.wbs_plan(plan)
+        self.assertEqual(out, ["duplicate: Epic item E1.QA at line 7 (first at line 3) — find and reuse it"])
+
     def test_the_file_is_unchanged_through_the_cli(self):
         tmp = Path(tempfile.mkdtemp(prefix="karvey-wbs-legacy-"))
         self.addCleanup(shutil.rmtree, str(tmp), True)
@@ -142,6 +159,25 @@ class Legacy(unittest.TestCase):
     @unittest.skipUnless(OWN.is_file(), "not this repository")
     def test_this_changes_own_plan_is_in_the_new_shape(self):
         self.assertEqual(trace.wbs_plan((OWN.parent / "PLAN.md").read_text(encoding="utf-8")), [])
+
+
+
+class SkillText(unittest.TestCase):
+    """QA and deploy fill the Epic items on the Markdown tracker (manual tracker-wbs steps 2 and 4)."""
+
+    def read(self, *parts):
+        return (_path.PLUGIN_ROOT / "skills" / Path(*parts)).read_text(encoding="utf-8")
+
+    def test_BUG_98_qa_deploy_and_the_markdown_adapter_name_the_epic_item_shape(self):
+        qa = self.read("karvey-qa", "SKILL.md")
+        self.assertNotIn('Add a "QA Review" section at the end of PLAN.md', qa)
+        self.assertIn("Fill the `### Epic item E{n}.QA` section of PLAN.md", qa)
+        dep = self.read("karvey-deploy", "SKILL.md")
+        self.assertNotIn("## Deploy — {change-id}", dep)
+        self.assertIn("fill the `### Epic item E{n}.DEPLOY` section of `PLAN.md`", dep)
+        self.assertIn("- [ ] [Deploy] {change-id}@{version}", dep)
+        md = self.read("karvey", "rules", "adapters", "markdown.md")
+        self.assertIn("never a root-level section or table", md)
 
 
 if __name__ == "__main__":

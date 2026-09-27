@@ -152,6 +152,13 @@ class View(unittest.TestCase):
         self.assertIn("repo-c · owner team-b — not a Karvey project", out)
         self.assertIn("active   feat-a · tasks · lane standard", out)
 
+    def test_BUG_93_the_text_view_ends_with_the_read_only_footer(self):
+        code, out = run_view()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out.rstrip("\n").splitlines()[-1],
+                         "read-only: no file written · no network request (never fetches, pulls or clones) · "
+                         "output not published")
+
     def test_byte_identical_across_runs(self):
         self.assertEqual(run_view("--json")[1], run_view("--json")[1])
         self.assertEqual(run_view()[1], run_view()[1])
@@ -248,6 +255,39 @@ class Offline(unittest.TestCase):
         self.assertEqual((code, code2), (0, 0), out + text)
         self.assertEqual(len(json.loads(out)["result"]["clients"]), 2)
         self.assertEqual(self.snapshot(), before)
+
+
+
+class Containment(unittest.TestCase):
+    """A repository's symlinks never read another client's files (QA dimension 1)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-portfolio-link-"))
+        other = karvey_repo(self.tmp / "other-client", changes=[("secret-plan", {
+            "change_id": "secret-plan", "phase": "impl", "lane": "standard",
+            "effort": [{"kind": "phase", "phase": "tasks", "at": "2026-10-10T10:00:00-03:00",
+                        "usd": {"value": 99.0, "quality": "exact"}}]})])
+        (other / "docs/spec/questions.md").write_text(
+            "| ID | Question | Owner | Needed by | State |\n|----|----|----|----|----|\n"
+            "| Q-01 | Merge with the rival? | sponsor | 2026-10-01 | open |\n", encoding="utf-8")
+        mine = karvey_repo(self.tmp / "mine")
+        os.symlink(str(other / "docs/spec/changes/secret-plan"), str(mine / "docs/spec/changes/secret-plan"))
+        os.symlink(str(other / "docs/spec/questions.md"), str(mine / "docs/spec/questions.md"))
+        self.mine = mine
+
+    def tearDown(self):
+        shutil.rmtree(str(self.tmp), ignore_errors=True)
+
+    def test_BUG_108_symlinks_out_of_the_repository_are_not_read(self):
+        row = pf.read_repo(os.path.realpath(str(self.mine)), "2026-10-01", "2026-10-14", "2026-10-14")
+        self.assertEqual(row["active"], [])
+        self.assertEqual(row["waiting"], [])
+        self.assertEqual(row["cost"]["usd"], 0.0)
+        with self.assertRaises(pf.NotRead):
+            pf.read_text(self.mine / "docs/spec/questions.md", within=os.path.realpath(str(self.mine)))
+
+    def test_BUG_113_sanitise_strips_bidi_and_zero_width(self):
+        self.assertEqual(pf.sanitise("a\u202eb\u200bc\u2066d"), "abcd")
 
 
 if __name__ == "__main__":

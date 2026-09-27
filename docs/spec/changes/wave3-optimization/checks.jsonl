@@ -1,0 +1,7 @@
+{"at": "2026-09-27T13:42:42+00:00", "check": "security.tools", "detail": "sast: not evaluated (no tool)", "finding": null, "mode": "advisory", "would_refuse": true}
+{"at": "2026-09-27T14:43:28+00:00", "check": "coverage.requirements", "detail": "REQ-W3-064: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T14:43:28+00:00", "check": "coverage.requirements", "detail": "REQ-W3-065: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T14:43:28+00:00", "check": "coverage.requirements", "detail": "REQ-W3-073: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T14:43:30+00:00", "check": "coverage.requirements", "detail": "REQ-W3-064: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T14:43:30+00:00", "check": "coverage.requirements", "detail": "REQ-W3-065: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T14:43:30+00:00", "check": "coverage.requirements", "detail": "REQ-W3-073: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}

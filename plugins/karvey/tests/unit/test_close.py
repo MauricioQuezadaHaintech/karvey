@@ -65,6 +65,17 @@ class Close(unittest.TestCase):
         self.assertTrue(res["steps"][3]["ok"])
         self.assertEqual(self.spec()["effort"][-1]["phase"], "architecture")
 
+    def test_BUG_96_a_leak_refusal_names_each_field_and_rule_never_the_value(self):
+        risks = self.cdir / "risks.md"
+        risks.write_text(risks.read_text(encoding="utf-8").replace("Sign-in records kept longer than allowed",
+                                                                   "The job reads " + CONN), encoding="utf-8")
+        sponsor = self.close("changes_requested")["steps"][0]
+        self.assertTrue(any(h["rule"] == "secret" and h["field"].startswith("risks.items[") for h in sponsor["refused"]),
+                        sponsor["refused"])
+        self.assertTrue(any(x.startswith("leak check: risks.items[") and "rule secret" in x
+                            for x in sponsor["lines"]), sponsor["lines"])
+        self.assertNotIn("z" * 12, json.dumps(sponsor))
+
     def test_changes_requested_also_regenerates_the_page(self):
         self.close("changes_requested")
         hist = [json.loads(x) for x in (self.cdir / "sponsor-history.jsonl").read_text(encoding="utf-8").splitlines()]
@@ -90,6 +101,32 @@ class Close(unittest.TestCase):
         self.assertEqual(b["steps"][1]["payloads"], [])
         self.assertIn("already sent", " ".join(b["steps"][1]["skipped"]))
 
+
+    def test_BUG_116_the_qa_notification_state_is_the_verdict_only(self):
+        pj = self.root / "docs/spec/project.json"
+        data = json.loads(pj.read_text(encoding="utf-8"))
+        data["notifications"] = {"channel": "slack", "target": "#team-sample", "events": ["qa"]}
+        pj.write_text(json.dumps(data), encoding="utf-8")
+        res = self.close("approved", "qa", "--run-id", "qa-1")
+        ev = res["steps"][1]
+        self.assertFalse(ev["ok"])
+        self.assertIn("needs --verdict", ev["error"])
+        self.assertEqual(ev["payloads"], [])
+        a = self.close("approved", "qa", "--verdict", "pass", "--run-id", "qa-2")
+        self.assertEqual(a["steps"][1]["payloads"][0]["state"], "pass")
+
+    def test_BUG_119_an_internal_error_is_an_envelope_exit_5(self):
+        import contextlib
+        import importlib.util
+        import io
+        spec = importlib.util.spec_from_file_location("karvey_close_t", str(TOOL))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        out = io.StringIO()
+        with mock.patch.object(mod, "run", side_effect=RuntimeError("boom")), contextlib.redirect_stdout(out):
+            code = mod.main([CHANGE, "architecture", "--outcome", "approved", "--root", str(self.root), "--json"])
+        self.assertEqual(code, 5)
+        self.assertIn("RuntimeError: boom", json.loads(out.getvalue())["errors"][0]["message"])
 
     def test_REQ_W3_033_qa_close_lists_the_owners_to_ask_in_order(self):
         reg = self.cdir / "risks.md"
@@ -178,6 +215,62 @@ class Observed(unittest.TestCase):
             self.assertNotIn("/work/", cp.stdout)
         finally:
             shutil.rmtree(str(tmp), ignore_errors=True)
+
+
+    def test_BUG_101_skill_loads_and_shell_reads_count_as_opened(self):
+        tmp = Path(tempfile.mkdtemp(prefix="karvey-observed-"))
+        try:
+            def use(name, inp):
+                return {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": inp}]}}
+            lines = [use("Skill", {"skill": "karvey:karvey-tasks"}),
+                     use("Bash", {"command": "R=/work/plugin/skills/karvey/rules; sed -n 1,5p $R/management-adapters.md"}),
+                     use("Bash", {"command": "grep -n Markdown \"${R2:-/x}\" /work/plugin/skills/karvey/rules/adapters/markdown.md"}),
+                     use("Bash", {"command": "ls /work/plugin/skills/karvey/rules/gates.md"}),  # listed, not read
+                     use("Bash", {"command": "cat /work/plugin/skills/karvey/rules/*.md"}),  # a glob names no file
+                     use("Bash", {"command": "R=/work/plugin/skills/karvey/rules; wc -l $R/{_core,gates}.md"}),
+                     use("Bash", {"command": "cd /work/plugin/skills/karvey/rules && cat phase-close.md"})]  # BUG-127
+            tr = tmp / "session.jsonl"
+            tr.write_text("\n".join(json.dumps(x) for x in lines) + "\n", encoding="utf-8")
+            cp = subprocess.run([sys.executable, str(_path.SCRIPTS_DIR / "karvey-context-budget.py"), "observed",
+                                 "--transcript", str(tr), "--json"], capture_output=True, text=True, timeout=60)
+            self.assertEqual(cp.returncode, 0, cp.stderr)
+            self.assertEqual(json.loads(cp.stdout)["result"]["opened"], [
+                "skills/karvey-tasks/SKILL.md", "skills/karvey/rules/_core.md", "skills/karvey/rules/adapters/markdown.md",
+                "skills/karvey/rules/gates.md", "skills/karvey/rules/management-adapters.md",
+                "skills/karvey/rules/phase-close.md"])  # BUG-104: brace list · BUG-127: relative to a cd
+        finally:
+            shutil.rmtree(str(tmp), ignore_errors=True)
+
+
+
+class ObservedAlternatives(unittest.TestCase):
+    def test_BUG_126_any_tracker_adapter_of_the_load_list_is_inside_it(self):
+        tmp = Path(tempfile.mkdtemp(prefix="karvey-observed-"))
+        try:
+            lines = [{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read", "input": {
+                "file_path": "/work/plugin/skills/karvey/rules/adapters/%s.md" % a}}]}} for a in ("markdown", "clickup")]
+            tr = tmp / "session.jsonl"
+            tr.write_text("\n".join(json.dumps(x) for x in lines) + "\n", encoding="utf-8")
+            cp = subprocess.run([sys.executable, str(_path.SCRIPTS_DIR / "karvey-context-budget.py"), "observed",
+                                 "--transcript", str(tr), "--skill", "karvey-tasks", "--json"],
+                                capture_output=True, text=True, timeout=60)
+            self.assertEqual(cp.returncode, 0, cp.stderr)
+            self.assertEqual(json.loads(cp.stdout)["result"]["outside_load_list"], [])
+        finally:
+            shutil.rmtree(str(tmp), ignore_errors=True)
+
+
+class AdvanceText(unittest.TestCase):
+    """Every gated phase skill names the close script in its Advance paragraph (manual one-phase step 1)."""
+
+    def test_BUG_103_every_gated_phase_skill_names_karvey_close(self):
+        skills = _path.PLUGIN_ROOT / "skills"
+        gated = [p for p in sorted(skills.glob("*/SKILL.md"))
+                 if "The answer is recorded with `approve`/`approve-gate`" in p.read_text(encoding="utf-8")]
+        self.assertGreaterEqual(len(gated), 7)
+        for p in gated:
+            adv = p.read_text(encoding="utf-8").split("## Advance to the next phase", 1)[1]
+            self.assertIn("then run the close steps once — `karvey-close.py", adv, p.parent.name)
 
 
 if __name__ == "__main__":

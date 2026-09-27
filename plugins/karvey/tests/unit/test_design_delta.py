@@ -179,6 +179,46 @@ class Apply(Project):
         self.assertEqual(env["result"]["applied"], ["modified --color-primary (light)"])
         self.assertEqual(self.system.read_bytes(), before)
 
+    def test_BUG_118_an_empty_design_system_file_is_applied_not_a_traceback(self):
+        self.system.write_text("", encoding="utf-8")
+        self.delta("## Added\n\n| Token | Scheme | Base value | New value |\n|---|---|---|---|\n"
+                   "| `--color-primary` | both | — | `#2b4256` |\n")
+        code, env = self.tool("apply", "sample-change")
+        self.assertEqual(code, 0, env)
+        self.assertIn("--color-primary", ds.parse(self.system.read_text(encoding="utf-8"))["tokens"])
+
+    def test_BUG_118_a_conflict_stops_and_writes_nothing_not_even_the_additions(self):
+        self.delta(self.MOD % "#1f4f7a")
+        self.assertEqual(self.tool("apply", "sample-change")[0], 0)
+        other = self.tmp / "docs/spec/changes/second-change"
+        other.mkdir()
+        (other / "spec.json").write_text('{"change_id": "second-change", "phase": "archived"}\n')
+        (other / "design-delta.md").write_text(self.MOD % "#335577" + "\n## Added\n\n| Token | Scheme | Base value | "
+                                               "New value |\n|---|---|---|---|\n| `--color-info` | both | — | "
+                                               "`#1c5d96` |\n", encoding="utf-8")
+        before = self.system.read_bytes()
+        code, env = self.tool("apply", "second-change")
+        self.assertEqual(code, 3, env)
+        self.assertFalse(env["result"]["written"])
+        self.assertEqual(self.system.read_bytes(), before)
+
+    def test_BUG_119_an_internal_error_is_an_envelope_exit_5(self):
+        import contextlib
+        import importlib.util
+        import io
+        import json
+        from unittest import mock
+        spec = importlib.util.spec_from_file_location("karvey_design_t", str(_path.SCRIPTS_DIR / "karvey-design.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.delta(self.MOD % "#1f4f7a")
+        out = io.StringIO()
+        with mock.patch.object(mod.ds, "apply_delta", side_effect=RuntimeError("boom")), \
+                contextlib.redirect_stdout(out):
+            code = mod.main(["apply", "sample-change", "--root", str(self.tmp), "--json"])
+        self.assertEqual(code, 5)
+        self.assertIn("RuntimeError: boom", json.loads(out.getvalue())["errors"][0]["message"])
+
     def test_the_first_ui_change_seeds_the_design_system(self):
         self.system.unlink()
         self.delta("## Added\n\n| Token | Scheme | Base value | New value |\n|---|---|---|---|\n"

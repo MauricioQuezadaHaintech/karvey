@@ -172,6 +172,14 @@
       "en": "since",
       "es": "desde"
     },
+    "sections": {
+      "en": "Sections",
+      "es": "Secciones"
+    },
+    "summary": {
+      "en": "Summary",
+      "es": "Resumen"
+    },
     "step_done": {
       "en": "done",
       "es": "hecho"

@@ -102,16 +102,26 @@ def spec_dir(root):
     return Path(root) / spec_layout(root)[0]
 
 
-def is_karvey_project(directory):
+def is_karvey_project(directory, read_only=False):
+    """A ``docs/spec/`` project; a ``spec/`` one only for the read-only views (``read_only=True``: the session hook,
+    the dashboard, the portfolio — REQ-W3-048). The writing tools never see a ``spec/`` project, so they never
+    create a second spec root beside it (BUG-105)."""
     d = Path(directory)
-    return _has_spec(d, SPEC_DIR) or _has_spec(d, ALT_SPEC_DIR)
+    return _has_spec(d, SPEC_DIR) or (read_only and _has_spec(d, ALT_SPEC_DIR))
 
 
-def find_root(start=None, root=None):
-    """The Karvey project root, or None when there is none (see module docstring)."""
+def read_only_layout(directory):
+    """True when ``directory`` is a ``spec/``-only project (readable, never written by 4.1)."""
+    d = Path(directory)
+    return not _has_spec(d, SPEC_DIR) and _has_spec(d, ALT_SPEC_DIR)
+
+
+def find_root(start=None, root=None, read_only=False):
+    """The Karvey project root, or None when there is none (see module docstring); ``read_only`` also accepts a
+    ``spec/`` project."""
     if root is not None:
         r = _abs(root)
-        return r if is_karvey_project(r) else None
+        return r if is_karvey_project(r, read_only) else None
     cur = _abs(start if start is not None else os.getcwd())
     if cur.is_file():
         cur = cur.parent
@@ -119,11 +129,11 @@ def find_root(start=None, root=None):
         cur = cur.parent
     top = git_toplevel(cur)
     if top is None:
-        return cur if is_karvey_project(cur) else None
+        return cur if is_karvey_project(cur, read_only) else None
     top = Path(os.path.realpath(str(top)))
     cur = Path(os.path.realpath(str(cur)))
     while True:
-        if is_karvey_project(cur):
+        if is_karvey_project(cur, read_only):
             return cur
         if cur == top or cur == cur.parent:
             return None

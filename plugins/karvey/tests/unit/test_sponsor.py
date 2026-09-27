@@ -163,6 +163,41 @@ class Page(unittest.TestCase):
         self.assertTrue(all(w.startswith(("hecho ", "en curso desde ")) for w in words))
 
 
+    def page(self):
+        return sponsor.render(sponsor.build_model(self.t.root, CHANGE, today=TODAY))
+
+    def test_BUG_90_landmarks_are_named_for_what_they_hold(self):
+        page = self.page()
+        self.assertIn('<nav class="toc" aria-label="Sections">', page)
+        self.assertIn('<ul class="facts" aria-label="Summary">', page)
+
+    def test_BUG_91_risk_state_tag_fill_follows_the_design_spec(self):
+        rows = re.findall(r'<span class="tag ?([a-z]*)">([^<]+)</span><br>', self.page())
+        self.assertEqual(rows, [("warn", "being watched"), ("ok", "reduced")])
+        self.assertEqual(sponsor.RISK_TAG, {"open": "warn", "mitigated": "ok", "closed": "ok", "accepted": "",
+                                            "moved": ""})
+
+    def test_BUG_92_a_long_goal_is_cut_at_a_word_with_an_ellipsis(self):
+        goal = "Every phase loads only what it declares and " + "the sponsor reads one page " * 8
+        t = sponsor._title({"goal": goal}, None)
+        self.assertLessEqual(len(t), sponsor.TITLE_MAX)
+        self.assertTrue(t.endswith("…"))
+        self.assertTrue(goal.startswith(t[:-1]))
+        self.assertEqual(goal[len(t) - 1], " ", "cut at a word boundary")
+        self.assertEqual(sponsor._title({"goal": "Short goal. Second sentence."}, None), "Short goal")
+
+
+class FixtureValid(unittest.TestCase):
+    def test_BUG_102_the_sponsor_fixture_validates_without_errors(self):
+        import subprocess
+        import sys
+        cp = subprocess.run([sys.executable, str(_path.SCRIPTS_DIR / "karvey-state.py"), "validate",
+                             str(FIX / "docs/spec/changes" / CHANGE / "spec.json"), "--json"],
+                            capture_output=True, text=True, timeout=60)
+        env = json.loads(cp.stdout.strip().splitlines()[-1])
+        self.assertEqual(env["errors"], [], env["errors"])
+
+
 class Cli(unittest.TestCase):
     """@req REQ-W3-022 REQ-W3-023 — ``karvey-sponsor.py build|deliver``."""
 
@@ -265,6 +300,7 @@ class Cli(unittest.TestCase):
         self.assertFalse(self.page.exists())
 
     def test_deliver_prints_the_checked_payload(self):
+        self.assertEqual(self.build()[0], 0)
         code, out, _ = run("deliver", CHANGE, "--root", str(self.t.root), "--json")
         res = json.loads(out)["result"]
         self.assertEqual(code, 0)
@@ -273,12 +309,78 @@ class Cli(unittest.TestCase):
         self.assertNotIn("://", out)
 
     def test_F74_a_payload_with_a_leaked_value_is_not_printed(self):
-        leaky = ({"channel": "email", "change": CHANGE, "subject": "s", "summary": "see " + CONN}, {"channel": "email"})
+        self.assertEqual(self.build()[0], 0)
+        leaky = ({"channel": "email", "change": CHANGE, "subject": "s", "summary": "see " + CONN},
+                 {"channel": "email", "target": "sponsor@example.org"})
         with mock.patch.object(cli, "payload_of", return_value=leaky):
             code, out, err = run("deliver", CHANGE, "--root", str(self.t.root))
         self.assertEqual(code, 3)
         self.assertNotIn("y" * 12, out + err)
         self.assertNotIn("summary", out)
+
+
+
+class Security(unittest.TestCase):
+    """QA dimension 1 of wave3-optimization: what is sent is what was checked; unsafe values fail closed."""
+
+    def setUp(self):
+        self.t = Tree()
+        self.page = self.t.cdir / "sponsor.html"
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def build(self):
+        return run("build", CHANGE, "--gate", "how", "--root", str(self.t.root))
+
+    def deliver(self):
+        return run("deliver", CHANGE, "--root", str(self.t.root), "--json")
+
+    def test_BUG_106_deliver_refuses_a_page_changed_after_the_checked_build(self):
+        code, out, _ = self.deliver()  # never built
+        self.assertEqual(code, 3, out)
+        self.assertEqual(self.build()[0], 0)
+        with open(str(self.page), "a", encoding="utf-8") as fh:
+            fh.write("<p>" + CONN + "</p>")
+        code, out, _ = self.deliver()
+        self.assertEqual(code, 3, out)
+        self.assertIn("not the last checked build", out)
+        self.assertNotIn("y" * 12, out)
+        self.assertNotIn('"payload"', out)
+
+    def test_BUG_107_a_change_override_with_an_unsafe_destination_is_refused_at_use(self):
+        self.assertEqual(self.build()[0], 0)
+        s = self.t.spec()
+        s["stakeholders"] = {"sponsor": {"role": "sponsor", "destination": {
+            "channel": "email", "target": "x@evil.test; rm -rf ~"}}}
+        self.t.write_spec(s)
+        self.assertEqual(self.build()[0], 0)
+        code, out, _ = self.deliver()
+        self.assertEqual(code, 3, out)
+        self.assertIn("destination is refused", out)
+        self.assertNotIn("rm -rf", out)
+
+    def test_BUG_110_an_unreadable_declared_portfolio_fails_closed(self):
+        pjf = self.t.root / "docs/spec/project.json"
+        data = json.loads(pjf.read_text(encoding="utf-8"))
+        data["portfolio"] = {"file": "docs/spec/missing-portfolio.json"}
+        pjf.write_text(json.dumps(data), encoding="utf-8")
+        code, out, err = self.build()
+        self.assertEqual(code, 3, out + err)
+        self.assertFalse(self.page.exists())
+        self.assertIn("portfolio file declared but not readable", out + err)
+        self.assertIn("client-unchecked", out + err)
+
+    def test_BUG_111_braces_in_free_text_neither_crash_nor_fill_a_slot(self):
+        risks = self.t.cdir / "risks.md"
+        risks.write_text(risks.read_text(encoding="utf-8").replace("Sign-in records kept longer than allowed",
+                                                                   "Keep {{title}} and {{{toc}}} as typed"),
+                         encoding="utf-8")
+        code, out, err = self.build()
+        self.assertEqual(code, 0, out + err)
+        page = self.page.read_text(encoding="utf-8")
+        self.assertIn("Keep &#123;&#123;title&#125;&#125;", page)
+        self.assertEqual(page.count('<nav class="toc"'), 1)
 
 
 if __name__ == "__main__":

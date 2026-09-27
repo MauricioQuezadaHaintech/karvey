@@ -85,6 +85,14 @@ class Report(unittest.TestCase):
                                             "owner": "tech lead", "state": "being watched"}])
         self.assertEqual(sorted(r["decisions_awaited"]), ["sponsor", "tech lead"])
 
+    def test_BUG_120_a_non_object_deploys_entry_is_skipped_not_a_crash(self):
+        g.write(self.root, "docs/spec/changes/second/spec.json",
+                spec("second", "architecture", "sample-client-a", 3, deploys=["prod 1.0.0", None, 7]))
+        code, out = self.report("--json")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(json.loads(out)["result"]["released"],
+                         [{"change": "first", "version": "1.4.0", "date": "2026-10-05"}])
+
     def test_human_table_uses_business_wording(self):
         code, out = self.report()
         self.assertIn("second — Technical design · 11 days", out)

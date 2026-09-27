@@ -19,6 +19,10 @@ TABLE = qs.TITLE + qs.HEADER + (
 class Parse(unittest.TestCase):
     """@req REQ-W3-028"""
 
+    def test_BUG_115_a_row_less_table_before_does_not_hide_the_questions(self):
+        rows = qs.parse("| Note | Value |\n|------|-------|\n\n" + TABLE)
+        self.assertEqual([q["id"] for q in rows], ["Q-01", "Q-02"])
+
     def test_an_open_and_a_resolved_question(self):
         rows = qs.parse(TABLE)
         self.assertEqual([(q["id"], q["state"], q["resolved_by"]) for q in rows],

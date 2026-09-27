@@ -9,7 +9,7 @@ deterministic close steps and prints what is left for the agent:
 
 1. ``sponsor`` — ``karvey-sponsor.py build`` (approved or changes requested alike) and ``deliver`` → the checked
    payload, the refusal lines, or ``no sponsor declared``;
-2. ``events`` — the notifications due at this close (``qa`` at the qa phase with the verdict, ``deploy`` with a
+2. ``events`` — the notifications due at this close (``qa`` at the qa phase with ``--verdict``, ``deploy`` with a
    version and environment), each filtered by the sent-log (``notify-sent``) and printed as a payload;
 3. ``risks`` — at the *qa* and *release* gates, the open risks whose owners are to be asked (the risk register);
 4. ``effort`` — ``karvey-state.py effort`` **last**, so steps 1–3 are charged to the phase that closes;
@@ -83,6 +83,11 @@ def step_sponsor(args, root, gate):
     res = (env or {}).get("result") or {}
     if rc != 0:
         out.update(ok=False, error="sponsor build: %s" % _errors(env, err), written=False)
+        hits = [h for h in res.get("hits") or [] if isinstance(h, dict)]
+        if hits:  # a leak refusal: each field and rule, never the value (REQ-W3-023, BUG-96)
+            out["refused"] = [{"field": h.get("field"), "rule": h.get("rule")} for h in hits]
+            out["lines"] = ["leak check: %s — rule %s (value not shown)" % (h.get("field"), h.get("rule"))
+                            for h in hits] + ["the last written page is unchanged and nothing was delivered"]
         return out
     if res.get("sponsor") is False:
         out.update(written=False, lines=["sponsor page: no sponsor declared"])
@@ -103,7 +108,7 @@ def step_sponsor(args, root, gate):
 def due_events(args, phase):
     ev = []
     if phase == "qa":
-        ev.append({"event": "qa", "item": "qa", "state": args.verdict or args.outcome})
+        ev.append({"event": "qa", "item": "qa", "state": args.verdict})  # the review verdict only (BUG-116)
     if phase in ("deploying", "deployed") and args.version and args.env:
         ev.append({"event": "deploy", "version": args.version, "env": args.env})
     return ev
@@ -119,6 +124,9 @@ def step_events(args, root, phase):
     for e in due_events(args, phase):
         if e["event"] not in enabled:
             out["skipped"].append("%s: not in notifications.events" % e["event"])
+            continue
+        if e["event"] == "qa" and not e.get("state"):  # one state source for the sent-log: the verdict (BUG-116)
+            out.update(ok=False, error="qa notification: the qa close needs --verdict {the review verdict}")
             continue
         argv = ["notify-sent", args.change, "--event", e["event"], "--record"]
         for k in ("item", "state", "version", "env"):
@@ -246,7 +254,7 @@ def build_parser():
     p.add_argument("--outcome", required=True)
     p.add_argument("--gate", choices=GATES)
     p.add_argument("--review-min", type=int, default=None)
-    p.add_argument("--verdict", help="qa: the verdict (default: the outcome)")
+    p.add_argument("--verdict", help="qa: the review verdict the qa notification carries (required for it)")
     p.add_argument("--version", help="deploy event: the version")
     p.add_argument("--env", help="deploy event: the environment")
     p.add_argument("--run-id", dest="run_id", help="the run or iteration id the payloads carry")
@@ -269,6 +277,9 @@ def main(argv=None):
         code, res, err = run(args)
     except Usage as exc:
         return kl.emit(kl.envelope(TOOL, kl.EXIT_USAGE, errors=[kl.issue("usage", str(exc))]), args.json)
+    except Exception as exc:  # never a traceback: an envelope with exit 5 (BUG-119)
+        return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL, errors=[kl.issue("close.internal", "%s: %s" % (
+            type(exc).__name__, exc))]), args.json)
     if code != kl.EXIT_OK:
         return kl.emit(kl.envelope(TOOL, code, errors=[kl.issue("close.not_found", err)]), args.json)
     return kl.emit(kl.envelope(TOOL, code, result=res), args.json, human=render(res))

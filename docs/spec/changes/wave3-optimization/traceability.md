@@ -32,7 +32,7 @@ Coverage: 87/90 requirements with a green test or a `manual` exception · 0 unco
 | REQ-W3-021 | E1.F4.T4 | `28df32e` | `plugins/karvey/tests/unit/test_sponsor.py` | pass | green |
 | REQ-W3-022 | E1.F4.T6, E1.F4.T10, E1.F4.T11 | `d3f2821`, `270a953`, `f737908` | `plugins/karvey/tests/unit/test_close.py`, `plugins/karvey/tests/unit/test_sponsor.py` | pass · manual | green |
 | REQ-W3-023 | E1.F4.T3, E1.F4.T6 | `f737908`, `5202faa` | `plugins/karvey/tests/unit/test_leakcheck.py`, `plugins/karvey/tests/unit/test_sponsor.py` | pass · manual | green |
-| REQ-W3-024 | E1.F4.T5 | `8277ded` | `plugins/karvey/tests/unit/test_lint_w3.py` | pass · manual | green |
+| REQ-W3-024 | E1.F4.T5 | `8277ded` | `plugins/karvey/tests/unit/test_lint_w3.py`, `plugins/karvey/tests/unit/test_sponsor.py` | pass · manual | green |
 | REQ-W3-025 | E1.F4.T7 | `acfc3b8` | `plugins/karvey/tests/unit/test_context_report.py` | pass | green |
 | REQ-W3-026 | E1.F4.T8 | `6201940` | `plugins/karvey/tests/unit/test_notify_events.py` | pass | green |
 | REQ-W3-027 | E1.F4.T9 | `095af3f` | `plugins/karvey/tests/unit/test_notify_events.py` | pass | green |

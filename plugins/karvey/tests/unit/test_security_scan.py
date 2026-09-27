@@ -75,6 +75,15 @@ class Run(Base):
         self.assertEqual(json.loads(ev[-1])["label"], "security:secrets:gitleaks")
         self.assertTrue((self.root / r["report"]).is_file())
 
+    def test_BUG_94_the_recorded_command_carries_no_absolute_path(self):
+        code, env, by = self.scan("--categories", "secrets")
+        self.assertEqual(code, 0, env)
+        ev = json.loads((self.root / "docs/spec/changes/feat-a/evidence.jsonl").read_text().splitlines()[-1])
+        for arg in ev["argv"] + by["secrets"]["argv"]:
+            self.assertFalse(os.path.isabs(arg), arg)
+            self.assertNotIn(str(self.t.path), arg)
+        self.assertTrue((self.root / by["secrets"]["report"]).is_file())
+
     def test_findings_are_counted_by_severity(self):
         rep = json.dumps({"results": [{"issue_severity": "HIGH"}, {"issue_severity": "LOW"}]})
         _, _, by = self.scan("--categories", "sast", env={"KARVEY_STUB_SEC_REPORT": rep, "KARVEY_STUB_SEC_RC": "1"})

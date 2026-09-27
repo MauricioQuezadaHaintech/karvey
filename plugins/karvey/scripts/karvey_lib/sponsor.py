@@ -26,6 +26,10 @@ from .judges import read_rows_text
 
 WORDING_FILE = "wording.json"
 NOT_MEASURED = "not measured"
+TITLE_MAX = 120
+# risk state → tag fill (design-spec, Risk state tag): accent-soft watched, success-soft reduced or gone,
+# surface-2 (plain tag) accepted as is or carried to later work
+RISK_TAG = {"open": "warn", "mitigated": "ok", "closed": "ok", "accepted": "", "moved": ""}
 NONE_RECORDED = "none recorded"
 _ID_RE = re.compile(r"\b(?:REQ-[A-Z0-9]+-\d+|REQ-\d+|F-\d+|D-\d+|BL-\d+|Q-\d+|BUG-\d+|R-\d+|C-\d+|A-\d+)"
                     r"(?:@[\w.-]+)?\b")
@@ -265,7 +269,10 @@ def _title(spec, prd):
     goal = spec.get("goal")
     if isinstance(goal, str) and goal.strip():
         first = re.split(r"(?<=[.;:])\s", normalise(goal), 1)[0].rstrip(".;:")
-        return first[:120]
+        if len(first) <= TITLE_MAX:
+            return first
+        cut = first[:TITLE_MAX - 1]
+        return (cut.rsplit(" ", 1)[0] if " " in cut else cut).rstrip(" ,;:—-") + "…"
     return spec.get("change_id") or "change"
 
 
@@ -311,8 +318,9 @@ TEMPLATE_FILE = SCHEMAS_DIR.parent / "templates" / "sponsor.html"
 
 
 def _e(v):
+    """HTML-escaped text; braces become entities too, so free text never forms a template slot (BUG-111)."""
     import html as _html
-    return _html.escape("" if v is None else str(v), quote=True)
+    return _html.escape("" if v is None else str(v), quote=True).replace("{", "&#123;").replace("}", "&#125;")
 
 
 def _money(v):
@@ -425,7 +433,7 @@ def render(model, template=None):
                            ('<details><summary class="small">%s</summary><p class="small">%s</p></details>' % (
                                _e(L("set_off_by")), _e(r["trigger"]))) if r["trigger"] else "",
                            _e(r["likelihood"]), _e(r["impact"]), _e(r["owner"]),
-                           "warn" if r["state_id"] == "open" else "ok", _e(r["state"]), _e(L("last_review")),
+                           RISK_TAG.get(r["state_id"], ""), _e(r["state"]), _e(L("last_review")),
                            _e(r["last_review"] or "—")) for r in risks["items"])
         risks_html = ('<section id="risks"><h2>%s</h2><div class="table-scroll"><table><thead><tr><th>%s</th><th>'
                       '%s</th><th>%s</th><th>%s</th></tr></thead><tbody>%s</tbody></table></div></section>' % (
@@ -450,8 +458,8 @@ def render(model, template=None):
         "lang": lang, "title": model["title"], "label_page_title": L("page_title"),
         "change_line": "%s · %s: %s" % (model["change"], L("prepared_for"), sponsor.get("name") or sponsor.get("role")
                                         or "—"),
-        "updated_line": "%s %s" % (L("updated"), model["as_of"]), "label_sections": L("progress"),
-        "label_summary": L("step"), "label_footer": L("footer"),
+        "updated_line": "%s %s" % (L("updated"), model["as_of"]), "label_sections": L("sections"),
+        "label_summary": L("summary"), "label_footer": L("footer"),
     }
     raw = {"language_note": note, "status": status, "toc": toc, "facts": facts, "section_waiting": waiting_html,
            "section_scope": scope_html, "section_progress": progress_html, "section_cost": cost_html,

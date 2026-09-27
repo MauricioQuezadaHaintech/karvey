@@ -98,6 +98,12 @@ class Outcomes(Base):
         self.assertEqual(e["kind"], "plan-exception")
         self.assertEqual(self.read()["phase"], "requirements")
 
+    def test_BUG_100_changes_requested_on_an_approved_phase_is_refused_with_the_way_out(self):
+        self.st("approve", "feat-a", "requirements", "--by", "owner", "--role", "human", "--ref", "D-1")
+        self.refused(("outcome", "feat-a", "requirements", "changes_requested", "--by", "owner", "--role", "human",
+                      "--ref", "D-1"), "requirements already approved: withdraw it first with `karvey-state.py reopen")
+        self.assertTrue(self.read()["approvals"]["requirements"]["approved"])
+
     def test_unknown_target_refused(self):
         self.refused(("outcome", "feat-a", "nowhere", "changes_requested", "--by", "o", "--role", "human",
                       "--ref", "D-1"), "unknown phase or gate")

@@ -17,6 +17,7 @@ The fallback tracker: `PLAN.md` in the change directory. `external: false`.
 | `set_status` | the marker of the task's row in *Task status* | — |
 | `comment` | a row of the *History* table | — |
 | dependencies | `(depends E1.F1.T1)` after the task line | — |
+| QA / deploy items | inside the existing `### Epic item E{n}.QA` / `### Epic item E{n}.DEPLOY` section (created once, found and reused): `- [ ] E{n}.QA.{k} {fix}` · `- [ ] [Deploy] {change-id}@{version}`; never a root-level section or table | — |
 | `log_time` | none: the `actual_ai_min` / `actual_review_min` columns | none |
 
 Markers: `⬜ todo · 🔄 in_progress · 👀 review · ✅ done · ⛔ blocked · 🙋 awaiting-human` (🙋 next to ⛔ for a

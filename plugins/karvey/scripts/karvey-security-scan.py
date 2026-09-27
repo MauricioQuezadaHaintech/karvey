@@ -206,7 +206,9 @@ def run_tool(root, change, category, tool, repo, timeout):
     report = qa / ("security-%s.json" % category)
     if report.exists():
         report.unlink()
-    argv = build_argv(tool["run_argv"], repo, str(report))
+    # the tool runs in the repository (cwd), so both placeholders are relative: the recorded evidence and the
+    # report carry no absolute local path (a public repository would publish it; BUG-94)
+    argv = build_argv(tool["run_argv"], ".", os.path.relpath(str(report), repo).replace(os.sep, "/"))
     res = {"category": category, "tool": tool["id"], "version": _version(tool), "argv": argv, "exit": None,
            "findings_by_severity": None, "findings": None,
            "report": os.path.relpath(str(report), str(root)).replace(os.sep, "/")}

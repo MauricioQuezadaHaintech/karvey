@@ -25,9 +25,11 @@ PATTERNS_FILE = Path(__file__).resolve().parent / "leak_patterns.json"
 NOT_CHECKED = "other-client names not checked"
 RULES = ("secret", "path", "host", "email", "pii", "client")
 _CACHE = {}
-_DATE = re.compile(r"^\d{4}[-/.]\d{2}[-/.]\d{2}$|^\d{2}[-/.]\d{2}[-/.]\d{4}$|^\d{8}$")
+_DATE = re.compile(r"^\d{4}[-/.]\d{2}[-/.]\d{2}$|^\d{2}[-/.]\d{2}[-/.]\d{4}$"
+                   r"|^(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$")  # 8 digits: a plausible YYYYMMDD only (BUG-112)
 _VERSION = re.compile(r"^\d+\.\d+\.\d+(?:\.\d+)?$")
 _TOKEN = re.compile(r"[A-Za-z0-9+/_=-]{32,}")
+_HEX = re.compile(r"(?<![0-9A-Za-z])[0-9a-fA-F]{16,}(?![0-9A-Za-z])")
 
 
 def patterns():
@@ -67,6 +69,16 @@ def _high_entropy(text, cfg):
             continue
         if _entropy(tok) >= float(cfg["min_bits_per_char"]):
             return True
+    # hex carries at most 4 bits per character, so it never reaches the general threshold: its own (BUG-109);
+    # short commit ids (7–12) stay below the length
+    for m in _HEX.finditer(text):
+        tok = m.group(0)
+        if len(tok) < int(cfg.get("hex_min_length", 32)):
+            continue
+        if not (re.search(r"[0-9]", tok) and re.search(r"[A-Fa-f]", tok)):
+            continue
+        if _entropy(tok) >= float(cfg.get("hex_min_bits_per_char", 3.0)):
+            return True
     return False
 
 
@@ -76,14 +88,14 @@ def _pii(text, p):
         digits = re.sub(r"\D", "", s)
         if len(digits) < p["pii_min"]:
             continue
-        if _DATE.match(s) or _VERSION.match(s):
-            continue
+        if _DATE.match(s) or (_VERSION.match(s) and not re.fullmatch(r"\d{1,3}(?:\.\d{3}){2,}", s)):
+            continue  # a dotted id "12.345.678" is not a version (BUG-112)
         before = text[max(0, m.start() - 4):m.start()]
         after = text[m.end():m.end() + 4]
         if "$" in before or re.match(r"\s*(?:%|USD|US\$|EUR|CLP)", after):
             continue  # an amount
-        if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?", s):
-            continue  # a grouped amount
+        if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+[.,]\d{1,2}", s):
+            continue  # a grouped amount with its decimals; "12.345.678" alone is an id shape (BUG-112)
         return True
     return False
 

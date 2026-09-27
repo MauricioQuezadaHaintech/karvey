@@ -102,13 +102,17 @@ def cmd_apply(args, root):
             return kl.EXIT_USAGE, None, [kl.issue("usage", "--keep TOKEN=current|new, got %r" % k)], []
         keep[tok] = choice
     spath = Path(root) / SYSTEM
+    read_sha = atomicio.file_sha256(spath)  # the hash of what was read, None when absent (BUG-118)
     before = _read(spath, required=False)
     text, applied, conflicts = ds.apply_delta(before, delta, args.change, keep)
     changed = text != (before or "")
     res = {"change": args.change, "applied": applied, "conflicts": conflicts, "dry_run": bool(args.dry_run),
            "written": False, "file": SYSTEM.as_posix(), "empty": delta["empty"] or not applied and not conflicts}
-    if changed and not args.dry_run:
-        atomicio.write_text_atomic(str(spath), text, expected_sha256=atomicio.file_sha256(spath) if before else None)
+    if changed and not args.dry_run and not conflicts:  # a conflict stops the apply: nothing is written
+        try:
+            atomicio.write_text_atomic(str(spath), text, expected_sha256=read_sha)
+        except (atomicio.CASConflict, atomicio.LockBusy) as exc:
+            return kl.EXIT_REFUSED, res, [kl.issue("design.write", "design system not written: %s" % exc)], []
         res["written"] = True
     if conflicts:
         return kl.EXIT_REFUSED, res, [kl.issue("design.conflict", "%s (%s): design system has %s, the delta's base "
@@ -166,6 +170,9 @@ def main(argv=None):
     except NotFound as exc:
         return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue("design.not_found", str(exc))]),
                        args.json)
+    except Exception as exc:  # never a traceback: an envelope with exit 5 (BUG-119)
+        return kl.emit(kl.envelope(TOOL, kl.EXIT_INTERNAL, errors=[kl.issue("design.internal", "%s: %s" % (
+            type(exc).__name__, exc))]), args.json)
     return kl.emit(kl.envelope(TOOL, code, result=res, errors=errors, warnings=warns), args.json,
                    human=render(res) if res else None)
 

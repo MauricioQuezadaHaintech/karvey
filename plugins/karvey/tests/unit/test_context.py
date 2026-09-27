@@ -493,5 +493,32 @@ class Layout(unittest.TestCase):
         self.assertIn("two spec roots", " ".join(w["message"] for w in env["warnings"]))
 
 
+
+class SpecLayoutIsReadOnly(unittest.TestCase):
+    """REQ-W3-048: the views read a ``spec/`` project; the writing tools refuse it and never add ``docs/spec/``."""
+
+    def setUp(self):
+        self.t = g.TempDir()
+        self.root = g.init(self.t.path / "repo")
+        g.write(self.root, "spec/project.json", {})
+        g.write(self.root, "spec/changes/foo/spec.json", {"change_id": "foo", "phase": "requirements"})
+
+    def tearDown(self):
+        self.t.cleanup()
+
+    def test_BUG_105_writers_refuse_the_spec_layout_and_create_no_second_root(self):
+        import subprocess
+        import sys
+        from karvey_lib import project as pj
+        self.assertIsNone(pj.find_root(root=str(self.root)))
+        self.assertEqual(str(pj.find_root(root=str(self.root), read_only=True)), str(self.root))
+        for argv in (["next", "foo"], ["init", "bar"]):
+            cp = subprocess.run([sys.executable, str(_path.SCRIPTS_DIR / "karvey-state.py")] + argv +
+                                ["--root", str(self.root)], capture_output=True, text=True, timeout=60)
+            self.assertEqual(cp.returncode, 4, cp.stdout + cp.stderr)
+            self.assertIn("uses the spec/ layout", cp.stdout + cp.stderr)
+        self.assertFalse((self.root / "docs").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

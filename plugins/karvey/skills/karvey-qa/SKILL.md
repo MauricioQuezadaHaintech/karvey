@@ -268,7 +268,7 @@ Fix estimation:
 
 ### Step 3B — Update PLAN.md (Markdown)
 
-Add a "QA Review" section at the end of PLAN.md with the list of findings and pending actions.
+Fill the `### Epic item E{n}.QA` section of PLAN.md (find it; create it once under the Epic only when absent) with one checkbox child per finding to fix, `- [ ] E{n}.QA.{k} {finding}`; never a root-level "QA Review" section or table (`karvey-trace.py --wbs` reports one as `outside the hierarchy`).
 
 ### Step 3C — Record the result through the state tool
 
@@ -301,7 +301,7 @@ Resolve the destination with `karvey-config.py resolve notifications`; never loo
 - `channel` unset → skip and say `Notification: not configured — run /karvey:karvey-init --settings`.
 - `channel: none`, or `qa` not in `events` → skip and say so.
 - Otherwise run `karvey-config.py notify-check` first: exit 10 means the destination changed since the last confirmed send — show it and ask the human to type the phrase it prints (`confirmo notificacion <code>`); only then does `notify-check --confirm` record it (D-16). Then send through `via`. A failed send is reported, not swallowed; the phase still closes.
-- Send only when `karvey-config.py notify-sent {change-id} --event qa --item qa --state {verdict} --run-id {run}` says `new` (the first run and a verdict change; every run with `notifications.qa_every_run`), then re-run it with `--record`; the message carries the run id and the time.
+- The close does the dedup: `karvey-close.py {change-id} qa --outcome … --verdict {verdict} --run-id {run}` runs `notify-sent … --event qa --item qa --state {verdict}` and prints the payload only when it is `new` (the first run and a verdict change; every run with `notifications.qa_every_run`) — send it as printed; never a second `notify-sent` of your own. The message carries the run id and the time.
 
 Content (event `qa`): change-id, source → target, **counts** by severity and the review path (`detail: counts`, the default); finding titles and manual-testing areas only with `detail: full`.
 Write it in the **channel's own markup** (`notifications.md` → Message format per channel). Google Chat / Slack example:
@@ -345,7 +345,7 @@ Next step (if converged — no open bug/spec-gap, security gate passed):
 
 ## Advance to the next phase
 
-Close the phase per `../karvey/rules/gates.md` (phase `qa`, gate *release*): `generated`, then `karvey-state.py gate {change-id} qa` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; *Approve and advance* runs the skill `next` names with no second question. First check convergence: with open `bug`/`spec-gap` items in `findings.md` (or the security gate unresolved), the next step is `/karvey-iterate {change-id}`, not the gate. The fiscal runs before the gate question (Step 3C). In a new session, `karvey-state.py next {change-id}` says where the change is.
+Close the phase per `../karvey/rules/gates.md` (phase `qa`, gate *release*): `generated`, then `karvey-state.py gate {change-id} qa` says whether this phase asks the one gate question now (granular, or the last phase of the merged gate) or records `generated` and continues. The answer is recorded with `approve`/`approve-gate` or `outcome … changes_requested`; then run the close steps once — `karvey-close.py "{change-id}" qa --outcome approved|changes_requested` (never skipped); *Approve and advance* runs the skill `next` names with no second question. First check convergence: with open `bug`/`spec-gap` items in `findings.md` (or the security gate unresolved), the next step is `/karvey-iterate {change-id}`, not the gate. The fiscal runs before the gate question (Step 3C). In a new session, `karvey-state.py next {change-id}` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `../karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

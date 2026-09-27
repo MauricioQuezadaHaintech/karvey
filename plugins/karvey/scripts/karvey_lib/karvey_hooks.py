@@ -510,8 +510,8 @@ def settings_notice(start, team_root, mode, env):
     ``origin/{integration}`` (local ref, no fetch) has them."""
     if mode != "startup":
         return None
-    kp = pj.find_root(start=start)  # REQ-W1-050: walk up no further than the git top level
-    if kp is None and team_root and pj.is_karvey_project(team_root):
+    kp = pj.find_root(start=start, read_only=True)  # REQ-W1-050: walk up no further than the git top level
+    if kp is None and team_root and pj.is_karvey_project(team_root, read_only=True):
         kp = team_root
     if kp is None:
         return None
@@ -613,7 +613,7 @@ def session_text(mode, env):
     out = []
     if root is None:
         n = settings_notice(start, None, mode, env)
-        kp = pj.find_root(start=start)
+        kp = pj.find_root(start=start, read_only=True)
         ow = open_work_block(kp) if kp else []
         lay = layout_line(kp) if kp else None
         bad = settings_invalid_line(kp) if kp else None
@@ -663,7 +663,7 @@ def session_text(mode, env):
         out.append("")
         out.append("(no state.json beside the handoff: nothing was measured, so treat every claim in it as unverified)")
         drift = True
-    kroot = root if pj.is_karvey_project(root) else pj.find_root(start=start)
+    kroot = root if pj.is_karvey_project(root, read_only=True) else pj.find_root(start=start, read_only=True)
     act = pj.active_change(kroot) if kroot else {"change": None, "reason": "none", "candidates": []}
     n = settings_notice(start, root, mode, env)
     if n:

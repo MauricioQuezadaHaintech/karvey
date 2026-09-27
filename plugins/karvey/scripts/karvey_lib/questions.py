@@ -54,7 +54,7 @@ def parse(text):
     out, head = [], None
     for n, line in enumerate((text or "").splitlines(), 1):
         if not line.lstrip().startswith("|"):
-            head = None if out else head
+            head = None  # any non-table line ends the table: a row-less table never lends its header (BUG-115)
             continue
         cells = _cells(line)
         if head is None:

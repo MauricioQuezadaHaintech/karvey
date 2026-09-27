@@ -63,6 +63,8 @@ EVENT_ACTOR = {"approval_requested": "approver", "awaiting_human": "executor", "
 EVENT_EXPECTED = {"approval_requested": "approve or request changes at the %s gate",
                   "awaiting_human": "run the step %s and report it done",
                   "blocked": "unblock %s"}
+EVENT_NO_ITEM = {"approval_requested": "current", "awaiting_human": "named in the tracker",
+                 "blocked": "the change"}  # no "at the the gate" when no item is given
 DETAILS = ("counts", "full")
 DEFAULT_DETAIL = "counts"
 OVERRIDE_FIELDS = ("tool", "location", "statuses", "sprints")
@@ -341,6 +343,9 @@ def resolve_notifications(settings):
     return res, warnings
 
 
+CHANGE_ID_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
+
+
 def resolve_event(settings, notif, event, change=None, item=None, verdict=None, run_id=None, at=None):
     """The destination and payload of a "your turn" event (REQ-W3-026): the stakeholder whose role acts
     (``approver`` / ``executor``; whoever unblocks is the executor), else the team destination with ``no approver
@@ -348,6 +353,8 @@ def resolve_event(settings, notif, event, change=None, item=None, verdict=None, 
     if event not in EVENT_ACTOR:
         raise Usage("--event must be one of %s" % ", ".join(EVENT_ACTOR))
     spec = None
+    if change is not None and not (isinstance(change, str) and CHANGE_ID_OK.match(change)):
+        raise Usage("--change must be a change id (letters, digits, '.', '_', '-'; no path)")  # BUG-113
     if change:
         sp_ = Path(settings.root) / pj.CHANGES_DIR / change / "spec.json"
         try:
@@ -360,20 +367,32 @@ def resolve_event(settings, notif, event, change=None, item=None, verdict=None, 
     who = stake.get(role)
     dest = who.get("destination") if isinstance(who, dict) and isinstance(who.get("destination"), dict) else None
     note = None
+    refused = None
     if who and dest and dest.get("channel") not in (None, "none"):
+        try:  # checked at the point of use, the change's own override included (BUG-107)
+            sv.check_target(dest["channel"], dest.get("target", ""), key="stakeholders.%s.destination.target" % role)
+        except sv.UnsafeValue as exc:
+            refused = exc.rule
+    if refused:
+        destination = {"channel": "none", "target": ""}
+        source = "stakeholder:%s" % role
+        note = "%s destination refused (%s; value not shown): nothing is sent" % (role, refused)
+    elif who and dest and dest.get("channel") not in (None, "none"):
         destination = {"channel": dest["channel"], "target": dest.get("target", "")}
         source = "stakeholder:%s" % role
     else:
         destination = {"channel": notif["channel"], "target": notif["target"]}
         source = "team"
         note = "no %s declared" % role
-    payload = {"event": event, "change": change, "item": item, "expected": EVENT_EXPECTED[event] % (item or "the"),
+    expected = EVENT_EXPECTED[event] % (item or EVENT_NO_ITEM[event])
+    payload = {"event": event, "change": change, "item": item, "expected": expected,
                "to": (who or {}).get("name") or role, "run_id": run_id, "at": at}
     if note:
         payload["note"] = note
     if event == "blocked" and verdict:
         payload["verdict"] = verdict
-    return {"event": event, "enabled": event in notif["events"], "actor_role": role, "destination": destination,
+    return {"event": event, "enabled": event in notif["events"] and not refused, "actor_role": role,
+            "destination": destination,
             "source": source, "note": note, "payload": payload}
 
 

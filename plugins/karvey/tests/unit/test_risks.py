@@ -108,6 +108,41 @@ class Command(unittest.TestCase):
         self.assertIn("feat-a / R-1", backlog)
         self.assertEqual(self.data()["risk_log"][-1]["ref"], bl)
 
+    def test_BUG_114_move_with_an_existing_backlog_writes_everything_once(self):
+        backlog = self.root / "docs/spec/backlog.md"
+        backlog.write_text("# Discovery Backlog\n\n| ID | Date | Origin | Type | Priority | Title | Status | Tracker | "
+                           "Promoted to change-id |\n|----|------|--------|------|----------|-------|--------|---------|"
+                           "-----------------------|\n| BL-01 | 2026-10-01 | x | idea | low | old | open | — | — |\n",
+                           encoding="utf-8")
+        code, env = self.risk("R-1", "move", "--to", "BL-07", "--by-role", "tech lead")
+        self.assertEqual(code, 0, env)
+        text = backlog.read_text(encoding="utf-8")
+        self.assertIn("| BL-01 |", text)
+        self.assertEqual(text.count("| BL-07 |"), 1)
+        self.assertEqual(rk.read(self.spec.parent)[0]["state_cell"], "moved → BL-07")
+        self.assertEqual(len(self.data()["risk_log"]), 1)
+
+    def test_BUG_114_a_failed_spec_write_puts_register_and_backlog_back(self):
+        from unittest import mock
+        from _state import state
+        from karvey_lib import atomicio
+        backlog = self.root / "docs/spec/backlog.md"
+        backlog.write_text("# Discovery Backlog\n\n| ID | Date |\n|----|------|\n", encoding="utf-8")
+        before = (self.reg.read_bytes(), backlog.read_bytes(), self.spec.read_bytes())
+        with mock.patch.object(state, "transact", side_effect=atomicio.CASConflict("changed by another writer")):
+            code, env = self.risk("R-1", "move", "--to", "BL-07", "--by-role", "tech lead")
+        self.assertEqual(code, 3, env)
+        self.assertEqual((self.reg.read_bytes(), backlog.read_bytes(), self.spec.read_bytes()), before)
+        code, env = self.risk("R-1", "move", "--to", "BL-07", "--by-role", "tech lead")  # the re-run
+        self.assertEqual(code, 0, env)
+        self.assertEqual(len(self.data()["risk_log"]), 1)
+        self.assertEqual(backlog.read_text(encoding="utf-8").count("| BL-07 |"), 1)
+
+    def test_BUG_123_rewrite_finds_its_header_whatever_the_case(self):
+        text = REG.replace("| ID |", "| Id |").replace("| Owner |", "| owner |")
+        out = rk.rewrite(text, "R-1", "closed", "2026-10-20 tech lead")
+        self.assertEqual([r["state"] for r in rk.parse(out)], ["closed", "mitigated"])
+
     def test_close_and_mitigate(self):
         self.risk("R-1", "close", "--reason", "provider replaced")
         self.risk("R-2", "mitigate")
@@ -219,6 +254,14 @@ class Archive(unittest.TestCase):
         code, env = self.st("advance", "feat-a", "archived")
         self.assertEqual(code, 3, env)
         self.assertIn("R-1: state without record", env["errors"][0]["message"])
+
+    def test_BUG_115_a_row_less_table_before_the_register_does_not_hide_an_open_risk(self):
+        self.reg.write_text("# Risks\n\n| Note | Value |\n|------|-------|\n\n" + self.reg.read_text(encoding="utf-8"),
+                            encoding="utf-8")
+        self.assertEqual([r["id"] for r in rk.open_risks(rk.read(self.spec.parent))], ["R-1"])
+        code, env = self.st("advance", "feat-a", "archived")
+        self.assertEqual(code, 3, env)
+        self.assertIn("R-1: open", env["errors"][0]["message"])
 
     def test_REQ_W3_034_closed_through_the_command_archive_proceeds(self):
         code, env = self.st("risk", "feat-a", "R-1", "close", "--reason", "provider replaced", "--by-role", "tech lead")

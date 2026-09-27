@@ -112,6 +112,14 @@ class SkippedLane(unittest.TestCase):
         nolane = spec(skipped={"requirements": "not needed"})
         self.assertIn("state.skip_not_lane", [i["code"] for i in self.issues(nolane)])
 
+    def test_BUG_102_a_lane_reason_for_a_phase_the_lane_makes_optional_says_so(self):
+        bad = spec(lane="feature-ui", skipped={"infra": "lane:feature-ui"})
+        errs_ = self.issues(bad)
+        self.assertEqual([i["code"] for i in errs_], ["state.skip_not_lane"])
+        self.assertIn("does not skip phase 'infra': it is optional there — record a plain reason", errs_[0]["message"])
+        self.assertNotEqual(errs_[0].get("expected"), errs_[0].get("got"))
+        self.assertEqual(self.issues(spec(lane="feature-ui", skipped={"infra": "no cloud resources"})), [])
+
     def test_skippable_phase_keeps_free_reason(self):
         self.assertEqual(self.issues(spec(skipped={"mockup": "no UI"})), [])
 

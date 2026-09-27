@@ -79,6 +79,24 @@ class Events(unittest.TestCase):
         e = self.event("--event", "awaiting_human", "--item", "E1.F2.T3")
         self.assertEqual((e["source"], e["destination"]["target"]), ("stakeholder:executor", "#ops-sample"))
 
+    def test_BUG_107_an_unsafe_stakeholder_destination_is_refused_at_use(self):
+        spec = {"change_id": "sample-change", "phase": "architecture",
+                "stakeholders": {"approver": {"role": "approver", "destination": {
+                    "channel": "email", "target": "x@evil.test; rm -rf ~"}}}}
+        (self.tmp / "docs/spec/changes/sample-change/spec.json").write_text(json.dumps(spec), encoding="utf-8")
+        e = self.event("--event", "approval_requested", "--item", "how")
+        self.assertEqual(e["destination"], {"channel": "none", "target": ""})
+        self.assertFalse(e["enabled"])
+        self.assertIn("destination refused", e["note"])
+        self.assertNotIn("rm -rf", json.dumps(e))
+
+    def test_BUG_113_change_must_be_an_id_and_no_item_reads_naturally(self):
+        code, _ = run("resolve", "notifications", "--root", str(self.tmp), "--change", "../..",
+                      "--event", "blocked", "--json")
+        self.assertEqual(code, 2)
+        e = self.event("--event", "approval_requested")
+        self.assertNotIn("the the", e["payload"]["expected"])
+
     def test_unknown_event_is_usage(self):
         code, _ = run("resolve", "notifications", "--root", str(self.tmp), "--event", "nope", "--json")
         self.assertEqual(code, 2)
