@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "change_id": "mockup-conformance",
+  "capability": "method",
+  "description": "What is built matches the approved mockup, one to one (D-40, 4.3.0): every mockup element carries a stable element id and the requirement it covers, and decisions taken while iterating the mockup are written back into the requirements before the mockup can be approved; the approved mockup is a mandatory input of implementation, which keeps the same element ids; a blocking conformance gate checks that every mockup element exists in the build, compares side-by-side captures of mockup and build at the same viewport and state with the differences marked, and holds the release until every difference is recorded as a deviation approved by the owner through the hook; a traceability matrix requirement → mockup element → test → evidence is complete before release. Reaches existing projects through project-upgrade steps; web, mobile, desktop and CLI targets are defined, other targets scoped out.",
+  "goal": "The UI a change ships is the UI the owner approved in its mockup: every approved mockup element is present in the build under the same element id, every visible difference between mockup and build at the same viewport and state has been either fixed or recorded as a deviation the owner approved through the hook, and every UI requirement is traced to its mockup elements, tests and evidence before the release gate opens.",
+  "layers": [
+    "Backend"
+  ],
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 3,
+  "security_tier_reason": "the conformance gate is a trust boundary — a deviation approval releases a blocking gate, so it must come only from the owner's own message through the hook (D-01) and never from the agent; captures of a running build may show data and enter tracked files of a repository that may be public (fixture data only, never a production target); browsing can be delegated to another agent (browse.via), whose returned captures must be verified rather than trusted",
+  "type": "feature",
+  "links": {
+    "parent": "",
+    "children": []
+  },
+  "decisions": [
+    "D-40"
+  ],
+  "inputs": {
+    "decisions": "karvey docs/spec/decisions.md @c5192d1 (branch feature/mockup-conformance, D-40)",
+    "wave2_spec_delta": "karvey docs/spec/changes/wave2-structural/spec-delta.md @5ea10b0",
+    "wave3_spec_delta": "karvey docs/spec/changes/wave3-optimization/spec-delta.md @c3a21e7",
+    "living_docs_spec_delta": "karvey docs/spec/changes/living-docs/spec-delta.md @62c1674"
+  },
+  "iteration_count": 0,
+  "revision_history": [
+    {
+      "at": "2026-09-27T22:10:00+00:00",
+      "by": "agent (judges routed in place, pre-approval; owner standing instruction D-21)",
+      "reason": "requirements judges (domain, methods; intra-model) — right findings fixed in place before the what gate: text and style differences are differences (REQ-MC-054), stack-forced difference declared at impl (REQ-MC-055, split of 016), mockup hash re-recorded at design approval, report stale on mockup hash, UI code and reviewed line defined, pixel tolerance setting, not evaluated / not applicable handled end to end, agent-initiated mockup changes logged and detected, dismissals shown at the gate, living-spec requirement surface, approved-only dynamic masking, confirm phrase limited to 10 ids, desktop named in the PRD, WHILE-first EARS, complete mode registry, real error scenarios, MC-036/046 merged only as amendments; F-29 partly rejected with reason",
+      "findings": [
+        "F-01",
+        "F-02",
+        "F-03",
+        "F-04",
+        "F-05",
+        "F-06",
+        "F-07",
+        "F-08",
+        "F-09",
+        "F-10",
+        "F-11",
+        "F-12",
+        "F-13",
+        "F-14",
+        "F-15",
+        "F-16",
+        "F-17",
+        "F-18",
+        "F-19",
+        "F-20",
+        "F-21",
+        "F-22",
+        "F-23",
+        "F-24",
+        "F-25",
+        "F-26",
+        "F-27",
+        "F-28",
+        "F-29",
+        "F-30",
+        "F-31"
+      ],
+      "note": "runtime reported about 100k subagent tokens per judge; the recorded judge cost is the prompt-based estimate (collect found no transcript usage)"
+    }
+  ],
+  "phase": "requirements",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-27T21:47:10+00:00",
+      "exited_at": "2026-09-27T21:47:13+00:00",
+      "by": "agent (D-40; owner standing instruction D-21)"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-27T21:47:13+00:00"
+    }
+  ],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": false,
+      "generated_at": "2026-09-27T21:58:05+00:00"
+    }
+  },
+  "created_at": "2026-09-27T21:47:10+00:00",
+  "updated_at": "2026-09-27T21:58:05+00:00",
+  "lane": "standard",
+  "judge_runs": [
+    {
+      "lens": "domain",
+      "model": "claude-opus-5-5",
+      "intra_model": true,
+      "verdict": "concerns",
+      "findings": {
+        "High": 4,
+        "Medium": 10,
+        "Low": 1
+      },
+      "discarded": 0,
+      "at": "2026-09-27T21:54:38+00:00",
+      "tokens_in": 25186,
+      "tokens_out": 1506,
+      "tokens_total": 26692,
+      "usd": 0.098148,
+      "estimated": true,
+      "usd_estimated": true,
+      "source": "estimate",
+      "phase": "requirements"
+    },
+    {
+      "lens": "methods",
+      "model": "claude-opus-5-5",
+      "intra_model": true,
+      "verdict": "concerns",
+      "findings": {
+        "High": 2,
+        "Medium": 11,
+        "Low": 3
+      },
+      "discarded": 0,
+      "at": "2026-09-27T21:54:38+00:00",
+      "tokens_in": 25186,
+      "tokens_out": 1574,
+      "tokens_total": 26760,
+      "usd": 0.099168,
+      "estimated": true,
+      "usd_estimated": true,
+      "source": "estimate",
+      "phase": "requirements"
+    }
+  ]
+}
