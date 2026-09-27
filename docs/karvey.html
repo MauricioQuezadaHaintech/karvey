@@ -7,11 +7,11 @@
 <meta name="description" content="What the Karvey Method is (Afán — zeal, the drive to get things done, in the Ona language) and a complete map of the Claude Code plugin: orchestrator, 0–12 pipeline, support layer, rules, hooks, artefacts and team settings. Available in English, Spanish, Portuguese, German and Chinese.">
 <script>
 /* Early language pick (avoids a flash of English), the same rule as pickLang() at the end of <body>:
-   a valid ?lang= (one of en/es/pt/de/zh, or xx-YY read by its first two letters) -> the saved choice
-   -> the browser's primary language when it is one of the five -> en. Nothing is saved here.
+   a valid ?lang= (one of en/es/pt/de/zh/it/ja/fr/ko, or xx-YY read by its first two letters) -> the saved
+   choice -> the browser's primary language when it is one of the nine -> en. Nothing is saved here.
    The "js" class shows the language switch, which does nothing without JavaScript (BUG-14). */
 (function(){
-  var L=['en','es','pt','de','zh'],R=/^([a-zA-Z]{2})(?:[-_][a-zA-Z0-9]{1,8})*$/,l=null;
+  var L=['en','es','pt','de','zh','it','ja','fr','ko'],R=/^([a-zA-Z]{2})(?:[-_][a-zA-Z0-9]{1,8})*$/,l=null;
   function ok(v){var m=R.exec(String(v==null?'':v));return m&&L.indexOf(m[1].toLowerCase())!==-1?m[1].toLowerCase():null;}
   var d=document.documentElement;d.className=(d.className?d.className+' ':'')+'js';
   try{var m=/[?&]lang=([^&#]*)/.exec(location.search);if(m)l=ok(decodeURIComponent(m[1]));}catch(e){}
@@ -41,6 +41,7 @@
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
   --cjk:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC";
+  --font-cjk:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Apple SD Gothic Neo","Malgun Gothic","PingFang SC","Microsoft YaHei","Noto Sans CJK JP","Noto Sans CJK KR","Noto Sans CJK SC";
   --sans-zh:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC",sans-serif;
   --bar-h:3rem;
   color-scheme:light dark;
@@ -99,6 +100,10 @@ html:not(.js) .langs{display:none}
 .langs ul{list-style:none;margin:0;padding:0;display:flex;gap:.15rem}
 .langs a{display:block;text-decoration:none;color:var(--ink-2);font-family:var(--mono);font-size:.8rem;line-height:1.4;padding:.25rem .45rem;border:1px solid transparent;border-radius:6px;white-space:nowrap}
 .langs a:lang(zh){font-family:var(--sans-zh)}
+.langs a:lang(ja),.langs a:lang(ko){font-family:var(--sans),var(--font-cjk)}
+/* Nine codes do not fit a phone bar: under 720 px the list becomes a select (REQ-W3-066) */
+.lang-select{display:none;font:inherit;font-size:.8rem;min-height:32px;padding:.15rem .4rem;border:1px solid var(--ink-2);border-radius:6px;background:var(--surface);color:var(--ink)}
+@media (max-width:720px){.langs ul{display:none}.lang-select{display:block}}
 .langs a:hover{background:var(--surface-2);color:var(--ink)}
 .langs a[aria-current="true"]{background:var(--slate);border-color:var(--slate);color:var(--bg);font-weight:700}
 
@@ -116,12 +121,18 @@ html[data-lang="en"] .lang-block[data-lang="en"],
 html[data-lang="es"] .lang-block[data-lang="es"],
 html[data-lang="pt"] .lang-block[data-lang="pt"],
 html[data-lang="de"] .lang-block[data-lang="de"],
-html[data-lang="zh"] .lang-block[data-lang="zh"]{display:block}
+html[data-lang="zh"] .lang-block[data-lang="zh"],
+html[data-lang="it"] .lang-block[data-lang="it"],
+html[data-lang="ja"] .lang-block[data-lang="ja"],
+html[data-lang="fr"] .lang-block[data-lang="fr"],
+html[data-lang="ko"] .lang-block[data-lang="ko"]{display:block}
 html:lang(zh),.lang-block:lang(zh){
   --sans:var(--sans-zh);
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",var(--cjk),monospace;
 }
 .lang-block:lang(zh){font-family:var(--sans);line-height:1.7}
+/* Japanese and Korean: system fonts only, no download (REQ-W3-068) */
+.lang-block:lang(ja),.lang-block:lang(ko){font-family:var(--sans),var(--font-cjk);line-height:1.75}
 
 main{max-width:1180px;margin:0 auto;padding:0 16px}
 section.block{padding:3rem 0 1rem;border-top:1px solid var(--line)}
@@ -318,7 +329,22 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
         <li><a href="?lang=pt" hreflang="pt" lang="pt" data-set-lang="pt" title="Português">PT</a></li>
         <li><a href="?lang=de" hreflang="de" lang="de" data-set-lang="de" title="Deutsch">DE</a></li>
         <li><a href="?lang=zh" hreflang="zh-Hans" lang="zh-Hans" data-set-lang="zh" title="简体中文">中文</a></li>
+        <li><a href="?lang=it" hreflang="it" lang="it" data-set-lang="it" title="Italiano">IT</a></li>
+        <li><a href="?lang=ja" hreflang="ja" lang="ja" data-set-lang="ja" title="日本語">日本語</a></li>
+        <li><a href="?lang=fr" hreflang="fr" lang="fr" data-set-lang="fr" title="Français">FR</a></li>
+        <li><a href="?lang=ko" hreflang="ko" lang="ko" data-set-lang="ko" title="한국어">한국어</a></li>
       </ul>
+      <select class="lang-select" aria-labelledby="lang-label">
+        <option value="en" lang="en">EN — English</option>
+        <option value="es" lang="es">ES — Español</option>
+        <option value="pt" lang="pt">PT — Português</option>
+        <option value="de" lang="de">DE — Deutsch</option>
+        <option value="zh" lang="zh-Hans">中文 — 简体中文</option>
+        <option value="it" lang="it">IT — Italiano</option>
+        <option value="ja" lang="ja">日本語</option>
+        <option value="fr" lang="fr">FR — Français</option>
+        <option value="ko" lang="ko">한국어</option>
+      </select>
       <span class="lang-note" id="lang-note" hidden></span>
     </nav>
   </div>
@@ -4512,7 +4538,7 @@ claude plugin update karvey@karvey-methods</code></pre>
    init(window), so node can test them with a stub window (plugins/karvey/tests/page/test_page.mjs).
    In a browser it runs init(window); under node it only exports the functions. */
 (function(g){
-  var LANGS=['en','es','pt','de','zh'], KEY='karvey-lang';
+  var LANGS=['en','es','pt','de','zh','it','ja','fr','ko'], KEY='karvey-lang';
   var TAG=/^([a-zA-Z]{2})(?:[-_][a-zA-Z0-9]{1,8})*$/, HANT=/^zh[-_](hant|tw|hk|mo)(?:[-_]|$)/i;
   /* UI strings for the shared bar (outside the language blocks) */
   var UI={
@@ -4520,7 +4546,11 @@ claude plugin update karvey@karvey-methods</code></pre>
     es:{title:'Método Karvey',label:'Idioma',skip:'Saltar al contenido',home:'Karvey, volver al inicio',simplified:'El chino se muestra en caracteres simplificados'},
     pt:{title:'Método Karvey',label:'Idioma',skip:'Pular para o conteúdo',home:'Karvey, voltar ao início',simplified:'O chinês é exibido em caracteres simplificados'},
     de:{title:'Karvey-Methode',label:'Sprache',skip:'Zum Inhalt springen',home:'Karvey, zurück zum Anfang',simplified:'Chinesisch wird in vereinfachten Schriftzeichen angezeigt'},
-    zh:{title:'Karvey 方法',label:'语言',skip:'跳到正文',home:'Karvey，返回顶部',simplified:'本页中文为简体中文'}
+    zh:{title:'Karvey 方法',label:'语言',skip:'跳到正文',home:'Karvey，返回顶部',simplified:'本页中文为简体中文'},
+    it:{title:'Metodo Karvey',label:'Lingua',skip:'Vai al contenuto',home:'Karvey, torna all\u2019inizio',simplified:'Il cinese è mostrato in caratteri semplificati'},
+    ja:{title:'Karvey メソッド',label:'言語',skip:'本文へスキップ',home:'Karvey、ページの先頭へ',simplified:'中国語は簡体字で表示されています'},
+    fr:{title:'Méthode Karvey',label:'Langue',skip:'Aller au contenu',home:'Karvey, retour en haut',simplified:'Le chinois est affiché en caractères simplifiés'},
+    ko:{title:'Karvey 방법론',label:'언어',skip:'본문으로 건너뛰기',home:'Karvey, 맨 위로',simplified:'중국어는 간체자로 표시됩니다'}
   };
 
   /* '#…' decoded, or null when empty or malformed (BUG-10: never throws) */
@@ -4579,7 +4609,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     function replace(url){try{w.history.replaceState(null,'',url);}catch(e){}}
     var blocks=[].slice.call(doc.querySelectorAll('.lang-block[data-lang]'));
     var switcher=[].slice.call(doc.querySelectorAll('.langs a[data-set-lang]'));
-    var nav=doc.querySelector('.langs'), note=doc.getElementById('lang-note');
+    var nav=doc.querySelector('.langs'), note=doc.getElementById('lang-note'), select=doc.querySelector('.lang-select');
     var skip=doc.querySelector('.skip'), brand=doc.querySelector('.brand'), label=doc.getElementById('lang-label');
     var section={}, current='en', traditional=false;
     function block(l){for(var i=0;i<blocks.length;i++){if(blocks[i].getAttribute('data-lang')===l) return blocks[i];} return null;}
@@ -4635,6 +4665,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       if(skip){skip.textContent=t.skip; skip.setAttribute('href','#'+l+'-content');}
       if(brand){brand.setAttribute('aria-label',t.home); brand.setAttribute('href','#'+l+'-top');}
       if(label) label.textContent=t.label;
+      if(select) select.value=l;
       if(note){note.textContent=t.simplified; note.hidden=!(traditional && l==='zh');}
       if(t.title) doc.title=t.title;
       current=l; return l;
@@ -4660,21 +4691,27 @@ claude plugin update karvey@karvey-methods</code></pre>
     followHash();
     w.addEventListener('hashchange',followHash);
 
+    /* A choice from the list or the select: show it, remember it, keep the reader's section */
+    function choose(req){
+      var sec=section[current];
+      traditional=false;
+      var l=apply(req), hash='';
+      if(LANGS.indexOf(req)!==-1) save(req);
+      var target=(sec && w.scrollY>0) ? doc.getElementById(l+'-'+sec) : null;
+      if(!target){var id=hashToBlock(loc.hash,l); target=id?doc.getElementById(id):null;}
+      if(target){hash='#'+target.id; jump(target);}
+      replace(loc.pathname+withLang(loc.search,req)+hash);
+      return l;
+    }
     switcher.forEach(function(a){
       a.addEventListener('click',function(ev){
         if(ev.defaultPrevented||ev.button!==0||ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.altKey) return;
         ev.preventDefault();
-        var req=a.getAttribute('data-set-lang'), sec=section[current];
-        traditional=false;
-        var l=apply(req), hash='';
-        if(LANGS.indexOf(req)!==-1) save(req);
-        var target=(sec && w.scrollY>0) ? doc.getElementById(l+'-'+sec) : null;
-        if(!target){var id=hashToBlock(loc.hash,l); target=id?doc.getElementById(id):null;}
-        if(target){hash='#'+target.id; jump(target);}
-        replace(loc.pathname+withLang(loc.search,req)+hash);
+        choose(a.getAttribute('data-set-lang'));
       });
     });
-    return {apply:apply, current:function(){return current;}, followHash:followHash, pick:pick};
+    if(select) select.addEventListener('change',function(){choose(select.value);});
+    return {apply:apply, choose:choose, current:function(){return current;}, followHash:followHash, pick:pick};
   }
 
   var api={LANGS:LANGS, KEY:KEY, UI:UI, safeDecodeHash:safeDecodeHash, langOf:langOf, pickLang:pickLang,

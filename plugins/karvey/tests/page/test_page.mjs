@@ -1,5 +1,5 @@
 // Method page docs/karvey.html: the inline script's pure functions and init(window) against a stub
-// window (E1.F11.T2; BUG-10..13, REQ-W1-102..105). node:test only, no npm (Q-A7 / D-09):
+// window (E1.F11.T2; BUG-10..13, REQ-W1-102..105; nine languages: REQ-W3-066, 068). node:test only, no npm (Q-A7 / D-09):
 //   node --test plugins/karvey/tests/page/
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -50,8 +50,9 @@ class El {
 }
 
 function makeWindow({ search = '', hash = '', saved = null, languages = ['en'], ids = [], storageThrows = false } = {}) {
-  const blocks = ['en', 'es', 'pt', 'de', 'zh'].map((l) => new El({ 'data-lang': l, lang: l === 'zh' ? 'zh-Hans' : l }));
-  const links = ['en', 'es', 'pt', 'de', 'zh'].map((l) => new El({ 'data-set-lang': l }));
+  const NINE = ['en', 'es', 'pt', 'de', 'zh', 'it', 'ja', 'fr', 'ko'];
+  const blocks = NINE.map((l) => new El({ 'data-lang': l, lang: l === 'zh' ? 'zh-Hans' : l }));
+  const links = NINE.map((l) => new El({ 'data-set-lang': l }));
   const byId = {};
   for (const id of ids) byId[id] = new El({}, id);
   const note = new El({}, 'lang-note');
@@ -127,13 +128,17 @@ test('safeDecodeHash returns null for a malformed or empty hash, never throws (B
 });
 
 // ---------------------------------------------------------------- langOf / pickLang (BUG-11)
-test('langOf reads xx and xx-YY by the first two letters, only for the five languages', () => {
+test('langOf reads xx and xx-YY by the first two letters, only for the nine languages', () => {
   assert.equal(P.langOf('de'), 'de');
   assert.equal(P.langOf('ES-cl'), 'es');
   assert.equal(P.langOf('zh-TW'), 'zh');
   assert.equal(P.langOf('pt_BR'), 'pt');
   assert.equal(P.langOf('xx'), null);
-  assert.equal(P.langOf('fr'), null);
+  assert.equal(P.langOf('fr-FR'), 'fr');
+  assert.equal(P.langOf('ko-KR'), 'ko');
+  assert.equal(P.langOf('ja'), 'ja');
+  assert.equal(P.langOf('it_IT'), 'it');
+  assert.equal(P.langOf('nl'), null);
   assert.equal(P.langOf('english'), null);
   assert.equal(P.langOf(null), null);
 });
@@ -160,7 +165,8 @@ test('pickLang: an invalid ?lang= is ignored and nothing is saved; the browser r
 
 test('pickLang: saved choice, then browser, then en', () => {
   assert.equal(P.pickLang('', 'de', ['es']).lang, 'de');
-  assert.equal(P.pickLang('', 'garbage', ['fr-FR']).lang, 'en');
+  assert.equal(P.pickLang('', 'garbage', ['nl-NL']).lang, 'en');
+  assert.equal(P.pickLang('', 'garbage', ['fr-FR']).lang, 'fr');
   assert.equal(P.pickLang('', null, []).source, 'default');
 });
 
@@ -271,7 +277,8 @@ test('init survives a localStorage that throws', () => {
   assert.doesNotThrow(() => P.init(s.w));
 });
 
-test('every UI string exists in the five languages', () => {
+test('every UI string exists in the nine languages', () => {
+  assert.deepEqual([...P.LANGS], ['en', 'es', 'pt', 'de', 'zh', 'it', 'ja', 'fr', 'ko']);
   const keys = Object.keys(P.UI.en).sort();
   for (const l of P.LANGS) assert.deepEqual(Object.keys(P.UI[l]).sort(), keys, l);
 });
@@ -282,7 +289,9 @@ test('the early head script follows the same language rule', () => {
     [{ search: '?lang=es-CL', saved: 'de', nav: ['en'] }, 'es'],
     [{ search: '?lang=xx', saved: null, nav: ['pt-BR'] }, 'pt'],
     [{ search: '', saved: 'zh', nav: ['en'] }, 'zh'],
-    [{ search: '?lang=%E0%A4%A', saved: null, nav: ['fr'] }, 'en'],
+    [{ search: '?lang=%E0%A4%A', saved: null, nav: ['nl'] }, 'en'],
+    [{ search: '', saved: null, nav: ['ko-KR'] }, 'ko'],
+    [{ search: '?lang=ja', saved: 'de', nav: ['en'] }, 'ja'],
   ];
   for (const [c, want] of cases) {
     const attrs = {};
@@ -296,4 +305,45 @@ test('the early head script follows the same language rule', () => {
     assert.match(doc.documentElement.className, /\bjs\b/);
     assert.equal(P.pickLang(c.search, c.saved, c.nav).lang, want, 'pickLang agrees: ' + JSON.stringify(c));
   }
+});
+
+// ---------------------------------------------------------------- nine languages (REQ-W3-066, 068)
+test('REQ-W3-066: a Korean browser gets the Korean block and the tab title follows', () => {
+  const s = makeWindow({ languages: ['ko-KR', 'en'] });
+  const api = P.init(s.w);
+  assert.equal(api.current(), 'ko');
+  assert.equal(s.w.document.title, P.UI.ko.title);
+  assert.equal(s.root.lang, 'ko');
+});
+
+test('REQ-W3-066: ?lang=xx renders English and saves nothing', () => {
+  const s = makeWindow({ search: '?lang=xx', languages: ['nl-NL'] });
+  const api = P.init(s.w);
+  assert.equal(api.current(), 'en');
+  assert.equal('karvey-lang' in s.store, false);
+});
+
+test('REQ-W3-068: ?lang=ja sets the document language to ja; zh keeps zh-Hans', () => {
+  const s = makeWindow({ search: '?lang=ja' });
+  const api = P.init(s.w);
+  assert.equal(s.root.lang, 'ja');
+  api.apply('zh');
+  assert.equal(s.root.lang, 'zh-Hans');
+});
+
+test('REQ-W3-066: the four new links switch in page like the others', () => {
+  const s = makeWindow();
+  const api = P.init(s.w);
+  for (const [i, l] of [[5, 'it'], [6, 'ja'], [7, 'fr'], [8, 'ko']]) {
+    click(s.links[i]);
+    assert.equal(api.current(), l);
+    assert.equal(s.store['karvey-lang'], l);
+  }
+});
+
+test('REQ-W3-068: the page fetches nothing and CJK uses system fonts only', () => {
+  assert.doesNotMatch(html, /<link[^>]+href=|<script[^>]+src=|@import|@font-face|url\(\s*['"]?(https?:)?\/\//);
+  assert.match(html, /--font-cjk:/);
+  assert.match(html, /\.lang-block:lang\(ja\),\.lang-block:lang\(ko\)\{font-family:var\(--sans\),var\(--font-cjk\)/);
+  assert.match(html, /@media \(max-width:720px\)\{\.langs ul\{display:none\}\.lang-select\{display:block\}\}/);
 });

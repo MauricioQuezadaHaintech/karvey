@@ -1,8 +1,9 @@
 """Static checks of the method page docs/karvey.html (E1.F11.T2; BUG-14, REQ-W1-106, REQ-ADP-030).
 
 html.parser only (stdlib): the markup nests cleanly, ids are unique, every in-page anchor resolves,
-nothing is fetched from outside the file, the five language blocks share one structure, and the
-language switch is not visible without JavaScript.
+nothing is fetched from outside the file, the nine language blocks share one structure, and the
+language switch is not visible without JavaScript (REQ-W3-066: nine languages; a block not written yet is
+reported by L-74, its selection is checked here).
 """
 import re
 import unittest
@@ -11,7 +12,7 @@ from html.parser import HTMLParser
 import _path
 
 PAGE = _path.REPO_ROOT / "docs" / "karvey.html"
-LANGS = ("en", "es", "pt", "de", "zh")
+LANGS = ("en", "es", "pt", "de", "zh", "it", "ja", "fr", "ko")
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
         "track", "wbr", "path", "circle", "rect", "line", "polyline", "polygon", "ellipse", "use", "stop"}
 # elements whose end tag HTML lets you omit; the page closes them anyway, so they are checked too
@@ -111,15 +112,29 @@ class Markup(unittest.TestCase):
         self.assertEqual(self.p.fetches, [], "the page must not fetch anything")
         self.assertNotRegex(self.css, r"@import|url\(\s*['\"]?(https?:)?//")
 
-    def test_five_blocks_share_one_structure(self):
-        for l in LANGS:
+    def written(self):
+        """The languages whose block is in the page (the first five always; it/ja/fr/ko once translated)."""
+        return [l for l in LANGS if self.p.shapes[l]]
+
+    def test_blocks_share_one_structure(self):
+        for l in LANGS[:5]:
             self.assertTrue(self.p.shapes[l], "block %s missing" % l)
         base = [t for t, _ in self.p.shapes["en"]]
-        for l in LANGS[1:]:
+        for l in self.written()[1:]:
             self.assertEqual([t for t, _ in self.p.shapes[l]], base, "block %s differs in structure from en" % l)
         ids = [i for _, i in self.p.shapes["en"] if i]
-        for l in LANGS[1:]:
+        for l in self.written()[1:]:
             self.assertEqual([i for _, i in self.p.shapes[l] if i], ids, "block %s ids differ from en" % l)
+
+    def test_REQ_W3_066_every_language_is_selectable(self):
+        text = PAGE.read_text(encoding="utf-8")
+        head = re.findall(r"<script>([\s\S]*?)</script>", text)[0]
+        self.assertIn("var L=[%s]" % ",".join("'%s'" % l for l in LANGS), head)
+        self.assertIn("var LANGS=[%s]" % ",".join("'%s'" % l for l in LANGS), text)
+        for l in LANGS:
+            self.assertIn('html[data-lang="%s"] .lang-block[data-lang="%s"]' % (l, l), self.css)
+        opts = [a.get("value") for t, a, _ in self.p.elements if t == "option"]
+        self.assertEqual(opts, list(LANGS))
 
 
 class NoInertSwitch(unittest.TestCase):
