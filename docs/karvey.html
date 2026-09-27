@@ -364,6 +364,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
       <li><a href="#en-team-config">Team settings</a></li>
       <li><a href="#en-deploy">Deploy &amp; branches</a></li>
       <li><a href="#en-agent-team">Agent team</a></li>
+      <li><a href="#en-wave3">Wave 3 (4.1)</a></li>
       <li><a href="#en-install">Install</a></li>
       <li><a href="#en-versions">Versions</a></li>
     </ol>
@@ -437,7 +438,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
   <div class="org" role="group" aria-label="Org chart of the karvey plugin">
     <div class="org-node">
       <div class="t">Plugin <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 skills · 26 rules · hooks</div>
+      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 skills · 27 rules · hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -494,22 +495,22 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
 
       <!-- (c) Rules -->
       <section class="branch" aria-labelledby="en-org-c">
-        <h3 id="en-org-c"><span class="l" aria-hidden="true">c</span> Shared rules · 26</h3>
+        <h3 id="en-org-c"><span class="l" aria-hidden="true">c</span> Shared rules · 27</h3>
         <h4>Project and configuration</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>Team and tools (3.10)</h4>
-        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>clickup-protocol</li></ul>
+        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>adapters (7)</li></ul>
         <h4>Specification and design</h4>
         <ul class="chips"><li>ears-format</li><li>security-tiers</li><li>engineering-standards</li></ul>
         <h4>Spiral and closing</h4>
-        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>phase-close</li><li>verification</li></ul>
+        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>risks</li><li>phase-close</li><li>verification</li></ul>
         <h4>Delivery</h4>
         <ul class="chips"><li>deploy-workflow</li><li>versioning</li><li>changelog-policy</li><li>enforcement</li></ul>
         <h4>Collaboration</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team (optional)</li></ul>
         <h4>Flow, lanes and gates</h4>
-        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li><li>_core</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -590,7 +591,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
       <dl>
         <dt>What it does</dt><dd>Creates or reads <code>project.json</code> (git, cloud, IaC, knowledge_sync, targets, repos, spec_repo, branch_flow, enforcement), captures the <em>goal</em> (north star), asks for the team settings (step 3.2) and offers to enable the hooks (step 3.5).</dd>
         <dt>Produces</dt><dd><code>project.json</code>, <code>change-id</code>, <code>prd.md</code>, <code>spec.json</code>, an Epic in the team’s tracker or <code>PLAN.md</code>.</dd>
-        <dt>Rules</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">clickup-protocol</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
+        <dt>Rules</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">adapters</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
       </dl>
       <p class="gate"><b>Gate:</b> no approval of its own; the next step is generating requirements.</p>
     </article>
@@ -656,7 +657,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
       <dl>
         <dt>What it does</dt><dd>Splits the work into 10–30 min AI tasks <code>E{n}.F{n}.T{n} [DB/Backend/Frontend/Infra]</code> with dependencies, estimated in minutes (cap ~60, otherwise split). <code>[human]</code> tasks carry an executor, command, verification and rollback.</dd>
         <dt>Produces</dt><dd><code>tasks.md</code> + tasks in the tracker or a checklist in <code>PLAN.md</code>.</dd>
-        <dt>Rules</dt><dd><span class="tag">clickup-protocol</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
+        <dt>Rules</dt><dd><span class="tag">adapters</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
       </dl>
       <p class="gate"><b>Gate:</b> <code>approvals.tasks.approved</code>.</p>
     </article>
@@ -863,7 +864,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
 <!-- 7. RULES -->
 <section class="block" id="en-rules" aria-labelledby="en-t-rules">
   <p class="eyebrow">07 · Common contract</p>
-  <h2 id="en-t-rules">Shared rules · 26</h2>
+  <h2 id="en-t-rules">Shared rules · 27</h2>
   <p class="lede">They live in <code>plugins/karvey/skills/karvey/rules/</code>. Skills cite them instead of repeating them; local copies must be byte-for-byte identical to the canonical one.</p>
 
   <div class="filter" id="en-rules-filter" data-filter="rules" hidden>
@@ -876,10 +877,10 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
       <caption class="sr">Shared rules of the Karvey method</caption>
       <thead><tr><th scope="col">Rule</th><th scope="col">What it governs</th><th scope="col">Applies in</th></tr></thead>
       <tbody>
+        <tr><td><code>_core.md</code> <span class="tag o">4.1</span></td><td>The seven hard contracts every phase loads: the state tool, the gate and approval, the production gate, branches and commits, verification, the finding router and neutral text. Everything else is on the phase's <code>Load:</code> line.</td><td>every phase</td></tr>
         <tr><td><code>project-config.md</code></td><td>The project’s <code>project.json</code>: git, cloud, IaC, knowledge_sync, targets, repos (1 or more, never zero), spec_repo, branch_flow, enforcement, standards and the team blocks.</td><td>init, architecture, infra, deploy, context</td></tr>
-        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>The team’s management tool and its status flow: 5 logical states, logical operations (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) and one adapter per tool.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
+        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>The team’s management tool and its status flow: 5 logical states, logical operations (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) and one adapter per tool. Since 4.1 each tool's adapter lives in <code>rules/adapters/</code> and a phase loads only the one the project uses.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
         <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>The team’s notification channel (never an assumed one): target, route, events (<code>qa</code>, <code>deploy</code>, optional <code>incident</code>) and per-channel formatting.</td><td>init, qa, deploy, iterate</td></tr>
-        <tr><td><code>clickup-protocol.md</code></td><td>The ClickUp adapter: credentials in <code>.connections.json</code> (never committed), hierarchy, naming and AI-minute estimation (10–30, cap ~60) valid for any tool.</td><td>init, tasks, impl, qa, deploy, archive</td></tr>
         <tr><td><code>engineering-standards.md</code></td><td>The golden paths per layer (the third source of truth), the conformance gate in design mode and <code>deviations.md</code>; separation between the public method and the team’s standards.</td><td>init, architecture, impl, qa, archive, guard</td></tr>
         <tr><td><code>ears-format.md</code></td><td>EARS syntax: ubiquitous, event-driven (WHEN), state-driven (WHILE), unwanted behaviour (IF/THEN), optional feature (WHERE) and complex.</td><td>requirements</td></tr>
         <tr><td><code>security-tiers.md</code></td><td>Tiers 1–4 (public, authenticated, privileged, critical) with their minimum controls per layer.</td><td>requirements, architecture, infra, qa</td></tr>
@@ -894,6 +895,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
         <tr><td><code>iteration-loop.md</code></td><td>The three feedback edges, <code>findings.md</code>, the spec revision sub-cycle and the convergence rule.</td><td>test, qa, browse, iterate</td></tr>
         <tr><td><code>incident-tracking.md</code></td><td>A <code>BUG-NN</code> tracker per repo (<code>docs/bugs_dev_testing.md</code>) + a global index, numbering that never resets, and a state history.</td><td>test, qa, iterate, investigate</td></tr>
         <tr><td><code>backlog.md</code></td><td>A dual discovery backlog: Markdown as the source of truth, mirrored in the tracker; swept at archive.</td><td>iterate, archive, context</td></tr>
+        <tr><td><code>risks.md</code> <span class="tag o">4.1</span></td><td>One risk register per change: owner, probability, impact, trigger, mitigation, state and last review; reviewed at the qa and release gates.</td><td>architecture, iterate, qa, archive</td></tr>
         <tr><td><code>phase-close.md</code></td><td>A mandatory 4-action ritual when closing every phase and task: comment, change status (+ cascade), sweep findings and backlog, update <code>spec.json</code> + knowledge.</td><td>every phase (at close), impl, iterate</td></tr>
         <tr><td><code>verification.md</code></td><td>18 failure modes that make a green report false (a citation is not the thing cited, exit 0 is not success, a green test on code nobody calls…).</td><td>every phase (before saying “done”), guard, qa, health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>Multi-agent and multi-repo work: parent/child changes, <code>D-NN</code> decisions, <code>@commit</code>-pinned inputs, approvals with who and where, <code>[human]</code> tasks, <code>ops</code> and <code>hotfix</code> types, docs-only PRs.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health and every gate</td></tr>
@@ -1125,6 +1127,47 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
 </section>
 
 <!-- 12. INSTALL -->
+<section class="block" id="en-wave3" aria-labelledby="en-t-wave3">
+  <p class="eyebrow">New in 4.1 · Wave 3</p>
+  <h2 id="en-t-wave3">Smaller phases, informed sponsors</h2>
+  <p class="lede">Each phase loads only the rules it declares, and the sponsor of a change gets one page with its scope, state, cost, open risks and the decisions it waits for. Cost is measured, never capped.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>Load lists</h3>
+      <p class="small">Every phase skill names its closed list on a <code>Load:</code> line: the core contracts (<code>_core.md</code>) plus the rules it needs, and only the tracker adapter the project uses. Rules cite other rules in footnotes that are never opened. Measured: the median phase loads 56% less text than in 4.0.</p>
+    </div>
+    <div class="card">
+      <h3>Sponsor page</h3>
+      <p class="small">At every gate close <code>karvey-close.py</code> builds <code>sponsor.html</code> from the change's own artifacts: scope, state, cost, open risks and what waits for the sponsor. An allow-list and a leak check refuse secrets, paths, hosts and personal data; it goes only to the destination the project declares.</p>
+    </div>
+    <div class="card">
+      <h3>Questions and risks</h3>
+      <p class="small">Open questions <code>Q-NN</code> carry an owner and a needed-by date (<code>/karvey-decisions ask</code>). Each change keeps a risk register with owner, trigger and last review; archive refuses an open risk.</p>
+    </div>
+    <div class="card">
+      <h3>Cost per change</h3>
+      <p class="small">The statusline captures the session cost without a model turn; <code>karvey-state.py effort</code> records it per phase and judges take their tokens from the transcript. Metrics per lane, client and period; an outlier is input for the retro, never a stop.</p>
+    </div>
+    <div class="card">
+      <h3>Design system</h3>
+      <p class="small">The project keeps one <code>design-system.md</code>; design-graphic writes only a delta. <code>karvey-contrast-check.py</code> computes WCAG contrast and a design judge reads the delta before the gate.</p>
+    </div>
+    <div class="card">
+      <h3>Portfolio</h3>
+      <p class="small"><code>karvey-context.py --portfolio</code> reads every Karvey repository of the organisation from one file, offline and read-only: active changes, decisions awaited, releases and cost, per client.</p>
+    </div>
+    <div class="card">
+      <h3>WSJF backlog</h3>
+      <p class="small">Value, effort, cost of delay and the needed-by date rank the backlog (<code>karvey-context.py --backlog</code>); <code>done-direct</code> closes an item with its commit; a refinement cadence keeps it fresh.</p>
+    </div>
+    <div class="card">
+      <h3>Portability guide</h3>
+      <p class="small"><code>docs/portability.md</code> lists what depends on the runtime (Claude Code is the only supported one); browser work can go to another agent (<code>browse.via</code>); no fixed country, time zone or language.</p>
+    </div>
+  </div>
+  <p class="small" data-counts="wave3">In this release: <span data-count="skills">33</span> skills (1 orchestrator, <span data-count="phase">13</span> phases, <span data-count="support">19</span> support), <span data-count="rules">27</span> shared rules, <span data-count="adapters">7</span> tracker adapters and <span data-count="scripts">19</span> scripts.</p>
+</section>
+
 <section class="block" id="en-install" aria-labelledby="en-t-inst">
   <p class="eyebrow">12 · Get started</p>
   <h2 id="en-t-inst">Install and update</h2>
@@ -1168,7 +1211,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     <li><span class="ver">3.7.0</span><span class="date">2026-09-18</span><br>Multi-agent and multi-repo work: parent/child changes, <code>D-NN</code> decisions, pinned inputs, <code>approvals.prod</code>, <code>[human]</code> tasks, <code>ops</code> and <code>hotfix</code> types, docs-only PRs, readiness checks in health.</li>
     <li><span class="ver">3.6.0</span><span class="date">2026-09-08</span><br>Causal discipline in <code>karvey-investigate</code>: date the symptom, what changed before what is wrong, causal-coherence gate, trace across repos.</li>
     <li><span class="ver">3.5.0</span><span class="date">2026-07-05</span><br>Visual component catalogue (<code>design-components.md</code>) in design-graphic.</li>
-    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Estimation in AI minutes (10–30 min, cap ~60) in <code>clickup-protocol.md</code>.</li>
+    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Estimation in AI minutes (10–30 min, cap ~60) in <code>rules/adapters/clickup.md</code>.</li>
     <li><span class="ver">3.3.0</span><span class="date">2026-06-23</span><br>Engineering-standards layer (golden paths), conformance gate in design mode, <code>deviations.md</code>, <code>karvey-standards</code>.</li>
     <li><span class="ver">3.2.0</span><span class="date">2026-06-17</span><br>Karvey becomes a spiral: <code>karvey-iterate</code>, iteration loop, <code>BUG-NN</code> tracker, dual backlog, phase-close ritual; 3–4-level mockup with validation.</li>
     <li><span class="ver">3.1.0</span><span class="date">2026-06-14</span><br><code>karvey-import</code>: migration from Kiro and gstack.</li>
@@ -1201,6 +1244,7 @@ claude plugin update karvey@karvey-methods</code></pre>
         <li><a href="#es-team-config">Config. del equipo</a></li>
         <li><a href="#es-deploy">Deploy y ramas</a></li>
         <li><a href="#es-agent-team">Equipo de agentes</a></li>
+        <li><a href="#es-wave3">Ola 3 (4.1)</a></li>
         <li><a href="#es-install">Instalar</a></li>
         <li><a href="#es-versions">Versiones</a></li>
       </ol>
@@ -1274,7 +1318,7 @@ claude plugin update karvey@karvey-methods</code></pre>
   <div class="org" role="group" aria-label="Organigrama del plugin karvey">
     <div class="org-node">
       <div class="t">Plugin <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 skills · 26 reglas · hooks</div>
+      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 skills · 27 reglas · hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -1331,22 +1375,22 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (c) Reglas -->
       <section class="branch" aria-labelledby="es-org-c">
-        <h3 id="es-org-c"><span class="l" aria-hidden="true">c</span> Reglas compartidas · 26</h3>
+        <h3 id="es-org-c"><span class="l" aria-hidden="true">c</span> Reglas compartidas · 27</h3>
         <h4>Proyecto y configuración</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>Equipo y herramientas (3.10)</h4>
-        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>clickup-protocol</li></ul>
+        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>adapters (7)</li></ul>
         <h4>Especificación y diseño</h4>
         <ul class="chips"><li>ears-format</li><li>security-tiers</li><li>engineering-standards</li></ul>
         <h4>Espiral y cierre</h4>
-        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>phase-close</li><li>verification</li></ul>
+        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>risks</li><li>phase-close</li><li>verification</li></ul>
         <h4>Entrega</h4>
         <ul class="chips"><li>deploy-workflow</li><li>versioning</li><li>changelog-policy</li><li>enforcement</li></ul>
         <h4>Colaboración</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team (opcional)</li></ul>
         <h4>Flujo, carriles y gates</h4>
-        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li><li>_core</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -1427,7 +1471,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <dl>
         <dt>Qué hace</dt><dd>Crea o lee <code>project.json</code> (git, cloud, IaC, knowledge_sync, targets, repos, spec_repo, branch_flow, enforcement), captura el <em>goal</em> (estrella polar), pregunta los settings del equipo (paso 3.2) y ofrece activar los hooks (paso 3.5).</dd>
         <dt>Produce</dt><dd><code>project.json</code>, <code>change-id</code>, <code>prd.md</code>, <code>spec.json</code>, Epic en el tracker del equipo o <code>PLAN.md</code>.</dd>
-        <dt>Reglas</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">clickup-protocol</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
+        <dt>Reglas</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">adapters</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
       </dl>
       <p class="gate"><b>Gate:</b> sin aprobación propia; el siguiente paso es generar requisitos.</p>
     </article>
@@ -1493,7 +1537,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <dl>
         <dt>Qué hace</dt><dd>Parte el trabajo en tareas IA de 10–30 min <code>E{n}.F{n}.T{n} [DB/Backend/Frontend/Infra]</code> con dependencias, estimadas en minutos (tope ~60, si no se divide). Tareas <code>[human]</code> con ejecutor, comando, verificación y rollback.</dd>
         <dt>Produce</dt><dd><code>tasks.md</code> + tareas en el tracker o checklist en <code>PLAN.md</code>.</dd>
-        <dt>Reglas</dt><dd><span class="tag">clickup-protocol</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
+        <dt>Reglas</dt><dd><span class="tag">adapters</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
       </dl>
       <p class="gate"><b>Gate:</b> <code>approvals.tasks.approved</code>.</p>
     </article>
@@ -1700,7 +1744,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 7. REGLAS -->
 <section class="block" id="es-rules" aria-labelledby="es-t-rules">
   <p class="eyebrow">07 · Contrato común</p>
-  <h2 id="es-t-rules">Reglas compartidas · 26</h2>
+  <h2 id="es-t-rules">Reglas compartidas · 27</h2>
   <p class="lede">Viven en <code>plugins/karvey/skills/karvey/rules/</code>. Los skills las citan en vez de repetirlas; las copias locales deben ser idénticas byte a byte a la canónica.</p>
 
   <div class="filter" id="es-rules-filter" data-filter="rules" hidden>
@@ -1713,10 +1757,10 @@ claude plugin update karvey@karvey-methods</code></pre>
       <caption class="sr">Reglas compartidas del método Karvey</caption>
       <thead><tr><th scope="col">Regla</th><th scope="col">Qué gobierna</th><th scope="col">Se aplica en</th></tr></thead>
       <tbody>
+        <tr><td><code>_core.md</code> <span class="tag o">4.1</span></td><td>Los siete contratos duros que carga toda fase: la herramienta de estado, el gate y la aprobación, el gate de producción, ramas y commits, la verificación, el enrutador de hallazgos y el texto neutral. Todo lo demás va en la línea <code>Load:</code> de la fase.</td><td>toda fase</td></tr>
         <tr><td><code>project-config.md</code></td><td>El <code>project.json</code> de proyecto: git, cloud, IaC, knowledge_sync, targets, repos (1 o más, nunca cero), spec_repo, branch_flow, enforcement, standards y los bloques de equipo.</td><td>init, architecture, infra, deploy, context</td></tr>
-        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>La herramienta de gestión del equipo y su flujo de estados: 5 estados lógicos, operaciones lógicas (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) y un adaptador por herramienta.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
+        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>La herramienta de gestión del equipo y su flujo de estados: 5 estados lógicos, operaciones lógicas (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) y un adaptador por herramienta. Desde 4.1 el adaptador de cada herramienta vive en <code>rules/adapters/</code> y una fase carga solo el que usa el proyecto.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
         <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>El canal de avisos del equipo (nunca uno asumido): destino, vía, eventos (<code>qa</code>, <code>deploy</code>, <code>incident</code> opcional) y formato por canal.</td><td>init, qa, deploy, iterate</td></tr>
-        <tr><td><code>clickup-protocol.md</code></td><td>El adaptador de ClickUp: credenciales en <code>.connections.json</code> (nunca commiteado), jerarquía, nombres y estimación en minutos IA (10–30, tope ~60) válida para cualquier herramienta.</td><td>init, tasks, impl, qa, deploy, archive</td></tr>
         <tr><td><code>engineering-standards.md</code></td><td>Los golden paths por capa (tercera fuente de verdad), el gate de conformidad en modo diseño y <code>deviations.md</code>; separación método público / estándares del equipo.</td><td>init, architecture, impl, qa, archive, guard</td></tr>
         <tr><td><code>ears-format.md</code></td><td>Sintaxis EARS: ubicuo, por evento (WHEN), por estado (WHILE), condicional (IF/THEN), opcional (WHERE) y combinado.</td><td>requirements</td></tr>
         <tr><td><code>security-tiers.md</code></td><td>Tiers 1–4 (público, autenticado, privilegiado, crítico) con sus controles mínimos por capa.</td><td>requirements, architecture, infra, qa</td></tr>
@@ -1731,6 +1775,7 @@ claude plugin update karvey@karvey-methods</code></pre>
         <tr><td><code>iteration-loop.md</code></td><td>Las tres aristas de retroalimentación, <code>findings.md</code>, el sub-ciclo de revisión de spec y la regla de convergencia.</td><td>test, qa, browse, iterate</td></tr>
         <tr><td><code>incident-tracking.md</code></td><td>Tracker <code>BUG-NN</code> por repo (<code>docs/bugs_dev_testing.md</code>) + índice global, numeración que nunca se reinicia e historial de estados.</td><td>test, qa, iterate, investigate</td></tr>
         <tr><td><code>backlog.md</code></td><td>Backlog de descubrimiento dual: Markdown como fuente de verdad, espejado en el tracker; barrido en archive.</td><td>iterate, archive, context</td></tr>
+        <tr><td><code>risks.md</code> <span class="tag o">4.1</span></td><td>Un registro de riesgos por cambio: responsable, probabilidad, impacto, gatillo, mitigación, estado y última revisión; se revisa en los gates de qa y release.</td><td>architecture, iterate, qa, archive</td></tr>
         <tr><td><code>phase-close.md</code></td><td>Ritual obligatorio de 4 acciones al cerrar cada fase y tarea: comentar, cambiar estado (+ cascada), barrer hallazgos y backlog, actualizar <code>spec.json</code> + conocimiento.</td><td>todas las fases (al cierre), impl, iterate</td></tr>
         <tr><td><code>verification.md</code></td><td>18 modos de falla que vuelven falso un reporte en verde (una cita no es lo citado, exit 0 no es éxito, un test verde sobre código que nadie llama…).</td><td>todas las fases (antes de decir «listo»), guard, qa, health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>Trabajo multi-agente y multi-repo: cambios padre/hijo, decisiones <code>D-NN</code>, inputs fijados <code>@commit</code>, aprobaciones con quién y dónde, tareas <code>[human]</code>, tipos <code>ops</code> y <code>hotfix</code>, PR solo docs.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health y todo gate</td></tr>
@@ -1962,6 +2007,47 @@ claude plugin update karvey@karvey-methods</code></pre>
 </section>
 
 <!-- 12. INSTALAR -->
+<section class="block" id="es-wave3" aria-labelledby="es-t-wave3">
+  <p class="eyebrow">Nuevo en 4.1 · Ola 3</p>
+  <h2 id="es-t-wave3">Fases más livianas, sponsors informados</h2>
+  <p class="lede">Cada fase carga solo las reglas que declara, y el sponsor de un cambio recibe una página con su alcance, estado, costo, riesgos abiertos y las decisiones que esperan por él. El costo se mide, nunca se topa.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>Listas de carga</h3>
+      <p class="small">Cada skill de fase nombra su lista cerrada en una línea <code>Load:</code>: los contratos del núcleo (<code>_core.md</code>) más las reglas que necesita, y solo el adaptador del tracker que usa el proyecto. Las reglas citan otras reglas en notas al pie que nunca se abren. Medido: la fase mediana carga un 56% menos de texto que en 4.0.</p>
+    </div>
+    <div class="card">
+      <h3>Página del sponsor</h3>
+      <p class="small">En cada cierre de gate <code>karvey-close.py</code> genera <code>sponsor.html</code> desde los artefactos del propio cambio: alcance, estado, costo, riesgos abiertos y lo que espera por el sponsor. Una lista permitida y un control de fugas rechazan secretos, rutas, hosts y datos personales; se envía solo al destino que declara el proyecto.</p>
+    </div>
+    <div class="card">
+      <h3>Preguntas y riesgos</h3>
+      <p class="small">Las preguntas abiertas <code>Q-NN</code> llevan responsable y fecha límite (<code>/karvey-decisions ask</code>). Cada cambio mantiene un registro de riesgos con responsable, gatillo y última revisión; archive rechaza un riesgo abierto.</p>
+    </div>
+    <div class="card">
+      <h3>Costo por cambio</h3>
+      <p class="small">La statusline captura el costo de la sesión sin un turno del modelo; <code>karvey-state.py effort</code> lo registra por fase y los jueces toman sus tokens del transcript. Métricas por carril, cliente y período; un valor atípico es insumo para la retro, nunca un freno.</p>
+    </div>
+    <div class="card">
+      <h3>Sistema de diseño</h3>
+      <p class="small">El proyecto mantiene un solo <code>design-system.md</code>; design-graphic escribe solo un delta. <code>karvey-contrast-check.py</code> calcula el contraste WCAG y un juez de diseño lee el delta antes del gate.</p>
+    </div>
+    <div class="card">
+      <h3>Portafolio</h3>
+      <p class="small"><code>karvey-context.py --portfolio</code> lee todos los repositorios Karvey de la organización desde un archivo, sin red y en solo lectura: cambios activos, decisiones pendientes, releases y costo, por cliente.</p>
+    </div>
+    <div class="card">
+      <h3>Backlog WSJF</h3>
+      <p class="small">Valor, esfuerzo, costo del retraso y fecha requerida ordenan el backlog (<code>karvey-context.py --backlog</code>); <code>done-direct</code> cierra un ítem con su commit; una cadencia de refinamiento lo mantiene al día.</p>
+    </div>
+    <div class="card">
+      <h3>Guía de portabilidad</h3>
+      <p class="small"><code>docs/portability.md</code> lista lo que depende del runtime (Claude Code es el único soportado); el trabajo de navegador puede ir a otro agente (<code>browse.via</code>); sin país, zona horaria ni idioma fijos.</p>
+    </div>
+  </div>
+  <p class="small" data-counts="wave3">En esta versión: <span data-count="skills">33</span> skills (1 orquestador, <span data-count="phase">13</span> fases, <span data-count="support">19</span> de soporte), <span data-count="rules">27</span> reglas compartidas, <span data-count="adapters">7</span> adaptadores de tracker y <span data-count="scripts">19</span> scripts.</p>
+</section>
+
 <section class="block" id="es-install" aria-labelledby="es-t-inst">
   <p class="eyebrow">12 · Empezar</p>
   <h2 id="es-t-inst">Instalar y actualizar</h2>
@@ -2005,7 +2091,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     <li><span class="ver">3.7.0</span><span class="date">2026-09-18</span><br>Trabajo multi-agente y multi-repo: cambios padre/hijo, decisiones <code>D-NN</code>, inputs fijados, <code>approvals.prod</code>, tareas <code>[human]</code>, tipos <code>ops</code> y <code>hotfix</code>, PR solo docs, chequeos de preparación en health.</li>
     <li><span class="ver">3.6.0</span><span class="date">2026-09-08</span><br>Disciplina causal en <code>karvey-investigate</code>: fechar el síntoma, qué cambió antes de qué está mal, gate de coherencia causal, trazar entre repos.</li>
     <li><span class="ver">3.5.0</span><span class="date">2026-07-05</span><br>Catálogo de componentes visuales (<code>design-components.md</code>) en design-graphic.</li>
-    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Estimación en minutos de IA (10–30 min, tope ~60) en <code>clickup-protocol.md</code>.</li>
+    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Estimación en minutos de IA (10–30 min, tope ~60) en <code>rules/adapters/clickup.md</code>.</li>
     <li><span class="ver">3.3.0</span><span class="date">2026-06-23</span><br>Capa de estándares de ingeniería (golden paths), gate de conformidad en modo diseño, <code>deviations.md</code>, <code>karvey-standards</code>.</li>
     <li><span class="ver">3.2.0</span><span class="date">2026-06-17</span><br>Karvey se vuelve espiral: <code>karvey-iterate</code>, bucle de iteración, tracker <code>BUG-NN</code>, backlog dual, ritual de cierre de fase; mockup de 3–4 niveles con validación.</li>
     <li><span class="ver">3.1.0</span><span class="date">2026-06-14</span><br><code>karvey-import</code>: migración desde Kiro y gstack.</li>
@@ -2037,6 +2123,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <li><a href="#pt-team-config">Configuração da equipe</a></li>
       <li><a href="#pt-deploy">Deploy e branches</a></li>
       <li><a href="#pt-agent-team">Equipe de agentes</a></li>
+      <li><a href="#pt-wave3">Onda 3 (4.1)</a></li>
       <li><a href="#pt-install">Instalação</a></li>
       <li><a href="#pt-versions">Versões</a></li>
     </ol>
@@ -2110,7 +2197,7 @@ claude plugin update karvey@karvey-methods</code></pre>
   <div class="org" role="group" aria-label="Organograma do plugin karvey">
     <div class="org-node">
       <div class="t">Plugin <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 skills · 26 regras · hooks</div>
+      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 skills · 27 regras · hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -2167,22 +2254,22 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (c) Rules -->
       <section class="branch" aria-labelledby="pt-org-c">
-        <h3 id="pt-org-c"><span class="l" aria-hidden="true">c</span> Regras compartilhadas · 26</h3>
+        <h3 id="pt-org-c"><span class="l" aria-hidden="true">c</span> Regras compartilhadas · 27</h3>
         <h4>Projeto e configuração</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>Equipe e ferramentas (3.10)</h4>
-        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>clickup-protocol</li></ul>
+        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>adapters (7)</li></ul>
         <h4>Especificação e design</h4>
         <ul class="chips"><li>ears-format</li><li>security-tiers</li><li>engineering-standards</li></ul>
         <h4>Espiral e fechamento</h4>
-        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>phase-close</li><li>verification</li></ul>
+        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>risks</li><li>phase-close</li><li>verification</li></ul>
         <h4>Entrega</h4>
         <ul class="chips"><li>deploy-workflow</li><li>versioning</li><li>changelog-policy</li><li>enforcement</li></ul>
         <h4>Colaboração</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team (opcional)</li></ul>
         <h4>Fluxo, faixas e gates</h4>
-        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li><li>_core</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -2263,7 +2350,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <dl>
         <dt>O que faz</dt><dd>Cria ou lê o <code>project.json</code> (git, cloud, IaC, knowledge_sync, targets, repos, spec_repo, branch_flow, enforcement), captura o <em>goal</em> (estrela-guia), pede a configuração da equipe (passo 3.2) e oferece ativar os hooks (passo 3.5).</dd>
         <dt>Produz</dt><dd><code>project.json</code>, <code>change-id</code>, <code>prd.md</code>, <code>spec.json</code>, um Epic no tracker da equipe ou <code>PLAN.md</code>.</dd>
-        <dt>Regras</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">clickup-protocol</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
+        <dt>Regras</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">adapters</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
       </dl>
       <p class="gate"><b>Gate:</b> sem aprovação própria; o passo seguinte é gerar os requisitos.</p>
     </article>
@@ -2329,7 +2416,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <dl>
         <dt>O que faz</dt><dd>Divide o trabalho em tarefas de IA de 10–30 min <code>E{n}.F{n}.T{n} [DB/Backend/Frontend/Infra]</code> com dependências, estimadas em minutos (teto de ~60; acima disso, divide). As tarefas <code>[human]</code> trazem executor, comando, verificação e rollback.</dd>
         <dt>Produz</dt><dd><code>tasks.md</code> + tarefas no tracker ou um checklist no <code>PLAN.md</code>.</dd>
-        <dt>Regras</dt><dd><span class="tag">clickup-protocol</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
+        <dt>Regras</dt><dd><span class="tag">adapters</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
       </dl>
       <p class="gate"><b>Gate:</b> <code>approvals.tasks.approved</code>.</p>
     </article>
@@ -2536,7 +2623,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 7. RULES -->
 <section class="block" id="pt-rules" aria-labelledby="pt-t-rules">
   <p class="eyebrow">07 · Contrato comum</p>
-  <h2 id="pt-t-rules">Regras compartilhadas · 26</h2>
+  <h2 id="pt-t-rules">Regras compartilhadas · 27</h2>
   <p class="lede">Ficam em <code>plugins/karvey/skills/karvey/rules/</code>. As skills as citam em vez de repeti-las; as cópias locais devem ser idênticas byte a byte à canônica.</p>
 
   <div class="filter" id="pt-rules-filter" data-filter="rules" hidden>
@@ -2549,10 +2636,10 @@ claude plugin update karvey@karvey-methods</code></pre>
       <caption class="sr">Regras compartilhadas do método Karvey</caption>
       <thead><tr><th scope="col">Regra</th><th scope="col">O que rege</th><th scope="col">Aplica-se em</th></tr></thead>
       <tbody>
+        <tr><td><code>_core.md</code> <span class="tag o">4.1</span></td><td>Os sete contratos rígidos que toda fase carrega: a ferramenta de estado, o gate e a aprovação, o gate de produção, branches e commits, a verificação, o roteador de achados e o texto neutro. Todo o resto fica na linha <code>Load:</code> da fase.</td><td>toda fase</td></tr>
         <tr><td><code>project-config.md</code></td><td>O <code>project.json</code> do projeto: git, cloud, IaC, knowledge_sync, targets, repos (1 ou mais, nunca zero), spec_repo, branch_flow, enforcement, standards e os blocos da equipe.</td><td>init, architecture, infra, deploy, context</td></tr>
-        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>A ferramenta de gestão da equipe e seu fluxo de status: 5 estados lógicos, operações lógicas (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) e um adaptador por ferramenta.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
+        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>A ferramenta de gestão da equipe e seu fluxo de status: 5 estados lógicos, operações lógicas (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) e um adaptador por ferramenta. Desde a 4.1 o adaptador de cada ferramenta fica em <code>rules/adapters/</code> e uma fase carrega só o que o projeto usa.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
         <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>O canal de notificação da equipe (nunca um presumido): destino, rota, eventos (<code>qa</code>, <code>deploy</code>, <code>incident</code> opcional) e formatação por canal.</td><td>init, qa, deploy, iterate</td></tr>
-        <tr><td><code>clickup-protocol.md</code></td><td>O adaptador do ClickUp: credenciais em <code>.connections.json</code> (nunca commitadas), hierarquia, nomenclatura e estimativa em minutos de IA (10–30, teto de ~60) válida para qualquer ferramenta.</td><td>init, tasks, impl, qa, deploy, archive</td></tr>
         <tr><td><code>engineering-standards.md</code></td><td>Os golden paths por camada (a terceira fonte da verdade), o gate de conformidade em modo design e o <code>deviations.md</code>; separação entre o método público e os padrões da equipe.</td><td>init, architecture, impl, qa, archive, guard</td></tr>
         <tr><td><code>ears-format.md</code></td><td>Sintaxe EARS: ubíquo, orientado a evento (WHEN), orientado a estado (WHILE), comportamento indesejado (IF/THEN), funcionalidade opcional (WHERE) e complexo.</td><td>requirements</td></tr>
         <tr><td><code>security-tiers.md</code></td><td>Tiers 1–4 (público, autenticado, privilegiado, crítico) com seus controles mínimos por camada.</td><td>requirements, architecture, infra, qa</td></tr>
@@ -2567,6 +2654,7 @@ claude plugin update karvey@karvey-methods</code></pre>
         <tr><td><code>iteration-loop.md</code></td><td>As três arestas de feedback, o <code>findings.md</code>, o subciclo de revisão da spec e a regra de convergência.</td><td>test, qa, browse, iterate</td></tr>
         <tr><td><code>incident-tracking.md</code></td><td>Um tracker <code>BUG-NN</code> por repositório (<code>docs/bugs_dev_testing.md</code>) + um índice global, numeração que nunca reinicia e histórico de estados.</td><td>test, qa, iterate, investigate</td></tr>
         <tr><td><code>backlog.md</code></td><td>Um backlog de descobertas duplo: Markdown como fonte da verdade, espelhado no tracker; varrido no arquivamento.</td><td>iterate, archive, context</td></tr>
+        <tr><td><code>risks.md</code> <span class="tag o">4.1</span></td><td>Um registro de riscos por mudança: responsável, probabilidade, impacto, gatilho, mitigação, estado e última revisão; revisado nos gates de qa e release.</td><td>architecture, iterate, qa, archive</td></tr>
         <tr><td><code>phase-close.md</code></td><td>Um ritual obrigatório de 4 ações ao fechar cada fase e tarefa: comentar, mudar o status (+ cascata), varrer achados e backlog, atualizar <code>spec.json</code> + conhecimento.</td><td>todas as fases (no fechamento), impl, iterate</td></tr>
         <tr><td><code>verification.md</code></td><td>18 modos de falha que tornam falso um relatório verde (uma citação não é a coisa citada, exit 0 não é sucesso, um teste verde sobre código que ninguém chama…).</td><td>todas as fases (antes de dizer “pronto”), guard, qa, health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>Trabalho multiagente e multirrepositório: mudanças mãe/filha, decisões <code>D-NN</code>, inputs fixados com <code>@commit</code>, aprovações com quem e onde, tarefas <code>[human]</code>, tipos <code>ops</code> e <code>hotfix</code>, PRs só de documentação.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health e todos os gates</td></tr>
@@ -2798,6 +2886,47 @@ claude plugin update karvey@karvey-methods</code></pre>
 </section>
 
 <!-- 12. INSTALL -->
+<section class="block" id="pt-wave3" aria-labelledby="pt-t-wave3">
+  <p class="eyebrow">Novo na 4.1 · Onda 3</p>
+  <h2 id="pt-t-wave3">Fases mais leves, sponsors informados</h2>
+  <p class="lede">Cada fase carrega só as regras que declara, e o sponsor de uma mudança recebe uma página com escopo, estado, custo, riscos abertos e as decisões que aguardam por ele. O custo é medido, nunca limitado.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>Listas de carga</h3>
+      <p class="small">Cada skill de fase nomeia sua lista fechada numa linha <code>Load:</code>: os contratos do núcleo (<code>_core.md</code>) mais as regras de que precisa, e só o adaptador do tracker que o projeto usa. As regras citam outras regras em notas de rodapé que nunca são abertas. Medido: a fase mediana carrega 56% menos texto que na 4.0.</p>
+    </div>
+    <div class="card">
+      <h3>Página do sponsor</h3>
+      <p class="small">A cada fechamento de gate o <code>karvey-close.py</code> gera o <code>sponsor.html</code> a partir dos artefatos da própria mudança: escopo, estado, custo, riscos abertos e o que aguarda o sponsor. Uma lista de permissões e uma verificação de vazamento recusam segredos, caminhos, hosts e dados pessoais; vai só ao destino que o projeto declara.</p>
+    </div>
+    <div class="card">
+      <h3>Perguntas e riscos</h3>
+      <p class="small">As perguntas abertas <code>Q-NN</code> têm responsável e data-limite (<code>/karvey-decisions ask</code>). Cada mudança mantém um registro de riscos com responsável, gatilho e última revisão; o archive recusa um risco aberto.</p>
+    </div>
+    <div class="card">
+      <h3>Custo por mudança</h3>
+      <p class="small">A statusline captura o custo da sessão sem um turno do modelo; <code>karvey-state.py effort</code> o registra por fase e os juízes tiram seus tokens do transcript. Métricas por faixa, cliente e período; um valor atípico é insumo para a retro, nunca um freio.</p>
+    </div>
+    <div class="card">
+      <h3>Sistema de design</h3>
+      <p class="small">O projeto mantém um único <code>design-system.md</code>; o design-graphic escreve só um delta. O <code>karvey-contrast-check.py</code> calcula o contraste WCAG e um juiz de design lê o delta antes do gate.</p>
+    </div>
+    <div class="card">
+      <h3>Portfólio</h3>
+      <p class="small"><code>karvey-context.py --portfolio</code> lê todos os repositórios Karvey da organização a partir de um arquivo, offline e só leitura: mudanças ativas, decisões pendentes, releases e custo, por cliente.</p>
+    </div>
+    <div class="card">
+      <h3>Backlog WSJF</h3>
+      <p class="small">Valor, esforço, custo do atraso e data necessária ordenam o backlog (<code>karvey-context.py --backlog</code>); <code>done-direct</code> fecha um item com o seu commit; uma cadência de refinamento o mantém em dia.</p>
+    </div>
+    <div class="card">
+      <h3>Guia de portabilidade</h3>
+      <p class="small"><code>docs/portability.md</code> lista o que depende do runtime (o Claude Code é o único suportado); o trabalho de navegador pode ir para outro agente (<code>browse.via</code>); sem país, fuso horário ou idioma fixos.</p>
+    </div>
+  </div>
+  <p class="small" data-counts="wave3">Nesta versão: <span data-count="skills">33</span> skills (1 orquestrador, <span data-count="phase">13</span> fases, <span data-count="support">19</span> de suporte), <span data-count="rules">27</span> regras compartilhadas, <span data-count="adapters">7</span> adaptadores de tracker e <span data-count="scripts">19</span> scripts.</p>
+</section>
+
 <section class="block" id="pt-install" aria-labelledby="pt-t-inst">
   <p class="eyebrow">12 · Primeiros passos</p>
   <h2 id="pt-t-inst">Instalar e atualizar</h2>
@@ -2841,7 +2970,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     <li><span class="ver">3.7.0</span><span class="date">2026-09-18</span><br>Trabalho multiagente e multirrepositório: mudanças mãe/filha, decisões <code>D-NN</code>, inputs fixados, <code>approvals.prod</code>, tarefas <code>[human]</code>, tipos <code>ops</code> e <code>hotfix</code>, PRs só de documentação, verificações de prontidão no health.</li>
     <li><span class="ver">3.6.0</span><span class="date">2026-09-08</span><br>Disciplina causal no <code>karvey-investigate</code>: datar o sintoma, o que mudou antes do que está errado, gate de coerência causal, rastreio entre repositórios.</li>
     <li><span class="ver">3.5.0</span><span class="date">2026-07-05</span><br>Catálogo de componentes visuais (<code>design-components.md</code>) no design-graphic.</li>
-    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Estimativa em minutos de IA (10–30 min, teto de ~60) no <code>clickup-protocol.md</code>.</li>
+    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Estimativa em minutos de IA (10–30 min, teto de ~60) no <code>rules/adapters/clickup.md</code>.</li>
     <li><span class="ver">3.3.0</span><span class="date">2026-06-23</span><br>Camada de padrões de engenharia (golden paths), gate de conformidade em modo design, <code>deviations.md</code>, <code>karvey-standards</code>.</li>
     <li><span class="ver">3.2.0</span><span class="date">2026-06-17</span><br>O Karvey vira espiral: <code>karvey-iterate</code>, ciclo de iteração, tracker <code>BUG-NN</code>, backlog duplo, ritual de fechamento de fase; mockup de 3–4 níveis com validação.</li>
     <li><span class="ver">3.1.0</span><span class="date">2026-06-14</span><br><code>karvey-import</code>: migração a partir do Kiro e do gstack.</li>
@@ -2873,6 +3002,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <li><a href="#de-team-config">Team-Einstellungen</a></li>
       <li><a href="#de-deploy">Deploy &amp; Branches</a></li>
       <li><a href="#de-agent-team">Agententeam</a></li>
+      <li><a href="#de-wave3">Welle 3 (4.1)</a></li>
       <li><a href="#de-install">Installation</a></li>
       <li><a href="#de-versions">Versionen</a></li>
     </ol>
@@ -2946,7 +3076,7 @@ claude plugin update karvey@karvey-methods</code></pre>
   <div class="org" role="group" aria-label="Organigramm des Plugins karvey">
     <div class="org-node">
       <div class="t">Plugin <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">Marketplace <span class="mono">karvey-methods</span> · 33 Skills · 26 Regeln · Hooks</div>
+      <div class="d">Marketplace <span class="mono">karvey-methods</span> · 33 Skills · 27 Regeln · Hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -3003,22 +3133,22 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (c) Rules -->
       <section class="branch" aria-labelledby="de-org-c">
-        <h3 id="de-org-c"><span class="l" aria-hidden="true">c</span> Gemeinsame Regeln · 26</h3>
+        <h3 id="de-org-c"><span class="l" aria-hidden="true">c</span> Gemeinsame Regeln · 27</h3>
         <h4>Projekt und Konfiguration</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>Team und Werkzeuge (3.10)</h4>
-        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>clickup-protocol</li></ul>
+        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>adapters (7)</li></ul>
         <h4>Spezifikation und Design</h4>
         <ul class="chips"><li>ears-format</li><li>security-tiers</li><li>engineering-standards</li></ul>
         <h4>Spirale und Abschluss</h4>
-        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>phase-close</li><li>verification</li></ul>
+        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>risks</li><li>phase-close</li><li>verification</li></ul>
         <h4>Auslieferung</h4>
         <ul class="chips"><li>deploy-workflow</li><li>versioning</li><li>changelog-policy</li><li>enforcement</li></ul>
         <h4>Zusammenarbeit</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team (optional)</li></ul>
         <h4>Ablauf, Spuren und Gates</h4>
-        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li><li>_core</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -3099,7 +3229,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <dl>
         <dt>Was sie tut</dt><dd>Erstellt oder liest <code>project.json</code> (git, cloud, IaC, knowledge_sync, targets, repos, spec_repo, branch_flow, enforcement), erfasst das <em>Ziel</em> (Nordstern), fragt die Team-Einstellungen ab (Schritt 3.2) und bietet an, die Hooks zu aktivieren (Schritt 3.5).</dd>
         <dt>Ergebnis</dt><dd><code>project.json</code>, <code>change-id</code>, <code>prd.md</code>, <code>spec.json</code>, ein Epic im Tracker des Teams oder <code>PLAN.md</code>.</dd>
-        <dt>Regeln</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">clickup-protocol</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
+        <dt>Regeln</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">adapters</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
       </dl>
       <p class="gate"><b>Gate:</b> keine eigene Freigabe; der nächste Schritt ist das Erzeugen der Anforderungen.</p>
     </article>
@@ -3165,7 +3295,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <dl>
         <dt>Was sie tut</dt><dd>Zerlegt die Arbeit in KI-Aufgaben von 10–30 Min. <code>E{n}.F{n}.T{n} [DB/Backend/Frontend/Infra]</code> mit Abhängigkeiten, geschätzt in Minuten (Obergrenze ~60, sonst aufteilen). <code>[human]</code>-Aufgaben enthalten Ausführende, Befehl, Verifikation und Rollback.</dd>
         <dt>Ergebnis</dt><dd><code>tasks.md</code> + Aufgaben im Tracker oder eine Checkliste in <code>PLAN.md</code>.</dd>
-        <dt>Regeln</dt><dd><span class="tag">clickup-protocol</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
+        <dt>Regeln</dt><dd><span class="tag">adapters</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
       </dl>
       <p class="gate"><b>Gate:</b> <code>approvals.tasks.approved</code>.</p>
     </article>
@@ -3372,7 +3502,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 7. RULES -->
 <section class="block" id="de-rules" aria-labelledby="de-t-rules">
   <p class="eyebrow">07 · Gemeinsamer Vertrag</p>
-  <h2 id="de-t-rules">Gemeinsame Regeln · 26</h2>
+  <h2 id="de-t-rules">Gemeinsame Regeln · 27</h2>
   <p class="lede">Sie liegen in <code>plugins/karvey/skills/karvey/rules/</code>. Skills verweisen auf sie, statt sie zu wiederholen; lokale Kopien müssen byteweise identisch mit der kanonischen sein.</p>
 
   <div class="filter" id="de-rules-filter" data-filter="rules" hidden>
@@ -3385,10 +3515,10 @@ claude plugin update karvey@karvey-methods</code></pre>
       <caption class="sr">Gemeinsame Regeln der Karvey-Methode</caption>
       <thead><tr><th scope="col">Regel</th><th scope="col">Was sie regelt</th><th scope="col">Gilt in</th></tr></thead>
       <tbody>
+        <tr><td><code>_core.md</code> <span class="tag o">4.1</span></td><td>Die sieben harten Verträge, die jede Phase lädt: das Zustandswerkzeug, Gate und Freigabe, das Produktions-Gate, Branches und Commits, die Verifikation, der Befund-Router und neutraler Text. Alles andere steht in der <code>Load:</code>-Zeile der Phase.</td><td>jede Phase</td></tr>
         <tr><td><code>project-config.md</code></td><td>Die <code>project.json</code> des Projekts: git, cloud, IaC, knowledge_sync, targets, repos (1 oder mehr, nie null), spec_repo, branch_flow, enforcement, standards und die Team-Blöcke.</td><td>init, architecture, infra, deploy, context</td></tr>
-        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>Das Management-Werkzeug des Teams und sein Statusablauf: 5 logische Zustände, logische Operationen (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) und ein Adapter pro Werkzeug.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
+        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>Das Management-Werkzeug des Teams und sein Statusablauf: 5 logische Zustände, logische Operationen (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) und ein Adapter pro Werkzeug. Seit 4.1 liegt der Adapter jedes Werkzeugs in <code>rules/adapters/</code>, und eine Phase lädt nur den, den das Projekt nutzt.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
         <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>Der Benachrichtigungskanal des Teams (nie ein angenommener): Ziel, Route, Ereignisse (<code>qa</code>, <code>deploy</code>, optional <code>incident</code>) und Formatierung pro Kanal.</td><td>init, qa, deploy, iterate</td></tr>
-        <tr><td><code>clickup-protocol.md</code></td><td>Der ClickUp-Adapter: Zugangsdaten in <code>.connections.json</code> (nie committet), Hierarchie, Benennung und Schätzung in KI-Minuten (10–30, Obergrenze ~60), gültig für jedes Werkzeug.</td><td>init, tasks, impl, qa, deploy, archive</td></tr>
         <tr><td><code>engineering-standards.md</code></td><td>Die Golden Paths pro Schicht (die dritte Quelle der Wahrheit), das Konformitäts-Gate im Designmodus und <code>deviations.md</code>; Trennung zwischen der öffentlichen Methode und den Standards des Teams.</td><td>init, architecture, impl, qa, archive, guard</td></tr>
         <tr><td><code>ears-format.md</code></td><td>EARS-Syntax: ubiquitär, ereignisgesteuert (WHEN), zustandsgesteuert (WHILE), unerwünschtes Verhalten (IF/THEN), optionales Feature (WHERE) und komplex.</td><td>requirements</td></tr>
         <tr><td><code>security-tiers.md</code></td><td>Tiers 1–4 (öffentlich, authentifiziert, privilegiert, kritisch) mit ihren Mindestkontrollen pro Schicht.</td><td>requirements, architecture, infra, qa</td></tr>
@@ -3403,6 +3533,7 @@ claude plugin update karvey@karvey-methods</code></pre>
         <tr><td><code>iteration-loop.md</code></td><td>Die drei Feedbackkanten, <code>findings.md</code>, der Revisions-Teilzyklus der Spezifikation und die Konvergenzregel.</td><td>test, qa, browse, iterate</td></tr>
         <tr><td><code>incident-tracking.md</code></td><td>Ein <code>BUG-NN</code>-Tracker pro Repo (<code>docs/bugs_dev_testing.md</code>) + ein globaler Index, eine Nummerierung, die nie zurückgesetzt wird, und eine Zustandshistorie.</td><td>test, qa, iterate, investigate</td></tr>
         <tr><td><code>backlog.md</code></td><td>Ein doppeltes Discovery-Backlog: Markdown als Single Source of Truth, gespiegelt im Tracker; bei der Archivierung durchkämmt.</td><td>iterate, archive, context</td></tr>
+        <tr><td><code>risks.md</code> <span class="tag o">4.1</span></td><td>Ein Risikoregister pro Änderung: Verantwortlicher, Wahrscheinlichkeit, Auswirkung, Auslöser, Gegenmaßnahme, Status und letzte Prüfung; geprüft an den Gates qa und release.</td><td>architecture, iterate, qa, archive</td></tr>
         <tr><td><code>phase-close.md</code></td><td>Ein verpflichtendes Ritual aus 4 Aktionen beim Abschluss jeder Phase und Aufgabe: kommentieren, Status ändern (+ Kaskade), Befunde und Backlog durchkämmen, <code>spec.json</code> + Wissen aktualisieren.</td><td>jede Phase (beim Abschluss), impl, iterate</td></tr>
         <tr><td><code>verification.md</code></td><td>18 Fehlermodi, die einen grünen Bericht falsch machen (ein Zitat ist nicht das Zitierte, Exit 0 ist kein Erfolg, ein grüner Test auf Code, den niemand aufruft…).</td><td>jede Phase (bevor „fertig“ gesagt wird), guard, qa, health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>Arbeit mit mehreren Agenten und Repos: über-/untergeordnete Änderungen, <code>D-NN</code>-Entscheidungen, per <code>@commit</code> gepinnte Eingaben, Freigaben mit wer und wo, <code>[human]</code>-Aufgaben, Typen <code>ops</code> und <code>hotfix</code>, reine Doku-PRs.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health und jedes Gate</td></tr>
@@ -3634,6 +3765,47 @@ claude plugin update karvey@karvey-methods</code></pre>
 </section>
 
 <!-- 12. INSTALL -->
+<section class="block" id="de-wave3" aria-labelledby="de-t-wave3">
+  <p class="eyebrow">Neu in 4.1 · Welle 3</p>
+  <h2 id="de-t-wave3">Schlankere Phasen, informierte Sponsoren</h2>
+  <p class="lede">Jede Phase lädt nur die Regeln, die sie deklariert, und der Sponsor einer Änderung bekommt eine Seite mit Umfang, Stand, Kosten, offenen Risiken und den Entscheidungen, die auf ihn warten. Kosten werden gemessen, nie gedeckelt.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>Ladelisten</h3>
+      <p class="small">Jeder Phasen-Skill nennt seine geschlossene Liste in einer <code>Load:</code>-Zeile: die Kernverträge (<code>_core.md</code>), die Regeln, die er braucht, und nur den Tracker-Adapter, den das Projekt nutzt. Regeln zitieren andere Regeln in Fußnoten, die nie geöffnet werden. Gemessen: die mittlere Phase lädt 56&nbsp;% weniger Text als in 4.0.</p>
+    </div>
+    <div class="card">
+      <h3>Sponsor-Seite</h3>
+      <p class="small">Bei jedem Gate-Abschluss erzeugt <code>karvey-close.py</code> die <code>sponsor.html</code> aus den Artefakten der Änderung selbst: Umfang, Stand, Kosten, offene Risiken und was auf den Sponsor wartet. Eine Positivliste und eine Leck-Prüfung weisen Geheimnisse, Pfade, Hosts und personenbezogene Daten zurück; sie geht nur an das Ziel, das das Projekt deklariert.</p>
+    </div>
+    <div class="card">
+      <h3>Fragen und Risiken</h3>
+      <p class="small">Offene Fragen <code>Q-NN</code> haben einen Verantwortlichen und ein Fälligkeitsdatum (<code>/karvey-decisions ask</code>). Jede Änderung führt ein Risikoregister mit Verantwortlichem, Auslöser und letzter Prüfung; archive lehnt ein offenes Risiko ab.</p>
+    </div>
+    <div class="card">
+      <h3>Kosten pro Änderung</h3>
+      <p class="small">Die Statuszeile erfasst die Sitzungskosten ohne Modell-Turn; <code>karvey-state.py effort</code> verbucht sie pro Phase, und die Judges nehmen ihre Tokens aus dem Transkript. Kennzahlen pro Spur, Kunde und Zeitraum; ein Ausreißer ist Input für die Retro, nie ein Stopp.</p>
+    </div>
+    <div class="card">
+      <h3>Designsystem</h3>
+      <p class="small">Das Projekt führt ein einziges <code>design-system.md</code>; design-graphic schreibt nur ein Delta. <code>karvey-contrast-check.py</code> berechnet den WCAG-Kontrast, und ein Design-Judge liest das Delta vor dem Gate.</p>
+    </div>
+    <div class="card">
+      <h3>Portfolio</h3>
+      <p class="small"><code>karvey-context.py --portfolio</code> liest alle Karvey-Repositories der Organisation aus einer Datei, offline und nur lesend: aktive Änderungen, ausstehende Entscheidungen, Releases und Kosten, pro Kunde.</p>
+    </div>
+    <div class="card">
+      <h3>WSJF-Backlog</h3>
+      <p class="small">Wert, Aufwand, Verzögerungskosten und Bedarfsdatum ordnen das Backlog (<code>karvey-context.py --backlog</code>); <code>done-direct</code> schließt einen Eintrag mit seinem Commit; ein Refinement-Rhythmus hält es aktuell.</p>
+    </div>
+    <div class="card">
+      <h3>Portabilitätsleitfaden</h3>
+      <p class="small"><code>docs/portability.md</code> listet, was von der Laufzeit abhängt (Claude Code ist die einzige unterstützte); Browserarbeit kann an einen anderen Agenten gehen (<code>browse.via</code>); kein festes Land, keine feste Zeitzone oder Sprache.</p>
+    </div>
+  </div>
+  <p class="small" data-counts="wave3">In diesem Release: <span data-count="skills">33</span> Skills (1 Orchestrator, <span data-count="phase">13</span> Phasen, <span data-count="support">19</span> Support), <span data-count="rules">27</span> gemeinsame Regeln, <span data-count="adapters">7</span> Tracker-Adapter und <span data-count="scripts">19</span> Skripte.</p>
+</section>
+
 <section class="block" id="de-install" aria-labelledby="de-t-inst">
   <p class="eyebrow">12 · Loslegen</p>
   <h2 id="de-t-inst">Installieren und aktualisieren</h2>
@@ -3677,7 +3849,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     <li><span class="ver">3.7.0</span><span class="date">2026-09-18</span><br>Arbeit mit mehreren Agenten und Repos: über-/untergeordnete Änderungen, <code>D-NN</code>-Entscheidungen, gepinnte Eingaben, <code>approvals.prod</code>, <code>[human]</code>-Aufgaben, Typen <code>ops</code> und <code>hotfix</code>, reine Doku-PRs, Bereitschaftsprüfungen in health.</li>
     <li><span class="ver">3.6.0</span><span class="date">2026-09-08</span><br>Kausale Disziplin in <code>karvey-investigate</code>: das Symptom datieren, was sich geändert hat vor dem, was falsch ist, Gate für kausale Kohärenz, Nachverfolgung über Repos hinweg.</li>
     <li><span class="ver">3.5.0</span><span class="date">2026-07-05</span><br>Visueller Komponentenkatalog (<code>design-components.md</code>) in design-graphic.</li>
-    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Schätzung in KI-Minuten (10–30 Min., Obergrenze ~60) in <code>clickup-protocol.md</code>.</li>
+    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br>Schätzung in KI-Minuten (10–30 Min., Obergrenze ~60) in <code>rules/adapters/clickup.md</code>.</li>
     <li><span class="ver">3.3.0</span><span class="date">2026-06-23</span><br>Ebene der Engineering-Standards (Golden Paths), Konformitäts-Gate im Designmodus, <code>deviations.md</code>, <code>karvey-standards</code>.</li>
     <li><span class="ver">3.2.0</span><span class="date">2026-06-17</span><br>Karvey wird zur Spirale: <code>karvey-iterate</code>, Iterationsschleife, <code>BUG-NN</code>-Tracker, doppeltes Backlog, Phase-Close-Ritual; Mockup mit 3–4 Ebenen und Validierung.</li>
     <li><span class="ver">3.1.0</span><span class="date">2026-06-14</span><br><code>karvey-import</code>: Migration von Kiro und gstack.</li>
@@ -3709,6 +3881,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <li><a href="#zh-team-config">团队设置</a></li>
       <li><a href="#zh-deploy">部署与分支</a></li>
       <li><a href="#zh-agent-team">代理团队</a></li>
+      <li><a href="#zh-wave3">第 3 波（4.1）</a></li>
       <li><a href="#zh-install">安装</a></li>
       <li><a href="#zh-versions">版本</a></li>
     </ol>
@@ -3782,7 +3955,7 @@ claude plugin update karvey@karvey-methods</code></pre>
   <div class="org" role="group" aria-label="karvey 插件组织结构图">
     <div class="org-node">
       <div class="t">插件 <code style="background:none;color:inherit">karvey</code></div>
-      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 个技能 · 26 条规则 · hooks</div>
+      <div class="d">marketplace <span class="mono">karvey-methods</span> · 33 个技能 · 27 条规则 · hooks</div>
     </div>
     <div class="org-stem" aria-hidden="true"></div>
     <div class="org-node orch">
@@ -3839,22 +4012,22 @@ claude plugin update karvey@karvey-methods</code></pre>
 
       <!-- (c) Rules -->
       <section class="branch" aria-labelledby="zh-org-c">
-        <h3 id="zh-org-c"><span class="l" aria-hidden="true">c</span> 共享规则 · 26</h3>
+        <h3 id="zh-org-c"><span class="l" aria-hidden="true">c</span> 共享规则 · 27</h3>
         <h4>项目与配置</h4>
         <ul class="chips"><li>project-config</li><li>targets</li><li>knowledge-sync</li><li>living-specs</li></ul>
         <h4>团队与工具（3.10）</h4>
-        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>clickup-protocol</li></ul>
+        <ul class="chips"><li>management-adapters</li><li>notifications</li><li>adapters (7)</li></ul>
         <h4>规格与设计</h4>
         <ul class="chips"><li>ears-format</li><li>security-tiers</li><li>engineering-standards</li></ul>
         <h4>螺旋与收尾</h4>
-        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>phase-close</li><li>verification</li></ul>
+        <ul class="chips"><li>iteration-loop</li><li>incident-tracking</li><li>backlog</li><li>risks</li><li>phase-close</li><li>verification</li></ul>
         <h4>交付</h4>
         <ul class="chips"><li>deploy-workflow</li><li>versioning</li><li>changelog-policy</li><li>enforcement</li></ul>
         <h4>协作</h4>
         <ul class="chips"><li>multi-agent</li><li>support-skills</li></ul>
         <ul class="chips opt" style="margin-top:.35rem"><li>team（可选）</li></ul>
         <h4>流程、通道与关口</h4>
-        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li></ul>
+        <ul class="chips"><li>state-machine</li><li>lanes</li><li>gates</li><li>judges</li><li>_core</li></ul>
       </section>
 
       <!-- (d) Hooks -->
@@ -3935,7 +4108,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <dl>
         <dt>做什么</dt><dd>创建或读取 <code>project.json</code>（git、cloud、IaC、knowledge_sync、targets、repos、spec_repo、branch_flow、enforcement），记录<em>目标</em>（北极星），询问团队设置（步骤 3.2），并提供启用 hooks 的选项（步骤 3.5）。</dd>
         <dt>产出</dt><dd><code>project.json</code>、<code>change-id</code>、<code>prd.md</code>、<code>spec.json</code>，以及团队追踪工具中的一个 Epic 或 <code>PLAN.md</code>。</dd>
-        <dt>规则</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">clickup-protocol</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
+        <dt>规则</dt><dd><span class="tag">project-config</span><span class="tag">management-adapters</span><span class="tag">notifications</span><span class="tag">adapters</span><span class="tag">living-specs</span><span class="tag">knowledge-sync</span><span class="tag">enforcement</span></dd>
       </dl>
       <p class="gate"><b>关卡：</b>本身无需审批；下一步是生成需求。</p>
     </article>
@@ -4001,7 +4174,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <dl>
         <dt>做什么</dt><dd>把工作拆分为 10–30 分钟的 AI 任务 <code>E{n}.F{n}.T{n} [DB/Backend/Frontend/Infra]</code>，带依赖关系，以分钟估算（上限约 60，超出则拆分）。<code>[human]</code> 任务需注明执行者、命令、验证方式和回滚方案。</dd>
         <dt>产出</dt><dd><code>tasks.md</code> + 追踪工具中的任务，或 <code>PLAN.md</code> 中的清单。</dd>
-        <dt>规则</dt><dd><span class="tag">clickup-protocol</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
+        <dt>规则</dt><dd><span class="tag">adapters</span><span class="tag">management-adapters</span><span class="tag">multi-agent</span></dd>
       </dl>
       <p class="gate"><b>关卡：</b><code>approvals.tasks.approved</code>。</p>
     </article>
@@ -4208,7 +4381,7 @@ claude plugin update karvey@karvey-methods</code></pre>
 <!-- 7. RULES -->
 <section class="block" id="zh-rules" aria-labelledby="zh-t-rules">
   <p class="eyebrow">07 · 共同契约</p>
-  <h2 id="zh-t-rules">共享规则 · 26</h2>
+  <h2 id="zh-t-rules">共享规则 · 27</h2>
   <p class="lede">它们位于 <code>plugins/karvey/skills/karvey/rules/</code>。技能引用这些规则，而不是重复其内容；本地副本必须与规范版本逐字节一致。</p>
 
   <div class="filter" id="zh-rules-filter" data-filter="rules" hidden>
@@ -4221,10 +4394,10 @@ claude plugin update karvey@karvey-methods</code></pre>
       <caption class="sr">Karvey 方法的共享规则</caption>
       <thead><tr><th scope="col">规则</th><th scope="col">约束内容</th><th scope="col">适用于</th></tr></thead>
       <tbody>
+        <tr><td><code>_core.md</code> <span class="tag o">4.1</span></td><td>每个阶段都会加载的七项硬性契约：状态工具、关口与批准、生产关口、分支与提交、验证、发现路由以及中立文本。其余内容都在该阶段的 <code>Load:</code> 行中。</td><td>每个阶段</td></tr>
         <tr><td><code>project-config.md</code></td><td>项目的 <code>project.json</code>：git、cloud、IaC、knowledge_sync、targets、repos（1 个或多个，绝不为零）、spec_repo、branch_flow、enforcement、standards 以及团队相关的配置块。</td><td>init、architecture、infra、deploy、context</td></tr>
-        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>团队的管理工具及其状态流：5 个逻辑状态、逻辑操作（<code>create_epic</code>、<code>set_status</code>、<code>cascade</code>…）以及每种工具一个适配器。</td><td>init、requirements、tasks、impl、qa、deploy、iterate、archive、phase-close</td></tr>
+        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>团队的管理工具及其状态流：5 个逻辑状态、逻辑操作（<code>create_epic</code>、<code>set_status</code>、<code>cascade</code>…）以及每种工具一个适配器。 自 4.1 起，每个工具的适配器位于 <code>rules/adapters/</code>，一个阶段只加载项目实际使用的那一个。</td><td>init、requirements、tasks、impl、qa、deploy、iterate、archive、phase-close</td></tr>
         <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>团队的通知渠道（绝不擅自假定）：目标、路由、事件（<code>qa</code>、<code>deploy</code>，可选 <code>incident</code>）以及各渠道的格式。</td><td>init、qa、deploy、iterate</td></tr>
-        <tr><td><code>clickup-protocol.md</code></td><td>ClickUp 适配器：凭据放在 <code>.connections.json</code> 中（绝不提交），层级、命名，以及适用于任何工具的 AI 分钟估算（10–30，上限约 60）。</td><td>init、tasks、impl、qa、deploy、archive</td></tr>
         <tr><td><code>engineering-standards.md</code></td><td>各层的黄金路径（第三个事实来源）、设计模式下的符合性关卡和 <code>deviations.md</code>；公共方法与团队标准之间的分离。</td><td>init、architecture、impl、qa、archive、guard</td></tr>
         <tr><td><code>ears-format.md</code></td><td>EARS 语法：通用型、事件驱动（WHEN）、状态驱动（WHILE）、非期望行为（IF/THEN）、可选特性（WHERE）以及复合型。</td><td>requirements</td></tr>
         <tr><td><code>security-tiers.md</code></td><td>Tier 1–4（公开、已认证、特权、关键）及其在各层的最低控制措施。</td><td>requirements、architecture、infra、qa</td></tr>
@@ -4239,6 +4412,7 @@ claude plugin update karvey@karvey-methods</code></pre>
         <tr><td><code>iteration-loop.md</code></td><td>三条反馈边、<code>findings.md</code>、规格修订子循环以及收敛规则。</td><td>test、qa、browse、iterate</td></tr>
         <tr><td><code>incident-tracking.md</code></td><td>每个仓库一个 <code>BUG-NN</code> 追踪表（<code>docs/bugs_dev_testing.md</code>）+ 全局索引，编号永不重置，并保留状态历史。</td><td>test、qa、iterate、investigate</td></tr>
         <tr><td><code>backlog.md</code></td><td>双轨发现待办清单：以 Markdown 为事实来源，镜像到追踪工具；在归档时清扫。</td><td>iterate、archive、context</td></tr>
+        <tr><td><code>risks.md</code> <span class="tag o">4.1</span></td><td>每个变更一份风险登记册：负责人、概率、影响、触发条件、缓解措施、状态和最近一次评审；在 qa 和 release 关口评审。</td><td>architecture、iterate、qa、archive</td></tr>
         <tr><td><code>phase-close.md</code></td><td>每个阶段和任务收尾时强制执行的 4 步仪式：评论、变更状态（+ 级联）、清扫发现项和待办清单、更新 <code>spec.json</code> + 知识库。</td><td>每个阶段（收尾时）、impl、iterate</td></tr>
         <tr><td><code>verification.md</code></td><td>18 种会让“全绿”报告失真的失败模式（引用不等于被引用的事物本身，exit 0 不等于成功，测试通过但代码无人调用……）。</td><td>每个阶段（在说“完成”之前）、guard、qa、health</td></tr>
         <tr><td><code>multi-agent.md</code></td><td>多代理与多仓库工作：父/子变更、<code>D-NN</code> 决策、以 <code>@commit</code> 固定的输入、注明由谁在何处批准、<code>[human]</code> 任务、<code>ops</code> 与 <code>hotfix</code> 类型、纯文档 PR。</td><td>init、requirements、design-graphic、infra、tasks、impl、test、iterate、deploy、health 以及每个关卡</td></tr>
@@ -4470,6 +4644,47 @@ claude plugin update karvey@karvey-methods</code></pre>
 </section>
 
 <!-- 12. INSTALL -->
+<section class="block" id="zh-wave3" aria-labelledby="zh-t-wave3">
+  <p class="eyebrow">4.1 新增 · 第 3 波</p>
+  <h2 id="zh-t-wave3">更轻的阶段，知情的发起人</h2>
+  <p class="lede">每个阶段只加载它声明的规则；变更的发起人会得到一个页面，列出范围、状态、成本、未关闭的风险以及等待其决定的事项。成本只度量，从不设上限。</p>
+  <div class="grid">
+    <div class="card">
+      <h3>加载清单</h3>
+      <p class="small">每个阶段技能都在 <code>Load:</code> 行中列出其封闭清单：核心契约（<code>_core.md</code>）、所需的规则，以及项目实际使用的那一个跟踪工具适配器。规则只在从不打开的脚注中引用其他规则。实测：中位阶段加载的文本比 4.0 少 56%。</p>
+    </div>
+    <div class="card">
+      <h3>发起人页面</h3>
+      <p class="small">每次关口关闭时，<code>karvey-close.py</code> 都会根据变更自身的产物生成 <code>sponsor.html</code>：范围、状态、成本、未关闭的风险以及等待发起人的事项。允许清单和泄漏检查会拒绝密钥、路径、主机和个人数据；页面只发送到项目声明的目的地。</p>
+    </div>
+    <div class="card">
+      <h3>问题与风险</h3>
+      <p class="small">未决问题 <code>Q-NN</code> 带有负责人和截止日期（<code>/karvey-decisions ask</code>）。每个变更维护一份风险登记册，包含负责人、触发条件和最近一次评审；archive 会拒绝仍处于打开状态的风险。</p>
+    </div>
+    <div class="card">
+      <h3>每个变更的成本</h3>
+      <p class="small">状态栏在不占用模型回合的情况下记录会话成本；<code>karvey-state.py</code> 的 effort 子命令按阶段记录，评审员的 token 取自会话记录。按泳道、客户和时间段汇总指标；异常值是回顾会的输入，绝不是停止条件。</p>
+    </div>
+    <div class="card">
+      <h3>设计系统</h3>
+      <p class="small">项目只维护一份 <code>design-system.md</code>；design-graphic 只写增量。<code>karvey-contrast-check.py</code> 计算 WCAG 对比度，设计评审员在关口之前阅读该增量。</p>
+    </div>
+    <div class="card">
+      <h3>组合视图</h3>
+      <p class="small"><code>karvey-context.py --portfolio</code> 从一个文件读取组织内所有 Karvey 仓库，离线且只读：按客户列出进行中的变更、待定决策、发布和成本。</p>
+    </div>
+    <div class="card">
+      <h3>WSJF 待办清单</h3>
+      <p class="small">价值、工作量、延迟成本和需求日期决定待办清单的排序（<code>karvey-context.py --backlog</code>）；<code>done-direct</code> 用对应提交关闭条目；固定的梳理节奏让它保持最新。</p>
+    </div>
+    <div class="card">
+      <h3>可移植性指南</h3>
+      <p class="small"><code>docs/portability.md</code> 列出依赖运行时的行为（Claude Code 是唯一受支持的运行时）；浏览器工作可以交给另一个代理（<code>browse.via</code>）；不固定国家、时区或语言。</p>
+    </div>
+  </div>
+  <p class="small" data-counts="wave3">本版本：<span data-count="skills">33</span> 个技能（1 个编排器、<span data-count="phase">13</span> 个阶段、<span data-count="support">19</span> 个支持技能）、<span data-count="rules">27</span> 条共享规则、<span data-count="adapters">7</span> 个跟踪工具适配器和 <span data-count="scripts">19</span> 个脚本。</p>
+</section>
+
 <section class="block" id="zh-install" aria-labelledby="zh-t-inst">
   <p class="eyebrow">12 · 开始使用</p>
   <h2 id="zh-t-inst">安装与更新</h2>
@@ -4513,7 +4728,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     <li><span class="ver">3.7.0</span><span class="date">2026-09-18</span><br>多代理与多仓库工作：父/子变更、<code>D-NN</code> 决策、固定输入、<code>approvals.prod</code>、<code>[human]</code> 任务、<code>ops</code> 与 <code>hotfix</code> 类型、纯文档 PR、health 中的就绪检查。</li>
     <li><span class="ver">3.6.0</span><span class="date">2026-09-08</span><br><code>karvey-investigate</code> 中的因果纪律：确定症状出现的时间，先问变了什么再问哪里错了，因果一致性关卡，跨仓库追踪。</li>
     <li><span class="ver">3.5.0</span><span class="date">2026-07-05</span><br>design-graphic 中的视觉组件目录（<code>design-components.md</code>）。</li>
-    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br><code>clickup-protocol.md</code> 中以 AI 分钟估算（10–30 分钟，上限约 60）。</li>
+    <li><span class="ver">3.4.0</span><span class="date">2026-06-23</span><br><code>rules/adapters/clickup.md</code> 中以 AI 分钟估算（10–30 分钟，上限约 60）。</li>
     <li><span class="ver">3.3.0</span><span class="date">2026-06-23</span><br>工程标准层（黄金路径）、设计模式下的符合性关卡、<code>deviations.md</code>、<code>karvey-standards</code>。</li>
     <li><span class="ver">3.2.0</span><span class="date">2026-06-17</span><br>Karvey 变为螺旋式：<code>karvey-iterate</code>、迭代循环、<code>BUG-NN</code> 追踪表、双轨待办清单、阶段收尾仪式；带校验的 3–4 层原型。</li>
     <li><span class="ver">3.1.0</span><span class="date">2026-06-14</span><br><code>karvey-import</code>：从 Kiro 和 gstack 迁移。</li>

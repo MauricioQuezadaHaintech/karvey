@@ -294,7 +294,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F11.T6 [Test] | ✅ done | 10 | 12 | 0 | trace prints 90/90 covered (80 REQ-W3 + 10 modified), 78 green; `validate` takes a path, not the change id |
 | E1.F11.T7 [Backend] | ✅ done | 6 | 9 | 0 |  |
 | E1.F12.T1 [Frontend] | ✅ done | 12 | 14 | 0 |  |
-| E1.F12.T2 [Frontend] | ⬜ todo | 15 | — | — |  |
+| E1.F12.T2 [Frontend] | ✅ done | 15 | 16 | 0 | section id is `{lang}-wave3` (the page's id convention; the done-when grep `id="wave3` would need an unprefixed, duplicated id): `grep -c -- '-wave3"'` = 15 |
 | E1.F12.T3 [Frontend] | ⬜ todo | 12 | — | — |  |
 | E1.F12.T4 [Frontend] | ⬜ todo | 12 | — | — |  |
 | E1.F12.T5 [Frontend] | ⬜ todo | 12 | — | — |  |
