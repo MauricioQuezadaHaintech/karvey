@@ -5127,15 +5127,15 @@ claude plugin update karvey@karvey-methods</code></pre>
 
 <!-- 5. ITERATION -->
 <section class="block" id="it-iteration" aria-labelledby="it-t-iter">
-  <p class="eyebrow">05 · The spiral</p>
-  <h2 id="it-t-iter">The iteration loop</h2>
-  <p class="lede"><em>Afán</em> — zeal: you do not stop until the result is truly achieved. <code>test</code>, <code>qa</code> and <code>browse</code> only <strong>observe and classify</strong> (they log to <code>findings.md</code>); <code>karvey-iterate</code> is the only one that <strong>routes</strong>.</p>
+  <p class="eyebrow">05 · La spirale</p>
+  <h2 id="it-t-iter">Il ciclo di iterazione</h2>
+  <p class="lede"><em>Afán</em>, zelo: non ti fermi finché il risultato non è davvero raggiunto. <code>test</code>, <code>qa</code> e <code>browse</code> si limitano a <strong>osservare e classificare</strong> (registrano in <code>findings.md</code>); <code>karvey-iterate</code> è l’unica che <strong>instrada</strong>.</p>
 
   <figure>
     <div class="figure-wrap">
       <svg viewBox="0 0 820 330" role="img" aria-labelledby="it-loop-title it-loop-desc">
-        <title id="it-loop-title">Karvey iteration loop</title>
-        <desc id="it-loop-desc">Findings from test, qa and browse land in findings.md. karvey-iterate classifies and routes them: a bug goes to the BUG-NN tracker and the impl, test, qa micro-loop; a spec-gap reopens requirements and ripples only to the affected phases; an emergent item goes to the discovery backlog and becomes a future change-id, swept at archive.</desc>
+        <title id="it-loop-title">Ciclo di iterazione di Karvey</title>
+        <desc id="it-loop-desc">I finding di test, qa e browse finiscono in findings.md. karvey-iterate li classifica e li instrada: un bug va al tracker BUG-NN e al micro-ciclo impl, test, qa; uno spec-gap riapre i requisiti e si propaga solo alle fasi interessate; un elemento emergent va nel backlog di scoperta e diventa un futuro change-id, ripreso in fase di archiviazione.</desc>
         <defs>
           <marker id="it-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah"/></marker>
         </defs>
@@ -5145,11 +5145,11 @@ claude plugin update karvey@karvey-methods</code></pre>
 
         <rect x="200" y="135" width="140" height="60" rx="10" class="n-s"/>
         <text x="270" y="162" text-anchor="middle" class="tb">findings.md</text>
-        <text x="270" y="181" text-anchor="middle" class="tm">single inbox</text>
+        <text x="270" y="181" text-anchor="middle" class="tm">casella unica</text>
 
         <rect x="380" y="130" width="160" height="70" rx="10" class="n-o"/>
         <text x="460" y="160" text-anchor="middle" class="tb">karvey-iterate</text>
-        <text x="460" y="180" text-anchor="middle" class="tm">classifies and routes</text>
+        <text x="460" y="180" text-anchor="middle" class="tm">classifica e instrada</text>
 
         <path d="M160 165 H196" class="e" marker-end="url(#en-arr)"/>
         <path d="M340 165 H376" class="e" marker-end="url(#en-arr)"/>
@@ -5157,37 +5157,37 @@ claude plugin update karvey@karvey-methods</code></pre>
         <rect x="600" y="20" width="210" height="80" rx="10" class="n-r"/>
         <text x="705" y="46" text-anchor="middle" class="tb">bug</text>
         <text x="705" y="66" text-anchor="middle" class="t">BUG-NN (tracker)</text>
-        <text x="705" y="86" text-anchor="middle" class="tm">micro-loop impl → test → qa</text>
+        <text x="705" y="86" text-anchor="middle" class="tm">micro-ciclo impl → test → qa</text>
 
         <rect x="600" y="125" width="210" height="80" rx="10" class="n-s"/>
         <text x="705" y="151" text-anchor="middle" class="tb">spec-gap</text>
-        <text x="705" y="171" text-anchor="middle" class="t">reopens requirements</text>
-        <text x="705" y="191" text-anchor="middle" class="tm">ripple only to affected phases</text>
+        <text x="705" y="171" text-anchor="middle" class="t">riapre i requisiti</text>
+        <text x="705" y="191" text-anchor="middle" class="tm">si propaga solo alle fasi interessate</text>
 
         <rect x="600" y="230" width="210" height="80" rx="10" class="n-m"/>
         <text x="705" y="256" text-anchor="middle" class="tb">emergent</text>
-        <text x="705" y="276" text-anchor="middle" class="t">discovery backlog</text>
-        <text x="705" y="296" text-anchor="middle" class="tm">future change-id (archive)</text>
+        <text x="705" y="276" text-anchor="middle" class="t">backlog di scoperta</text>
+        <text x="705" y="296" text-anchor="middle" class="tm">futuro change-id (archive)</text>
 
         <path d="M540 150 C 570 150, 570 60, 596 60" class="e" marker-end="url(#en-arr)"/>
         <path d="M540 165 H596" class="e" marker-end="url(#en-arr)"/>
         <path d="M540 180 C 570 180, 570 270, 596 270" class="e" marker-end="url(#en-arr)"/>
 
         <path d="M600 40 C 300 0, 110 40, 85 131" class="e-d" marker-end="url(#en-arr)"/>
-        <text x="300" y="30" text-anchor="middle" class="tm">re-tests the affected scope</text>
+        <text x="300" y="30" text-anchor="middle" class="tm">ritesta il perimetro interessato</text>
       </svg>
     </div>
-    <figcaption>The 0→12 pipeline is the happy path; these three edges are reality. A change is only <strong>ready</strong> when <code>findings.md</code> has no open <code>bug</code> or <code>spec-gap</code> and every <code>emergent</code> item has been captured in the backlog.</figcaption>
+    <figcaption>La pipeline 0→12 è il percorso ideale; questi tre archi sono la realtà. Un change è <strong>pronto</strong> solo quando <code>findings.md</code> non ha <code>bug</code> o <code>spec-gap</code> aperti e ogni elemento <code>emergent</code> è stato registrato nel backlog.</figcaption>
   </figure>
 
   <div class="table-wrap">
     <table>
-      <caption class="sr">Finding types and their edge</caption>
-      <thead><tr><th scope="col">Type</th><th scope="col">Litmus test</th><th scope="col">Edge</th><th scope="col">Blocks?</th></tr></thead>
+      <caption class="sr">Tipi di finding e il loro arco</caption>
+      <thead><tr><th scope="col">Tipo</th><th scope="col">Prova del nove</th><th scope="col">Arco</th><th scope="col">Blocca?</th></tr></thead>
       <tbody>
-        <tr><td><span class="tag r">bug</span></td><td>“The spec is right, the code is wrong.”</td><td><code>BUG-NN</code> tracker with a state history (DETECTADO → DIAGNOSTICADO → EN FIX → RESUELTO → REABIERTO — detected, diagnosed, fixing, resolved, reopened) → impl→test→qa micro-loop.</td><td>Yes, until resolved.</td></tr>
-        <tr><td><span class="tag s">spec-gap</span></td><td>“Had we specified it properly, the implementation would have been different.”</td><td>Revision sub-cycle: <code>approvals.requirements</code> set to false, +1 <code>iteration_count</code>, an entry in <code>revision_history</code>; only the affected requirement is amended and re-approved.</td><td>Yes, until resolved.</td></tr>
-        <tr><td><span class="tag m">emergent</span></td><td>“Good idea, but it is another change.”</td><td><code>docs/spec/backlog.md</code> (source of truth) + a mirror in the tracker → a new change-id at the archive sweep.</td><td>No; it only has to be captured.</td></tr>
+        <tr><td><span class="tag r">bug</span></td><td>“La specifica è giusta, il codice è sbagliato.”</td><td>Tracker <code>BUG-NN</code> con uno storico degli stati (DETECTADO → DIAGNOSTICADO → EN FIX → RESUELTO → REABIERTO: rilevato, diagnosticato, in correzione, risolto, riaperto) → micro-ciclo impl→test→qa.</td><td>Sì, finché non è risolto.</td></tr>
+        <tr><td><span class="tag s">spec-gap</span></td><td>“Se l’avessimo specificato bene, l’implementazione sarebbe stata diversa.”</td><td>Sotto-ciclo di revisione: <code>approvals.requirements</code> impostato a false, +1 a <code>iteration_count</code>, una voce in <code>revision_history</code>; si emenda e si riapprova solo il requisito interessato.</td><td>Sì, finché non è risolto.</td></tr>
+        <tr><td><span class="tag m">emergent</span></td><td>“Buona idea, ma è un altro change.”</td><td><code>docs/spec/backlog.md</code> (fonte di verità) + una copia speculare nel tracker → un nuovo change-id durante la rassegna dell’archiviazione.</td><td>No; basta che sia registrato.</td></tr>
       </tbody>
     </table>
   </div>
@@ -5195,47 +5195,47 @@ claude plugin update karvey@karvey-methods</code></pre>
 
 <!-- 6. SUPPORT LAYER -->
 <section class="block" id="it-support" aria-labelledby="it-t-sup">
-  <p class="eyebrow">06 · At any time</p>
-  <h2 id="it-t-sup">Support layer · 19 support skills</h2>
-  <p class="lede">They are not phases: they do not push <code>spec.json:phase</code> forward. The one exception is <code>karvey-iterate</code>, which may make the controlled <em>backward</em> transition of the revision sub-cycle. They honour the same gates and hooks.</p>
+  <p class="eyebrow">06 · In qualsiasi momento</p>
+  <h2 id="it-t-sup">Livello di supporto · 19 skill di supporto</h2>
+  <p class="lede">Non sono fasi: non fanno avanzare <code>spec.json:phase</code>. L’unica eccezione è <code>karvey-iterate</code>, che può effettuare la transizione controllata <em>all’indietro</em> del sotto-ciclo di revisione. Rispettano gli stessi gate e hook.</p>
 
   <div class="filter" id="it-sup-filter" data-filter="sup" hidden>
-    <label for="it-sup-q">Filter skills</label>
-    <input id="it-sup-q" type="search" placeholder="e.g. handoff, model, PDF…" autocomplete="off">
-    <output id="it-sup-count" for="it-sup-q" aria-live="polite" data-tpl="{n} of {total} skills"></output>
+    <label for="it-sup-q">Filtra le skill</label>
+    <input id="it-sup-q" type="search" placeholder="es. handoff, modello, PDF…" autocomplete="off">
+    <output id="it-sup-count" for="it-sup-q" aria-live="polite" data-tpl="{n} di {total} skill"></output>
   </div>
 
   <div class="grid" id="it-sup-grid" data-filter-list="sup" data-filter-items="[data-f]">
-    <article class="card" data-f><h3><code>karvey-iterate</code></h3><span class="tag o">iteration</span><p>The iteration engine: reads <code>findings.md</code>, confirms the type and routes each finding to bug, spec-gap or emergent. The only place where the loop’s logic lives.</p><p class="small muted"><b>When:</b> findings turned up, or the spec proved wrong or incomplete.</p></article>
-    <article class="card" data-f><h3><code>karvey-investigate</code></h3><span class="tag o">diagnosis</span><p>Root-cause debugging. <strong>Iron Law: no fix without investigating.</strong> Dates the symptom, asks what changed before asking what is wrong, follows the data across repos and separates the cause from latent fragility.</p><p class="small muted"><b>When:</b> something fails and nobody understands why.</p></article>
-    <article class="card" data-f><h3><code>karvey-second-opinion</code></h3><span class="tag s">review</span><p>Adversarial review with <em>another</em> model (Claude vs GPT/Codex/Gemini). Review (PASS/FAIL), Challenge and Consult modes. It complements QA’s security gate; it never approves on its own.</p><p class="small muted"><b>When:</b> before releasing something sensitive.</p></article>
-    <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">quality</span><p>A 0–10 quality score (type-check, lint, tests, dead code) with a trend, plus method readiness: skills installed and pinned inputs (<code>repo path @commit</code>) still current.</p><p class="small muted"><b>When:</b> periodic check-ups or multi-repo work.</p></article>
-    <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">review</span><p>Reviews the developer experience: walks the real onboarding, measures time-to-hello-world and finds friction and “docs that lie”. Plan and live modes.</p><p class="small muted"><b>When:</b> auditing onboarding or DX.</p></article>
-    <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">review</span><p>Cycle retrospective: velocity, test health, per-person breakdown, streaks and improvement opportunities from the commit history.</p><p class="small muted"><b>When:</b> closing a cycle (recommended at archive).</p></article>
-    <article class="card" data-f><h3><code>karvey-judges</code></h3><span class="tag s">review</span><p>Advisory judges at the cheap end of the cycle: clean-context subagents with Read/Grep/Glob only read a closed list of inputs and a rubric per lens (requirements, architecture, and QA with the fiscal); a script collects their verdicts, citations and cost into <code>findings.md</code> and <code>judge_runs</code>.</p><p class="small muted"><b>When:</b> before the gate of requirements, architecture and QA; never a substitute for the human.</p></article>
-    <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">eyes</span><p>Gives the agent eyes in the real runtime: browser (web), simulator or device (mobile), terminal (CLI). Click, screenshot, inspect; imports cookies for authenticated views.</p><p class="small muted"><b>When:</b> to see what the user sees; it also writes to <code>findings.md</code>.</p></article>
-    <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">state / handoff</span><p><code>save</code> / <code>restore</code> of the change’s checkpoint <strong>and the agent’s handoff</strong>: identity, manifest, board, checklist, measured repo state (<code>state.json</code>), standing decisions and scheduled tasks.</p><p class="small muted"><b>When:</b> rotating a session or handing work over, with one agent or several.</p></article>
-    <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">documentation</span><p>Documentation engineer: generates Diátaxis docs (tutorial, how-to, reference, explanation) from the code, updates stale docs and exports Markdown to PDF.</p><p class="small muted"><b>When:</b> after a release (recommended at archive).</p></article>
-    <article class="card" data-f><h3><code>karvey-diagram</code></h3><span class="tag">diagrams</span><p>Natural language to diagram: mermaid source + editable <code>.excalidraw</code> + rendered SVG/PNG. Works offline.</p><p class="small muted"><b>When:</b> flow, sequence, architecture or ER.</p></article>
-    <article class="card" data-f><h3><code>karvey-guard</code></h3><span class="tag r">guardrails</span><p>Installs or removes the enforcement hooks, grants a temporary plan-gate override, applies an edit-lock to a directory (<code>--freeze</code>) and runs the verification checklist (<code>--verify</code>, read-only).</p><p class="small muted"><b>When:</b> sensitive work, or to enforce the flow.</p></article>
-    <article class="card" data-f><h3><code>karvey-team</code></h3><span class="tag">team · optional</span><p>Opt-in team layer: <code>init</code>, <code>census</code>, <code>relay</code>, <code>cost</code>. Roles, manifests, boards, census, relay and <strong>spend measurement</strong>.</p><p class="small muted"><b>When:</b> only after reading <code>rules/team.md</code>; Karvey is complete with a single agent.</p></article>
-    <article class="card" data-f><h3><code>karvey-decisions</code></h3><span class="tag">team · decisions</span><p>A single numbered log (<code>D-NN</code> business, <code>C-NN</code> direction) that changes cite. <code>cross</code> checks a question against the log <strong>before</strong> declaring anything blocked.</p><p class="small muted"><b>When:</b> making, looking up or citing a decision.</p></article>
-    <article class="card" data-f><h3><code>karvey-standards</code></h3><span class="tag">standards</span><p>Extracts the team’s golden paths (db, backend, frontend…) from the <strong>real system</strong> into the team’s standards repo. Re-runnable; <code>--refresh</code> promotes recurring deviations. It never writes to the public plugin.</p><p class="small muted"><b>When:</b> bootstrapping or refreshing the standards.</p></article>
-    <article class="card" data-f><h3><code>karvey-import</code></h3><span class="tag">import</span><p>Converts Kiro specs (<code>.kiro/specs/*</code>) or gstack specs into the <code>docs/spec/</code> structure. Non-destructive towards the source; gates come in unapproved so they are revalidated.</p><p class="small muted"><b>When:</b> migrating from Kiro or gstack.</p></article>
-    <article class="card" data-f><h3><code>karvey-benchmark-models</code></h3><span class="tag">benchmark</span><p>Compares models side by side on a skill or task: latency, tokens, cost and LLM-judged quality (optional).</p><p class="small muted"><b>When:</b> deciding which model to use.</p></article>
-    <article class="card" data-f><h3><code>karvey-scrape</code></h3><span class="tag">scrape</span><p>Extracts data from a website: the first time it prototypes the extraction, then encodes it as a reusable, tested script or skill.</p><p class="small muted"><b>When:</b> extracting web data repeatably.</p></article>
-    <article class="card" data-f><h3><code>karvey-context</code></h3><span class="tag">context · read-only</span><p>Dashboard: project config, capabilities, active and archived changes, sprint, deploy queue / landing report (what is in dev, in prod, ready to release), backlog and live branches.</p><p class="small muted"><b>When:</b> at any time; it never writes.</p></article>
+    <article class="card" data-f><h3><code>karvey-iterate</code></h3><span class="tag o">iterazione</span><p>Il motore dell’iterazione: legge <code>findings.md</code>, conferma il tipo e instrada ogni finding verso bug, spec-gap o emergent. L’unico punto in cui vive la logica del ciclo.</p><p class="small muted"><b>Quando:</b> sono emersi finding, oppure la specifica si è rivelata sbagliata o incompleta.</p></article>
+    <article class="card" data-f><h3><code>karvey-investigate</code></h3><span class="tag o">diagnosi</span><p>Debug della causa radice. <strong>Legge ferrea: nessuna correzione senza indagine.</strong> Data il sintomo, chiede cosa è cambiato prima di chiedere cosa non va, segue i dati attraverso i repo e separa la causa dalla fragilità latente.</p><p class="small muted"><b>Quando:</b> qualcosa fallisce e nessuno capisce perché.</p></article>
+    <article class="card" data-f><h3><code>karvey-second-opinion</code></h3><span class="tag s">revisione</span><p>Revisione avversariale con <em>un altro</em> modello (Claude vs GPT/Codex/Gemini). Modalità Review (PASS/FAIL), Challenge e Consult. Completa il gate di sicurezza della QA; non approva mai da sola.</p><p class="small muted"><b>Quando:</b> prima di rilasciare qualcosa di delicato.</p></article>
+    <article class="card" data-f><h3><code>karvey-health</code></h3><span class="tag s">qualità</span><p>Un punteggio di qualità 0–10 (type-check, lint, test, codice morto) con il suo andamento, più la prontezza al metodo: skill installate e input fissati (<code>repo path @commit</code>) ancora aggiornati.</p><p class="small muted"><b>Quando:</b> controlli periodici o lavoro su più repo.</p></article>
+    <article class="card" data-f><h3><code>karvey-devex</code></h3><span class="tag s">revisione</span><p>Revisiona la developer experience: percorre l’onboarding reale, misura il time-to-hello-world e trova attriti e “documentazione che mente”. Modalità plan e live.</p><p class="small muted"><b>Quando:</b> per verificare l’onboarding o la DX.</p></article>
+    <article class="card" data-f><h3><code>karvey-retro</code></h3><span class="tag s">revisione</span><p>Retrospettiva del ciclo: velocità, salute dei test, dettaglio per persona, serie positive e opportunità di miglioramento a partire dalla cronologia dei commit.</p><p class="small muted"><b>Quando:</b> alla chiusura di un ciclo (consigliata in fase di archiviazione).</p></article>
+    <article class="card" data-f><h3><code>karvey-judges</code></h3><span class="tag s">revisione</span><p>Giudici consultivi all’estremità economica del ciclo: subagenti con contesto pulito e solo Read/Grep/Glob leggono un elenco chiuso di input e una rubrica per ogni prospettiva (requisiti, architettura e QA con il fiscal); uno script raccoglie verdetti, citazioni e costo in <code>findings.md</code> e <code>judge_runs</code>.</p><p class="small muted"><b>Quando:</b> prima del gate di requisiti, architettura e QA; mai un sostituto della persona.</p></article>
+    <article class="card" data-f><h3><code>karvey-browse</code></h3><span class="tag m">occhi</span><p>Dà all’agente occhi nel runtime reale: browser (web), simulatore o dispositivo (mobile), terminale (CLI). Clicca, cattura schermate, ispeziona; importa i cookie per le viste autenticate.</p><p class="small muted"><b>Quando:</b> per vedere ciò che vede l’utente; scrive anche in <code>findings.md</code>.</p></article>
+    <article class="card" data-f><h3><code>karvey-checkpoint</code></h3><span class="tag m">stato / handoff</span><p><code>save</code> / <code>restore</code> del checkpoint del change <strong>e dell’handoff dell’agente</strong>: identità, manifest, board, checklist, stato misurato dei repo (<code>state.json</code>), decisioni in vigore e task pianificati.</p><p class="small muted"><b>Quando:</b> per ruotare una sessione o passare il lavoro, con uno o più agenti.</p></article>
+    <article class="card" data-f><h3><code>karvey-docs</code></h3><span class="tag">documentazione</span><p>Ingegnere della documentazione: genera documentazione Diátaxis (tutorial, guida pratica, riferimento, spiegazione) dal codice, aggiorna la documentazione obsoleta ed esporta Markdown in PDF.</p><p class="small muted"><b>Quando:</b> dopo un rilascio (consigliata in fase di archiviazione).</p></article>
+    <article class="card" data-f><h3><code>karvey-diagram</code></h3><span class="tag">diagrammi</span><p>Dal linguaggio naturale al diagramma: sorgente mermaid + <code>.excalidraw</code> modificabile + SVG/PNG renderizzato. Funziona offline.</p><p class="small muted"><b>Quando:</b> flusso, sequenza, architettura o ER.</p></article>
+    <article class="card" data-f><h3><code>karvey-guard</code></h3><span class="tag r">guardrail</span><p>Installa o rimuove gli hook di enforcement, concede un override temporaneo del plan-gate, applica un blocco delle modifiche a una directory (<code>--freeze</code>) ed esegue la checklist di verifica (<code>--verify</code>, sola lettura).</p><p class="small muted"><b>Quando:</b> lavoro delicato, o per imporre il flusso.</p></article>
+    <article class="card" data-f><h3><code>karvey-team</code></h3><span class="tag">team · opzionale</span><p>Livello team opt-in: <code>init</code>, <code>census</code>, <code>relay</code>, <code>cost</code>. Ruoli, manifest, board, censimento, staffetta e <strong>misurazione della spesa</strong>.</p><p class="small muted"><b>Quando:</b> solo dopo aver letto <code>rules/team.md</code>; Karvey è completo con un solo agente.</p></article>
+    <article class="card" data-f><h3><code>karvey-decisions</code></h3><span class="tag">team · decisioni</span><p>Un unico registro numerato (<code>D-NN</code> business, <code>C-NN</code> indirizzo) che i change citano. <code>cross</code> confronta una domanda con il registro <strong>prima</strong> di dichiarare qualcosa bloccato.</p><p class="small muted"><b>Quando:</b> per prendere, consultare o citare una decisione.</p></article>
+    <article class="card" data-f><h3><code>karvey-standards</code></h3><span class="tag">standard</span><p>Estrae i golden path del team (db, backend, frontend…) dal <strong>sistema reale</strong> nel repo degli standard del team. Rieseguibile; <code>--refresh</code> promuove le deviazioni ricorrenti. Non scrive mai nel plugin pubblico.</p><p class="small muted"><b>Quando:</b> per avviare o aggiornare gli standard.</p></article>
+    <article class="card" data-f><h3><code>karvey-import</code></h3><span class="tag">importazione</span><p>Converte le specifiche Kiro (<code>.kiro/specs/*</code>) o gstack nella struttura <code>docs/spec/</code>. Non distruttiva verso l’origine; i gate arrivano non approvati per essere riconvalidati.</p><p class="small muted"><b>Quando:</b> per migrare da Kiro o gstack.</p></article>
+    <article class="card" data-f><h3><code>karvey-benchmark-models</code></h3><span class="tag">benchmark</span><p>Confronta modelli fianco a fianco su una skill o un task: latenza, token, costo e qualità valutata da un LLM (opzionale).</p><p class="small muted"><b>Quando:</b> per decidere quale modello usare.</p></article>
+    <article class="card" data-f><h3><code>karvey-scrape</code></h3><span class="tag">scraping</span><p>Estrae dati da un sito web: la prima volta prototipa l’estrazione, poi la codifica come script o skill riutilizzabile e testata.</p><p class="small muted"><b>Quando:</b> per estrarre dati web in modo ripetibile.</p></article>
+    <article class="card" data-f><h3><code>karvey-context</code></h3><span class="tag">contesto · sola lettura</span><p>Cruscotto: configurazione del progetto, capability, change attivi e archiviati, sprint, coda di deploy / report di atterraggio (cosa c’è in dev, in prod, pronto al rilascio), backlog e branch vivi.</p><p class="small muted"><b>Quando:</b> in qualsiasi momento; non scrive mai.</p></article>
   </div>
-  <p class="small muted" id="it-sup-empty" data-filter-empty="sup" hidden>No skill matches the filter.</p>
+  <p class="small muted" id="it-sup-empty" data-filter-empty="sup" hidden>Nessuna skill corrisponde al filtro.</p>
 
   <details>
-    <summary>Coming from Kiro or gstack: equivalents</summary>
+    <summary>Se arrivi da Kiro o gstack: equivalenze</summary>
     <div class="table-wrap">
       <table>
         <thead><tr><th scope="col">Kiro / gstack</th><th scope="col">In Karvey</th></tr></thead>
         <tbody>
-          <tr><td>kiro <code>/spec</code>, <code>/kiro-spec-*</code></td><td>grill + PRD + EARS requirements (phases 0–2)</td></tr>
-          <tr><td>office-hours, plan-ceo-review</td><td>10-star reframe in <code>karvey-grill</code></td></tr>
+          <tr><td>kiro <code>/spec</code>, <code>/kiro-spec-*</code></td><td>grill + PRD + requisiti EARS (fasi 0–2)</td></tr>
+          <tr><td>office-hours, plan-ceo-review</td><td>riformulazione a 10 stelle in <code>karvey-grill</code></td></tr>
           <tr><td>plan-design-review, design-consultation, design-shotgun</td><td><code>karvey-design-graphic</code> + <code>karvey-mockup</code> (shotgun)</td></tr>
           <tr><td>plan-eng-review, diagram</td><td><code>karvey-architecture</code> + <code>karvey-diagram</code></td></tr>
           <tr><td>setup-deploy</td><td><code>karvey-infra</code></td></tr>
@@ -5243,14 +5243,14 @@ claude plugin update karvey@karvey-methods</code></pre>
           <tr><td>qa, browse, benchmark</td><td><code>karvey-test</code> + <code>karvey-browse</code> + <code>karvey-health</code></td></tr>
           <tr><td>ship, land-and-deploy, canary</td><td><code>karvey-deploy</code></td></tr>
           <tr><td>investigate · health · retro</td><td><code>karvey-investigate</code> · <code>karvey-health</code> · <code>karvey-retro</code></td></tr>
-          <tr><td>(no equivalent: feedback loop)</td><td><code>karvey-iterate</code></td></tr>
+          <tr><td>(nessun equivalente: ciclo di feedback)</td><td><code>karvey-iterate</code></td></tr>
           <tr><td>context-save/restore</td><td><code>karvey-checkpoint</code></td></tr>
           <tr><td>document-generate/release, make-pdf</td><td><code>karvey-docs</code></td></tr>
           <tr><td>learn, gbrain</td><td><code>knowledge-sync</code> (graphify / obsidian)</td></tr>
-          <tr><td>careful, freeze, guard</td><td><code>karvey-guard</code> + <code>enforcement.md</code> hooks</td></tr>
+          <tr><td>careful, freeze, guard</td><td><code>karvey-guard</code> + hook di <code>enforcement.md</code></td></tr>
           <tr><td>devex-review · scrape, skillify · benchmark-models</td><td><code>karvey-devex</code> · <code>karvey-scrape</code> · <code>karvey-benchmark-models</code></td></tr>
-          <tr><td>ios-qa, ios-fix, ios-design-review</td><td>generalised via <code>targets.md</code> (real runtime per target)</td></tr>
-          <tr><td>existing <code>.kiro/specs/*</code> / gstack specs</td><td><code>karvey-import --from kiro|gstack</code></td></tr>
+          <tr><td>ios-qa, ios-fix, ios-design-review</td><td>generalizzati tramite <code>targets.md</code> (runtime reale per target)</td></tr>
+          <tr><td>specifiche <code>.kiro/specs/*</code> / gstack esistenti</td><td><code>karvey-import --from kiro|gstack</code></td></tr>
         </tbody>
       </table>
     </div>
@@ -5259,52 +5259,52 @@ claude plugin update karvey@karvey-methods</code></pre>
 
 <!-- 7. RULES -->
 <section class="block" id="it-rules" aria-labelledby="it-t-rules">
-  <p class="eyebrow">07 · Common contract</p>
-  <h2 id="it-t-rules">Shared rules · 27</h2>
-  <p class="lede">They live in <code>plugins/karvey/skills/karvey/rules/</code>. Skills cite them instead of repeating them; local copies must be byte-for-byte identical to the canonical one.</p>
+  <p class="eyebrow">07 · Contratto comune</p>
+  <h2 id="it-t-rules">Regole condivise · 27</h2>
+  <p class="lede">Vivono in <code>plugins/karvey/skills/karvey/rules/</code>. Le skill le citano invece di ripeterle; le copie locali devono essere identiche byte per byte a quella canonica.</p>
 
   <div class="filter" id="it-rules-filter" data-filter="rules" hidden>
-    <label for="it-rules-q">Filter rules</label>
-    <input id="it-rules-q" type="search" placeholder="e.g. deploy, qa, states…" autocomplete="off">
-    <output id="it-rules-count" for="it-rules-q" aria-live="polite" data-tpl="{n} of {total} rules"></output>
+    <label for="it-rules-q">Filtra le regole</label>
+    <input id="it-rules-q" type="search" placeholder="es. deploy, qa, stati…" autocomplete="off">
+    <output id="it-rules-count" for="it-rules-q" aria-live="polite" data-tpl="{n} di {total} regole"></output>
   </div>
   <div class="table-wrap">
     <table id="it-rules-table" data-filter-list="rules" data-filter-items="tbody tr">
-      <caption class="sr">Shared rules of the Karvey method</caption>
-      <thead><tr><th scope="col">Rule</th><th scope="col">What it governs</th><th scope="col">Applies in</th></tr></thead>
+      <caption class="sr">Regole condivise del metodo Karvey</caption>
+      <thead><tr><th scope="col">Regola</th><th scope="col">Cosa governa</th><th scope="col">Si applica in</th></tr></thead>
       <tbody>
-        <tr><td><code>_core.md</code> <span class="tag o">4.1</span></td><td>The seven hard contracts every phase loads: the state tool, the gate and approval, the production gate, branches and commits, verification, the finding router and neutral text. Everything else is on the phase's <code>Load:</code> line.</td><td>every phase</td></tr>
-        <tr><td><code>project-config.md</code></td><td>The project’s <code>project.json</code>: git, cloud, IaC, knowledge_sync, targets, repos (1 or more, never zero), spec_repo, branch_flow, enforcement, standards and the team blocks.</td><td>init, architecture, infra, deploy, context</td></tr>
-        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>The team’s management tool and its status flow: 5 logical states, logical operations (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) and one adapter per tool. Since 4.1 each tool's adapter lives in <code>rules/adapters/</code> and a phase loads only the one the project uses.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
-        <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>The team’s notification channel (never an assumed one): target, route, events (<code>qa</code>, <code>deploy</code>, optional <code>incident</code>) and per-channel formatting.</td><td>init, qa, deploy, iterate</td></tr>
-        <tr><td><code>engineering-standards.md</code></td><td>The golden paths per layer (the third source of truth), the conformance gate in design mode and <code>deviations.md</code>; separation between the public method and the team’s standards.</td><td>init, architecture, impl, qa, archive, guard</td></tr>
-        <tr><td><code>ears-format.md</code></td><td>EARS syntax: ubiquitous, event-driven (WHEN), state-driven (WHILE), unwanted behaviour (IF/THEN), optional feature (WHERE) and complex.</td><td>requirements</td></tr>
-        <tr><td><code>security-tiers.md</code></td><td>Tiers 1–4 (public, authenticated, privileged, critical) with their minimum controls per layer.</td><td>requirements, architecture, infra, qa</td></tr>
-        <tr><td><code>living-specs.md</code></td><td>The <code>docs/spec/</code> structure, cumulative living specs per capability and the spec-delta protocol.</td><td>init, requirements, archive</td></tr>
-        <tr><td><code>knowledge-sync.md</code></td><td>A knowledge graph across iterations: Obsidian if there is an MCP; otherwise graphify as the minimum floor. Never without sync.</td><td>every phase (at close)</td></tr>
-        <tr><td><code>targets.md</code></td><td>Stack agnosticism: how each phase adapts to web, iOS, Android, desktop, CLI, API, embedded and others.</td><td>mockup, design-graphic, architecture, test, qa, deploy</td></tr>
-        <tr><td><code>deploy-workflow.md</code></td><td>The pipeline-triggered feature → dev → PR master flow, the 6-step checklist, PR gates, human OK, zero downtime and branch hygiene.</td><td>infra, impl, deploy, archive (sweep), context (live branches)</td></tr>
-        <tr><td><code>changelog-policy.md</code></td><td>Every line of code in a CHANGELOG: who, when and why, with the AI model made explicit and always an accountable human.</td><td>impl, infra, deploy, qa</td></tr>
-        <tr><td><code>versioning.md</code></td><td>Semver <code>major.minor.rev</code> per component and repo. Hard rule: never deploy without bumping the version.</td><td>impl, deploy, qa</td></tr>
-        <tr><td><code>enforcement.md</code></td><td>Opt-in <code>PreToolUse</code> hooks that actually block (git-flow-guard, plan-gate), override and rollback, per project.</td><td>init, guard</td></tr>
-        <tr><td><code>support-skills.md</code></td><td>The support-layer catalogue and its invocation rules (they do not advance the phase; they honour the gates).</td><td>support layer</td></tr>
-        <tr><td><code>iteration-loop.md</code></td><td>The three feedback edges, <code>findings.md</code>, the spec revision sub-cycle and the convergence rule.</td><td>test, qa, browse, iterate</td></tr>
-        <tr><td><code>incident-tracking.md</code></td><td>A <code>BUG-NN</code> tracker per repo (<code>docs/bugs_dev_testing.md</code>) + a global index, numbering that never resets, and a state history.</td><td>test, qa, iterate, investigate</td></tr>
-        <tr><td><code>backlog.md</code></td><td>A dual discovery backlog: Markdown as the source of truth, mirrored in the tracker; swept at archive.</td><td>iterate, archive, context</td></tr>
-        <tr><td><code>risks.md</code> <span class="tag o">4.1</span></td><td>One risk register per change: owner, probability, impact, trigger, mitigation, state and last review; reviewed at the qa and release gates.</td><td>architecture, iterate, qa, archive</td></tr>
-        <tr><td><code>phase-close.md</code></td><td>A mandatory 4-action ritual when closing every phase and task: comment, change status (+ cascade), sweep findings and backlog, update <code>spec.json</code> + knowledge.</td><td>every phase (at close), impl, iterate</td></tr>
-        <tr><td><code>verification.md</code></td><td>18 failure modes that make a green report false (a citation is not the thing cited, exit 0 is not success, a green test on code nobody calls…).</td><td>every phase (before saying “done”), guard, qa, health</td></tr>
-        <tr><td><code>multi-agent.md</code></td><td>Multi-agent and multi-repo work: parent/child changes, <code>D-NN</code> decisions, <code>@commit</code>-pinned inputs, approvals with who and where, <code>[human]</code> tasks, <code>ops</code> and <code>hotfix</code> types, docs-only PRs.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health and every gate</td></tr>
-        <tr><td><code>team.md</code> <span class="tag">optional</span></td><td>The agent-team layer: <code>team.json</code>, roles, rotation, addressing, minimal communication and measured cost.</td><td>checkpoint (handoff), team, decisions, context</td></tr>
-        <tr><td><code>gates.md</code></td><td>The one closing block of every phase skill: three merged human gates (<em>what</em>, <em>how</em>, <em>release</em>) or seven granular ones, one question per gate, <code>-y</code> = <code>role: auto</code> and never production.</td><td>every phase</td></tr>
-        <tr><td><code>judges.md</code></td><td>The judge prompt template (Read/Grep/Glob only, no edits), the output contract and the rubric per lens under <code>rules/judges/</code>.</td><td>requirements, architecture, qa</td></tr>
-        <tr><td><code>lanes.md</code></td><td>The six lanes (patch, standard, feature-ui, ops, hotfix, docs): which phases each runs or skips, objective admission criteria and the official <code>patch</code> path.</td><td>init, every phase</td></tr>
-        <tr><td><code>state-machine.md</code></td><td>The phase table as data: skill, approval key, gate, skippable, produces and reads; edges and reopen targets.</td><td>every phase</td></tr>
+        <tr><td><code>_core.md</code> <span class="tag o">4.1</span></td><td>I sette contratti rigidi che ogni fase carica: lo strumento di stato, il gate e l’approvazione, il gate di produzione, branch e commit, la verifica, il router dei finding e il testo neutro. Tutto il resto sta nella riga <code>Load:</code> della fase.</td><td>ogni fase</td></tr>
+        <tr><td><code>project-config.md</code></td><td>Il <code>project.json</code> del progetto: git, cloud, IaC, knowledge_sync, targets, repos (1 o più, mai zero), spec_repo, branch_flow, enforcement, standards e i blocchi del team.</td><td>init, architecture, infra, deploy, context</td></tr>
+        <tr><td><code>management-adapters.md</code> <span class="tag o">3.10</span></td><td>Lo strumento di gestione del team e il suo flusso di stati: 5 stati logici, operazioni logiche (<code>create_epic</code>, <code>set_status</code>, <code>cascade</code>…) e un adapter per strumento. Dalla 4.1 l’adapter di ogni strumento vive in <code>rules/adapters/</code> e una fase carica solo quello usato dal progetto.</td><td>init, requirements, tasks, impl, qa, deploy, iterate, archive, phase-close</td></tr>
+        <tr><td><code>notifications.md</code> <span class="tag o">3.10</span></td><td>Il canale di notifica del team (mai uno presunto): destinazione, via, eventi (<code>qa</code>, <code>deploy</code>, <code>incident</code> opzionale) e formattazione per canale.</td><td>init, qa, deploy, iterate</td></tr>
+        <tr><td><code>engineering-standards.md</code></td><td>I golden path per livello (la terza fonte di verità), il gate di conformità in fase di design e <code>deviations.md</code>; separazione tra il metodo pubblico e gli standard del team.</td><td>init, architecture, impl, qa, archive, guard</td></tr>
+        <tr><td><code>ears-format.md</code></td><td>Sintassi EARS: ubiquo, guidato da eventi (WHEN), guidato dallo stato (WHILE), comportamento indesiderato (IF/THEN), funzionalità opzionale (WHERE) e complesso.</td><td>requirements</td></tr>
+        <tr><td><code>security-tiers.md</code></td><td>Tier 1–4 (pubblico, autenticato, privilegiato, critico) con i rispettivi controlli minimi per livello.</td><td>requirements, architecture, infra, qa</td></tr>
+        <tr><td><code>living-specs.md</code></td><td>La struttura di <code>docs/spec/</code>, le living spec cumulative per capability e il protocollo spec-delta.</td><td>init, requirements, archive</td></tr>
+        <tr><td><code>knowledge-sync.md</code></td><td>Un grafo della conoscenza tra le iterazioni: Obsidian se c’è un MCP; altrimenti graphify come soglia minima. Mai senza sincronizzazione.</td><td>ogni fase (alla chiusura)</td></tr>
+        <tr><td><code>targets.md</code></td><td>Indipendenza dallo stack: come ogni fase si adatta a web, iOS, Android, desktop, CLI, API, embedded e altri.</td><td>mockup, design-graphic, architecture, test, qa, deploy</td></tr>
+        <tr><td><code>deploy-workflow.md</code></td><td>Il flusso feature → dev → PR master attivato dalla pipeline, la checklist in 6 passi, i gate della PR, l’OK umano, zero downtime e igiene dei branch.</td><td>infra, impl, deploy, archive (rassegna), context (branch vivi)</td></tr>
+        <tr><td><code>changelog-policy.md</code></td><td>Ogni riga di codice in un CHANGELOG: chi, quando e perché, con il modello IA esplicitato e sempre una persona responsabile.</td><td>impl, infra, deploy, qa</td></tr>
+        <tr><td><code>versioning.md</code></td><td>Semver <code>major.minor.rev</code> per componente e repo. Regola rigida: mai un deploy senza incrementare la versione.</td><td>impl, deploy, qa</td></tr>
+        <tr><td><code>enforcement.md</code></td><td>Hook <code>PreToolUse</code> opt-in che bloccano davvero (git-flow-guard, plan-gate), override e rollback, per progetto.</td><td>init, guard</td></tr>
+        <tr><td><code>support-skills.md</code></td><td>Il catalogo del livello di supporto e le sue regole di invocazione (non fanno avanzare la fase; rispettano i gate).</td><td>livello di supporto</td></tr>
+        <tr><td><code>iteration-loop.md</code></td><td>I tre archi di feedback, <code>findings.md</code>, il sotto-ciclo di revisione delle specifiche e la regola di convergenza.</td><td>test, qa, browse, iterate</td></tr>
+        <tr><td><code>incident-tracking.md</code></td><td>Un tracker <code>BUG-NN</code> per repo (<code>docs/bugs_dev_testing.md</code>) + un indice globale, una numerazione che non si azzera mai e uno storico degli stati.</td><td>test, qa, iterate, investigate</td></tr>
+        <tr><td><code>backlog.md</code></td><td>Un backlog di scoperta duale: Markdown come fonte di verità, replicato nel tracker; passato in rassegna in fase di archiviazione.</td><td>iterate, archive, context</td></tr>
+        <tr><td><code>risks.md</code> <span class="tag o">4.1</span></td><td>Un registro dei rischi per change: responsabile, probabilità, impatto, innesco, mitigazione, stato e ultima revisione; rivisto ai gate di qa e di rilascio.</td><td>architecture, iterate, qa, archive</td></tr>
+        <tr><td><code>phase-close.md</code></td><td>Un rituale obbligatorio di 4 azioni alla chiusura di ogni fase e task: commentare, cambiare stato (+ cascata), passare in rassegna finding e backlog, aggiornare <code>spec.json</code> + conoscenza.</td><td>ogni fase (alla chiusura), impl, iterate</td></tr>
+        <tr><td><code>verification.md</code></td><td>18 modalità di errore che rendono falso un report verde (una citazione non è la cosa citata, exit 0 non è successo, un test verde su codice che nessuno chiama…).</td><td>ogni fase (prima di dire “fatto”), guard, qa, health</td></tr>
+        <tr><td><code>multi-agent.md</code></td><td>Lavoro multi-agente e multi-repo: change padre/figlio, decisioni <code>D-NN</code>, input fissati a un <code>@commit</code>, approvazioni con chi e dove, task <code>[human]</code>, tipi <code>ops</code> e <code>hotfix</code>, PR di sola documentazione.</td><td>init, requirements, design-graphic, infra, tasks, impl, test, iterate, deploy, health e ogni gate</td></tr>
+        <tr><td><code>team.md</code> <span class="tag">opzionale</span></td><td>Il livello del team di agenti: <code>team.json</code>, ruoli, rotazione, indirizzamento, comunicazione minima e costo misurato.</td><td>checkpoint (handoff), team, decisions, context</td></tr>
+        <tr><td><code>gates.md</code></td><td>L’unico blocco di chiusura di ogni skill di fase: tre gate umani accorpati (<em>cosa</em>, <em>come</em>, <em>rilascio</em>) o sette granulari, una domanda per gate, <code>-y</code> = <code>role: auto</code> e mai la produzione.</td><td>ogni fase</td></tr>
+        <tr><td><code>judges.md</code></td><td>Il template di prompt dei giudici (solo Read/Grep/Glob, nessuna modifica), il contratto di output e la rubrica per prospettiva in <code>rules/judges/</code>.</td><td>requirements, architecture, qa</td></tr>
+        <tr><td><code>lanes.md</code></td><td>Le sei lane (patch, standard, feature-ui, ops, hotfix, docs): quali fasi esegue o salta ciascuna, criteri di ammissione oggettivi e il percorso ufficiale <code>patch</code>.</td><td>init, ogni fase</td></tr>
+        <tr><td><code>state-machine.md</code></td><td>La tabella delle fasi come dati: skill, chiave di approvazione, gate, saltabile, cosa produce e cosa legge; archi e destinazioni di riapertura.</td><td>ogni fase</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="small muted" id="it-rules-empty" data-filter-empty="rules" hidden>No rule matches the filter.</p>
-  <p class="small muted">The “Applies in” column follows the orchestrator’s table; for <code>management-adapters</code> and <code>notifications</code> (not yet listed there) it is taken from the rule itself.</p>
+  <p class="small muted" id="it-rules-empty" data-filter-empty="rules" hidden>Nessuna regola corrisponde al filtro.</p>
+  <p class="small muted">La colonna “Si applica in” segue la tabella dell’orchestratore; per <code>management-adapters</code> e <code>notifications</code> (non ancora elencate lì) è ricavata dalla regola stessa.</p>
 </section>
 
 <!-- 8. HOOKS -->
