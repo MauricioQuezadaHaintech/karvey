@@ -81,15 +81,15 @@ Coverage: 87/90 requirements with a green test or a `manual` exception · 0 unco
 | REQ-W3-073 | E1.F11.T4, E1.F11.T6 | `3dd75f7`, `90b279c` | — | no test | not green |
 | REQ-W3-074 | E1.F11.T4 | `90b279c` | — | no test · manual | green |
 | REQ-W3-075 | E1.F11.T4 | `90b279c` | — | no test · manual | green |
-| REQ-W3-066 | E1.F12.T1, E1.F12.T3, E1.F12.T4, E1.F12.T5, E1.F12.T6, E1.F12.T7, E1.F12.T8, E1.F12.T9, E1.F12.T10, E1.F12.T11, E1.F12.T12, E1.F12.T13, E1.F12.T14 | `5597e28`, `039106c`, `69ae5cd`, `231bd32`, `a8b5bd2`, `874919f`, `9ed9600`, `d881d41`, `8d3954c`, `bf0bcd5`, `7deed25`, `6c842ba`, `871e2ae`, `d6e6e62`, `6c38dfc`, `69c1ca2` | `plugins/karvey/tests/page/test_page.mjs`, `plugins/karvey/tests/unit/test_page_static.py` | pass | green |
+| REQ-W3-066 | E1.F12.T1, E1.F12.T3, E1.F12.T4, E1.F12.T5, E1.F12.T6, E1.F12.T7, E1.F12.T8, E1.F12.T9, E1.F12.T10, E1.F12.T11, E1.F12.T12, E1.F12.T13, E1.F12.T14 | `fbab336`, `5597e28`, `039106c`, `69ae5cd`, `231bd32`, `a8b5bd2`, `874919f`, `9ed9600`, `d881d41`, `8d3954c`, `bf0bcd5`, `7deed25`, `6c842ba`, `871e2ae`, `d6e6e62`, `6c38dfc`, `69c1ca2` | `plugins/karvey/tests/page/test_page.mjs`, `plugins/karvey/tests/unit/test_page_static.py` | pass | green |
 | REQ-W3-067 | E1.F12.T15 | `5597e28` | `plugins/karvey/tests/unit/test_lint_w3.py` | pass | green |
-| REQ-W3-068 | E1.F12.T1 | `5597e28`, `039106c`, `69ae5cd`, `231bd32`, `a8b5bd2`, `874919f`, `d6e6e62`, `6c38dfc`, `69c1ca2` | `plugins/karvey/tests/page/test_page.mjs` | pass | green |
+| REQ-W3-068 | E1.F12.T1 | `fbab336`, `5597e28`, `039106c`, `69ae5cd`, `231bd32`, `a8b5bd2`, `874919f`, `d6e6e62`, `6c38dfc`, `69c1ca2` | `plugins/karvey/tests/page/test_page.mjs` | pass | green |
 | REQ-W3-069 | E1.F12.T16 | `6c38dfc` | `plugins/karvey/tests/page/test_page.mjs`, `plugins/karvey/tests/unit/test_lint_w3.py` | pass | green |
-| REQ-W3-070 | E1.F12.T2, E1.F12.T17, E1.F12.T18 | `d6e6e62`, `9eed656` | `plugins/karvey/tests/unit/test_lint_plugin.py` | pass | green |
+| REQ-W3-070 | E1.F12.T2, E1.F12.T17, E1.F12.T18 | `fbab336`, `d6e6e62`, `9eed656` | `plugins/karvey/tests/unit/test_lint_plugin.py` | pass | green |
 | REQ-ADP-011 | E1.F4.T8 | `6201940` | `plugins/karvey/tests/unit/test_notify_events.py` | pass | green |
 | REQ-W1-045 | E1.F8.T2 | `477a65b` | `plugins/karvey/tests/hooks/tables/session.json`, `plugins/karvey/tests/unit/test_context.py` | pass | green |
 | REQ-W1-089 | E1.F7.T1 | `5b728db` | — | no test · manual | green |
-| REQ-ADP-031 | E1.F12.T1 | `5597e28`, `039106c`, `69ae5cd`, `231bd32`, `a8b5bd2`, `874919f`, `d6e6e62`, `6c38dfc`, `69c1ca2` | `plugins/karvey/tests/page/test_page.mjs` | pass | green |
+| REQ-ADP-031 | E1.F12.T1 | `fbab336`, `5597e28`, `039106c`, `69ae5cd`, `231bd32`, `a8b5bd2`, `874919f`, `d6e6e62`, `6c38dfc`, `69c1ca2` | `plugins/karvey/tests/page/test_page.mjs` | pass | green |
 | REQ-W1-009 | E1.F11.T2 | `2040dd0` | `plugins/karvey/tests/unit/test_state_fix.py` | pass | green |
 | REQ-W1-068 | E1.F5.T5, E1.F10.T5 | `1da2721`, `d8b4357` | `plugins/karvey/tests/unit/test_incident_states.py` | pass | green |
 | REQ-W2-003 | E1.F3.T7 | `c6db4bf` | `plugins/karvey/tests/unit/test_metrics.py` | pass | green |
