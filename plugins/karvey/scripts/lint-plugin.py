@@ -773,8 +773,12 @@ COUNT_RES = (
 )
 
 
+PAGE_COUNT_RE = re.compile(r'<span data-count="([a-z]+)">(\d+)</span>')
+
+
 @check("L-11", "Skill and rule counts in README.md, plugins/karvey/README.md, plugin.json and "
-               "marketplace.json match the files", reqs=("055",))
+               "marketplace.json match the files, and so do the method page's Wave 3 counts in every language",
+       reqs=("055", "W3-070"))
 def l11_counts(ctx):
     skills = ctx.skills()
     phases = phase_skills(ctx)
@@ -805,6 +809,21 @@ def l11_counts(ctx):
                         yield (path, n, "says %d %s but the plugin has %d (%s)"
                                % (got, {"phase": "phases", "support": "support skills", "skills": "skills",
                                         "rules": "rules"}[kind], truth[kind], m.group(0)))
+    # the method page's Wave 3 counts, in every language block (REQ-W3-070)
+    page = ctx.root / "docs" / "karvey.html"
+    text = ctx.read(page)
+    if text is None:
+        return
+    truth["adapters"] = len(list((ctx.rules_dir / "adapters").glob("*.md")))
+    truth["scripts"] = len(list((ctx.plugin / "scripts").glob("*.py")))
+    starts = [(m.start(), m.group(1)) for m in LANG_BLOCK_RE.finditer(text)]
+    for i, (pos, lang) in enumerate(starts):
+        end = starts[i + 1][0] if i + 1 < len(starts) else len(text)
+        for m in PAGE_COUNT_RE.finditer(text, pos, end):
+            kind, got = m.group(1), int(m.group(2))
+            if kind in truth and got != truth[kind]:
+                yield (page, text.count("\n", 0, m.start()) + 1, "the %s block says %d %s but the plugin has %d"
+                       % (lang, got, kind, truth[kind]))
 
 
 # --------------------------------------------------------------------------- L-12

@@ -456,6 +456,18 @@ class L11(LintCase):
         self.assertFails("L-11", "rules")
 
 
+    def test_REQ_W3_070_a_page_count_off_by_one_names_the_language(self):
+        """@req REQ-W3-070 — the method page's Wave 3 counts match the plugin in every language."""
+        scripts = len(list(self.t.path("plugins/karvey/scripts").glob("*.py")))
+        skills = len([d for d in self.t.path(SKILLS).iterdir() if (d / "SKILL.md").is_file()])
+        page = "docs/karvey.html"
+        self.t.write(page, "<html><body>\n" + "".join(
+            '<div class="lang-block" data-lang="%s" lang="%s"><p data-counts="wave3"><span data-count="skills">%d'
+            '</span> <span data-count="scripts">%d</span></p></div>\n' % (l, l, skills, scripts + (l == "ja"))
+            for l in ("en", "ja")) + "</body></html>\n")
+        fs = self.assertFails("L-11", "the ja block says %d scripts" % (scripts + 1), file=page)
+        self.assertEqual(len(fs), 1)
+
 class L12(LintCase):
     def test_pass(self):
         self.assertPasses("L-12")
