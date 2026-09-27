@@ -297,7 +297,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F12.T2 [Frontend] | ✅ done | 15 | 16 | 0 | section id is `{lang}-wave3` (the page's id convention; the done-when grep `id="wave3` would need an unprefixed, duplicated id): `grep -c -- '-wave3"'` = 15 |
 | E1.F12.T3 [Frontend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F12.T4 [Frontend] | ✅ done | 12 | 7 | 0 |  |
-| E1.F12.T5 [Frontend] | ⬜ todo | 12 | — | — |  |
+| E1.F12.T5 [Frontend] | ✅ done | 12 | 8 | 0 |  |
 | E1.F12.T6 [Frontend] | ⬜ todo | 12 | — | — |  |
 | E1.F12.T7 [Frontend] | ⬜ todo | 12 | — | — |  |
 | E1.F12.T8 [Frontend] | ⬜ todo | 12 | — | — |  |
