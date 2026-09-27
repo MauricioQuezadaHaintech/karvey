@@ -46,6 +46,49 @@ nothing else. It is proposed only when `karvey-context.py --readiness` shows at 
 report attached, and its approval is its own decision. The checks beyond those three stay warn or advisory in 4.0
 until a later decision reads the readiness data. The Wave 1 deprecated shims are removed in the same release.
 
+### Wave 3 (`wave3-optimization`) — summary for the release block
+Every phase loads only the rules on its `Load:` line plus the core contracts; the sponsor of a change reads its scope,
+state, cost, risks and pending decisions on one page generated from the change's artifacts; the organisation sees
+every Karvey repository in one read-only portfolio. Cost is measured, never capped (D-30). The version number and
+date are set at release.
+
+**Context size, before and after** (`karvey-context-budget.py compare`, `closure_max` bytes per phase skill):
+`docs/spec/retros/context-size-4.0.0.json` (the 4.0.0 content, committed before any move) → `docs/spec/retros/context-size-4.1.0.json`:
+**median reduction 56.1%** against a 40% target, every phase above it (from 40.7% for deploy to 73.1% for mockup;
+orchestrator 81.9%); the session hook is unchanged; `contracts` keeps 79 of 79 (phase, contract) pairs loaded.
+
+**This change's cost:** judges US$ 0.77 (estimated, six runs across the requirements, architecture and design
+reviews). The single-agent cost before 4.1 was not measured: the effort record did not exist for the phases this
+change closed before it (init … tasks), which read `not measured (effort record did not exist)`; from the next gate
+close on, `spec.json:effort` records it. The final figure is completed at release from `effort[]`.
+
+**New checks** (`check-modes.json`, 4.1 defaults): only `sponsor.leak` (a sponsor page never leaves with a secret,
+path, host, address or personal datum) and `loadlist.missing` (a `Load:` entry names a missing file) are blocking;
+the other fourteen Wave 3 rows are warn or advisory. The Wave 2 rows keep their 4.0 values.
+
+**Upgrade (manual, until the project-upgrade catalogue carries these steps;** declared in
+`docs/spec/changes/wave3-optimization/upgrade-steps.handoff.json`**):**
+- `client-from-tag` — run `karvey-state.py validate --all --fix`: a non-empty tracker `client_tag` is proposed as
+  the first-level `client` (diff first, the tag stays); `client-tag-mismatch` reports a `client` that differs.
+- `stakeholders-declare` — declare `project.json:stakeholders` (sponsor, approver, executor) when the PRDs name a
+  sponsor; without it the close prints `no sponsor declared` once.
+- `cost-cap-keys` — cost-limit keys (the Wave 2 `judges.budget` included) are reported `unsupported (D-30)`;
+  remove them when you accept the shown diff.
+- `statusline-capture` — install the plugin's statusline, or effort reads `n/a — statusline not installed`.
+- `backlog-wsjf-columns` — add `Value | Effort | CoD | Needed by | Client | Reviewed | Commit` to `backlog.md`
+  (items become `unscored`); `backlog-done-undefined` suggests `done-direct` with its commit.
+- `incident-states-neutral` — localized incident states stay valid; an optional rewrite is shown as a diff.
+- `time-zone-declare` — set `project.json:time_zone` where rules named a fixed zone.
+- `browse-via` — set `project.json:browse.via` (`local` by default, `agent:<name>`, `none`).
+- `settings-valid` — fix the team settings `karvey-config.py resolve` names as invalid.
+- `design-system-seed` — seed `docs/spec/design-system.md` from the latest design-spec (a diff you accept).
+- `wbs-legacy-shape` and `spec-layout-root` — reported for the record, never rewritten.
+
+**4.0 → 4.1.** Backward compatible: a project that passes `validate --strict` and the linter under 4.0 still passes
+under 4.1 with the default modes (`compat.json` `compat41-` replays, `test_compat_w3.py`). Per-tool tracker text
+moved into `rules/adapters/`, rare paths into skill `references/`, and the orchestrator only routes; the method
+overview is `skills/karvey/references/overview.md`.
+
 ### Added
 - E1.F1.T1 — real hook payloads captured headless from CLI 2.1.281 into `plugins/karvey/tests/fixtures/payloads/` (9 sanitised fixtures); F-02 closed with a result per assumption A-1..A-10, A-8 nuance logged as F-04. Why: freeze the parser and guard tables on the real contract, not on docs.
 - E1.F2.T1 — `karvey_lib` package: exit codes, `--json` envelope and `defaults.json` (8 h rotation, 120 min marker, 7 days stalled, ±30 % over 3 changes). Why: one contract and one place for the D-06/D-07 values (REQ-W1-049).
@@ -264,6 +307,7 @@ until a later decision reads the readiness data. The Wave 1 deprecated shims are
 - wave3-optimization E1.F11.T3 — compatibility 4.0 → 4.1: `test_compat_w3.py` validates every legacy and fixture-project `spec.json` / `project.json` with `--strict` on the 4.0 and the 4.1 release line (a fixture that passes under 4.0 passes under 4.1, and no error code appears that 4.0 did not report, named on failure), lints the good fixture project on the 4.1 line, and checks that a Wave 2 cost-limit key passes with the `cost.cap_key` warning; `compat.json` gains 70 `compat41-` replays of the Wave 2 compat cases with every Wave 3 check-modes row at its 4.1 default (generated by `test_compat_w3.py --write`, 144 cases pass). Why: nothing that passed under 4.0 may fail under 4.1 (REQ-W3-062). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5.
 - wave3-optimization E1.F11.T4 — dogfooding: this change declares `stakeholders.sponsor` (role "method owner", `channel: none`), its sponsor page is built at the *how* gate (leak check PASS, delivery `not delivered: no destination declared`) and `sponsor-history.jsonl` records the *what* and *how* gates closed before the generator as `no page (generator not built yet)`; the design judge ran once on this change's design (F-68) over a `design-delta.md` written after the fact (every token added, the project has no design system yet) and `contrast.json` (14 pairs, 0 below AA): verdict `concerns`, 18 findings F-86..F-103 (3 High) appended for iterate, its cost recorded as an estimate (33k tokens; the runtime showed ~64k for the subagent). Why: the change runs its own sponsor page and design judge before release (REQ-W3-073, 074, 075). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5.
 - wave3-optimization E1.F11.T6 — whole-repo gate, each command recorded through `karvey-evidence.py` (`evidence.jsonl` lines 1–12, all exit 0): lint 0 errors, unit (1,347) and regression suites, 550 guard-table runs, `test-hooks.sh` 72 passed, 26 page tests, `validate --all` 0 errors, `karvey-trace.py --check` 90 of 90 requirements covered by tasks (the 80 REQ-W3 plus 10 modified ones; 78 green, the 12 others belong to F11.T7, F12 or are change-scoped), `--wbs` 0 issues, `contracts` 79/79, `compare` median 56.1%, release manifest with no unmapped commit; `traceability.md` regenerated. Why: F1..F11 are proven together before the release docs and the method page (REQ-W3-061, 062, 065, 073). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5.
+- wave3-optimization E1.F11.T7 — release docs: the `[Unreleased]` block gains the Wave 3 summary — context size before/after (both snapshots, median 56.1%), this change's cost with the single-agent cost before 4.1 not measured, the two blocking 4.1 checks, the manual Upgrade list from `upgrade-steps.handoff.json` and the 4.0 → 4.1 note; no version or date; F2 and F11 marked done in PLAN.md. Why: the release notes state what changed and what a 4.0 project must do (REQ-W3-064). Responsible: Mauricio Quezada (mauricio.quezada@haintech.cl) · AI: Claude Opus 5.5.
 
 ### Fixed
 - F-06/F-05 — a legacy date-only `approvals.*.date` is a warning in advisory mode (error in strict); `approvals.prod.date` stays strict; architecture §2.2 documents `maxLength`, the annotations and `schema.legacy`. Why: REQ-W1-003 says legacy shapes warn, and every existing `spec.json` holds date-only approvals.

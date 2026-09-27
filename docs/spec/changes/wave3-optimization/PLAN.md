@@ -1,7 +1,7 @@
 # Plan: wave3-optimization
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend, Frontend, Infra
-**Created:** 2026-09-26 | **Status:** 🔄 impl — batch 2: 65 of 100 agent tasks done (F1, F3..F10, F11.T1, T2, T5); next E1.F2.T1 (then F2, E1.F11.T4, F11.T3, T6, T7, F12 last)
+**Created:** 2026-09-26 | **Status:** 🔄 impl — batch 3: 83 of 100 agent tasks done (F1..F11); next E1.F12.T1 (the method page, last)
 **Lane:** feature-ui (the sponsor page and the method page are UI: mockup and design-graphic run)
 **Release target:** 4.1.0 (minor, backward compatible with 4.0.0)
 **Flow:** trunk (`feature/wave3-optimization` → PR → `main`) · **Decisions:** D-30, D-31, D-32 (D-01..D-29 hold)
@@ -48,7 +48,7 @@ F11 rollout; **F12 last** (B-06).
 | Feature | Area | Requirements covered | Panel / sources | Status |
 |---------|------|----------------------|-----------------|--------|
 | F1 | Context measurement: size tool, baseline, CI | REQ-W3-001, 002, 010, 011, 071, 072 | R-15 · AG-04, H-34 · BL-18 | ✅ |
-| F2 | Context budget: core, load lists, adapters, references, routing-only orchestrator, contract coverage, generated lists, one phase per session | REQ-W3-003..009, 012, 013 | R-15 · AG-04 · BL-18, BL-39 | ⬜ |
+| F2 | Context budget: core, load lists, adapters, references, routing-only orchestrator, contract coverage, generated lists, one phase per session | REQ-W3-003..009, 012, 013 | R-15 · AG-04 · BL-18, BL-39 | ✅ |
 | F3 | Cost per change with a single agent | REQ-W3-014..019, 077 | R-25 · PM-08 · D-30 · BL-28, BL-37 | ✅ |
 | F4 | Sponsor page, report, "your turn" events, deduplication | REQ-W3-020..027, 080 | R-19 · PM-07 · D-31 · BL-22, BL-43 | ✅ |
 | F5 | Open questions Q-NN and risk register | REQ-W3-028..034 | R-24 · PM-11 · BL-27 | ✅ |
@@ -57,7 +57,7 @@ F11 rollout; **F12 last** (B-06).
 | F8 | Organisation portfolio | REQ-W3-044..048, 078, 079 | R-28 · PM-14 · D-32 · BL-31, BL-40 | ✅ |
 | F9 | Backlog ranked by WSJF, `done-direct` | REQ-W3-049..052 | R-29 · PM-15 · BL-32 | ✅ |
 | F10 | Portability (guide, browse.via, OS/time neutrality, neutral states, loaded version, settings validation) | REQ-W3-053..060 | R-30 · AG-14 · D-32 · BL-33, BL-38 | ✅ |
-| F11 | Rollout 4.1.0 and dogfooding | REQ-W3-061..065, 073, 074, 075 (064, 065, 073..075 change-scoped) | Ola 3 plan · D-24, D-26, D-31 | ⬜ |
+| F11 | Rollout 4.1.0 and dogfooding | REQ-W3-061..065, 073, 074, 075 (064, 065, 073..075 change-scoped) | Ola 3 plan · D-24, D-26, D-31 | ✅ |
 | F12 | **Last:** method page in it / ja / fr / ko, alias table | REQ-W3-066..070 | B-06 · BL-42 | ⬜ |
 
 Coverage: 80 of 80 REQ-W3 in exactly one Feature.
@@ -292,7 +292,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F11.T4 [Backend] | ✅ done | 10 | 18 | 0 | design judge over the mockups (the design artifact); F-86..F-103 await iterate; effort starts at the next gate close |
 | E1.F11.T5 [Backend] | ✅ done | 8 | 6 | 0 |  |
 | E1.F11.T6 [Test] | ✅ done | 10 | 12 | 0 | trace prints 90/90 covered (80 REQ-W3 + 10 modified), 78 green; `validate` takes a path, not the change id |
-| E1.F11.T7 [Backend] | ⬜ todo | 6 | — | — |  |
+| E1.F11.T7 [Backend] | ✅ done | 6 | 9 | 0 |  |
 | E1.F12.T1 [Frontend] | ⬜ todo | 12 | — | — |  |
 | E1.F12.T2 [Frontend] | ⬜ todo | 15 | — | — |  |
 | E1.F12.T3 [Frontend] | ⬜ todo | 12 | — | — |  |
