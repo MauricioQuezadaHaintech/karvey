@@ -215,6 +215,15 @@ class Compare(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertNotIn("::warning", out)
 
+    def test_BUG_133_a_phase_only_in_the_baseline_fails_the_gate(self):
+        base = self.write("base.json", snapshot({"a": 1000, "b": 1000, "c": 1000, "d": 1000}))
+        after = self.write("after.json", snapshot({"a": 500, "b": 500, "c": 500}))  # d (a low reducer) renamed away
+        rc, _, err = run("compare", base, after)
+        self.assertEqual(rc, 1)
+        self.assertIn("d is in the baseline but not measured now", err)
+        rc, _, _ = run("compare", base, after, "--warn-growth", "10")  # the CI step only warns on growth
+        self.assertEqual(rc, 0)
+
     def test_missing_snapshot_exits_4(self):
         rc, _, _ = run("compare", str(self.tmp / "none.json"), "--live")
         self.assertEqual(rc, 4)

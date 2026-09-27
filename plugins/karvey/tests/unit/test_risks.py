@@ -138,6 +138,28 @@ class Command(unittest.TestCase):
         self.assertEqual(len(self.data()["risk_log"]), 1)
         self.assertEqual(backlog.read_text(encoding="utf-8").count("| BL-07 |"), 1)
 
+    def test_BUG_136_move_to_an_unrelated_backlog_item_is_refused(self):
+        backlog = self.root / "docs/spec/backlog.md"
+        backlog.write_text("# Discovery Backlog\n\n| ID | Date | Origin | Type | Priority | Title | Status | Tracker | "
+                           "Promoted to change-id |\n|----|------|--------|------|----------|-------|--------|---------|"
+                           "-----------------------|\n| BL-01 | 2026-10-01 | x | idea | low | unrelated | open | — | — |\n",
+                           encoding="utf-8")
+        before = (self.reg.read_bytes(), backlog.read_bytes(), self.spec.read_bytes())
+        code, env = self.risk("R-1", "move", "--to", "BL-01", "--by-role", "tech lead")
+        self.assertEqual(code, 3, env)
+        self.assertIn("does not cite R-1", env["errors"][0]["message"])
+        self.assertEqual((self.reg.read_bytes(), backlog.read_bytes(), self.spec.read_bytes()), before)
+
+    def test_BUG_136_a_second_move_is_refused(self):
+        code, env = self.risk("R-1", "move", "--to", "BL-07", "--by-role", "tech lead")
+        self.assertEqual(code, 0, env)
+        before = (self.reg.read_bytes(), self.spec.read_bytes())
+        code, env = self.risk("R-1", "move", "--to", "BL-08", "--by-role", "tech lead")
+        self.assertEqual(code, 3, env)
+        self.assertIn("already moved", env["errors"][0]["message"])
+        self.assertEqual((self.reg.read_bytes(), self.spec.read_bytes()), before)
+        self.assertEqual(len(self.data()["risk_log"]), 1)
+
     def test_BUG_123_rewrite_finds_its_header_whatever_the_case(self):
         text = REG.replace("| ID |", "| Id |").replace("| Owner |", "| owner |")
         out = rk.rewrite(text, "R-1", "closed", "2026-10-20 tech lead")

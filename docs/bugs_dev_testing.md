@@ -1930,3 +1930,282 @@ The command is split into segments; a `cd DIR` segment sets the directory and re
 | 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | relative paths after cd ignored |
 | 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
 | 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-128 — Contract coverage passes with a contract gone
+- **Priority:** high
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-context-budget.py (`_anchored`)
+- **Change / origin:** wave3-optimization — finding F-145 (QA dimension 7 (second opinion, intra-model))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: an anchor in `_core.md` counted for every phase even when the phase no longer loads `_core.md`, and only the heading was checked (79/79 with the section emptied).
+
+### Actual vs expected
+- Actual: an anchor in `_core.md` counted for every phase even when the phase no longer loads `_core.md`, and only the heading was checked (79/79 with the section emptied).
+- Expected: a contract counts only where its file is in the phase closure and its section still has a body.
+
+### Root cause
+anchor presence checked, not reachability or content.
+
+### Fix
+the anchor file must be in the phase closure and the section keep at least 12 words (`CONTRACT_MIN_WORDS`).
+
+### Regression test
+`plugins/karvey/tests/unit/test_contracts.py`, `Coverage.test_BUG_128_the_core_counts_only_for_a_phase_that_loads_it`, `plugins/karvey/tests/unit/test_contracts.py`, `Coverage.test_BUG_128_an_emptied_contract_section_is_not_loaded` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-145: QA dimension 7 (second opinion, intra-model) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | anchor presence checked, not reachability or content |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-129 — Webhook URLs with the secret in the path pass the leak check
+- **Priority:** high
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/leak_patterns.json
+- **Change / origin:** wave3-optimization — finding F-146 (QA dimension 7 (second opinion, intra-model))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: a chat webhook URL (`/services/T…/B…/…`) passed with ok=True.
+
+### Actual vs expected
+- Actual: a chat webhook URL (`/services/T…/B…/…`) passed with ok=True.
+- Expected: any webhook URL or random 24+ character URL segment is a secret.
+
+### Root cause
+no rule for secrets in URL paths.
+
+### Fix
+rules `webhook-url`, `chat-webhook-path`, `url-random-segment`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_leakcheck.py`, `QaDimension1.test_BUG_129_webhook_urls_and_random_url_segments_are_secrets` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-146: QA dimension 7 (second opinion, intra-model) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | no rule for secrets in URL paths |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-130 — Phone-like numbers exempt as versions
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/leakcheck.py (`_pii`)
+- **Change / origin:** wave3-optimization — finding F-147 (QA dimension 7 (second opinion, intra-model))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: "9.8765.4321" passed as a version.
+
+### Actual vs expected
+- Actual: "9.8765.4321" passed as a version.
+- Expected: a version only after `v` or a version word.
+
+### Root cause
+any dotted number exempt.
+
+### Fix
+version context required.
+
+### Regression test
+`plugins/karvey/tests/unit/test_leakcheck.py`, `QaDimension1.test_BUG_130_a_version_needs_a_v_or_version_context` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-147: QA dimension 7 (second opinion, intra-model) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | any dotted number exempt |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-131 — Secret assignments in Spanish or Portuguese pass
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/leak_patterns.json
+- **Change / origin:** wave3-optimization — finding F-148 (QA dimension 7 (second opinion, intra-model))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: "clave: …" or "senha: …" with a secret value passed.
+
+### Actual vs expected
+- Actual: "clave: …" or "senha: …" with a secret value passed.
+- Expected: caught as in English.
+
+### Root cause
+English keywords only.
+
+### Fix
+keywords contraseña, clave, secreto, senha, segredo, chave, credencial.
+
+### Regression test
+`plugins/karvey/tests/unit/test_leakcheck.py`, `QaDimension1.test_BUG_131_spanish_and_portuguese_assignments_are_secrets` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-148: QA dimension 7 (second opinion, intra-model) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | English keywords only |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-132 — Other-client names missed with other accents or case
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/leakcheck.py (`_client`)
+- **Change / origin:** wave3-optimization — finding F-149 (QA dimension 7 (second opinion, intra-model))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: a client name written without its accents or in another case passed.
+
+### Actual vs expected
+- Actual: a client name written without its accents or in another case passed.
+- Expected: accent- and case-insensitive match at a word start.
+
+### Root cause
+exact-text match.
+
+### Fix
+`fold()` (NFKD, casefold), word-start match, prefix for terms of 4+ characters.
+
+### Regression test
+`plugins/karvey/tests/unit/test_leakcheck.py`, `QaDimension1.test_BUG_132_client_names_ignore_accents_and_case_and_match_as_prefix` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-149: QA dimension 7 (second opinion, intra-model) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | exact-text match |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-133 — A phase dropped from the snapshot leaves the median silently
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-context-budget.py (`cmd_compare`)
+- **Change / origin:** wave3-optimization — finding F-150 (QA dimension 7 (second opinion, intra-model))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: a skill only in the baseline was left out of the median (renaming a low-reduction skill raised it).
+
+### Actual vs expected
+- Actual: a skill only in the baseline was left out of the median (renaming a low-reduction skill raised it).
+- Expected: reported; an error when compare is the gate.
+
+### Root cause
+only common skills compared.
+
+### Fix
+`budget.only_in_base` error in gate mode (CI warn step unchanged).
+
+### Regression test
+`plugins/karvey/tests/unit/test_context_budget.py`, `Compare.test_BUG_133_a_phase_only_in_the_baseline_fails_the_gate` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-150: QA dimension 7 (second opinion, intra-model) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | only common skills compared |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-134 — Effort charges another session capture as exact
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/effort.py (`pick_capture`), karvey-state.py (`cmd_effort`)
+- **Change / origin:** wave3-optimization — finding F-151 (QA dimension 7 (second opinion, intra-model))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: the latest capture of the project was charged as "exact" even from another session; agent-passed review minutes marked "exact".
+
+### Actual vs expected
+- Actual: the latest capture of the project was charged as "exact" even from another session; agent-passed review minutes marked "exact".
+- Expected: only the closing session is exact; stated minutes never exact.
+
+### Root cause
+capture chosen by time, not by session.
+
+### Fix
+closing session from `--session` or the runtime session variable; otherwise "estimated"; review minutes "estimated", source "stated at the gate".
+
+### Regression test
+`plugins/karvey/tests/unit/test_effort.py`, `Lib.test_BUG_134_only_the_closing_sessions_capture_is_exact`, `plugins/karvey/tests/unit/test_effort.py`, `Lib.test_BUG_134_review_minutes_are_never_exact` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-151: QA dimension 7 (second opinion, intra-model) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | capture chosen by time, not by session |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-135 — done-direct accepts a commit that does not exist
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey_lib/backlog.py, karvey-state.py, karvey-context.py
+- **Change / origin:** wave3-optimization — finding F-152 (QA dimension 7 (second opinion, intra-model))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: "0000000" accepted as the done-direct commit; states unvalidated; "open (blocked)" dropped from the view.
+
+### Actual vs expected
+- Actual: "0000000" accepted as the done-direct commit; states unvalidated; "open (blocked)" dropped from the view.
+- Expected: the commit exists in git; states valid; one state reading everywhere.
+
+### Root cause
+regex only; two status comparisons.
+
+### Fix
+`git cat-file -e` (format only without git); `state_of` shared; unknown states warned, never dropped.
+
+### Regression test
+`plugins/karvey/tests/unit/test_backlog_wsjf.py`, `DoneDirectInGit.test_BUG_135_a_done_direct_commit_that_is_not_in_git_is_refused`, `plugins/karvey/tests/unit/test_backlog_wsjf.py`, `DoneDirectInGit.test_BUG_135_a_real_commit_is_accepted`, `plugins/karvey/tests/unit/test_backlog_wsjf.py`, `DoneDirectInGit.test_BUG_135_an_unknown_state_is_a_warning_not_dropped`, `plugins/karvey/tests/unit/test_backlog_wsjf.py`, `View.test_BUG_135_open_with_a_note_is_listed_and_an_unknown_state_is_invalid` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-152: QA dimension 7 (second opinion, intra-model) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | regex only; two status comparisons |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-136 — A risk can be moved to an unrelated item or moved twice
+- **Priority:** medium
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-state.py (`cmd_risk`, `_backlog_row`)
+- **Change / origin:** wave3-optimization — finding F-153 (QA dimension 7 (second opinion, intra-model))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+See the finding: `--to BL-N` naming an unrelated item exited 0; a second move logged moved → moved.
+
+### Actual vs expected
+- Actual: `--to BL-N` naming an unrelated item exited 0; a second move logged moved → moved.
+- Expected: both refused, nothing written.
+
+### Root cause
+no check of the target item or the current state.
+
+### Fix
+exit 3 unless the item cites the risk; from == to refused.
+
+### Regression test
+`plugins/karvey/tests/unit/test_risks.py`, `Command.test_BUG_136_move_to_an_unrelated_backlog_item_is_refused`, `plugins/karvey/tests/unit/test_risks.py`, `Command.test_BUG_136_a_second_move_is_refused` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-153: QA dimension 7 (second opinion, intra-model) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | no check of the target item or the current state |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |

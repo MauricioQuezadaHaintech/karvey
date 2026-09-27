@@ -230,6 +230,39 @@ INDEX = {
     "BUG-127": [  # `observed` misses files read relative to a `cd`
         ('unit', 'test_close.py', 'Observed.test_BUG_101_skill_loads_and_shell_reads_count_as_opened'),
     ],
+    "BUG-128": [  # Contract coverage passes with a contract gone
+        ('unit', 'test_contracts.py', 'Coverage.test_BUG_128_the_core_counts_only_for_a_phase_that_loads_it'),
+        ('unit', 'test_contracts.py', 'Coverage.test_BUG_128_an_emptied_contract_section_is_not_loaded'),
+    ],
+    "BUG-129": [  # Webhook URLs with the secret in the path pass the leak check
+        ('unit', 'test_leakcheck.py', 'QaDimension1.test_BUG_129_webhook_urls_and_random_url_segments_are_secrets'),
+    ],
+    "BUG-130": [  # Phone-like numbers exempt as versions
+        ('unit', 'test_leakcheck.py', 'QaDimension1.test_BUG_130_a_version_needs_a_v_or_version_context'),
+    ],
+    "BUG-131": [  # Secret assignments in Spanish or Portuguese pass
+        ('unit', 'test_leakcheck.py', 'QaDimension1.test_BUG_131_spanish_and_portuguese_assignments_are_secrets'),
+    ],
+    "BUG-132": [  # Other-client names missed with other accents or case
+        ('unit', 'test_leakcheck.py', 'QaDimension1.test_BUG_132_client_names_ignore_accents_and_case_and_match_as_prefix'),
+    ],
+    "BUG-133": [  # A phase dropped from the snapshot leaves the median silently
+        ('unit', 'test_context_budget.py', 'Compare.test_BUG_133_a_phase_only_in_the_baseline_fails_the_gate'),
+    ],
+    "BUG-134": [  # Effort charges another session capture as exact
+        ('unit', 'test_effort.py', 'Lib.test_BUG_134_only_the_closing_sessions_capture_is_exact'),
+        ('unit', 'test_effort.py', 'Lib.test_BUG_134_review_minutes_are_never_exact'),
+    ],
+    "BUG-135": [  # done-direct accepts a commit that does not exist
+        ('unit', 'test_backlog_wsjf.py', 'DoneDirectInGit.test_BUG_135_a_done_direct_commit_that_is_not_in_git_is_refused'),
+        ('unit', 'test_backlog_wsjf.py', 'DoneDirectInGit.test_BUG_135_a_real_commit_is_accepted'),
+        ('unit', 'test_backlog_wsjf.py', 'DoneDirectInGit.test_BUG_135_an_unknown_state_is_a_warning_not_dropped'),
+        ('unit', 'test_backlog_wsjf.py', 'View.test_BUG_135_open_with_a_note_is_listed_and_an_unknown_state_is_invalid'),
+    ],
+    "BUG-136": [  # A risk can be moved to an unrelated item or moved twice
+        ('unit', 'test_risks.py', 'Command.test_BUG_136_move_to_an_unrelated_backlog_item_is_refused'),
+        ('unit', 'test_risks.py', 'Command.test_BUG_136_a_second_move_is_refused'),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 

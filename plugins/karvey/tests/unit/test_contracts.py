@@ -85,11 +85,30 @@ class Coverage(unittest.TestCase):
         self.assertEqual(cp.returncode, 1)
         self.assertIn("deploy: contract prod-gate not loaded", cp.stderr)
 
-    def test_core_heading_anchor_counts_without_the_rule(self):
-        plug = fixture_plugin(self.tmp / "core", deploy_cites_prod_rule=False, anchor="#contract-prod-gate")
+    BODY = ("Production needs the human's own words and a decision id; it is never delegated, never automatic and "
+            "never recorded by an agent.\n")
+
+    def core_plugin(self, name, body=BODY, deploy_loads_core=True):
+        plug = fixture_plugin(self.tmp / name, deploy_cites_prod_rule=False, anchor="#contract-prod-gate")
         (plug / "skills" / "karvey" / "rules" / "_core.md").write_text(
-            "# Core\n## Production gate {#contract-prod-gate}\n", encoding="utf-8")
-        self.assertEqual(run("contracts", "--plugin", str(plug)).returncode, 0)
+            "# Core\n## Production gate {#contract-prod-gate}\n" + body + "## Next\nx\n", encoding="utf-8")
+        if deploy_loads_core:
+            md = plug / "skills" / "karvey-deploy" / "SKILL.md"
+            md.write_text(md.read_text(encoding="utf-8") + "Read `rules/_core.md`.\n", encoding="utf-8")
+        return plug
+
+    def test_core_heading_anchor_counts_without_the_rule(self):
+        self.assertEqual(run("contracts", "--plugin", str(self.core_plugin("core"))).returncode, 0)
+
+    def test_BUG_128_the_core_counts_only_for_a_phase_that_loads_it(self):
+        cp = run("contracts", "--plugin", str(self.core_plugin("noload", deploy_loads_core=False)))
+        self.assertEqual(cp.returncode, 1, cp.stdout)
+        self.assertIn("deploy: contract prod-gate not loaded", cp.stderr)
+
+    def test_BUG_128_an_emptied_contract_section_is_not_loaded(self):
+        cp = run("contracts", "--plugin", str(self.core_plugin("empty", body="TBD.\n")))
+        self.assertEqual(cp.returncode, 1, cp.stdout)
+        self.assertIn("deploy: contract prod-gate not loaded", cp.stderr)
 
     def test_missing_registry_exits_4(self):
         plug = fixture_plugin(self.tmp / "noreg")

@@ -1,0 +1,20 @@
+[
+  {"tool": "bandit", "rule": "B314,B405", "path": "plugins/karvey/",
+   "reason": "the JUnit XML is the project's own test report in the same repository (trusted input), read only after a size cap (JUNIT_MAX_BYTES); ElementTree resolves no external entity and the bundled expat limits entity amplification",
+   "scope": "karvey-trace.py junit_cases() and the tests that build JUnit fixtures"},
+  {"tool": "bandit", "rule": "B108", "path": "plugins/karvey/tests/unit/",
+   "reason": "'/tmp/...' strings are inputs to path-normalisation and allow-list tests; no test creates a file at a fixed shared path (temp dirs come from tempfile)",
+   "scope": "test_judges.py, test_paths.py, test_safe_values.py, test_shellparse.py"},
+  {"tool": "bandit", "rule": "B103", "path": "plugins/karvey/tests/unit/test_portfolio.py",
+   "reason": "0o755 makes a stub executable inside a private temp directory created by the test",
+   "scope": "test_portfolio.py setUp stub only"},
+  {"tool": "bandit", "rule": "B404,B603,B607", "path": "plugins/karvey/",
+   "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+   "scope": "scripts and tests: every subprocess call site"},
+  {"tool": "bandit", "rule": "B105,B107", "path": "plugins/karvey/",
+   "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+   "scope": "karvey-context-budget.py:68, designsys.py:216/329, karvey_hooks.py:54, lint-plugin.py:660 and the test fixtures"},
+  {"tool": "bandit", "rule": "B110", "path": "plugins/karvey/scripts/karvey_lib/",
+   "reason": "the hooks must never fail the session: a best-effort audit/selftest write swallows its own error by contract (hooks README)",
+   "scope": "guards.py:1215, karvey_hooks.py:227/239"}
+]

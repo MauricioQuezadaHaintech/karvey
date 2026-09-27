@@ -60,7 +60,7 @@ median reduction: 56.1% (target 40%)
 
 ## Results per requirement (REQ-W3-001..080)
 
-**78 PASS · 0 FAIL · 2 PENDING.** "Verified by" names the test files that tag the requirement
+**80 PASS · 0 FAIL · 0 PENDING** (REQ-W3-042 and 074 closed in QA, 2026-09-27). "Verified by" names the test files that tag the requirement
 (`@req` / `test_REQ_*`, or a guard table's case tags) and the evidence line of the run; the change-scoped
 requirements are verified by inspection of this change's own artifacts.
 
@@ -78,7 +78,7 @@ requirements are verified by inspection of this change's own artifacts.
 | REQ-W3-010 | The budget is a target, measured after | `test_context_budget.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-011 | Size checked in CI | `test_ci_workflow.py`, `test_context_budget.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-012 | Per-phase rule lists are generated, not hand-kept | `test_context_budget.py`, `test_lint_w3.py` · evidence.jsonl:34 | PASS |
-| REQ-W3-013 | One phase per session is the declared pattern | `test_close.py` · evidence.jsonl:34 · + manual `one-phase-per-session.md` (to run before QA) | PASS |
+| REQ-W3-013 | One phase per session is the declared pattern | `test_close.py` · evidence.jsonl:34 · + manual `one-phase-per-session.md` PASS (`qa/manual/one-phase-per-session-2026-09-27.md`) | PASS |
 | REQ-W3-014 | Effort recorded at each phase close | `test_close.py`, `test_effort.py`, `test_schema_w3.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-015 | Cost source captured outside the model | `statusline.json`, `test_effort.py` · evidence.jsonl:34,36 | PASS |
 | REQ-W3-016 | Judge cost kept apart | `test_effort.py`, `test_schema_w3.py` · evidence.jsonl:34 | PASS |
@@ -87,9 +87,9 @@ requirements are verified by inspection of this change's own artifacts.
 | REQ-W3-019 | Outliers in the retro | `test_metrics.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-020 | Stakeholders declared in the project | `test_stakeholders.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-021 | One page per change, from the artifacts | `test_sponsor.py` · evidence.jsonl:34 | PASS |
-| REQ-W3-022 | Published at every gate close | `test_close.py`, `test_sponsor.py` · evidence.jsonl:34 · + manual `sponsor-at-gate.md` (to run before QA) | PASS |
-| REQ-W3-023 | Nothing internal leaves | `test_leakcheck.py`, `test_sponsor.py` · evidence.jsonl:34 · + manual `sponsor-at-gate.md` (to run before QA) | PASS |
-| REQ-W3-024 | Self-contained, readable page | `test_lint_w3.py` · evidence.jsonl:34 · + manual `sponsor-at-gate.md` (to run before QA) | PASS |
+| REQ-W3-022 | Published at every gate close | `test_close.py`, `test_sponsor.py` · evidence.jsonl:34 · + manual `sponsor-at-gate.md` PASS (`qa/manual/sponsor-at-gate-2026-09-27.md`) | PASS |
+| REQ-W3-023 | Nothing internal leaves | `test_leakcheck.py`, `test_sponsor.py` · evidence.jsonl:34 · + manual `sponsor-at-gate.md` PASS (`qa/manual/sponsor-at-gate-2026-09-27.md`) | PASS |
+| REQ-W3-024 | Self-contained, readable page | `test_lint_w3.py` · evidence.jsonl:34 · + manual `sponsor-at-gate.md` PASS (`qa/manual/sponsor-at-gate-2026-09-27.md`) | PASS |
 | REQ-W3-025 | The report command | `test_context_report.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-026 | "Your turn" events | `test_notify_events.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-027 | Notifications are not duplicated | `test_notify_events.py` · evidence.jsonl:34 | PASS |
@@ -102,12 +102,12 @@ requirements are verified by inspection of this change's own artifacts.
 | REQ-W3-034 | Archive closes or moves every risk | `test_risks.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-035 | One design system per project | `test_design_delta.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-036 | The change declares only its delta | `test_design_delta.py` · evidence.jsonl:34 | PASS |
-| REQ-W3-037 | Art catalogue is opt-in | `test_lint_w3.py` · evidence.jsonl:34 · + manual `design-judge-gate.md` (to run before QA) | PASS |
+| REQ-W3-037 | Art catalogue is opt-in | `test_lint_w3.py` · evidence.jsonl:34 · + manual `design-judge-gate.md` PASS (`qa/manual/design-judge-gate-2026-09-27.md`) | PASS |
 | REQ-W3-038 | Contrast is computed | `test_contrast.py`, `test_design_delta.py` · evidence.jsonl:34 | PASS |
-| REQ-W3-039 | The design score comes from a judge | `test_contrast.py`, `test_judges.py`, `test_lint_w3.py` · evidence.jsonl:34 · + manual `design-judge-gate.md` (to run before QA) | PASS |
-| REQ-W3-040 | Feature means a functional area | `test_lint_w3.py`, `test_wbs.py` · evidence.jsonl:34 · + manual `tracker-wbs.md` (to run before QA) | PASS |
-| REQ-W3-041 | QA and deploy belong to the Epic | `test_lint_w3.py`, `test_wbs.py` · evidence.jsonl:34 · + manual `tracker-wbs.md` (to run before QA) | PASS |
-| REQ-W3-042 | Hierarchy by parent and child | PENDING (manual: tracker-wbs.md) | PENDING |
+| REQ-W3-039 | The design score comes from a judge | `test_contrast.py`, `test_judges.py`, `test_lint_w3.py` · evidence.jsonl:34 · + manual `design-judge-gate.md` PASS (`qa/manual/design-judge-gate-2026-09-27.md`) | PASS |
+| REQ-W3-040 | Feature means a functional area | `test_lint_w3.py`, `test_wbs.py` · evidence.jsonl:34 · + manual `tracker-wbs.md` PASS (`qa/manual/tracker-wbs-2026-09-27.md`) | PASS |
+| REQ-W3-041 | QA and deploy belong to the Epic | `test_lint_w3.py`, `test_wbs.py` · evidence.jsonl:34 · + manual `tracker-wbs.md` PASS (`qa/manual/tracker-wbs-2026-09-27.md`) | PASS |
+| REQ-W3-042 | Hierarchy by parent and child | `test_wbs.py` (BUG-97, BUG-98) · manual `tracker-wbs.md` PASS on the rerun (`qa/manual/tracker-wbs-2026-09-27.md`: QA fix tasks as children of `E1.QA`, `[Deploy] sample-wbs@…` under `E1.DEPLOY`, found and reused on a second run) | PASS |
 | REQ-W3-043 | Every task belongs to exactly one Feature | `test_wbs.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-044 | Client as a first-level field | `test_stakeholders.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-045 | A portfolio file lists the repositories | `test_portfolio.py` · evidence.jsonl:34 | PASS |
@@ -119,7 +119,7 @@ requirements are verified by inspection of this change's own artifacts.
 | REQ-W3-051 | The backlog view | `test_backlog_wsjf.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-052 | Refinement cadence | `test_backlog_wsjf.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-053 | A portability guide, one supported runtime | `test_lint_w3.py` · evidence.jsonl:34 | PASS |
-| REQ-W3-054 | Browsing can be delegated | `test_browse_via.py` · evidence.jsonl:34 · + manual `browse-via-agent.md` (to run before QA) | PASS |
+| REQ-W3-054 | Browsing can be delegated | `test_browse_via.py` · evidence.jsonl:34 · + manual `browse-via-agent.md` PASS (`qa/manual/browse-via-agent-2026-09-27.md`) | PASS |
 | REQ-W3-055 | No OS-only commands | `test_lint_w3.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-056 | No fixed country time | `test_lint_w3.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-057 | Neutral incident states with aliases | `test_incident_states.py` · evidence.jsonl:34 | PASS |
@@ -139,7 +139,7 @@ requirements are verified by inspection of this change's own artifacts.
 | REQ-W3-071 | The size tool is reproducible | `test_context_budget.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-072 | A missing load-list file fails CI | `test_context_budget.py`, `test_lint_w3.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-073 | Built with itself: the lane | inspection: `spec.json:lane` = `feature-ui`, `project.json:branch_flow.mode` = `trunk`; `validate` 0 errors · evidence.jsonl:40 | PASS |
-| REQ-W3-074 | Built with itself: its own effort | PENDING — no gate has closed since the effort capture existed (C-09); `spec.json:effort` is empty and the phases init … tasks read `not measured (effort record did not exist)`; the first entry is written by `karvey-close.py` at the next gate close (test → qa) | PENDING |
+| REQ-W3-074 | Built with itself: its own effort | `spec.json:effort` gained its first entry at the close of the test phase (`karvey-state.py effort wave3-optimization test`, 2026-09-27): `usd`/`tokens` `n/a — statusline not installed` (the agent sessions of this change run without the statusline), review minutes `n/a` — recorded with the reason, never as zero; the phases init … tasks closed before the capture existed and read `not measured (effort record did not exist)` (the error scenario) | PASS |
 | REQ-W3-075 | Built with itself: its own sponsor page | inspection: `sponsor-history.jsonl` records the *what* and *how* gates as `no page (generator not built yet)` and the pages built since (sha256); `deliver` → `not delivered: no destination declared` (`channel: none`) · evidence.jsonl:48 | PASS |
 | REQ-W3-076 | Design-system conflicts stop the apply | `test_design_delta.py` · evidence.jsonl:34 | PASS |
 | REQ-W3-077 | Judge cost measured from the runtime | `test_judges.py` · evidence.jsonl:34 | PASS |
@@ -162,20 +162,21 @@ requirements are verified by inspection of this change's own artifacts.
 | REQ-W2-022 | `test_judges.py` | PASS |
 | REQ-W2-030 | `test_judges.py`, `test_state_judges.py` | PASS |
 
-## Manual agent-behaviour scripts — to run before QA
+## Manual agent-behaviour scripts — run in QA (2026-09-27)
 
-These need a real session, a person at a gate or a real browser/agent; they are **not run** in this phase (no
-headless path for the behaviour they check). Each has automated coverage of its scripts (above); the script
+Run headless as the maintainer agent (owner-authorised pattern, D-19/D-21/D-28): a throw-away repository with a bare
+origin, the branch plugin, `--resume` for multi-turn; the person's answers are the ones each script prescribes. This
+host has no browser: the rendered checks are recorded as "not run: no browser here". Each has automated coverage of its scripts (above); the script
 checks what the agent does with them. Run each per its header (a throw-away repo, the branch plugin), file the
 evidence under `docs/spec/changes/wave3-optimization/qa/manual/<script>-<date>.md` with PASS/FAIL.
 
 | Script | Requirements | What it proves | Status |
 |---|---|---|---|
-| `plugins/karvey/tests/manual/sponsor-at-gate.md` | 022, 023, 024, 075 | a real gate builds the page once, it opens offline at 360/1440 px and in print, a leak is refused without the value, a failed delivery goes to the outbox | to run before QA |
-| `plugins/karvey/tests/manual/design-judge-gate.md` | 037, 039 | a `feature-ui` change without an asset request gets no art catalogue; the judge verdict and the contrast result are in the gate summary | to run before QA |
-| `plugins/karvey/tests/manual/tracker-wbs.md` | 040, 041, 042 | on the Markdown tracker: Features are areas, phases on the Epic, `E1.QA` / `E1.DEPLOY` found or created once | to run before QA |
-| `plugins/karvey/tests/manual/browse-via-agent.md` | 054 | `browse.via: agent:<name>` sends a self-contained instruction with declared URLs only; `none` → visual dimension `not evaluated` | to run before QA |
-| `plugins/karvey/tests/manual/one-phase-per-session.md` | 013 | the close offers the checkpoint, recommends a fresh session at the threshold, the hook resumes; `observed` shows no footnote-only rule opened | to run before QA |
+| `plugins/karvey/tests/manual/sponsor-at-gate.md` | 022, 023, 024, 075 | a real gate builds the page once, it opens offline at 360/1440 px and in print, a leak is refused without the value, a failed delivery goes to the outbox | PASS on the rerun (first run FAIL → BUG-96, BUG-100, BUG-102); step 2 rendered checks not run: no browser here |
+| `plugins/karvey/tests/manual/design-judge-gate.md` | 037, 039 | a `feature-ui` change without an asset request gets no art catalogue; the judge verdict and the contrast result are in the gate summary | PASS on the rerun (first run FAIL → BUG-95) |
+| `plugins/karvey/tests/manual/tracker-wbs.md` | 040, 041, 042 | on the Markdown tracker: Features are areas, phases on the Epic, `E1.QA` / `E1.DEPLOY` found or created once | PASS on the rerun (first run FAIL → BUG-97, BUG-98) |
+| `plugins/karvey/tests/manual/browse-via-agent.md` | 054 | `browse.via: agent:<name>` sends a self-contained instruction with declared URLs only; `none` → visual dimension `not evaluated` | PASS on the rerun (first run FAIL → BUG-99); the sending and capture parts not run: no browser or browser agent here |
+| `plugins/karvey/tests/manual/one-phase-per-session.md` | 013 | the close offers the checkpoint, recommends a fresh session at the threshold, the hook resumes; `observed` shows no footnote-only rule opened | PASS on the fourth rerun (earlier FAIL → BUG-100, BUG-101, BUG-103, BUG-104, BUG-126, BUG-127) |
 
 ## Regression
 
@@ -198,8 +199,11 @@ baseline for the next change); suite durations are in `evidence.jsonl` (`duratio
 ## Findings from this phase
 
 - F-104 (`bug`, High) → BUG-84, fixed and closed in this phase.
-- The design judge's 18 findings on this change's mockups (F-86..F-103, 3 High: undeclared soft semantic tokens,
-  undeclared type/spacing scales, unmeasured contrast pairs) are open for `/karvey-iterate` before QA.
+- The design judge's 18 findings on this change's mockups (F-86..F-103) were routed by `/karvey-iterate` on
+  2026-09-27: the delta declares every page value, contrast.json covers 27 pairs (0 below), BUG-86..BUG-89 fixed,
+  F-93 and F-96 deferred with reason.
+- QA and the manual scripts (2026-09-27): BUG-90..BUG-121, BUG-123, BUG-126, BUG-127 fixed, each with its regression
+  test indexed in `tests/regression/test_incidents.py`; see `qa/REVISION_PR_wave3_20260927.md`.
 - `karvey-id.py next BUG` reserves on every call: BUG-85 was reserved by a second call and left unused.
 
 ## Summary
@@ -207,6 +211,6 @@ baseline for the next change); suite durations are in `evidence.jsonl` (`duratio
 | Category | Total | PASS | FAIL | PENDING |
 |---|---|---|---|---|
 | Suite runs | 16 | 16 | 0 | 0 |
-| REQ-W3 | 80 | 78 | 0 | 2 |
-| Manual scripts | 5 | — | — | 5 (to run before QA) |
-| Regression | 2 | 2 | 0 | 0 |
+| REQ-W3 | 80 | 80 | 0 | 0 |
+| Manual scripts | 5 | 5 | 0 | 0 (browser-only parts not run: no browser here) |
+| Regression | 44 incidents (BUG-84, BUG-86..121, 123, 126, 127) | all | 0 | 0 |

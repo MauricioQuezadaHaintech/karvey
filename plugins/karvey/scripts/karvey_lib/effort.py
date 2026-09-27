@@ -66,17 +66,35 @@ def read_captures(cost_dir, rkey):
     return out, bad
 
 
-def pick_capture(captures):
-    """``(hash, record, quality, reason)`` of the latest capture; ``estimated`` when two are within 120 s."""
+REASON_SESSION_UNKNOWN = "closing session not known: the latest capture of this project"
+REASON_NO_SESSION_CAPTURE = "no capture of the closing session"
+
+
+def session_hash(session_id):
+    """The capture file name of a session (the statusline's ``sha256(session_id)[:16]``), or None."""
+    if not isinstance(session_id, str) or not session_id.strip():
+        return None
+    return hashlib.sha256(session_id.strip().encode("utf-8")).hexdigest()[:16]
+
+
+def pick_capture(captures, session=None):
+    """``(hash, record, quality, reason)`` of the closing session's capture (``session`` = its hash): ``exact``.
+    With no known session, the latest capture of the root is only ``estimated`` — it may be another session's
+    (BUG-134); ``estimated`` also when two captures are within 120 s."""
     if not captures:
         return None, None, None, None
+    if session is not None:
+        own = [hr for hr in captures if hr[0] == session]
+        if not own:
+            return None, None, None, REASON_NO_SESSION_CAPTURE
+        return own[0][0], own[0][1], "exact", None
     ranked = sorted(captures, key=lambda hr: (_parse_at(hr[1]["at"]), hr[0]))
     h, rec = ranked[-1]
     latest = _parse_at(rec["at"])
     for oh, orec in ranked[:-1]:
         if abs((latest - _parse_at(orec["at"])).total_seconds()) <= TWO_SESSIONS_S:
             return h, rec, "estimated", REASON_TWO_SESSIONS
-    return h, rec, "exact", None
+    return h, rec, "estimated", REASON_SESSION_UNKNOWN
 
 
 def transcript_usage(path):
@@ -144,16 +162,18 @@ def _na(reason, source=None):
     return v
 
 
-def compute(cost_dir, rkey, phase, at, review_min=None):
+def compute(cost_dir, rkey, phase, at, review_min=None, session=None):
     """``(entry, charge)``: the ``effort[]`` entry of a phase close and the charged record to write after it is
     stored (``charge`` is ``None`` when nothing may be written — an ``n/a`` source leaves the gap for later)."""
-    review = ({"value": review_min, "quality": "exact", "source": "stated at the gate"}
+    # the minutes reach this tool through the agent, not a runtime measure: estimated, never exact (BUG-134)
+    review = ({"value": review_min, "quality": "estimated", "source": "stated at the gate, passed by the agent"}
               if review_min is not None else _na("review minutes not stated at the gate"))
     captures, bad = read_captures(cost_dir, rkey)
-    h, rec, quality, reason = pick_capture(captures)
+    h, rec, quality, reason = pick_capture(captures, session)
     entry = {"kind": "phase", "phase": phase, "at": at, "session": h, "review_min": review}
     if rec is None:
-        why = "capture unreadable" if bad else REASON_NO_STATUSLINE
+        why = reason if reason == REASON_NO_SESSION_CAPTURE else (
+            "capture unreadable" if bad else REASON_NO_STATUSLINE)
         entry["usd"] = _na(why, "runtime statusline")
         entry["tokens"] = _na(why, "session transcript")
         entry["tokens"].pop("value")
@@ -188,10 +208,10 @@ def compute(cost_dir, rkey, phase, at, review_min=None):
     return entry, charge
 
 
-def rotation_advice(cost_dir, rkey, red_pct):
+def rotation_advice(cost_dir, rkey, red_pct, session=None):
     """The checkpoint-rotation line when the latest capture's context is at or above ``red_pct`` (F-47)."""
     captures, _ = read_captures(cost_dir, rkey)
-    _, rec, _, _ = pick_capture(captures)
+    _, rec, _, _ = pick_capture(captures, session)
     pct = rec.get("context_pct") if rec else None
     if isinstance(pct, (int, float)) and red_pct is not None and pct >= red_pct:
         return ("context at %s%% (>= %s%%): save a checkpoint and start the next phase in a fresh session"
@@ -203,14 +223,14 @@ RECOMMEND_FRESH = "recommend: checkpoint + fresh session before the next skill"
 READING_UNAVAILABLE = "context reading unavailable"
 
 
-def context_check(cost_dir, rkey, red_pct=None, red_tokens=None):
+def context_check(cost_dir, rkey, red_pct=None, red_tokens=None, session=None):
     """One phase per session (C-08, REQ-W3-013): compare the latest capture's context reading with the checkpoint
     rotation threshold — ``context_pct`` against ``red_pct``, else ``context_tokens`` against ``red_tokens``.
 
     ``{"status": "recommend" | "offer" | "unavailable", "pct", "tokens", "line"}``; the script decides, not the
     model. ``offer`` means the checkpoint is only offered; continuing in the same session stays allowed."""
     captures, _ = read_captures(cost_dir, rkey)
-    _, rec, _, _ = pick_capture(captures)
+    _, rec, _, _ = pick_capture(captures, session)
     pct = rec.get("context_pct") if rec else None
     tok = rec.get("context_tokens") if rec else None
     pct = pct if isinstance(pct, (int, float)) and not isinstance(pct, bool) else None

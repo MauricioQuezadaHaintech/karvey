@@ -19,6 +19,7 @@ import html
 import json
 import math
 import re
+import unicodedata
 from pathlib import Path
 
 PATTERNS_FILE = Path(__file__).resolve().parent / "leak_patterns.json"
@@ -28,6 +29,7 @@ _CACHE = {}
 _DATE = re.compile(r"^\d{4}[-/.]\d{2}[-/.]\d{2}$|^\d{2}[-/.]\d{2}[-/.]\d{4}$"
                    r"|^(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$")  # 8 digits: a plausible YYYYMMDD only (BUG-112)
 _VERSION = re.compile(r"^\d+\.\d+\.\d+(?:\.\d+)?$")
+_VERSION_CONTEXT = re.compile(r"(?i)(?:\bv|\b(?:version|versi[oó]n|vers[aã]o|release|build)\s*:?\s*)$")
 _TOKEN = re.compile(r"[A-Za-z0-9+/_=-]{32,}")
 _HEX = re.compile(r"(?<![0-9A-Za-z])[0-9a-fA-F]{16,}(?![0-9A-Za-z])")
 
@@ -88,8 +90,11 @@ def _pii(text, p):
         digits = re.sub(r"\D", "", s)
         if len(digits) < p["pii_min"]:
             continue
-        if _DATE.match(s) or (_VERSION.match(s) and not re.fullmatch(r"\d{1,3}(?:\.\d{3}){2,}", s)):
-            continue  # a dotted id "12.345.678" is not a version (BUG-112)
+        if _DATE.match(s):
+            continue
+        if _VERSION.match(s) and not re.fullmatch(r"\d{1,3}(?:\.\d{3}){2,}", s) and _VERSION_CONTEXT.search(
+                text[max(0, m.start() - 12):m.start()]):
+            continue  # a version only with a "v" or version context: "9.8765.4321" is a phone shape (BUG-130, BUG-112)
         before = text[max(0, m.start() - 4):m.start()]
         after = text[m.end():m.end() + 4]
         if "$" in before or re.match(r"\s*(?:%|USD|US\$|EUR|CLP)", after):
@@ -100,11 +105,23 @@ def _pii(text, p):
     return False
 
 
+def fold(text):
+    """Case- and accent-insensitive form: NFKD, combining marks dropped, casefolded (BUG-132)."""
+    return "".join(ch for ch in unicodedata.normalize("NFKD", text or "") if not unicodedata.combining(ch)).casefold()
+
+
 def _client(text, terms):
-    low = text.lower()
+    """A client name at a word start; a term of 4+ characters also matches as a prefix ("Fenix" → "Fenixes"),
+    a shorter one only as a whole word; accents and case never matter (BUG-132)."""
+    low = fold(text)
     for t in terms:
-        t = t.strip().lower()
-        if t and re.search(r"(?<!\w)%s(?!\w)" % re.escape(t), low):
+        t = " ".join(fold(t).split())
+        if not t:
+            continue
+        pat = r"(?<!\w)%s" % r"\s+".join(re.escape(w) for w in t.split())
+        if len(t) < 4:
+            pat += r"(?!\w)"
+        if re.search(pat, low):
             return True
     return False
 

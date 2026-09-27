@@ -35,8 +35,8 @@ class Lib(unittest.TestCase):
                     "context_tokens": 24000, "at": at}, **extra)
         (self.dir / (h + ".json")).write_text(json.dumps(rec), encoding="utf-8")
 
-    def close(self, phase="requirements", review=None):
-        entry, charge = effort.compute(self.dir, RK, phase, AT, review)
+    def close(self, phase="requirements", review=None, session=None):
+        entry, charge = effort.compute(self.dir, RK, phase, AT, review, session)
         if charge is not None:
             effort.write_charged(self.dir, entry["session"], charge)
         return entry
@@ -47,7 +47,7 @@ class Lib(unittest.TestCase):
 
     def test_first_close_counts_from_session_start(self):
         self.capture()
-        e = self.close()
+        e = self.close(session="sess1")
         self.assertEqual(e["usd"], {"value": 1.5, "quality": "exact", "source": "runtime statusline"})
         self.assertEqual((e["tokens"]["total"], e["tokens"]["quality"]), (2900, "exact"))
         self.assertEqual(e["session"], "sess1")
@@ -115,7 +115,22 @@ class Lib(unittest.TestCase):
     def test_review_minutes_exact_when_stated(self):
         self.capture()
         self.assertEqual(self.close(review=12)["review_min"],
-                         {"value": 12, "quality": "exact", "source": "stated at the gate"})
+                         {"value": 12, "quality": "estimated", "source": "stated at the gate, passed by the agent"})
+
+    def test_BUG_134_only_the_closing_sessions_capture_is_exact(self):
+        self.capture("other", usd=9.0)  # another session of the same project, the latest capture
+        e = self.close(session="sess1")
+        self.assertEqual((e["usd"]["quality"], e["usd"]["reason"]), ("n/a", "no capture of the closing session"))
+        self.assertIsNone(e["session"])
+        e = self.close()  # closing session unknown: the latest capture, never exact
+        self.assertEqual((e["session"], e["usd"]["quality"]), ("other", "estimated"))
+        self.assertEqual(e["usd"]["reason"], "closing session not known: the latest capture of this project")
+        self.capture("sess1", usd=1.5)
+        e = self.close("mockup", session="sess1")
+        self.assertEqual((e["session"], e["usd"]["value"], e["usd"]["quality"]), ("sess1", 1.5, "exact"))
+
+    def test_BUG_134_review_minutes_are_never_exact(self):
+        self.assertEqual(self.close(review=5)["review_min"]["quality"], "estimated")
 
 
 class Command(unittest.TestCase):
@@ -127,6 +142,8 @@ class Command(unittest.TestCase):
         self.spec = make_project(self.root, spec=dict(GOOD_SPEC))
         self.env = mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(self.tmp / "state")})
         self.env.start()
+        for k in ("CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID"):  # the runner's own session is not the test's
+            os.environ.pop(k, None)
         self.cost = pj.state_dir(self.root) / effort.CAPTURE_DIR
 
     def tearDown(self):
@@ -137,21 +154,23 @@ class Command(unittest.TestCase):
         self.cost.mkdir(parents=True, exist_ok=True)
         rec = {"root_key": effort.root_key(self.root), "usd": usd, "transcript": transcript, "context_pct": pct,
                "context_tokens": 24000, "at": "2026-09-26T10:00:00-03:00"}
-        (self.cost / "sessA.json").write_text(json.dumps(rec), encoding="utf-8")
+        (self.cost / (effort.session_hash("session-A") + ".json")).write_text(json.dumps(rec), encoding="utf-8")
 
     def data(self):
         return json.loads(self.spec.read_text(encoding="utf-8"))
 
     def test_runtime_with_cost_gives_exact_usd_tokens_and_review(self):
         self.capture()
-        code, env = run_json("effort", "feat-a", "requirements", "--review-min", "7", "--root", str(self.root))
+        code, env = run_json("effort", "feat-a", "requirements", "--review-min", "7", "--session", "session-A",
+                             "--root", str(self.root))
         self.assertEqual(code, 0, env)
         e = self.data()["effort"][0]
         self.assertEqual((e["kind"], e["phase"]), ("phase", "requirements"))
         self.assertEqual((e["usd"]["value"], e["usd"]["quality"]), (2.25, "exact"))
         self.assertEqual((e["tokens"]["total"], e["tokens"]["quality"]), (2900, "exact"))
-        self.assertEqual(e["review_min"], {"value": 7, "quality": "exact", "source": "stated at the gate"})
-        self.assertTrue((self.cost / ("sessA" + effort.CHARGED_SUFFIX)).is_file())
+        self.assertEqual(e["review_min"], {"value": 7, "quality": "estimated",
+                                           "source": "stated at the gate, passed by the agent"})
+        self.assertTrue((self.cost / (effort.session_hash("session-A") + effort.CHARGED_SUFFIX)).is_file())
         code, env = run_json("validate", str(self.spec), "--strict", "--root", str(self.root))
         self.assertEqual(code, 0, env["errors"])
 

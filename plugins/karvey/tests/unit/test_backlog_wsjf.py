@@ -72,6 +72,47 @@ class DoneDirect(unittest.TestCase):
         self.assertIn("BL-01: done-direct needs the commit", err[0]["message"])
 
 
+class DoneDirectInGit(unittest.TestCase):
+    """BUG-135: in a repository the done-direct commit must exist; an unknown state is reported."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        import _gitrepo as g
+        from _state import GOOD_SPEC, make_project
+        g.isolate_git()
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-bl-git-"))
+        self.addCleanup(__import__("shutil").rmtree, str(self.tmp), True)
+        self.root = g.init(self.tmp / "repo")
+        make_project(self.root, spec=dict(GOOD_SPEC))
+        g.run(["add", "-A"], self.root)
+        g.run(["commit", "-q", "-m", "base"], self.root)
+
+    def validate(self, commit, status="done-direct"):
+        from _state import run_json
+        (self.root / "docs/spec/backlog.md").write_text((BACKLOG % commit).replace("| done-direct |", "| %s |" % status),
+                                                        encoding="utf-8")
+        return run_json("validate", "--all", "--root", str(self.root))
+
+    def test_BUG_135_a_done_direct_commit_that_is_not_in_git_is_refused(self):
+        code, env = self.validate("0000000")
+        self.assertEqual(code, 1, env)
+        self.assertTrue(any("0000000 is not a commit of this repository" in e["message"] for e in env["errors"]))
+
+    def test_BUG_135_a_real_commit_is_accepted(self):
+        import subprocess
+        sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=str(self.root), capture_output=True,
+                             text=True).stdout.strip()
+        code, env = self.validate(sha)
+        self.assertEqual(code, 0, env["errors"])
+
+    def test_BUG_135_an_unknown_state_is_a_warning_not_dropped(self):
+        code, env = self.validate("—", status="done")
+        self.assertEqual(code, 0, env["errors"])
+        self.assertTrue(any(w["code"] == "backlog.state" and "BL-01" in w["message"] for w in env["warnings"]))
+        self.assertEqual(bk.state_of("open (blocked)"), "open")
+
+
 class View(unittest.TestCase):
     """@req REQ-W3-051"""
 
@@ -135,6 +176,20 @@ class View(unittest.TestCase):
         self.assertIn("invalid row BL-07: Value 'high' is not 1-5", out)
         self.assertIn("BL-01", out)
         self.assertIn("stale (reviewed 2026-08-01)", out)
+
+    def test_BUG_135_open_with_a_note_is_listed_and_an_unknown_state_is_invalid(self):
+        import json
+        p = self.root / "docs/spec/backlog.md"
+        text = p.read_text(encoding="utf-8").replace("| Item 4 | open |", "| Item 4 | open (blocked) |")
+        text = text.replace("| Item 5 | open |", "| Item 5 | done |")
+        p.write_text(text, encoding="utf-8")
+        code, out = self.view("--json")
+        res = json.loads(out)["result"]
+        listed = {x["id"] for x in res["scored"] + res["unscored"]}
+        self.assertIn("BL-04", listed)
+        self.assertNotIn("BL-05", listed)
+        self.assertIn({"id": "BL-05", "reason": "status 'done' is not one of open, promoted, discarded, done-direct"},
+                      res["invalid"])
 
     def test_read_only(self):
         import subprocess

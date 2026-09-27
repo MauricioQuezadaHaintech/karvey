@@ -942,7 +942,9 @@ def cmd_validate(args, root):
             worst = kl.EXIT_FINDINGS
     if args.all:
         warnings += dangling_questions(root)
-        bl_errors = backlog_issues(root)  # REQ-W3-050: a state this change introduces, refused from the start
+        bl_all = backlog_issues(root)  # REQ-W3-050: a state this change introduces, refused from the start
+        bl_errors = [i for i in bl_all if i.get("severity", "error") == "error"]
+        warnings += [i for i in bl_all if i.get("severity", "error") != "error"]  # unknown states (BUG-135)
         errors += bl_errors
         if bl_errors and worst == kl.EXIT_OK:
             worst = kl.EXIT_FINDINGS
@@ -1030,8 +1032,11 @@ def backlog_issues(root):
         text = p.read_text(encoding="utf-8-sig")
     except OSError:
         return []
+    rows = bl.parse(text)
     return [kl.issue("backlog.done_direct", msg, file=rel(root, p), path="line %d" % line, got=bid)
-            for bid, line, msg in bl.direct_problems(bl.parse(text))]
+            for bid, line, msg in bl.direct_problems(rows, root)] + \
+        [kl.issue("backlog.state", msg, severity="warning", file=rel(root, p), path="line %d" % line, got=bid)
+         for bid, line, msg in bl.state_problems(rows)]
 
 
 def dangling_questions(root):
@@ -2318,7 +2323,9 @@ def cmd_effort(args, root):
     # read the charged record, store the entry and move the charge under one lock: two closes at once never
     # charge the same interval twice (BUG-121)
     with atomicio.lock(str(cost_dir / ("%s.effort" % rkey)), wait_s=30.0):
-        entry, charge = ef.compute(cost_dir, rkey, args.phase, now, args.review_min)
+        sid = (getattr(args, "session", None) or os.environ.get("CLAUDE_CODE_SESSION_ID")
+               or os.environ.get("CLAUDE_SESSION_ID"))  # the closing session (BUG-134)
+        entry, charge = ef.compute(cost_dir, rkey, args.phase, now, args.review_min, ef.session_hash(sid))
 
         def mutate(data):
             log = data.get("effort") if isinstance(data.get("effort"), list) else []
@@ -2332,7 +2339,7 @@ def cmd_effort(args, root):
             ef.write_charged(cost_dir, entry["session"], charge)
     res["file"] = rel(root, path)
     red = (kl.defaults().get("context_pct") or {}).get("red")
-    res["advice"] = ef.rotation_advice(cost_dir, rkey, red)
+    res["advice"] = ef.rotation_advice(cost_dir, rkey, red, ef.session_hash(sid))
 
     def fmt(v, unit):
         if v.get("value") is None and "total" not in v:
@@ -2363,7 +2370,12 @@ def _backlog_row(root, bl, change, risk, day):
         old, old_sha = None, None
     text = old if old is not None else "# Discovery Backlog\n\n" + head
     lines = text.rstrip("\n").split("\n")
-    if any(ln.lstrip().startswith("| %s |" % bl) for ln in lines):
+    same = [ln for ln in lines if ln.lstrip().startswith("| %s |" % bl)]
+    if same:
+        cite = re.compile(r"(?<![\w-])%s(?![\w-])" % re.escape(risk["id"]))
+        if not any(cite.search(ln) for ln in same):  # --to names an unrelated item (BUG-136)
+            raise Refused("%s exists in the backlog and does not cite %s: give a BL-NN that records this risk or "
+                          "leave --to out to reserve one" % (bl, risk["id"]), code="state.risk")
         return p, old, old_sha, None  # already there (a re-run): nothing to add
     rows = [i for i, ln in enumerate(lines) if ln.lstrip().startswith("|")]
     if rows:
@@ -2424,6 +2436,8 @@ def cmd_risk(args, root):
         risk = rows[args.risk]
         ref, backlog = None, None
         if args.action == "move":
+            if risk["state"] == "moved":  # a second move would log moved → moved (BUG-136)
+                raise Refused("%s is already %s" % (args.risk, risk["state_cell"]), code="state.risk")
             ref = args.to or _reserve_bl(root)
             new_state = "moved → %s" % ref
         elif args.action == "review":
@@ -2586,6 +2600,8 @@ def build_parser():
     ef_.add_argument("change")
     ef_.add_argument("phase")
     ef_.add_argument("--review-min", type=int, default=None, help="review minutes the human states at the gate")
+    ef_.add_argument("--session", help="the closing session id (default $CLAUDE_CODE_SESSION_ID); without it the latest "
+                     "capture of the project is charged as estimated")
     rs = sub.add_parser("risk", parents=[common], help="change a risk's state in the register (+ risk_log)")
     rs.add_argument("change")
     rs.add_argument("risk")

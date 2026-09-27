@@ -311,7 +311,11 @@ def cmd_compare(args):
     if args.warn_growth is not None:
         lines = growth_warnings(res, args.warn_growth)
         res["warnings"] = lines
-    elif res["median_reduction_pct"] is None or res["median_reduction_pct"] < args.target_median:
+    if args.warn_growth is None and res["only_in_base"]:  # a renamed or dropped skill cannot lift the median (BUG-133)
+        errors += [kl.issue("budget.only_in_base", "%s is in the baseline but not measured now: a renamed or removed "
+                            "phase is not left out of the median silently" % sk, got=sk) for sk in res["only_in_base"]]
+    if args.warn_growth is None and (res["median_reduction_pct"] is None or
+                                     res["median_reduction_pct"] < args.target_median):
         errors.append(kl.issue("budget.median", "median reduction %s is below the %s%% target" % (
             "n/a" if res["median_reduction_pct"] is None else _pct(res["median_reduction_pct"]) + "%",
             _pct(args.target_median)), expected=args.target_median, got=res["median_reduction_pct"]))
@@ -412,12 +416,37 @@ def closures(plugin_dir):
     return out
 
 
-def _anchored(anchor, files, plugin_dir, core_text):
+CONTRACT_MIN_WORDS = 12  # a contract section shorter than this is emptied, not kept (BUG-128)
+
+
+def section_words(text, mark):
+    """Words of the section whose heading carries ``mark``, up to the next heading of the same or a higher level;
+    ``None`` when the mark is absent."""
+    lines = (text or "").splitlines()
+    for i, ln in enumerate(lines):
+        if mark in ln and ln.lstrip().startswith("#"):
+            level = len(ln) - len(ln.lstrip("#"))
+            body = []
+            for nxt in lines[i + 1:]:
+                st = nxt.lstrip()
+                if st.startswith("#") and len(st) - len(st.lstrip("#")) <= level:
+                    break
+                body.append(nxt)
+            return sum(len(b.split()) for b in body)
+    return None
+
+
+def _anchored(anchor, files, plugin_dir, core_text=None):
+    """The contract is reachable when the file holding its anchor is **in the phase's closure** and the anchored
+    section still has a body (at least ``CONTRACT_MIN_WORDS`` words) — BUG-128: the core counted for every phase
+    even when a phase no longer loaded it, and only the heading was checked."""
     if anchor.startswith("#"):
         mark = "{%s}" % anchor
-        if mark in core_text:
-            return True
-        return any(mark in loadlist.read_text(Path(plugin_dir) / f) for f in files)
+        for f in files:
+            n = section_words(loadlist.read_text(Path(plugin_dir) / f), mark)
+            if n is not None and n >= CONTRACT_MIN_WORDS:
+                return True
+        return False
     return any(f == anchor or f.endswith("/rules/" + anchor) for f in files)
 
 

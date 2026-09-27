@@ -55,11 +55,11 @@ REQ-W1-045, REQ-W1-068, REQ-W1-089, REQ-W2-003, REQ-W2-008, REQ-W2-022, REQ-W2-0
 
 | Script | Covers | Status |
 |---|---|---|
-| `one-phase-per-session.md` | 013 | planned, not executed — needs a real fresh session and a statusline capture; to run before QA |
-| `sponsor-at-gate.md` | 022, 023, 024, 075 | planned, not executed — needs a person at a real gate and a browser offline; to run before QA |
-| `browse-via-agent.md` | 054 | planned, not executed — needs a second agent with a browser; to run before QA |
-| `design-judge-gate.md` | 037, 039 | planned, not executed — needs a real design-graphic gate; to run before QA |
-| `tracker-wbs.md` | 040, 041, 042 | planned, not executed — needs an agent run on the Markdown tracker; to run before QA |
+| `one-phase-per-session.md` | 013 | executed in QA 2026-09-27, PASS on the rerun (`qa/manual/one-phase-per-session-2026-09-27.md`; browser-only parts not run: no browser here) |
+| `sponsor-at-gate.md` | 022, 023, 024, 075 | executed in QA 2026-09-27, PASS on the rerun (`qa/manual/sponsor-at-gate-2026-09-27.md`; browser-only parts not run: no browser here) |
+| `browse-via-agent.md` | 054 | executed in QA 2026-09-27, PASS on the rerun (`qa/manual/browse-via-agent-2026-09-27.md`; browser-only parts not run: no browser here) |
+| `design-judge-gate.md` | 037, 039 | executed in QA 2026-09-27, PASS on the rerun (`qa/manual/design-judge-gate-2026-09-27.md`; browser-only parts not run: no browser here) |
+| `tracker-wbs.md` | 040, 041, 042 | executed in QA 2026-09-27, PASS on the rerun (`qa/manual/tracker-wbs-2026-09-27.md`; browser-only parts not run: no browser here) |
 | `portability-guide-review.md` | 053 | planned, not executed — the script was not written; 053 is covered by L-69 (`test_lint_w3.py`) |
 
 ## 6.4 Change-scoped verification
@@ -72,7 +72,7 @@ REQ-W1-045, REQ-W1-068, REQ-W1-089, REQ-W2-003, REQ-W2-008, REQ-W2-022, REQ-W2-0
 | `render --check` | 012 | executed (CS-04) |
 | release manifest maps every commit; 114/114 commits carry the trailer | 065 | executed (RG-01 + `git log --grep`) |
 | `validate` shows lane `feature-ui`, trunk flow | 073 | executed (VD-01) |
-| `spec.json:effort[]` per closed phase | 074 | planned, not executed — no gate has closed since the capture existed; first entry at the next gate close |
+| `spec.json:effort[]` per closed phase | 074 | executed in QA 2026-09-27: first entry at the test close (`n/a`, reason stated); earlier phases `not measured` |
 | `sponsor-history.jsonl`, page built with leak check PASS, delivery `no destination declared` | 075 | executed (SP-01) |
 | `[Unreleased]` release summary | 064 | executed (inspection; version and date at deploy) |
 | trace coverage gate | all | executed (TR-01: 90/90 covered, 87 green + 3 by inspection) |

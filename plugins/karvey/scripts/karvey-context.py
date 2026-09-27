@@ -502,7 +502,7 @@ def read_backlog(rd):
         return None
     tbl = find_table(parse_tables(t), "id", "status")
     return [{"id": col(r, "id"), "title": col(r, "title"), "priority": col(r, "priority"), "type": col(r, "type")}
-            for r in (tbl["rows"] if tbl else []) if first_word(col(r, "status")) == "open"]
+            for r in (tbl["rows"] if tbl else []) if bkl.state_of(col(r, "status")) == "open"]
 
 
 def read_outbox(rd, cdir):
@@ -1477,7 +1477,10 @@ def backlog_view(args, rd):
     rows = bkl.parse(text or "")
     scored, unscored, invalid = [], [], []
     for r in rows:
-        if r["status"] != "open":
+        if r["state"] not in bkl.STATES:  # an unknown state is shown, never silently dropped (BUG-135)
+            invalid.append({"id": r["id"], "reason": "status %r is not one of %s" % (r["status"], ", ".join(bkl.STATES))})
+            continue
+        if r["state"] != "open":
             continue
         sc = bkl.score(r, as_of)
         item = {"id": r["id"], "title": r["title"], "client": r["client"], "reviewed": r["reviewed"],

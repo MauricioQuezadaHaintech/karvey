@@ -28,7 +28,7 @@
     },
     {
       "id": "assignment",
-      "re": "(?i)\\b(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)\\s*[:=]\\s*[^\\s;,]{3,}"
+      "re": "(?i)\\b(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret|contrase[ñn]a|clave|secreto|senha|segredo|chave|credencial)\\s*[:=]\\s*[^\\s;,]{3,}"
     },
     {
       "id": "connection-string",
@@ -41,6 +41,18 @@
     {
       "id": "signed-url",
       "re": "(?i)[?&](?:sig|signature|x-amz-signature|token)=[A-Za-z0-9%+/=_-]{16,}"
+    },
+    {
+      "id": "webhook-url",
+      "re": "(?i)\\bhttps?://(?:[^\\s/\"'<>]*hook[^\\s/\"'<>]*/[^\\s\"'<>]{8,}|[^\\s\"'<>]*/(?:api/)?webhooks?/[^\\s\"'<>]{8,})"
+    },
+    {
+      "id": "chat-webhook-path",
+      "re": "/services/T[A-Z0-9]{6,}/B[A-Z0-9]{6,}/[A-Za-z0-9]{16,}"
+    },
+    {
+      "id": "url-random-segment",
+      "re": "\\bhttps?://[^\\s\"'<>]*/(?=[A-Za-z0-9_-]*\\d)(?=[A-Za-z0-9_-]*[A-Za-z])[A-Za-z0-9_-]{24,}(?![A-Za-z0-9_-])"
     }
   ],
   "entropy": {

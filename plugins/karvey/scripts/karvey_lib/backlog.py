@@ -15,6 +15,7 @@ A missing value, effort or urgency makes the item ``unscored`` (never 0); a malf
 change: ``Commit`` is required). Standard library only.
 """
 import re
+import subprocess
 from datetime import date
 
 STATES = ("open", "promoted", "discarded", "done-direct")
@@ -57,10 +58,36 @@ def parse(text):
         def g(k):
             v = (r.get(k) or "").strip()
             return None if v in _NONE else v
-        out.append({"id": bid, "title": g("title") or "", "status": (g("status") or "open").lower(),
+        status = (g("status") or "open").lower()
+        out.append({"id": bid, "title": g("title") or "", "status": status, "state": state_of(status),
                     "value": g("value"), "effort": g("effort"), "cod": g("cod"), "needed_by": g("needed by"),
                     "client": g("client"), "reviewed": g("reviewed"), "commit": g("commit"), "line": n})
     return out
+
+
+def state_of(status):
+    """The state word of a Status cell: ``open (blocked)`` → ``open``, ``done-direct — abc1234`` → ``done-direct``
+    (one rule for every view, BUG-135)."""
+    m = re.match(r"\s*([a-z][a-z-]*)", (status or "open").lower())
+    return m.group(1) if m else ""
+
+
+def commit_exists(root, sha):
+    """``True`` / ``False`` whether ``sha`` names a commit of the repository at ``root``; ``None`` when git cannot
+    tell (no git, not a repository, timeout) — then only the format is checked."""
+    try:
+        cp = subprocess.run(["git", "cat-file", "-e", "%s^{commit}" % sha], cwd=str(root), stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL, timeout=5, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if cp.returncode == 0:
+        return True
+    try:
+        top = subprocess.run(["git", "rev-parse", "--git-dir"], cwd=str(root), stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, timeout=5, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return False if top.returncode == 0 else None
 
 
 def last_refinement(text):
@@ -153,10 +180,23 @@ def refinement(text, today, refine_days=REFINE_DAYS):
     return {"date": d, "days": days, "state": "overdue" if days > refine_days else "ok", "refine_days": refine_days}
 
 
-def direct_problems(rows):
-    """``done-direct`` without a commit (REQ-W3-050): ``[(id, line, message)]``."""
+def direct_problems(rows, root=None):
+    """``done-direct`` without a commit of this repository (REQ-W3-050): ``[(id, line, message)]``. With ``root``
+    the commit must exist in git (``git cat-file -e``), not only look like a hash (BUG-135)."""
     out = []
     for r in rows:
-        if r["status"] == "done-direct" and not (r.get("commit") and _COMMIT.match(r["commit"].lower())):
+        if state_of(r["status"]) != "done-direct":
+            continue
+        c = (r.get("commit") or "").lower()
+        if not _COMMIT.match(c):
             out.append((r["id"], r["line"], "%s: done-direct needs the commit that did it (Commit column)" % r["id"]))
+        elif root is not None and commit_exists(root, c) is False:
+            out.append((r["id"], r["line"], "%s: done-direct commit %s is not a commit of this repository"
+                        % (r["id"], c)))
     return out
+
+
+def state_problems(rows):
+    """Items whose state is not one of ``STATES``: ``[(id, line, message)]`` (BUG-135)."""
+    return [(r["id"], r["line"], "%s: status %r is not one of %s" % (r["id"], r["status"], ", ".join(STATES)))
+            for r in rows if state_of(r["status"]) not in STATES]

@@ -104,5 +104,29 @@ class QaDimension1(unittest.TestCase):
         self.assertEqual(rules_of("release 3.11.4 costs US$ 1,234,567.50"), [])
 
 
+    def test_BUG_129_webhook_urls_and_random_url_segments_are_secrets(self):
+        seg = "a1b2c3" * 4
+        for t in ("posts to https://hooks." + "chat.example/services/T0ABCDEFG/B0ABCDEFG/" + seg,
+                  "https://chat.example/api/" + "webhooks/team-alerts/" + seg,
+                  "https://example.org/x/" + "k9" * 13):
+            self.assertEqual(rules_of(t), ["secret"], t)
+        self.assertEqual(rules_of("the guide at https://example.org/docs/getting-started"), [])
+
+    def test_BUG_130_a_version_needs_a_v_or_version_context(self):
+        self.assertEqual(rules_of("call 9.8765.4321"), ["pii"])
+        self.assertEqual(rules_of("shipped v10.2000.3000 and release 11.2000.3000"), [])
+
+    def test_BUG_131_spanish_and_portuguese_assignments_are_secrets(self):
+        val = "Sup3r" + "S3cret!"
+        for kw in ("contrase\u00f1a: ", "clave=", "senha: ", "secreto = "):
+            self.assertEqual(rules_of("la " + kw + val), ["secret"], kw)
+
+    def test_BUG_132_client_names_ignore_accents_and_case_and_match_as_prefix(self):
+        self.assertEqual(rules_of("same as echo fenix did", other_clients=["\u00c9cho F\u00e9nix"]), ["client"])
+        self.assertEqual(rules_of("the Echo Fenixes flow", other_clients=["\u00c9cho F\u00e9nix"]), ["client"])
+        self.assertEqual(rules_of("ALPHA CORP asked", other_clients=["Alpha Corp"]), ["client"])
+        self.assertEqual(rules_of("an abcdef value", other_clients=["Abc"]), [])  # short term: whole word only
+
+
 if __name__ == "__main__":
     unittest.main()
