@@ -5,6 +5,7 @@ natural keys, outbox, work breakdown, cascade and estimation are tool-neutral an
 adapters rule[^r-ma]; this file holds only how ClickUp does them.
 
 <!-- karvey:generated load-lists:adapter-used-by -->
+Used by: `/karvey-init`, `/karvey-requirements`, `/karvey-tasks`, `/karvey-impl`, `/karvey-qa`, `/karvey-deploy`, `/karvey-archive`.
 <!-- /karvey:generated load-lists:adapter-used-by -->
 
 | Operation | ClickUp | log_time |

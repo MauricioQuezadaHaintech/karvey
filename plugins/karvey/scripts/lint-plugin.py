@@ -1623,7 +1623,7 @@ def l30_minor_consistency(ctx):
             yield test, n, "duplicate 'For each E2E flow step' block (first at line %d)" % hits[0]
     for p in (ctx.root / "README.md", ctx.plugin / "README.md"):
         for n, line in enumerate(ctx.lines(p), 1):
-            for m in re.finditer(r"/karvey:(?!karvey\b|karvey-)([\w-]+)", line):
+            for m in re.finditer(r"(?<!<!-- )/karvey:(?!karvey\b|karvey-|generated\b)([\w-]+)", line):
                 yield p, n, "skill named /karvey:%s; the plugin namespace form is /karvey:karvey-%s" % (
                     m.group(1), m.group(1))
 
@@ -2440,6 +2440,19 @@ def l60_orchestrator_routing_only(ctx):
     if words > ORCHESTRATOR_WORDS_MAX:
         yield (path, 1, "the orchestrator has %d words, over the %d-word limit: move feature lists, phase "
                         "descriptions and equivalences to its references" % (words, ORCHESTRATOR_WORDS_MAX))
+
+
+# --------------------------------------------------------------------------- L-61 (wave3-optimization)
+@check("L-61", "The generated load-list blocks (orchestrator, adapters, README) match their rendering from the "
+               "Load: lines (REQ-W3-012)", reqs=("W3-012",))
+def l61_generated_blocks(ctx):
+    from karvey_lib import loadrender
+    if not (ctx.rules_dir / "_core.md").is_file():
+        return  # before the core ships there are no Load: lines to render from
+    for path, name, msg in loadrender.drift(ctx.plugin):
+        if not Path(path).is_file():
+            continue
+        yield (path, line_of(ctx, path, loadrender.begin(name)), msg)
 
 
 # --------------------------------------------------------------------------- L-62 (wave3-optimization)

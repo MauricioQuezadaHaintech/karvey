@@ -46,21 +46,46 @@ Invoked as `/karvey:<skill>`. **1 orchestrator + 13 phase skills + 19 support sk
 
 ### Pipeline phases (0–12)
 
-| # | Skill | Produces | Key rules |
-|---|---|---|---|
-| 0 | `karvey-grill` | Pre-spec interview + "10-star" reframe → synthesis that seeds the PRD | — |
-| 1 | `karvey-init` | `project.json`, `change-id`, `prd.md`, `spec.json`, Epic in the team's configured tracker or `PLAN.md` | project-config, management-adapters, living-specs, enforcement |
-| 2 | `karvey-requirements` | EARS `requirements.md` traced to the PRD + `spec-delta.md` | ears-format, living-specs, security-tiers |
-| 3 | `karvey-mockup` | Navigable mockup, 3–4 levels + spec↔mockup validation | targets |
-| 4 | `karvey-design-graphic` | `design-spec.md` + `design-delta.md` over `design-system.md` (contrast computed, design judge; art catalogue on request) | targets |
-| 5 | `karvey-architecture` | `architecture.md`: boundaries, security tier, diagrams, cloud; standards conformance gate | security-tiers, engineering-standards |
-| 6 | `karvey-infra` | IaC + CI/CD pipelines with infra security review → `infra.md` | project-config, deploy-workflow |
-| 7 | `karvey-tasks` | `tasks.md`: 10–30 min AI tasks `E{n}.F{n}.T{n}` with dependencies | management-adapters |
-| 8 | `karvey-impl` | Code on `feature/{change-id}`, per-task commit + a CHANGELOG `[Unreleased]` line | deploy-workflow, versioning, engineering-standards |
-| 9 | `karvey-test` | Unit + E2E in the real runtime → `test_evidence.md`, findings, `BUG-NN` | targets, iteration-loop, incident-tracking |
-| 10 | `karvey-qa` | 9-dimension review (security gate, standards conformance…) → `docs/spec/changes/{change-id}/qa/REVISION_PR_*.md` | changelog-policy, versioning, iteration-loop |
-| 11 | `karvey-deploy` | feature → dev → PR master, PR gates verified, human OK, canary, **branch hygiene** | deploy-workflow, versioning, changelog-policy |
-| 12 | `karvey-archive` | Spec-deltas merged into living specs, Epic closed, backlog + branch sweep | living-specs, backlog, phase-close |
+| # | Skill | Produces |
+|---|---|---|
+| 0 | `karvey-grill` | Pre-spec interview + "10-star" reframe → synthesis that seeds the PRD |
+| 1 | `karvey-init` | `project.json`, `change-id`, `prd.md`, `spec.json`, Epic in the team's configured tracker or `PLAN.md` |
+| 2 | `karvey-requirements` | EARS `requirements.md` traced to the PRD + `spec-delta.md` |
+| 3 | `karvey-mockup` | Navigable mockup, 3–4 levels + spec↔mockup validation |
+| 4 | `karvey-design-graphic` | `design-spec.md` + `design-delta.md` over `design-system.md` (contrast computed, design judge; art catalogue on request) |
+| 5 | `karvey-architecture` | `architecture.md`: boundaries, security tier, diagrams, cloud; standards conformance gate |
+| 6 | `karvey-infra` | IaC + CI/CD pipelines with infra security review → `infra.md` |
+| 7 | `karvey-tasks` | `tasks.md`: 10–30 min AI tasks `E{n}.F{n}.T{n}` with dependencies |
+| 8 | `karvey-impl` | Code on `feature/{change-id}`, per-task commit + a CHANGELOG `[Unreleased]` line |
+| 9 | `karvey-test` | Unit + E2E in the real runtime → `test_evidence.md`, findings, `BUG-NN` |
+| 10 | `karvey-qa` | 9-dimension review (security gate, standards conformance…) → `docs/spec/changes/{change-id}/qa/REVISION_PR_*.md` |
+| 11 | `karvey-deploy` | feature → dev → PR master, PR gates verified, human OK, canary, **branch hygiene** |
+| 12 | `karvey-archive` | Spec-deltas merged into living specs, Epic closed, backlog + branch sweep |
+
+Rules each skill loads — generated from the skills' `Load:` lines (`karvey-context-budget.py render`):
+
+<!-- karvey:generated load-lists:readme -->
+| Skill | Loads (its closed `Load:` list; `?` = only when its condition holds) |
+|---|---|
+| `karvey-init` | `_core.md`, `gates.md`, `project-config.md`, `management-adapters.md`, `adapters/{tool}.md`, `lanes.md`, `references/team-settings.md?`, `references/settings.md?` |
+| `karvey-requirements` | `_core.md`, `gates.md`, `ears-format.md`, `living-specs.md`, `security-tiers.md`, `management-adapters.md`, `adapters/{tool}.md`, `judges.md` |
+| `karvey-mockup` | `_core.md`, `gates.md`, `targets.md` |
+| `karvey-design-graphic` | `_core.md`, `gates.md`, `targets.md`, `judges.md` |
+| `karvey-architecture` | `_core.md`, `gates.md`, `engineering-standards.md`, `security-tiers.md`, `judges.md` |
+| `karvey-infra` | `_core.md`, `gates.md`, `deploy-workflow.md`, `security-tiers.md`, `targets.md` |
+| `karvey-tasks` | `_core.md`, `gates.md`, `management-adapters.md`, `adapters/{tool}.md` |
+| `karvey-impl` | `_core.md`, `gates.md`, `management-adapters.md`, `adapters/{tool}.md`, `engineering-standards.md`, `changelog-policy.md`, `phase-close.md` |
+| `karvey-test` | `_core.md`, `gates.md`, `targets.md`, `phase-close.md`, `iteration-loop.md` |
+| `karvey-qa` | `_core.md`, `gates.md`, `phase-close.md`, `iteration-loop.md`, `management-adapters.md`, `adapters/{tool}.md`, `versioning.md`, `notifications.md` |
+| `karvey-deploy` | `_core.md`, `gates.md`, `deploy-workflow.md`, `versioning.md`, `changelog-policy.md`, `notifications.md`, `management-adapters.md`, `adapters/{tool}.md`, `references/docs-only.md?`, `references/hotfix.md?`, `references/postdeploy.md?`, `references/branch-hygiene.md?` |
+| `karvey-archive` | `_core.md`, `gates.md`, `living-specs.md`, `knowledge-sync.md`, `backlog.md`, `risks.md`, `management-adapters.md`, `adapters/{tool}.md` |
+| `karvey-checkpoint` | `_core.md` |
+| `karvey-context` | `_core.md` |
+| `karvey-decisions` | `_core.md`, `multi-agent.md` |
+| `karvey-iterate` | `_core.md`, `iteration-loop.md`, `incident-tracking.md`, `backlog.md`, `risks.md`, `management-adapters.md`, `notifications.md`, `phase-close.md` |
+| `karvey-judges` | `_core.md`, `judges.md`, `judges/{phase}.md` |
+| `karvey` | `_core.md`, `references/overview.md?`, `references/equivalences.md?` |
+<!-- /karvey:generated load-lists:readme -->
 
 ### Support skills (any time, do not advance the phase)
 

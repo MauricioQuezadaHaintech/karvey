@@ -97,6 +97,32 @@ Each phase skill declares its closed list on its `Load:` line; this table is gen
 (`karvey-context-budget.py render`).
 
 <!-- karvey:generated load-lists:orchestrator -->
+| Rule | Applies in |
+|---|---|
+| `_core` | every skill with a `Load:` line |
+| `adapters/{tool}` | init, requirements, tasks, impl, qa, deploy, archive |
+| `backlog` | archive, iterate |
+| `changelog-policy` | impl, deploy |
+| `deploy-workflow` | infra, deploy |
+| `ears-format` | requirements |
+| `engineering-standards` | architecture, impl |
+| `gates` | init, requirements, mockup, design-graphic, architecture, infra, tasks, impl, test, qa, deploy, archive |
+| `incident-tracking` | iterate |
+| `iteration-loop` | test, qa, iterate |
+| `judges` | requirements, design-graphic, architecture, judges |
+| `judges/{phase}` | judges |
+| `knowledge-sync` | archive |
+| `lanes` | init |
+| `living-specs` | requirements, archive |
+| `management-adapters` | init, requirements, tasks, impl, qa, deploy, archive, iterate |
+| `multi-agent` | decisions |
+| `notifications` | qa, deploy, iterate |
+| `phase-close` | impl, test, qa, iterate |
+| `project-config` | init |
+| `risks` | archive, iterate |
+| `security-tiers` | requirements, architecture, infra |
+| `targets` | mockup, design-graphic, infra, test |
+| `versioning` | qa, deploy |
 <!-- /karvey:generated load-lists:orchestrator -->
 
 ---

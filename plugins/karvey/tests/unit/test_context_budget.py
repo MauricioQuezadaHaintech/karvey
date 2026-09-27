@@ -338,5 +338,59 @@ class RareReferences(unittest.TestCase):
             self.assertIn(ref, row["closure_max_files"])
 
 
+class Render(unittest.TestCase):
+    """@req REQ-W3-012 — the generated load-list blocks follow the Load: lines; a hand edit is drift."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="karvey-budget-r-"))
+        self.plugin = self.tmp / "repo" / "plugins" / "karvey"
+        for part in ("skills", "schemas"):
+            shutil.copytree(str(_path.SCRIPTS_DIR.parent / part), str(self.plugin / part))
+        shutil.copy(str(_path.REPO_ROOT / "README.md"), str(self.tmp / "repo" / "README.md"))
+        self.readme = self.tmp / "repo" / "README.md"
+        self.orch = self.plugin / "skills" / "karvey" / "SKILL.md"
+        self.adapter = self.plugin / "skills" / "karvey" / "rules" / "adapters" / "markdown.md"
+
+    def tearDown(self):
+        shutil.rmtree(str(self.tmp), ignore_errors=True)
+
+    def blocks(self):
+        from karvey_lib import loadrender as lr
+        return (lr.block_of(self.orch.read_text(encoding="utf-8"), lr.ORCH),
+                lr.block_of(self.adapter.read_text(encoding="utf-8"), lr.ADAPTER),
+                lr.block_of(self.readme.read_text(encoding="utf-8"), lr.README))
+
+    def test_the_repository_blocks_are_current(self):
+        rc, out, err = run("render", "--check")
+        self.assertEqual(rc, 0, err)
+
+    def test_REQ_W3_012_a_load_change_changes_the_three_blocks(self):
+        self.assertEqual(run("render", "--check", "--plugin", str(self.plugin))[0], 0)
+        before = self.blocks()
+        mock = self.plugin / "skills" / "karvey-mockup" / "SKILL.md"
+        text = mock.read_text(encoding="utf-8")
+        mock.write_text(text.replace("Load: _core.md, gates.md, targets.md",
+                                     "Load: _core.md, gates.md, targets.md, adapters/{tool}.md", 1), encoding="utf-8")
+        rc, _, err = run("render", "--check", "--plugin", str(self.plugin))
+        self.assertEqual(rc, 1)
+        self.assertIn("load-lists:readme", err)
+        rc, out, _ = run("render", "--plugin", str(self.plugin))
+        self.assertEqual(rc, 0)
+        after = self.blocks()
+        for b, a in zip(before, after):
+            self.assertNotEqual(b, a)
+        self.assertIn("mockup", after[0].split("`adapters/{tool}`", 1)[1].splitlines()[0])
+        self.assertIn("`/karvey-mockup`", after[1])
+        self.assertEqual(run("render", "--check", "--plugin", str(self.plugin))[0], 0)
+
+    def test_REQ_W3_012_a_hand_edit_is_reported_as_drift(self):
+        text = self.adapter.read_text(encoding="utf-8")
+        self.adapter.write_text(text.replace("Used by: ", "Used by: `/karvey-mockup`, ", 1), encoding="utf-8")
+        rc, _, err = run("render", "--check", "--plugin", str(self.plugin))
+        self.assertEqual(rc, 1)
+        self.assertIn("adapters/markdown.md", err)
+        self.assertIn("load-lists:adapter-used-by", err)
+
+
 if __name__ == "__main__":
     unittest.main()

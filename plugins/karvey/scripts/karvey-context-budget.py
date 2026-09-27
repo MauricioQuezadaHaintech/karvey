@@ -6,6 +6,7 @@
                                      [--reasons FILE] [--plugin DIR] [--json]
     karvey-context-budget.py order --baseline docs/spec/retros/context-size-4.0.0.json --change ID [--root DIR]
     karvey-context-budget.py contracts [--plugin DIR] [--json]
+    karvey-context-budget.py render [--check] [--plugin DIR] [--json]
 
 ``measure`` prints one row per phase skill of ``schemas/state-machine.json`` plus the orchestrator: the skill's own
 size, the rules it cites directly and the transitive closure (``closure_min`` / ``closure_max``, see
@@ -32,6 +33,10 @@ not) every commit carrying ``Karvey-Change: ID`` that renames or deletes a skill
 file that is in that closure. Otherwise ``{phase}: contract {id} not loaded``, exit 1. A contract whose anchor is
 ``null`` is reported ``pending`` and does not fail (the core anchors it).
 
+``render`` (C-07, REQ-W3-012) rewrites the generated blocks from the skills' ``Load:`` lines
+(``karvey_lib/loadrender.py``): the orchestrator's routing table and its "applies in" table, each adapter's "used by"
+line and the README's per-skill list. ``--check`` writes nothing and exits 1 naming each block that drifted (L-61).
+
 Exit: 0 · 1 findings (missing load file, median below target) · 2 usage · 4 snapshot not found. Stdlib only.
 """
 import argparse
@@ -48,6 +53,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
 from karvey_lib import loadlist  # noqa: E402
+from karvey_lib import loadrender  # noqa: E402
 
 TOOL = "karvey-context-budget"
 ORCHESTRATOR = "karvey"
@@ -446,6 +452,24 @@ def cmd_contracts(args):
     return kl.emit(kl.envelope(TOOL, code, res, errors), args.json, human)
 
 
+# --------------------------------------------------------------------------- render (C-07, REQ-W3-012)
+def cmd_render(args):
+    plugin = Path(args.plugin) if args.plugin else kl.PLUGIN_ROOT
+    root = loadrender.readme_path(plugin).parent
+    if args.check:
+        found = loadrender.drift(plugin)
+        errors = [kl.issue("budget.render_drift", msg, file=loadlist.rel(p, root),
+                           got=name) for p, name, msg in found]
+        code = kl.EXIT_FINDINGS if errors else kl.EXIT_OK
+        res = {"blocks": len(loadrender.targets(plugin)), "drifted": len(errors)}
+        human = "render: %d generated block(s) current" % res["blocks"] if not errors else None
+        return kl.emit(kl.envelope(TOOL, code, res, errors), args.json, human)
+    changed = [loadlist.rel(p, root) for p in loadrender.render_all(plugin)]
+    res = {"blocks": len(loadrender.targets(plugin)), "changed": changed}
+    human = "render: %d file(s) rewritten%s" % (len(changed), (": " + ", ".join(changed)) if changed else "")
+    return kl.emit(kl.envelope(TOOL, kl.EXIT_OK, res), args.json, human)
+
+
 # --------------------------------------------------------------------------- cli
 class _Parser(argparse.ArgumentParser):
     def error(self, message):
@@ -480,6 +504,10 @@ def build_parser():
     k = sub.add_parser("contracts", help="every baseline (phase, contract) pair is still loaded (REQ-W3-009)")
     k.add_argument("--plugin", help="plugin directory (default: this plugin)")
     k.add_argument("--json", action="store_true")
+    r = sub.add_parser("render", help="rewrite the generated load-list blocks (REQ-W3-012)")
+    r.add_argument("--check", action="store_true", help="write nothing; exit 1 when a block drifted")
+    r.add_argument("--plugin", help="plugin directory (default: this plugin)")
+    r.add_argument("--json", action="store_true")
     return p
 
 
@@ -493,6 +521,8 @@ def main(argv=None):
         return cmd_order(args)
     if args.cmd == "contracts":
         return cmd_contracts(args)
+    if args.cmd == "render":
+        return cmd_render(args)
     build_parser().print_usage(sys.stderr)
     return kl.EXIT_USAGE
 

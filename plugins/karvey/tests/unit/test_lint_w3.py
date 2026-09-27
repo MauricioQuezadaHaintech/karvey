@@ -420,5 +420,30 @@ class L60(LintCase):
         self.assertFails("L-60", "over the 1200-word limit", file=self.ORCH)
 
 
+class L61(LintCase):
+    """@req REQ-W3-012 — a generated load-list block does not drift from the Load: lines."""
+    ORCH = SKILLS + "/karvey/SKILL.md"
+    ADAPTER = SKILLS + "/karvey/rules/adapters/markdown.md"
+
+    def setUp(self):
+        super().setUp()
+        from karvey_lib import loadrender as lr
+        self.t.write(SKILLS + "/karvey/rules/_core.md", "# Core\n")
+        self.t.write(self.ADAPTER, "# Tracker adapter: Markdown\n\n%s\n%s\n" % (lr.begin(lr.ADAPTER), lr.end(lr.ADAPTER)))
+        self.t.sub(SKILLS + "/karvey-qa/SKILL.md", r"(?m)^(# .*)$", r"\1\nLoad: _core.md, adapters/{tool}.md")
+        self.t.append(self.ORCH, "\n%s\n%s\n\n%s\n%s\n" % (lr.begin(lr.ROUTING), lr.end(lr.ROUTING),
+                                                            lr.begin(lr.ORCH), lr.end(lr.ORCH)))
+        self.t.write("README.md", "# Readme\n\n%s\n%s\n" % (lr.begin(lr.README), lr.end(lr.README)))
+        lr.render_all(self.t.path("plugins/karvey"))
+
+    def test_rendered_blocks_pass(self):
+        self.assertIn("`/karvey-qa`", self.t.read(self.ADAPTER))
+        self.assertPasses("L-61")
+
+    def test_REQ_W3_012_a_hand_edit_inside_a_block_fails(self):
+        self.t.replace(self.ADAPTER, "Used by: `/karvey-qa`", "Used by: `/karvey-qa`, `/karvey-impl`")
+        self.assertFails("L-61", "differs from its rendering", file=self.ADAPTER)
+
+
 if __name__ == "__main__":
     unittest.main()
