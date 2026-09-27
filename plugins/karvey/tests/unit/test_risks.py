@@ -29,7 +29,8 @@ class Register(unittest.TestCase):
     @unittest.skipUnless((OWN / "risks.md").is_file(), "not this repository")
     def test_this_changes_own_register_parses(self):
         rows = rk.read(OWN)
-        self.assertEqual([r["id"] for r in rows], ["R-%d" % i for i in range(1, 10)])
+        self.assertEqual([r["id"] for r in rows], ["R-%d" % i for i in range(1, len(rows) + 1)])  # consecutive ids
+        self.assertGreaterEqual(len(rows), 9)
         self.assertEqual(rk.problems(rows), [])
         self.assertTrue(all(r["state"] in rk.STATES for r in rows))
 
