@@ -347,3 +347,25 @@ test('REQ-W3-068: the page fetches nothing and CJK uses system fonts only', () =
   assert.match(html, /\.lang-block:lang\(ja\),\.lang-block:lang\(ko\)\{font-family:var\(--sans\),var\(--font-cjk\)/);
   assert.match(html, /@media \(max-width:720px\)\{\.langs ul\{display:none\}\.lang-select\{display:block\}\}/);
 });
+
+// ---------------------------------------------------------------- anchor aliases (REQ-W3-069)
+test('REQ-W3-069: hashToBlock resolves an anchor renamed after 3.10.0', () => {
+  assert.equal(P.hashToBlock('#reglas', 'en'), 'en-rules');
+  assert.equal(P.hashToBlock('#capa-equipo', 'ko'), 'ko-agent-team');
+  assert.equal(P.hashToBlock('#t-como', 'ja'), 'ja-t-principles');
+  assert.equal(P.hashToBlock('#pipeline', 'fr'), 'fr-pipeline');
+  assert.equal(P.hashToBlock('#constructor', 'en'), 'en-constructor', 'only own keys are aliases');
+});
+
+for (const lang of ['en', 'ko']) {
+  test('REQ-W3-069: an old anchor scrolls to its renamed section (' + lang + ')', () => {
+    const s = makeWindow({ search: '?lang=' + lang, hash: '#versiones', ids: [lang + '-versions'] });
+    P.init(s.w);
+    assert.equal(s.byId[lang + '-versions'].scrolled, 1);
+    assert.equal(s.history.at(-1), '/karvey.html?lang=' + lang + '#' + lang + '-versions');
+  });
+}
+
+test('REQ-W3-069: every alias target is a section of the English block', () => {
+  for (const target of Object.values(P.ANCHOR_ALIASES)) assert.match(html, new RegExp('id="en-' + target + '"'), target);
+});

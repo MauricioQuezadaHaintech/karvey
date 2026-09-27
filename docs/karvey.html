@@ -4755,6 +4755,11 @@ claude plugin update karvey@karvey-methods</code></pre>
 (function(g){
   var LANGS=['en','es','pt','de','zh','it','ja','fr','ko'], KEY='karvey-lang';
   var TAG=/^([a-zA-Z]{2})(?:[-_][a-zA-Z0-9]{1,8})*$/, HANT=/^zh[-_](hant|tw|hk|mo)(?:[-_]|$)/i;
+  /* Anchors published since 3.10.0 and renamed later (the 3.10.0 page was Spanish-only, without a language
+     prefix): an old link still lands on its section, in every language (REQ-W3-069) */
+  var ANCHOR_ALIASES={'contenido':'content','inicio':'top','como':'principles','t-como':'t-principles',
+    'organigrama':'org','iteracion':'iteration','transversal':'support','reglas':'rules',
+    'equipo-config':'team-config','capa-equipo':'agent-team','instalar':'install','versiones':'versions'};
   /* UI strings for the shared bar (outside the language blocks) */
   var UI={
     en:{title:'Karvey Method',label:'Language',skip:'Skip to content',home:'Karvey, back to top',simplified:'Chinese is shown in Simplified characters'},
@@ -4807,12 +4812,13 @@ claude plugin update karvey@karvey-methods</code></pre>
     p.set('lang',lang);
     return '?'+p.toString();
   }
-  /* The id of the hash's section in the block of 'lang' (#es-pipeline or #pipeline), or null */
+  /* The id of the hash's section in the block of 'lang' (#es-pipeline, #pipeline or a renamed #reglas), or null */
   function hashToBlock(h,lang){
     var id=safeDecodeHash(h);
     if(!id) return null;
     var m=/^([a-z]{2})-(.+)$/.exec(id);
     var rest=(m&&LANGS.indexOf(m[1])!==-1)?m[2]:id;
+    if(Object.prototype.hasOwnProperty.call(ANCHOR_ALIASES,rest)) rest=ANCHOR_ALIASES[rest];
     return lang+'-'+rest;
   }
 
@@ -4929,7 +4935,7 @@ claude plugin update karvey@karvey-methods</code></pre>
     return {apply:apply, choose:choose, current:function(){return current;}, followHash:followHash, pick:pick};
   }
 
-  var api={LANGS:LANGS, KEY:KEY, UI:UI, safeDecodeHash:safeDecodeHash, langOf:langOf, pickLang:pickLang,
+  var api={LANGS:LANGS, KEY:KEY, UI:UI, ANCHOR_ALIASES:ANCHOR_ALIASES, safeDecodeHash:safeDecodeHash, langOf:langOf, pickLang:pickLang,
            withLang:withLang, hashToBlock:hashToBlock, init:init};
   if(typeof module==='object'&&module&&module.exports) module.exports=api;
   if(g&&g.document&&!g.KARVEY_NO_INIT) init(g);

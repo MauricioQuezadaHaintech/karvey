@@ -445,5 +445,28 @@ class L61(LintCase):
         self.assertFails("L-61", "differs from its rendering", file=self.ADAPTER)
 
 
+class L75(LintCase):
+    """@req REQ-W3-069 — every anchor alias resolves in every language block."""
+    PAGE = "docs/karvey.html"
+
+    def setUp(self):
+        super().setUp()
+        self.t.write(self.PAGE, "<html><body>\n"
+                     '<div class="lang-block" data-lang="en" lang="en"><section id="en-rules"></section></div>\n'
+                     '<div class="lang-block" data-lang="ko" lang="ko"><section id="ko-rules"></section></div>\n'
+                     "<script>var ANCHOR_ALIASES={'reglas':'rules'};</script>\n</body></html>\n")
+
+    def test_aliases_that_resolve_pass(self):
+        self.assertPasses("L-75")
+
+    def test_REQ_W3_069_an_alias_to_a_missing_id_fails(self):
+        self.t.replace(self.PAGE, "{'reglas':'rules'}", "{'reglas':'rules','versiones':'versions'}")
+        self.assertFails("L-75", "'versiones' -> 'versions': no id en-versions", file=self.PAGE)
+
+    def test_a_block_missing_the_target_fails_naming_the_language(self):
+        self.t.replace(self.PAGE, 'id="ko-rules"', 'id="ko-other"')
+        self.assertFails("L-75", "in the ko block", file=self.PAGE)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -2455,6 +2455,35 @@ def l61_generated_blocks(ctx):
         yield (path, line_of(ctx, path, loadrender.begin(name)), msg)
 
 
+# --------------------------------------------------------------------------- L-75 (wave3-optimization)
+ALIASES_RE = re.compile(r"var ANCHOR_ALIASES=\{(.*?)\};", re.S)
+ALIAS_PAIR_RE = re.compile(r"'([^']+)'\s*:\s*'([^']+)'")
+
+
+def page_blocks(text):
+    """``[(lang, start, end)]`` of the method page's language blocks."""
+    starts = [(m.start(), m.group(1)) for m in LANG_BLOCK_RE.finditer(text)]
+    return [(lang, pos, starts[i + 1][0] if i + 1 < len(starts) else len(text)) for i, (pos, lang) in enumerate(starts)]
+
+
+@check("L-75", "Every anchor alias of the method page resolves to a section id in every language block "
+               "(REQ-W3-069)", reqs=("W3-069",))
+def l75_anchor_aliases(ctx):
+    page = ctx.root / "docs" / "karvey.html"
+    text = ctx.read(page)
+    if text is None:
+        return
+    m = ALIASES_RE.search(text)
+    if m is None:
+        return  # a page without the alias table (before 4.1, the lint fixtures)
+    n = text.count("\n", 0, m.start()) + 1
+    blocks = page_blocks(text)
+    for old, new in ALIAS_PAIR_RE.findall(m.group(1)):
+        for lang, start, end in blocks:
+            if ('id="%s-%s"' % (lang, new)) not in text[start:end]:
+                yield page, n, "anchor alias %r -> %r: no id %s-%s in the %s block" % (old, new, lang, new, lang)
+
+
 # --------------------------------------------------------------------------- L-62 (wave3-optimization)
 @check("L-62", "A skill's Load: line names only files that exist (blocking; REQ-W3-072)", reqs=("W3-072",))
 def l62_load_entries_exist(ctx):
