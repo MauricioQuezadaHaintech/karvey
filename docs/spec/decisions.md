@@ -260,3 +260,8 @@ corrected, not annotated at the end.
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-25. **Answer, verbatim:** «HainTech completo, solo Claude Code (Recomendado)»
 - **What:** one portfolio over every Karvey repo of the organisation; R-30 stays a portability guide without official support for other runtimes.
+
+## D-40 — New change `mockup-conformance`: what is built matches the approved mockup, one to one
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-27. Request relayed by a peer agent (the owner found the gap in three applications built with Karvey, paid in rework); routing answer, verbatim: «Change propio en paralelo (Recomendado)».
+- **What:** a separate change, specified now in its own worktree (docs only) and implemented after `living-docs`: stable element ids in the mockup tied to requirements, decisions taken while iterating the mockup written back to requirements; the approved mockup is a mandatory input of implementation; a blocking conformance gate (every mockup element present in the build, side-by-side captures at the same viewport and state with a marked diff where the stack allows, every deviation recorded and approved by the owner); a traceability matrix requirement → mockup element → test → evidence before release.
