@@ -162,6 +162,19 @@ requirements are verified by inspection of this change's own artifacts.
 | REQ-W2-022 | `test_judges.py` | PASS |
 | REQ-W2-030 | `test_judges.py`, `test_state_judges.py` | PASS |
 
+## QA re-run (2026-09-27, after the QA fixes)
+
+| ID | Command | Result | Evidence | Status |
+|---|---|---|---|---|
+| QA-UT | `python3 -m unittest discover -s plugins/karvey/tests/unit` @4e6d07e | `Ran 1421 tests` · `OK` | `evidence.jsonl:73` | ✅ PASS |
+| QA-RG | `python3 -m unittest discover -s plugins/karvey/tests/regression` @4e6d07e | `OK` (72 incidents indexed) | `evidence.jsonl:74` | ✅ PASS |
+| QA-TB | `run_tables.py` @f5cc563 | `550 passed, 0 failed` | `evidence.jsonl:66` | ✅ PASS |
+| QA-HK | `test-hooks.sh` @f5cc563 | `71 passed, 0 failed` | `evidence.jsonl:67` | ✅ PASS |
+| QA-PG | `node --test plugins/karvey/tests/page/` @f5cc563 | `# pass 39` · `# fail 0` | `evidence.jsonl:68` | ✅ PASS |
+| QA-LN | `lint-plugin.py` @f5cc563 | `0 errors, 3 warnings (72 checks)` | `evidence.jsonl:69` | ✅ PASS |
+| QA-VD | `karvey-state.py validate --all` @f5cc563 | `0 errors · 29 warnings` | `evidence.jsonl:70` | ✅ PASS |
+| QA-TR | `karvey-trace.py wave3-optimization --write --check` @4e6d07e | `coverage: 87/90` | `evidence.jsonl:75` | ✅ PASS |
+
 ## Manual agent-behaviour scripts — run in QA (2026-09-27)
 
 Run headless as the maintainer agent (owner-authorised pattern, D-19/D-21/D-28): a throw-away repository with a bare

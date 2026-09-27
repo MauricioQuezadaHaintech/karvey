@@ -6,20 +6,20 @@
 - Source branch: feature/wave3-optimization
 - Target branch: origin/feature/wave2-structural (the change builds on Wave 2, not yet merged to main)
 - Date: 2026-09-27
-- Commits included: 116 at review start (`96bd020`); the fixes of this review add three commits
+- Commits included: 116 at review start (`96bd020`); the fixes of this review: `4e5cc2f`, `b94988a`, `f5cc563`, `4e6d07e`
 - Files modified: 227 at review start (33,231 insertions, 984 deletions); code under `plugins/karvey/scripts`,
   `hooks`, `templates`: 36 files, 6,559 insertions
 
 ## Executive Summary
-The change is functionally complete (REQ-W3-001..080: 80 PASS). The review found **2 High** defects in the
+The change is functionally complete (REQ-W3-001..080: 80 PASS in `test_evidence.md` § Results per requirement, each row naming its test file and evidence line; trace coverage 87/90, evidence.jsonl:58 — the three not green, REQ-W3-064/065/073, are change-scoped and verified by inspection in the same file: release manifest, trailers, lane). The review found **2 High** defects in the
 implementation — writing tools that created a second spec root in a `spec/` project (BUG-105) and a risk move that
 half-applied when a backlog existed (BUG-114) — and the adversarial second opinion found **2 High** more: the
 contract-coverage check could pass with a contract gone (BUG-128) and webhook URLs with a secret path passed the leak
 check (BUG-129). The five manual agent-behaviour scripts, run headless for the first time, failed at first on nine
 plugin defects (the close skipped or losing the leak detail, QA/deploy writing outside the Epic items, the browse
-session fetching an undeclared URL, `observed` blind to Skill and shell reads) and all pass on the rerun. Every
-defect is fixed with a regression test (red before, green after) and indexed as a `BUG-NN`; low-value improvements are
-deferred with their reason in `findings.md`. **No Critical or High finding is open.**
+session fetching an undeclared URL, `observed` blind to Skill and shell reads) and all pass on the rerun (overall verdict lines of `qa/manual/sponsor-at-gate-2026-09-27.md`, `design-judge-gate-…`, `tracker-wbs-…`, `browse-via-agent-…`, `one-phase-per-session-…`: PASS; browser-only parts not run: no browser here). Every
+defect is fixed with a regression test and indexed as a `BUG-NN` (`docs/bugs_dev_testing.md` names each test; `tests/regression/test_incidents.py` fails when one is missing — evidence.jsonl:53); red-before was checked by each fixer against the previous code and recorded for the four Highs (evidence.jsonl:60, exit 1 on `96bd020`); low-value improvements are
+deferred with their reason in `findings.md`. **No Critical or High finding is open** (`findings.md` F-105..F-174: every High row `closed` with its BUG; `karvey-context.py --section convergence` lists only the owner decision F-168/F-169, both Medium).
 
 ## Findings by Dimension
 
@@ -28,7 +28,7 @@ deferred with their reason in `findings.md`. **No Critical or High finding is op
 - secrets — gitleaks 8.30.1: 0 findings · `gitleaks detect --no-banner --source . …` · evidence.jsonl:50
 - sast — bandit 1.9.4 (installed in a scratch virtualenv for this run): medium 7, low 118 · `bandit -r . -f json …` ·
   evidence.jsonl:51. Triage: every item is a false positive recorded in `qa/suppressions.json` with its reason and
-  scope (`validate-suppressions`: 6 suppressions, 0 problems) — B314/B405 on the size-capped local JUnit parse, B108/B103
+  scope, one entry per rule, file and lines — 91 entries covering all 125 bandit items (`validate-suppressions`: 91 suppressions, 0 problems, evidence.jsonl:59) — B314/B405 on the size-capped local JUnit parse, B108/B103
   in tests, B404/B603/B607 fixed-argv subprocess calls, B105/B107 "token" placeholders, B110 best-effort hook writes.
 - sca, iac — not applicable (no dependency manifest, no IaC file).
 
@@ -53,9 +53,9 @@ business-logic abuse — a changed page cannot be delivered (BUG-106), a risk ca
 (BUG-114, BUG-136), a done-direct item needs a real commit (BUG-135).
 
 OWASP coverage: A01 finding 3 · A02 finding 4 · A03 findings 2, 8 · A04 findings 1, 5 · A05 covered — the page's CSP is
-`default-src 'none'`, no script, no external request (L-64, page tests) · A06 not applicable (stdlib only, no
-dependency) · A07 not applicable (no authentication in the plugin) · A08 covered — CI actions pinned by SHA, the
-workflow has no `${{ }}` of untrusted input in `run:` · A09 finding 9 · A10 not applicable (no server-side fetch; the
+`default-src 'none'` (`plugins/karvey/templates/sponsor.html:6`), no script, no external request (L-64 in lint, evidence.jsonl:57; `test_sponsor_page.mjs`, evidence.jsonl:56) · A06 not applicable (stdlib only, no
+dependency) · A07 not applicable (no authentication in the plugin) · A08 covered — CI actions pinned by SHA
+(`.github/workflows/lint.yml:24,25,44,47,61,62,74,77`); its `run:` lines (lines 28-34, 50-56, 65, 81-83) use no `${{ }}` expression · A09 finding 9 · A10 not applicable (no server-side fetch; the
 browse session makes no request of its own, BUG-99).
 
 > **Security gate: PASSED** — no Critical or High open (the Highs of dimensions 4 and 7 are fixed, see below).
@@ -86,17 +86,20 @@ browse session makes no request of its own, BUG-99).
 |---|---|---|---|---|
 | 1 | karvey_lib/project.py and ~40 writing call sites | **High** | `spec/` accepted by every tool; `init` created a second spec root | BUG-105 (writers refuse `spec/`; views read it — REQ-W3-048) |
 | 2 | karvey-state.py validate | Medium | four new warnings ignored their check modes | BUG-117 |
-| 3 | release gate `spec_merged` | info | conflict in `docs/spec/specs/method/spec.md` on requirements Wave 2 also modifies: expected until wave2-structural is archived first (merge order) | no finding — checked again at archive |
+| 3 | release gate `spec_merged` | info | `conflict in docs/spec/specs/method/spec.md` on ten ids (evidence.jsonl:61): this change MODIFIES requirements that Wave 2 adds (e.g. REQ-W2-003, `docs/spec/changes/wave2-structural/spec-delta.md:22`) and the living spec does not hold yet (0 matches) — wave2-structural must be archived first | no finding — merge order, checked again at archive |
 
-A 4.0 project with none of the new keys: `validate` 0 errors (test_compat_w3, 70 `compat41-` table replays).
+A 4.0 project with none of the new keys: `validate` 0 errors — `test_compat_w3.py` in the unit run (evidence.jsonl:52) and the 70 `compat41-` table replays (evidence.jsonl:54).
 
 ### 5. Environment variables
-No new variable read from the environment. `KARVEY_DEFAULTS_JSON` is internal (set and exported by
-`karvey-statusline.sh` for its own python, fallback `''`). No Dockerfile or pipeline variable involved.
+Variables the diff reads (grep, evidence.jsonl:63): `KARVEY_DEFAULTS_JSON` — internal, assigned and exported
+unconditionally by `hooks/karvey-statusline.sh:32-33` before its python runs (never inherited); `CLAUDE_CODE_SESSION_ID` /
+`CLAUDE_SESSION_ID` — optional, set by the runtime, used only to pick the closing session's capture (BUG-134; absent →
+quality `estimated`); the portfolio's child environment drops `KARVEY_`, `CLAUDE_`, `GIT_` variables. No Dockerfile or
+pipeline variable involved.
 
 ### 6. Versioning
-- `unreleased-section`: `CHANGELOG.md` `[Unreleased]` names wave3-optimization; release gate `changelog: pass`.
-- `one-bump-per-release`: no version bump in the diff; `version_match: pass` (3.11.4 everywhere; the 4.1.0 bump happens
+- `unreleased-section`: `CHANGELOG.md` `[Unreleased]` names wave3-optimization; release gate `changelog: pass` (evidence.jsonl:61).
+- `one-bump-per-release`: no version bump in the diff; `version_match: pass` (evidence.jsonl:61: 3.11.4 in `plugins/karvey/.claude-plugin/plugin.json:5`, `.claude-plugin/marketplace.json:13` and the top CHANGELOG release; the 4.1.0 bump happens
   at the release step).
 - `versions-agree`: plugin.json, marketplace.json and CHANGELOG agree.
 - `changelog-why`: every line names the why and the AI model. The lines added in this review name the responsible
@@ -119,7 +122,7 @@ declared**; no external model key is available on this host. New findings (origi
 | 8 | karvey-state.py risk move | Medium | `--to` an unrelated item, and a second move, accepted | BUG-136 |
 | 9 | karvey-context-budget.py `compare` | Low | a skill only in the base snapshot silently left the median | BUG-133 |
 
-Discrepancies: none — the second model confirmed the preliminary findings it re-checked.
+Discrepancies: none recorded — its nine findings are new (rows F-145..F-153 of `findings.md`, origin `qa:D7`); the second model ran as a fresh-context subagent of the same session, whose runtime keeps the transcript.
 
 ### 8. Visual audit (implemented vs design-spec)
 `browse.via` is `local` and this host has no browser: **static audit** of the implemented template, the rendered page of
@@ -136,24 +139,25 @@ px, both schemes, print preview) stay with `sponsor-at-gate.md` step 2 — **not
 | 6 | sponsor page | Medium | dark-scheme print, touch targets, step state by colour only, question squeezed at 360 px (design judge) | BUG-86..BUG-89 |
 | 7 | method page | Low | zh block line-height 1.7 vs 1.75; switch values off the scales | deferred with F-93 (pre-existing page variables) |
 
-Conforms: section order (Waiting for you first), four-fact row, 880 px column, 4→2 steps under 520 px, print hides only
+Conforms (static checks `tests/page/test_sponsor_page.mjs`, evidence.jsonl:56; `contrast.json`; lint L-64, evidence.jsonl:57): section order (Waiting for you first), four-fact row, 880 px column, 4→2 steps under 520 px, print hides only
 navigation and opens every `details`, no external request, status pill and "your approval" tag, colour tokens =
-design-delta (27 pairs, 0 below, `contrast.json`), method-page select under 720 px, system fonts only.
+design-delta (27 pairs × 2 schemes, 0 below: `contrast.json` and evidence.jsonl:62), method-page select under 720 px, system fonts only.
 
 ### 9. Standards conformance (golden path)
 **Not evaluated** — the project declares no standards (`project.json:standards` absent, no `docs/spec/standards/`,
 no `deviations.md`). Not evaluated is not conformance. What the repository enforces instead ran green: `lint-plugin.py`
-72 checks, 0 errors.
+0 errors (evidence.jsonl:57; the run prints `0 errors, 3 warnings (72 checks)`).
 
 ## Summary Table by Severity
 | Severity | Found | Fixed | Deferred | Open |
 |-----------|---------|-------|----------|------|
 | Critical | 0 | 0 | 0 | 0 |
 | High | 4 | 4 | 0 | 0 |
-| Medium | 22 | 22 | 0 | 0 |
-| Low | 17 | 12 | 5 | 0 |
+| Medium | 23 | 23 | 0 | 0 |
+| Low | 23 | 17 | 6 | 0 |
 
-(Review and second opinion, plus the manual-script defects BUG-95..BUG-104, BUG-126, BUG-127.)
+(Findings F-105..F-154 in `findings.md`: the review, the second opinion and the manual-script defects. The design
+judge's F-86..F-103, routed before QA, are not counted here. Deferred: F-109, F-119, F-120, F-142, F-143, F-154.)
 
 ## Pre-merge checklist
 - [x] All critical findings resolved (none)
@@ -163,9 +167,29 @@ no `deviations.md`). Not evaluated is not conformance. What the repository enfor
 - [x] Visual audit vs design-spec with no blocking deviations (static; rendered checks not run: no browser here)
 - [x] Standards conformance: not evaluated (no standards declared)
 - [x] Environment variables verified
-- [x] Tests: pass — {EVIDENCE_TESTS}
-- [x] Coverage: {COVERAGE} (karvey-trace.py --check); not green: REQ-W3-064, REQ-W3-065, REQ-W3-073 (change-scoped, verified by inspection in test_evidence.md)
+- [x] Tests: pass on `4e6d07e` — unit 1,421 (evidence.jsonl:73), regression 72 incidents indexed (74), trace 87/90 (75); on `f5cc563`, which differs from `4e6d07e` only in `tests/unit/test_risks.py`: guard tables 550/550 (66), test-hooks 71/71 (67), page tests 39/39 (68), lint 0 errors (69), `validate --all` 0 errors (70), contracts 79/79 (72). The run at evidence.jsonl:64 failed on that register test, fixed in `4e6d07e`.
+- [x] Coverage: 87/90 (karvey-trace.py --check, evidence.jsonl:75); not green: REQ-W3-064, REQ-W3-065, REQ-W3-073 (change-scoped, verified by inspection in test_evidence.md)
 - [x] Production build: not applicable (no build step; the plugin ships as files)
+
+## Judges at the qa gate (intra-model, declared)
+`karvey-judges.py inputs wave3-optimization qa` → lenses fiscal and security, run in fresh contexts with Read/Grep/Glob
+only; collected into `findings.md` F-155..F-174 and `spec.json:judge_runs` (2 runs, estimated cost). Fiscal (fail, 13):
+claims without evidence — this document was amended in place with the evidence lines above (F-155..F-167 closed).
+Security (concerns, 7): suppressions narrowed to files and lines (F-170), a delivery traceback fixed (BUG-137),
+two risks accepted into `risks.md` (R-10, R-11), one rejected with the file line (F-171), and **F-168/F-169 — personal
+names and work e-mail addresses in public text** — left for the owner (below).
+
+## Owner decision (Medium — not a security-gate blocker; blocks deploy under dimension 6)
+**Personal attribution in a public repository** (F-168, F-169; dimension 6 `changelog-why`). The branch's CHANGELOG
+lines (about 107, written before this review) carry the owner's name and work e-mail; the incident tracker's state
+history and `spec.json` approvals carry the owner's name; the lines added in this review say `Responsible: maintainer`
+because new text must be company-neutral, while `changelog-policy` asks for the responsible human.
+- **(A, recommended)** Attribution by role in public text: keep "maintainer" on the new lines and fold the existing
+  name/e-mail lines into the scheduled owner cleanup (one pass over CHANGELOG, tracker and approvals, `by` values kept
+  as a role or handle), and amend `changelog-policy` so a public repository names a role or handle, not an e-mail.
+- (B) Keep personal attribution: accept the name and e-mail as published, and add the owner's name to the three new
+  lines.
+- (C) Keep both as they are for this release and record a deviation for this change only; decide at the next change.
 
 ## Areas requiring manual testing
 - Sponsor page in a real browser: 360/1440 px, light/dark, print preview, offline network panel (`sponsor-at-gate.md` step 2).
