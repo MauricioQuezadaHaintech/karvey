@@ -7,6 +7,7 @@
     karvey-context-budget.py order --baseline docs/spec/retros/context-size-4.0.0.json --change ID [--root DIR]
     karvey-context-budget.py contracts [--plugin DIR] [--json]
     karvey-context-budget.py render [--check] [--plugin DIR] [--json]
+    karvey-context-budget.py observed --transcript FILE [--skill NAME] [--plugin DIR] [--json]
 
 ``measure`` prints one row per phase skill of ``schemas/state-machine.json`` plus the orchestrator: the skill's own
 size, the rules it cites directly and the transitive closure (``closure_min`` / ``closure_max``, see
@@ -36,6 +37,11 @@ file that is in that closure. Otherwise ``{phase}: contract {id} not loaded``, e
 ``render`` (C-07, REQ-W3-012) rewrites the generated blocks from the skills' ``Load:`` lines
 (``karvey_lib/loadrender.py``): the orchestrator's routing table and its "applies in" table, each adapter's "used by"
 line and the README's per-skill list. ``--check`` writes nothing and exits 1 naming each block that drifted (L-61).
+
+``observed`` (C-08, the manual one-phase-per-session script) reads a session transcript (JSONL) and lists the
+plugin text the session actually opened (``Read`` tool calls on ``skills/…/*.md``), as plugin-relative paths. With
+``--skill`` each opened rule outside that skill's closure is listed as ``outside the load list`` — a footnote-only
+rule that was opened anyway. Read-only; the transcript's own paths are never printed.
 
 Exit: 0 · 1 findings (missing load file, median below target) · 2 usage · 4 snapshot not found. Stdlib only.
 """
@@ -470,6 +476,49 @@ def cmd_render(args):
     return kl.emit(kl.envelope(TOOL, kl.EXIT_OK, res), args.json, human)
 
 
+# --------------------------------------------------------------------------- observed (C-08, REQ-W3-013)
+def opened_files(transcript):
+    """Sorted plugin-relative ``skills/…/*.md`` paths opened by ``Read`` tool calls in a JSONL transcript."""
+    seen = set()
+    with open(transcript, encoding="utf-8-sig", errors="replace") as fh:
+        for raw in fh:
+            try:
+                rec = json.loads(raw)
+            except ValueError:
+                continue
+            msg = rec.get("message") if isinstance(rec, dict) else None
+            content = msg.get("content") if isinstance(msg, dict) else None
+            for part in content if isinstance(content, list) else []:
+                if not isinstance(part, dict) or part.get("type") != "tool_use" or part.get("name") != "Read":
+                    continue
+                fp = str((part.get("input") or {}).get("file_path") or "").replace("\\", "/")
+                if "/skills/" in "/" + fp and fp.endswith(".md"):
+                    seen.add("skills/" + ("/" + fp).rsplit("/skills/", 1)[1])
+    return sorted(seen)
+
+
+def cmd_observed(args):
+    plugin = Path(args.plugin) if args.plugin else kl.PLUGIN_ROOT
+    try:
+        opened = opened_files(args.transcript)
+    except OSError:
+        return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue("budget.not_found",
+                                                                            "transcript not found")]), args.json)
+    res = {"opened": opened}
+    lines = ["opened: %s" % f for f in opened] or ["opened: no plugin text"]
+    if args.skill:
+        md = plugin / "skills" / args.skill / "SKILL.md"
+        if not md.is_file():
+            return kl.emit(kl.envelope(TOOL, kl.EXIT_NOT_FOUND, errors=[kl.issue(
+                "budget.not_found", "skill %s not found" % args.skill)]), args.json)
+        row, _ = loadlist.measure_skill(plugin, md)
+        allowed = set(row["closure_max_files"]) | {"skills/%s/SKILL.md" % args.skill}
+        outside = [f for f in opened if f.startswith("skills/karvey/rules/") and f not in allowed]
+        res.update(skill=args.skill, outside_load_list=outside)
+        lines += ["outside the load list: %s" % f for f in outside]
+    return kl.emit(kl.envelope(TOOL, kl.EXIT_OK, res), args.json, "\n".join(lines))
+
+
 # --------------------------------------------------------------------------- cli
 class _Parser(argparse.ArgumentParser):
     def error(self, message):
@@ -508,6 +557,11 @@ def build_parser():
     r.add_argument("--check", action="store_true", help="write nothing; exit 1 when a block drifted")
     r.add_argument("--plugin", help="plugin directory (default: this plugin)")
     r.add_argument("--json", action="store_true")
+    ob = sub.add_parser("observed", help="plugin text a session transcript actually opened (C-08)")
+    ob.add_argument("--transcript", required=True, help="session transcript (JSONL)")
+    ob.add_argument("--skill", help="list opened rules outside this skill's closure")
+    ob.add_argument("--plugin", help="plugin directory (default: this plugin)")
+    ob.add_argument("--json", action="store_true")
     return p
 
 
@@ -523,6 +577,8 @@ def main(argv=None):
         return cmd_contracts(args)
     if args.cmd == "render":
         return cmd_render(args)
+    if args.cmd == "observed":
+        return cmd_observed(args)
     build_parser().print_usage(sys.stderr)
     return kl.EXIT_USAGE
 

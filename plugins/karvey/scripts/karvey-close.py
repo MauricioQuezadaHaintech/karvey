@@ -13,7 +13,9 @@ deterministic close steps and prints what is left for the agent:
    version and environment), each filtered by the sent-log (``notify-sent``) and printed as a payload;
 3. ``risks`` — at the *qa* and *release* gates, the open risks whose owners are to be asked (the risk register);
 4. ``effort`` — ``karvey-state.py effort`` **last**, so steps 1–3 are charged to the phase that closes;
-5. ``checkpoint`` — the checkpoint line and, when the context is at the red threshold, the fresh-session advice.
+5. ``checkpoint`` — the checkpoint offer; the script compares the latest capture's context reading with the
+   checkpoint rotation threshold and prints ``recommend: checkpoint + fresh session before the next skill`` when it
+   is reached, ``context reading unavailable`` when there is no reading (one phase per session, REQ-W3-013).
 
 Each step's failure is reported and the next step still runs. The gate outcome is never changed here: this
 script records nothing about approvals. Exit: 0 (every step ran, failures are in the result) · 2 usage · 4 not
@@ -29,6 +31,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
+from karvey_lib import effort as ef  # noqa: E402
 from karvey_lib import project as pj  # noqa: E402
 from karvey_lib import risks as rsk  # noqa: E402
 
@@ -174,11 +177,21 @@ def step_effort(args, root):
     return out
 
 
-def step_checkpoint(effort):
-    line = ("offer /karvey-checkpoint save: the next phase can start in a fresh session (one phase per session)")
+def step_checkpoint(root):
+    """Step 5 (C-08): the checkpoint offer, and the script's own comparison of the context reading with the
+    checkpoint rotation threshold (``defaults.json`` ``context_pct.red``, else ``context_tokens.red``)."""
+    line = "offer /karvey-checkpoint save: the next phase can start in a fresh session (one phase per session)"
     out = {"step": "checkpoint", "ok": True, "lines": [line]}
-    if effort.get("advice"):
-        out["lines"].append(effort["advice"])
+    d = kl.defaults()
+    try:
+        chk = ef.context_check(pj.state_dir(root, create=False) / ef.CAPTURE_DIR, ef.root_key(root),
+                               (d.get("context_pct") or {}).get("red"), (d.get("context_tokens") or {}).get("red"))
+    except OSError:
+        chk = {"status": "unavailable", "line": ef.READING_UNAVAILABLE}
+    out["context"] = chk["status"]
+    out["lines"].append(chk["line"])
+    if chk["status"] != "recommend":
+        out["lines"].append("continuing in this session is allowed")
     return out
 
 
@@ -192,8 +205,7 @@ def run(args):
         return kl.EXIT_NOT_FOUND, None, "change %r not found" % args.change
     gate = args.gate or gate_of(args.phase)
     steps = [step_sponsor(args, root, gate), step_events(args, root, args.phase), step_risks(args, root, gate)]
-    eff = step_effort(args, root)
-    steps += [eff, step_checkpoint(eff)]
+    steps += [step_effort(args, root), step_checkpoint(root)]
     res = {"change": args.change, "phase": args.phase, "gate": gate, "outcome": args.outcome,
            "order": [s["step"] for s in steps], "steps": steps,
            "failures": [s["error"] for s in steps if not s["ok"]]}

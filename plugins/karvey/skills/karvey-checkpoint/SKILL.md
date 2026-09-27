@@ -57,6 +57,22 @@ session *competent* rather than merely informed:
 Plus what no artifact holds: **standing decisions that affect the work** (linked, with their *why*),
 **commitments made** (to whom, by when), and **what a new session cannot derive from the repo**.
 
+## One phase per session (the default pattern)
+
+Each phase loads only its own `Load:` list, so a phase started in a fresh session carries nothing from the one
+before. At every gate close, `karvey-close.py` step 5 offers `/karvey-checkpoint save` and says the next phase can
+start in a fresh session, which the session hook resumes through `karvey-state.py next`. The script — not the model —
+compares the latest context reading of the statusline capture with the rotation threshold below (`context_pct.red`,
+else `context_tokens.red`):
+
+- at or above it → `recommend: checkpoint + fresh session before the next skill` — save, then load the next skill in
+  a new session;
+- below it → the offer only; **continuing in the same session stays allowed**;
+- no reading (statusline not installed) → `context reading unavailable`; the offer stands.
+
+To see what a session really opened, `karvey-context-budget.py observed --transcript <file> --skill <skill>` lists
+the plugin text it read and any rule outside that skill's load list.
+
 ## Modes
 
 The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`. If no `change-id` is given, the active change is detected (see "Resolving the change-id"). Flags: `--handoff-only` (rotate without touching the change checkpoint) and `--no-handoff` (checkpoint only).

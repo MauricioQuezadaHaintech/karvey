@@ -284,7 +284,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F2.T9 [Backend] | ✅ done | 12 | 11 | 0 |  |
 | E1.F2.T10 [Backend] | ✅ done | 15 | 13 | 0 |  |
 | E1.F2.T11 [Backend] | ✅ done | 10 | 14 | 0 |  |
-| E1.F2.T12 [Backend] | ⬜ todo | 10 | — | — |  |
+| E1.F2.T12 [Backend] | ✅ done | 10 | 13 | 0 |  |
 | E1.F2.T13 [Test] | ⬜ todo | 8 | — | — |  |
 | E1.F11.T1 [Backend] | ✅ done | 10 | 12 | 0 |  |
 | E1.F11.T2 [Backend] | ✅ done | 8 | 6 | 0 |  |

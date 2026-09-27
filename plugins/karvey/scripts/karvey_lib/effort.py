@@ -197,3 +197,33 @@ def rotation_advice(cost_dir, rkey, red_pct):
         return ("context at %s%% (>= %s%%): save a checkpoint and start the next phase in a fresh session"
                 % (("%g" % pct), ("%g" % red_pct)))
     return None
+
+
+RECOMMEND_FRESH = "recommend: checkpoint + fresh session before the next skill"
+READING_UNAVAILABLE = "context reading unavailable"
+
+
+def context_check(cost_dir, rkey, red_pct=None, red_tokens=None):
+    """One phase per session (C-08, REQ-W3-013): compare the latest capture's context reading with the checkpoint
+    rotation threshold — ``context_pct`` against ``red_pct``, else ``context_tokens`` against ``red_tokens``.
+
+    ``{"status": "recommend" | "offer" | "unavailable", "pct", "tokens", "line"}``; the script decides, not the
+    model. ``offer`` means the checkpoint is only offered; continuing in the same session stays allowed."""
+    captures, _ = read_captures(cost_dir, rkey)
+    _, rec, _, _ = pick_capture(captures)
+    pct = rec.get("context_pct") if rec else None
+    tok = rec.get("context_tokens") if rec else None
+    pct = pct if isinstance(pct, (int, float)) and not isinstance(pct, bool) else None
+    tok = tok if isinstance(tok, (int, float)) and not isinstance(tok, bool) else None
+    out = {"pct": pct, "tokens": tok}
+    if pct is not None and red_pct is not None:
+        hit, reading = pct >= red_pct, "context at %g%% (threshold %g%%)" % (pct, red_pct)
+    elif tok is not None and red_tokens is not None:
+        hit, reading = tok >= red_tokens, "context at %d tokens (threshold %d)" % (tok, red_tokens)
+    else:
+        out.update(status="unavailable", line=READING_UNAVAILABLE)
+        return out
+    out.update(status="recommend" if hit else "offer",
+               line=("%s — %s" % (RECOMMEND_FRESH, reading)) if hit else reading)
+    return out
+

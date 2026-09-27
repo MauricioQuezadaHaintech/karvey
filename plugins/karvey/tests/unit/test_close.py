@@ -107,5 +107,78 @@ class Close(unittest.TestCase):
         self.assertEqual(res["steps"][2]["ask"], [])
         self.assertEqual(res["steps"][2]["note"], "no risk review at this gate")
 
+class OnePhasePerSession(unittest.TestCase):
+    """@req REQ-W3-013 — step 5 compares the capture's context reading with the checkpoint threshold."""
+    setUp, tearDown, close = Close.setUp, Close.tearDown, Close.close
+
+    def capture(self, pct=None, tokens=None):
+        sys.path.insert(0, str(_path.SCRIPTS_DIR))
+        from karvey_lib import effort as ef
+        from karvey_lib import project as pj
+        with mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(self.tmp / "state")}):
+            d = pj.state_dir(self.root) / ef.CAPTURE_DIR
+        d.mkdir(parents=True, exist_ok=True)
+        rec = {"root_key": ef.root_key(self.root), "usd": 0.5, "transcript": None, "context_pct": pct,
+               "context_tokens": tokens, "at": "2026-01-01T00:00:00+00:00"}
+        (d / "0123456789abcdef.json").write_text(json.dumps(rec), encoding="utf-8")
+
+    def step5(self):
+        res = self.close()
+        self.assertEqual(res["order"][-1], "checkpoint")
+        return res["steps"][-1]
+
+    def test_REQ_W3_013_at_the_red_threshold_recommends_a_fresh_session(self):
+        self.capture(pct=55)
+        s = self.step5()
+        self.assertEqual(s["context"], "recommend")
+        self.assertIn("recommend: checkpoint + fresh session before the next skill", " ".join(s["lines"]))
+
+    def test_below_the_threshold_only_offers(self):
+        self.capture(pct=20)
+        s = self.step5()
+        self.assertEqual(s["context"], "offer")
+        text = " ".join(s["lines"])
+        self.assertIn("/karvey-checkpoint save", text)
+        self.assertNotIn("recommend:", text)
+        self.assertIn("continuing in this session is allowed", text)
+
+    def test_tokens_are_the_fallback_when_the_percentage_is_unknown(self):
+        self.capture(tokens=160000)
+        self.assertEqual(self.step5()["context"], "recommend")
+
+    def test_no_reading_says_so(self):
+        s = self.step5()
+        self.assertEqual(s["context"], "unavailable")
+        self.assertIn("context reading unavailable", " ".join(s["lines"]))
+
+
+class Observed(unittest.TestCase):
+    """@req REQ-W3-013 — ``observed`` lists the plugin text a session opened; a footnote-only rule is flagged."""
+
+    def test_a_footnote_only_rule_that_was_opened_is_listed(self):
+        tmp = Path(tempfile.mkdtemp(prefix="karvey-observed-"))
+        try:
+            def read(path):
+                return {"type": "assistant", "message": {"content": [
+                    {"type": "tool_use", "name": "Read", "input": {"file_path": path}}]}}
+            lines = [read("/work/plugin/skills/karvey-impl/SKILL.md"),
+                     read("/work/plugin/skills/karvey/rules/gates.md"),
+                     read("/work/plugin/skills/karvey/rules/deploy-workflow.md"),
+                     read("/work/app/src/main.py"), {"type": "user", "message": {"content": "hi"}}]
+            tr = tmp / "session.jsonl"
+            tr.write_text("\n".join(json.dumps(x) for x in lines) + "\nnot json\n", encoding="utf-8")
+            cp = subprocess.run([sys.executable, str(_path.SCRIPTS_DIR / "karvey-context-budget.py"), "observed",
+                                 "--transcript", str(tr), "--skill", "karvey-impl", "--json"],
+                                capture_output=True, text=True, timeout=60)
+            self.assertEqual(cp.returncode, 0, cp.stderr)
+            res = json.loads(cp.stdout)["result"]
+            self.assertEqual(res["opened"], ["skills/karvey-impl/SKILL.md", "skills/karvey/rules/deploy-workflow.md",
+                                             "skills/karvey/rules/gates.md"])
+            self.assertEqual(res["outside_load_list"], ["skills/karvey/rules/deploy-workflow.md"])
+            self.assertNotIn("/work/", cp.stdout)
+        finally:
+            shutil.rmtree(str(tmp), ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()
