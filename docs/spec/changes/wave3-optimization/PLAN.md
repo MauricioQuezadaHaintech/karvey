@@ -202,6 +202,19 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [ ] E1.F12.T17 [Backend] L-11 extended: the page's Wave 3 counts (skills, rules, scripts) match the plugin in every language — est: 6min (depends E1.F12.T2) (P)
 - [ ] E1.F12.T18 [Test] Final gate: lint 0, page and unit suites, `karvey-trace.py wave3-optimization --check` 80/80, and the plan-order check (every F12 task after the last task of every other feature) — est: 8min (depends E1.F12.T15, E1.F12.T16, E1.F12.T17)
 
+### Epic item E1.QA
+
+QA Review wave3-optimization (feature/wave3-optimization → feature/wave2-structural) — `qa/REVISION_PR_wave3_20260927.md`.
+- [x] E1.QA.1 High: writers refuse a `spec/` project (BUG-105)
+- [x] E1.QA.2 High: risk move all-or-nothing (BUG-114)
+- [x] E1.QA.3 High: contract coverage needs the contract loaded and non-empty (BUG-128)
+- [x] E1.QA.4 High: webhook URLs with a secret path caught (BUG-129)
+- [x] E1.QA.5 Medium/Low security: sponsor delivery, destinations, portfolio symlinks, leak-check rules (BUG-94, BUG-106..113, BUG-130..132)
+- [x] E1.QA.6 Medium/Low errors and consistency: tables, qa notification key, check modes, design apply, envelopes, effort, done-direct, risk move (BUG-115..121, 123, 133..136)
+- [x] E1.QA.7 Manual scripts: close named and kept, outcome after approval, tracker shape, browse, observed (BUG-95..104, 126, 127)
+- [x] E1.QA.8 Visual: sponsor labels, risk tags, title, portfolio footer (BUG-90..93)
+- [ ] E1.QA.9 Owner decision: CHANGELOG attribution by role in a public repository (review § Owner decision)
+
 ### Epic item E1.DEPLOY
 
 - [ ] E1.DEPLOY.T1 [human] The prod OK for the release that ships this change (D-10) — executor: the owner (depends E1.F12.T18)

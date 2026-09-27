@@ -5,3 +5,9 @@
 {"at": "2026-09-27T14:43:30+00:00", "check": "coverage.requirements", "detail": "REQ-W3-064: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
 {"at": "2026-09-27T14:43:30+00:00", "check": "coverage.requirements", "detail": "REQ-W3-065: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
 {"at": "2026-09-27T14:43:30+00:00", "check": "coverage.requirements", "detail": "REQ-W3-073: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T15:08:19+00:00", "check": "coverage.requirements", "detail": "REQ-W3-064: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T15:08:19+00:00", "check": "coverage.requirements", "detail": "REQ-W3-065: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T15:08:19+00:00", "check": "coverage.requirements", "detail": "REQ-W3-073: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T15:09:16+00:00", "check": "coverage.requirements", "detail": "REQ-W3-064: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T15:09:16+00:00", "check": "coverage.requirements", "detail": "REQ-W3-065: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}
+{"at": "2026-09-27T15:09:16+00:00", "check": "coverage.requirements", "detail": "REQ-W3-073: no green test and no manual exception", "finding": null, "mode": "warn", "would_refuse": true}

@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-27 (wave3-optimization QA: BUG-90..BUG-121, BUG-123, BUG-126..BUG-136 RESUELTO — QA review and the five manual agent scripts). Before: 2026-09-27 (BUG-86..BUG-89 RESUELTO from the design judge). Before: 2026-09-27 (BUG-84 RESUELTO). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
+Last updated: 2026-09-27 (wave3-optimization QA: BUG-90..BUG-121, BUG-123, BUG-126..BUG-137 RESUELTO — QA review and the five manual agent scripts). Before: 2026-09-27 (BUG-86..BUG-89 RESUELTO from the design judge). Before: 2026-09-27 (BUG-84 RESUELTO). Before: 2026-09-25 (wave1-hardening E1.F17.T1: BUG-22 RESUELTO). Before: 2026-09-24 (F-39: BUG-05 RESUELTO with L-36; BUG-06..17 RESUELTO in E1.F14.T3).
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -79,6 +79,7 @@ Last updated: 2026-09-27 (wave3-optimization QA: BUG-90..BUG-121, BUG-123, BUG-1
 | BUG-134 | karvey | medium | Effort charges another session capture as exact | wave3-optimization / F-151 | RESUELTO | plugins/karvey/tests/unit/test_effort.py (BUG_134) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave3-optimization (done on feature/wave3-optimization, ships in 4.1.0) |
 | BUG-135 | karvey | medium | done-direct accepts a commit that does not exist | wave3-optimization / F-152 | RESUELTO | plugins/karvey/tests/unit/test_backlog_wsjf.py (BUG_135) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave3-optimization (done on feature/wave3-optimization, ships in 4.1.0) |
 | BUG-136 | karvey | medium | A risk can be moved to an unrelated item or moved twice | wave3-optimization / F-153 | RESUELTO | plugins/karvey/tests/unit/test_risks.py (BUG_136) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave3-optimization (done on feature/wave3-optimization, ships in 4.1.0) |
+| BUG-137 | karvey | low | Sponsor delivery crashes when the portfolio becomes unreadable after the model check | wave3-optimization / F-172 | RESUELTO | plugins/karvey/tests/unit/test_sponsor.py (BUG_137) (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave3-optimization (done on feature/wave3-optimization, ships in 4.1.0) |
 
 ## Summary by state
 
@@ -87,7 +88,7 @@ Last updated: 2026-09-27 (wave3-optimization QA: BUG-90..BUG-121, BUG-123, BUG-1
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 71 | BUG-01 .. BUG-22, BUG-84, BUG-86 .. BUG-121, BUG-123, BUG-126 .. BUG-136 |
+| RESUELTO | 72 | BUG-01 .. BUG-22, BUG-84, BUG-86 .. BUG-121, BUG-123, BUG-126 .. BUG-137 |
 | REABIERTO | 0 | — |
 
 Next number: from `karvey-id.py next BUG` (ids are reserved across branches and worktrees; BUG-23..BUG-83 are held elsewhere, BUG-85, BUG-122, BUG-124 and BUG-125 were reserved and left unused).

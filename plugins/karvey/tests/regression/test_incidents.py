@@ -263,6 +263,9 @@ INDEX = {
         ('unit', 'test_risks.py', 'Command.test_BUG_136_move_to_an_unrelated_backlog_item_is_refused'),
         ('unit', 'test_risks.py', 'Command.test_BUG_136_a_second_move_is_refused'),
     ],
+    "BUG-137": [  # Sponsor delivery crashes when the portfolio becomes unreadable after the model c
+        ('unit', 'test_sponsor.py', 'Security.test_BUG_137_a_portfolio_unreadable_at_delivery_refuses_not_a_traceback'),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 

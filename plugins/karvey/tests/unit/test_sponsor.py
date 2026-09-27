@@ -371,6 +371,21 @@ class Security(unittest.TestCase):
         self.assertIn("portfolio file declared but not readable", out + err)
         self.assertIn("client-unchecked", out + err)
 
+    def test_BUG_137_a_portfolio_unreadable_at_delivery_refuses_not_a_traceback(self):
+        self.assertEqual(self.build()[0], 0)
+        real, calls = cli.leak_ctx, []
+
+        def flaky(*a, **k):  # readable for the model check, unreadable when the page on disk is checked
+            calls.append(1)
+            if len(calls) > 1:
+                raise cli.PortfolioUnreadable("portfolio file declared but not readable")
+            return real(*a, **k)
+        with mock.patch.object(cli, "leak_ctx", side_effect=flaky):
+            code, out, _ = self.deliver()
+        self.assertEqual(code, 3, out)
+        self.assertIn("portfolio file declared but not readable", out)
+        self.assertNotIn('"payload"', out)
+
     def test_BUG_111_braces_in_free_text_neither_crash_nor_fill_a_slot(self):
         risks = self.t.cdir / "risks.md"
         risks.write_text(risks.read_text(encoding="utf-8").replace("Sign-in records kept longer than allowed",

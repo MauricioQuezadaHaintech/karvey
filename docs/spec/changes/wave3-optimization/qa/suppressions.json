@@ -1,20 +1,639 @@
 [
-  {"tool": "bandit", "rule": "B314,B405", "path": "plugins/karvey/",
-   "reason": "the JUnit XML is the project's own test report in the same repository (trusted input), read only after a size cap (JUNIT_MAX_BYTES); ElementTree resolves no external entity and the bundled expat limits entity amplification",
-   "scope": "karvey-trace.py junit_cases() and the tests that build JUnit fixtures"},
-  {"tool": "bandit", "rule": "B108", "path": "plugins/karvey/tests/unit/",
-   "reason": "'/tmp/...' strings are inputs to path-normalisation and allow-list tests; no test creates a file at a fixed shared path (temp dirs come from tempfile)",
-   "scope": "test_judges.py, test_paths.py, test_safe_values.py, test_shellparse.py"},
-  {"tool": "bandit", "rule": "B103", "path": "plugins/karvey/tests/unit/test_portfolio.py",
-   "reason": "0o755 makes a stub executable inside a private temp directory created by the test",
-   "scope": "test_portfolio.py setUp stub only"},
-  {"tool": "bandit", "rule": "B404,B603,B607", "path": "plugins/karvey/",
-   "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
-   "scope": "scripts and tests: every subprocess call site"},
-  {"tool": "bandit", "rule": "B105,B107", "path": "plugins/karvey/",
-   "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
-   "scope": "karvey-context-budget.py:68, designsys.py:216/329, karvey_hooks.py:54, lint-plugin.py:660 and the test fixtures"},
-  {"tool": "bandit", "rule": "B110", "path": "plugins/karvey/scripts/karvey_lib/",
-   "reason": "the hooks must never fail the session: a best-effort audit/selftest write swallows its own error by contract (hooks README)",
-   "scope": "guards.py:1215, karvey_hooks.py:227/239"}
+ {
+  "tool": "bandit",
+  "rule": "B103",
+  "path": "plugins/karvey/tests/unit/test_portfolio.py",
+  "reason": "0o755 makes a stub executable inside a private temp directory created by the test",
+  "scope": "lines 38 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B105",
+  "path": "plugins/karvey/scripts/karvey-context-budget.py",
+  "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+  "scope": "lines 68 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B105",
+  "path": "plugins/karvey/scripts/karvey_lib/designsys.py",
+  "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+  "scope": "lines 329 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B105",
+  "path": "plugins/karvey/scripts/karvey_lib/karvey_hooks.py",
+  "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+  "scope": "lines 54 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B105",
+  "path": "plugins/karvey/scripts/lint-plugin.py",
+  "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+  "scope": "lines 660 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B105",
+  "path": "plugins/karvey/tests/unit/test_audit.py",
+  "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+  "scope": "lines 35, 36 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B105",
+  "path": "plugins/karvey/tests/unit/test_evidence.py",
+  "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+  "scope": "lines 16 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B105",
+  "path": "plugins/karvey/tests/unit/test_hookio.py",
+  "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+  "scope": "lines 9, 74, 75 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B105",
+  "path": "plugins/karvey/tests/unit/test_trace.py",
+  "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+  "scope": "lines 106 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B107",
+  "path": "plugins/karvey/scripts/karvey_lib/designsys.py",
+  "reason": "the flagged strings are template placeholders and table headers containing the word 'token' (design tokens, a self-test marker), not credentials; gitleaks reports 0 secrets (evidence.jsonl:50)",
+  "scope": "lines 216 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B108",
+  "path": "plugins/karvey/tests/unit/test_judges.py",
+  "reason": "'/tmp/...' strings are inputs to path-normalisation and allow-list tests; no test creates a file at a fixed shared path (temp dirs come from tempfile)",
+  "scope": "lines 66, 69 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B108",
+  "path": "plugins/karvey/tests/unit/test_paths.py",
+  "reason": "'/tmp/...' strings are inputs to path-normalisation and allow-list tests; no test creates a file at a fixed shared path (temp dirs come from tempfile)",
+  "scope": "lines 22 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B108",
+  "path": "plugins/karvey/tests/unit/test_safe_values.py",
+  "reason": "'/tmp/...' strings are inputs to path-normalisation and allow-list tests; no test creates a file at a fixed shared path (temp dirs come from tempfile)",
+  "scope": "lines 108 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B108",
+  "path": "plugins/karvey/tests/unit/test_shellparse.py",
+  "reason": "'/tmp/...' strings are inputs to path-normalisation and allow-list tests; no test creates a file at a fixed shared path (temp dirs come from tempfile)",
+  "scope": "lines 78 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B110",
+  "path": "plugins/karvey/scripts/karvey_lib/guards.py",
+  "reason": "the hooks must never fail the session: a best-effort audit/selftest write swallows its own error by contract (hooks README)",
+  "scope": "lines 1215 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B110",
+  "path": "plugins/karvey/scripts/karvey_lib/karvey_hooks.py",
+  "reason": "the hooks must never fail the session: a best-effort audit/selftest write swallows its own error by contract (hooks README)",
+  "scope": "lines 227, 239 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B314",
+  "path": "plugins/karvey/scripts/karvey-trace.py",
+  "reason": "the JUnit XML is the project's own test report in the same repository (trusted input), read only after a size cap (JUNIT_MAX_BYTES); ElementTree resolves no external entity and the bundled expat limits entity amplification",
+  "scope": "lines 232 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey-close.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 27 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey-context-budget.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 53 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey-evidence.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 20 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey-release-gate.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 29 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey-security-scan.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 31 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey-state.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 41 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey_lib/gitlog.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 8 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey_lib/guards.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 29 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey_lib/livestate.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 18 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey_lib/project.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 20 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/karvey_lib/safe_values.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 25 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/scripts/lint-plugin.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 27, 1754, 1863 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/hooks/run_tables.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 50 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/_gitrepo.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 4 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_backlog_wsjf.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 140 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_ci_workflow.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 6 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_close.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 8 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_compat_w3.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 16 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_context_budget.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 8 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_context_report.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 9 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_contracts.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 7 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_contrast.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 7 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_design_delta.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 91 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_evidence.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 6 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_handoff_capture.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 7 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_health_score.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 7 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_id_tool.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 7 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_lint_plugin.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 12 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_metrics.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 10 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_portfolio.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 244 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B404",
+  "path": "plugins/karvey/tests/unit/test_release_gate.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 246 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B405",
+  "path": "plugins/karvey/scripts/karvey-trace.py",
+  "reason": "the JUnit XML is the project's own test report in the same repository (trusted input), read only after a size cap (JUNIT_MAX_BYTES); ElementTree resolves no external entity and the bundled expat limits entity amplification",
+  "scope": "lines 40 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B405",
+  "path": "plugins/karvey/tests/hooks/run_tables.py",
+  "reason": "the JUnit XML is the project's own test report in the same repository (trusted input), read only after a size cap (JUNIT_MAX_BYTES); ElementTree resolves no external entity and the bundled expat limits entity amplification",
+  "scope": "lines 54 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey-close.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 53 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey-context-budget.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 112, 133, 336 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey-evidence.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 52 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey-release-gate.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 239 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey-security-scan.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 99, 111, 172, 217 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey-state.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 2323 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey_lib/gitlog.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 35 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey_lib/guards.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 939 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey_lib/livestate.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 43 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey_lib/project.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 42 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/karvey_lib/safe_values.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 187 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/scripts/lint-plugin.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 1761, 1878, 2264, 2273, 3111 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/hooks/run_tables.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 95, 350, 457, 486, 526 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/_gitrepo.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 23, 53 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_backlog_wsjf.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 142 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_ci_workflow.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 44 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_close.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 35, 170 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_compat_w3.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 46 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_context_budget.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 86, 92, 227, 236 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_context_report.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 103 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_contracts.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 22 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_contrast.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 34, 110 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_design_delta.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 93 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_evidence.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 21 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_handoff_capture.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 20 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_health_score.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 27 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_id_tool.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 21, 46 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_lint_plugin.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 31, 1319 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_metrics.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 142 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B603",
+  "path": "plugins/karvey/tests/unit/test_release_gate.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 247 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/scripts/karvey-context-budget.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 112, 133 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/scripts/karvey-security-scan.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 99, 111 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/scripts/karvey_lib/safe_values.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 187 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/scripts/lint-plugin.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 1761, 2264, 2273, 3111 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/tests/hooks/run_tables.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 350 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/tests/unit/_gitrepo.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 53 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/tests/unit/test_backlog_wsjf.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 142 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/tests/unit/test_context_budget.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 92, 236 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/tests/unit/test_context_report.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 103 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/tests/unit/test_metrics.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 142 only"
+ },
+ {
+  "tool": "bandit",
+  "rule": "B607",
+  "path": "plugins/karvey/tests/unit/test_release_gate.py",
+  "reason": "subprocess is called with fixed argv lists, never shell=True (lint and test_security_scan check the no-shell rule); partial executable names (git, gitleaks, node) are resolved on the user's PATH by design",
+  "scope": "lines 247 only"
+ }
 ]

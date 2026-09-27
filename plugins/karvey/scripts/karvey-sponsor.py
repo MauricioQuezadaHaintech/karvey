@@ -253,13 +253,18 @@ def cmd_deliver(args):
             PAGE, "missing" if disk is None else ("not the last checked build" if built else "never built"))
         return kl.EXIT_REFUSED, {"change": args.change, "delivered": False, "reason": "page"}, \
             [kl.issue("sponsor.page_changed", msg)], msg
-    dv = leakcheck.check({"page": leakcheck.text_of_html(disk.decode("utf-8", "replace"))},
-                         leak_ctx(root, project, stake))
+    try:  # one context for both checks; an unreadable portfolio refuses here too, never a traceback (BUG-137)
+        ctx = leak_ctx(root, project, stake)
+    except PortfolioUnreadable as exc:
+        msg = "not delivered: %s" % exc
+        return kl.EXIT_REFUSED, {"change": args.change, "delivered": False, "reason": "portfolio"}, \
+            [kl.issue("sponsor.leak", msg)], msg
+    dv = leakcheck.check({"page": leakcheck.text_of_html(disk.decode("utf-8", "replace"))}, ctx)
     if not dv["ok"]:
         lines = refuse(cdir, "deliver", dv, now_iso())
         return kl.EXIT_REFUSED, {"change": args.change, "delivered": False}, [kl.issue("sponsor.leak", lines[0])], \
             "\n".join(lines)
-    pv = leakcheck.check(leakcheck.flatten(body), leak_ctx(root, project, stake))
+    pv = leakcheck.check(leakcheck.flatten(body), ctx)
     if not pv["ok"]:
         lines = refuse(cdir, "deliver", pv, now_iso())
         return kl.EXIT_REFUSED, {"change": args.change, "delivered": False}, [kl.issue("sponsor.leak", lines[0])], \

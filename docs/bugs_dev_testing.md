@@ -2209,3 +2209,34 @@ exit 3 unless the item cites the risk; from == to refused.
 | 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | no check of the target item or the current state |
 | 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
 | 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
+
+## BUG-137 — Sponsor delivery crashes when the portfolio becomes unreadable after the model check
+- **Priority:** low
+- **Detected:** 2026-09-27 · **Component:** plugins/karvey/scripts/karvey-sponsor.py (`cmd_deliver`)
+- **Change / origin:** wave3-optimization — finding F-172 (QA judge security (qa gate))
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A declared portfolio that becomes unreadable between the model check and the check of the page on disk; `karvey-sponsor.py deliver {change}`.
+
+### Actual vs expected
+- Actual: `PortfolioUnreadable` escaped from the second `leak_ctx` call: a traceback, the refusal not recorded (nothing was sent).
+- Expected: a refusal envelope with exit 3, as at build (BUG-110).
+
+### Root cause
+The two later leak checks rebuilt the context without the handler the first check has.
+
+### Fix
+One context for both later checks, built under the same `PortfolioUnreadable` handler (exit 3).
+
+### Regression test
+`plugins/karvey/tests/unit/test_sponsor.py`, `Security.test_BUG_137_a_portfolio_unreadable_at_delivery_refuses_not_a_traceback` — fail on the previous code, pass on the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-27 | DETECTADO | maintainer agent (D-21) / Claude Opus 5.5 | F-172: QA judge security (qa gate) |
+| 2026-09-27 | DIAGNOSTICADO | maintainer agent (D-21) / Claude Opus 5.5 | handler only on the first context build |
+| 2026-09-27 | EN FIX | maintainer agent (D-21) / Claude Opus 5.5 | feature/wave3-optimization |
+| 2026-09-27 | RESUELTO | maintainer agent (D-21) / Claude Opus 5.5 | fix + regression test, red before and green after |
