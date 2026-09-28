@@ -1,7 +1,7 @@
 # Tasks: mockup-conformance
 
 > PHASE 7 (`karvey-tasks`, skill text read from `plugins/karvey/skills/karvey-tasks/SKILL.md` in this worktree) · Security Tier 3 · Lane `standard` · Tracker: Markdown (`project.json:management.tool = markdown`): this file + `PLAN.md`, no external tracker.
-> Inputs: `architecture.md` (generated for the merged *how* gate; revised after its judges, F-32..F-54), `requirements.md` (REQ-MC-001..055, approved under D-21), `prd.md`, `spec.json`, `risks.md`, the house style of `living-docs/tasks.md`, and the code on `feature/mockup-conformance` at `1eb6e9c`.
+> Inputs: `architecture.md` (generated for the merged *how* gate; revised after its judges, F-32..F-54), `requirements.md` (REQ-MC-001..055, approved under D-21; revised under D-42 / F-55 on 2026-09-28: 016, 030, 055 revised, 056 and 057 added → REQ-MC-001..057, re-approval pending), `prd.md`, `spec.json`, `risks.md`, the house style of `living-docs/tasks.md`, and the code on `feature/mockup-conformance` at `1eb6e9c`.
 >
 > **Estimates are calibrated.** In this repo the skill's 10–30 min band ran about 10× high. The minutes below are realistic **AI execution + human review** for one task (typically 3–8 min AI + 2–7 min review), as in Waves 2 and 3 and `living-docs`. `karvey-impl` records the actuals next to them in `PLAN.md` and never edits an estimate.
 
@@ -12,9 +12,9 @@
 | Features | 9 (the PLAN.md features F1..F9, same numbering) + `E1.DEPLOY` |
 | Tasks | 69 (53 Backend, 14 Test, 2 human) |
 | Agent tasks / `[human]` tasks | 67 / 2 |
-| Total estimate (agent tasks, AI + review, calibrated) | **778 min** (≈ 13.0 h) |
+| Total estimate (agent tasks, AI + review, calibrated) | **782 min** (≈ 13.0 h) |
 | Critical path by dependencies (agent minutes; the `[human]` waits not counted) | **192 min** (≈ 3.2 h), 15 tasks |
-| REQ-MC coverage | 55/55 |
+| REQ-MC coverage | 57/57 |
 | Largest task | 15 min (cap 60) |
 
 ## Conventions
@@ -156,18 +156,18 @@ Total estimated time: 81 min (7 tasks)
 **Tests added:** REQ-MC-013 scenarios; dismissals listed  
 **Done when:** `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_mockup_log.py' -v` passes; all 008–011, 013 cases green
 
-## Feature E1.F3: Implementation from the mockup: impl refusal, Elements lines, impl and tasks text, strip setting, extra ids, declared deviations
+## Feature E1.F3: Implementation from the mockup: impl refusal, Elements lines, impl and tasks text (mockup first, requirements for behaviour — D-42), strip setting, extra ids, declared deviations (forced, improvement), conflicts asked
 
 Architecture §1.6, §1.7.  
-Requirements covered: 014..018, 055  
-Total estimated time: 68 min (7 tasks)
+Requirements covered: 014..018, 055..057  
+Total estimated time: 72 min (7 tasks)
 
-### E1.F3.T1 [Test] Failing cases for F3 in `test_mockup_hash.py` (impl refusal, lane raise), `test_tasks_elements.py` (Elements lines, assignment), `test_conformance_settings.py` (strip setting), `test_lint_mc.py` (impl and tasks text anchors), `test_deviations.py` (declared deviations) — _Depends: E1.F9.T1_ (P)
+### E1.F3.T1 [Test] Failing cases for F3 in `test_mockup_hash.py` (impl refusal, lane raise), `test_tasks_elements.py` (Elements lines, assignment), `test_conformance_settings.py` (strip setting), `test_lint_mc.py` (impl and tasks text anchors), `test_deviations.py` (declared deviations: forced and improvement; conflict open at close) — _Depends: E1.F9.T1_ (P)
 
 **Estimate:** 10 min  
 **Files:** `plugins/karvey/tests/unit/test_mockup_hash.py` (NEW); `plugins/karvey/tests/unit/test_tasks_elements.py` (NEW); `plugins/karvey/tests/unit/test_conformance_settings.py` (NEW); `plugins/karvey/tests/unit/test_lint_mc.py` (NEW)  
-**Requirements:** REQ-MC-014, REQ-MC-015, REQ-MC-016, REQ-MC-017, REQ-MC-018, REQ-MC-055  
-**Tests added:** scenarios of 014–018 and 055 fail with a named reason (`invalid choice`, missing module, missing lint id) until their tasks land  
+**Requirements:** REQ-MC-014, REQ-MC-015, REQ-MC-016, REQ-MC-017, REQ-MC-018, REQ-MC-055, REQ-MC-056, REQ-MC-057  
+**Tests added:** scenarios of 014–018 and 055–057 fail with a named reason (`invalid choice`, missing module, missing lint id) until their tasks land  
 **Done when:** the suites run and fail for those reasons (`python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_tasks_elements.py' -v`)
 
 ### E1.F3.T2 [Backend] `advance … impl` on a UI change: refuse `mockup not approved` and `mockup changed after approval`; warn `mockup hash absent (approved before 4.3)` for a 4.2 approval; a lane raised to `feature-ui` without a mockup is refused — _Depends: E1.F2.T6, E1.F3.T1_
@@ -186,12 +186,12 @@ Total estimated time: 68 min (7 tasks)
 **Tests added:** `filter-status` unassigned refuses the tasks approval; the *how* gate holds it (043)  
 **Done when:** `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_tasks_elements.py' -v` passes its 015 cases
 
-### E1.F3.T4 [Backend] Skill text: `karvey-tasks` (Elements lines, one presence `[Test]` task per screen before its first UI task, plan build side) and `karvey-impl` (Step 1 reads the map and mockup files; parent, order, text, states, tokens per element; same ids; declare forced differences; presence test at task close); L-87 anchors for both — _Depends: E1.F3.T3, E1.F8.T6_
+### E1.F3.T4 [Backend] Skill text: `karvey-tasks` (Elements lines, one presence `[Test]` task per screen before its first UI task, plan build side) and `karvey-impl` (Step 1 reads the map and mockup files; source order — the approved mockup for structure, layout, content and style, the requirements for behaviour, equal or better never different (D-42); parent, order, text, states, tokens per element; same ids; declare forced differences and improvements; on a requirement/mockup conflict stop, ask the owner and record a `spec-gap` finding; presence test at task close); L-87 anchors for both — _Depends: E1.F3.T3, E1.F8.T6_
 
-**Estimate:** 12 min  
+**Estimate:** 14 min  
 **Files:** `plugins/karvey/skills/karvey-tasks/SKILL.md`; `plugins/karvey/skills/karvey-impl/SKILL.md`; `plugins/karvey/scripts/lint-plugin.py` (L-87); `plugins/karvey/tests/unit/test_lint_mc.py` (cases)  
-**Requirements:** REQ-MC-015, REQ-MC-016, REQ-MC-017  
-**Tests added:** L-87 mutation: impl text without the map input → error  
+**Requirements:** REQ-MC-015, REQ-MC-016, REQ-MC-017, REQ-MC-057  
+**Tests added:** L-87 mutations: impl text without the map input, without the source order or without the conflict duty → error  
 **Done when:** `python3 plugins/karvey/scripts/lint-plugin.py --only L-87` exits 0 and `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_lint_mc.py' -v` passes
 
 ### E1.F3.T5 [Backend] `conformance.strip_in_production` read from the reviewed line only (working copy ignored and audited); the gate never strips — _Depends: E1.F4.T1, E1.F3.T1_ (P)
@@ -212,13 +212,13 @@ Total estimated time: 68 min (7 tasks)
 
 - **Split:** REQ-MC-018 sits in F3 (PLAN) but its code lives in the F4 comparator; it runs after E1.F4.T6.
 
-### E1.F3.T7 [Backend] `karvey-state.py deviation add … --origin impl` for a forced difference (REQ-MC-055); the task summary names it; entries found later carry origin `gate` and the metrics count undeclared-at-impl — _Depends: E1.F5.T2, E1.F3.T1_
+### E1.F3.T7 [Backend] `karvey-state.py deviation add … --origin impl --kind forced|improvement` (REQ-MC-055, 056): an improvement needs `--better` and its side-by-side image, owner rejection → `fix-build`; the task summary names it; entries found later carry origin `gate`, kind `found`, and the metrics count undeclared-at-impl; `compare --presence-only` exits non-zero with `conflict open: F-NN` while an open `spec-gap` names an element of the entry (REQ-MC-057) — _Depends: E1.F5.T2, E1.F3.T1_
 
-**Estimate:** 8 min  
+**Estimate:** 10 min  
 **Files:** `plugins/karvey/scripts/karvey-state.py`; `plugins/karvey/scripts/karvey_lib/deviations.py`; `plugins/karvey/scripts/karvey_lib/metrics.py`; `plugins/karvey/tests/unit/test_deviations.py` (cases)  
-**Requirements:** REQ-MC-055  
-**Tests added:** REQ-MC-055 scenarios  
-**Done when:** `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_deviations.py' -v` passes its 055 cases
+**Requirements:** REQ-MC-055, REQ-MC-056, REQ-MC-057  
+**Tests added:** REQ-MC-055, 056 and 057 scenarios (`improvement without reason`, `improvement without side-by-side image`, rejection → `fix-build`, `conflict open`)  
+**Done when:** `python3 -m unittest discover -s plugins/karvey/tests/unit -p 'test_deviations.py' -v` passes its 055, 056 and 057 cases
 
 - **Split:** depends on the deviation group of F5.
 
@@ -641,7 +641,7 @@ Total estimated time: 55 min (7 tasks, 1 `[human]`)
 
 - **Split:** REQ-MC-045's measurement closes the change; it runs last.
 
-### E1.F9.T7 [Test] Whole-repo gate: all unit suites, hook tables, `lint-plugin.py` 0 errors, `validate --all`, `karvey-trace.py mockup-conformance --check` 55/55 + 2 MODIFIED — _Depends: E1.F9.T3, E1.F9.T4, E1.F9.T6, E1.F8.T9_
+### E1.F9.T7 [Test] Whole-repo gate: all unit suites, hook tables, `lint-plugin.py` 0 errors, `validate --all`, `karvey-trace.py mockup-conformance --check` 57/57 + 2 MODIFIED — _Depends: E1.F9.T3, E1.F9.T4, E1.F9.T6, E1.F8.T9_
 
 **Estimate:** 8 min  
 **Files:** `docs/spec/changes/mockup-conformance/PLAN.md` (history)  
@@ -718,15 +718,17 @@ Total estimated time: 55 min (7 tasks, 1 `[human]`)
 | 053 | E1.F9.T1, E1.F9.T7 |
 | 054 | E1.F4.T2, E1.F4.T6 |
 | 055 | E1.F3.T1, E1.F3.T7 |
+| 056 | E1.F3.T1, E1.F3.T7 |
+| 057 | E1.F3.T1, E1.F3.T4, E1.F3.T7 |
 
-MODIFIED living requirements: **REQ-W2-060** (the traceability matrix) → E1.F6.T2, E1.F6.T3 (with REQ-MC-036, 037); **REQ-LD-022** (the frontend-module template) → E1.F8.T6 (with REQ-MC-046). `karvey-trace.py mockup-conformance` counts 57 requirements: 55 REQ-MC + these two.
+MODIFIED living requirements: **REQ-W2-060** (the traceability matrix) → E1.F6.T2, E1.F6.T3 (with REQ-MC-036, 037); **REQ-LD-022** (the frontend-module template) → E1.F8.T6 (with REQ-MC-046). `karvey-trace.py mockup-conformance` counts 59 requirements: 57 REQ-MC + these two.
 
-**Coverage:** 55/55. No REQ-MC is left without a task. Every component of the architecture's file plan (§1.2) has a task: `karvey-mockup.py` (check, assign, propose), `karvey-conformance.py` (plan, request, verify-captures, compare, status); `karvey_lib/mockup.py`, `deviations.py` and the `conformance/` package (`__init__`, `png`, `imgdiff`, `render`, `elements`, `textdiff`, `plan`, `captures`); the probe and its three schemas; `vocabulary.json`, `approval.py`, `guards.py`, `karvey-hook.sh`; `check-modes.json`, `modes.py`, both schemas; `karvey-state.py` (`mockup`, `deviation`, blockers, hashes, `check-prod`), `karvey-context.py`, `karvey-trace.py`, `karvey-release-gate.py`; `components.py`, `component-kinds.json`, the frontend-module template; the upgrade catalogue rows; `lint-plugin.py` (L-82..L-87); the rule, `targets.md`, the fiscal rubric and the nine skill texts; the READMEs; the fixtures and manual scripts (§6).
+**Coverage:** 57/57. No REQ-MC is left without a task. Every component of the architecture's file plan (§1.2) has a task: `karvey-mockup.py` (check, assign, propose), `karvey-conformance.py` (plan, request, verify-captures, compare, status); `karvey_lib/mockup.py`, `deviations.py` and the `conformance/` package (`__init__`, `png`, `imgdiff`, `render`, `elements`, `textdiff`, `plan`, `captures`); the probe and its three schemas; `vocabulary.json`, `approval.py`, `guards.py`, `karvey-hook.sh`; `check-modes.json`, `modes.py`, both schemas; `karvey-state.py` (`mockup`, `deviation`, blockers, hashes, `check-prod`), `karvey-context.py`, `karvey-trace.py`, `karvey-release-gate.py`; `components.py`, `component-kinds.json`, the frontend-module template; the upgrade catalogue rows; `lint-plugin.py` (L-82..L-87); the rule, `targets.md`, the fiscal rubric and the nine skill texts; the READMEs; the fixtures and manual scripts (§6).
 
 ## Totals and critical path
 
 - **Tasks:** 69, of which 2 `[human]` and 67 agent tasks (53 Backend, 14 Test).
-- **Total estimate:** 778 min ≈ 13.0 h of AI + review, calibrated. Per feature: F1 74 · F2 81 · F3 68 · F4 180 · F5 112 · F6 30 · F7 55 · F8 123 · F9 55.
+- **Total estimate:** 782 min ≈ 13.0 h of AI + review, calibrated. Per feature: F1 74 · F2 81 · F3 72 · F4 180 · F5 112 · F6 30 · F7 55 · F8 123 · F9 55.
 - **Critical path by dependencies:** 192 min ≈ 3.2 h:
   E1.F9.T1 → E1.F1.T1 → E1.F1.T2 → E1.F1.T3 → E1.F1.T4 → E1.F4.T4 → E1.F4.T9 → E1.F4.T10 → E1.F4.T12 → E1.F5.T2 → E1.F5.T6 → E1.F5.T7 → E1.F5.T8 → E1.F9.T3 → E1.F9.T7.
   The `[human]` waits (the owner's deviation approval, the prod OK) and CI queue time are not counted.
@@ -736,5 +738,5 @@ MODIFIED living requirements: **REQ-W2-060** (the traceability matrix) → E1.F6
 
 1. **Nothing starts before `living-docs`.** E1.F9.T1 is a hard gate (REQ-MC-053): the confirm phrases, reviewed settings, component sheets and `4.2` modes this change extends do not exist in this branch yet. The plan can only be made ready.
 2. **The size base belongs to F8 but must run first**, and its comparison last (`Split:` lines on E1.F9.T2 and E1.F9.T6).
-3. **Three requirements sit in one Feature and are coded in another**: REQ-MC-018 (extra ids) in the F4 comparator, REQ-MC-055 (declared deviations) on the F5 deviation group, REQ-MC-043 (which gate holds which check) across the three blocker tasks; their tasks carry `Split:` lines or name 043 explicitly.
+3. **Some requirements sit in one Feature and are coded in another**: REQ-MC-018 (extra ids) in the F4 comparator, REQ-MC-055 and 056 (declared deviations) and 057 (`conflict open` at close) on the F5 deviation group, REQ-MC-043 (which gate holds which check) across the three blocker tasks; their tasks carry `Split:` lines or name 043 explicitly.
 4. **No browser in CI.** The web end-to-end runs on pre-rendered captures and probes; the real-browser run and the owner's phrase are the manual E2E (E1.F9.T5, `[human]`), which is also the only place REQ-MC-016 is exercised on a UI built by the impl skill.

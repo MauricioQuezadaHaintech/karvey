@@ -2,22 +2,24 @@
 
 ## Project description
 
-What is built matches the approved mockup, one to one (D-40, release 4.3.0). Four parts: (1) every element of a
-mockup carries a stable element id and the requirements it covers, and every decision taken while iterating the
-mockup is written back into the requirements before the mockup can be approved; (2) the approved mockup, frozen by
-its hash, is a mandatory input of implementation, which builds from its structure and styles and keeps the same
-element ids; (3) a blocking conformance gate checks that every mockup element exists in the build, compares
-side-by-side captures of mockup and build at the same viewport and state with the differences marked (pixel
-difference with a threshold where the target allows), and holds QA, the release gate and deploy until every
-difference is fixed or recorded as a deviation the owner approved through the hook; (4) a traceability matrix
-requirement → mockup element → test → evidence is complete before release. Web, mobile, desktop and CLI targets are
-defined; every other target is scoped out by name. North star (PRD §2): *the UI a change ships is the UI the owner
-approved in its mockup.*
+What is built matches the approved mockup, one to one — equal or better, never different (D-40, D-42, release 4.3.0).
+Four parts: (1) every element of a mockup carries a stable element id and the requirements it covers, and every
+decision taken while iterating the mockup is written back into the requirements before the mockup can be approved; (2)
+the approved mockup, frozen by its hash, is a mandatory input of implementation and its primary source of structure,
+layout, content and style, while the documented requirements give the behaviour; the build keeps the same element ids,
+and a requirement/mockup conflict is asked to the owner, never resolved silently (D-42); (3) a blocking conformance
+gate checks that every mockup element exists in the build, compares side-by-side captures of mockup and build at the
+same viewport and state with the differences marked (pixel difference with a threshold where the target allows), and
+holds QA, the release gate and deploy until every difference is fixed or recorded as a deviation the owner approved
+through the hook; (4) a traceability matrix requirement → mockup element → test → evidence is complete before release.
+Web, mobile, desktop and CLI targets are defined; every other target is scoped out by name. North star (PRD §2): *the
+UI a change ships is the UI the owner approved in its mockup* — equal or better, never different (D-42): "better" only
+as a declared deviation the owner approves with side-by-side evidence.
 
 ## Conventions
 
-- **IDs.** `REQ-MC-NNN`; requirements added after the judges' review take the next free number (054…) and sit in
-  their area. The heading also carries the numeric EARS id (`1.1`, `1.2`…).
+- **IDs.** `REQ-MC-NNN`; requirements added after the judges' review or a later spec revision take the next free
+  number (054…, 056… after D-42) and sit in their area. The heading also carries the numeric EARS id (`1.1`, `1.2`…).
 - **Trace line.** Each requirement cites the PRD (`PRD §n`, scope `S-n`, objective `O-n`, acceptance `AC-n`), its
   decisions (`D-NN`) and the living requirements it builds on (`REQ-W1-*`, `REQ-W2-*`, `REQ-W3-*`, `REQ-UP-*`,
   `REQ-LD-*`).
@@ -279,30 +281,75 @@ invoice-list screen starts with a presence test task.
 **Scenario — error:** GIVEN `filter-status` in the element map and in no task WHEN tasks approval is requested THEN it
 is refused naming `filter-status`.
 
-### 3.3 REQ-MC-016 — Build from the mockup's structure and styles
-WHEN the implementation skill builds a UI element, it SHALL take from the approved mockup the element's parent, its
-order among siblings, its visible text and its states, and SHALL take its styles from the design-system tokens the
-mockup references rather than from values it re-authors.
+### 3.3 REQ-MC-016 — The approved mockup is the primary source; the requirements give the behaviour
+WHEN a change with a UI target has an approved mockup, the implementation skill SHALL take the approved mockup as the
+primary source of each UI element's structure (its parent and its order among siblings), layout, content (its visible
+text and its states) and style (the design-system tokens the mockup references, never values it re-authors), and SHALL
+take the documented requirements as the source of behaviour (data, rules, validation, errors, permissions); it SHALL
+NOT build a UI element from the requirements' prose alone while the approved mockup shows it. The expected build is
+equal to the mockup or better, never different: IF the build differs from the approved mockup, THEN the difference
+SHALL be either a declared deviation the owner approves — an improvement (REQ-MC-056) or a difference the stack forces
+(REQ-MC-055) — or it SHALL block QA approval, the release gate and deploy (REQ-MC-033).
 
-Traces to PRD: §6 S-3, O-3 · Decision: D-40 · Builds on: REQ-W3-035
+Traces to PRD: §2, §6 S-3, S-5, O-3, O-5, AC-4 · Decision: D-40, D-42 (F-55, revised 2026-09-28) · Builds on: REQ-W3-035
 
-**Scenario — success:** GIVEN the mockup's export button uses the token `color-action` WHEN impl builds it THEN the
-built button references the same token and its text is the mockup's text.
-**Scenario — error:** GIVEN the built button's text "Download" where the mockup says "Export" WHEN the task's presence
-test runs THEN it fails with `text differs: export` (REQ-MC-054).
+**Scenario — success:** GIVEN the mockup's export button uses the token `color-action`, sits second in `filter-bar` and
+reads "Export", and `REQ-INV-004` says what the export produces WHEN impl builds it THEN the built button references the
+same token, sits in the same place with the mockup's text, and produces what `REQ-INV-004` requires.
+**Scenario — error:** GIVEN the built button's text "Download" where the mockup says "Export" and no deviation declares
+it WHEN the task's presence test runs THEN it fails with `text differs: export` (REQ-MC-054); WHEN the conformance run
+later finds it THEN it is `uncovered` and QA, release and deploy stay refused until it is fixed or an approved
+deviation covers it.
 
 ### 3.4 REQ-MC-055 — A difference the stack forces is declared when it is made
 WHEN the stack cannot reproduce something the approved mockup shows, the implementation skill SHALL record a proposed
-mockup deviation (REQ-MC-030) in the task that meets it, and the task's summary SHALL name it.
+mockup deviation (REQ-MC-030) of kind `forced` in the task that meets it, and the task's summary SHALL name it.
 
-Traces to PRD: §6 S-3, S-5, O-3, O-5 · Decision: D-40
+Traces to PRD: §6 S-3, S-5, O-3, O-5 · Decision: D-40, D-42 (F-55, revised 2026-09-28)
 
 **Scenario — success:** GIVEN the stack's date picker cannot show the mockup's inline calendar WHEN impl builds the filter
-THEN it records `DV-01` (`date-range`, proposed `accept`) in the same task, and the task's summary names it.
+THEN it records `DV-01` (`date-range`, kind `forced`, proposed `accept`) in the same task, and the task's summary names
+it.
 **Scenario — error:** GIVEN a task closed with a difference no deviation declares WHEN the conformance run later finds it
 THEN the deviation it requires is recorded with origin `gate`, and the metrics count it as undeclared at impl.
 
-### 3.5 REQ-MC-017 — The same element ids in the build
+### 3.5 REQ-MC-056 — "Better" is a declared improvement the owner approves
+WHERE the implementation departs from the approved mockup because it judges the result better, the implementation skill
+SHALL record, in the task that makes the difference, a proposed mockup deviation (REQ-MC-030) of kind `improvement`,
+resolution `accept`, with the side-by-side images of mockup and build and the reason it is better (the requirement,
+accessibility or usability gain it serves); the state tool SHALL refuse an `improvement` entry without a reason or
+without its side-by-side image; the improvement SHALL count as approved only through the owner's approval
+(REQ-MC-032), and IF the owner does not approve it, THEN its resolution SHALL become `fix-build` and the build SHALL
+return to the mockup.
+
+Traces to PRD: §2, §6 S-3, S-5, O-3, O-5, AC-6 · Decision: D-42 (F-55, added 2026-09-28) · Builds on: REQ-MC-030, 031, 032
+
+**Scenario — success:** GIVEN the mockup's error text sits below the form and impl places it next to the field it
+concerns WHEN the task closes THEN `DV-04` (kind `improvement`, `Better because: the error is read next to the field
+that caused it`, image `invoice-form@1280x800.sbs.png`) is pending, and the owner's "approve deviation DV-04" accepts it.
+**Scenario — error:** GIVEN `deviation add --kind improvement` without a reason WHEN it runs THEN the state tool refuses
+it with `improvement without reason`; GIVEN the owner does not approve `DV-04` WHEN the gate is presented THEN `DV-04`
+reads `fix-build` and the release stays closed until a run shows the build equal to the mockup.
+
+### 3.6 REQ-MC-057 — A requirement/mockup conflict is asked to the owner, never resolved silently
+IF, while building a UI element, the implementation skill finds that a documented requirement and the approved mockup
+disagree (the requirement asks for something the mockup does not show, or the mockup shows something a requirement
+forbids or contradicts), THEN it SHALL stop that element's task, ask the owner which one prevails, and record the
+conflict as a `spec-gap` finding naming the requirement id and the element id; the answer SHALL be routed through the
+iteration skill either as a requirement revision or as a `revise-mockup` deviation (REQ-MC-031); the agent SHALL NOT
+choose either side on its own, and the task SHALL NOT close while its conflict finding is `open`.
+
+Traces to PRD: §6 S-2, S-3, S-5, O-2, O-3 · Decision: D-42 (F-55, added 2026-09-28) · Builds on: the iteration loop,
+REQ-MC-009, REQ-MC-031
+
+**Scenario — success:** GIVEN `REQ-INV-007` requires a mandatory due-date field that the approved mockup's form does not
+show WHEN impl reaches the form THEN it records `F-NN` (`REQ-INV-007` vs `invoice-form`), asks the owner, and the owner's
+answer is routed as a `revise-mockup` deviation that re-opens the mockup.
+**Scenario — error:** GIVEN impl builds the due-date field without asking WHEN the conformance run executes THEN it
+reports `extra: due-date` as `uncovered` and the gate stays closed; GIVEN a task whose conflict finding is still `open`
+WHEN its close is attempted THEN the close is refused naming the finding.
+
+### 3.7 REQ-MC-017 — The same element ids in the build
 The built UI SHALL carry, on the element that realises each mockup element, the same element id in the form its
 target defines (Requirement 7), in every build the conformance gate checks; a production build SHALL strip the ids
 only WHERE the project's reviewed settings set `conformance.strip_in_production` to true (default false).
@@ -314,7 +361,7 @@ THEN it finds exactly one element.
 **Scenario — error:** GIVEN `strip_in_production: true` set only in the working copy WHEN the release build runs THEN the
 ids are kept and the audit log records `conformance setting ignored (not reviewed)`.
 
-### 3.6 REQ-MC-018 — No invented elements
+### 3.8 REQ-MC-018 — No invented elements
 The presence check SHALL report as `extra` every element id found in the build that the approved element map does not
 contain; an `extra` id SHALL need a mockup deviation or its removal before the gate passes.
 
@@ -490,11 +537,13 @@ it reports `capture missing: <name>` and asks for a re-run.
 ### 5.1 REQ-MC-030 — Every difference is a deviation entry
 Every `missing`, `hidden` or `extra` id, every `text differs` or `style differs` element (REQ-MC-054), every
 `unapproved dynamic marker`, every entry `over threshold`, `unmeasured`, `state not reached` or `not evaluated`, and
-every difference the implementation declared (REQ-MC-055) SHALL be covered by a mockup deviation `DV-NN` with:
-the element ids, the plan entries and viewports, the side-by-side images, what differs, why, the proposed resolution
-(`fix-build`, `accept` or `revise-mockup`) and the status `pending`.
+every difference the implementation declared (REQ-MC-055, REQ-MC-056) SHALL be covered by a mockup deviation `DV-NN`
+with: the element ids, the plan entries and viewports, the side-by-side images, what differs, its kind (`forced`,
+`improvement` or `found`), why — for an `improvement`, the reason it is better —, the proposed resolution (`fix-build`,
+`accept` or `revise-mockup`) and the status `pending`. No difference is admitted without an entry (D-42).
 
-Traces to PRD: §6 S-5, O-5, AC-6 · Decision: D-40 · Builds on: the engineering-standards `deviations.md`
+Traces to PRD: §6 S-5, O-5, AC-6 · Decision: D-40, D-42 (F-55, revised 2026-09-28) · Builds on: the
+engineering-standards `deviations.md`
 
 **Scenario — success:** GIVEN the run reports `export: box Δy +20px` WHEN the agent records `DV-02` (proposed
 `fix-build`) THEN the report shows the difference covered by `DV-02`.

@@ -17,7 +17,8 @@
     "children": []
   },
   "decisions": [
-    "D-40"
+    "D-40",
+    "D-42"
   ],
   "inputs": {
     "decisions": "karvey docs/spec/decisions.md @c5192d1 (branch feature/mockup-conformance, D-40)",
@@ -25,7 +26,7 @@
     "wave3_spec_delta": "karvey docs/spec/changes/wave3-optimization/spec-delta.md @c3a21e7",
     "living_docs_spec_delta": "karvey docs/spec/changes/living-docs/spec-delta.md @62c1674"
   },
-  "iteration_count": 0,
+  "iteration_count": 1,
   "revision_history": [
     {
       "at": "2026-09-27T22:10:00+00:00",
@@ -96,9 +97,54 @@
         "F-54"
       ],
       "note": "runtime reported about 115k subagent tokens per judge; the recorded judge cost is the prompt-based estimate"
+    },
+    {
+      "at": "2026-09-28T15:15:13+00:00",
+      "reopened": "requirements",
+      "from_phase": "tasks",
+      "reason": "D-42: with an approved mockup the build is based on the mockup and the documented specs; equal or better, never different (REQ-MC-016, 030, 055 revised; REQ-MC-056, 057 added; ripple: spec-delta, architecture, tasks)",
+      "ref": "F-55",
+      "superseded_approvals": {
+        "requirements": {
+          "generated": true,
+          "approved": true,
+          "by": "Mauricio Quezada Ibáñez",
+          "role": "human",
+          "date": "2026-09-27T21:58:36+00:00",
+          "ref": "D-21",
+          "evidence": {
+            "marker": "none"
+          },
+          "generated_at": "2026-09-27T21:58:05+00:00"
+        },
+        "architecture": {
+          "generated": true,
+          "approved": true,
+          "by": "Mauricio Quezada Ibáñez",
+          "role": "human",
+          "date": "2026-09-27T22:12:46+00:00",
+          "ref": "D-21",
+          "evidence": {
+            "marker": "none"
+          },
+          "generated_at": "2026-09-27T22:04:16+00:00"
+        },
+        "tasks": {
+          "generated": true,
+          "approved": true,
+          "by": "Mauricio Quezada Ibáñez",
+          "role": "human",
+          "date": "2026-09-27T22:12:46+00:00",
+          "ref": "D-21",
+          "evidence": {
+            "marker": "none"
+          },
+          "generated_at": "2026-09-27T22:12:19+00:00"
+        }
+      }
     }
   ],
-  "phase": "tasks",
+  "phase": "requirements",
   "phase_history": [
     {
       "phase": "init",
@@ -118,49 +164,31 @@
     },
     {
       "phase": "tasks",
-      "entered_at": "2026-09-27T22:07:52+00:00"
+      "entered_at": "2026-09-27T22:07:52+00:00",
+      "exited_at": "2026-09-28T15:15:13+00:00"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-28T15:15:13+00:00",
+      "ref": "F-55"
     }
   ],
   "approvals": {
     "requirements": {
       "generated": true,
-      "approved": true,
-      "by": "Mauricio Quezada Ibáñez",
-      "role": "human",
-      "date": "2026-09-27T21:58:36+00:00",
-      "ref": "D-21",
-      "evidence": {
-        "marker": "none"
-      },
-      "generated_at": "2026-09-27T21:58:05+00:00"
+      "approved": false
     },
     "architecture": {
       "generated": true,
-      "approved": true,
-      "by": "Mauricio Quezada Ibáñez",
-      "role": "human",
-      "date": "2026-09-27T22:12:46+00:00",
-      "ref": "D-21",
-      "evidence": {
-        "marker": "none"
-      },
-      "generated_at": "2026-09-27T22:04:16+00:00"
+      "approved": false
     },
     "tasks": {
       "generated": true,
-      "approved": true,
-      "by": "Mauricio Quezada Ibáñez",
-      "role": "human",
-      "date": "2026-09-27T22:12:46+00:00",
-      "ref": "D-21",
-      "evidence": {
-        "marker": "none"
-      },
-      "generated_at": "2026-09-27T22:12:19+00:00"
+      "approved": false
     }
   },
   "created_at": "2026-09-27T21:47:10+00:00",
-  "updated_at": "2026-09-27T22:12:46+00:00",
+  "updated_at": "2026-09-28T15:15:13+00:00",
   "lane": "standard",
   "judge_runs": [
     {

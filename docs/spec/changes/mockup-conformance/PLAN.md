@@ -46,7 +46,7 @@ release to a measured report before it, and keeps the requirements as complete a
 |---------|------|----------------------|--------|
 | F1 | Element ids in the mockup: required kinds, format and uniqueness, requirement attribute, UI coverage, deterministic element check and map, stability across iterations, preserved by design-graphic | REQ-MC-001..007 | ⬜ |
 | F2 | Decisions written back: decision log, resolution into requirement revisions, approval refusal, captured-instruction link, frozen mockup hash, revisions shown at the gate | REQ-MC-008..013 | ⬜ |
-| F3 | Implementation from the mockup: mandatory input, tasks name elements, structure and tokens from the mockup, stack-forced differences declared when made, same ids in the build, no invented elements | REQ-MC-014..018, 055 | ⬜ |
+| F3 | Implementation from the mockup: mandatory input, tasks name elements, the mockup as primary source of structure, layout, content and style and the requirements of behaviour (equal or better, never different — D-42), stack-forced differences and improvements declared when made, requirement/mockup conflicts asked to the owner, same ids in the build, no invented elements | REQ-MC-014..018, 055..057 | ⬜ |
 | F4 | Conformance gate: plan, viewports, presence, same viewport and state, marked difference, text and style differences, pixel threshold, unmeasured pairs, browse settings, no production, evidence bound to the commit, capture storage | REQ-MC-019..029, 054 | ⬜ |
 | F5 | Mockup deviations: every difference an entry, resolutions, owner approval through the hook, QA / release / deploy refusal, gate summary, QA's visual audit | REQ-MC-030..035 | ⬜ |
 | F6 | Traceability matrix to evidence, complete before release | REQ-MC-036, 037 | ⬜ |
@@ -56,7 +56,7 @@ release to a measured report before it, and keeps the requirements as complete a
 
 ## Tasks
 
-Detail per task (files, requirements, tests, done-when command) in `tasks.md`. Estimates are calibrated to realistic AI execution + review (the default scale ran ~10× high in this repo). 69 tasks (67 agent, 2 `[human]`), 778 min total, critical path 192 min. Execution order: E1.F9.T1 (base after living-docs) → E1.F9.T2 (size base) + E1.F8.T1 (modes) → failing suites per feature → F1 → F2 → F3 and F4 → F5 → F6, F7 → F8 → F9 end-to-end, owner's approval in the E2E, size, whole-repo gate → E1.DEPLOY.
+Detail per task (files, requirements, tests, done-when command) in `tasks.md`. Estimates are calibrated to realistic AI execution + review (the default scale ran ~10× high in this repo). 69 tasks (67 agent, 2 `[human]`), 782 min total, critical path 192 min. Execution order: E1.F9.T1 (base after living-docs) → E1.F9.T2 (size base) + E1.F8.T1 (modes) → failing suites per feature → F1 → F2 → F3 and F4 → F5 → F6, F7 → F8 → F9 end-to-end, owner's approval in the E2E, size, whole-repo gate → E1.DEPLOY.
 
 ### Feature E1.F1: Element ids in the mockup: contract, parser, rules, surface coverage, deterministic map, history and renames, design keeps ids
 
@@ -77,15 +77,15 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [ ] E1.F2.T6 [Backend] Mockup hash: `approvals.<phase>.artifact_sha256` and `spec.json:mockup.{hash, map_sha256, approved_under}` written at `approve mockup` and `approve design_graphic`; `validate` reports `mockup changed after approval` — est: 12min (depends E1.F2.T4, E1.F8.T1, E1.F2.T1)
 - [ ] E1.F2.T7 [Backend] *Mockup decisions* gate-summary block (revisions with REQ and MD ids, then `no-spec-impact` with reasons) and the approval `ref` composed with the MD ids; summary refuses to present when a revision lacks its MD — est: 12min (depends E1.F2.T3) (P)
 
-### Feature E1.F3: Implementation from the mockup: impl refusal, Elements lines, impl and tasks text, strip setting, extra ids, declared deviations
+### Feature E1.F3: Implementation from the mockup: impl refusal, Elements lines, impl and tasks text (mockup first, requirements for behaviour — D-42), strip setting, extra ids, declared deviations (forced, improvement), conflicts asked
 
-- [ ] E1.F3.T1 [Test] Failing cases for F3 in `test_mockup_hash.py` (impl refusal, lane raise), `test_tasks_elements.py` (Elements lines, assignment), `test_conformance_settings.py` (strip setting), `test_lint_mc.py` (impl and tasks text anchors), `test_deviations.py` (declared deviations) — est: 10min (depends E1.F9.T1) (P)
+- [ ] E1.F3.T1 [Test] Failing cases for F3 in `test_mockup_hash.py` (impl refusal, lane raise), `test_tasks_elements.py` (Elements lines, assignment), `test_conformance_settings.py` (strip setting), `test_lint_mc.py` (impl and tasks text anchors), `test_deviations.py` (declared deviations: forced and improvement; conflict open at close) — est: 10min (depends E1.F9.T1) (P)
 - [ ] E1.F3.T2 [Backend] `advance … impl` on a UI change: refuse `mockup not approved` and `mockup changed after approval`; warn `mockup hash absent (approved before 4.3)` for a 4.2 approval; a lane raised to `feature-ui` without a mockup is refused — est: 10min (depends E1.F2.T6, E1.F3.T1)
 - [ ] E1.F3.T3 [Backend] `Elements:` line parsed next to `**Requirements:**` (`karvey-trace.py parse_tasks`); `karvey-mockup.py assign <change>` lists ids in no task and unknown ids; `approve tasks` / `approve-gate how` refuse on either — est: 12min (depends E1.F1.T4, E1.F3.T1, E1.F8.T2)
-- [ ] E1.F3.T4 [Backend] Skill text: `karvey-tasks` (Elements lines, one presence `[Test]` task per screen before its first UI task, plan build side) and `karvey-impl` (Step 1 reads the map and mockup files; parent, order, text, states, tokens per element; same ids; declare forced differences; presence test at task close); L-87 anchors for both — est: 12min (depends E1.F3.T3, E1.F8.T6)
+- [ ] E1.F3.T4 [Backend] Skill text: `karvey-tasks` (Elements lines, one presence `[Test]` task per screen before its first UI task, plan build side) and `karvey-impl` (Step 1 reads the map and mockup files; source order — the approved mockup for structure, layout, content and style, the requirements for behaviour, equal or better never different (D-42); parent, order, text, states, tokens per element; same ids; declare forced differences and improvements; on a requirement/mockup conflict stop, ask the owner and record a `spec-gap` finding; presence test at task close); L-87 anchors for both — est: 14min (depends E1.F3.T3, E1.F8.T6)
 - [ ] E1.F3.T5 [Backend] `conformance.strip_in_production` read from the reviewed line only (working copy ignored and audited); the gate never strips — est: 8min (depends E1.F4.T1, E1.F3.T1) (P)
 - [ ] E1.F3.T6 [Backend] `extra` ids: build-probe ids not in the approved map reported and counted as differences needing a deviation — est: 8min (depends E1.F4.T6, E1.F3.T1)
-- [ ] E1.F3.T7 [Backend] `karvey-state.py deviation add … --origin impl` for a forced difference (REQ-MC-055); the task summary names it; entries found later carry origin `gate` and the metrics count undeclared-at-impl — est: 8min (depends E1.F5.T2, E1.F3.T1)
+- [ ] E1.F3.T7 [Backend] `karvey-state.py deviation add … --origin impl --kind forced|improvement` (REQ-MC-055, 056): an improvement needs `--better` and its side-by-side image, owner rejection → `fix-build`; the task summary names it; entries found later carry origin `gate`, kind `found`, and the metrics count undeclared-at-impl; `compare --presence-only` exits non-zero with `conflict open: F-NN` while an open `spec-gap` names an element of the entry (REQ-MC-057) — est: 10min (depends E1.F5.T2, E1.F3.T1)
 
 ### Feature E1.F4: Conformance gate: settings, codec, plan, probe, elements, pixels, side-by-side, request, captures, browse, report and recomputation, storage
 
@@ -151,7 +151,7 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 - [ ] E1.F9.T4 [Test] `test_fixture_cli_e2e.py`: the CLI fixture end to end (AC-9) and an `api` target reporting `not applicable` — est: 12min (depends E1.F7.T4, E1.F7.T5) (P)
 - [ ] E1.F9.T5 [human] The owner approves a deviation in the manual E2E on the web fixture (`tests/manual/conformance-e2e.md`): real captures where `browse.via` allows, one deliberate difference, and the owner's own phrase — executor: the owner (depends E1.F9.T3, E1.F4.T11)
 - [ ] E1.F9.T6 [Backend] Size comparison against the base snapshot: `karvey-context-budget.py compare --fail-growth 10`; result in the PLAN history — est: 6min (depends E1.F8.T6, E1.F8.T10, E1.F5.T9, E1.F3.T4)
-- [ ] E1.F9.T7 [Test] Whole-repo gate: all unit suites, hook tables, `lint-plugin.py` 0 errors, `validate --all`, `karvey-trace.py mockup-conformance --check` 55/55 + 2 MODIFIED — est: 8min (depends E1.F9.T3, E1.F9.T4, E1.F9.T6, E1.F8.T9)
+- [ ] E1.F9.T7 [Test] Whole-repo gate: all unit suites, hook tables, `lint-plugin.py` 0 errors, `validate --all`, `karvey-trace.py mockup-conformance --check` 57/57 + 2 MODIFIED — est: 8min (depends E1.F9.T3, E1.F9.T4, E1.F9.T6, E1.F8.T9)
 
 ### E1.DEPLOY
 
@@ -177,10 +177,10 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | E1.F3.T1 [Test] | ⬜ todo | 10 | — | — |  |
 | E1.F3.T2 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F3.T3 [Backend] | ⬜ todo | 12 | — | — |  |
-| E1.F3.T4 [Backend] | ⬜ todo | 12 | — | — |  |
+| E1.F3.T4 [Backend] | ⬜ todo | 14 | — | — |  |
 | E1.F3.T5 [Backend] | ⬜ todo | 8 | — | — |  |
 | E1.F3.T6 [Backend] | ⬜ todo | 8 | — | — |  |
-| E1.F3.T7 [Backend] | ⬜ todo | 8 | — | — |  |
+| E1.F3.T7 [Backend] | ⬜ todo | 10 | — | — |  |
 | E1.F4.T1 [Backend] | ⬜ todo | 12 | — | — |  |
 | E1.F4.T2 [Test] | ⬜ todo | 15 | — | — |  |
 | E1.F4.T3 [Backend] | ⬜ todo | 15 | — | — |  |
@@ -243,3 +243,4 @@ Detail per task (files, requirements, tests, done-when command) in `tasks.md`. E
 | 2026-09-27 | architecture | `architecture.md` + `risks.md` (R-1..R-11) generated; 19 components, 55/55 REQ-MC covered, component delta (5 MODIFIED), §13 integration after living-docs; judges security + methods (intra-model, concerns) — 23 findings (F-32..F-54) accepted and fixed in place pre-approval |
 | 2026-09-27 | infra | skipped: no cloud (`cloud.provider = none`); CI runs the new suites in its existing test step (architecture A-13) |
 | 2026-09-27 | tasks | `tasks.md`: 69 tasks (67 agent, 2 `[human]`), 778 min calibrated, critical path 192 min; 57/57 requirements traced (55 REQ-MC + 2 MODIFIED), test-first for every requirement; merged *how* gate pending |
+| 2026-09-28 | iterate (spec revision) | Owner instruction D-42 (finding F-55, `instruction` → `spec-gap`): with an approved mockup the build is based on the mockup **and** the documented specs — equal or better, never different. `reopen requirements` through the state tool (approvals of requirements, architecture and tasks moved to `revision_history`; iteration 1). Rewritten in place: REQ-MC-016 (the approved mockup is the primary source of structure, layout, content and style; the requirements give the behaviour; an undeclared difference blocks), REQ-MC-030 (deviation kind and the reason an improvement is better), REQ-MC-055 (kind `forced`); added REQ-MC-056 ("better" = a declared improvement the owner approves with side-by-side evidence, else `fix-build`) and REQ-MC-057 (a requirement/mockup conflict is asked to the owner, never resolved silently). Ripple: `spec-delta.md` (ADDED 53), `architecture.md` §1.7, §1.12, §2.2, §6.1, §11 + revision history, `tasks.md` (E1.F3.T1, T4, T7; 57/57; 782 min; critical path unchanged 192 min). Mockup and design-graphic stay skipped by the lane. Owner re-approval of the *what* and *how* gates pending |

@@ -8,6 +8,9 @@
 > and the `living-docs` confirm phrases, reviewed settings and component sheets — so both the component and the
 > data-flow diagrams are included (§4).
 >
+> Revised 2026-09-28 for D-42 (finding F-55, spec revision): `requirements.md` now REQ-MC-001..057 — 016, 030 and 055
+> revised, 056 and 057 added; the parts touched are §1.7, §1.12, §2.2, §6.1, §11 and the revision history.
+>
 > Inputs read in this session: `prd.md`, `requirements.md` (REQ-MC-001..055, approved at the *what* gate under
 > D-21, commit `1eb6e9c`), `spec-delta.md`, `PLAN.md`, `spec.json`, `findings.md` (F-01..F-31, all closed),
 > `docs/spec/project.json`, the `living-docs` design (`living-docs/architecture.md`, §1.1, §1.6, §1.7, §1.9, §1.10,
@@ -34,7 +37,10 @@ data plus two deterministic scripts, so that the model only builds and explains 
   mockup and design approvals and checked by `validate` and `advance … impl`.
 - **The mockup as the input of implementation.** `advance … impl` refuses without a matching hash; tasks carry an
   `Elements:` line checked by `karvey-mockup.py assign`; the conformance plan is generated from the map
-  (`karvey-conformance.py plan`); the impl skill loads the map and builds with the same ids.
+  (`karvey-conformance.py plan`); the impl skill loads the map and builds with the same ids, taking structure,
+  layout, content and style from the mockup and behaviour from the requirements (D-42): equal or better, never
+  different — an improvement is a declared deviation the owner approves, and a requirement/mockup conflict is an
+  open finding the task cannot close over.
 - **The conformance gate.** `karvey-conformance.py` splits capture from comparison. Captures are taken where
   `browse.via` says, by the browse skill, following a request file; each capture comes back with a manifest and an
   **element probe** (a shipped in-page script for web; the accessibility-tree dump for native; the real transcript for
@@ -269,13 +275,22 @@ block cannot be built (a revision without its MD), the summary reports it and th
 
 The impl skill's `Load:` gains the rule; its Step 1 reads `mockup-map.json` and the mockup files (hash-checked by
 `advance`), and per UI task the elements named in `Elements:` with their parent, order, text, states and the tokens
-their styles reference (REQ-MC-016). The skill text makes three duties explicit: the same `data-mk` (or the target's
-equivalent) on the built element (REQ-MC-017); `karvey-state.py deviation add … --origin impl` when the stack forces
-a difference (REQ-MC-055); the presence test of the task green at task close (`karvey-conformance.py compare
---entry <screen> --presence-only` over a local probe when `browse.via` allows, or the unit test that asserts the ids
-in the rendered component where the project's test runner can render). Stripping ids in production is a build
-setting of the project; the gate reads `conformance.strip_in_production` from the reviewed line only (REQ-MC-017) and
-never strips anything itself.
+their styles reference. **Source order (REQ-MC-016, D-42):** the approved mockup is the primary source of structure,
+layout, content and style; the requirements cited by each element (`reqs` in the map) are the source of behaviour.
+The skill text states it as a rule, not a hint: a UI element the mockup shows is never built from the requirements'
+prose alone, and the expected build is equal to the mockup or better, never different. The skill text makes five
+duties explicit: the same `data-mk` (or the target's equivalent) on the built element (REQ-MC-017);
+`karvey-state.py deviation add … --origin impl --kind forced` when the stack forces a difference (REQ-MC-055);
+`deviation add … --origin impl --kind improvement --better "<reason>" --image <sbs>` when the agent judges a
+difference better (REQ-MC-056 — no other way to ship it); on a requirement/mockup conflict, stop the task, ask the
+owner and record a `spec-gap` finding whose text names `REQ-…` and `mk:<id>` (REQ-MC-057), never choosing a side; the
+presence test of the task green at task close (`karvey-conformance.py compare --entry <screen> --presence-only` over a
+local probe when `browse.via` allows, or the unit test that asserts the ids in the rendered component where the
+project's test runner can render). The presence-only compare also reads `findings.md` and exits non-zero with
+`conflict open: F-NN (<element id>)` while an `open` `spec-gap` names an element of the entry, so the task cannot close
+over an unanswered conflict (REQ-MC-057); the convergence rule of the iteration loop keeps it out of deploy as well.
+Stripping ids in production is a build setting of the project; the gate reads `conformance.strip_in_production` from
+the reviewed line only (REQ-MC-017) and never strips anything itself.
 
 ### 1.8 C-06 — Probe contract per target (`templates/conformance/`)
 
@@ -369,8 +384,14 @@ report keeps hashes; a missing local image at a gate → `capture missing: <name
 ### 1.12 C-10 — Mockup deviations (`deviations.py`, `deviation` command group)
 
 `deviations.md` gains `## Mockup deviations`; each entry is a fixed block (`### DV-NN — <title>`, then `Elements:`,
-`Entries:`, `Images:`, `Differs:`, `Why:`, `Resolution: fix-build | accept | revise-mockup`, `Origin: impl | gate |
-agent`, `Status:`). Only `karvey-state.py deviation add|update|close` writes it; `deviation add --from-report` creates
+`Entries:`, `Images:`, `Differs:`, `Kind: forced | improvement | found`, `Why:`, `Better because:` (only and always
+for `improvement`), `Resolution: fix-build | accept | revise-mockup`, `Origin: impl | gate | agent`, `Status:`).
+`deviation add --kind improvement` is refused with `improvement without reason` when `--better` is empty (< 10
+characters) and with `improvement without side-by-side image` when its `Images:` path does not exist; an improvement
+is proposed `accept` and counts only through the owner's marker (REQ-MC-032); when the owner does not approve it, the
+agent records `deviation update DV-NN --resolution fix-build` (the conservative direction needs no marker; the reverse
+does) and the entry then closes only as `fixed` in a recomputation (REQ-MC-056, 031). Entries
+created by `--from-report` carry `Kind: found`. Only `karvey-state.py deviation add|update|close` writes it; `deviation add --from-report` creates
 one entry per uncovered difference (one per screen for `unmeasured`, REQ-MC-025). Coverage (REQ-MC-030) maps every
 report finding to the entry whose `Elements`/`Entries` cover it. `fix-build` entries close to `fixed` only inside
 `compare`, when the difference is gone (REQ-MC-031); `revise-mockup` entries are handed to `/karvey-iterate` as a
@@ -487,7 +508,7 @@ owner runs or asks for; the step writes nothing. Changes past their mockup are n
 | L-84 | `mk-probe.js` contains no write API (`fetch`, `XMLHttpRequest`, `sendBeacon`, `WebSocket`, storage setters, `.value =`, `click(` outside the step runner) — read-only probe (S-6) |
 | L-85 | `confirm.deviation` has phrases in every shipped language and matches the ids pattern (REQ-MC-032) |
 | L-86 | the README section names `conformance`, both scripts, the deviation phrase and MC-1..MC-3 (REQ-MC-051) |
-| L-87 | skill-text anchors: impl names the map and the mockup files as inputs and the same-id duty (REQ-MC-016, 017); tasks names `Elements:` (015); qa's Dimension 8 cites the report and says `not evaluated` without it, and `rules/judges/qa.md` asks the fiscal question on conformance claims (035); mockup, test and deploy name their steps (051) |
+| L-87 | skill-text anchors: impl names the map and the mockup files as inputs, the source order (mockup for structure, layout, content and style; requirements for behaviour), the improvement and conflict duties and the same-id duty (REQ-MC-016, 056, 057, 017); tasks names `Elements:` (015); qa's Dimension 8 cites the report and says `not evaluated` without it, and `rules/judges/qa.md` asks the fiscal question on conformance claims (035); mockup, test and deploy name their steps (051) |
 
 ### 1.21 C-19 — Fixtures, dogfooding and sequencing (REQ-MC-052, 053)
 
@@ -529,7 +550,8 @@ Sequencing: the first impl task verifies that `living-docs`' implementation is i
 ```markdown
 ### DV-02 — Export button lower than approved
 Elements: export · Entries: invoice-list@1280x800 · Images: conformance/captures/invoice-list@1280x800.sbs.png
-Differs: box Δy +20px · Why: toolbar wraps at this width · Resolution: fix-build · Origin: gate · Status: pending
+Differs: box Δy +20px · Kind: found · Why: toolbar wraps at this width · Resolution: fix-build · Origin: gate
+Status: pending
 ```
 
 ---
@@ -690,7 +712,7 @@ sequenceDiagram
 | `test_conformance_settings.py` | unit | 017, 020, 024 (reviewed line vs working copy, viewports invalid, strip setting) |
 | `test_conformance_captures.py` | unit | 026, 027 (request content, no secret, none, agent manifest verification, size caps and bounded inflation, build-commit meta, dev-host allow-list, production refusal, empty allow-list refused) |
 | `test_conformance_report.py` | unit | 028, 029 (commit + mockup hash, stale on UI code and on hash, local storage, missing capture) |
-| `test_deviations.py` | unit | 030, 031, 033, 034, 043, 055 (coverage, fix-build closes only in a recomputation, revise-mockup routing, blockers in approve/approve-gate/release-gate/check-prod, forged report refused, gate block) |
+| `test_deviations.py` | unit | 030, 031, 033, 034, 043, 055, 056, 057 (kinds, improvement without reason or image refused, owner rejection → fix-build, `conflict open` at presence-only close, coverage, fix-build closes only in a recomputation, revise-mockup routing, blockers in approve/approve-gate/release-gate/check-prod, forged report refused, gate block) |
 | `test_deviation_approval.py` | unit + hook table | 032 (phrase languages, ≤ 10 ids, marker hashes, echo, transcript confirmation, approve, audit cross-check, other-clone `not verifiable here`, tamper, void on edit, agent text ignored) |
 | `test_trace_elements.py` | unit | 036, 037, 041 (columns, empty cell, n/a) |
 | `test_targets.py` | unit | 038–041 (web probe shape, native no-tree, CLI anchors and text diff, restricted patterns, minimal environment, transcript leak check, other targets, undeclared) |
@@ -814,7 +836,7 @@ Listed in §1.18; each edit keeps the skill inside its Wave 3 size budget (measu
 | 013 | C-03 | test_mockup_log |
 | 014 | C-03, C-05 | test_mockup_hash |
 | 015 | C-04 | test_tasks_elements |
-| 016 | C-05, C-16 | L-87 (impl inputs); test_fixture_web_e2e (text and tokens of the build equal the mockup's, via 054/044); conformance-e2e (manual, impl-built UI) |
+| 016 | C-05, C-16 | L-87 (impl inputs and the source order: mockup for structure/layout/content/style, requirements for behaviour); test_fixture_web_e2e (text and tokens of the build equal the mockup's, via 054/044; an undeclared difference blocks); conformance-e2e (manual, impl-built UI) |
 | 017 | C-05, C-14 | test_conformance_settings |
 | 018 | C-08 | test_conformance_compare |
 | 019 | C-04 | test_tasks_elements |
@@ -854,8 +876,10 @@ Listed in §1.18; each edit keeps the skill inside its Wave 3 size budget (measu
 | 053 | C-19 | base check task |
 | 054 | C-08 | test_conformance_compare |
 | 055 | C-05, C-10 | test_deviations |
+| 056 | C-05, C-10, C-11 | test_deviations (kind, reason, image, rejection → fix-build), test_deviation_approval |
+| 057 | C-05, C-16 | test_deviations (`conflict open` at presence-only close), L-87 (impl conflict duty) |
 
-55/55 covered; the two MODIFIED blocks (REQ-W2-060 via 036, REQ-LD-022 via 046) are covered by their REQ-MC rows.
+57/57 covered; the two MODIFIED blocks (REQ-W2-060 via 036, REQ-LD-022 via 046) are covered by their REQ-MC rows.
 
 ## Component delta
 
@@ -928,3 +952,4 @@ files and sections before any task that edits them; the line numbers of §1.1 ar
 |---|---|---|
 | 2026-09-27 | architect (karvey-architecture) | First version; generated for the merged *how* gate (D-21). |
 | 2026-09-27 | architect, after the judges (security, methods; intra-model) | Fixed in place: report recomputed from verified captures at every gate, `record` only a cache (F-42, A-14); absent hash / `approved_under` defined, one-of-two inconsistent blocks (F-32, F-33, F-52); deviation ledger per clone with tracked `deviation_log` and `not verifiable here` in other clones and CI (F-34); deploy refusal through `check-prod` and the prod-gate hook (F-35); L-87 skill-text anchors for 016/035/051 (F-36, F-37); suites name 043, 048 re-approval, 051 (F-38); alternatives for A-05/08/10/12 (F-39); units and viewport pattern (F-40); R-2 without the undefined downscale (F-41); transcript cross-check + R-10 (F-43); bound entries echoed to the owner (F-44); audit cross-check specified (F-45); development-host allow-list, fail closed (F-46, A-15); text layers leak-checked, minimal CLI environment (F-47); CLI patterns in the hashed mockup, restricted regex (F-48); build-commit meta, R-11 (F-49); three trust boundaries added (F-50); fixture value limits (F-51); size caps and bounded inflation (F-53); reviewed-line limit stated (F-54). |
+| 2026-09-28 | architect (spec revision, karvey-iterate, F-55) | D-42 — with an approved mockup the build is based on the mockup and the documented specs, equal or better, never different: §1.7 source order (mockup = structure, layout, content, style; requirements = behaviour), improvement and conflict duties, `conflict open` at the presence-only close (REQ-MC-016, 056, 057); §1.12 `Kind:` and `Better because:` fields, improvement refusals, owner rejection → `fix-build` (REQ-MC-030, 055, 056); §2.2 example; §6.1 and §11 rows for 056, 057. No new component, file or trust boundary. |
