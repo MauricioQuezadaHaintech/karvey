@@ -4,6 +4,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5
+> 🔗 Incident: BUG-52 · Karvey route: karvey-iterate (finding → root cause → fix → regression) · Apache 2.0
+
+### Fixed
+- BUG-52 — the prod-gate forwards `--org`/`--organization` of `az repos pr update` to its `az repos pr show` lookup. Why: without it `az` fell back to remote auto-detection, which fails on a `https://pat@...` remote, and the gate blocked even PRs into the integration branch.
+
 ## [3.12.0] - 2026-09-26
 
 ### Why

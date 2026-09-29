@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-52 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -247,6 +247,11 @@ INDEX = {
         ("table", "prod-gate", "pg6-18-dry-run-cancelled-by-no-dry-run"),
         ("table", "prod-gate", "pg6-19-repo-option-names-a-mirror-remote"),
         ("table", "prod-gate", "pg6-20-repo-option-names-a-wildcard-remote"),
+    ],
+    "BUG-52": [  # field use: paautin-database PR 9727
+        ("unit", "test_prod_gate_az_org.py", "AzPrLookupKeepsTheOrganization.test_org_is_forwarded"),
+        ("unit", "test_prod_gate_az_org.py", "AzPrLookupKeepsTheOrganization.test_organization_long_form_is_forwarded"),
+        ("unit", "test_prod_gate_az_org.py", "AzPrLookupKeepsTheOrganization.test_prod_candidates_carries_the_org"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
