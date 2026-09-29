@@ -290,3 +290,13 @@ corrected, not annotated at the end.
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-26. **Request, verbatim:** «tengo un problema con la documentación que debemos resolver con karvey: he estado desarrollando y los agentes avanzan en lo suyo pero dejan de anotar indicaciones como requerimientos, modificaciones a los reqs, nuevos detalles, etc. tambien falta la documentación de la base de datos, los componentes de backend y frontend así como la infra, es decir, arma documentos pero faltan fichas teécnicas de componentes, entiendo que en el código quedan pero he visto varias falls por no tener documeentada la estructura de datos en un no-sql por ejemplo. como lo podemos resolver?» and «ademas de actualizar el readme de cada repo, eso es vital».
 - **What:** a new change `living-docs` (its own worktree, in parallel; implementation after `wave3-optimization`'s implementation to avoid conflicting edits) with three parts: (1) the owner's instructions during an active change are captured verbatim by a prompt hook and must each be classified (requirement revision, finding, or no spec impact with reason) before a phase closes; (2) living technical sheets per component (data store incl. NoSQL document schemas checked against real dev documents read-only, backend, frontend, infra) mapped to code paths, updated in the same commit as the code, merged at archive; (3) each repo's README kept current, checked when setup, commands, env vars or components change. Reaches existing projects through `project-upgrade` steps.
+
+## D-43 — Hotfix 3.12.1 of the prod-gate before the rest of the release chain
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-29. **Answers, verbatim:** «Sí, 3.12.1 primero (Recomendado)» and, on REST calls and commands outside a repo, «Sí, el gate los cubre (Recomendado)».
+- **What:** (1) a prod approval is bound to the change its phrase names, and refused when that change does not exist where the hook runs (never the "active" change); (2) an approval recorded in the repo that owns a change covers the `[Deploy] <id>` PRs of the repos the change declares in `spec.json:repos`; (3) the BLOCK message says how to resolve each case; (4) the prod-gate recognises REST calls that complete a PR or approve a production pipeline, and commands run outside a repo that target a Karvey repo, and requires the same SHA-bound approval; what it cannot resolve it blocks with the reason.
+
+## D-44 — `mockup-conformance` is implemented before `living-docs`
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-09-29. **Answer, verbatim:** «Sí, mockup primero (Recomendado)»
+- **What:** the implementation order becomes mockup-conformance, then living-docs (supersedes that part of D-40).
