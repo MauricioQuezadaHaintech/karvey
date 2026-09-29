@@ -1567,3 +1567,33 @@ the dry-run early exit ran before the unknown-option check and never saw the neg
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-96, karvey-qa re-run D7 second opinion re-check (N-5, N-6) |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on d0153c2, green after |
+
+## BUG-52 — The prod-gate looked up an `az` PR without the organization the command named
+- **Priority:** medium
+- **Detected:** 2026-09-28 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`prod_candidates`, `pr_info`)
+- **Change / origin:** field use in paautin-database (PR 9727 to `dev`), reported by the owner
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+In a repository whose remote is `https://pat@dev.azure.com/<org>/<project>/_git/<repo>` and with no `az devops` default organization: `az repos pr update --id 9727 --status completed --org https://dev.azure.com/<org>`.
+
+### Actual vs expected
+- Actual: the gate blocked with `cannot resolve the PR base (az exited 1: WARNING: Auto-detect was enabled but no Azure DevOps remote was found...)`, even for a PR into the integration branch.
+- Expected: the lookup reaches the same organization the command names, resolves the base and applies the gate's rule to it.
+
+### Root cause
+`pr_info` ran `az repos pr show --id N` with none of the command's options, so `az` fell back to remote auto-detection, which does not recognise a remote URL carrying a user.
+
+### Fix
+`prod_candidates` keeps `--org`/`--organization` of `az repos pr update` and `pr_info` forwards it to `az repos pr show`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_prod_gate_az_org.py` AzPrLookupKeepsTheOrganization.test_org_is_forwarded, AzPrLookupKeepsTheOrganization.test_organization_long_form_is_forwarded, AzPrLookupKeepsTheOrganization.test_prod_candidates_carries_the_org; red on e2acfab. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-28 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | blocked the completion of paautin-database PR 9727 |
+| 2026-09-29 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-09-29 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on fix/bug53-az-pr-org; regression test red on e2acfab, green after |

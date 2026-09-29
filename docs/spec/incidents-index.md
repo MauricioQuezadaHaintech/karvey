@@ -59,6 +59,7 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | BUG-49 | karvey | low | `reopen` superseded the ledger prod approval after writing spec.json | wave1-hardening / F-94 | RESUELTO | plugins/karvey/tests/unit/test_state_approve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-50 | karvey | high | prod-gate push parser missed `refs/*` wildcards, `-o` clusters, abbreviated long options and remote names with a slash | wave1-hardening / F-95 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-13..17 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-51 | karvey | high | prod-gate trusted `--dry-run` cancelled by `--no-dry-run` and ignored `--repo` | wave1-hardening / F-96 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-18..20 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-52 | karvey | medium | prod-gate looked up an `az` PR without the command's `--org` | field use (paautin-database PR 9727) | RESUELTO | plugins/karvey/tests/unit/test_prod_gate_az_org.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | fix/bug53-az-pr-org |
 
 ## Summary by state
 
@@ -67,7 +68,7 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 51 | BUG-01 .. BUG-51 |
+| RESUELTO | 52 | BUG-01 .. BUG-52 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-52**.
+Next number: **BUG-53**.

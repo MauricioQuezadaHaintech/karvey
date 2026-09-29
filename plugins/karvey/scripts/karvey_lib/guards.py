@@ -1094,7 +1094,11 @@ def prod_candidates(ctx):
         elif seg.argv0 == "az" and a[:3] == ["repos", "pr", "update"]:
             status, auto = _opt(a, "--status"), _opt(a, "--auto-complete")
             if (status or "").lower() == "completed" or (auto or "").lower() in ("true", "yes", "1"):
+                # BUG-52: the lookup must reach the same organization the command names; without
+                # it `az` falls back to remote auto-detection, which fails on a `https://pat@...` remote
+                org = _opt(a, "--org", "--organization")
                 out.append(Candidate("az", seg, dir=seg.cwd, selector=_opt(a, "--id"),
+                                     repo_arg=["--org", org] if org else None,
                                      deferred=(status or "").lower() != "completed"))  # BUG-48
         elif seg.argv0 == "glab" and a[:2] == ["mr", "merge"]:
             pos = _positional(a[2:], {"-m", "--message", "--sha", "-R", "--repo"})
@@ -1159,7 +1163,8 @@ def pr_info(c, cwd, budget):
     elif c.kind == "az":
         if not c.selector:
             return None, "az repos pr update without --id"
-        data, err = _run_cli(["az", "repos", "pr", "show", "--id", c.selector, "--output", "json"], cwd, budget)
+        data, err = _run_cli(["az", "repos", "pr", "show", "--id", c.selector] + (c.repo_arg or []) +
+                             ["--output", "json"], cwd, budget)
         keys = ("targetRefName", "sourceRefName", "title")
         lm = (data or {}).get("lastMergeSourceCommit")
         sha = lm.get("commitId") if isinstance(lm, dict) else None
