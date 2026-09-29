@@ -1,0 +1,61 @@
+{
+  "change_id": "prod-gate-scope",
+  "capability": "method",
+  "description": "Hotfix 3.12.1 of the prod-gate (D-43): a prod approval is bound to the change the human's phrase names; an approval in the repo that owns a change covers the [Deploy] <id> PRs of the repos it declares; REST calls that complete a PR or approve a production pipeline, and commands run outside a repo, pass the same SHA-bound gate; a read-only listing of the state paths is not blocked (BL-64).",
+  "goal": "A production approval reaches exactly the change and the commits the human approved, whatever repo, working tree or command form the release goes through.",
+  "layers": [
+    "Backend"
+  ],
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 2,
+  "security_tier_reason": "changes the approval hook and the prod-gate, the guards that stand between an agent and a production merge",
+  "type": "hotfix",
+  "lane": "hotfix",
+  "links": {
+    "parent": "",
+    "children": []
+  },
+  "decisions": [
+    "D-34",
+    "D-35",
+    "D-36",
+    "D-37",
+    "D-43"
+  ],
+  "inputs": {},
+  "iteration_count": 0,
+  "revision_history": [],
+  "seed_backlog_id": [
+    "BL-64"
+  ],
+  "clickup": {
+    "epic_id": "",
+    "feature_ids": [],
+    "task_ids": {},
+    "backlog_list_id": "",
+    "client_tag": ""
+  },
+  "schema_version": 1,
+  "phase": "requirements",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-29T16:40:39+00:00",
+      "exited_at": "2026-09-29T16:41:26+00:00",
+      "by": "Mauricio Quezada Ibáñez"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-29T16:41:26+00:00"
+    }
+  ],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": false
+    }
+  },
+  "created_at": "2026-09-29T16:40:39+00:00",
+  "updated_at": "2026-09-29T16:43:08+00:00"
+}

@@ -63,6 +63,7 @@
 | BL-59 | 2026-09-25 | wave1-hardening / F-84 | spec-gap (deferred) | med | spec-merge item format: blank lines inside an item, `### REQ-` headings in ADDED | open | — | — |
 | BL-60 | 2026-09-25 | wave1-hardening / F-85 | spec-gap (deferred) | med | project.json ban line in every skill that dispatches subagents | open | — | — |
 | BL-61 | 2026-09-25 | wave1-hardening / F-86 | emergent | low | Factor duplicated helpers (now_iso, parse_dt, git) and the TTL literals into karvey_lib | open | — | — |
+| BL-64 | 2026-09-29 | real use (owner) | bug | low | protect-paths blocks a read-only listing of the approval/state paths | promoted | BUG-54 | prod-gate-scope |
 
 ## BL-01 — Run graphify over the repo at the end of all the changes
 - **Origin:** owner request (Mauricio Quezada Ibáñez), 2026-09-22, after publishing 3.8.0 / 3.9.0 and during the 3.9.1 docs sync.
@@ -382,3 +383,8 @@
 - **Origin:** change `wave1-hardening`, QA re-run finding F-91 (spec-gap (deferred)).
 - **Why:** The deploy skill records the prod approval in `deploying`, where `reopen` is refused ("allowed up to qa"), so D-36 only supersedes approvals recorded earlier. The SHA binding and the 24 h expiry limit the damage (a rework is a new commit and needs a new OK). Decide whether a spec-gap found in `deploying` reopens (and supersedes), or whether `approve prod` is restricted to `deploying` and documented as such.
 - **Status:** open
+
+## BL-64 — protect-paths blocks a read-only listing of the approval/state paths
+- **Origin:** real use, 2026-09-29 (owner); promoted to change `prod-gate-scope` (hotfix 3.12.1) as BUG-54 (finding F-04).
+- **Why:** `ls <state dir> 2>/dev/null; echo done`, `cat <ledger> | python3 -m json.tool` and `ls "$(git rev-parse --git-common-dir)/karvey/approvals/"` are blocked although nothing is written: the last protect-paths check requires every segment of the call to be read-only.
+- **Status:** promoted (BUG-54)
