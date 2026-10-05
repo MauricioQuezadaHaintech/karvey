@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-150 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-151 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -324,6 +324,15 @@ INDEX = {
     ],
     "BUG-150": [  # F-17: a worktree of the same repo read as two repos
         ("unit", "test_session_profile.py", "SessionProfile.test_bug150_session_moved_into_a_worktree_of_the_same_repo"),
+    ],
+    "BUG-151": [  # F-19: QA re-check — fake Karvey clone, curl globs, dot segments, raw HTTP, Azure repo answer
+        ("unit", "test_prodgate_identity.py", "Identity.test_bug151_fake_karvey_clone_cannot_decide_or_switch_the_gate_off"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_bug151_azure_host_answer_names_the_repo"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_karvey_repo_in_another_wrapper_folder_is_found"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_curl_globs_and_dot_segments"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_raw_http_by_hand"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_credentials_in_variables_do_not_block_a_non_completing_update"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_text_output_is_not_a_request"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

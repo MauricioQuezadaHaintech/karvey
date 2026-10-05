@@ -1844,7 +1844,8 @@ QTOOL_RE = re.compile(r"AskUserQuestion|\bquestion[- ]tool\b|\bherramienta de pr
 PROD_OK_RE = re.compile(r"\bprod(?:uction)?\s+(?:ok|approval|marker|release\s+approval)\b|"
                         r"\b(?:release|deploy|merge)\s+to\s+prod(?:uction)?\b|\bgo[- ]live\s+approval\b|"
                         r"\bok\s+(?:de|a|para)\s+producci[oó]n\b|\baprobaci[oó]n\s+(?:de|a|para)\s+"
-                        r"producci[oó]n\b|\bpaso\s+a\s+producci[oó]n\b", re.I)
+                        r"producci[oó]n\b|\bpas[eo]\s+a\s+producci[oó]n\b|\baprueb\w*\b[^.;]*\bproducci[oó]n\b|"
+                        r"\baprob\w*\b[^.;]*\bproducci[oó]n\b", re.I)
 # BUG-149: only a negation that governs the tool counts ("never use AskUserQuestion", "no uses la herramienta")
 QTOOL_NEG_RE = re.compile(r"\b(never|do not|don't|not|no|nunca|jam[aá]s)\s+(?:(?:use|uses|usar|uses|ask|asks|with|"
                           r"a|an|the|la|el|una|un|through|via|por|con|question|tool|herramienta|de|preguntas?)\s+)*"

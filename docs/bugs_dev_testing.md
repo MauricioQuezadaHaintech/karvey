@@ -1957,3 +1957,33 @@ same common dir = same repo; candidate labels de-duplicated. Hotfix 3.12.1, bran
 | 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-17, karvey-qa |
 | 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
 | 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-151 — QA re-check: a fake Karvey clone could decide or switch the gate off, and REST forms still slipped
+- **Priority:** critical
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`resolve_target`, `pr_info`, prod-gate switch), restcalls.py, clones.py, lint-plugin.py (L-80)
+- **Change / origin:** prod-gate-scope — finding F-19 (QA re-check of bd81fae: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A Karvey clone made by the agent (`zz-fk`, `enforcement.prod_gate_hook: false` on its own origin, remote set to the real repo): `cd zz-fk && gh pr merge 12 --repo org/app-web`. `curl -X PUT '…/pulls/{12}/merge'`, `…/pulls/12/./merge`, `printf 'PUT /repos/…/pulls/12/merge …' | openssl s_client …`. An Azure PR whose host answer names another repository. A Karvey repo in another wrapper folder (`Dev/<wrapper>/<repo>`). `curl -u "$USER:$PAT" -X PATCH -d '{"title":"x"}' <PR url>` and `echo POST <PR url>` (blocked by the first QA loop). «Usa AskUserQuestion para que el dueño apruebe el pase a producción».
+
+### Actual vs expected
+- Actual: "prod-gate DISABLED" from the fake clone; globbed, dot-segment and hand-written requests allowed; the Azure repo check dead; the wrapper-folder repo warned as not Karvey; non-completing updates and plain text blocked; one Spanish wording not flagged.
+- Expected: two different Karvey clones answering to one name block; only the session project, its worktrees and the paths its project.json lists may switch the gate off; curl globs expanded (or blocked), dot segments removed, raw HTTP to a socket blocked; the Azure answer's repository decides; wrapper folders searched; variables in credential/header options and text output are not requests; the wording flagged.
+
+### Root cause
+the first Karvey clone found decided and its own settings were trusted; the parser read URLs literally and treated any variable argument as a URL; the az answer's API URL hid the repository; the clone search stopped at siblings.
+
+### Fix
+`trusted_roots`, several-clones block, az `repository.webUrl/name`, `expand_curl_glob`, `remove_dot_segments`, `--path-as-is` fail, raw-HTTP-to-socket fail, credential/header option values skipped, text commands not requests unless sent to a socket, wrapper-folder search, L-80 wordings. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_prodgate_identity.py` (test_bug151_*, test_karvey_repo_in_another_wrapper_folder_is_found), `plugins/karvey/tests/unit/test_restcalls_evasions.py` (test_bug151_*); red on bd81fae. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-19, karvey-qa re-check |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on bd81fae, green after |

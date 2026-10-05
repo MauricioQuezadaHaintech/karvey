@@ -1139,7 +1139,7 @@ def prod_candidates(ctx):
                                  repo_arg=_opt(a[2:], "-R", "--repo"), repo_name=_opt(a[2:], "-R", "--repo"),
                                  deferred=True, bound=_opt(a[2:], "--sha")))
         else:
-            c = _rest_candidate(seg)  # REQ-HF-010..015: HTTP clients, az rest, glab api, inline scripts
+            c = _rest_candidate(seg, ctx.payload.command)  # REQ-HF-010..015: HTTP clients, az rest, glab api
             if c is not None:
                 out.append(c)
     return out
@@ -1157,8 +1157,8 @@ def _url_repo(selector):
     return m.group("gh") or m.group("az") or m.group("gl")
 
 
-def _rest_candidate(seg):
-    call = restcalls.classify_segment(seg)
+def _rest_candidate(seg, raw=None):
+    call = restcalls.classify_segment(seg, raw)
     if call is None:
         return None
     if call.kind == "fail":
@@ -1246,8 +1246,10 @@ def pr_info(c, cwd, budget):
     if not isinstance(base, str) or not base:
         return None, "the %s answer has no %s" % (c.kind, keys[0])
     url = data.get("url") if isinstance(data.get("url"), str) else None
-    if c.kind == "az" and isinstance(data.get("repository"), dict):
-        url = url or "/_git/%s" % data["repository"].get("name", "")
+    if c.kind == "az":  # BUG-151: data.url is the API URL; the repository names the repo
+        repo = data.get("repository") if isinstance(data.get("repository"), dict) else {}
+        url = repo.get("webUrl") if isinstance(repo.get("webUrl"), str) and "/_git/" in repo["webUrl"] else (
+            "/_git/%s" % repo["name"] if isinstance(repo.get("name"), str) and repo["name"] else None)
     return {"base": _strip_heads(base.replace("refs/heads/", "")),
             "head": _strip_heads(head.replace("refs/heads/", "")) if isinstance(head, str) else None,
             "title": title if isinstance(title, str) else "", "url": url,
@@ -1367,6 +1369,26 @@ def _not_karvey(name, why):
                           record={"decision_detail": "not-karvey-target", "reason": why, "target": name}, audit=True)
 
 
+def trusted_roots(ctx):
+    """BUG-151: the clones whose settings may switch the gate off: the session project (``CLAUDE_PROJECT_DIR``),
+    its worktrees and the paths its ``project.json:repos`` lists. A clone reached only by the command's
+    directory (the agent can ``cd`` anywhere) is not trusted to weaken the gate."""
+    def build():
+        out = set()
+        r = _project_dir_root(ctx)
+        if r is None:
+            return out
+        out.add(os.path.realpath(str(r)))
+        rc, wts = pj.git(["worktree", "list", "--porcelain"], r)
+        for ln in (wts.splitlines() if rc == 0 else []):
+            if ln.startswith("worktree "):
+                out.add(os.path.realpath(ln[len("worktree "):].strip()))
+        for p in clones.project_paths(str(r)):
+            out.add(os.path.realpath(p))
+        return out
+    return _memo(ctx, ("trusted-roots",), build)
+
+
 def _karvey_context(ctx, c):
     """The Karvey project roots of this call: the command's directory, the payload's cwd, the session project."""
     out = []
@@ -1391,12 +1413,17 @@ def resolve_target(ctx, c):
         return None, _pg_block(None, "target", "cannot verify the production approval: the target repo is "
                                                "built from variables; write it out")
     tops = _memo(ctx, ("clones-of", name), lambda: clones.find_clones(_anchors(ctx, c), name))
-    cwd_top = clones.toplevel(c.dir) if c.dir else None
-    tops = sorted(tops, key=lambda t: t != cwd_top)
+    karvey = []
     for t in tops:
         root = pj.find_root(start=t)
-        if root is not None:
-            return root, None
+        if root is not None and str(pj.git_common_dir(root)) not in [str(pj.git_common_dir(k)) for k in karvey]:
+            karvey.append(root)
+    if len(karvey) > 1:  # BUG-151: two different Karvey clones answer to the name; none may decide alone
+        return None, _pg_block(None, "target", "cannot verify the production approval: several local clones answer "
+                                               "to %s (%s); run the command from the session's own clone"
+                               % (name, ", ".join(str(k) for k in karvey)))
+    if karvey:
+        return karvey[0], None
     kctx = _karvey_context(ctx, c)
     if any(clones.karvey_named(k, name) for k in kctx):
         return None, "unresolved"
@@ -1498,6 +1525,9 @@ def _evaluate_candidate(ctx, c, deadline):
     if root is None:
         return None  # not a Karvey project: inert and silent
     on, why = prod_gate_setting(ctx, root)
+    if not on and os.path.realpath(str(root)) not in trusted_roots(ctx) and _project_dir_root(ctx) is not None:
+        on = True  # BUG-151: a clone outside the session project cannot switch the gate off
+        why = "on (switched off only in %s, which is not the session's project)" % root
     if not on:
         return Decision.allow(stdout=["[karvey] prod-gate DISABLED for this project (project.json)"],
                               record={"decision_detail": "disabled", "reason": why}, audit=True)

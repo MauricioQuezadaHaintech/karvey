@@ -76,10 +76,23 @@ class Request:
         self.body, self.body_text, self.unreadable, self.variable = None, None, None, False
 
 
+CRED_OPTS = {"-u", "--user", "-H", "--header", "-a", "--auth", "--oauth2-bearer", "--proxy-user", "-E", "--cert",
+             "--key", "--pass", "-b", "--cookie", "-A", "--user-agent", "-e", "--referer", "--password",
+             "--http-user", "--http-password", "--session", "-o", "--output", "-O", "--output-document"}
+
+
 def _scheme_urls(args):
-    """BUG-146: every argument that is an http(s) URL is a request target, whatever option precedes it."""
-    return [a for a in args if isinstance(a, str) and (re.match(r"^https?://", a, re.I) or
-                                                       re.match(r"^[\"']?(\$|`)", a))]
+    """BUG-146: every argument that is an http(s) URL is a request target, whatever option precedes it; a
+    variable counts as a possible URL unless it is the value of a credential, header or output option."""
+    out = []
+    for i, a in enumerate(args):
+        if not isinstance(a, str):
+            continue
+        if re.match(r"^https?://", a, re.I):
+            out.append(a)
+        elif re.match(r"^[\"']?(\$|`)", a) and not (i > 0 and args[i - 1] in CRED_OPTS):
+            out.append(a)
+    return out
 
 
 class Call:
@@ -126,7 +139,62 @@ def clean_url(raw):
         if dec == path:
             break
         path = dec
-    return "%s://%s%s" % (parts.scheme.lower(), host.lower(), re.sub(r"/{2,}", "/", path))
+    return "%s://%s%s" % (parts.scheme.lower(), host.lower(), remove_dot_segments(re.sub(r"/{2,}", "/", path)))
+
+
+def remove_dot_segments(path):
+    """RFC 3986 §5.2.4, as curl and the hosts apply it (BUG-151: ``…/12/./merge``)."""
+    out = []
+    for seg in path.split("/"):
+        if seg == ".":
+            continue
+        if seg == "..":
+            if len(out) > 1:
+                out.pop()
+            continue
+        out.append(seg)
+    res = "/".join(out)
+    if path.endswith(("/.", "/..")):
+        res += "/"
+    return res
+
+
+GLOB_MAX = 32
+
+
+def expand_curl_glob(url):
+    """The URLs curl's globbing makes of ``url`` (``{a,b}`` and ``[1-3]``/``[a-c]``), or None when there are more
+    than ``GLOB_MAX`` or the pattern cannot be read (BUG-151)."""
+    out = [url]
+    pat = re.compile(r"\{([^{}]*)\}|\[([0-9]+|[a-zA-Z])-([0-9]+|[a-zA-Z])(?::[0-9]+)?\]")
+    for _ in range(8):
+        nxt, changed = [], False
+        for u in out:
+            m = pat.search(u)
+            if not m:
+                nxt.append(u)
+                continue
+            changed = True
+            if m.group(1) is not None:
+                alts = m.group(1).split(",")
+            else:
+                a, b = m.group(2), m.group(3)
+                if a.isdigit() and b.isdigit():
+                    lo, hi = int(a), int(b)
+                    if hi < lo or hi - lo > GLOB_MAX:
+                        return None
+                    alts = [str(n).zfill(len(a)) for n in range(lo, hi + 1)]
+                elif a.isalpha() and b.isalpha() and ord(b) >= ord(a) and ord(b) - ord(a) <= GLOB_MAX:
+                    alts = [chr(c) for c in range(ord(a), ord(b) + 1)]
+                else:
+                    return None
+            nxt += [u[:m.start()] + alt + u[m.end():] for alt in alts]
+            if len(nxt) > GLOB_MAX:
+                return None
+        out = nxt
+        if not changed:
+            return out
+    return None
 
 
 def _read_body(arg, cwd):
@@ -200,7 +268,22 @@ def _parse_curl(seg):
             i += 1
             continue
         i += 1
-    r.urls = list(dict.fromkeys(explicit + _scheme_urls(a)))
+    urls = list(dict.fromkeys(explicit + _scheme_urls(a)))
+    globoff = any(x in ("-g", "--globoff") or (re.match(r"^-[a-zA-Z]+$", x) and "g" in x[1:] and
+                                                 not any(ch in CURL_SHORT_ARG for ch in x[1:x.index("g")]))
+                  for x in a)
+    r.urls = []
+    for u in urls:
+        if not globoff and re.search(r"[{}\[\]]", u):
+            exp = expand_curl_glob(u)
+            if exp is None:
+                r.unreadable = r.unreadable or "the URL glob %s cannot be expanded; use -g or write it out" % u
+                continue
+            r.urls += exp
+        else:
+            r.urls.append(u)
+    if "--path-as-is" in a and any(re.search(r"/\.\.?(/|$|\?)", u) for u in r.urls):
+        r.unreadable = r.unreadable or "--path-as-is with dot segments in the URL"
     r.url = r.urls[0] if r.urls else None
     texts = []
     for d in data:
@@ -600,12 +683,24 @@ def posix_base(name):
     return (name or "").rsplit("/", 1)[-1]
 
 
-def unknown_client_call(seg):
+TEXT_ONLY = frozenset({"echo", "printf", "cat", "grep", "egrep", "rg", "less", "more", "head", "tail", "sed", "awk",
+                       "tee", "jq", "true", ":"})
+_NET_SINK = re.compile(r"\b(openssl|s_client|nc|ncat|netcat|socat|telnet)\b|/dev/(tcp|udp)/")
+
+
+def unknown_client_call(seg, raw=None):
     """BUG-146: a command this module does not parse that names a completion/approval endpoint URL together
     with a write method fails closed."""
     args = seg.argv[1:]
+    if posix_base(seg.argv0) in TEXT_ONLY and not _NET_SINK.search(raw or ""):
+        return None  # text output: a request only when the call sends it to a socket
     urls = [u for u in args if _URL_TOKEN.match(u) and _ENDPOINT_TEXT.search(unquote(u))]
-    if not urls:
+    if not urls:  # raw HTTP written by hand (printf "PUT /repos/…/pulls/12/merge HTTP/1.1" | openssl s_client)
+        raw = [x for x in args if re.search(r"(?i)\b(PUT|PATCH|POST|DELETE)\s+/\S+", x) and
+               _ENDPOINT_TEXT.search(unquote(x))]
+        if raw:
+            return Call("fail", client=seg.argv0, reason="%s writes a raw HTTP request to a completion or approval "
+                                                         "endpoint, which the gate cannot verify" % posix_base(seg.argv0))
         return None
     joined = " ".join(args)
     if re.search(r"(?i)(^|\s)(PUT|PATCH|POST|DELETE)(\s|$)", joined) or re.search(
@@ -616,7 +711,7 @@ def unknown_client_call(seg):
     return None
 
 
-def classify_segment(seg):
+def classify_segment(seg, raw=None):
     """The :class:`Call` of one segment (HTTP client or inline script), or None."""
     if not seg.argv:
         return None
@@ -627,5 +722,5 @@ def classify_segment(seg):
     if r is None:
         if posix_base(seg.argv0) in ("git", "gh", "glab", "az"):
             return None
-        return unknown_client_call(seg)
+        return unknown_client_call(seg, raw)
     return classify(r)

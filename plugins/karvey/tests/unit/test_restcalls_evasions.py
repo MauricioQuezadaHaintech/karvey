@@ -51,6 +51,31 @@ class Evasions(unittest.TestCase):
                          "pr-complete")
         self.assertEqual(self.kind('curl -X PUT "https://api.github.com/repos/org/app-web/pulls/$N/merge"'), "fail")
 
+    def test_bug151_curl_globs_and_dot_segments(self):
+        self.assertEqual(self.kind("curl -X PUT 'https://api.github.com/repos/org/app-web/pulls/{12}/merge'"),
+                         "pr-complete")
+        self.assertEqual(self.kind("curl -X PUT 'https://api.github.com/repos/org/app-web/pulls/1[2-2]/merge'"),
+                         "pr-complete")
+        self.assertEqual(self.kind("curl -X PUT https://api.github.com/repos/org/app-web/pulls/12/./merge"),
+                         "pr-complete")
+        self.assertEqual(self.kind("curl --path-as-is -X PUT https://api.github.com/repos/org/app-web/pulls/12/"
+                                   "merge/../merge"), "fail")
+        self.assertEqual(self.kind("curl -X PUT 'https://api.github.com/repos/org/app-web/pulls/[1-999]/merge'"),
+                         "fail")
+
+    def test_bug151_raw_http_by_hand(self):
+        self.assertEqual(self.kind("printf 'PUT /repos/org/app-web/pulls/12/merge HTTP/1.1\\r\\nHost: "
+                                   "api.github.com\\r\\n\\r\\n' | openssl s_client -connect api.github.com:443"),
+                         "fail")
+
+    def test_bug151_credentials_in_variables_do_not_block_a_non_completing_update(self):
+        self.assertIsNone(self.kind('curl -u "$USER:$PAT" -X PATCH -d \'{"title":"x"}\' \'%s\'' % AZ))
+        self.assertIsNone(self.kind('curl -H "$AUTH" -X PATCH -d \'{"title":"x"}\' \'%s\'' % AZ))
+        self.assertIsNone(self.kind('wget --header "$H" --method=PATCH --body-data=\'{"title":"x"}\' \'%s\'' % AZ))
+
+    def test_bug151_text_output_is_not_a_request(self):
+        self.assertIsNone(self.kind("echo POST %s" % AZ))
+
     def test_inline_read_is_not_a_candidate(self):
         self.assertIsNone(self.kind("python3 -c \"print(open('.git/refs/heads/main').read())\""))
 

@@ -93,7 +93,7 @@ def _worktrees(top):
     return [ln[len("worktree "):].strip() for ln in out.splitlines() if ln.startswith("worktree ")]
 
 
-def _project_paths(root):
+def project_paths(root):
     data, _ = pj.load_project_json(root)
     out = []
     for r in (data or {}).get("repos") or []:
@@ -122,10 +122,10 @@ def search_dirs(anchors):
         for wt in _worktrees(t):
             add(os.path.realpath(wt))
         if pj.is_karvey_project(t):
-            for p in _project_paths(t):
+            for p in project_paths(t):
                 add(p)
     # BUG-145: a session in a folder that holds the repos (not a repo itself) — its children, two levels
-    budget = [SIBLINGS_MAX * 2]
+    budget = [SIBLINGS_MAX * 4]
 
     def kids_of(d, depth):
         if depth == 0 or budget[0] <= 0:
@@ -154,15 +154,13 @@ def search_dirs(anchors):
         par = os.path.dirname(os.path.realpath(str(a)))
         if par not in parents:
             parents.append(par)
+    # siblings, and repos one folder below a sibling that is not a repo (Dev/<wrapper>/<repo>, D7 re-check)
     for par in parents:
-        try:
-            kids = sorted(os.listdir(par))[:SIBLINGS_MAX]
-        except OSError:
-            continue
-        for k in kids:
-            p = os.path.join(par, k)
-            if os.path.isdir(os.path.join(p, ".git")) or os.path.isfile(os.path.join(p, ".git")):
-                add(os.path.realpath(p))
+        kids_of(par, 2)
+    for t in tops:  # a repo inside a wrapper folder: the wrappers next to it (Dev/<wrapper>/<repo>)
+        wrapper = os.path.dirname(t)
+        if not toplevel(wrapper):
+            kids_of(os.path.dirname(wrapper), 2)
     return out
 
 

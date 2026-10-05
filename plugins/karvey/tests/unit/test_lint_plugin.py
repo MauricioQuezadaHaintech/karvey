@@ -1092,7 +1092,8 @@ class L80Bug149(LintCase):
     def test_spanish_and_other_wordings_fail(self):
         for text in ("Pide el OK de producción con `AskUserQuestion`.",
                      "Use AskUserQuestion to confirm the release to production.",
-                     "Collect the go-live approval with a question tool."):
+                     "Collect the go-live approval with a question tool.",
+                     "Usa AskUserQuestion para que el dueño apruebe el pase a producción."):
             self.t.write(RULES + "/release.md", "# Release\n\n%s\n" % text)
             self.assertFails("L-80", "question tool", file=RULES + "/release.md")
 

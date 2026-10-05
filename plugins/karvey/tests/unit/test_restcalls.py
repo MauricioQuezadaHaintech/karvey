@@ -15,7 +15,7 @@ SHA = "a" * 40
 def calls(cmd, cwd=None):
     out = []
     for seg in shellparse.parse(cmd, cwd=cwd or "/").segments:
-        c = rc.classify_segment(seg)
+        c = rc.classify_segment(seg, cmd)
         if c is not None:
             out.append(c)
     return out
