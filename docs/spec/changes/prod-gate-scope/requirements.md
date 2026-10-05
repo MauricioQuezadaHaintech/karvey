@@ -5,7 +5,11 @@
 Hotfix 3.12.1 (D-43). Real use of 3.12.0 showed a prod approval bound to a change the human did not name
 (F-01), a multi-repo change that cannot be released from the repos it does not live in (F-02), REST and
 outside-a-repo release forms the prod-gate does not see (F-03), and a read-only listing blocked by
-protect-paths (F-04, BL-64). North star (PRD): *a production approval reaches exactly the change and the
+protect-paths (F-04, BL-64). Revision 1 (D-45) adds the defects found in use since: another agent's profile
+injected by the session hook (F-05), the prod-gate deciding by the session's directory instead of the PR's
+repo (F-06), a prod OK asked through a question tool that never reaches the approval hook (F-07), a silent hook
+on a production-shaped phrase (F-08) and an opaque `approve … prod` error (F-09); and it lets production calls
+to non-Karvey repos pass with a warning (F-10). North star (PRD): *a production approval reaches exactly the change and the
 commits the human approved, whatever repo, working tree or command form the release goes through.*
 
 ## Conventions
@@ -14,24 +18,28 @@ commits the human approved, whatever repo, working tree or command form the rele
 - **Trace line.** PRD objective `O-n` / scope `S-n` / acceptance `AC-n`, finding `F-NN`, incident `BUG-NN`,
   backlog `BL-NN`, decision `D-NN`, and the 3.12.0 requirement it amends (`AMENDS REQ-W1-0NN`, from
   `wave1-hardening`, not yet in the living spec).
-- **Roles.** the *approval hook* (runs on the human's prompt), the *state tool* (`karvey-state.py`), the
+- **Roles.** the *session hook* (runs at session start, resume, clear and compact), the *approval hook* (runs
+  on the human's prompt), the *state tool* (`karvey-state.py`), the
   *prod-gate* and *protect-paths* (pre-execution guards), the *release ledger* (machine-local approval record
   of a clone), the *owning repo* (the repo whose `docs/spec/changes/` holds the change), a *declared repo*
-  (a repo the change lists as released with it). Examples use the fictional repos `app-web`, `app-api`,
+  (a repo the change lists as released with it), the *working repo* (the git top level of the session's
+  directory; for a linked worktree, that worktree), a *Karvey repo* (a local clone that is a Karvey project:
+  `docs/spec/project.json` or `docs/spec/changes/`), the *target repo* (the repo a PR or REST call acts on).
+  Examples use the fictional repos `app-web`, `app-api`,
   `app-db`.
 - **Production approval** = the ledger record of D-34/D-35: human, evidence of the approval hook's audit
   line, bound to an approved head commit, valid 24 h after the human's OK.
 
 ---
 
-## Requirement 1: The prod approval is bound to the change the phrase names (F-01, BUG-53)
+## Requirement 1: The prod approval is bound to the change the phrase names (F-01, BUG-138)
 
 ### 1.1 REQ-HF-001 — A named change wins over the active change
 WHEN the human's prompt is a production approval (D-10) and names exactly one change id that exists in the
 working tree where the approval hook runs, the approval hook SHALL record the prod marker for that change,
 whatever change is active there.
 
-Traces to PRD: O-1, S-1, AC-1 · F-01 · BUG-53 · Decision: D-43 · AMENDS REQ-W1-017
+Traces to PRD: O-1, S-1, AC-1 · F-01 · BUG-138 · Decision: D-43 · AMENDS REQ-W1-017
 
 #### Scenario: Success
 GIVEN a tree holding `team-adapters` (active) and `project-upgrade`
@@ -49,7 +57,7 @@ runs, THEN the approval hook SHALL record no marker and SHALL print that the cha
 how to fix it: the path of the local worktree that holds it when `git worktree list` finds one, otherwise the
 branch that holds it when one does, otherwise "open the session in the tree or branch that holds the change".
 
-Traces to PRD: O-1, S-1, AC-1 · F-01 · BUG-53 · Decision: D-43
+Traces to PRD: O-1, S-1, AC-1 · F-01 · BUG-138 · Decision: D-43
 
 #### Scenario: Success (the fix is named)
 GIVEN a tree where only `team-adapters` is open, and a second worktree `../app-web-wt-upgrade` of the same
@@ -69,7 +77,7 @@ change only when exactly one change is active (by branch, or the only open one) 
 that the change was taken as the active one because the message named none; IF no change or several changes
 are active, THEN it SHALL record no marker and SHALL print the candidates and ask to name one.
 
-Traces to PRD: O-1, S-1 · F-01 · BUG-53 · Decision: D-43
+Traces to PRD: O-1, S-1 · F-01 · BUG-138 · Decision: D-43
 
 #### Scenario: Success
 GIVEN only `team-adapters` is active
@@ -86,7 +94,7 @@ THEN no marker is written and the line lists `team-adapters, wave-a` and asks to
 IF a production approval names more than one change id, THEN the approval hook SHALL record no marker and
 SHALL say that one production approval covers one change (BUG-41) and ask for one message per change.
 
-Traces to PRD: O-1, S-1 · F-01 · BUG-53 · Decision: D-37 (manifest path unchanged), D-43
+Traces to PRD: O-1, S-1 · F-01 · BUG-138 · Decision: D-37 (manifest path unchanged), D-43
 
 #### Scenario: Success
 GIVEN changes `app-login` and `app-search` in the tree
@@ -275,15 +283,17 @@ GIVEN no approval
 WHEN the PATCH also carries `"status": "completed"`
 THEN it is blocked.
 
-### 3.5 REQ-HF-014 — Commands outside a repository are tied to the repo they name
+### 3.5 REQ-HF-014 — Commands outside a repository are tied to the repo they name *(revised, rev 1, D-45)*
 WHEN a production merge candidate (CLI or REST) runs in a directory that is not inside a Karvey project (for
 example after `cd /tmp`), the prod-gate SHALL tie it to a local clone by the repository the command names (its
-repo option or variable, the PR the host reports, the URL) among the session's project, its worktrees and the
-command's directory; a Karvey clone SHALL get the full check; a clone that is not a Karvey project SHALL not be
-gated; IF no local clone matches and the PR's base is a production-named branch or cannot be determined, THEN
-the prod-gate SHALL block with the reason and say to run the command from the repo's clone.
+repo option, the PR URL, the request URL, the PR the host reports) among the session's project, its worktrees,
+the repos its `project.json` and its changes' `spec.json:repos` name, and the command's directory; a Karvey
+clone SHALL get the full check (REQ-HF-024, 025); a target that is not a Karvey repo SHALL pass with the warning
+of REQ-HF-026; IF the command names a Karvey repo (by `project.json` or a change's `spec.json:repos`) of which no
+local clone is found, and the PR's base is a production branch or cannot be determined, THEN the prod-gate SHALL
+block with the reason and say to run the command from the repo's clone.
 
-Traces to PRD: O-3, S-3, AC-3 · F-03 · Decision: D-43 · AMENDS REQ-W1-024
+Traces to PRD: O-3, O-6, S-3, S-7, AC-3, AC-7 · F-03, F-10 · Decision: D-43, D-45 · AMENDS REQ-W1-024
 
 #### Scenario: Success
 GIVEN a session in the clone `app-web` (Karvey) with a live approval bound to the PR head
@@ -291,8 +301,8 @@ WHEN `cd /tmp && gh pr merge 7 -R org/app-web` runs
 THEN it is checked against `app-web`'s ledger and allowed; a PR into `dev` from `/tmp` is not gated.
 
 #### Scenario: Error
-GIVEN a session outside any repo and no local clone of `org/app-web`
-WHEN `cd /tmp && az repos pr update --id 7 --status completed` runs on a PR into `main`
+GIVEN a session in `app-api`, whose `project.json` names `app-web` as a repo, and no local clone of `org/app-web`
+WHEN `cd /tmp && az repos pr update --id 7 --repository app-web --status completed` runs on a PR into `main`
 THEN it is blocked with "cannot tie … to a local clone; run it from the clone".
 
 ### 3.6 REQ-HF-015 — What the gate cannot read is blocked with the reason
@@ -316,7 +326,7 @@ THEN it is blocked with the reason.
 
 ---
 
-## Requirement 4: Read-only listings of the protected paths (F-04, BL-64, BUG-54)
+## Requirement 4: Read-only listings of the protected paths (F-04, BL-64, BUG-139)
 
 ### 4.1 REQ-HF-016 — A read-only listing passes; writes stay blocked
 WHEN every command of a Bash call that names a protected path (approval markers, release ledger, the Karvey
@@ -325,7 +335,7 @@ from it nor write (text output, formatters, read-only `git` subcommands in a com
 SHALL allow the call; IF any command could write a protected path — a mutating command, a redirection into it,
 a pipe into a command that runs its input (`xargs`, a shell, `tee`) — THEN it SHALL keep blocking.
 
-Traces to PRD: O-4, S-4, AC-4 · F-04 · BL-64 · BUG-54 · AMENDS REQ-W1-018
+Traces to PRD: O-4, S-4, AC-4 · F-04 · BL-64 · BUG-139 · AMENDS REQ-W1-018
 
 #### Scenario: Success
 GIVEN a Karvey project
@@ -345,15 +355,17 @@ THEN it is blocked.
 ## Requirement 5: Regression, security and release (hotfix lane)
 
 ### 5.1 REQ-HF-017 — Each incident ships with its regression test
-The change SHALL record BUG-53 (F-01) and BUG-54 (F-04) in the incident tracker and index, each with a
-regression test that fails on 3.12.0 and passes with the fix, in the same PR (`rules/multi-agent.md` §7).
+The change SHALL record BUG-138 (F-01), BUG-139 (F-04), BUG-140 (F-05), BUG-141 (F-06), BUG-142 (F-07),
+BUG-143 (F-08) and BUG-144 (F-09) in the incident tracker and index, each with a regression test (unit test or
+guard-table row) that fails on 3.12.0 and passes with the fix, in the same PR (`rules/multi-agent.md` §7).
+*(revised, rev 1: BUG-140..144 added; BUG-53/54 renumbered, F-11)*
 
-Traces to PRD: S-5, AC-5 · BUG-53, BUG-54
+Traces to PRD: S-5, AC-5 · BUG-138 .. BUG-144
 
 #### Scenario: Success
 GIVEN the fix
 WHEN the regression suite runs
-THEN the BUG-53 and BUG-54 tests pass; on 3.12.0 they fail.
+THEN the BUG-138 .. BUG-144 tests pass; on 3.12.0 they fail.
 
 #### Scenario: Error
 GIVEN an incident without a regression test
@@ -362,10 +374,13 @@ THEN the incident is not `RESUELTO`.
 
 ### 5.2 REQ-HF-018 — The guards stay fail-closed and within budget
 The prod-gate and protect-paths SHALL stay fail-closed (an error or a timeout blocks), the approval hook SHALL
-stay fail-open (no marker), every network lookup SHALL stay within the pre-bash budget, and no guard SHALL log
-or forward a credential found in a command.
+stay fail-open (no marker, and its one line says the approval was not recorded because of an error), the session
+hook SHALL never block a session and, on any error while resolving the profile, SHALL inject no profile content
+(an error never discloses a manifest, board or handoff), every network lookup SHALL stay within the pre-bash
+budget, and no guard SHALL log or forward a credential found in a command. *(revised, rev 1: session hook and
+the approval hook's error line)*
 
-Traces to PRD: Constraints, S-3 · Security Tier 2 · AMENDS REQ-W1-024
+Traces to PRD: Constraints, S-3, S-6, S-8 · Security Tier 2 · AMENDS REQ-W1-024
 
 #### Scenario: Success
 GIVEN a host CLI that answers in time
@@ -373,9 +388,10 @@ WHEN the gate resolves a REST candidate
 THEN the decision arrives within the hook timeout and the audit record holds no token.
 
 #### Scenario: Error
-GIVEN a host CLI that hangs
-WHEN a production candidate is evaluated
-THEN it is blocked with the time-out reason.
+GIVEN a host CLI that hangs, or a team configuration that cannot be parsed
+WHEN a production candidate is evaluated, or a session starts
+THEN the candidate is blocked with the time-out reason, and the session gets no profile content and one line
+with the reason.
 
 ### 5.3 REQ-HF-019 — Release 3.12.1
 The release SHALL carry version 3.12.1 in the plugin manifest, the marketplace entry and `project.json`, a
@@ -394,6 +410,240 @@ GIVEN one version string still says 3.12.0
 WHEN lint runs
 THEN it reports the mismatch.
 
+---
+
+## Requirement 6: The agent profile comes from the working repo only (F-05, BUG-140)
+
+### 6.1 REQ-HF-020 — The profile is resolved from the working repo, never from an ancestor folder
+WHEN the session hook runs, it SHALL take the working repo as the git top level of the session's directory and
+SHALL inject a profile only when that repo holds it (`docs/spec/agent/` at its top level) or a team configuration
+maps that repo, by its exact name (a linked worktree by the name of its main clone), to a role; it SHALL NOT walk
+up past the working repo's top level to find a profile, SHALL NOT fall back to a default role for an unmapped repo,
+and IF the session's directory is not inside a git repo or the repo is not mapped, THEN it SHALL inject no
+manifest, board or handoff and SHALL print one line saying why and how to restore explicitly (REQ-HF-023).
+
+Traces to PRD: O-5, S-6, AC-6 · F-05 · BUG-140 · Decision: D-45
+
+#### Scenario: Success
+GIVEN a team folder holding the repos `app-web` and `app-api`, with a team configuration that maps `app-web` to
+the role `web` and `app-api` to the role `api`
+WHEN a session starts in `app-web/src/`
+THEN it receives the `web` profile only.
+
+#### Scenario: Error
+GIVEN the same team folder and a session that starts (or resumes) in the team folder itself, in a folder of the
+`api` agent's profile area that is not inside `app-api`, or in an unmapped repo `app-tools`
+WHEN the session hook runs
+THEN no profile is injected and one line says `profile not loaded: <reason>` with the explicit restore command.
+
+### 6.2 REQ-HF-021 — An ambiguous identity injects nothing
+IF the directory the session started in and its current directory resolve to different working repos (the
+directory changed, for example on resume), or more than one profile is a candidate for the working repo (the repo
+holds its own profile and a team configuration maps it too, or two roles map it), THEN the session hook SHALL
+inject no manifest, board or handoff and SHALL print exactly one line naming the candidate profiles and the
+command to restore one explicitly.
+
+Traces to PRD: O-5, S-6, AC-6 · F-05 · BUG-140 · Decision: D-45
+
+#### Scenario: Success
+GIVEN a session started in `app-web` and resumed in `app-web`
+WHEN the session hook runs
+THEN the `web` profile is injected as before.
+
+#### Scenario: Error
+GIVEN a session started in `app-web` and resumed with its directory in `app-api`
+WHEN the session hook runs
+THEN nothing is injected and the line reads `profile not loaded: candidates web (app-web), api (app-api) — run
+/karvey-checkpoint restore --profile <role|path> in the repo you work in`.
+
+### 6.3 REQ-HF-022 — A sensitive handoff never leaves its repo
+WHERE a handoff is marked sensitive (front matter `sensitive: true`, which `/karvey-checkpoint save --sensitive`
+writes), the session hook and `/karvey-checkpoint restore` SHALL show its body only in a session whose working repo
+is the profile's own repo (the repo the team configuration maps to the role, or the repo that holds
+`docs/spec/agent/`); IF the working repo differs or cannot be determined, THEN they SHALL withhold the body and
+print one line saying a sensitive handoff was withheld and in which repo it can be restored.
+
+Traces to PRD: O-5, S-6, AC-6 · F-05 · BUG-140 · Decision: D-45
+
+#### Scenario: Success
+GIVEN the `ops` profile with a handoff marked sensitive, mapped to the repo `app-ops`
+WHEN a session starts in `app-ops`
+THEN the handoff is injected.
+
+#### Scenario: Error
+GIVEN the same handoff
+WHEN a session in `app-web` runs `/karvey-checkpoint restore --profile ops`
+THEN the manifest and board may be shown, the handoff body is not, and the line names `app-ops`.
+
+### 6.4 REQ-HF-023 — Restoring a profile explicitly
+WHEN the human or the agent runs `/karvey-checkpoint restore --profile <role|path>`, the skill SHALL restore that
+profile (manifest, board, handoff under REQ-HF-022, live-state comparison) in the current session and SHALL say
+which profile it restored; IF the role or path names no profile, THEN it SHALL restore nothing and list the
+profiles it found.
+
+Traces to PRD: O-5, S-6, AC-6 · F-05 · BUG-140 · Decision: D-45
+
+#### Scenario: Success
+GIVEN the ambiguity line of REQ-HF-021
+WHEN `/karvey-checkpoint restore --profile web` runs in `app-web`
+THEN the `web` profile is restored and the reply names it.
+
+#### Scenario: Error
+GIVEN no role `mobile`
+WHEN `/karvey-checkpoint restore --profile mobile` runs
+THEN nothing is restored and the reply lists `web`, `api`.
+
+---
+
+## Requirement 7: The prod-gate decides on the PR's repo and base (F-06, BUG-141)
+
+### 7.1 REQ-HF-024 — The target repo is the PR's repo, not the session's directory
+WHEN a production merge candidate names its repo — `--repo`/`-R`, a PR URL as the selector, `az … --repository`
+(with `--org`/`--project`), a REST URL — or the host's answer for the PR names it, the prod-gate SHALL take that
+repo as the target repo, SHALL find its local clone (REQ-HF-014's search), and SHALL read the branch flow, the
+production set and the release ledger from that clone, never from the clone of the session's directory when the
+two differ; IF the named repo and the host's answer disagree, THEN it SHALL block with the reason.
+
+Traces to PRD: O-6, S-7, AC-7 · F-06 · BUG-141 · Decision: D-45 · AMENDS REQ-W1-023
+
+#### Scenario: Success
+GIVEN a session in `app-web` and a local clone `app-api` with a live approval of `api-login` bound to the PR head
+WHEN `gh pr merge 12 --repo org/app-api` runs on the PR `[Deploy] api-login` into `main`
+THEN it is checked against `app-api`'s ledger and allowed.
+
+#### Scenario: Error
+GIVEN the same, but the approval lives only in `app-web`'s ledger
+WHEN the merge runs
+THEN it is blocked; the message names `app-api` as the repo whose approval is missing.
+
+### 7.2 REQ-HF-025 — Only a production branch of the target repo is gated
+WHEN the prod-gate has resolved the target repo and the PR's base branch from the host's answer, it SHALL gate the
+merge only if the base is in the target repo's production set (its `branch_flow.production`, plus `main`/`master`
+per D-15, minus its integration branch when that differs); a merge into any other branch, including the target's
+integration branch, SHALL pass silently; IF the base cannot be resolved, THEN it SHALL block with the reason.
+
+Traces to PRD: O-6, S-7, AC-7 · F-06 · BUG-141 · Decision: D-15, D-45
+
+#### Scenario: Success
+GIVEN a session in `app-web` (trunk flow, production `main`) and `app-api` with integration `dev`, production `main`
+WHEN `gh pr merge 30 --repo org/app-api` runs on a PR into `dev`
+THEN it passes and prints nothing.
+
+#### Scenario: Error
+GIVEN the same, but the PR's base is `main` and no approval exists in `app-api`
+WHEN the merge runs
+THEN it is blocked.
+
+### 7.3 REQ-HF-026 — A target that is not a Karvey repo passes with a warning
+WHEN a production merge candidate or a production pipeline approval (CLI or REST) targets a repo that is not a
+Karvey repo — its local clone is not a Karvey project, or no local clone exists and neither the session's
+`project.json` nor any change's `spec.json:repos` names it — the prod-gate SHALL allow it and SHALL print exactly
+one warning line naming the target repo and saying it is not gated because it is not a Karvey repo; a target the
+gate cannot identify at all keeps REQ-HF-015.
+
+Traces to PRD: O-6, S-7, AC-7 · F-10 · Decision: D-45 · AMENDS REQ-W1-024
+
+#### Scenario: Success
+GIVEN a session in `app-web` and no local clone of `org/static-site`, not named by `project.json` or any change
+WHEN `curl -X PUT https://api.github.com/repos/org/static-site/pulls/3/merge` runs
+THEN it passes with `[karvey] prod-gate WARNING: org/static-site is not a Karvey repo — not gated`.
+
+#### Scenario: Error
+GIVEN `project.json` names `app-api` and no local clone of it exists
+WHEN `curl -X PUT https://api.github.com/repos/org/app-api/pulls/3/merge` runs into `main`
+THEN it is blocked (REQ-HF-014), not warned.
+
+---
+
+## Requirement 8: The production OK is typed by the owner (F-07, BUG-142)
+
+### 8.1 REQ-HF-027 — The agent shows the exact phrase to type
+WHEN a skill or rule asks the human for the production OK, it SHALL ask in plain text and SHALL show the exact
+phrase for the human to type, built from the project's approval vocabulary and naming the change id, the PR and
+the version (for example «aprobado para producción app-login PR #42 v2.3.0»), together with the PR head commit;
+it SHALL NOT ask for the production OK through a question tool (a tool whose answer does not pass through the
+prompt hook), because that answer never reaches the approval hook.
+
+Traces to PRD: O-7, S-8, AC-8 · F-07 · BUG-142 · Decision: D-45, D-10
+
+#### Scenario: Success
+GIVEN `karvey-deploy` at the production OK step for `app-login`, PR 42, version 2.3.0
+WHEN it asks for the OK
+THEN its message shows «aprobado para producción app-login PR #42 v2.3.0» and the head commit, and the human's
+typed phrase records `(prod, app-login, …)`.
+
+#### Scenario: Error
+GIVEN a skill text that says to ask for the production OK with a question tool
+WHEN lint runs
+THEN it fails (REQ-HF-028).
+
+### 8.2 REQ-HF-028 — Lint forbids a question tool for the production OK
+The plugin linter SHALL report an error for any skill or rule text that instructs a question tool (by name, such
+as `AskUserQuestion`, or as "question tool") in the same step or paragraph as the production OK (production
+approval, prod OK, prod marker), and SHALL accept question tools for other questions.
+
+Traces to PRD: O-7, S-8, AC-8 · F-07 · BUG-142 · Decision: D-45
+
+#### Scenario: Success
+GIVEN `karvey-deploy` step 2.9 rewritten to show the phrase, and `karvey-architecture` using a question tool for a
+design choice
+WHEN lint runs
+THEN it reports 0 errors.
+
+#### Scenario: Error
+GIVEN a fixture skill whose production step says "Ask with `AskUserQuestion` for the production OK"
+WHEN lint runs
+THEN it reports one error naming the file and line.
+
+---
+
+## Requirement 9: A production-shaped phrase always gets one answer line (F-08, BUG-143)
+
+### 9.1 REQ-HF-029 — Exactly one line: recorded, or not recorded with the reason and the phrase
+WHEN the human's prompt holds an approval word and a production word (D-10) outside quoted or fenced material, the
+approval hook SHALL print exactly one line: either `approval recorded (<kind>, <change>, expires <hh:mm>)`, or
+`prod approval NOT recorded: <reason>` followed, on the same line, by the phrase to type (change id from the
+candidates when there is exactly one, otherwise `<change-id>`); the reasons SHALL cover at least: no change named
+and none or several active (REQ-HF-003), a named change not in this tree (REQ-HF-002), several changes named
+(REQ-HF-004), the phrase classified as a plan approval, and an internal error (REQ-HF-018); a plan marker recorded
+from such a phrase SHALL be said to be a plan approval and not a production one, on that same line.
+
+Traces to PRD: O-7, S-8, AC-8 · F-08 · BUG-143 · Decision: D-45 · AMENDS REQ-W1-017
+
+#### Scenario: Success
+GIVEN only `app-login` active
+WHEN the human writes «ok, aprobado para producción app-login»
+THEN the hook prints one line `[karvey] approval recorded (prod, app-login, expires 15:40)`.
+
+#### Scenario: Error
+GIVEN `app-login` and `app-search` active
+WHEN the human writes «dale, sube a producción»
+THEN the hook prints one line `[karvey] prod approval NOT recorded: no change named and 2 active (app-login,
+app-search) — type: «aprobado para producción <change-id>»`, and no prod marker is written.
+
+---
+
+## Requirement 10: The `approve … prod` refusal names what it found (F-09, BUG-144)
+
+### 10.1 REQ-HF-030 — The refusal lists the markers found and the missing piece
+IF `approve <id> prod` is refused, THEN the state tool SHALL print each approval marker it considered (kind,
+change, age in minutes, expired or not) — or that it found none — and SHALL name the missing piece: no marker, a
+marker of another kind, a marker of another change, an expired marker, no audit line, or a missing or unbound
+commit; it SHALL end with the phrase the human types to fix it.
+
+Traces to PRD: O-8, S-9, AC-9 · F-09 · BUG-144 · Decision: D-45
+
+#### Scenario: Success
+GIVEN a live prod marker of `app-login`
+WHEN `approve app-login prod --by "<human>" --role human --ref D-12 --sha <head>` runs
+THEN it records the approval (no refusal text).
+
+#### Scenario: Error
+GIVEN only a plan marker of `app-login` 12 minutes old and an expired prod marker of `app-search`
+WHEN `approve app-login prod …` runs
+THEN it is refused with `found: plan app-login 12 min (live); prod app-search 95 min (expired) — missing: a live
+prod marker for app-login; the human types «aprobado para producción app-login PR #<n> v<version>»`.
+
 ## Explicit exclusions
 
 - Plan-kind approvals keep the 3.12.0 scope rule (named change in this tree, else active, else `_project`).
@@ -405,3 +655,15 @@ THEN it reports the mismatch.
   own login.
 - Classic release approvals and deployment approvals of other hosts are blocked, not resolved.
 - Lanes stay recorded data only (Wave 2).
+- A team folder that is not itself a git repo gets no automatic profile; `/karvey-checkpoint restore --profile`
+  restores one explicitly (REQ-HF-020, 023).
+- Question tools stay allowed for every question other than the production OK; whether a plan-kind gate approval
+  answered through a question tool should also be typed is not decided here.
+- No remote probing to learn whether a target is a Karvey repo (REQ-HF-026 decides from local clones and the
+  repos the project and its changes name).
+
+## Revision history
+
+| Rev | Date | Ref | Requirements | Why |
+|---|---|---|---|---|
+| 1 | 2026-10-05 | D-45 · F-05..F-11 | ADDED REQ-HF-020..030; REVISED REQ-HF-014 (non-Karvey targets warn), REQ-HF-017 (BUG-138..144), REQ-HF-018 (session hook, approval-hook error line); BUG-53/54 renumbered to BUG-138/139 | The owner widened the hotfix with the defects found in use (D-45). BUG-53/54 were already used by another unmerged branch (F-11). Ripple: prd.md (problems 5-9, O-5..O-8, S-6..S-9, AC-6..AC-9), findings.md, spec-delta.md, PLAN.md, spec.json, backlog BL-64. Revised in place while requirements are generated and not approved. |

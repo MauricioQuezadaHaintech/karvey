@@ -1,7 +1,7 @@
 {
   "change_id": "prod-gate-scope",
   "capability": "method",
-  "description": "Hotfix 3.12.1 of the prod-gate (D-43): a prod approval is bound to the change the human's phrase names; an approval in the repo that owns a change covers the [Deploy] <id> PRs of the repos it declares; REST calls that complete a PR or approve a production pipeline, and commands run outside a repo, pass the same SHA-bound gate; a read-only listing of the state paths is not blocked (BL-64).",
+  "description": "Hotfix 3.12.1 of the prod-gate (D-43): a prod approval is bound to the change the human's phrase names; an approval in the repo that owns a change covers the [Deploy] <id> PRs of the repos it declares; REST calls that complete a PR or approve a production pipeline, and commands run outside a repo, pass the same SHA-bound gate; a read-only listing of the state paths is not blocked (BL-64); widened by D-45: the session hook loads only the working repo's profile and withholds sensitive handoffs elsewhere, the prod-gate decides on the PR's own repo and base (non-Karvey targets warn), the production OK is always typed (never a question tool), a production-shaped phrase always gets one hook line, and the approve refusal names the markers it found.",
   "goal": "A production approval reaches exactly the change and the commits the human approved, whatever repo, working tree or command form the release goes through.",
   "layers": [
     "Backend"
@@ -17,15 +17,58 @@
     "children": []
   },
   "decisions": [
+    "D-15",
     "D-34",
     "D-35",
     "D-36",
     "D-37",
-    "D-43"
+    "D-43",
+    "D-45"
   ],
   "inputs": {},
-  "iteration_count": 0,
-  "revision_history": [],
+  "iteration_count": 1,
+  "revision_history": [
+    {
+      "date": "2026-10-05",
+      "by": "Mauricio Quezada Ibáñez",
+      "reason": "owner widened the hotfix with defects found in use (D-45): profile injected from another agent's folder, prod-gate decided by the session's cwd repo, prod OK asked through a question tool, silent approval hook, opaque approve error; REST to non-Karvey repos warns; BUG-53/54 renumbered to BUG-138/139 (held by another branch)",
+      "decision": "D-45",
+      "added": [
+        "REQ-HF-020",
+        "REQ-HF-021",
+        "REQ-HF-022",
+        "REQ-HF-023",
+        "REQ-HF-024",
+        "REQ-HF-025",
+        "REQ-HF-026",
+        "REQ-HF-027",
+        "REQ-HF-028",
+        "REQ-HF-029",
+        "REQ-HF-030"
+      ],
+      "revised": [
+        "REQ-HF-014",
+        "REQ-HF-017",
+        "REQ-HF-018"
+      ],
+      "findings": [
+        "F-05",
+        "F-06",
+        "F-07",
+        "F-08",
+        "F-09",
+        "F-10",
+        "F-11"
+      ],
+      "ripple": [
+        "prd.md",
+        "findings.md",
+        "spec-delta.md",
+        "PLAN.md",
+        "docs/spec/backlog.md (BL-64)"
+      ]
+    }
+  ],
   "seed_backlog_id": [
     "BL-64"
   ],
@@ -57,5 +100,5 @@
     }
   },
   "created_at": "2026-09-29T16:40:39+00:00",
-  "updated_at": "2026-09-29T16:43:08+00:00"
+  "updated_at": "2026-10-05T05:55:15+00:00"
 }

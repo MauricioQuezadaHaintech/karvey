@@ -385,6 +385,6 @@
 - **Status:** open
 
 ## BL-64 — protect-paths blocks a read-only listing of the approval/state paths
-- **Origin:** real use, 2026-09-29 (owner); promoted to change `prod-gate-scope` (hotfix 3.12.1) as BUG-54 (finding F-04).
+- **Origin:** real use, 2026-09-29 (owner); promoted to change `prod-gate-scope` (hotfix 3.12.1) as BUG-139 (finding F-04).
 - **Why:** `ls <state dir> 2>/dev/null; echo done`, `cat <ledger> | python3 -m json.tool` and `ls "$(git rev-parse --git-common-dir)/karvey/approvals/"` are blocked although nothing is written: the last protect-paths check requires every segment of the call to be read-only.
-- **Status:** promoted (BUG-54)
+- **Status:** promoted (BUG-139)
