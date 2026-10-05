@@ -117,6 +117,16 @@
         4
       ]
     },
+    "repos": {
+      "description": "REQ-HF-005: the repos this change releases (repo names); the owning repo binds each one's release commit into the change's production approval",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      }
+    },
     "layers": {
       "type": "array",
       "items": {
