@@ -80,7 +80,7 @@
     "client_tag": ""
   },
   "schema_version": 1,
-  "phase": "tasks",
+  "phase": "test",
   "phase_history": [
     {
       "phase": "init",
@@ -102,6 +102,18 @@
     {
       "phase": "tasks",
       "entered_at": "2026-10-05T06:01:50+00:00",
+      "exited_at": "2026-10-05T06:02:40+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "impl",
+      "entered_at": "2026-10-05T06:02:40+00:00",
+      "exited_at": "2026-10-05T06:19:29+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "test",
+      "entered_at": "2026-10-05T06:19:29+00:00",
       "by": "agent (hotfix lane)"
     }
   ],
@@ -141,7 +153,7 @@
     }
   },
   "created_at": "2026-09-29T16:40:39+00:00",
-  "updated_at": "2026-10-05T06:02:31+00:00",
+  "updated_at": "2026-10-05T06:19:29+00:00",
   "skipped": {
     "mockup": "hotfix lane, no UI: the change touches hooks, the prod-gate and the state tool only",
     "design_graphic": "no UI (hooks and CLI text only)",

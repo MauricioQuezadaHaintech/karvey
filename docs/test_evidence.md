@@ -175,3 +175,49 @@ BUG-22..26, each red first on its parent commit (`docs/bugs_dev_testing.md`): `t
 ### CI after QA (2026-09-26)
 - run 36211327222 @ `72b460b`: 6/7 green; `windows-advisory` red — the BUG-37 lock stayed behind on Windows (text-mode fd). Fixed in `9c6d3b7` (BUG-37 re-opened and resolved).
 - run 36211642274 @ `9c6d3b7`: `windows-advisory` green; `tests (macos-latest, 3.12)` red on one timing assertion (`nc-08` 1.43 s > 1 s limit, functionally green) → F-89. All other legs green.
+
+---
+
+# Test evidence: prod-gate-scope (hotfix 3.12.1) — 2026-10-05
+
+Head `368f013` on `hotfix/3.12.1-prod-gate` (Linux, Python 3, node). Red-first: every BUG-138..144 check failed on
+`e2acfab` (3.12.0) before its fix (`docs/bugs_dev_testing.md`).
+
+### Full suite
+
+| Suite | Result |
+|---|---|
+| `python3 -m unittest discover -s plugins/karvey/tests/unit` | 819 tests, OK |
+| `python3 -m unittest discover -s plugins/karvey/tests/regression` | 10 tests, OK (BUG-05..51, 138..144 indexed) |
+| `run_tables.py` | 431 cases, 517 runs (86 without python), 517 passed |
+| `KARVEY_SKIP_TABLES=1 test-hooks.sh` | 67 passed |
+| `node --test plugins/karvey/tests/page/` | 22 passed |
+| `lint-plugin.py` | 0 errors, 3 warnings (37 checks, L-80 included) |
+| `karvey-state.py validate --all` | 0 errors |
+
+### PASS/FAIL per requirement
+
+| Requirements | Evidence | Status |
+|---|---|---|
+| HF-001..004, 029 (BUG-138, BUG-143) | approval table ap-hf-01..10; test_approval_scope (8) | ✅ PASS |
+| HF-005, 006, 009, 030 (BUG-144) | test_state_repos (6) | ✅ PASS |
+| HF-007, 008 | test_prodgate_multirepo (4) | ✅ PASS |
+| HF-010..013, 015 | test_restcalls (9), test_prodgate_pipeline (11), pg-hf-03..09 | ✅ PASS |
+| HF-014, 024..026 (BUG-141) | test_prodgate_target (8), pg-hf-01/02 | ✅ PASS |
+| HF-016 (BUG-139) | pp-hf-01..09 | ✅ PASS |
+| HF-017 | regression index | ✅ PASS |
+| HF-018 | session error path (test_session_profile), approval-hook error line, pg-hf-09 without python, existing CLI time-out rows | ✅ PASS |
+| HF-020..023 (BUG-140) | ss-hf-01..07 (python + no-python), test_session_profile (16) | ✅ PASS |
+| HF-027, 028 (BUG-142) | L80 tests (6), lint on the real tree | ✅ PASS |
+| HF-019 | release gate | ⏳ at release prep |
+
+Not run: a live call against a real host (GitHub / Azure DevOps): the gate's network lookups are exercised
+through the CLI stubs and patched CLI answers; the release PR's CI is the live check of the suites.
+
+### Benchmark (pre-bash, n=20)
+
+| Command | Median / p95 |
+|---|---|
+| `ls 2>/dev/null` | 89 / 96 ms |
+| `curl -s https://example.com/health` (pre-filtered into the prod-gate, not a candidate) | 90 / 99 ms |
+| `python3 -c 'print(1)'` | 91 / 93 ms |
