@@ -1567,3 +1567,213 @@ the dry-run early exit ran before the unknown-option check and never saw the neg
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-96, karvey-qa re-run D7 second opinion re-check (N-5, N-6) |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on d0153c2, green after |
+
+## BUG-138 — The prod approval was recorded for the active change, not the change the phrase named
+- **Priority:** high
+- **Detected:** 2026-09-29 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`scope_for`), guards.py (`approval_hook`)
+- **Change / origin:** prod-gate-scope — finding F-01 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+In a working tree where only `team-adapters` is open, the human writes «aprobado para producción project-upgrade 3.13.0»; `project-upgrade` lives on another branch.
+
+### Actual vs expected
+- Actual: a prod marker `(prod, team-adapters)`: an approval of a change the human did not name.
+- Expected: a named change wins; a named change that is not in this tree records nothing and names the worktree or branch that holds it; several named changes or no resolvable change record nothing; the single active change is said out loud.
+
+### Root cause
+`approval.scope_for` only matched ids present in the tree; anything else fell back to the active change.
+
+### Fix
+`approval.resolve_prod_scope` (named here → that change; named elsewhere → worktree/branch lookup, nothing recorded; several named → nothing; none → the single active change, said in the line). Plan approvals keep the 3.12.0 rule. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/approval.json` ap-hf-02, ap-hf-03, ap-hf-05, ap-hf-06; `plugins/karvey/tests/unit/test_approval_scope.py`; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-29 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-01, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-139 — protect-paths blocked read-only listings of the state paths (BL-64)
+- **Priority:** low
+- **Detected:** 2026-09-29 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`protect_paths`)
+- **Change / origin:** prod-gate-scope — finding F-04 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`ls -la .git/karvey/approvals/ 2>/dev/null; echo done`, `cat .git/karvey/ledger/x.json | python3 -m json.tool`, `ls "$(git rev-parse --git-common-dir)/karvey/approvals/"`.
+
+### Actual vs expected
+- Actual: blocked although nothing is written.
+- Expected: allowed; any write form (mutator, redirection into the path, `xargs`, `tee`) stays blocked.
+
+### Root cause
+the last check (a needle split by quoting) required every segment to be in READ_ONLY; `echo`, a formatter and a read-only `git` subcommand are not.
+
+### Fix
+`_listing_safe`: READ_ONLY, text output, path-less formatters and read-only `git` subcommands without a write redirection count as safe beside a listing. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/protect-paths.json` pp-hf-01, pp-hf-02, pp-hf-03; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-29 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-04, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-140 — The session hook injected another agent's profile, including a sensitive handoff
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/livestate.py, karvey_hooks.py (`session_text`), hooks/karvey-session-context.sh
+- **Change / origin:** prod-gate-scope — finding F-05 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A session starts (or resumes) in a folder of another agent, in a team folder above the repos, or in a repo the team configuration does not map.
+
+### Actual vs expected
+- Actual: the hook walked up the folder tree and injected the profile it found first (or the default `ceo` role): manifest, board and handoff of another agent, one of them a sensitive handoff.
+- Expected: a profile only from the repo the session works in (its git top level), mapped by exact name; otherwise, or when ambiguous, nothing and one line with the explicit restore command; a sensitive handoff only in its own repo.
+
+### Root cause
+`find_team_root` walked up from the starting directory, the role was taken from the first folder below the team root with a `ceo` fallback, and a handoff had no sensitivity mark.
+
+### Fix
+`livestate.resolve_session_profile` (git top level, explicit mapping, no default role, ambiguity → nothing), `handoff_sensitive` / `profile_repos`, `karvey_hooks.py restore-profile`, `/karvey-checkpoint restore --profile`, `save --sensitive`; the bash degraded path mirrors it. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/session.json` ss-hf-01, ss-hf-02, ss-hf-03, ss-hf-05, ss-hf-06; `plugins/karvey/tests/unit/test_session_profile.py`; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-05, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-141 — The prod-gate decided by the session's repo instead of the PR's repo
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_evaluate_candidate`), clones.py
+- **Change / origin:** prod-gate-scope — finding F-06 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+From repo A, `gh pr merge <n> --repo <owner>/<B>` (or a PR URL) on a PR into B's integration branch.
+
+### Actual vs expected
+- Actual: evaluated with A's flow, production set and ledger: blocked as a production merge.
+- Expected: the target repo is the one the command names; its local clone gives flow, production set and ledger; an integration base passes; a non-Karvey target passes with a warning.
+
+### Root cause
+`root` came from the command's directory; `--repo` only reached the PR lookup.
+
+### Fix
+`resolve_target` (clone lookup by name in `clones.py`), host-answer URL check, owner-repo release, non-Karvey warning. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_prodgate_target.py`; `plugins/karvey/tests/hooks/tables/prod-gate.json` pg-hf-01; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-06, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-142 — The deploy skill asked for the production OK through a question tool
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/skills/karvey-deploy/SKILL.md (2.9), lint-plugin.py
+- **Change / origin:** prod-gate-scope — finding F-07 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Run `karvey-deploy` to step 2.9 and answer the question tool with the production OK.
+
+### Actual vs expected
+- Actual: the answer never reaches the UserPromptSubmit hook: no prod marker, and `approve … prod` is refused.
+- Expected: the OK is typed by the human from a phrase the agent shows (change id, PR, version, head SHA); lint forbids a question tool for it.
+
+### Root cause
+the skill text said to ask with `AskUserQuestion`; a question-tool answer is not a prompt.
+
+### Fix
+2.9 rewritten; lint L-80. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+L-80; `plugins/karvey/tests/unit/test_lint_plugin.py`; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-07, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-143 — A production-shaped phrase that recorded nothing printed nothing
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`approval_hook`), approval.py
+- **Change / origin:** prod-gate-scope — finding F-08 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Write «aprobado para producción, no hay más cambios», or a production phrase late in a long prompt, or with several active changes.
+
+### Actual vs expected
+- Actual: no line at all; the owner learnt of it from the later "kind plan does not satisfy prod".
+- Expected: exactly one line: recorded (kind, change) or NOT recorded with the reason and the phrase to type.
+
+### Root cause
+the hook printed only when it wrote a marker.
+
+### Fix
+`approval.prod_shaped`, `suggested_phrase`; the hook prints the NOT-recorded line (also on an internal error). Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/approval.json` ap-hf-07, ap-hf-09, ap-hf-10; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-08, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-144 — The `approve … prod` refusal did not say which marker it found
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey-state.py (`cmd_approve`), approval.py
+- **Change / origin:** prod-gate-scope — finding F-09 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`approve <id> prod …` with only a plan marker, an expired prod marker, or a marker of another change.
+
+### Actual vs expected
+- Actual: "kind plan does not satisfy prod" and nothing else.
+- Expected: each marker found (kind, change, age, state), the missing piece, and the phrase to type.
+
+### Root cause
+the refusal printed `find_valid`'s per-scope reason only.
+
+### Fix
+`approval.describe_markers` and `marker_report`. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_repos.py`; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-09, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |

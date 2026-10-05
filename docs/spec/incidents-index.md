@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimension review and the second opinion, all RESUELTO with a regression test red on 4c9b7c0)
+Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO with a regression test red on e2acfab)
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -59,6 +59,13 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | BUG-49 | karvey | low | `reopen` superseded the ledger prod approval after writing spec.json | wave1-hardening / F-94 | RESUELTO | plugins/karvey/tests/unit/test_state_approve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-50 | karvey | high | prod-gate push parser missed `refs/*` wildcards, `-o` clusters, abbreviated long options and remote names with a slash | wave1-hardening / F-95 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-13..17 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-51 | karvey | high | prod-gate trusted `--dry-run` cancelled by `--no-dry-run` and ignored `--repo` | wave1-hardening / F-96 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-18..20 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-138 | karvey | high | The prod approval was recorded for the active change, not the change the phrase named | prod-gate-scope / F-01 | RESUELTO | plugins/karvey/tests/ approval.json ap-hf-02/03/05/06; test_approval_scope.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-139 | karvey | low | protect-paths blocked read-only listings of the state paths (BL-64) | prod-gate-scope / F-04 | RESUELTO | plugins/karvey/tests/ protect-paths.json pp-hf-01..03 (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-140 | karvey | high | The session hook injected another agent's profile, including a sensitive handoff | prod-gate-scope / F-05 | RESUELTO | plugins/karvey/tests/ session.json ss-hf-01..06; test_session_profile.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-141 | karvey | high | The prod-gate decided by the session's repo instead of the PR's repo | prod-gate-scope / F-06 | RESUELTO | plugins/karvey/tests/ test_prodgate_target.py; prod-gate.json pg-hf-01 (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-142 | karvey | high | The deploy skill asked for the production OK through a question tool | prod-gate-scope / F-07 | RESUELTO | plugins/karvey/tests/ L-80; test_lint_plugin.py (L80) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-143 | karvey | medium | A production-shaped phrase that recorded nothing printed nothing | prod-gate-scope / F-08 | RESUELTO | plugins/karvey/tests/ approval.json ap-hf-07/09/10 (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-144 | karvey | medium | The `approve … prod` refusal did not say which marker it found | prod-gate-scope / F-09 | RESUELTO | plugins/karvey/tests/ test_state_repos.py (Refusal) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 
 ## Summary by state
 
@@ -67,7 +74,7 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 51 | BUG-01 .. BUG-51 |
+| RESUELTO | 58 | BUG-01 .. BUG-51, BUG-138 .. BUG-144 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-52**.
+Next number: **BUG-145** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).

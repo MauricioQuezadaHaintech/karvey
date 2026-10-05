@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-144 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -247,6 +247,47 @@ INDEX = {
         ("table", "prod-gate", "pg6-18-dry-run-cancelled-by-no-dry-run"),
         ("table", "prod-gate", "pg6-19-repo-option-names-a-mirror-remote"),
         ("table", "prod-gate", "pg6-20-repo-option-names-a-wildcard-remote"),
+    ],
+    # hotfix 3.12.1 (prod-gate-scope, D-43/D-45); BUG-52..137 are held by other branches
+    "BUG-138": [  # F-01: prod approval bound to the active change instead of the named one
+        ("table", "approval", "ap-hf-02-named-change-only-on-a-branch-records-nothing"),
+        ("table", "approval", "ap-hf-03-named-change-nowhere-records-nothing"),
+        ("table", "approval", "ap-hf-05-several-active-records-nothing"),
+        ("table", "approval", "ap-hf-06-several-named-records-nothing"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_named_change_in_a_worktree_is_named_as_the_fix"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_named_change_on_a_branch_names_the_branch"),
+    ],
+    "BUG-139": [  # F-04 / BL-64: read-only listings of the state paths blocked
+        ("table", "protect-paths", "pp-hf-01-ls-then-echo"),
+        ("table", "protect-paths", "pp-hf-02-cat-into-json-tool"),
+        ("table", "protect-paths", "pp-hf-03-ls-of-rev-parse-substitution"),
+    ],
+    "BUG-140": [  # F-05: another agent's profile (and a sensitive handoff) injected
+        ("table", "session", "ss-hf-01-ancestor-folder-profile-not-injected"),
+        ("table", "session", "ss-hf-02-team-folder-not-a-repo-gets-nothing"),
+        ("table", "session", "ss-hf-03-unmapped-repo-no-default-role"),
+        ("table", "session", "ss-hf-05-cwd-changed-to-another-repo-ambiguous"),
+        ("table", "session", "ss-hf-06-two-candidates-inject-nothing"),
+        ("unit", "test_session_profile.py", "SessionProfile.test_bug140_sensitive_handoff_withheld_on_explicit_restore_elsewhere"),
+    ],
+    "BUG-141": [  # F-06: prod-gate decided by the session's repo, not the PR's
+        ("unit", "test_prodgate_target.py", "Target.test_merge_into_the_target_integration_branch_passes"),
+        ("unit", "test_prodgate_target.py", "Target.test_production_merge_is_checked_on_the_target_ledger"),
+        ("unit", "test_prodgate_target.py", "Target.test_non_karvey_target_passes_with_a_warning"),
+        ("table", "prod-gate", "pg-hf-01-repo-flag-names-a-non-karvey-repo"),
+    ],
+    "BUG-142": [  # F-07: production OK asked through a question tool
+        ("lint", "L-80"),
+        ("unit", "test_lint_plugin.py", "L80.test_question_tool_for_prod_ok_fails"),
+    ],
+    "BUG-143": [  # F-08: a production-shaped phrase that recorded nothing printed nothing
+        ("table", "approval", "ap-hf-07-negated-prod-phrase-says-why"),
+        ("table", "approval", "ap-hf-09-late-prod-phrase-says-why"),
+        ("table", "approval", "ap-hf-10-not-recorded-line-suggests-the-phrase"),
+    ],
+    "BUG-144": [  # F-09: the approve refusal did not name the markers found
+        ("unit", "test_state_repos.py", "Refusal.test_refusal_lists_markers_and_missing_piece"),
+        ("unit", "test_state_repos.py", "Refusal.test_refusal_with_no_marker"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
