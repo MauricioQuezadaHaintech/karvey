@@ -1052,13 +1052,48 @@ class L36(LintCase):
         self.assertPasses("L-36")
 
 
+DEPLOY = SKILLS + "/karvey-deploy/SKILL.md"
+
+
+class L80(LintCase):
+    """BUG-142, REQ-HF-028: the production OK is typed by the human, never answered through a question tool."""
+
+    def test_pass(self):
+        self.assertPasses("L-80")
+
+    def test_question_tool_for_prod_ok_fails(self):
+        self.t.append(DEPLOY, "\n**2.9 — Prod OK.** Ask with `AskUserQuestion` for the production approval of the PR.\n")
+        fs = self.assertFails("L-80", "question tool", file=DEPLOY)
+        self.assertTrue(all(f["line"] > 1 for f in fs))
+
+    def test_question_tool_words_in_a_rule_fail(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nGet the prod OK through a question tool and record "
+                                            "the prod marker.\n")
+        self.assertFails("L-80", "production OK", file=RULES + "/release.md")
+
+    def test_negated_instruction_passes(self):
+        self.t.append(DEPLOY, "\nNever use `AskUserQuestion` for the prod OK: its answer never reaches the "
+                              "approval hook. Show the phrase for the human to type.\n")
+        self.assertPasses("L-80")
+
+    def test_question_tool_for_another_question_passes(self):
+        self.t.append(DEPLOY, "\nAsk with `AskUserQuestion` which canary percentage to use.\n\nThe production "
+                              "approval is typed by the human.\n")
+        self.assertPasses("L-80")
+
+    def test_code_block_is_ignored(self):
+        self.t.append(DEPLOY, "\n```text\nAskUserQuestion: prod OK?\n```\n")
+        self.assertPasses("L-80")
+
+
 class ListAll(unittest.TestCase):
     def test_list_names_l01_to_l36(self):
         code, out, _ = run_cli("--root", str(_path.REPO_ROOT), "--list")
         self.assertEqual(code, 0, out)
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)])
+        self.assertIn("L-80 ", out)
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)] + ["L-80"])
 
 
 if __name__ == "__main__":

@@ -1839,6 +1839,49 @@ def l36_impl_logical_dependencies(ctx):
         yield impl, 1, "karvey-impl does not state that a dependency is satisfied at `review` or `done` (REQ-W1-085)"
 
 
+# --------------------------------------------------------------------------- L-80
+QTOOL_RE = re.compile(r"AskUserQuestion|\bquestion[- ]tool\b", re.I)
+PROD_OK_RE = re.compile(r"\bprod(?:uction)?\s+(?:ok|approval|marker)\b", re.I)
+QTOOL_NEG_RE = re.compile(r"\b(never|not|no|don't|do not)\b[^.;:]*$", re.I)
+
+
+def _paragraphs(ctx, path):
+    """``(first_lineno, text)`` of each prose paragraph (code blocks and frontmatter skipped)."""
+    lines = ctx.lines(path)
+    _, end, _ = parse_frontmatter(lines)
+    buf, start = [], None
+    for n, line, lang in iter_lines(lines):
+        if n <= end:
+            continue
+        if lang is not None or not line.strip() or FENCE_RE.match(line):
+            if buf:
+                yield start, " ".join(buf)
+            buf, start = [], None
+            continue
+        if start is None:
+            start = n
+        buf.append(line.strip())
+    if buf:
+        yield start, " ".join(buf)
+
+
+@check("L-80", "the production OK is typed by the human: no skill or rule asks for it through a question tool, "
+               "whose answer never reaches the approval hook (BUG-142, REQ-HF-028)")
+def l80_prod_ok_not_by_question_tool(ctx):
+    for path in ctx.text_files():
+        for n, para in _paragraphs(ctx, path):
+            if not PROD_OK_RE.search(para):
+                continue
+            for m in QTOOL_RE.finditer(para):
+                sentence = re.split(r"[.!?]\s", para[:m.start()])[-1]
+                if QTOOL_NEG_RE.search(sentence):
+                    continue
+                yield (path, n, "asks for the production OK through a question tool (%s); its answer never reaches "
+                                "the approval hook, so no prod marker is recorded. Ask in plain text and show the "
+                                "phrase the human types (BUG-142)" % m.group(0))
+                break
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""
@@ -2020,7 +2063,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser():
-    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-36).")
+    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-36, L-80).")
     p.add_argument("--root", help="repository root (default: git top level)")
     p.add_argument("--plugin", help="plugin directory (default: <root>/plugins/karvey)")
     p.add_argument("--only", help="comma list of check ids (L-NN)")
