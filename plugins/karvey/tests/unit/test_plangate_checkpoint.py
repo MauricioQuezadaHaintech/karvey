@@ -64,3 +64,31 @@ class TeamLayout(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ProjectMarkerSession(unittest.TestCase):
+    """D7 on D-47: a project-wide plan approval has no phase to close; it belongs to the session that gave it."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = g.init(Path(os.path.realpath(self.tmp.name)) / "app")
+        g.write(self.root, "docs/spec/project.json", {"branch_flow": {"integration": "main", "production": "main"},
+                                                      "enforcement": {"plan_gate_hook": True}})
+        g.write(self.root, "src/a.py", "x\n")
+        g.commit_all(self.root)
+        e = mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(self.root.parent / "xdg"), approval.COMPAT_ENV: ""})
+        e.start()
+        self.addCleanup(e.stop)
+        approval.write_marker(self.root, "plan", "_project", "ok", session_id="s-old", compat="")
+
+    def run_rm(self, session):
+        out, err = io.StringIO(), io.StringIO()
+        payload = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "cwd": str(self.root), "session_id": session,
+                   "tool_input": {"command": "rm src/a.py"}}
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(self.root))
+        return kh.dispatch("pre-bash", json.dumps(payload), env=env, out=out, err=err, only=["plan-gate"])
+
+    def test_same_session_proceeds_another_session_is_gated(self):
+        self.assertEqual(self.run_rm("s-old"), 0)
+        self.assertEqual(self.run_rm("s-new"), 2)

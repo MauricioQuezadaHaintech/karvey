@@ -1504,7 +1504,7 @@
       "input": {
         "tool_name": "Bash",
         "tool_input": {
-          "command": "bash -c 'rm -rf /tmp/x'"
+          "command": "bash -c 'rm -rf build'"
         }
       },
       "expect": {
@@ -1523,7 +1523,8 @@
         "plan-gate",
         "REQ-W1-015",
         "H-10"
-      ]
+      ],
+      "note": "D-47: /tmp is scratch, so the wrapper is tested on a project folder"
     },
     {
       "id": "pg-36-destructive",
@@ -4213,6 +4214,1243 @@
         "plan-gate",
         "REQ-HF-032",
         "D-47"
+      ]
+    },
+    {
+      "id": "d47-22-terraform-global-flag-before-verb",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "terraform -chdir=infra apply -auto-approve"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-23-kubectl-context-before-verb",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "kubectl --context prod -n app apply -f k.yaml"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-24-helm-namespace-before-verb",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "helm -n app upgrade rel ./chart"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-25-pip-target-in-venv-path-still-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": ".venv/bin/pip install --prefix /usr/local x"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-26-sql-from-a-pipe-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "cat q.sql | sqlcmd -S s"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-27-psql-include-directive-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "psql -c '\\i q.sql'"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-28-versioned-python-m-pip",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "python3.12 -m pip install x"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-29-sql-select-from-a-pipe-of-echo-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "echo 'SELECT 1' | sqlcmd -S s"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-30-kubectl-get-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "kubectl --context prod get pods"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-31-rm-rf-scratch-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "rm -rf /tmp/claude-x/work"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-32-select-with-create-in-a-literal-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "sqlcmd -Q \"SELECT name FROM t WHERE name LIKE '%create%'\""
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-33-exec-of-a-read-procedure-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "sqlcmd -Q \"EXEC dbo.sp_get_cases @id=1\""
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-34-exec-of-a-write-procedure-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "sqlcmd -Q \"EXEC dbo.sp_post_case @id=1\""
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-35-az-config-list-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "az webapp config appsettings list -g rg -n app"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-36-kubectl-rollout-status-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "kubectl rollout status deploy/api"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-37-aws-s3-download-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "aws s3 cp s3://b/k ./k"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-38-venv-activate-then-pip-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "source .venv/bin/activate && pip install -r requirements.txt"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-39-uv-pip-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "uv pip install x"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-40-alembic-upgrade-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "alembic upgrade head"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-41-gh-repo-delete-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "gh repo delete org/x --yes"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-42-gsutil-rm-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "gsutil rm -r gs://b"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-43-curl-delete-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "curl -X DELETE https://api.example.com/items/1"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-44-docker-system-prune-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "docker system prune -af"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-45-xargs-rm-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "xargs rm < files.txt"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-46-inline-python-sql-delete-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "python3 -c \"c.execute('DELETE FROM t WHERE id=1')\""
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-47-crontab-r-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "crontab -r"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-48-gh-release-create-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "gh release create v1.0.0"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-49-push-deleting-a-tag-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git push origin :refs/tags/v1"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
+      ]
+    },
+    {
+      "id": "d47-50-systemctl-restart-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "systemctl restart nginx"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d7"
       ]
     }
   ]

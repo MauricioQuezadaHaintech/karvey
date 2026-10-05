@@ -483,10 +483,28 @@ def _sql_class(text):
     for d in _SQL_DELETE.finditer(text):
         if not re.search(r"\bwhere\b", d.group("rest"), re.I):
             return "SQL DELETE without WHERE"
-    m = _SQL_WRITE.search(_strip_sql_comments(text))
-    if m:
-        return "SQL %s (writes data or schema)" % m.group(1).split()[0].upper()
+    body = _strip_sql_literals(_strip_sql_comments(text))
+    for m in _SQL_WRITE.finditer(body):
+        word = m.group(1).split()[0].lower()
+        if word in ("exec", "execute", "call"):  # D-47: a read procedure is investigation; a write one is not
+            name = re.match(r"\s*(?:@\w+\s*=\s*)?([\w.\[\]\"]+)", body[m.end():])
+            proc = (name.group(1) if name else "").lower()
+            if not proc or _WRITE_PROC.search(proc.rsplit(".", 1)[-1].strip("[]\"")):
+                return "SQL %s %s (may write data)" % (word.upper(), proc or "?")
+            continue
+        return "SQL %s (writes data or schema)" % word.upper()
+    if re.search(r"(^|\s)(\\i|\\ir|\\include|source|\.read)\s", text or ""):
+        return "SQL script included by the client (cannot be read)"
     return None
+
+
+_WRITE_PROC = re.compile(r"(post|put|ins|upd|del|set|save|create|delete|update|merge|import|purge|clean|fix|"
+                         r"load|sync|write|drop|insert|remove|alter|grant|reset|migrat|seed|truncat|archive|move|"
+                         r"close|approve|send)", re.I)
+
+
+def _strip_sql_literals(text):
+    return re.sub(r"'(?:[^']|'')*'|N'(?:[^']|'')*'", "''", text or "")
 
 
 def _strip_sql_comments(text):
@@ -593,23 +611,106 @@ def _tracked(seg, paths):
     return out
 
 
+_READ_VERBS = frozenset({"show", "list", "get", "describe", "status", "logs", "log", "top", "version", "history",
+                         "diff", "explain", "api-resources", "cluster-info", "wait", "query", "check", "export",
+                         "download", "view", "search", "lint", "template", "plan", "validate", "output", "fmt",
+                         "init", "graph", "providers", "tail", "list-*", "ls", "cat", "events", "inspect", "info"})
+_TF_GLOBAL = re.compile(r"^-(chdir|help|version)")
+_GLOBAL_WITH_ARG = {"kubectl": {"-n", "--namespace", "--context", "--kubeconfig", "--cluster", "--user", "-s",
+                                "--server", "--token", "-l", "--selector"},
+                    "helm": {"-n", "--namespace", "--kube-context", "--kubeconfig", "--repository-config"},
+                    "docker": {"-H", "--host", "--context", "-c", "--config", "-l", "--log-level"}}
+_MIGRATE = [("alembic", "upgrade"), ("alembic", "downgrade"), ("flyway", "migrate"), ("flyway", "clean"),
+            ("liquibase", "update"), ("liquibase", "rollback"), ("dbmate", "up"), ("dbmate", "down"),
+            ("sqlpackage", "/a:publish"), ("sqlpackage", "/action:publish")]
+_HOSTS_LOCAL = re.compile(r"^https?://(localhost|127\.|0\.0\.0\.0|\[::1\])", re.I)
+
+
+def _is_scratch(path, seg, ctx):
+    """A path inside the temp folder (``/tmp``, ``$TMPDIR``) — scratch work, never the project."""
+    if not path or "$" in path or "*" in path or ".." in path.split("/"):
+        return False
+    full = os.path.realpath(path if os.path.isabs(path) else os.path.join(seg.cwd or os.getcwd(), path))
+    bases = {os.path.realpath("/tmp"), os.path.realpath("/var/tmp")}
+    if ctx is not None and ctx.env.get("TMPDIR"):
+        bases.add(os.path.realpath(ctx.env["TMPDIR"]))
+    if not any(full.startswith(b + "/") for b in bases):
+        return False
+    d = full if os.path.isdir(full) else os.path.dirname(full)
+    while d and not os.path.isdir(d):
+        d = os.path.dirname(d)
+    return clones.toplevel(d) is None  # a repository under the temp folder is not scratch
+
+
+def _verb(n, args):
+    """The first positional word of a CLI after its global options (D1 on D-47: `terraform -chdir=x apply`,
+    `kubectl --context c -n ns apply`)."""
+    with_arg = _GLOBAL_WITH_ARG.get(n, set())
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a.startswith("-"):
+            i += 2 if (a in with_arg and "=" not in a) else 1
+            continue
+        return a, args[i + 1:]
+    return "", []
+
+
+def _venv_in(seg, ctx):
+    """pip/uv run inside a virtual environment: a venv executable, ``VIRTUAL_ENV``, an activate earlier in the
+    same call, ``uv`` (always a project venv), or a ``.venv``/``venv`` folder in the command's directory; never
+    with ``--prefix``/``--root``/``--target``/``--user``/``--system``/``--break-system-packages``."""
+    args = seg.argv[1:]
+    if any(a in ("--prefix", "--root", "--target", "-t", "--user", "--system", "--break-system-packages") or
+           a.startswith(("--prefix=", "--root=", "--target=")) for a in args):
+        return False
+    exe = seg.argv[0] if seg.argv else ""
+    if _VENV_BIN.search(exe):
+        real = os.path.realpath(os.path.join(seg.cwd or os.getcwd(), exe)) if not os.path.isabs(exe) else \
+            os.path.realpath(exe)
+        return bool(_VENV_BIN.search(real))
+    if posixpath.basename(exe) == "uv":
+        return True
+    if ctx is not None and ctx.env.get("VIRTUAL_ENV"):
+        return True
+    if ctx is not None and re.search(r"(^|[;&|]\s*)(source|\.)\s+\S*(venv|\.venv)\S*/bin/activate",
+                                     ctx.payload.command or ""):
+        return True
+    cwd = seg.cwd or os.getcwd()
+    return any(os.path.isfile(os.path.join(cwd, d, "pyvenv.cfg")) for d in (".venv", "venv"))
+
+
 def consequential_class(seg, ctx=None):
     """D-47 (REQ-HF-032): the consequential class of one segment, or None (free)."""
     n = posixpath.basename(seg.argv0 or "")
     args = seg.argv[1:]
-    if n == "sudo" and args:
+    if n in ("sudo", "doas", "env", "command", "nice", "nohup", "time", "timeout") and args:
         return None  # the wrapped command is its own segment
+    if n in SQL_CLIENTS and seg.op == "|" and ctx is not None:  # SQL from a pipe (D1 on D-47)
+        segs = ctx.parsed.segments
+        k = segs.index(seg) if seg in segs else -1
+        prev = segs[k - 1] if k > 0 else None
+        if prev is not None and posixpath.basename(prev.argv0 or "") in ("echo", "printf"):
+            c = _sql_class(" ".join(prev.argv[1:]))
+            return c
+        return "SQL from a pipe (cannot be read)"
     c = destructive_class(seg)
     if c in ("sed -i", "perl -i"):
         c = None  # an in-place edit is a file edit (plan_gate_edits)
     if c == "truncate":
         c = "truncate of a tracked file" if _tracked(seg, [a for a in args if not a.startswith("-")]) else None
+    if c == "recursive rm":  # D-47: rm -rf is consequential, except inside a scratch location (D7)
+        targets = [a for a in args if not a.startswith("-")]
+        if targets and all(_is_scratch(t, seg, ctx) for t in targets):
+            c = None
     if c:
         return c
     if n in ("rm", "unlink", "shred") and _tracked(seg, args):
         return "delete of a tracked file"
     if n == "mv" and _tracked(seg, [a for a in args if not a.startswith("-")]):
         return "move or overwrite of a tracked file"
+    if n == "xargs" and any(posixpath.basename(a) in ("rm", "unlink", "shred", "git") for a in args):
+        return "xargs delete (targets cannot be read)"
     if n == "git" and seg.git:
         sub, ga = seg.git.get("sub"), seg.git.get("args") or []
         if sub == "rm":
@@ -618,23 +719,30 @@ def consequential_class(seg, ctx=None):
             return "git %s (history rewrite)" % sub
         if sub == "rebase" and any(a in ("-i", "--interactive", "--root") for a in ga):
             return "git rebase (history rewrite)"
-    if n in ("pip", "pip3", "uv", "poetry", "conda", "mamba") or re.match(r"^pip3(\.\d+)?$", n):
-        verb = next((a for a in args if not a.startswith("-")), "")
+        if sub == "push" and any(a.startswith(":") or a == "--delete" or a == "-d" for a in ga):
+            return "git push that deletes a remote branch or tag"
+        if sub == "tag" and any(a in ("-d", "--delete") for a in ga):
+            return None
+    if re.match(r"^(pip3?(\.\d+)?|uv|poetry|conda|mamba|pipx)$", n) or (
+            re.match(r"^python3?(\.\d+)?$", n) and args[:2] == ["-m", "pip"]):
+        rest = args[2:] if n.startswith("python") else args
+        verb = next((a for a in rest if not a.startswith("-")), "")
         if n == "uv":
-            verb = " ".join(a for a in args[:2])
-            if not re.match(r"^(pip install|pip uninstall|tool install)", verb):
+            sub = [a for a in rest if not a.startswith("-")][:2]
+            if sub[:1] == ["tool"] and sub[1:2] == ["install"]:
+                return "uv tool install (software change)"
+            if sub[:1] != ["pip"] or sub[1:2] not in (["install"], ["uninstall"]):
                 return None
-        if verb in ("install", "uninstall", "add", "remove", "update", "upgrade", "pip install", "tool install") \
-                or verb.startswith(("pip install", "pip uninstall")):
-            in_venv = (_VENV_BIN.search(seg.argv[0] if seg.argv else "") or
-                       (ctx is not None and ctx.env.get("VIRTUAL_ENV")) or "--target" in args or "-t" in args)
-            return None if in_venv else "%s %s (software change)" % (n, verb)
-    if n in ("python", "python3") and args[:2] == ["-m", "pip"] and len(args) > 2 and args[2] in ("install", "uninstall"):
-        in_venv = _VENV_BIN.search(seg.argv[0] if seg.argv else "") or (ctx is not None and ctx.env.get("VIRTUAL_ENV"))
-        return None if in_venv else "pip %s (software change)" % args[2]
+            verb = sub[1]
+        if verb in ("install", "uninstall", "add", "remove", "update", "upgrade", "inject"):
+            if n == "pipx" or n in ("conda", "mamba") and "-n" not in args and "--prefix" not in args:
+                return "%s %s (software change)" % (n, verb)
+            return None if _venv_in(seg, ctx) else "%s %s outside a virtual environment (software change)" % (n, verb)
     if n in ("npm", "pnpm", "yarn", "bun") and (any(a in ("-g", "--global", "global") for a in args)):
         if any(a in ("install", "i", "add", "uninstall", "remove", "rm", "update", "upgrade", "link") for a in args):
             return "%s global install (software change)" % n
+    if n in ("npm", "pnpm", "yarn") and args[:1] == ["publish"]:
+        return "%s publish" % n
     if n in _PKG:
         verb = next((a for a in args if not a.startswith("-") or n == "pacman"), "")
         if verb in _PKG[n]:
@@ -647,28 +755,78 @@ def consequential_class(seg, ctx=None):
     for d in _DEPLOY:
         if (n,) + tuple(args[:len(d) - 1]) == d:
             return "deploy (%s)" % " ".join(d)
-    if n in ("vercel", "netlify") and ("--prod" in args or "deploy" in args and n == "vercel" and "--prod" in args):
+    if n in ("vercel", "netlify") and "--prod" in args:
         return "%s production deploy" % n
-    if n in ("terraform", "tofu", "terragrunt") and args and args[0] in ("apply", "destroy", "import", "state",
-                                                                         "taint", "untaint", "run-all"):
-        return "%s %s (infrastructure)" % (n, args[0])
-    if n == "kubectl" and args and args[0] in ("apply", "delete", "patch", "scale", "replace", "create", "edit",
-                                                 "rollout", "set", "label", "annotate", "drain", "cordon"):
-        return "kubectl %s (infrastructure)" % args[0]
+    for tool, verb in _MIGRATE:
+        if n == tool and any(a.lower() == verb for a in args):
+            return "%s %s (schema migration)" % (n, verb)
+    if n in ("python", "python3") and "manage.py" in " ".join(args[:1]) and "migrate" in args:
+        return "Django migrate (schema migration)"
+    if n in ("npx", "prisma") and "prisma" in (args[:1] + [n]) and "migrate" in args and \
+            any(a in ("deploy", "dev", "reset") for a in args):
+        return "prisma migrate (schema migration)"
+    if n == "dotnet" and args[:3] == ["ef", "database", "update"]:
+        return "dotnet ef database update (schema migration)"
+    if n in ("terraform", "tofu", "terragrunt"):
+        verb, _r = _verb(n, args)
+        if verb in ("apply", "destroy", "import", "state", "taint", "untaint", "run-all"):
+            return "%s %s (infrastructure)" % (n, verb)
+        return None
+    if n in ("kubectl", "helm", "docker"):
+        verb, rest = _verb(n, args)
+        if n == "kubectl" and verb in ("apply", "delete", "patch", "scale", "replace", "create", "edit", "set",
+                                       "label", "annotate", "drain", "cordon", "taint") or \
+                n == "kubectl" and verb == "rollout" and rest[:1] and rest[0] in ("restart", "undo"):
+            return "kubectl %s (infrastructure)" % verb
+        if n == "helm" and verb in ("install", "upgrade", "uninstall", "rollback", "delete"):
+            return "helm %s (infrastructure)" % verb
+        if n == "docker" and (verb in ("push",) or verb == "system" and rest[:1] == ["prune"] or
+                              verb in ("volume", "image", "container", "network") and rest[:1] in (["prune"], ["rm"])):
+            return "docker %s (infrastructure)" % " ".join([verb] + rest[:1])
+        return None
     if n in ("az", "gcloud") and len(args) >= 2:
-        words = [a for a in args if not a.startswith("-")][:5]
-        if any(_INFRA_VERBS.match(w) for w in words[1:]) and words[0] not in ("login", "logout", "account",
-                                                                                "config", "auth", "version",
-                                                                                "help", "find", "upgrade",
-                                                                                "rest", "devops", "boards",
-                                                                                "repos", "pipelines", "artifacts"):
+        words = [a for a in args if not a.startswith("-")][:6]
+        if words and words[0] in ("login", "logout", "account", "config", "auth", "version", "help", "find",
+                                  "upgrade", "rest", "devops", "boards", "repos", "pipelines", "artifacts", "alias",
+                                  "feedback", "survey", "interactive", "bicep") and not (
+                n == "gcloud" and words[0] == "config" and False):
+            return None
+        if any(w in _READ_VERBS or w.startswith(("list-", "show-", "get-", "describe-")) for w in words[1:]):
+            return None  # D7 on D-47: `az webapp config appsettings list` reads
+        if any(_INFRA_VERBS.match(w) for w in words[1:]):
             return "%s %s (infrastructure)" % (n, " ".join(words[:3]))
-    if n == "aws" and len(args) >= 2 and re.match(r"^(create|delete|update|put|modify|terminate|run|start|stop|"
-                                                   r"attach|detach|associate|disassociate|rm|rb|mb|cp|sync|mv)",
-                                                   args[1] if args[0] != "s3" else args[1]):
-        return "aws %s %s (infrastructure)" % (args[0], args[1])
-    if n in SQL_CLIENTS or (n == "az" and args[:2] == ["sql", "db"]):
-        return None  # covered by destructive_class
+    if n == "gcloud" and args[:2] == ["storage", "rm"] or n == "gsutil" and args[:1] in (["rm"], ["rb"]):
+        return "bucket delete (infrastructure)"
+    if n == "aws" and len(args) >= 2:
+        if args[0] == "s3":
+            if args[1] in ("rm", "rb", "mb") or args[1] in ("cp", "sync", "mv") and any(
+                    a.startswith("s3://") for a in args[3:4] + args[-1:]):
+                return "aws s3 %s (writes a bucket)" % args[1]
+        elif re.match(r"^(create|delete|update|put|modify|terminate|run|start|stop|attach|detach|associate|"
+                      r"disassociate|reboot|restore|import|register|deregister)", args[1]):
+            return "aws %s %s (infrastructure)" % (args[0], args[1])
+    if n == "gh" and args[:2] in (["repo", "delete"], ["repo", "archive"], ["release", "create"],
+                                  ["release", "delete"], ["secret", "set"], ["secret", "delete"],
+                                  ["variable", "set"], ["variable", "delete"], ["workflow", "run"]):
+        return "gh %s (consequential)" % " ".join(args[:2])
+    if n == "gam" and re.search(r"\b(delete|suspend|undelete|update|create|add|remove|transfer|wipe|deprov)\b",
+                                " ".join(args)) and not re.search(r"\b(print|show|info|report)\b", " ".join(args[:3])):
+        return "Workspace admin change (gam)"
+    if n == "crontab" and any(a in ("-r", "-e") or not a.startswith("-") for a in args):
+        return "crontab change"
+    if n in ("systemctl", "service") and re.search(r"\b(stop|start|restart|reload|disable|enable|mask|kill)\b",
+                                                   " ".join(args)):
+        return "service change"
+    if n in ("curl", "wget", "http", "https", "xh", "httpx") and ctx is not None:
+        r = restcalls.parse_request(seg)
+        if r is not None and (r.method or "GET").upper() == "DELETE" and not all(
+                _HOSTS_LOCAL.match(u or "") for u in (r.urls or [r.url])):
+            return "HTTP DELETE to a remote service"
+    if re.match(r"^(python3?(\.\d+)?|node|ruby|perl|pwsh|powershell)$", n):
+        script = " ".join(args)
+        if re.search(r"(?i)\b(execute|exec|query|run|cursor)\w*\s*\(", script) and \
+                _sql_class(script.replace("\\'", "'")):
+            return "SQL write inside an inline script"
     if n in ("mongosh", "mongo") and re.search(r"\b(insert|update|delete|replace|drop|createIndex|"
                                                 r"bulkWrite|remove)\w*\s*\(", " ".join(args)):
         return "MongoDB write"
@@ -855,6 +1013,11 @@ def plan_gate(ctx):
     base = root or ctx.payload.cwd
     change = active_change(ctx, root)["change"] if root else None
     marker, scope, reasons = approval.find_valid(base, change=change, ttl_min=ttl_min(ctx, root) if root else None)
+    if marker is not None and scope == approval.SCOPE_PROJECT and marker.get("session_id") and \
+            ctx.payload.session_id and marker["session_id"] != ctx.payload.session_id:
+        # D7 on D-47: a project-wide approval has no phase to close; it belongs to the session that gave it
+        reasons[scope] = "a project-wide approval of another session"
+        marker = None
     if marker is not None:
         approval.cross_check(base, marker, ctx.payload.transcript_path)
         return None
@@ -2179,6 +2342,12 @@ def approval_hook(ctx):
                          % (code, (created + approval.timedelta(minutes=nm["ttl_min"])).strftime("%H:%M")))
         if approval.is_stop(text):  # D-47 (REQ-HF-033): "detente" / "stop" withdraws the plan approval
             gone = approval.withdraw_all(root)
+            for other in clones.project_paths(str(root)):  # the clones this project lists (D1 on D-47)
+                try:
+                    if pj.find_root(start=other) is not None:
+                        gone += approval.withdraw_all(other)
+                except Exception:
+                    pass
             lines.append("[karvey] plan approval withdrawn (stop)%s \u2014 a consequential action needs a new "
                          "approval" % ((": " + ", ".join(gone)) if gone else ""))
             return Decision.allow(stdout=lines)

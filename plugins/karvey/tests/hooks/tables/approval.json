@@ -368,13 +368,14 @@
       "expect": {
         "decision": "allow",
         "marker_created": false,
-        "stdout_empty": true
+        "stdout_contains": "[karvey] plan approval withdrawn (stop)"
       },
       "tags": [
         "approval",
         "REQ-W1-017",
         "REQ-W1-019"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-033): «no, espera» is a stop: it records nothing and withdraws any plan approval"
     },
     {
       "id": "ap-11-negation-or-question",

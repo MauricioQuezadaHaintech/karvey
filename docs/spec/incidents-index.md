@@ -76,6 +76,7 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | BUG-152 | karvey | high | curl `--request-target` and `--variable`/`--expand-*` hid a merge; a named fake clone could switch the gate off | prod-gate-scope / F-20 | RESUELTO | plugins/karvey/tests/unit/test_restcalls_evasions.py, test_prodgate_identity.py (bug152) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 | BUG-153 | karvey | high | A scheme-less curl or wget URL hid a merge | prod-gate-scope / F-21 | RESUELTO | plugins/karvey/tests/unit/test_restcalls_evasions.py (bug153) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 | BUG-154 | karvey | high | A checkpoint save was blocked by the plan-gate | prod-gate-scope / F-22 | RESUELTO | plugins/karvey/tests/hooks/tables/plan-gate.json cp-01..11; plugins/karvey/tests/unit/test_plangate_checkpoint.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-155 | karvey | high | The D-47 plan-gate gated daily reads and missed consequential actions; a project-wide approval never ended | prod-gate-scope / F-24 | RESUELTO | plugins/karvey/tests/hooks/tables/plan-gate.json d47-22..50; test_marker.py, test_plangate_checkpoint.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 
 ## Summary by state
 
@@ -84,7 +85,7 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 68 | BUG-01 .. BUG-51, BUG-138 .. BUG-154 |
+| RESUELTO | 69 | BUG-01 .. BUG-51, BUG-138 .. BUG-155 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-155** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).
+Next number: **BUG-156** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).

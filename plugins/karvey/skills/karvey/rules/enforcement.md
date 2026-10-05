@@ -117,6 +117,9 @@ The human is there for important decisions, not to authorise each step.
 - A marker of another project or change, consumed or withdrawn, still blocks. <!-- guard-case: pg-48-marker-of-another-project, pg-50-consumed-marker, pg-52-marker-of-another-change -->
 - A plan approval has no time limit: a three-day-old approval still allows the plan's actions. <!-- guard-case: d47-19-plan-approval-has-no-time-limit -->
 - A checkpoint save never needs an approval (BUG-154). <!-- guard-case: cp-01-handoff-save-needs-no-approval -->
+- Read verbs of cloud CLIs (`list`, `show`, `get`, `status` …), `SELECT`, `EXEC` of a read procedure, `rm -rf` inside the temp folder and `pip`/`uv` inside a virtual environment are free. <!-- guard-case: d47-35-az-config-list-is-free, d47-32-select-with-create-in-a-literal-is-free, d47-33-exec-of-a-read-procedure-is-free, d47-31-rm-rf-scratch-is-free, d47-38-venv-activate-then-pip-is-free -->
+- Schema migrations, repo and bucket deletes, HTTP DELETE to a remote service, `docker system prune`, `xargs rm`, SQL writes inside inline scripts, `crontab -r`, service restarts and release or tag deletes are gated. <!-- guard-case: d47-40-alembic-upgrade-is-gated, d47-41-gh-repo-delete-is-gated, d47-43-curl-delete-is-gated, d47-46-inline-python-sql-delete-is-gated, d47-49-push-deleting-a-tag-is-gated -->
+- A project-wide plan approval (no change named) belongs to the session that gave it; an approval of a change lasts until that change's phase closes.
 - A valid marker of the active change allows the write. <!-- guard-case: pg-47-valid-project-marker-10min, pg-53-marker-of-the-active-change -->
 - Limitation: a write done inside an interpreter (`python -c`, `node -e`) is allowed; the gate does not parse programs. <!-- guard-case: pg-57-interpreter-write-python, pg-58-interpreter-write-node -->
 

@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-154 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-155 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -346,6 +346,15 @@ INDEX = {
         ("table", "plan-gate", "cp-10-handoff-write-with-another-write-gated"),
         ("unit", "test_plangate_checkpoint.py", "TeamLayout.test_own_team_profile_files_need_no_approval"),
         ("unit", "test_plangate_checkpoint.py", "TeamLayout.test_another_agents_profile_and_other_files_stay_gated"),
+    ],
+    "BUG-155": [  # F-24: QA of the D-47 delta
+        ("table", "plan-gate", "d47-22-terraform-global-flag-before-verb"),
+        ("table", "plan-gate", "d47-26-sql-from-a-pipe-is-gated"),
+        ("table", "plan-gate", "d47-35-az-config-list-is-free"),
+        ("table", "plan-gate", "d47-40-alembic-upgrade-is-gated"),
+        ("table", "plan-gate", "d47-43-curl-delete-is-gated"),
+        ("unit", "test_plangate_checkpoint.py", "ProjectMarkerSession.test_same_session_proceeds_another_session_is_gated"),
+        ("unit", "test_marker.py", "TTL.test_d47_stop_withdraws_and_prod_use_keeps_the_plan"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

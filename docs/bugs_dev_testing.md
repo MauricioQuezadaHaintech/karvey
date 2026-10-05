@@ -2077,3 +2077,33 @@ the plan-gate gated every file edit and every write redirection, with no exempti
 | 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-22, owner report (D-46) |
 | 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
 | 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on 8d6c361, green after |
+
+## BUG-155 — The D-47 plan-gate gated daily reads and missed consequential actions; a project-wide approval never ended
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`consequential_class`, `_sql_class`, `plan_gate`), approval.py (`is_stop`, `withdraw_all`)
+- **Change / origin:** prod-gate-scope — finding F-24 (QA of the D-47 delta: security D1, second opinion D7)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+On 92d85d5 with `plan_gate_hook: true` and no approval: `az webapp config appsettings list` and `sqlcmd -Q "SELECT … LIKE '%create%'"` blocked; `terraform -chdir=x apply`, `kubectl --context c apply`, `cat q.sql | sqlcmd`, `alembic upgrade head`, `gh repo delete`, `curl -X DELETE …`, `xargs rm`, `python3.12 -m pip install` allowed; a `_project` plan approval 40 days old from another session allowed `rm src/a.py`; «para, espera un momento» and «no sigas» did not withdraw.
+
+### Actual vs expected
+- Actual: investigation gated, consequential actions free, an approval with no end.
+- Expected: D-47 — investigation free, consequential actions gated, approval ends with the plan, the session or a stop.
+
+### Root cause
+fixed-position verbs, SQL keywords matched inside literals, no read-verb list, a narrow software/infra list, and no owner for a project-wide approval.
+
+### Fix
+global options skipped before the verb; SQL literals stripped, `EXEC` gated by a write-procedure name; read verbs free; migrations, repo/bucket deletes, HTTP DELETE, prunes, `xargs rm`, inline SQL writes, cron and service changes, release/tag deletes gated; venv detection by activate/uv/`.venv`/real path; SQL from a pipe read when it is literal, else gated; `rm -rf` free only inside the temp folder outside a repository; a project-wide approval bound to its session; stop phrases widened and withdrawn in the project's listed clones too. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/plan-gate.json` d47-22..50; `plugins/karvey/tests/unit/test_marker.py` (TTL.test_d47_stop_withdraws_and_prod_use_keeps_the_plan); `plugins/karvey/tests/unit/test_plangate_checkpoint.py` (ProjectMarkerSession); red on 92d85d5. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-24, karvey-qa on the D-47 delta |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression tests red on 92d85d5, green after |

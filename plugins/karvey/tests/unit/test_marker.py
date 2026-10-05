@@ -97,6 +97,12 @@ class TTL(Base):
         self.assertTrue(ap.is_stop("para ya"))
         self.assertFalse(ap.is_stop("aprobado para producción"))
         self.assertFalse(ap.is_stop('el log dice "stop"'))
+        for t in ("para, espera un momento", "please stop", "hey, stop", "no sigas", "espera", "pausa", "hold on",
+                  "wait", "para el deploy", "no, detente", "detente por favor"):
+            self.assertTrue(ap.is_stop(t), t)
+        for t in ("para que sirve esto?", "aprobado para producción", "para producción app-login, aprobado",
+                  "espera a que termine el build y luego despliega?"):
+            self.assertFalse(ap.is_stop(t), t)
 
     def test_10_minutes_is_valid(self):
         ap.write_marker(self.repo, "plan", "feat-a", "ok", now=ap.now_dt() - timedelta(minutes=10))

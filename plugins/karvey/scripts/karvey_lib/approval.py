@@ -306,14 +306,20 @@ def withdraw_all(root, now=None):
     return out
 
 
-_STOP = re.compile(r"^(detente|detenete|deten|stop|para|paralo|alto|basta|cancela|cancelalo|cancel|halt|frena)"
-                   r"(\s+(ya|todo|ahora|now|it|eso|aqui))?\s*[.!]*$|^(detente|stop|basta|alto)\b")
+_STOP_LEAD = re.compile(r"^((please|por favor|hey|oye|ok|okay|ya|ojo)[,!.]?\s+|(no|espera|wait)[,!.]\s+)+")
+_STOP_WORD = r"(detente|detenete|deten|stop|alto|basta|cancela|cancelalo|cancel|halt|frena|pausa|pause|abort|aborta|" \
+             r"no sigas|no continues|dont continue|don't continue|hold on|hold|wait|espera|para|paralo|paren)"
+_STOP = re.compile(r"^%s(\s*[,.!;:]|\s*$|\s+(ya|todo|ahora|now|please|por favor|un momento|el|la|los|las|eso|"
+                   r"esto|aqui|it|that|this|everything|all|the)\b)" % _STOP_WORD)
 
 
 def is_stop(prompt):
     """The human's own message tells the agent to stop (quoted material aside)."""
     cleaned = normalise(strip_quoted(prompt if isinstance(prompt, str) else ""))
-    return bool(cleaned) and bool(_STOP.match(cleaned))
+    if not cleaned or cleaned.endswith("?") or "\u00bf" in cleaned:
+        return False
+    rest = _STOP_LEAD.sub("", cleaned)
+    return bool(_STOP.match(rest))
 
 
 def gc(root, now=None):
