@@ -300,3 +300,8 @@ corrected, not annotated at the end.
 
 - **Who / when:** Mauricio Quezada Ibáñez, 2026-09-29. **Answer, verbatim:** «Sí, mockup primero (Recomendado)»
 - **What:** the implementation order becomes mockup-conformance, then living-docs (supersedes that part of D-40).
+
+## D-45 — Hotfix 3.12.1 scope widened; REST to non-Karvey repos warns; prod OK only as typed text
+
+- **Who / when:** Mauricio Quezada Ibáñez, 2026-10-05. **Answers, verbatim:** «Sí, con REST no-Karvey con aviso (Recomendado)» and, on how the agent asks for the production OK, «Texto libre con frase sugerida (Recomendado)».
+- **What:** (1) the hotfix requirements are approved as widened with the defects found in use: the session hook resolves the agent profile by the starting directory / folder tree (another agent's profile, including a sensitive handoff, was injected), the prod-gate decides by the session's cwd instead of the PR's repo (`--repo` / PR URL) and blocked a merge into the integration branch, an approval answered through a question tool never reaches the prompt hook while the deploy skill asks for it that way, a phrase with approval and production words but no change id prints nothing, and the approve error does not say which marker it found; (2) a production REST call that targets a repo that is not a Karvey repo passes with a warning line; (3) the agent asks for the production OK by showing the exact phrase (change id + PR + version) for the owner to type; a question tool is never used for the production OK.
