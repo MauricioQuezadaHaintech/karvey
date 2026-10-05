@@ -63,6 +63,12 @@ class Evasions(unittest.TestCase):
         self.assertEqual(self.kind("curl -X PUT 'https://api.github.com/repos/org/app-web/pulls/[1-999]/merge'"),
                          "fail")
 
+    def test_bug152_request_target_and_variable_expansion(self):
+        self.assertEqual(self.kind("curl -X PUT --request-target /repos/org/app-web/pulls/12/merge "
+                                   "https://api.github.com/"), "pr-complete")
+        self.assertEqual(self.kind("curl --variable p=pulls --expand-url "
+                                   "'https://api.github.com/repos/org/app-web/{{p}}/12/merge' -X PUT"), "fail")
+
     def test_bug151_raw_http_by_hand(self):
         self.assertEqual(self.kind("printf 'PUT /repos/org/app-web/pulls/12/merge HTTP/1.1\\r\\nHost: "
                                    "api.github.com\\r\\n\\r\\n' | openssl s_client -connect api.github.com:443"),

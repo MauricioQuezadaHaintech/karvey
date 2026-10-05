@@ -73,6 +73,7 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | BUG-149 | karvey | medium | L-80 missed wordings and misread negations | prod-gate-scope / F-16 | RESUELTO | plugins/karvey/tests/unit/test_lint_plugin.py (L80Bug149) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 | BUG-150 | karvey | medium | A worktree of the same repo was reported as an ambiguous identity | prod-gate-scope / F-17 | RESUELTO | plugins/karvey/tests/unit/test_session_profile.py (bug150) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 | BUG-151 | karvey | critical | QA re-check: a fake Karvey clone could decide or switch the gate off, and REST forms still slipped | prod-gate-scope / F-19 | RESUELTO | plugins/karvey/tests/unit/test_prodgate_identity.py, test_restcalls_evasions.py (bug151) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-152 | karvey | high | curl `--request-target` and `--variable`/`--expand-*` hid a merge; a named fake clone could switch the gate off | prod-gate-scope / F-20 | RESUELTO | plugins/karvey/tests/unit/test_restcalls_evasions.py, test_prodgate_identity.py (bug152) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 
 ## Summary by state
 
@@ -81,7 +82,7 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 65 | BUG-01 .. BUG-51, BUG-138 .. BUG-151 |
+| RESUELTO | 66 | BUG-01 .. BUG-51, BUG-138 .. BUG-152 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-152** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).
+Next number: **BUG-153** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).

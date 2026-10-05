@@ -93,6 +93,16 @@ class Identity(World):
         self.assertBlock(res)
         self.assertNotIn("DISABLED", res[1])
 
+    def test_bug152_switch_off_of_a_named_clone_needs_a_trusted_session(self):
+        fake = self.clone("zz-fk", project_extra={"enforcement": {"prod_gate_hook": False}},
+                          remote_url="git@github.com:org/app-zz.git")
+        self.gh_pr("main", "feature/x", "c" * 40, url="https://github.com/org/app-zz/pull/12")
+        plain = self.base / "plain"
+        plain.mkdir()
+        res = self.run_gate("gh pr merge 12 --repo org/app-zz", fake, project_dir=plain)
+        self.assertNotIn("DISABLED", res[1])
+        self.assertBlock(res)
+
     def test_named_repo_without_a_clone_passes_only_into_integration(self):
         self.gh_pr("prod", "feature/x", "c" * 40, url="https://github.com/org/app-mobile/pull/3")
         self.assertBlock(self.run_gate("gh pr merge 3 --repo org/app-mobile", self.web), "run it from the clone")

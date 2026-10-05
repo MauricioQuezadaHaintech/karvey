@@ -1987,3 +1987,33 @@ the first Karvey clone found decided and its own settings were trusted; the pars
 | 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-19, karvey-qa re-check |
 | 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
 | 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on bd81fae, green after |
+
+## BUG-152 — curl `--request-target` and `--variable`/`--expand-*` hid a merge; a named fake clone could switch the gate off
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/restcalls.py (`_parse_curl`, `classify`), guards.py (prod-gate switch)
+- **Change / origin:** prod-gate-scope — finding F-20 (final QA re-check of 434c307, security review)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`curl -X PUT --request-target /repos/org/app-web/pulls/12/merge https://api.github.com/`; `curl --variable p=pulls --expand-url 'https://api.github.com/repos/org/app-web/{{p}}/12/merge' -X PUT`; a Karvey clone with `prod_gate_hook: false` named by `--repo` from a session whose project is not a Karvey project.
+
+### Actual vs expected
+- Actual: allowed silently; "prod-gate DISABLED" from the named clone.
+- Expected: the request target is the path classified; a variable-expanded request to a code host fails closed; a clone reached by name cannot switch the gate off without a trusted session project.
+
+### Root cause
+the parser classified only the URL argument and did not know curl's expansion options; the switch-off trust rule applied only with a Karvey session project.
+
+### Fix
+`--request-target` replaces the URL path; `--variable`/`--expand-*` mark the request unreadable, and an unreadable request to a code-host API fails closed; a named target's switch-off needs a trusted root. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_restcalls_evasions.py` (Evasions.test_bug152_request_target_and_variable_expansion), `plugins/karvey/tests/unit/test_prodgate_identity.py` (Identity.test_bug152_switch_off_of_a_named_clone_needs_a_trusted_session); red on 434c307. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-20, karvey-qa final re-check |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on 434c307, green after |

@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-151 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-152 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -333,6 +333,10 @@ INDEX = {
         ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_raw_http_by_hand"),
         ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_credentials_in_variables_do_not_block_a_non_completing_update"),
         ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_text_output_is_not_a_request"),
+    ],
+    "BUG-152": [  # F-20: curl request-target / variable expansion; named fake clone switch-off
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug152_request_target_and_variable_expansion"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_bug152_switch_off_of_a_named_clone_needs_a_trusted_session"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

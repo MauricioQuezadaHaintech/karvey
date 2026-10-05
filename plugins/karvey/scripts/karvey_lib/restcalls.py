@@ -36,6 +36,7 @@ CURL_LONG_ARG = {"--request", "--data", "--data-raw", "--data-binary", "--data-a
                  "--oauth2-bearer", "--proxy-user", "--interface", "--limit-rate", "--range", "--time-cond",
                  "--continue-at", "--quote", "--ciphers", "--capath", "--pass", "--netrc-file", "--aws-sigv4",
                  "--variable", "--expand-url", "--expand-data", "--expand-json", "--trace", "--trace-ascii",
+                 "--request-target", "--connect-to", "--expand-header", "--expand-user",
                  "--stderr", "--dump-header", "--create-file-mode", "--happy-eyeballs-timeout-ms"}
 CURL_DATA = {"-d", "--data", "--data-raw", "--data-binary", "--data-ascii", "--data-urlencode", "--json"}
 
@@ -64,6 +65,9 @@ _GRAPHQL_WRITE = re.compile(r"\b(mergePullRequest|enablePullRequestAutoMerge|upd
                             r"createCommitOnBranch|deleteRef|mergeBranch|updatePullRequestBranch)\b")
 _WRITE_VERB = re.compile(r"\b(patch|put|post|delete)\b|-X\s*(PATCH|PUT|POST|DELETE)|method\s*[:=]", re.I)
 _URL_TOKEN = re.compile(r"https?://\S+", re.I)
+# a code host's API (BUG-152): a request to one that the parser cannot read fails closed
+_CODE_HOST = re.compile(r"^https?://([^/]*\b(github|gitlab|azure|visualstudio)\b[^/]*|[^/]+/(api/v[34]|_apis)\b)",
+                        re.I)
 _COMPLETING_TEXT = re.compile(r"""["']?status["']?\s*[:=]\s*["']?(completed|approved)|autoCompleteSetBy|"""
                               r"""["']?state["']?\s*[:=]\s*["']?approved""", re.I)
 
@@ -221,7 +225,7 @@ def _parse_curl(seg):
     the bodies; ``-K``/``--config`` hides the request."""
     r = Request("curl")
     a = seg.argv[1:]
-    data, explicit, i, get, upload = [], [], 0, False, False
+    data, explicit, i, get, upload, target = [], [], 0, False, False, None
     while i < len(a):
         x = a[i]
         if x.startswith("--"):
@@ -240,6 +244,10 @@ def _parse_curl(seg):
                     upload = True
                 elif name == "--config":
                     r.unreadable = "curl --config hides the request"
+                elif name == "--request-target":  # BUG-152: the path sent is this one, not the URL's
+                    target = val
+                elif name == "--variable" or name.startswith("--expand-"):  # BUG-152: {{var}} expansion
+                    r.unreadable = r.unreadable or "curl %s builds the request from variables" % name
             elif name == "--get":
                 get = True
             i += 1
@@ -282,6 +290,12 @@ def _parse_curl(seg):
             r.urls += exp
         else:
             r.urls.append(u)
+    if target is not None:
+        if _has_var(target) or not target.startswith("/"):
+            r.unreadable = r.unreadable or "--request-target %s cannot be verified" % target
+        else:
+            r.urls = [re.sub(r"^(https?://[^/]+).*$", r"\1", u, flags=re.I) + target for u in r.urls
+                      if re.match(r"^https?://", u, re.I)] or r.urls
     if "--path-as-is" in a and any(re.search(r"/\.\.?(/|$|\?)", u) for u in r.urls):
         r.unreadable = r.unreadable or "--path-as-is with dot segments in the URL"
     r.url = r.urls[0] if r.urls else None
@@ -512,7 +526,7 @@ def _azure_org(url):
 
 def classify(r):
     """The :class:`Call` a request makes (the first ``fail``, else the first candidate over every URL), or None."""
-    if r.unreadable and not r.urls:
+    if r.unreadable and (not r.urls or any(_CODE_HOST.search(u or "") for u in r.urls)):
         return Call("fail", client=r.client, reason="cannot verify the request: %s" % r.unreadable)
     found = None
     for u in (r.urls or [None]):

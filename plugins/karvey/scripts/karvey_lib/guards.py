@@ -1525,7 +1525,8 @@ def _evaluate_candidate(ctx, c, deadline):
     if root is None:
         return None  # not a Karvey project: inert and silent
     on, why = prod_gate_setting(ctx, root)
-    if not on and os.path.realpath(str(root)) not in trusted_roots(ctx) and _project_dir_root(ctx) is not None:
+    if not on and os.path.realpath(str(root)) not in trusted_roots(ctx) and (
+            _project_dir_root(ctx) is not None or c.repo_name):
         on = True  # BUG-151: a clone outside the session project cannot switch the gate off
         why = "on (switched off only in %s, which is not the session's project)" % root
     if not on:
