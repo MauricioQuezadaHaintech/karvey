@@ -949,32 +949,25 @@ def transact(root, change, mutate):
 
 
 def consume_on_close(root, change, data, closing):
-    """Consume the markers of the phase that closed (REQ-W1-016, §3.3 control 7): the marker its
-    approval recorded as evidence, and the change's marker created while that phase was current."""
+    """BUG-157 (REQ-HF-037, D-47): a phase close never consumes a plan approval — an approved plan runs until the
+    change is archived or the human says stop. The close is audited; the markers are untouched. Returns ``[]``."""
+    try:
+        approval._audit(root, {"guard": "approval", "event": "phase-close", "decision": "kept", "change": change,
+                               "reason": "plan approval kept at the close of %s (D-47)" % closing})
+        approval.gc(root)
+    except (approval.ApprovalError, atomicio.AtomicIOError, OSError):
+        pass
+    return []
+
+
+def consume_on_archive(root, change):
+    """BUG-157: the change's own approval (plan or prod marker) ends when the change is archived. A session-wide
+    approval (``_project``) is not the change's and is kept (it ends with its session or a stop)."""
     consumed = []
     try:
-        pdef = phase_def(closing)
-        key = pdef["approval"] if pdef else None
-        aps = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
-        ev = (aps.get(key) or {}).get("evidence") if key and isinstance(aps.get(key), dict) else None
-        if isinstance(ev, dict) and isinstance(ev.get("marker"), str) and ev["marker"].startswith("approvals/"):
-            scope = ev["marker"][len("approvals/"):-len(".json")] if ev["marker"].endswith(".json") else ""
-            if approval.valid_scope(scope) and approval.consume(root, scope, created_at=ev.get("marker_created_at")):
-                consumed.append(scope)
-        entered = None
-        for e in reversed(data.get("phase_history") or []):
-            if isinstance(e, dict) and e.get("phase") == closing:
-                entered = parse_dt(e.get("entered_at"))
-                break
         m, status = approval.read_marker(root, change)
-        # BUG-43: only a phase that has an approval consumes the change's marker, never a prod one
-        if key and change not in consumed and status == "ok" and m.get("consumed_at") is None \
-                and m.get("kind") != "prod":
-            created = parse_dt(m.get("created_at"))
-            if created is not None and (entered is None or created >= entered):
-                if approval.consume(root, change):
-                    consumed.append(change)
-        approval.gc(root)
+        if status == "ok" and m.get("consumed_at") is None and approval.consume(root, change):
+            consumed.append(change)
     except (approval.ApprovalError, atomicio.AtomicIOError, OSError):
         pass
     return consumed
@@ -1036,6 +1029,8 @@ def cmd_advance(args, root):
     info.clear()
     path, res, _ = transact(root, args.change, mutate)
     res["consumed"] = consume_on_close(root, args.change, loaded.data, res["from"])
+    if res.get("to") == "archived":
+        res["consumed"] += consume_on_archive(root, args.change)
     res["file"] = rel(root, path)
     return kl.EXIT_OK, res, [], [], "%s: %s → %s" % (args.change, res["from"], res["to"])
 

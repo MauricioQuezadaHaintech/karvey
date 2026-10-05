@@ -42,8 +42,8 @@ the plugin's own files are never written by the agent.
 An approval exists only when the human types it. The hook reads the human's prompt, strips quoted material
 (code, `>` lines, pasted logs), applies negation and question precedence, and records a marker under
 `<git-common-dir>/karvey/approvals/` with kind and scope (the active change). A plan approval has no time
-limit (D-47): it lasts until `karvey-state.py advance` consumes it when the phase it approved closes, or until the
-human says stop. A production approval counts 24 h (D-35) and is also the plan approval.
+limit (D-47): a phase close never consumes it; an approval of a change lasts until the change is archived, a
+session-wide one (no change named) for that session, and either ends earlier if the human says stop. A production approval counts 24 h (D-35) and is also the plan approval.
 
 - An approval word prints `[karvey] approval recorded (plan, <scope>, until the plan ends or you say stop)`. <!-- guard-case: ap-01-approval-aprobado, ap-02-approval-ok -->
 - «detente», «para», «stop» (alone or opening the message) withdraws every plan approval and prints `[karvey] plan approval withdrawn (stop)`. <!-- guard-case: ap-d47-01-stop-withdraws-the-plan-approval, ap-d47-03-para-inside-a-sentence-is-not-stop -->
@@ -119,9 +119,9 @@ The human is there for important decisions, not to authorise each step.
 - A checkpoint save never needs an approval (BUG-154). <!-- guard-case: cp-01-handoff-save-needs-no-approval -->
 - Read verbs of cloud CLIs (`list`, `show`, `get`, `status` …), `SELECT`, `EXEC` of a read procedure, `rm -rf` inside the temp folder and `pip`/`uv` inside a virtual environment are free. <!-- guard-case: d47-35-az-config-list-is-free, d47-32-select-with-create-in-a-literal-is-free, d47-33-exec-of-a-read-procedure-is-free, d47-31-rm-rf-scratch-is-free, d47-38-venv-activate-then-pip-is-free -->
 - Schema migrations, repo and bucket deletes, HTTP DELETE to a remote service, `docker system prune`, `xargs rm`, SQL writes inside inline scripts, `crontab -r`, service restarts and release or tag deletes are gated. <!-- guard-case: d47-40-alembic-upgrade-is-gated, d47-41-gh-repo-delete-is-gated, d47-43-curl-delete-is-gated, d47-46-inline-python-sql-delete-is-gated, d47-49-push-deleting-a-tag-is-gated -->
-- A project-wide plan approval (no change named) belongs to the session that gave it; an approval of a change lasts until that change's phase closes.
+- A project-wide plan approval (no change named) belongs to the session that gave it; an approval of a change lasts until the change is archived (BUG-157).
 - `EXEC` of a stored procedure is gated by name (known limit): a name containing post, put, ins, upd, del, set, save, create, delete, update, merge, import, purge, clean, fix, load, sync, write, drop, insert, remove, alter, grant, reset, migrat, seed, truncat, archive, move, close, approve or send is a write; any other name is a read. A project adds write patterns with `enforcement.db_write_procs` (working copy or reviewed line) and frees read procedures with `enforcement.db_read_procs` (reviewed line only), both lists of regular expressions. <!-- guard-case: d47-34-exec-of-a-write-procedure-is-gated, d47-51-db-write-procs-gates-a-neutral-name -->
-- Known limits: a script file that writes (`python3 fix_data.py --apply`) is not read; a change-scoped plan approval lasts until its phase closes, and a stop withdraws approvals only in this project and the clones its `project.json` lists.
+- Known limits: a script file that writes (`python3 fix_data.py --apply`) is not read; a change-scoped plan approval lasts until the change is archived, and a stop withdraws approvals only in this project and the clones its `project.json` lists.
 - A valid marker of the active change allows the write. <!-- guard-case: pg-47-valid-project-marker-10min, pg-53-marker-of-the-active-change -->
 - Limitation: a write done inside an interpreter (`python -c`, `node -e`) is allowed; the gate does not parse programs. <!-- guard-case: pg-57-interpreter-write-python, pg-58-interpreter-write-node -->
 

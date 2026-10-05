@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-156 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-157 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -358,6 +358,11 @@ INDEX = {
     ],
     "BUG-156": [("unit", "test_plangate_symlinked_tmp.py",
                  "SymlinkedTemp.test_checkpoint_rows_pass_under_a_symlinked_temp_folder")],  # F-25
+    "BUG-157": [  # F-26: a phase close consumed the plan approval
+        ("unit", "test_plangate_checkpoint.py", "ApprovalSurvivesPhases.test_one_approval_covers_the_phases_and_the_implementation"),
+        ("unit", "test_state_approve.py", "Consumption.test_phase_close_keeps_the_plan_approval"),
+        ("unit", "test_state_approve.py", "Consumption.test_project_marker_used_as_evidence_is_kept"),
+    ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 

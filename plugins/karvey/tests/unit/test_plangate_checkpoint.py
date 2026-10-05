@@ -117,3 +117,56 @@ class StopInListedClones(unittest.TestCase):
                 self.assertIn("plan approval withdrawn", out.getvalue())
                 m, _ = approval.read_marker(other, "_project")
                 self.assertIsNotNone(m.get("stopped_at"))
+
+
+class ApprovalSurvivesPhases(unittest.TestCase):
+    """BUG-157 (REQ-HF-037): «apruebo» → the agent records the approvals of several phases of three changes →
+    the implementation's first consequential action still passes; a stop still revokes it."""
+
+    def setUp(self):
+        from _state import state, run_json
+        self.state, self.run_json = state, run_json
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = g.init(Path(os.path.realpath(self.tmp.name)) / "app")
+        g.write(self.root, "docs/spec/project.json", {"branch_flow": {"integration": "main", "production": "main"},
+                                                      "enforcement": {"plan_gate_hook": True,
+                                                                      "plan_gate_edits": True}})
+        t0 = "2026-10-05T10:00:00-03:00"
+        for cid in ("feat-a", "feat-b", "feat-c"):
+            g.write(self.root, "docs/spec/changes/%s/spec.json" % cid, {
+                "change_id": cid, "phase": "design_graphic", "skipped": {"mockup": "x"},
+                "approvals": {k: {"generated": True, "approved": True, "by": "M", "role": "human", "date": t0,
+                                  "ref": "D-1"} for k in ("requirements",)} | {
+                    "design_graphic": {"generated": True, "approved": False}},
+                "phase_history": [{"phase": p, "entered_at": t0, "exited_at": t0} for p in ("init", "requirements")]
+                + [{"phase": "design_graphic", "entered_at": t0}]})
+        g.write(self.root, "src/a.py", "x\n")
+        g.commit_all(self.root)
+        e = mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(self.root.parent / "xdg"), approval.COMPAT_ENV: ""})
+        e.start()
+        self.addCleanup(e.stop)
+
+    def hook(self, event, extra):
+        out, err = io.StringIO(), io.StringIO()
+        payload = dict({"cwd": str(self.root), "session_id": "s-1"}, **extra)
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(self.root))
+        return kh.dispatch(event, json.dumps(payload), env=env, out=out, err=err), out.getvalue(), err.getvalue()
+
+    def st(self, *argv):
+        return self.run_json(*(list(argv) + ["--root", str(self.root)]))
+
+    def test_one_approval_covers_the_phases_and_the_implementation(self):
+        self.assertIn("approval recorded (plan, _project", self.hook("prompt", {"prompt": "apruebo"})[1])
+        for cid in ("feat-a", "feat-b", "feat-c"):
+            c, env = self.st("approve", cid, "design_graphic", "--by", "M", "--role", "human", "--ref", "D-2")
+            self.assertEqual(c, 0, env)
+            c, env = self.st("advance", cid, "architecture")
+            self.assertEqual(c, 0, env)
+        write = {"tool_name": "Write", "tool_input": {"file_path": str(self.root / "src/a.py"), "content": "y"}}
+        code, _o, err = self.hook("pre-edit", write)
+        self.assertEqual(code, 0, err)
+        rm = {"tool_name": "Bash", "tool_input": {"command": "rm src/a.py"}}
+        self.assertEqual(self.hook("pre-bash", rm)[0], 0)
+        self.assertIn("withdrawn", self.hook("prompt", {"prompt": "detente"})[1])
+        self.assertEqual(self.hook("pre-bash", rm)[0], 2)

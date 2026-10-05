@@ -6,7 +6,7 @@ in `requirements.md`; the living spec keeps the compact form. The 3.12.0 require
 yet; they are cited as *amends* here and the amendment is ADDED, so the merge order of the two changes does
 not matter.
 
-Summary: **ADDED 36** (REQ-HF-001..036; revision 4, D-47: REQ-HF-032..036; revision 3, D-46: REQ-HF-031; revision 1, D-45: REQ-HF-020..030 added, REQ-HF-014/017/018 revised) · **MODIFIED 0** · **REMOVED 0**.
+Summary: **ADDED 37** (REQ-HF-001..037; revision 5, D-47: REQ-HF-037; revision 4, D-47: REQ-HF-032..036; revision 3, D-46: REQ-HF-031; revision 1, D-45: REQ-HF-020..030 added, REQ-HF-014/017/018 revised) · **MODIFIED 0** · **REMOVED 0**.
 
 ## ADDED Requirements
 
@@ -73,3 +73,4 @@ Traced to `docs/spec/changes/prod-gate-scope/prd.md`.
 - **REQ-HF-034** — A plan approval with a production word naming the change is also the production OK; recording it keeps the plan approval; the deploy skill asks only when `approve … prod` refuses. *(Traces: O-7, S-8 · F-23 · D-47, D-10)*
 - **REQ-HF-035** — Skills never ask approval for investigation or housekeeping, never re-ask, and proceed inside an approved plan; lint flags instructions to ask approval before reading or investigating. *(Traces: O-7, S-8 · F-23 · D-47)*
 - **REQ-HF-036** — The owner's personal files are aligned by a diff the owner applies. *(Traces: O-7 · F-23 · D-47, D-01, D-11)*
+- **REQ-HF-037** — A phase close never consumes a plan approval (audited); a change's approval lasts until the change is archived, a session-wide one for its session, both until the human says stop; only the production ledger keeps D-35. *(Traces: O-7, S-8 · F-26 · BUG-157 · D-47 · amends REQ-W1-016, REQ-HF-033)*

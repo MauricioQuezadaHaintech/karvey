@@ -2137,3 +2137,33 @@ the literal path must end with the physical relative path, and the folder left b
 | 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-25, CI macOS on 08b17fa |
 | 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above, reproduced on Linux with a symlinked TMPDIR |
 | 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on 08b17fa, green after |
+
+## BUG-157 — A phase close consumed the plan approval, so one approval could not cover approving phases and implementing
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey-state.py (`consume_on_close`)
+- **Change / origin:** prod-gate-scope — finding F-26 (real use, owner, D-47)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`plan_gate_hook: true`. The owner writes «apruebo» (session-wide marker); the agent records `approve` for design_graphic and advances three changes; minutes later three implementation subagents are blocked on their first Write with «marker _project: consumed».
+
+### Actual vs expected
+- Actual: every phase close consumed the marker used as evidence of its approval and the change's marker.
+- Expected (D-47): an approved plan runs to the end; it ends when the change is archived or the human says stop.
+
+### Root cause
+`consume_on_close` (3.12.0, REQ-W1-016) tied a plan approval's life to one phase.
+
+### Fix
+a phase close only writes an audit record; `advance … archived` consumes the change's own marker; a session-wide approval stays bound to its session (BUG-155) until a stop. The production ledger keeps D-35. Hotfix 3.12.1.
+
+### Regression test
+`plugins/karvey/tests/unit/test_plangate_checkpoint.py` (ApprovalSurvivesPhases.test_one_approval_covers_the_phases_and_the_implementation, the exact repro, with the stop); `plugins/karvey/tests/unit/test_state_approve.py` (Consumption.*); red on aa8a368. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-26, owner report |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on aa8a368, green after |

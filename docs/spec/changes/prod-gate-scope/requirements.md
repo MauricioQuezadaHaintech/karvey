@@ -717,8 +717,8 @@ WHEN the agent runs `rm src/a.py` (tracked), `sqlcmd -Q "UPDATE t SET a=1 WHERE 
 THEN each is blocked until the human approves the plan.
 
 ### 12.2 REQ-HF-033 — A plan approval lasts until the plan ends or the human says stop
-WHEN the human approves a plan, the approval SHALL stay valid with no time limit until the phase it was given for
-closes (the state tool consumes it) or the human says stop in their own message (`detente`, `para`, `stop`,
+WHEN the human approves a plan, the approval SHALL stay valid with no time limit until the plan ends (see
+REQ-HF-037) or the human says stop in their own message (`detente`, `para`, `stop`,
 `alto`, `basta`, `cancela`, alone or opening the message); THEN the approval hook SHALL withdraw every live plan
 approval of the clone and print one line saying so. A production approval keeps D-35: the release ledger binds it
 for 24 h after the human's OK, and a prod marker counts for `approve … prod` for those 24 h.
@@ -790,6 +790,30 @@ GIVEN any step of the change
 WHEN a write to the owner's personal files is attempted
 THEN it is not done (the diff is the deliverable).
 
+---
+
+## Requirement 13: A phase close never consumes a plan approval (F-26, BUG-157)
+
+### 13.1 REQ-HF-037 — An approved plan runs until the change is archived or the human stops it
+WHEN the state tool closes a phase (`advance`), it SHALL NOT consume any plan approval and SHALL write an audit
+record of the close; a plan approval of a change SHALL last until the change is archived (`advance … archived`
+consumes the change's own marker); a session-wide approval (no change named) SHALL last for the session that gave it
+(REQ-HF-032 plan-gate rule) until the human says stop; only the production ledger keeps D-35 (24 h, bound to the
+approved commit, one change per approval).
+
+Traces to PRD: O-7, S-8 · F-26 · BUG-157 · Decision: D-47 · AMENDS REQ-W1-016, REQ-HF-033
+
+#### Scenario: Success
+GIVEN `plan_gate_hook: true` and the human writes «apruebo» (session-wide)
+WHEN the agent records the approvals of design_graphic and advances three changes, then implementation writes
+code and deletes a tracked file in the same session
+THEN every step passes.
+
+#### Scenario: Error
+GIVEN the same approval
+WHEN the human writes «detente», or another session tries a consequential action, or the change is archived
+THEN the next consequential action is blocked.
+
 ## Explicit exclusions
 
 - Plan-kind approvals keep the 3.12.0 scope rule (named change in this tree, else active, else `_project`); what they gate and how long they last change with REQ-HF-032, 033 (D-47).
@@ -812,6 +836,7 @@ THEN it is not done (the diff is the deliverable).
 
 | Rev | Date | Ref | Requirements | Why |
 |---|---|---|---|---|
+| 5 | 2026-10-05 | D-47 · F-26 | ADDED REQ-HF-037; REVISED REQ-HF-033 (ends with the plan, not the phase) | Real use: one approval did not cover approving phases and then implementing; the phase close consumed it (BUG-157). |
 | 4 | 2026-10-05 | D-47 · F-23 | ADDED REQ-HF-032..036 | Owner instruction: investigation is free, only consequential actions need an approved plan, the approval lasts until the plan ends or the human says stop, one message approves the plan and production. |
 | 3 | 2026-10-05 | D-46 · F-22 | ADDED REQ-HF-031 | The owner reported that a checkpoint save was blocked by the plan-gate (D-46); routed through karvey-iterate as BUG-154. |
 | 2 | 2026-10-05 | QA F-12..F-17 | REVISED REQ-HF-014 (a Karvey repo with no clone passes only into the integration branch; folders below a non-repo session directory searched), REQ-HF-026 (a Karvey clone wins over look-alikes; in a Karvey context the host's answer decides; a failed lookup blocks) | The QA review (security, code, D7 second opinion) found the warning path reachable for Karvey targets. Tightened in place in the QA loop (stricter, fail closed); the owner confirms it with the QA approval. |

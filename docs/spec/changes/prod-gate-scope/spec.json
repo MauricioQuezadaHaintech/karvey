@@ -29,7 +29,7 @@
     "D-47"
   ],
   "inputs": {},
-  "iteration_count": 3,
+  "iteration_count": 4,
   "revision_history": [
     {
       "date": "2026-10-05",
@@ -113,6 +113,25 @@
         "rules",
         "lint",
         "owner personal files (diff only)"
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "by": "Mauricio Quezada Ibáñez",
+      "reason": "real use: a phase close consumed the plan approval (BUG-157)",
+      "decision": "D-47",
+      "added": [
+        "REQ-HF-037"
+      ],
+      "revised": [
+        "REQ-HF-033"
+      ],
+      "findings": [
+        "F-26"
+      ],
+      "ripple": [
+        "karvey-state.py consume_on_close",
+        "rules/enforcement.md"
       ]
     }
   ],
