@@ -2017,3 +2017,33 @@ the parser classified only the URL argument and did not know curl's expansion op
 | 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-20, karvey-qa final re-check |
 | 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
 | 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on 434c307, green after |
+
+## BUG-153 — A scheme-less curl or wget URL hid a merge
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/restcalls.py (`_scheme_urls`)
+- **Change / origin:** prod-gate-scope — finding F-21 (QA re-check of a5ad33f, security review)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`curl -X PUT --proto-default https api.github.com/repos/org/app-web/pulls/12/merge`; `curl -L -X PUT api.github.com/repos/org/app-web/pulls/12/merge`; `wget --method=PUT api.github.com/…/pulls/12/merge`.
+
+### Actual vs expected
+- Actual: allowed silently (curl sends it over https, or http and follows the redirect keeping the PUT).
+- Expected: classified like the same URL with a scheme.
+
+### Root cause
+only arguments starting with `http(s)://` were taken as URLs.
+
+### Fix
+a `host.domain/path` argument (not a credential or output value) is a URL with `https://`. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_restcalls_evasions.py` (Evasions.test_bug153_scheme_less_urls); red on a5ad33f. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-21, karvey-qa re-check |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a5ad33f, green after |

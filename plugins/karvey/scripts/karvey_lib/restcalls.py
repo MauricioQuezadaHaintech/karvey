@@ -80,6 +80,7 @@ class Request:
         self.body, self.body_text, self.unreadable, self.variable = None, None, None, False
 
 
+_BARE_HOST = re.compile(r"^(?:[\w.-]+@)?[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+(?::\d+)?/\S*$")
 CRED_OPTS = {"-u", "--user", "-H", "--header", "-a", "--auth", "--oauth2-bearer", "--proxy-user", "-E", "--cert",
              "--key", "--pass", "-b", "--cookie", "-A", "--user-agent", "-e", "--referer", "--password",
              "--http-user", "--http-password", "--session", "-o", "--output", "-O", "--output-document"}
@@ -94,6 +95,8 @@ def _scheme_urls(args):
             continue
         if re.match(r"^https?://", a, re.I):
             out.append(a)
+        elif _BARE_HOST.match(a) and not (i > 0 and args[i - 1] in CRED_OPTS):
+            out.append("https://" + a)  # BUG-153: curl/wget send a scheme-less host/path (https or http + -L)
         elif re.match(r"^[\"']?(\$|`)", a) and not (i > 0 and args[i - 1] in CRED_OPTS):
             out.append(a)
     return out
