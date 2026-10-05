@@ -1892,6 +1892,32 @@ def l80_prod_ok_not_by_question_tool(ctx):
                     break
 
 
+# --------------------------------------------------------------------------- L-81
+ASK_RE = re.compile(r"\b(ask|request|get|obtain|wait\s+for|seek|pide|pedir|solicita|espera)\b[^.;]{0,40}?"
+                    r"\b(approval|permission|confirmation|consent|ok|aprobaci[oó]n|autorizaci[oó]n|permiso|"
+                    r"confirmaci[oó]n)\b", re.I)
+INVESTIGATE_RE = re.compile(r"\b(before|prior\s+to|antes\s+de)\s+(\w+\s+){0,2}(read|reading|search|searching|"
+                            r"investigat\w*|explor\w*|look\w*|grep\w*|inspect\w*|query\w*|select|run\w*\s+a\s+"
+                            r"read-only|leer|buscar|investigar|explorar|revisar|consultar|indagar)\b", re.I)
+ASK_NEG_RE = re.compile(r"\b(never|do not|don't|not|no|nunca|jam[aá]s|sin)\b", re.I)
+
+
+@check("L-81", "skills and rules never ask approval for investigation (reads, searches, read-only queries) "
+               "(D-47, REQ-HF-035)")
+def l81_no_approval_for_investigation(ctx):
+    for path in ctx.text_files():
+        for n, para in _paragraphs(ctx, path):
+            for sentence in re.split(r"(?<=[.!?;])\s+", para):
+                m = ASK_RE.search(sentence)
+                if not m or not INVESTIGATE_RE.search(sentence[m.end():]):
+                    continue
+                if ASK_NEG_RE.search(sentence[:m.start()]):
+                    continue
+                yield (path, n, "asks for approval before investigation (reading, searching, a read-only query); "
+                                "investigation is free and never asks (D-47)")
+                break
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""
@@ -2073,7 +2099,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser():
-    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-36, L-80).")
+    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-36, L-80, L-81).")
     p.add_argument("--root", help="repository root (default: git top level)")
     p.add_argument("--plugin", help="plugin directory (default: <root>/plugins/karvey)")
     p.add_argument("--only", help="comma list of check ids (L-NN)")

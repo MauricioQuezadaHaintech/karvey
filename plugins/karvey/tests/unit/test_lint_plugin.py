@@ -1108,6 +1108,28 @@ class L80Bug149(LintCase):
         self.assertPasses("L-80")
 
 
+class L81(LintCase):
+    """D-47 (REQ-HF-035): no skill or rule asks for approval before reading, searching or investigating."""
+
+    def test_pass(self):
+        self.assertPasses("L-81")
+
+    def test_approval_before_searching_fails(self):
+        for text in ("Ask the user for approval before searching the repository.",
+                     "Request permission before running a read-only query.",
+                     "Pide aprobación antes de investigar el repositorio."):
+            self.t.write(RULES + "/explore.md", "# Explore\n\n%s\n" % text)
+            self.assertFails("L-81", "investigation", file=RULES + "/explore.md")
+
+    def test_never_ask_passes(self):
+        self.t.write(RULES + "/explore.md", "# Explore\n\nNever ask for approval before searching or reading.\n")
+        self.assertPasses("L-81")
+
+    def test_approval_for_a_consequential_action_passes(self):
+        self.t.write(RULES + "/explore.md", "# Explore\n\nAsk for approval before deleting tracked files.\n")
+        self.assertPasses("L-81")
+
+
 class ListAll(unittest.TestCase):
     def test_list_names_l01_to_l36(self):
         code, out, _ = run_cli("--root", str(_path.REPO_ROOT), "--list")
@@ -1115,7 +1137,7 @@ class ListAll(unittest.TestCase):
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
         self.assertIn("L-80 ", out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)] + ["L-80"])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 37)] + ["L-80", "L-81"])
 
 
 if __name__ == "__main__":

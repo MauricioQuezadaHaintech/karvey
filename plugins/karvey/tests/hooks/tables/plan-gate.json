@@ -346,29 +346,14 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "write to notes.txt",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-014",
         "nopy"
       ],
-      "expect_nopy": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "without python"
-        ]
-      }
+      "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
     },
     {
       "id": "pg-10-write",
@@ -400,21 +385,13 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "write to log.txt",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-014"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
     },
     {
       "id": "pg-11-write",
@@ -446,21 +423,13 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "write to f.txt",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-014"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
     },
     {
       "id": "pg-12-write",
@@ -492,21 +461,13 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "write to out.txt",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-014"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
     },
     {
       "id": "pg-13-write",
@@ -538,21 +499,13 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "write to forced.txt",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-014"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
     },
     {
       "id": "pg-14-write",
@@ -584,21 +537,13 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "write to build.log",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-014"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
     },
     {
       "id": "pg-15-destructive",
@@ -975,16 +920,7 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "sed -i",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
@@ -992,13 +928,7 @@
         "H-10",
         "nopy"
       ],
-      "expect_nopy": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "without python"
-        ]
-      }
+      "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
     },
     {
       "id": "pg-23-destructive",
@@ -1030,22 +960,14 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "perl -i",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-015",
         "H-10"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
     },
     {
       "id": "pg-24-destructive",
@@ -1077,22 +999,14 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "truncate",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-015",
         "H-10"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
     },
     {
       "id": "pg-25-destructive",
@@ -1659,7 +1573,7 @@
       ]
     },
     {
-      "id": "pg-37-allowed",
+      "id": "pg-37-update-with-where-is-a-data-write",
       "guard": "plan-gate",
       "given": {
         "repo": {
@@ -1688,13 +1602,14 @@
         }
       },
       "expect": {
-        "decision": "allow",
-        "stderr_empty": true
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-015"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): DELETE/UPDATE with WHERE still changes data"
     },
     {
       "id": "pg-38-allowed",
@@ -1898,7 +1813,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -1953,7 +1869,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2009,7 +1926,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2056,7 +1974,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2103,7 +2022,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2156,7 +2076,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2205,7 +2126,7 @@
       ]
     },
     {
-      "id": "pg-49-marker-121-min-old",
+      "id": "pg-49-plan-marker-121-min-old-still-valid",
       "guard": "plan-gate",
       "given": {
         "repo": {
@@ -2216,7 +2137,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2241,21 +2163,14 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-016",
         "D-07"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): a plan approval has no time limit (REQ-HF-033)"
     },
     {
       "id": "pg-50-consumed-marker",
@@ -2269,7 +2184,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2329,7 +2245,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2379,7 +2296,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2431,7 +2349,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2476,7 +2395,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2523,7 +2443,8 @@
             },
             "enforcement": {
               "plan_gate_hook": true,
-              "plan_marker_ttl_min": 30
+              "plan_marker_ttl_min": 30,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2548,21 +2469,14 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "BLOCK plan-gate",
-          "wait for the human's approval"
-        ],
-        "stderr_not_contains": [
-          "touch",
-          "create the marker"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "plan-gate",
         "REQ-W1-016",
         "§3.5"
-      ]
+      ],
+      "note": "D-47 (REQ-HF-032): the TTL no longer applies to plan approvals"
     },
     {
       "id": "pg-56-marker-allows-git-clean",
@@ -2576,7 +2490,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2764,7 +2679,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2816,7 +2732,8 @@
           "BLOCK plan-gate",
           "without python"
         ]
-      }
+      },
+      "note": "D-47 (REQ-HF-032): edits gated only with plan_gate_edits (here in the working copy); plan_gate_hook from the reviewed line"
     },
     {
       "id": "pg-62-unparsable-destructive-falls-back-to-regex",
@@ -2914,7 +2831,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2926,12 +2844,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -2964,7 +2876,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -2976,12 +2889,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -3014,7 +2921,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -3026,12 +2934,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -3064,7 +2966,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -3076,12 +2979,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -3114,7 +3011,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -3126,12 +3024,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -3169,7 +3061,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -3181,12 +3074,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -3224,7 +3111,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -3236,12 +3124,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         },
         "setup": [
@@ -3283,7 +3165,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -3295,12 +3178,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -3333,7 +3210,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -3345,12 +3223,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -3381,7 +3253,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -3393,12 +3266,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -3430,7 +3297,8 @@
               "production": "main"
             },
             "enforcement": {
-              "plan_gate_hook": true
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
             }
           },
           "spec": {
@@ -3442,12 +3310,6 @@
           "files": {
             "docs/spec/agent/handoff.md": "old\n",
             "src/a.py": "x\n"
-          },
-          "marker": {
-            "_project": {
-              "@valid": "plan",
-              "age_min": 200
-            }
           }
         }
       },
@@ -3465,6 +3327,892 @@
         "plan-gate",
         "REQ-HF-031",
         "BUG-154"
+      ]
+    },
+    {
+      "id": "d47-01-scratch-script-with-redirect-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "python3 scratch.py > out.txt"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-02-select-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "psql -c 'SELECT * FROM t'"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-03-update-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "sqlcmd -Q \"UPDATE t SET a=1 WHERE id=2\""
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-04-insert-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "psql -c \"INSERT INTO t VALUES (1)\""
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-05-pip-install-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "pip install requests"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-06-npm-global-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "npm install -g some-cli"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-07-apt-install-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "sudo apt-get install -y jq"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-08-az-extension-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "az extension add -n azure-devops"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-09-rm-of-a-tracked-file-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "rm src/a.py"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-10-git-rm-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git rm src/a.py"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-11-functionapp-publish-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "func azure functionapp publish app-x"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-12-kubectl-apply-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "kubectl apply -f k.yaml"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-13-terraform-apply-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "terraform apply -auto-approve"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-14-az-deployment-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "az deployment group create -g rg -f main.bicep"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-15-pr-to-production-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "gh pr create --base main --title x --body y"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-16-pr-to-integration-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "gh pr create --base dev --title x --body y"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-17-edit-is-free-by-default",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "{{root}}/src/a.py",
+          "content": "x"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "nopy"
+      ]
+    },
+    {
+      "id": "d47-18-edit-gated-with-plan-gate-edits",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true,
+              "plan_gate_edits": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "{{root}}/src/a.py",
+          "content": "x"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-19-plan-approval-has-no-time-limit",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          },
+          "marker": {
+            "_project": {
+              "@valid": "plan",
+              "age_min": 4320
+            }
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "rm -rf build"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "REQ-HF-033"
+      ]
+    },
+    {
+      "id": "d47-20-pip-in-a-venv-is-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": ".venv/bin/pip install pytest"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-21-grep-and-find-are-free",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "grep -rn TODO . && find . -name '*.py'"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
       ]
     }
   ]

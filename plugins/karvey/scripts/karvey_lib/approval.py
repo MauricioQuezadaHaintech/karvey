@@ -213,13 +213,17 @@ def check_marker(marker, root, scope=None, ttl_min=None, now=None, kinds=KINDS):
         return False, "bad prompt_sha256"
     if marker.get("consumed_at") is not None:
         return False, "consumed"
+    if marker.get("stopped_at") is not None:
+        return False, "withdrawn (the human said stop)"
+    if "plan" not in kinds and marker.get("prod_used_at") is not None:
+        return False, "consumed"  # BUG-41: one production approval, one change; it stays a plan approval (D-47)
     created = parse_dt(marker.get("created_at"))
     if created is None:
         return False, "bad created_at"
     now = now or now_dt()
-    ttl = clamp_ttl(ttl_min if ttl_min is not None else marker.get("ttl_min"))
-    if now - created > timedelta(minutes=ttl):
-        return False, "expired (older than %d min)" % ttl
+    if "plan" not in kinds:  # D-47 / D-35: a production OK counts 24 h; a plan approval has no time limit
+        if now - created > timedelta(hours=PROD_VALID_H):
+            return False, "expired (older than %d h)" % PROD_VALID_H
     if created - now > timedelta(minutes=5):
         return False, "created in the future"
     return True, "ok"
@@ -267,6 +271,49 @@ def consume(root, scope, now=None, created_at=None):
     _write_private(marker_path(root, scope), m)
     _audit(root, {"guard": "approval", "event": "marker", "decision": "consumed", "change": scope})
     return True
+
+
+def mark_prod_used(root, scope, created_at=None, now=None):
+    """D-47 (REQ-HF-034): ``approve … prod`` uses the production OK once (BUG-41) but the same message stays the
+    plan approval until the plan ends."""
+    m, status = read_marker(root, scope)
+    if status != "ok" or m.get("consumed_at") is not None or m.get("prod_used_at") is not None:
+        return False
+    if created_at is not None and m.get("created_at") != created_at:
+        return False
+    m["prod_used_at"] = iso(now or now_dt())
+    _write_private(marker_path(root, scope), m)
+    _audit(root, {"guard": "approval", "event": "marker", "decision": "prod-used", "change": scope})
+    return True
+
+
+def withdraw_all(root, now=None):
+    """D-47 (REQ-HF-033): the human said stop — every live plan approval of this clone is withdrawn."""
+    out = []
+    d = approvals_dir(root, create=False)
+    if not d.is_dir():
+        return out
+    for p in sorted(d.glob("*.json")):
+        m, status = read_marker(root, p.stem)
+        if status != "ok" or m.get("kind") not in KINDS or m.get("consumed_at") or m.get("stopped_at"):
+            continue
+        m["stopped_at"] = iso(now or now_dt())
+        _write_private(marker_path(root, p.stem), m)
+        out.append(p.stem)
+    if out:
+        _audit(root, {"guard": "approval", "event": "marker", "decision": "withdrawn", "reason": "stop",
+                      "change": ",".join(out)})
+    return out
+
+
+_STOP = re.compile(r"^(detente|detenete|deten|stop|para|paralo|alto|basta|cancela|cancelalo|cancel|halt|frena)"
+                   r"(\s+(ya|todo|ahora|now|it|eso|aqui))?\s*[.!]*$|^(detente|stop|basta|alto)\b")
+
+
+def is_stop(prompt):
+    """The human's own message tells the agent to stop (quoted material aside)."""
+    cleaned = normalise(strip_quoted(prompt if isinstance(prompt, str) else ""))
+    return bool(cleaned) and bool(_STOP.match(cleaned))
 
 
 def gc(root, now=None):
@@ -846,8 +893,10 @@ def describe_markers(root, ttl_min=None, now=None):
         if m.get("consumed_at"):
             state = "consumed"
         else:
-            ok, why = check_marker(m, root, ttl_min=ttl_min, now=now)
-            state = "live" if ok else ("expired" if why.startswith("expired") else why)
+            ok, why = check_marker(m, root, ttl_min=ttl_min, now=now,
+                                   kinds=("prod",) if m.get("kind") == "prod" else KINDS)
+            state = "live" if ok else ("expired" if why.startswith("expired") else
+                                       "used" if why == "consumed" and m.get("prod_used_at") else why)
         out.append({"kind": m.get("kind"), "scope": m.get("scope") or f.stem, "age_min": age, "state": state})
     out.sort(key=lambda x: (x["age_min"] is None, x["age_min"] or 0))
     return out

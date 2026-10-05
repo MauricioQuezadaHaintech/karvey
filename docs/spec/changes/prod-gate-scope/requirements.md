@@ -679,9 +679,120 @@ WHEN the call writes `docs/spec/changes/feat-a/spec.json`, `docs/spec/agent/../.
 a symlink to code, another agent's handoff, or the handoff together with `echo y > src/a.py` or `rm -rf src`
 THEN it is blocked as before.
 
+---
+
+## Requirement 12: Approval model — investigation is free, an approved plan runs to the end (D-47, F-23)
+
+### 12.1 REQ-HF-032 — The plan-gate gates only consequential actions
+WHILE the plan-gate is on, it SHALL require an approved plan only for consequential actions: deleting tracked
+files or folders (`rm -r`/`rm -rf`, `rm`, `mv`, `truncate`, `shred` over a tracked file, `git rm`, `find -delete`,
+`git clean`), discarding or rewriting history (`git reset --hard`, `git checkout --`/`git restore` of the work
+tree, force pushes, `filter-branch`/`filter-repo`), database statements that write data or schema (`INSERT`,
+`UPDATE`, `DELETE`, `MERGE`, `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `GRANT`, `REVOKE`, `EXEC` through `sqlcmd`,
+`psql`, `mysql`, `sqlite3` and the other SQL clients), installing, removing or upgrading software (`apt`,
+`dnf`, `yum`, `pip`/`pipx` outside a virtual environment, `npm`/`yarn`/`pnpm` global, `brew`, `winget`,
+`choco`, `snap`, `cargo install`, `go install`, `gem install`, `az`/`gh` extensions), a PR to or a merge into a
+production branch, deploys (`func … publish`, `az webapp`/`functionapp`/`containerapp` deploys, `kubectl
+apply`, `helm install|upgrade`, `docker push`, `vercel --prod`, `netlify deploy --prod`, `firebase deploy`,
+`gcloud app|run deploy`), and infrastructure changes (`terraform`/`tofu` `apply|destroy|import`, `az deployment`,
+`az … create|delete|update`, `gcloud … create|delete|update`, `aws … create-|delete-|update-|put-`, `kubectl
+delete|patch|scale`, `pulumi up|destroy`); IF a command cannot be parsed and its text matches one of these
+classes, THEN it SHALL be gated. Everything else SHALL NOT be gated: reads, searches, read-only queries
+(`SELECT`), running bash or python, creating and running scratch scripts, writing files with redirections,
+`sed -i`, and the checkpoint/handoff files (REQ-HF-031). File edits (Edit/Write tools and write redirections)
+SHALL be gated only when the project opts in with `enforcement.plan_gate_edits: true` (default off).
+
+Traces to PRD: O-7, S-8 · F-23 · Decision: D-47 · AMENDS REQ-W1-014, REQ-W1-016
+
+#### Scenario: Success
+GIVEN `plan_gate_hook: true`, no plan approval
+WHEN the agent runs `python3 scratch.py > out.txt`, `psql -c 'SELECT * FROM t'`, `sed -i s/a/b/ notes.md`, or
+edits `src/a.py`
+THEN nothing is gated.
+
+#### Scenario: Error
+GIVEN the same project
+WHEN the agent runs `rm src/a.py` (tracked), `sqlcmd -Q "UPDATE t SET a=1 WHERE id=2"`, `pip install requests`,
+`kubectl apply -f k.yaml` or `gh pr create --base main`
+THEN each is blocked until the human approves the plan.
+
+### 12.2 REQ-HF-033 — A plan approval lasts until the plan ends or the human says stop
+WHEN the human approves a plan, the approval SHALL stay valid with no time limit until the phase it was given for
+closes (the state tool consumes it) or the human says stop in their own message (`detente`, `para`, `stop`,
+`alto`, `basta`, `cancela`, alone or opening the message); THEN the approval hook SHALL withdraw every live plan
+approval of the clone and print one line saying so. A production approval keeps D-35: the release ledger binds it
+for 24 h after the human's OK, and a prod marker counts for `approve … prod` for those 24 h.
+
+Traces to PRD: O-7, S-8 · F-23 · Decision: D-47, D-35 · AMENDS REQ-W1-016
+
+#### Scenario: Success
+GIVEN a plan approved three days ago and its phase still open
+WHEN the agent runs a consequential action of the plan
+THEN it is allowed.
+
+#### Scenario: Error
+GIVEN the same approval
+WHEN the human writes «detente»
+THEN the hook prints `[karvey] plan approval withdrawn (stop)` and the next consequential action is blocked.
+
+### 12.3 REQ-HF-034 — One message approves the plan and production
+WHEN the human's approval of a plan holds a production word and names the change (D-10), the approval hook SHALL
+record a prod marker that is also the plan approval; recording it with `approve … prod` SHALL keep it as the plan
+approval for the rest of the plan; the deploy skill SHALL record an existing prod marker with `approve … prod`
+and SHALL ask for the production OK only when that command refuses.
+
+Traces to PRD: O-7, S-8 · F-23 · Decision: D-47, D-10, D-45
+
+#### Scenario: Success
+GIVEN «aprobado el plan de release de app-login, incluido el paso a producción»
+WHEN the deploy skill reaches the production step
+THEN `approve app-login prod …` succeeds without asking again, and later consequential steps of the plan pass.
+
+#### Scenario: Error
+GIVEN a plan approval without a production word
+WHEN the deploy skill reaches the production step
+THEN `approve … prod` refuses and the skill shows the phrase to type (REQ-HF-027).
+
+### 12.4 REQ-HF-035 — Skills never ask approval for investigation or housekeeping, nor re-ask
+The skills and rules SHALL state that investigation (reads, searches, read-only queries, scratch scripts) and
+housekeeping (checkpoint, handoff, board, notes, scratch) never need an approval, that an approval already given
+is never asked again, that pending work is not re-explained as a way to ask again, and that inside an approved
+plan the agent proceeds until a real blocker; the linter SHALL report an error for a skill or rule that instructs
+asking for approval, permission or confirmation before reading, searching, investigating or running a read-only
+query.
+
+Traces to PRD: O-7, S-8 · F-23 · Decision: D-47
+
+#### Scenario: Success
+GIVEN the plugin's skills and rules
+WHEN lint runs
+THEN it reports no such instruction.
+
+#### Scenario: Error
+GIVEN a skill that says "ask the user for approval before searching the repository"
+WHEN lint runs
+THEN it reports an error with file and line.
+
+### 12.5 REQ-HF-036 — The owner's personal files are aligned by a diff the owner applies
+The change SHALL prepare, without applying it, a diff of the owner's personal instructions and plan hook aligned
+with D-47 (investigation free, consequential actions need an approved plan, the approval lasts until the plan ends
+or the owner says stop), kept outside the repository (D-01, D-11).
+
+Traces to PRD: O-7 · F-23 · Decision: D-47, D-01, D-11
+
+#### Scenario: Success
+GIVEN the hotfix release
+WHEN the report is given
+THEN it names the diff's path and the files are unchanged.
+
+#### Scenario: Error
+GIVEN any step of the change
+WHEN a write to the owner's personal files is attempted
+THEN it is not done (the diff is the deliverable).
+
 ## Explicit exclusions
 
-- Plan-kind approvals keep the 3.12.0 scope rule (named change in this tree, else active, else `_project`).
+- Plan-kind approvals keep the 3.12.0 scope rule (named change in this tree, else active, else `_project`); what they gate and how long they last change with REQ-HF-032, 033 (D-47).
 - The release manifest (D-37) and "one approval, one change" (BUG-41) are unchanged; a multi-repo binding is
   part of one change's single approval.
 - No remote probing of a repository's contents to learn whether it is a Karvey project: the gate decides from
@@ -701,6 +812,7 @@ THEN it is blocked as before.
 
 | Rev | Date | Ref | Requirements | Why |
 |---|---|---|---|---|
+| 4 | 2026-10-05 | D-47 · F-23 | ADDED REQ-HF-032..036 | Owner instruction: investigation is free, only consequential actions need an approved plan, the approval lasts until the plan ends or the human says stop, one message approves the plan and production. |
 | 3 | 2026-10-05 | D-46 · F-22 | ADDED REQ-HF-031 | The owner reported that a checkpoint save was blocked by the plan-gate (D-46); routed through karvey-iterate as BUG-154. |
 | 2 | 2026-10-05 | QA F-12..F-17 | REVISED REQ-HF-014 (a Karvey repo with no clone passes only into the integration branch; folders below a non-repo session directory searched), REQ-HF-026 (a Karvey clone wins over look-alikes; in a Karvey context the host's answer decides; a failed lookup blocks) | The QA review (security, code, D7 second opinion) found the warning path reachable for Karvey targets. Tightened in place in the QA loop (stricter, fail closed); the owner confirms it with the QA approval. |
 | 1 | 2026-10-05 | D-45 · F-05..F-11 | ADDED REQ-HF-020..030; REVISED REQ-HF-014 (non-Karvey targets warn), REQ-HF-017 (BUG-138..144), REQ-HF-018 (session hook, approval-hook error line); BUG-53/54 renumbered to BUG-138/139 | The owner widened the hotfix with the defects found in use (D-45). BUG-53/54 were already used by another unmerged branch (F-11). Ripple: prd.md (problems 5-9, O-5..O-8, S-6..S-9, AC-6..AC-9), findings.md, spec-delta.md, PLAN.md, spec.json, backlog BL-64. Revised in place while requirements are generated and not approved. |

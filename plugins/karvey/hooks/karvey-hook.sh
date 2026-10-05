@@ -148,6 +148,8 @@ nopy_plan_gate() {
   root="$(karvey_root)"
   if [ "$FORCE" != "1" ]; then [ -z "$root" ] && return 0; flag_on "$root" plan_gate_hook || return 0; fi
   if [ "$EVENT" = "pre-edit" ]; then
+    # D-47 (REQ-HF-032): file edits are gated only when the project opts in with plan_gate_edits
+    if [ "$FORCE" != "1" ] && ! flag_on "$root" plan_gate_edits; then return 0; fi
     # BUG-154: a checkpoint/handoff save needs no approval (solo profile and checkpoints only; no symlink, no ..)
     local fp rr dir real rel
     fp="$(json_field file_path)"
@@ -166,8 +168,14 @@ nopy_plan_gate() {
     return 2
   fi
   cmd="$(json_field command)"
-  if printf '%s' "$cmd" | grep -Eiq '(^|[^0-9&>])>>?\|?[[:space:]]*([^&[:space:]/]|/([^d]|d[^e]|de[^v]))|\brm[[:space:]]+-[a-zA-Z]*[rR]|\bgit[[:space:]]+(clean|reset[[:space:]]+--hard|push[[:space:]].*(--force|-f\b))|\bsed[[:space:]]+-[a-zA-Z]*i|\btruncate\b|\bfind\b.*-(delete|exec)|\bdrop[[:space:]]+(table|database)|\bterraform[[:space:]]+destroy|\b(az|gcloud|kubectl)\b.*[[:space:]]delete\b'; then
-    echo "[karvey] BLOCK plan-gate: command may write or destroy, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
+  # D-47 (REQ-HF-032): only consequential actions; write redirections and sed -i only with plan_gate_edits
+  local edits=0; { [ "$FORCE" = "1" ] || flag_on "$root" plan_gate_edits; } && edits=1
+  if printf '%s' "$cmd" | grep -Eiq '\brm[[:space:]]+-[a-zA-Z]*[rR]|\bgit[[:space:]]+(rm|clean|reset[[:space:]]+--hard|push[[:space:]].*(--force|-f\b)|filter-(branch|repo))\b|\bfind\b.*-(delete|exec)|\b(insert[[:space:]]+into|update[[:space:]]+[^[:space:]]+[[:space:]]+set|delete[[:space:]]+from|merge[[:space:]]+into|drop|truncate|alter[[:space:]]+table|create[[:space:]]+table)\b|\b(pip3?|pipx|npm[[:space:]].*-g|apt(-get)?|dnf|yum|brew|winget|choco|snap)[[:space:]]+(install|uninstall|remove|purge|upgrade)\b|\b(az|gh)[[:space:]]+extension[[:space:]]+(add|remove|update|install)|\b(terraform|tofu)[[:space:]]+(apply|destroy|import)|\bkubectl[[:space:]]+(apply|delete|patch|scale|replace)|\bhelm[[:space:]]+(install|upgrade|uninstall)|\bfunc[[:space:]]+azure[[:space:]]+functionapp[[:space:]]+publish|\baz[[:space:]]+(deployment|webapp[[:space:]]+(deploy|up)|functionapp[[:space:]]+deploy)|\b(az|gcloud)\b.*[[:space:]](create|delete|update|deploy)\b|\bdocker[[:space:]]+push|\b(gh[[:space:]]+pr|glab[[:space:]]+mr|az[[:space:]]+repos[[:space:]]+pr)[[:space:]]+create'; then
+    echo "[karvey] BLOCK plan-gate: consequential command, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
+    return 2
+  fi
+  if [ "$edits" = "1" ] && printf '%s' "$cmd" | grep -Eiq '(^|[^0-9&>])>>?\|?[[:space:]]*([^&[:space:]/]|/([^d]|d[^e]|de[^v]))|\bsed[[:space:]]+-[a-zA-Z]*i|\btruncate\b'; then
+    echo "[karvey] BLOCK plan-gate: command may write, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
     return 2
   fi
   return 0

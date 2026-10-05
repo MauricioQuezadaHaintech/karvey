@@ -1451,7 +1451,8 @@ def cmd_approve(args, root):
                              marker_report(root, args.change)), code="state.no_prod_marker")
         rec = approval.prod_record(marker, scope, by, ref, date, head_sha)
         approval.record_prod(root, args.change, rec)
-        approval.consume(root, scope, created_at=marker.get("created_at"))  # BUG-41: one approval, one change
+        # BUG-41: one production approval, one change; D-47: the same message stays the plan approval
+        approval.mark_prod_used(root, scope, created_at=marker.get("created_at"))
         res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
         return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s, commit %s, " \
                                         "expires %s); spec.json untouched (D-03)" % (args.change, ref, head_sha[:12],

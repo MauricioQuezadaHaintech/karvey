@@ -28,7 +28,7 @@ class TeamLayout(unittest.TestCase):
             g.write(self.ops, "board/%s.md" % role, "b\n")
         self.web = g.init(team / "app-web")
         g.write(self.web, "docs/spec/project.json", {"branch_flow": {"integration": "main", "production": "main"},
-                                                     "enforcement": {"plan_gate_hook": True}})
+                                                     "enforcement": {"plan_gate_hook": True, "plan_gate_edits": True}})
         g.commit_all(self.web)
         e = mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(team / "xdg"), approval.COMPAT_ENV: ""})
         e.start()

@@ -196,7 +196,7 @@ INDEX = {
     ],
     "BUG-41": [  # F-70 (QA D7 second opinion (X-1))
         ("unit", "test_state_approve.py", "ProdMarkerScope.test_project_wide_prod_marker_is_not_a_prod_approval_of_a_change"),
-        ("unit", "test_state_approve.py", "ProdMarkerScope.test_prod_marker_is_consumed_by_the_approval"),
+        ("unit", "test_state_approve.py", "ProdMarkerScope.test_prod_marker_is_used_once_by_the_approval"),
     ],
     "BUG-42": [  # F-71 (QA D7 second opinion (X-2))
         ("unit", "test_approval_vocab.py", "ConditionalSi.test_conditional_si_is_not_an_approval"),

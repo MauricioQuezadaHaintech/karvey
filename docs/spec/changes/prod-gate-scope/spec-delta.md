@@ -6,7 +6,7 @@ in `requirements.md`; the living spec keeps the compact form. The 3.12.0 require
 yet; they are cited as *amends* here and the amendment is ADDED, so the merge order of the two changes does
 not matter.
 
-Summary: **ADDED 31** (REQ-HF-001..031; revision 3, D-46: REQ-HF-031; revision 1, D-45: REQ-HF-020..030 added, REQ-HF-014/017/018 revised) · **MODIFIED 0** · **REMOVED 0**.
+Summary: **ADDED 36** (REQ-HF-001..036; revision 4, D-47: REQ-HF-032..036; revision 3, D-46: REQ-HF-031; revision 1, D-45: REQ-HF-020..030 added, REQ-HF-014/017/018 revised) · **MODIFIED 0** · **REMOVED 0**.
 
 ## ADDED Requirements
 
@@ -66,3 +66,10 @@ Traced to `docs/spec/changes/prod-gate-scope/prd.md`.
 
 ### A checkpoint save needs no plan approval (F-22, BUG-154)
 - **REQ-HF-031** — The plan-gate allows, with no marker, a call that writes only checkpoint/handoff state files (change and project `checkpoint.md`, the resolved profile's `handoff.md`, `state.json`, board), named directly (no symlink, no `..`); any other write, destructive command or protected path in the call keeps the marker requirement. *(Traces: O-5, S-6 · F-22 · BUG-154 · D-46)*
+
+### Approval model (D-47, F-23)
+- **REQ-HF-032** — The plan-gate gates only consequential actions (deleting tracked files, discarding or rewriting history, database writes, software changes, PRs/merges to production, deploys, infrastructure); reads, queries, scripts, redirections and edits are free; edits are gated only with `enforcement.plan_gate_edits: true`. *(Traces: O-7, S-8 · F-23 · D-47 · amends REQ-W1-014, 016)*
+- **REQ-HF-033** — A plan approval has no time limit: it ends when its phase closes or the human says stop (the hook withdraws it and says so); a production approval keeps D-35's 24 h. *(Traces: O-7, S-8 · F-23 · D-47, D-35)*
+- **REQ-HF-034** — A plan approval with a production word naming the change is also the production OK; recording it keeps the plan approval; the deploy skill asks only when `approve … prod` refuses. *(Traces: O-7, S-8 · F-23 · D-47, D-10)*
+- **REQ-HF-035** — Skills never ask approval for investigation or housekeeping, never re-ask, and proceed inside an approved plan; lint flags instructions to ask approval before reading or investigating. *(Traces: O-7, S-8 · F-23 · D-47)*
+- **REQ-HF-036** — The owner's personal files are aligned by a diff the owner applies. *(Traces: O-7 · F-23 · D-47, D-01, D-11)*

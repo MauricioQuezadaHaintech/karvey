@@ -28,7 +28,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -72,7 +72,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -110,7 +110,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -148,7 +148,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -186,7 +186,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -224,7 +224,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -262,7 +262,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -711,7 +711,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -822,7 +822,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-b, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-b, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-b",
           "kind": "plan"
@@ -865,7 +865,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-b, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-b, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-b",
           "kind": "plan"
@@ -907,7 +907,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, _project, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, _project, until the plan ends or you say stop",
         "marker": {
           "scope": "_project",
           "kind": "plan"
@@ -956,7 +956,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, _project, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, _project, until the plan ends or you say stop",
         "marker": {
           "scope": "_project",
           "kind": "plan"
@@ -1045,7 +1045,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -1082,7 +1082,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan",
@@ -1120,7 +1120,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan",
@@ -1161,7 +1161,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -1202,7 +1202,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -1246,7 +1246,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan",
@@ -1297,7 +1297,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan",
@@ -1343,7 +1343,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (plan, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
         "marker": {
           "scope": "feat-a",
           "kind": "plan"
@@ -1893,6 +1893,162 @@
         "approval",
         "REQ-HF-029",
         "BUG-143"
+      ]
+    },
+    {
+      "id": "ap-d47-01-stop-withdraws-the-plan-approval",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "marker": {
+            "feat-a": {
+              "@valid": "plan",
+              "age_min": 30
+            }
+          }
+        }
+      },
+      "input": {
+        "prompt": "detente"
+      },
+      "expect": {
+        "decision": "allow",
+        "stdout_contains": "[karvey] plan approval withdrawn (stop)"
+      },
+      "tags": [
+        "approval",
+        "REQ-HF-033",
+        "D-47"
+      ]
+    },
+    {
+      "id": "ap-d47-02-stop-in-english",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "marker": {
+            "feat-a": {
+              "@valid": "plan",
+              "age_min": 30
+            }
+          }
+        }
+      },
+      "input": {
+        "prompt": "stop."
+      },
+      "expect": {
+        "decision": "allow",
+        "stdout_contains": "[karvey] plan approval withdrawn (stop)"
+      },
+      "tags": [
+        "approval",
+        "REQ-HF-033",
+        "D-47"
+      ]
+    },
+    {
+      "id": "ap-d47-03-para-inside-a-sentence-is-not-stop",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "marker": {
+            "feat-a": {
+              "@valid": "plan",
+              "age_min": 30
+            }
+          }
+        }
+      },
+      "input": {
+        "prompt": "aprobado para producción feat-a"
+      },
+      "expect": {
+        "decision": "allow",
+        "stdout_contains": "[karvey] approval recorded (prod, feat-a, expires "
+      },
+      "tags": [
+        "approval",
+        "REQ-HF-033",
+        "D-47"
+      ]
+    },
+    {
+      "id": "ap-d47-04-plan-line-says-until-the-plan-ends",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "marker": {
+            "feat-a": {
+              "@valid": "plan",
+              "age_min": 30
+            }
+          }
+        }
+      },
+      "input": {
+        "prompt": "ok, adelante"
+      },
+      "expect": {
+        "decision": "allow",
+        "stdout_contains": "until the plan ends or you say stop"
+      },
+      "tags": [
+        "approval",
+        "REQ-HF-033",
+        "D-47"
       ]
     }
   ]

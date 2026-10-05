@@ -215,13 +215,16 @@ class ProdMarkerScope(Base):
         self.refused(("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20"),
                      "prod-kind approval marker")
 
-    def test_prod_marker_is_consumed_by_the_approval(self):
+    def test_prod_marker_is_used_once_by_the_approval(self):
+        """BUG-41 kept (one production approval, one change); D-47: the message stays the plan approval."""
         ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
         c, env = self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
         self.assertEqual(c, 0, env)
         m, status = ap.read_marker(self.root, "feat-a")
         self.assertEqual(status, "ok")
-        self.assertIsNotNone(m["consumed_at"])
+        self.assertIsNotNone(m["prod_used_at"])
+        self.assertIsNone(ap.find_valid(self.root, "feat-a", kinds=("prod",), project_scope=False)[0])
+        self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
 
 
 class ConsumeOnlyWhatClosed(Base):

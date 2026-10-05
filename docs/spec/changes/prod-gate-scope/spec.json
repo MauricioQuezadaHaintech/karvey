@@ -25,10 +25,11 @@
     "D-43",
     "D-45",
     "D-21",
-    "D-46"
+    "D-46",
+    "D-47"
   ],
   "inputs": {},
-  "iteration_count": 2,
+  "iteration_count": 3,
   "revision_history": [
     {
       "date": "2026-10-05",
@@ -86,6 +87,32 @@
         "spec-delta.md",
         "karvey-checkpoint skill",
         "plan-gate"
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "by": "Mauricio Quezada Ibáñez",
+      "reason": "owner instruction D-47: approval model (investigation free, consequential actions need an approved plan, no TTL, stop withdraws, one message approves plan and production)",
+      "decision": "D-47",
+      "added": [
+        "REQ-HF-032",
+        "REQ-HF-033",
+        "REQ-HF-034",
+        "REQ-HF-035",
+        "REQ-HF-036"
+      ],
+      "revised": [],
+      "findings": [
+        "F-23"
+      ],
+      "ripple": [
+        "plan-gate",
+        "approval hook",
+        "approval.py",
+        "karvey-deploy",
+        "rules",
+        "lint",
+        "owner personal files (diff only)"
       ]
     }
   ],

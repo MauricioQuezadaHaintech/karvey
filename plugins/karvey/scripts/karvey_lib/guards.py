@@ -418,8 +418,9 @@ def protect_paths(ctx):
 
 
 # --------------------------------------------------------------------------- plan-gate (§3.4)
-PLAN_MSG = ("[karvey] BLOCK plan-gate: %s. Present the plan and wait for the human's approval; "
-            "the approval hook records it.")
+PLAN_MSG = ("[karvey] BLOCK plan-gate: %s. This is a consequential action (D-47): present the plan with it and "
+            "wait for the human's approval; the approval hook records it and it lasts until the plan ends or the human "
+            "says stop.")
 NULL_TARGETS = frozenset({"/dev/null", "/dev/stdout", "/dev/stderr", "/dev/tty", "-"})
 WRITE_OPS = frozenset({">", ">>", ">|", "&>", "&>>", "<>"})
 SQL_CLIENTS = frozenset({"psql", "mysql", "mariadb", "sqlcmd", "sqlite3", "sqlplus", "bq", "clickhouse-client",
@@ -446,20 +447,50 @@ def _is_write_redirect(r):
 
 def _sql_text(seg):
     parts = list(seg.argv[1:])
+    for i, a in enumerate(seg.argv[1:-1], start=1):  # D-47: a script file is read (unreadable: gated)
+        if a in ("-i", "-f", "--file", "--input-file") or (seg.argv0 == "sqlite3" and a == ".read"):
+            path = seg.argv[i + 1]
+            full = path if os.path.isabs(path) else os.path.join(seg.cwd or os.getcwd(), path)
+            try:
+                with open(full, encoding="utf-8", errors="replace") as fh:
+                    parts.append(fh.read(512 * 1024))
+            except OSError:
+                parts.append("EXEC unreadable-script")
+    for r in seg.redirects:  # mysql < script.sql
+        if r.op == "<" and r.target:
+            full = r.target if os.path.isabs(r.target) else os.path.join(seg.cwd or os.getcwd(), r.target)
+            try:
+                with open(full, encoding="utf-8", errors="replace") as fh:
+                    parts.append(fh.read(512 * 1024))
+            except OSError:
+                parts.append("EXEC unreadable-script")
     parts += [r.body for r in seg.redirects if getattr(r, "body", None)]
     parts += [r.target for r in seg.redirects if r.op == "<<<" and r.target]
     return "\n".join(p for p in parts if isinstance(p, str))
 
 
+_SQL_WRITE = re.compile(r"\b(insert\s+into|update\s+[\w.\[\]\"`]+\s+set|delete\s+from|merge\s+into|drop|truncate|"
+                        r"alter|create|grant|revoke|exec|execute|call|replace\s+into|upsert|copy\s+[\w.\"]+\s+from|"
+                        r"vacuum|reindex)\b", re.I)
+
+
 def _sql_class(text):
+    """D-47: a statement that writes data or schema (a SELECT or a SHOW is free)."""
     if _SQL_DROP.search(text):
         return "SQL DROP"
     if _SQL_TRUNC.search(text):
         return "SQL TRUNCATE"
-    for m in _SQL_DELETE.finditer(text):
-        if not re.search(r"\bwhere\b", m.group("rest"), re.I):
+    for d in _SQL_DELETE.finditer(text):
+        if not re.search(r"\bwhere\b", d.group("rest"), re.I):
             return "SQL DELETE without WHERE"
+    m = _SQL_WRITE.search(_strip_sql_comments(text))
+    if m:
+        return "SQL %s (writes data or schema)" % m.group(1).split()[0].upper()
     return None
+
+
+def _strip_sql_comments(text):
+    return re.sub(r"--[^\n]*|/\*.*?\*/", " ", text or "", flags=re.S)
 
 
 def _flag(args, short, long=()):
@@ -519,6 +550,154 @@ def destructive_class(seg):
     return None
 
 
+_PKG = {"apt": ("install", "remove", "purge", "upgrade", "dist-upgrade", "full-upgrade", "autoremove"),
+        "apt-get": ("install", "remove", "purge", "upgrade", "dist-upgrade", "autoremove"),
+        "dnf": ("install", "remove", "erase", "upgrade", "update"), "yum": ("install", "remove", "erase", "update"),
+        "zypper": ("install", "in", "remove", "rm", "update", "up"), "apk": ("add", "del", "upgrade"),
+        "pacman": ("-S", "-R", "-U", "-Syu"), "brew": ("install", "uninstall", "remove", "upgrade", "reinstall"),
+        "winget": ("install", "uninstall", "upgrade"), "choco": ("install", "uninstall", "upgrade"),
+        "scoop": ("install", "uninstall", "update"), "snap": ("install", "remove", "refresh"),
+        "flatpak": ("install", "uninstall", "update"), "gem": ("install", "uninstall", "update"),
+        "cargo": ("install", "uninstall"), "go": ("install",), "pipx": ("install", "uninstall", "upgrade", "inject"),
+        "dotnet": ("tool",)}
+_DEPLOY = [("func", "azure", "functionapp", "publish"), ("az", "webapp", "deploy"), ("az", "webapp", "up"),
+           ("az", "functionapp", "deploy"), ("az", "functionapp", "deployment"), ("az", "containerapp", "up"),
+           ("az", "containerapp", "update"), ("az", "acr", "build"), ("az", "staticwebapp", "deploy"),
+           ("az", "deployment"), ("az", "stack"), ("docker", "push"), ("podman", "push"), ("helm", "install"),
+           ("helm", "upgrade"), ("helm", "uninstall"), ("helm", "rollback"), ("firebase", "deploy"),
+           ("gcloud", "app", "deploy"), ("gcloud", "run", "deploy"), ("gcloud", "functions", "deploy"),
+           ("pulumi", "up"), ("pulumi", "destroy"), ("serverless", "deploy"), ("sls", "deploy"), ("cdk", "deploy"),
+           ("cdk", "destroy"), ("fly", "deploy"), ("flyctl", "deploy"), ("heroku", "releases:rollback"),
+           ("eb", "deploy"), ("swa", "deploy"), ("azd", "up"), ("azd", "deploy"), ("azd", "provision"),
+           ("azd", "down")]
+_INFRA_VERBS = re.compile(r"^(create|delete|update|set|add|remove|purge|restore|start|stop|restart|scale|swap|"
+                          r"assign|import|move|rotate|regenerate|reset|renew|deploy|apply|attach|detach|"
+                          r"create-or-update|delete-.*|config)$")
+_GIT_HISTORY = ("filter-branch", "filter-repo", "replace")
+_VENV_BIN = re.compile(r"(^|/)[^/]*venv[^/]*/(bin|Scripts)/")
+
+
+def _tracked(seg, paths):
+    """The arguments of ``seg`` that are git-tracked files or folders (D-47: deleting tracked work)."""
+    out = []
+    for p in paths:
+        if not p or p.startswith("-") or "$" in p:
+            continue
+        full = p if os.path.isabs(p) else os.path.join(seg.cwd or os.getcwd(), p)
+        d = full if os.path.isdir(full) else os.path.dirname(full) or "."
+        if not os.path.isdir(d):
+            continue
+        rc, out_ = pj.git(["ls-files", "--error-unmatch", "--", full], d)
+        if rc == 0 and out_.strip():
+            out.append(p)
+    return out
+
+
+def consequential_class(seg, ctx=None):
+    """D-47 (REQ-HF-032): the consequential class of one segment, or None (free)."""
+    n = posixpath.basename(seg.argv0 or "")
+    args = seg.argv[1:]
+    if n == "sudo" and args:
+        return None  # the wrapped command is its own segment
+    c = destructive_class(seg)
+    if c in ("sed -i", "perl -i"):
+        c = None  # an in-place edit is a file edit (plan_gate_edits)
+    if c == "truncate":
+        c = "truncate of a tracked file" if _tracked(seg, [a for a in args if not a.startswith("-")]) else None
+    if c:
+        return c
+    if n in ("rm", "unlink", "shred") and _tracked(seg, args):
+        return "delete of a tracked file"
+    if n == "mv" and _tracked(seg, [a for a in args if not a.startswith("-")]):
+        return "move or overwrite of a tracked file"
+    if n == "git" and seg.git:
+        sub, ga = seg.git.get("sub"), seg.git.get("args") or []
+        if sub == "rm":
+            return "git rm"
+        if sub in _GIT_HISTORY:
+            return "git %s (history rewrite)" % sub
+        if sub == "rebase" and any(a in ("-i", "--interactive", "--root") for a in ga):
+            return "git rebase (history rewrite)"
+    if n in ("pip", "pip3", "uv", "poetry", "conda", "mamba") or re.match(r"^pip3(\.\d+)?$", n):
+        verb = next((a for a in args if not a.startswith("-")), "")
+        if n == "uv":
+            verb = " ".join(a for a in args[:2])
+            if not re.match(r"^(pip install|pip uninstall|tool install)", verb):
+                return None
+        if verb in ("install", "uninstall", "add", "remove", "update", "upgrade", "pip install", "tool install") \
+                or verb.startswith(("pip install", "pip uninstall")):
+            in_venv = (_VENV_BIN.search(seg.argv[0] if seg.argv else "") or
+                       (ctx is not None and ctx.env.get("VIRTUAL_ENV")) or "--target" in args or "-t" in args)
+            return None if in_venv else "%s %s (software change)" % (n, verb)
+    if n in ("python", "python3") and args[:2] == ["-m", "pip"] and len(args) > 2 and args[2] in ("install", "uninstall"):
+        in_venv = _VENV_BIN.search(seg.argv[0] if seg.argv else "") or (ctx is not None and ctx.env.get("VIRTUAL_ENV"))
+        return None if in_venv else "pip %s (software change)" % args[2]
+    if n in ("npm", "pnpm", "yarn", "bun") and (any(a in ("-g", "--global", "global") for a in args)):
+        if any(a in ("install", "i", "add", "uninstall", "remove", "rm", "update", "upgrade", "link") for a in args):
+            return "%s global install (software change)" % n
+    if n in _PKG:
+        verb = next((a for a in args if not a.startswith("-") or n == "pacman"), "")
+        if verb in _PKG[n]:
+            return "%s %s (software change)" % (n, verb)
+    if n in ("az", "gh") and args[:1] == ["extension"] and len(args) > 1 and args[1] in (
+            "add", "remove", "update", "install", "upgrade"):
+        return "%s extension %s (software change)" % (n, args[1])
+    if n == "code" and any(a in ("--install-extension", "--uninstall-extension") for a in args):
+        return "editor extension change"
+    for d in _DEPLOY:
+        if (n,) + tuple(args[:len(d) - 1]) == d:
+            return "deploy (%s)" % " ".join(d)
+    if n in ("vercel", "netlify") and ("--prod" in args or "deploy" in args and n == "vercel" and "--prod" in args):
+        return "%s production deploy" % n
+    if n in ("terraform", "tofu", "terragrunt") and args and args[0] in ("apply", "destroy", "import", "state",
+                                                                         "taint", "untaint", "run-all"):
+        return "%s %s (infrastructure)" % (n, args[0])
+    if n == "kubectl" and args and args[0] in ("apply", "delete", "patch", "scale", "replace", "create", "edit",
+                                                 "rollout", "set", "label", "annotate", "drain", "cordon"):
+        return "kubectl %s (infrastructure)" % args[0]
+    if n in ("az", "gcloud") and len(args) >= 2:
+        words = [a for a in args if not a.startswith("-")][:5]
+        if any(_INFRA_VERBS.match(w) for w in words[1:]) and words[0] not in ("login", "logout", "account",
+                                                                                "config", "auth", "version",
+                                                                                "help", "find", "upgrade",
+                                                                                "rest", "devops", "boards",
+                                                                                "repos", "pipelines", "artifacts"):
+            return "%s %s (infrastructure)" % (n, " ".join(words[:3]))
+    if n == "aws" and len(args) >= 2 and re.match(r"^(create|delete|update|put|modify|terminate|run|start|stop|"
+                                                   r"attach|detach|associate|disassociate|rm|rb|mb|cp|sync|mv)",
+                                                   args[1] if args[0] != "s3" else args[1]):
+        return "aws %s %s (infrastructure)" % (args[0], args[1])
+    if n in SQL_CLIENTS or (n == "az" and args[:2] == ["sql", "db"]):
+        return None  # covered by destructive_class
+    if n in ("mongosh", "mongo") and re.search(r"\b(insert|update|delete|replace|drop|createIndex|"
+                                                r"bulkWrite|remove)\w*\s*\(", " ".join(args)):
+        return "MongoDB write"
+    if n in ("redis-cli",) and any(a.upper() in ("DEL", "FLUSHALL", "FLUSHDB", "SET", "HSET", "EXPIRE", "UNLINK")
+                                   for a in args):
+        return "Redis write"
+    if ctx is not None and n in ("gh", "glab", "az"):
+        base = None
+        if n == "gh" and args[:2] == ["pr", "create"]:
+            base = _opt(args, "-B", "--base")
+        elif n == "glab" and args[:2] == ["mr", "create"]:
+            base = _opt(args, "-b", "--target-branch")
+        elif n == "az" and args[:3] == ["repos", "pr", "create"]:
+            base = _opt(args, "-t", "--target-branch")
+        if args[:2] in (["pr", "create"], ["mr", "create"]) or args[:3] == ["repos", "pr", "create"]:
+            if base is None:
+                return "PR without an explicit base (it may target production)"
+            base = _strip_heads(base.replace("refs/heads/", ""))
+            root = ctx.root
+            prods = set(ALWAYS_PRODUCTION)
+            if root is not None:
+                wc, _ = project_wc(ctx, root)
+                _p, integ, prod = pj.branch_flow(wc or {})
+                prods = production_set(ctx, root, integ, prod)
+            if base in prods:
+                return "PR to production (%s)" % base
+    return None
+
+
 def write_class(seg):
     for r in seg.redirects:
         if _is_write_redirect(r):
@@ -530,24 +709,39 @@ def write_class(seg):
     return None
 
 
+def plan_edits_enabled(ctx):
+    """D-47: file edits and write redirections are gated only with ``enforcement.plan_gate_edits: true``."""
+    return opt_in_enabled(ctx, "plan_gate_edits", _gate_root(ctx)) if not ctx.force_enabled else \
+        bool(ctx.env.get("KARVEY_PLAN_GATE_EDITS"))
+
+
 def plan_classes(ctx):
-    """The gated classes of this tool call (empty = not gated)."""
+    """The gated classes of this tool call (empty = not gated). D-47 (REQ-HF-032): consequential actions only;
+    file edits and write redirections too when the project opts in with ``plan_gate_edits``."""
+    edits = plan_edits_enabled(ctx)
     if ctx.event == "pre-edit":
-        return ["file edit (%s)" % (ctx.payload.tool_name or "Edit")]
+        return ["file edit (%s)" % (ctx.payload.tool_name or "Edit")] if edits else []
     cmd = ctx.payload.command or ""
     if not cmd.strip():
         return []
     parsed = ctx.parsed
     if parsed.unparsed:  # conservative regex over the raw string (§3.2)
-        if _RAW_DESTRUCTIVE.search(cmd) or _RAW_WRITE.search(cmd):
-            return ["unparsable command that may write or destroy"]
+        if _RAW_DESTRUCTIVE.search(cmd) or _RAW_CONSEQUENTIAL.search(cmd) or (edits and _RAW_WRITE.search(cmd)):
+            return ["unparsable command that may be consequential"]
         return []
     out = []
     for seg in parsed.segments:
-        c = destructive_class(seg) or write_class(seg)
+        c = consequential_class(seg, ctx) or (edits and (destructive_class(seg) or write_class(seg))) or None
         if c:
             out.append(c)
     return out
+
+
+_RAW_CONSEQUENTIAL = re.compile(r"\b(pip3?|npm|apt(-get)?|brew|winget|choco)\s+(install|uninstall|remove)|"
+                                r"\b(terraform|tofu)\s+(apply|destroy)|\bkubectl\s+(apply|delete)|"
+                                r"\bfunc\s+azure\s+functionapp\s+publish|\bgit\s+rm\b|"
+                                r"\b(insert\s+into|update\s+\S+\s+set|delete\s+from|drop\s+table|alter\s+table)\b",
+                                re.I)
 
 
 def _gate_root(ctx):
@@ -1983,6 +2177,11 @@ def approval_hook(ctx):
             created = approval.parse_dt(nm["created_at"])
             lines.append("[karvey] notification destination confirmation recorded (%s, expires %s)"
                          % (code, (created + approval.timedelta(minutes=nm["ttl_min"])).strftime("%H:%M")))
+        if approval.is_stop(text):  # D-47 (REQ-HF-033): "detente" / "stop" withdraws the plan approval
+            gone = approval.withdraw_all(root)
+            lines.append("[karvey] plan approval withdrawn (stop)%s \u2014 a consequential action needs a new "
+                         "approval" % ((": " + ", ".join(gone)) if gone else ""))
+            return Decision.allow(stdout=lines)
         verdict = approval.classify(text, vocab)
         shaped = approval.prod_shaped(text, vocab)
         if verdict["approved"]:
@@ -2006,7 +2205,12 @@ def approval_hook(ctx):
                                            ttl_min=ttl, compat=ctx.env.get(approval.COMPAT_ENV, ""))
             created = approval.parse_dt(marker["created_at"])
             expires = (created + approval.timedelta(minutes=marker["ttl_min"])).strftime("%H:%M")
-            line = "[karvey] approval recorded (%s, %s%s, expires %s)" % (verdict["kind"], scope, note, expires)
+            if verdict["kind"] == "plan":  # D-47: no time limit
+                line = "[karvey] approval recorded (plan, %s%s, until the plan ends or you say stop)" % (scope, note)
+            else:
+                prod_until = (created + approval.timedelta(hours=approval.PROD_VALID_H)).strftime("%H:%M")
+                line = "[karvey] approval recorded (prod, %s%s, expires %s tomorrow; it is also the plan approval)" % (
+                    scope, note, prod_until)
             if verdict["kind"] == "plan" and shaped:  # REQ-HF-029: never let a plan pass for a prod OK
                 line += " \u2014 a plan approval, NOT a production one; type: \u00ab%s\u00bb" % \
                     approval.suggested_phrase(verdict["cleaned"], None if scope == approval.SCOPE_PROJECT else scope)

@@ -116,6 +116,10 @@
         "git_flow_hook": {
           "type": "boolean"
         },
+        "plan_gate_edits": {
+          "description": "D-47 (REQ-HF-032): also gate file edits and write redirections behind an approved plan (default off: only consequential actions are gated)",
+          "type": "boolean"
+        },
         "plan_gate_hook": {
           "type": "boolean"
         },

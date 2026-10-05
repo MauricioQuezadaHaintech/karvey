@@ -76,12 +76,12 @@ class Refusal(Base):
     def test_refusal_lists_markers_and_missing_piece(self):
         ap.write_marker(self.root, "plan", "feat-a", "aprobado", session_id="s1")
         ap.write_marker(self.root, "prod", "feat-b", "ok, merge a prod feat-b", session_id="s1",
-                        now=ap.now_dt() - ap.timedelta(minutes=600))
+                        now=ap.now_dt() - ap.timedelta(minutes=1500))
         env = self.refused(("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20"),
                            "found: ")
         msg = env["errors"][0]["message"]
         self.assertIn("plan feat-a 0 min (live)", msg)
-        self.assertIn("prod feat-b 600 min (expired)", msg)
+        self.assertIn("prod feat-b 1500 min (expired)", msg)
         self.assertIn("missing: a live prod marker for feat-a", msg)
         self.assertIn("aprobado para producción feat-a PR #<n> v<version>", msg)
 
