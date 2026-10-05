@@ -564,9 +564,87 @@ def plan_gate_enabled(ctx):
     return opt_in_enabled(ctx, "plan_gate_hook", _gate_root(ctx))
 
 
+# BUG-154 (REQ-HF-031): saving a checkpoint or a handoff never needs a plan approval. Only these exact files,
+# reached without a symlink or a ".." step, are exempt; markers, ledger, spec.json, decisions and code never are.
+_CHANGE_CHECKPOINT = re.compile(r"^docs/spec/changes/[a-z0-9][a-z0-9-]{1,62}/checkpoint\.md$")
+
+
+def _literal_abs(path, cwd):
+    p = path if posixpath.isabs(path) else posixpath.join(cwd or os.getcwd(), path)
+    return posixpath.normpath(p)
+
+
+def checkpoint_paths(ctx, root):
+    """The real paths a checkpoint save writes: the resolved profile's handoff, board and state (solo, team or
+    legacy layout) and the project checkpoint; change checkpoints are matched by pattern."""
+    def build():
+        out = set()
+        rr = os.path.realpath(str(root))
+        out.add(posixpath.join(rr, "docs", "spec", "checkpoint.md"))
+        try:
+            from . import karvey_hooks as kh  # lazy: karvey_hooks imports this module
+            res = livestate_mod().resolve_session_profile(rr, rr)
+            if res.get("status") == "ok":
+                pr = res["profile"]
+                _n, profile, board = kh.profile_paths(pr["kind"], pr["root"], pr["cfg"], pr["role"])
+                for f in ("handoff.md", "state.json"):
+                    out.add(posixpath.normpath(os.path.join(profile, f)))
+                out.add(posixpath.normpath(board))  # solo: <profile>/board.md; team: <ops>/board/<role>.md
+        except Exception:
+            pass  # no profile resolved: only the checkpoint files are exempt
+        return out
+    return _memo(ctx, ("checkpoint-paths", str(root)), build)
+
+
+def livestate_mod():
+    from . import livestate
+    return livestate
+
+
+def _is_checkpoint_write(ctx, root, raw_path, cwd):
+    if not raw_path or "$" in raw_path or "`" in raw_path or any(c in raw_path for c in "*?["):
+        return False
+    if ".." in raw_path.replace("\\", "/").split("/"):
+        return False
+    # the real path must be one of the exact files below (built from the real project root without resolving
+    # anything inside it): a symlinked file or folder inside the project resolves elsewhere and is gated, while
+    # a symlinked folder above the project (/tmp -> /private/tmp) is harmless
+    path = os.path.realpath(_literal_abs(raw_path, cwd))
+    rr = os.path.realpath(str(root))
+    rel = posixpath.relpath(path, rr) if path.startswith(rr + "/") else None
+    if rel is not None and _CHANGE_CHECKPOINT.match(rel):
+        return True
+    return path in checkpoint_paths(ctx, root)
+
+
+def checkpoint_only(ctx, root):
+    """True when every write of this tool call is a checkpoint/handoff save (BUG-154) and nothing else is gated."""
+    if root is None:
+        return False
+    if ctx.event == "pre-edit":
+        return _is_checkpoint_write(ctx, root, ctx.payload.file_path_raw or ctx.payload.file_path, ctx.payload.cwd)
+    parsed = ctx.parsed
+    if parsed.unparsed:
+        return False
+    seen = False
+    for seg in parsed.segments:
+        if destructive_class(seg):
+            return False
+        targets = [r.target for r in seg.redirects if _is_write_redirect(r)]
+        if seg.argv0 == "tee":
+            targets += [a for a in seg.argv[1:] if not a.startswith("-") and a not in NULL_TARGETS]
+        for t in targets:
+            if not _is_checkpoint_write(ctx, root, t, seg.cwd):
+                return False
+            seen = True
+    return seen
+
+
 def plan_gate(ctx):
     classes = plan_classes(ctx)
     if not classes:
+        return None
+    if checkpoint_only(ctx, _gate_root(ctx) or ctx.root):  # BUG-154: a checkpoint save needs no approval
         return None
     root = _gate_root(ctx)
     base = root or ctx.payload.cwd

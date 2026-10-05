@@ -2047,3 +2047,33 @@ a `host.domain/path` argument (not a credential or output value) is a URL with `
 | 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-21, karvey-qa re-check |
 | 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
 | 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a5ad33f, green after |
+
+## BUG-154 — A checkpoint save was blocked by the plan-gate
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`plan_gate`), hooks/karvey-hook.sh (no-python plan-gate), skills/karvey-checkpoint
+- **Change / origin:** prod-gate-scope — finding F-22 (real use, owner, D-46)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A repo with `enforcement.plan_gate_hook: true` and a plan marker older than its TTL: `/karvey-checkpoint save` writes `docs/spec/agent/handoff.md`.
+
+### Actual vs expected
+- Actual: "BLOCK plan-gate: file edit (Write) … marker _project: expired"; the human had to approve a save.
+- Expected: a save of the checkpoint/handoff state files needs no approval; everything else stays gated.
+
+### Root cause
+the plan-gate gated every file edit and every write redirection, with no exemption for the method's own state files.
+
+### Fix
+`checkpoint_only`: the change and project `checkpoint.md` and the resolved profile's `handoff.md`, `state.json` and board, named directly (no symlink, no `..`, no variable or glob), pass with no marker when nothing else in the call writes or destroys; the no-python path exempts the solo profile and checkpoints the same way; the checkpoint skill says a save never needs a plan approval. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/plan-gate.json` cp-01-handoff-save-needs-no-approval .. cp-11 (cp-05..08, 10, 11 keep the gate); `plugins/karvey/tests/unit/test_plangate_checkpoint.py`; red on 8d6c361. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-22, owner report (D-46) |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on 8d6c361, green after |

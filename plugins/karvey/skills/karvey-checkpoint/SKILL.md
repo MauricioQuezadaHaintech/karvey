@@ -61,6 +61,8 @@ The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`
 
 ### `save` mode — save state
 
+**A save never needs a plan approval** (BUG-154). The plan-gate lets through, with no marker, the writes of a save and nothing else: `docs/spec/changes/<id>/checkpoint.md`, `docs/spec/checkpoint.md`, and the resolved profile's `handoff.md`, `state.json` and board (solo: `docs/spec/agent/`; team: `{ops_repo}/agents/<role>/` and `{ops_repo}/board/<role>.md`), named directly (no symlink, no `..`). Commit them by explicit path, alone. A save is never put to the human for approval; if one is blocked, report it as a defect.
+
 1. **Resolve the change-id** (see the "Resolving the change-id" section).
 2. **Capture the git state** of the repo being worked on:
    - Current branch:

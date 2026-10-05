@@ -652,6 +652,33 @@ WHEN `approve app-login prod …` runs
 THEN it is refused with `found: plan app-login 12 min (live); prod app-search 95 min (expired) — missing: a live
 prod marker for app-login; the human types «aprobado para producción app-login PR #<n> v<version>»`.
 
+---
+
+## Requirement 11: A checkpoint save needs no plan approval (F-22, BUG-154)
+
+### 11.1 REQ-HF-031 — The plan-gate exempts the checkpoint and handoff files only
+WHEN the plan-gate is on and a tool call writes only checkpoint or handoff state files — `docs/spec/changes/<id>/checkpoint.md`,
+`docs/spec/checkpoint.md`, and the resolved profile's `handoff.md`, `state.json` and board (solo:
+`docs/spec/agent/`; team: `{ops_repo}/agents/<role>/` and `{ops_repo}/board/<role>.md`) — named directly (no
+symlink on the way, no `..`, no variable or glob), the plan-gate SHALL allow it without an approval marker; IF the
+same call writes or destroys anything else, or the path is an approval marker, the ledger, a `spec.json`,
+`decisions.md`, another agent's profile, or code, THEN the plan-gate SHALL keep requiring the marker. Committing
+those files is not gated by the plan-gate (it never gates commits); the checkpoint skill commits them by explicit
+path, alone, and says that a save never needs a plan approval.
+
+Traces to PRD: O-5, S-6 · F-22 · BUG-154 · Decision: D-46 (owner, verbatim: «los save de checkpoint no pueden estar sujetos a aprobación, eso es totalmente ridículo»)
+
+#### Scenario: Success
+GIVEN `enforcement.plan_gate_hook: true` and a plan marker that expired 200 minutes ago
+WHEN `/karvey-checkpoint save` writes `docs/spec/agent/handoff.md` (Write tool or a here-document)
+THEN it is allowed with no approval.
+
+#### Scenario: Error
+GIVEN the same project
+WHEN the call writes `docs/spec/changes/feat-a/spec.json`, `docs/spec/agent/../../../src/a.py`, a `handoff.md` that is
+a symlink to code, another agent's handoff, or the handoff together with `echo y > src/a.py` or `rm -rf src`
+THEN it is blocked as before.
+
 ## Explicit exclusions
 
 - Plan-kind approvals keep the 3.12.0 scope rule (named change in this tree, else active, else `_project`).
@@ -674,5 +701,6 @@ prod marker for app-login; the human types «aprobado para producción app-login
 
 | Rev | Date | Ref | Requirements | Why |
 |---|---|---|---|---|
+| 3 | 2026-10-05 | D-46 · F-22 | ADDED REQ-HF-031 | The owner reported that a checkpoint save was blocked by the plan-gate (D-46); routed through karvey-iterate as BUG-154. |
 | 2 | 2026-10-05 | QA F-12..F-17 | REVISED REQ-HF-014 (a Karvey repo with no clone passes only into the integration branch; folders below a non-repo session directory searched), REQ-HF-026 (a Karvey clone wins over look-alikes; in a Karvey context the host's answer decides; a failed lookup blocks) | The QA review (security, code, D7 second opinion) found the warning path reachable for Karvey targets. Tightened in place in the QA loop (stricter, fail closed); the owner confirms it with the QA approval. |
 | 1 | 2026-10-05 | D-45 · F-05..F-11 | ADDED REQ-HF-020..030; REVISED REQ-HF-014 (non-Karvey targets warn), REQ-HF-017 (BUG-138..144), REQ-HF-018 (session hook, approval-hook error line); BUG-53/54 renumbered to BUG-138/139 | The owner widened the hotfix with the defects found in use (D-45). BUG-53/54 were already used by another unmerged branch (F-11). Ripple: prd.md (problems 5-9, O-5..O-8, S-6..S-9, AC-6..AC-9), findings.md, spec-delta.md, PLAN.md, spec.json, backlog BL-64. Revised in place while requirements are generated and not approved. |

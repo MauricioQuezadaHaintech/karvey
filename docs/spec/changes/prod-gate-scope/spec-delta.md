@@ -6,7 +6,7 @@ in `requirements.md`; the living spec keeps the compact form. The 3.12.0 require
 yet; they are cited as *amends* here and the amendment is ADDED, so the merge order of the two changes does
 not matter.
 
-Summary: **ADDED 30** (REQ-HF-001..030; revision 1, D-45: REQ-HF-020..030 added, REQ-HF-014/017/018 revised) · **MODIFIED 0** · **REMOVED 0**.
+Summary: **ADDED 31** (REQ-HF-001..031; revision 3, D-46: REQ-HF-031; revision 1, D-45: REQ-HF-020..030 added, REQ-HF-014/017/018 revised) · **MODIFIED 0** · **REMOVED 0**.
 
 ## ADDED Requirements
 
@@ -63,3 +63,6 @@ Traced to `docs/spec/changes/prod-gate-scope/prd.md`.
 
 ### The `approve … prod` refusal names what it found (F-09, BUG-144)
 - **REQ-HF-030** — A refused `approve <id> prod` lists each marker considered (kind, change, age, expired) or none, names the missing piece and ends with the phrase to type. *(Traces: O-8, S-9, AC-9 · F-09 · BUG-144 · D-45)*
+
+### A checkpoint save needs no plan approval (F-22, BUG-154)
+- **REQ-HF-031** — The plan-gate allows, with no marker, a call that writes only checkpoint/handoff state files (change and project `checkpoint.md`, the resolved profile's `handoff.md`, `state.json`, board), named directly (no symlink, no `..`); any other write, destructive command or protected path in the call keeps the marker requirement. *(Traces: O-5, S-6 · F-22 · BUG-154 · D-46)*

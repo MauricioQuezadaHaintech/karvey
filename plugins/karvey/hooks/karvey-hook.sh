@@ -148,6 +148,20 @@ nopy_plan_gate() {
   root="$(karvey_root)"
   if [ "$FORCE" != "1" ]; then [ -z "$root" ] && return 0; flag_on "$root" plan_gate_hook || return 0; fi
   if [ "$EVENT" = "pre-edit" ]; then
+    # BUG-154: a checkpoint/handoff save needs no approval (solo profile and checkpoints only; no symlink, no ..)
+    local fp rr dir real rel
+    fp="$(json_field file_path)"
+    if [ -n "$root" ] && [ -n "$fp" ] && ! printf '%s' "$fp" | grep -q '\.\.' && [ ! -L "$fp" ]; then
+      rr="$(cd "$root" 2>/dev/null && pwd -P)"
+      dir="$(cd "$(dirname "$fp")" 2>/dev/null && pwd -P)"
+      real="$dir/$(basename "$fp")"; rel="${real#"$rr"/}"
+      # the path inside the project must resolve to itself (a symlink above the project is harmless)
+      if [ -n "$rr" ] && [ -n "$dir" ] && [ "$rel" != "$real" ] && { [ "${fp#"$root"/}" = "$rel" ] || [ "$fp" = "$real" ]; }; then
+        if printf '%s' "$rel" | grep -Eq '^docs/spec/(agent/(handoff\.md|board\.md|state\.json)|checkpoint\.md|changes/[a-z0-9][a-z0-9-]{1,62}/checkpoint\.md)$'; then
+          return 0
+        fi
+      fi
+    fi
     echo "[karvey] BLOCK plan-gate: file edit, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
     return 2
   fi

@@ -23,10 +23,12 @@
     "D-36",
     "D-37",
     "D-43",
-    "D-45"
+    "D-45",
+    "D-21",
+    "D-46"
   ],
   "inputs": {},
-  "iteration_count": 1,
+  "iteration_count": 2,
   "revision_history": [
     {
       "date": "2026-10-05",
@@ -66,6 +68,24 @@
         "spec-delta.md",
         "PLAN.md",
         "docs/spec/backlog.md (BL-64)"
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "by": "Mauricio Quezada Ibáñez",
+      "reason": "owner reported a checkpoint save blocked by the plan-gate (D-46); routed through karvey-iterate",
+      "decision": "D-46",
+      "added": [
+        "REQ-HF-031"
+      ],
+      "revised": [],
+      "findings": [
+        "F-22"
+      ],
+      "ripple": [
+        "spec-delta.md",
+        "karvey-checkpoint skill",
+        "plan-gate"
       ]
     }
   ],
