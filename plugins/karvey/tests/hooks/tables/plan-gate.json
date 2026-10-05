@@ -5452,6 +5452,308 @@
         "D-47",
         "qa-d7"
       ]
+    },
+    {
+      "id": "d47-51-db-write-procs-gates-a-neutral-name",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true,
+              "db_write_procs": [
+                "^sp_case_"
+              ]
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "sqlcmd -Q \"EXEC dbo.sp_case_flow @id=1\""
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-52-neutral-name-free-by-default",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "sqlcmd -Q \"EXEC dbo.sp_case_flow @id=1\""
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-53-db-read-procs-only-from-the-reviewed-line",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true,
+              "db_read_procs": [
+                "^sp_post_"
+              ]
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "sqlcmd -Q \"EXEC dbo.sp_post_case @id=1\""
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-54-docker-rmi-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "docker rmi app:1"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47"
+      ]
+    },
+    {
+      "id": "d47-55-pip-target-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": ".venv/bin/pip install --target /usr/lib/x y"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-56-sqlite-read-directive-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "sqlite3 app.db '.read q.sql'"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
+    },
+    {
+      "id": "d47-57-psql-from-a-pipe-is-gated",
+      "guard": "plan-gate",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            },
+            "enforcement": {
+              "plan_gate_hook": true
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          },
+          "files": {
+            "src/a.py": "x\n"
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "cat q.sql | psql -d app"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": "BLOCK plan-gate"
+      },
+      "tags": [
+        "plan-gate",
+        "REQ-HF-032",
+        "D-47",
+        "qa-d1"
+      ]
     }
   ]
 }

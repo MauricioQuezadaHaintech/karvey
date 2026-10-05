@@ -116,6 +116,16 @@
         "git_flow_hook": {
           "type": "boolean"
         },
+        "db_write_procs": {
+          "description": "D-47: regular expressions of stored-procedure names that write (EXEC of one needs an approved plan); added to the built-in write-word heuristic",
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "maxLength": 200}
+        },
+        "db_read_procs": {
+          "description": "D-47: regular expressions of stored-procedure names that only read (EXEC of one is free); read from the reviewed line only",
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "maxLength": 200}
+        },
         "plan_gate_edits": {
           "description": "D-47 (REQ-HF-032): also gate file edits and write redirections behind an approved plan (default off: only consequential actions are gated)",
           "type": "boolean"

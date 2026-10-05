@@ -92,3 +92,28 @@ class ProjectMarkerSession(unittest.TestCase):
     def test_same_session_proceeds_another_session_is_gated(self):
         self.assertEqual(self.run_rm("s-old"), 0)
         self.assertEqual(self.run_rm("s-new"), 2)
+
+
+class StopInListedClones(unittest.TestCase):
+    """D-47 (REQ-HF-033), D1 re-check: a stop withdraws the plan approvals of the clones project.json lists too."""
+
+    def test_stop_reaches_a_listed_clone(self):
+        with tempfile.TemporaryDirectory() as t:
+            base = Path(os.path.realpath(t))
+            other = g.init(base / "app-api")
+            g.write(other, "docs/spec/project.json", {"branch_flow": {"integration": "main", "production": "main"}})
+            g.commit_all(other)
+            web = g.init(base / "app-web")
+            g.write(web, "docs/spec/project.json", {"repos": ["app-web", "../app-api"],
+                                                    "branch_flow": {"integration": "main", "production": "main"}})
+            g.commit_all(web)
+            with mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(base / "xdg"), approval.COMPAT_ENV: ""}):
+                approval.write_marker(other, "plan", "_project", "ok", session_id="s", compat="")
+                out, err = io.StringIO(), io.StringIO()
+                payload = {"hook_event_name": "UserPromptSubmit", "cwd": str(web), "session_id": "s",
+                           "prompt": "detente"}
+                kh.dispatch("prompt", json.dumps(payload), env=dict(os.environ, CLAUDE_PROJECT_DIR=str(web)),
+                            out=out, err=err)
+                self.assertIn("plan approval withdrawn", out.getvalue())
+                m, _ = approval.read_marker(other, "_project")
+                self.assertIsNotNone(m.get("stopped_at"))

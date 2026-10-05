@@ -310,7 +310,7 @@ _STOP_LEAD = re.compile(r"^((please|por favor|hey|oye|ok|okay|ya|ojo)[,!.]?\s+|(
 _STOP_WORD = r"(detente|detenete|deten|stop|alto|basta|cancela|cancelalo|cancel|halt|frena|pausa|pause|abort|aborta|" \
              r"no sigas|no continues|dont continue|don't continue|hold on|hold|wait|espera|para|paralo|paren)"
 _STOP = re.compile(r"^%s(\s*[,.!;:]|\s*$|\s+(ya|todo|ahora|now|please|por favor|un momento|el|la|los|las|eso|"
-                   r"esto|aqui|it|that|this|everything|all|the)\b)" % _STOP_WORD)
+                   r"esto|aqui|ahi|alli|it|that|this|everything|all|the|right|there)\b)" % _STOP_WORD)
 
 
 def is_stop(prompt):

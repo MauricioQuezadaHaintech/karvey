@@ -474,7 +474,32 @@ _SQL_WRITE = re.compile(r"\b(insert\s+into|update\s+[\w.\[\]\"`]+\s+set|delete\s
                         r"vacuum|reindex)\b", re.I)
 
 
-def _sql_class(text):
+def _proc_patterns(ctx):
+    """``(write, read)`` procedure-name patterns: ``enforcement.db_write_procs`` (working copy or reviewed line:
+    it only adds gating) and ``enforcement.db_read_procs`` (reviewed line only: it frees procedures)."""
+    if ctx is None:
+        return [], []
+    root = ctx.root
+
+    def pats(v):
+        return [re.compile(x, re.I) for x in (v or []) if isinstance(x, str) and x.strip() and len(x) <= 200
+                and _compiles(x)] if isinstance(v, list) else []
+    wc, _ = project_wc(ctx, root) if root is not None else (None, None)
+    write = pats(pj.enforcement_of(wc).get("db_write_procs")) + pats(reviewed_setting(ctx, "db_write_procs", root)
+                                                                    if root is not None else None)
+    read = pats(reviewed_setting(ctx, "db_read_procs", root)) if root is not None else []
+    return write, read
+
+
+def _compiles(x):
+    try:
+        re.compile(x)
+        return True
+    except re.error:
+        return False
+
+
+def _sql_class(text, ctx=None):
     """D-47: a statement that writes data or schema (a SELECT or a SHOW is free)."""
     if _SQL_DROP.search(text):
         return "SQL DROP"
@@ -489,7 +514,13 @@ def _sql_class(text):
         if word in ("exec", "execute", "call"):  # D-47: a read procedure is investigation; a write one is not
             name = re.match(r"\s*(?:@\w+\s*=\s*)?([\w.\[\]\"]+)", body[m.end():])
             proc = (name.group(1) if name else "").lower()
-            if not proc or _WRITE_PROC.search(proc.rsplit(".", 1)[-1].strip("[]\"")):
+            short_name = proc.rsplit(".", 1)[-1].strip("[]\"")
+            write_p, read_p = _proc_patterns(ctx)
+            if proc and any(r.search(short_name) for r in write_p):
+                return "SQL %s %s (a write procedure, enforcement.db_write_procs)" % (word.upper(), proc)
+            if proc and any(r.search(short_name) for r in read_p):
+                continue
+            if not proc or _WRITE_PROC.search(short_name):
                 return "SQL %s %s (may write data)" % (word.upper(), proc or "?")
             continue
         return "SQL %s (writes data or schema)" % word.upper()
@@ -694,6 +725,10 @@ def consequential_class(seg, ctx=None):
             c = _sql_class(" ".join(prev.argv[1:]))
             return c
         return "SQL from a pipe (cannot be read)"
+    if n in SQL_CLIENTS:  # with the project's procedure patterns
+        c = _sql_class(_sql_text(seg), ctx)
+        if c:
+            return c
     c = destructive_class(seg)
     if c in ("sed -i", "perl -i"):
         c = None  # an in-place edit is a file edit (plan_gate_edits)
@@ -780,7 +815,7 @@ def consequential_class(seg, ctx=None):
             return "kubectl %s (infrastructure)" % verb
         if n == "helm" and verb in ("install", "upgrade", "uninstall", "rollback", "delete"):
             return "helm %s (infrastructure)" % verb
-        if n == "docker" and (verb in ("push",) or verb == "system" and rest[:1] == ["prune"] or
+        if n == "docker" and (verb in ("push", "rmi") or verb == "system" and rest[:1] == ["prune"] or
                               verb in ("volume", "image", "container", "network") and rest[:1] in (["prune"], ["rm"])):
             return "docker %s (infrastructure)" % " ".join([verb] + rest[:1])
         return None

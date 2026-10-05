@@ -112,3 +112,16 @@ Security review of the plan-gate checkpoint exemption only. **Gate PASS** (no Cr
 - L1 (Low): `ops_repo` naming the code repo → covered by the same fix.
 - L2 (Low, pre-existing, not widened by the exemption): the plan-gate never classified `cp` or `python -c` writes;
   superseded by D-47 (the plan-gate is re-scoped to consequential actions).
+
+## Addendum — D-47 delta (REQ-HF-032..036), 2026-10-05
+
+- D7 at `92d85d5`: FAIL (reads gated, consequential actions free, a project-wide approval with no end, stop
+  phrases missed) → BUG-155 fixed in `e90951f`. D7 re-check at `e90951f`: **PASS WITH FINDINGS** (Low: `alto ahí`,
+  `docker rmi`, script files that write — the first two fixed, the third a documented limit).
+- D1 at `92d85d5`: partial (static reading, six concerns) → addressed in `e90951f`. D1 re-run at `e90951f`:
+  **PASS (conditional)** — guard tables 200/200, fixes verified; requested coverage rows added (pip `--target`,
+  sqlite `.read`, psql from a pipe, stop in a listed clone).
+- Accepted by design (D-47, coordinator confirmation): a change-scoped plan approval lasts until its phase closes;
+  `rm -rf` free only inside the temp folder outside a repository; `EXEC` by a name heuristic with
+  `db_write_procs`/`db_read_procs`; «no, espera» is a stop. Residual: a stop does not reach clones the project does
+  not list (BL-67).
