@@ -1462,8 +1462,8 @@ def _audit(root, record):
 
 
 def approval_hook(ctx):
-    """UserPromptSubmit (REQ-W1-017, 019; D-01, D-10, D-11). Silent unless it records a marker;
-    it never blocks the prompt. Outside a Karvey project it does nothing."""
+    """UserPromptSubmit (REQ-W1-017, 019; D-01, D-10, D-11; REQ-HF-001..004, 029). Silent unless it records a
+    marker or the prompt is production-shaped (one line then); it never blocks the prompt. Outside a Karvey project it does nothing."""
     root = ctx.root
     text = ctx.payload.prompt
     if root is None or not isinstance(text, str) or not text.strip():
@@ -1481,18 +1481,47 @@ def approval_hook(ctx):
             lines.append("[karvey] notification destination confirmation recorded (%s, expires %s)"
                          % (code, (created + approval.timedelta(minutes=nm["ttl_min"])).strftime("%H:%M")))
         verdict = approval.classify(text, vocab)
+        shaped = approval.prod_shaped(text, vocab)
         if verdict["approved"]:
             ids = [c["id"] for c in pj.list_changes(root)]
-            scope = approval.scope_for(verdict["cleaned"], ids, active_change(ctx)["change"])
+            note = ""
+            if verdict["kind"] == "prod":  # REQ-HF-001..004 (BUG-138)
+                res = approval.resolve_prod_scope(root, verdict["cleaned"], ids, active_change(ctx))
+                if res["scope"] is None:
+                    cand = res["candidates"][0] if len(res["candidates"]) == 1 else None
+                    lines.append("[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
+                                 % (res["why"], approval.suggested_phrase(verdict["cleaned"], cand)))
+                    _audit(root, {"guard": "approval", "event": "prompt", "decision": "not-recorded",
+                                  "reason": res["why"]})
+                    return Decision.allow(stdout=lines)
+                scope = res["scope"]
+                if res["implicit"]:
+                    note = " \u2014 %s; your message named none" % res["why"]
+            else:
+                scope = approval.scope_for(verdict["cleaned"], ids, active_change(ctx)["change"])
             marker = approval.write_marker(root, verdict["kind"], scope, text, session_id=ctx.payload.session_id,
                                            ttl_min=ttl, compat=ctx.env.get(approval.COMPAT_ENV, ""))
             created = approval.parse_dt(marker["created_at"])
             expires = (created + approval.timedelta(minutes=marker["ttl_min"])).strftime("%H:%M")
-            lines.append("[karvey] approval recorded (%s, %s, expires %s)" % (verdict["kind"], scope, expires))
+            line = "[karvey] approval recorded (%s, %s%s, expires %s)" % (verdict["kind"], scope, note, expires)
+            if verdict["kind"] == "plan" and shaped:  # REQ-HF-029: never let a plan pass for a prod OK
+                line += " \u2014 a plan approval, NOT a production one; type: \u00ab%s\u00bb" % \
+                    approval.suggested_phrase(verdict["cleaned"], None if scope == approval.SCOPE_PROJECT else scope)
+            lines.append(line)
+        elif shaped:  # REQ-HF-029 (BUG-143): a production-shaped phrase always gets its line
+            cleaned = approval.normalise(approval.strip_quoted(text))
+            lines.append("[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
+                         % (verdict["reason"], approval.suggested_phrase(cleaned, active_change(ctx)["change"])))
         return Decision.allow(stdout=lines) if lines else None
     except Exception as exc:  # fail open: no marker is the safe side (§3.2)
         _audit(root, {"guard": "approval", "event": "prompt", "decision": "error",
                       "reason": "approval-hook error: %s: %s" % (type(exc).__name__, exc)})
+        try:
+            if approval.prod_shaped(text):  # REQ-HF-018/029: say it, even on an error
+                return Decision.allow(stdout=["[karvey] prod approval NOT recorded: internal error (%s)"
+                                              % type(exc).__name__])
+        except Exception:
+            pass
         return None
 
 

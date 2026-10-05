@@ -4,6 +4,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+- E1.F1 (BUG-138, BUG-143) — a production approval is recorded only for the change the phrase names (or the single active change, said out loud); a change named but not in this tree, several changes, or no resolvable change record nothing, and every production-shaped phrase gets one line: recorded, or NOT recorded with the reason and the phrase to type. Why: an approval was bound to a change the human did not name, and a phrase that recorded nothing printed nothing.
+
 ## [3.12.0] - 2026-09-26
 
 ### Why

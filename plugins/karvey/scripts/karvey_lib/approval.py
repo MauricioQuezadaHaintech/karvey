@@ -700,3 +700,133 @@ def scope_for(prompt_cleaned, change_ids, active=None):
     if active and valid_scope(active):
         return active
     return SCOPE_PROJECT
+
+
+# --------------------------------------------------------------------------- prod scope (REQ-HF-001..004, 029)
+_TOKEN = re.compile(r"(?<![\w-])([a-z0-9]+(?:-[a-z0-9]+)+)(?![\w-])")
+_ES_TERMS = ("aprobado", "apruebo", "aprueba", "dale", "ejecuta", "adelante", "procede", "perfecto", "si",
+             "produccion", "publica", "libera", "pasa", "sube")
+REF_SCAN_MAX = 50
+
+
+def suggested_phrase(cleaned, change=None):
+    """The phrase the human types to approve production of ``change`` (BUG-143), in the prompt's language."""
+    words = set(re.findall(r"[a-z]+", cleaned or ""))
+    cid = change or "<change-id>"
+    if words & set(_ES_TERMS):
+        return "aprobado para producción %s" % cid
+    return "approved for production %s" % cid
+
+
+def prod_shaped(prompt, vocab=None):
+    """An approval term and a production term anywhere in the human's own words (quoted material aside)."""
+    vocab = vocab or default_vocabulary()
+    cleaned = normalise(strip_quoted(prompt if isinstance(prompt, str) else ""))
+    if not cleaned:
+        return False
+    approve = [t for t in vocab["approve"] if normalise(t) != "si"]
+    return bool(find_term(cleaned, approve) and find_term(cleaned, vocab["prod_terms"]))
+
+
+def _named_ids(cleaned, ids):
+    found = []
+    for cid in sorted(ids, key=len, reverse=True):
+        if valid_scope(cid) and cid != SCOPE_PROJECT and re.search(
+                r"(?<![\w-])%s(?![\w-])" % re.escape(cid.casefold()), cleaned) and \
+                not any(cid in f for f in found):
+            found.append(cid)
+    return found
+
+
+def _where_else(root, token):
+    """``("worktree", path)`` / ``("branch", ref)`` holding change ``token``, else ``(None, None)``."""
+    here = os.path.realpath(str(root))
+    rc, out = pj.git(["worktree", "list", "--porcelain"], root)
+    if rc == 0:
+        for ln in out.splitlines():
+            if ln.startswith("worktree "):
+                wt = ln[len("worktree "):].strip()
+                if os.path.realpath(wt) != here and \
+                        os.path.isfile(os.path.join(wt, "docs", "spec", "changes", token, "spec.json")):
+                    return "worktree", os.path.realpath(wt)
+    rc, out = pj.git(["for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes"], root)
+    if rc == 0:
+        for ref in [r for r in out.splitlines() if r and not r.endswith("/HEAD")][:REF_SCAN_MAX]:
+            rc2, _ = pj.git(["cat-file", "-e", "%s:docs/spec/changes/%s/spec.json" % (ref, token)], root)
+            if rc2 == 0:
+                return "branch", ref
+    return None, None
+
+
+def resolve_prod_scope(root, cleaned, ids, active):
+    """The change a production approval is for (REQ-HF-001..004). Returns ``{scope, why, implicit,
+    candidates}``; ``scope`` is None when no marker may be written, ``why`` then says how to fix it."""
+    res = {"scope": None, "why": "", "implicit": False, "candidates": []}
+    named = _named_ids(cleaned, ids)
+    if len(named) > 1:
+        res["why"] = ("it names %d changes (%s); one production approval covers one change: send one message "
+                      "per change" % (len(named), ", ".join(sorted(named))))
+        res["candidates"] = sorted(named)
+        return res
+    if len(named) == 1:
+        res["scope"] = named[0]
+        return res
+    idset = set(ids)
+    tokens = [t for t in dict.fromkeys(_TOKEN.findall(cleaned)) if 3 <= len(t) <= 63 and t not in idset]
+    for tok in tokens:
+        kind, where = _where_else(root, tok)
+        res["candidates"] = [tok]
+        if kind == "worktree":
+            res["why"] = ("change %s is not in this working tree; approve it in the worktree that holds it: %s"
+                          % (tok, where))
+        elif kind == "branch":
+            res["why"] = ("change %s is not in this working tree; the branch %s holds it: open the session in a "
+                          "tree of that branch and approve there" % (tok, where))
+        else:
+            continue
+        return res
+    if tokens:
+        res["candidates"] = [tokens[0]]
+        res["why"] = ("change %s is not in this working tree and no worktree or branch holds it; check the id, or "
+                      "open the session in the tree or branch that holds the change" % tokens[0])
+        return res
+    act = active or {}
+    cands = list(act.get("candidates") or [])
+    if act.get("change") and valid_scope(act["change"]):
+        res.update(scope=act["change"], implicit=True, candidates=[act["change"]],
+                   why="the active change of this branch" if act.get("reason") == "branch"
+                   else "the only active change")
+        return res
+    res["candidates"] = cands
+    res["why"] = ("no change named and %d active (%s); name the change" % (len(cands), ", ".join(cands))
+                  if cands else "no change named and none active; name the change")
+    return res
+
+
+def describe_markers(root, ttl_min=None, now=None):
+    """Every marker file of this clone as ``{kind, scope, age_min, state}`` (BUG-144), newest first."""
+    out = []
+    try:
+        d = approvals_dir(root, create=False)
+        files = sorted(Path(d).glob("*.json")) if Path(d).is_dir() else []
+    except Exception:
+        files = []
+    now = now or now_dt()
+    for f in files:
+        try:
+            m = json.loads(f.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, UnicodeDecodeError):
+            out.append({"kind": "?", "scope": f.stem, "age_min": None, "state": "unreadable"})
+            continue
+        if not isinstance(m, dict) or m.get("kind") not in KINDS:
+            continue
+        created = parse_dt(m.get("created_at"))
+        age = int((now - created).total_seconds() // 60) if created else None
+        if m.get("consumed_at"):
+            state = "consumed"
+        else:
+            ok, why = check_marker(m, root, ttl_min=ttl_min, now=now)
+            state = "live" if ok else ("expired" if why.startswith("expired") else why)
+        out.append({"kind": m.get("kind"), "scope": m.get("scope") or f.stem, "age_min": age, "state": state})
+    out.sort(key=lambda x: (x["age_min"] is None, x["age_min"] or 0))
+    return out
