@@ -51,3 +51,9 @@ See `tasks.md` (24 tasks, E1.F1..F9, 690 min). Status per task is updated here a
 - 2026-09-29 — change opened in the hotfix lane (D-43).
 - 2026-10-05 — requirements revision 1 (D-45): F-05..F-11, REQ-HF-020..030 added, REQ-HF-014/017/018 revised,
   BUG-53/54 renumbered to BUG-138/139 (held by another branch).
+
+## QA Review
+
+Verdict PASS (security gate PASS at 8d6c361) — `qa/REVISION_PR_pending_20261005.md`. QA loops fixed BUG-145..153
+(findings F-12..F-21, all closed). Open: BL-67 (known limits, accepted). Pending: human QA approval (also confirms
+requirements revision 2), release prep 3.12.1.
