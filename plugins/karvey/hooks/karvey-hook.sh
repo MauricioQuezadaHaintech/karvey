@@ -177,14 +177,14 @@ nopy_git_flow() {
   return 0
 }
 
-# prod-gate without python (§3.2): fail closed. Any PR/MR merge is blocked (its base cannot be
+# prod-gate without python (§3.2): fail closed. Any PR/MR merge (CLI or REST, REQ-HF-010/012) is blocked (its base cannot be
 # resolved); a git push is blocked when it names master/main/the production branch, has no
 # refspec, or has a wildcard or matching (`:`) refspec (BUG-47). Off only if prod_gate_hook is false in the working copy AND on origin/<production>.
 nopy_prod_gate() {
   local root cmd pj prod kind rest n w
   root="$(karvey_root)"; [ -z "$root" ] && return 0
   cmd="$(json_field command)"
-  if printf '%s' "$cmd" | grep -Eq 'gh +pr +merge|az +repos +pr +update.*(completed|auto-complete)|glab +mr +merge|gh +api.*(pulls/[0-9]+/merge|mergePullRequest|enablePullRequestAutoMerge)'; then kind=pr
+  if printf '%s' "$cmd" | grep -Eq 'gh +pr +merge|az +repos +pr +update.*(completed|auto-complete)|glab +mr +merge|gh +api.*(pulls/[0-9]+/merge|mergePullRequest|enablePullRequestAutoMerge)|pullrequests/[0-9]+.*(completed|autoCompleteSetBy)|pulls/[0-9]+/merge|merge_requests/[0-9]+/merge|pipelines/approvals|pending_deployments'; then kind=pr
   elif printf '%s' "$cmd" | grep -Eq '(^|[^[:alnum:]_-])git[^;&|]*[[:space:]]push([[:space:]]|$)'; then kind=push
   else return 0; fi
   pj="$root/docs/spec/project.json"
