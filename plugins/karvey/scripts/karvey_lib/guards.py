@@ -312,6 +312,35 @@ def _free_text_args(seg):
     return out
 
 
+# BL-64 / BUG-139 (REQ-HF-016): segments that may sit beside a read-only listing of a protected path —
+# they neither write nor take a path from it. Wrappers that run their input (xargs, tee, a shell) are absent.
+LISTING_TEXT = frozenset({"echo", "printf", "true", ":"})
+LISTING_FORMATTERS = frozenset({"jq", "sort", "uniq", "column", "head", "tail", "wc", "cut", "tr", "nl"})
+_PY_FORMATTERS = (("-m", "json.tool"),)
+
+
+def _listing_safe(seg):
+    """True when ``seg`` cannot write: a READ_ONLY command, text output, a path-less formatter or a read-only
+    ``git`` subcommand, each without a write redirection (``/dev/null`` aside)."""
+    for r in seg.redirects:
+        if r.target and r.op in (">", ">>", ">|", "&>", "&>>", "<>") and r.target not in ("/dev/null",):
+            return False
+        if r.op == ">&" and r.target and not r.target.isdigit() and r.target not in ("-", "/dev/null"):
+            return False
+    name = seg.argv0
+    args = seg.argv[1:]
+    if name in READ_ONLY or name in LISTING_TEXT:
+        return True
+    if name in LISTING_FORMATTERS:
+        return all(a.startswith("-") or name in ("jq", "cut", "tr") for a in args) and not any(
+            a in ("-i", "--in-place", "-o", "--output") or a.startswith("--output=") for a in args)
+    if name in ("python3", "python") and tuple(args) in _PY_FORMATTERS:
+        return True
+    if name == "git" and seg.git and (seg.git.get("sub") or "") in READ_ONLY_GIT:
+        return True
+    return False
+
+
 def protect_paths(ctx):
     env = ctx.env
     needles = _state_needles(env)
@@ -383,7 +412,7 @@ def protect_paths(ctx):
         reduced += [w.raw for i, w in enumerate(tail) if i not in free]
         reduced += [r.target for r in seg.redirects if r.target]
     if _hits(_unquote(env_expand(" ".join(reduced), env)), [n for n in needles if "/" in n]) and not all(
-            s.argv0 in READ_ONLY for s in parsed.segments):
+            _listing_safe(s) for s in parsed.segments):
         return Decision.block(PROTECT_MSG, record={"reason": "command names a protected path"})
     return None
 
