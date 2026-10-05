@@ -44,7 +44,7 @@ change or a merge reached production unseen.
 
 ## Tasks
 
-(pending — karvey-tasks)
+See `tasks.md` (24 tasks, E1.F1..F9, 690 min). Status per task is updated here as impl closes them.
 
 ## History
 
