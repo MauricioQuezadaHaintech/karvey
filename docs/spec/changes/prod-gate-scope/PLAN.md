@@ -57,3 +57,9 @@ See `tasks.md` (24 tasks, E1.F1..F9, 690 min). Status per task is updated here a
 Verdict PASS (security gate PASS at 8d6c361) — `qa/REVISION_PR_pending_20261005.md`. QA loops fixed BUG-145..153
 (findings F-12..F-21, all closed). Open: BL-67 (known limits, accepted). Pending: human QA approval (also confirms
 requirements revision 2), release prep 3.12.1.
+
+## Release prep 3.12.1
+
+QA approved (D-46). D-47 delta QA: D1 PASS (conditional), D7 PASS WITH FINDINGS (Lows fixed or documented).
+Versions 3.12.1, CHANGELOG `[3.12.1]`, page entry; full gate green. Next: PR to `main`, CI, the production OK
+(typed by the owner), merge.

@@ -221,3 +221,17 @@ through the CLI stubs and patched CLI answers; the release PR's CI is the live c
 | `ls 2>/dev/null` | 89 / 96 ms |
 | `curl -s https://example.com/health` (pre-filtered into the prod-gate, not a candidate) | 90 / 99 ms |
 | `python3 -c 'print(1)'` | 91 / 93 ms |
+
+### Release gate 3.12.1 (2026-10-05)
+
+| Suite | Result |
+|---|---|
+| unit | 866 tests, OK |
+| regression | 10 tests, OK (BUG-05..51, 138..155 indexed) |
+| guard tables | 503 cases, 597 runs (94 without python), 597 passed |
+| `test-hooks.sh` | 67 passed |
+| node page tests | 22 passed |
+| lint | 0 errors (38 checks; L-80, L-81 new) |
+| validate --all | 0 errors |
+
+Versions 3.12.1 agree (plugin.json, marketplace.json, project.json, CHANGELOG `[3.12.1]`, page). REQ-HF-019: ✅.

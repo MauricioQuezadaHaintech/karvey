@@ -127,7 +127,7 @@
     "client_tag": ""
   },
   "schema_version": 1,
-  "phase": "qa",
+  "phase": "deploying",
   "phase_history": [
     {
       "phase": "init",
@@ -167,6 +167,12 @@
     {
       "phase": "qa",
       "entered_at": "2026-10-05T06:22:04+00:00",
+      "exited_at": "2026-10-05T13:37:16+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "deploying",
+      "entered_at": "2026-10-05T13:37:16+00:00",
       "by": "agent (hotfix lane)"
     }
   ],
@@ -217,7 +223,7 @@
     }
   },
   "created_at": "2026-09-29T16:40:39+00:00",
-  "updated_at": "2026-10-05T12:53:23+00:00",
+  "updated_at": "2026-10-05T13:37:16+00:00",
   "skipped": {
     "mockup": "hotfix lane, no UI: the change touches hooks, the prod-gate and the state tool only",
     "design_graphic": "no UI (hooks and CLI text only)",

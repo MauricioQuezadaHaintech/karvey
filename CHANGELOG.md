@@ -4,6 +4,41 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+## [3.12.1] - 2026-10-05 — hotfix
+
+### Why
+Real use of 3.12.0 showed production approvals reaching a change the human did not name, a prod-gate that decided by
+the session's directory instead of the PR's repo and did not see REST completions, multi-repo changes that could not
+be released, another agent's profile (with a sensitive handoff) injected at session start, a production OK asked
+through a question tool whose answer never reaches the approval hook, and a plan approval asked for searches, saves
+and every step of an approved plan (D-43, D-45, D-46, D-47). The QA review of this hotfix (security, code, second
+opinion) found and fixed 11 more defects in the new code (BUG-145..155); every incident ships with a regression
+test that failed first (BUG-138..155).
+
+### Behaviour change
+- **Production approval is bound to the change it names.** A phrase that names a change not in this tree, several
+  changes, or none when several are active records nothing and prints why and the phrase to type; every phrase with
+  approval and production words gets one line.
+- **The production OK is typed.** Skills never ask it through a question tool (lint L-80). When the human approves a
+  plan whose message names production and the change, that message is also the production OK (D-47).
+- **The prod-gate decides on the PR's own repo** (`--repo`, PR URL, REST URL, the host's answer); a merge into that
+  repo's integration branch passes; a target that is not a Karvey repo passes with one warning line; REST PR
+  completions, branch writes and pipeline approvals need the same approval; only the session's project can switch
+  the gate off. A change can declare `repos` and bind each repo's release commit from the owning repo
+  (`approve <id> prod --repo <name> --sha <commit>`).
+- **Session identity.** The session hook loads a profile only from the repo it works in (no walk up the folder tree,
+  no default `ceo` role); ambiguity loads nothing and prints `/karvey-checkpoint restore --profile <role|path>`; a
+  handoff marked `sensitive: true` is shown only in its own repo.
+- **Approval model (D-47).** The plan-gate gates only consequential actions (deleting tracked files, history
+  rewrites, database writes, software changes, PR/merge to production, deploys, infrastructure); investigation,
+  scripts and file edits are free (`enforcement.plan_gate_edits` gates edits again). A plan approval has no time
+  limit: it ends when its phase closes or the human says stop («detente», «para», «stop»). A checkpoint save never
+  needs an approval.
+
+### Compatibility
+- Unchanged from 3.12.0: notification destinations come only from `project.json`; projects that took them from tables in a `CLAUDE.md` file declare them under `notifications`. A session in a repo that no team configuration maps, or in a folder that is not a repo, no longer gets a default profile: map the repo in `team.json` or restore with `--profile`.
+
+### Fixed
 - D-47 confirmations — `EXEC` of a stored procedure is gated by a write-word name heuristic (documented as a known limit) that a project tunes with `enforcement.db_write_procs` and `enforcement.db_read_procs` (the latter from the reviewed line only); `docker rmi` is gated; «alto ahí» is a stop. Why: the D-47 confirmations and the D7 re-check.
 - QA of D-47 (BUG-155) — cloud read verbs, `SELECT` (keywords inside literals ignored), `EXEC` of read procedures, `rm -rf` in the temp folder and installs inside a virtual environment are free; global options before a verb, SQL from pipes and include directives, schema migrations, repo and bucket deletes, HTTP DELETE, prunes, `xargs rm`, SQL writes in inline scripts, cron and service changes and tag/release deletes are gated; a project-wide plan approval belongs to its session; more stop phrases («para, espera», «no sigas», «please stop») withdraw. Why: the review showed daily reads gated and consequential actions free.
 - E1.F11 (D-47) — approval model: the plan-gate gates only consequential actions (deleting tracked files, discarding or rewriting history, database writes incl. UPDATE/INSERT, installing/removing software outside a virtual environment, PRs and merges to production, deploys, infrastructure); reads, queries, scripts, redirections and file edits are free (`enforcement.plan_gate_edits: true` gates edits again). A plan approval has no time limit: it lasts until its phase closes or the human says «detente»/«para»/«stop», which withdraws it; a production approval counts 24 h and is also the plan approval, and recording it with `approve … prod` keeps the plan approval. The deploy skill records an existing production OK instead of asking again; the rules say investigation and housekeeping never ask and an approval is never re-asked; lint L-81 flags instructions to ask approval before investigating. Why: the owner was asked to approve searches, saves and steps inside an approved plan (D-47).
@@ -22,9 +57,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 - E1.F2 (BUG-144) — `spec.json` may declare the `repos` a change releases; `approve <id> prod --repo <name> --sha <commit>` binds a declared repo's release commit into the live production approval (expiry kept) and `check-prod --repo` answers for it; a refused `approve … prod` lists the markers found (kind, change, age, state), the missing piece and the phrase to type. Why: multi-repo releases had no way to carry the owner's approval, and the refusal said only "kind plan does not satisfy prod".
 - E1.F1 (BUG-138, BUG-143) — a production approval is recorded only for the change the phrase names (or the single active change, said out loud); a change named but not in this tree, several changes, or no resolvable change record nothing, and every production-shaped phrase gets one line: recorded, or NOT recorded with the reason and the phrase to type. Why: an approval was bound to a change the human did not name, and a phrase that recorded nothing printed nothing.
 
+### Known limits
+See `docs/spec/backlog.md` BL-67: a stop reaches only this project and the clones it lists; script files that write
+are not read; stored procedures are classified by name (`enforcement.db_write_procs` / `db_read_procs`); URLs built
+by string concatenation inside scripts are not seen.
+
 > 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
 > 🤖 AI-assisted: Claude Opus 5.5 (1M context)
-> 🔗 Change: prod-gate-scope · Karvey phase: impl · Apache 2.0
+> 🔗 Change: prod-gate-scope · Karvey phase: impl, test, qa, deploy · Apache 2.0
 
 ## [3.12.0] - 2026-09-26
 
