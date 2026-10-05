@@ -13,7 +13,9 @@ bad()  { FAIL=$((FAIL+1)); printf '  FAIL %s\n       got: %s\n' "$1" "$2"; }
 T=$(cd "$(mktemp -d)" && pwd -P); trap 'rm -rf "$T"' EXIT
 # Portable timeout: macOS has no timeout(1); perl's alarm is there on every runner (F-44).
 to() { local s="$1"; shift; if command -v timeout >/dev/null 2>&1; then timeout "$s" "$@"; else perl -e 'alarm shift; exec @ARGV' "$s" "$@"; fi; }
-ctx() { CLAUDE_PROJECT_DIR="$1" bash "$H/karvey-session-context.sh" 2>&1; }
+# The session runs in the directory it started in (BUG-140: a cwd in another repo than CLAUDE_PROJECT_DIR is an
+# ambiguous identity and loads no profile, so the hook must not inherit this script's cwd).
+ctx() { ( cd "$1" 2>/dev/null || cd "$T"; CLAUDE_PROJECT_DIR="$1" bash "$H/karvey-session-context.sh" 2>&1 ); }
 
 echo "session-context: settings nudge (BUG-02)"
 mkdir -p "$T/plain"; out=$(ctx "$T/plain");                      [ -z "$out" ] && ok "no docs/spec → silent" || bad "no docs/spec → silent" "$out"
@@ -88,7 +90,7 @@ done
 out=$(disp "$NOPY" "" "" nosuch);             [[ "$out" == *"unknown hook event"*"rc=0" ]] && ok "no python: unknown event is not blocking" || bad "nopy unknown" "$out"
 
 echo "session-context: team.json inside the repo (BUG-19)"
-R="$T/myrepo"; mkdir -p "$R/docs/spec/agents/ceo" "$R/docs/spec/board"
+R="$T/myrepo"; mkdir -p "$R/docs/spec/agents/ceo" "$R/docs/spec/board"; git -C "$R" init -q -b main  # BUG-140: a profile needs the repo
 echo '{"ops_repo":"myrepo","roles":{"myrepo":"ceo"},"display_names":{"ceo":"agente-x"}}' > "$R/docs/spec/team.json"
 echo "MANIFEST-X" > "$R/docs/spec/agents/ceo/manifest.md"; echo "COMPACT-X" > "$R/docs/spec/agents/ceo/manifest-compact.md"
 echo "HANDOFF-X" > "$R/docs/spec/agents/ceo/handoff.md"; echo "BOARD-X" > "$R/docs/spec/board/ceo.md"
@@ -98,7 +100,7 @@ out=$(ctx "$R")
 [[ "$out" == *"agente-x"* ]] && ok "role from the root's own name when the session starts at the root" || bad "role at root" "$out"
 rm "$R/docs/spec/agents/ceo/handoff.md"; out=$(ctx "$R")
 [[ "$out" == *"no handoff at"* ]] && ok "missing handoff is said, not silent" || bad "missing handoff" "$out"
-S="$T/team"; mkdir -p "$S/docs/spec" "$S/ops/agents/dev" "$S/app"
+S="$T/team"; mkdir -p "$S/docs/spec" "$S/ops/agents/dev" "$S/app"; git -C "$S/app" init -q -b main
 echo '{"ops_repo":"ops","roles":{"app":"dev"}}' > "$S/docs/spec/team.json"; echo "SIB-HANDOFF" > "$S/ops/agents/dev/handoff.md"
 out=$(ctx "$S/app")
 [[ "$out" == *"Profile: $S/ops/agents/dev"* && "$out" == *"SIB-HANDOFF"* ]] && ok "sibling ops repo layout still works" || bad "sibling layout" "$out"
@@ -117,7 +119,7 @@ for pth in repoA . ""; do
   [[ "$out" != *"NOT FOUND"* && "$out" == *"matches"* ]] && ok "state path '$pth' resolves to the root itself" || bad "state path '$pth'" "$(echo "$out" | grep -A2 'Live state')"
 done
 W="$T/wt"; git -C "$R2" worktree add -q "$W" -b wtb >/dev/null 2>&1
-mkdir -p "$T/wteam/docs/spec/agent"; WC=$(git -C "$W" log -1 --pretty=%h)
+mkdir -p "$T/wteam/docs/spec/agent"; git -C "$T/wteam" init -q -b main; WC=$(git -C "$W" log -1 --pretty=%h)
 printf '{"repos":[{"path":"%s","branch":"wtb","commit":"%s","uncommitted":0}]}' "$W" "$WC" > "$T/wteam/docs/spec/agent/state.json"; echo H > "$T/wteam/docs/spec/agent/handoff.md"
 out=$(ctx "$T/wteam")
 [[ "$out" != *"NOT FOUND"* ]] && ok "a git worktree (.git file) is found" || bad "worktree" "$(echo "$out" | grep -A2 'Live state')"

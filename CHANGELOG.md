@@ -4,10 +4,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+- E1.F7 (BUG-140) — the session hook loads an agent profile only from the repo the session works in (no walk up the folder tree, no default `ceo` role); another repo, an unmapped repo, a folder that is not a repo, or two candidate profiles load nothing and print one line with `/karvey-checkpoint restore --profile <role|path>`; a handoff with `sensitive: true` is shown only in its own repo. Why: a session started in another agent's folder received that agent's profile, including a sensitive handoff.
 - E1.F6 (BUG-139, BL-64) — protect-paths lets a read-only listing of the approval and state paths through when the rest of the call only prints text, formats output or runs a read-only `git` subcommand; any write form (mutator, redirection into the path, `xargs`, `tee`) stays blocked. Why: `ls <state dir> 2>/dev/null; echo done` and similar listings were blocked although nothing was written.
 - E1.F8 (BUG-142) — `karvey-deploy` 2.9 asks for the production OK in plain text and shows the phrase to type («aprobado para producción {change-id} PR #{pr} v{version}» with the head SHA); lint L-80 fails any skill or rule that asks for the production OK through a question tool. Why: a question-tool answer never reaches the approval hook, so no prod marker could be recorded from it.
 - E1.F2 (BUG-144) — `spec.json` may declare the `repos` a change releases; `approve <id> prod --repo <name> --sha <commit>` binds a declared repo's release commit into the live production approval (expiry kept) and `check-prod --repo` answers for it; a refused `approve … prod` lists the markers found (kind, change, age, state), the missing piece and the phrase to type. Why: multi-repo releases had no way to carry the owner's approval, and the refusal said only "kind plan does not satisfy prod".
 - E1.F1 (BUG-138, BUG-143) — a production approval is recorded only for the change the phrase names (or the single active change, said out loud); a change named but not in this tree, several changes, or no resolvable change record nothing, and every production-shaped phrase gets one line: recorded, or NOT recorded with the reason and the phrase to type. Why: an approval was bound to a change the human did not name, and a phrase that recorded nothing printed nothing.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5 (1M context)
+> 🔗 Change: prod-gate-scope · Karvey phase: impl · Apache 2.0
 
 ## [3.12.0] - 2026-09-26
 

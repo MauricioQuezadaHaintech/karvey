@@ -2,7 +2,7 @@
 name: karvey-checkpoint
 description: Karvey support — saves or restores a change checkpoint and the agent handoff (state.json by karvey-handoff-capture.py) — before rotating or resuming a session. Triggers include "karvey checkpoint", "karvey handoff", "relevo karvey".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [save | restore] [<change-id>] [--handoff-only | --no-handoff]
+argument-hint: [save | restore] [<change-id>] [--handoff-only | --no-handoff] [--sensitive] [--profile <role|path>]
 ---
 
 # Karvey Checkpoint
@@ -57,7 +57,7 @@ Plus what no artifact holds: **standing decisions that affect the work** (linked
 
 ## Modes
 
-The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`. If no `change-id` is given, the active change is detected (see "Resolving the change-id"). Flags: `--handoff-only` (rotate without touching the change checkpoint) and `--no-handoff` (checkpoint only).
+The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`. If no `change-id` is given, the active change is detected (see "Resolving the change-id"). Flags: `--handoff-only` (rotate without touching the change checkpoint), `--no-handoff` (checkpoint only), `--sensitive` (save: mark the handoff sensitive) and `--profile <role|path>` (restore: name the profile explicitly).
 
 ### `save` mode — save state
 
@@ -82,13 +82,16 @@ The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`
 3. **Collect the human context** of the session: decisions made, why, what is left pending and what the concrete next step is to resume.
 4. **Write the checkpoint** to `docs/spec/changes/{change-id}/checkpoint.md`, or to a project-level checkpoint (`docs/spec/checkpoint.md`) if there is **no** active change. Use the "Checkpoint format" section.
 5. **Resolve the agent profile** — where this agent's own artifacts live:
-   - **Team configured** (`docs/spec/team.json`, or a legacy `.ceo-agentes`, searching upward): role from the working directory, artifacts under `{ops_repo}/agents/<role>/` and `{ops_repo}/board/<role>.md`. See `../karvey/rules/team.md`.
+   - **Team configured** (`docs/spec/team.json`, or a legacy `.ceo-agentes`, at or above the repo): the role is the one the configuration maps to **this repo's name** (the git top level; a linked worktree maps by its main clone's name) — there is no default role. Artifacts under `{ops_repo}/agents/<role>/` and `{ops_repo}/board/<role>.md`. See `../karvey/rules/team.md`.
    - **No team** (the default): artifacts under `docs/spec/agent/` — `manifest.md`, `board.md`, `checklist.md`, `handoff.md`.
    - **Neither exists yet:** create `docs/spec/agent/` from the templates below, ask the three questions needed to fill the manifest (who this agent is, which repos it owns, what is not its call), and continue. **Bootstrapping is part of the save, not a prerequisite for it.**
 6. **Refresh the pieces before quoting them** — a handoff that cites a stale board is worse than one that cites nothing:
    - **Board:** move what this session actually did to its real state, and **write down every request that arrived and was not resolved**, before anything else.
    - **Manifest / checklist:** verify they still describe how this agent works; if a rule changed, **correct the body** and note the change. Record their commit (`git log -1 --pretty=%h -- <path>`) in the handoff, so `restore` can detect drift.
-7. **Write the handoff** using the "Handoff format" section. Put measured output into section 0, not
+7. **Write the handoff** using the "Handoff format" section. With `--sensitive` (or when the handoff
+   carries access, credentials-handling or personal matters), start it with the front matter
+   `---\nsensitive: true\n---`: the session hook and `restore` then show its body only in a session whose
+   repo is this profile's own (REQ-HF-022). Put measured output into section 0, not
    memory of it: for every claim of "done", run the check that measures it (the published version stamp,
    the live resource, the API response) per `../karvey/rules/verification.md`, and list the scheduled
    tasks of this session **with their full prompt**.
@@ -117,6 +120,14 @@ The skill receives a mode (`save` or `restore`) and, optionally, a `<change-id>`
 2. **Read the checkpoint** in full.
 3. **Verify the real git state** against what was recorded (branch, last commit, working tree) to detect divergences between what was saved and the current state.
 4. **Resolve the agent profile and read it whole**: handoff, manifest (or its compact version), board and checklist. This is what turns a blank session into *this* agent.
+   The session hook loads a profile only from the repo the session works in; when it printed
+   `profile not loaded` (another repo, an unmapped repo, a folder that is not a repo, or two candidate
+   profiles), never pick one by guessing: restore it explicitly, from the repo you work in, with
+   ```bash
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey_lib/karvey_hooks.py" restore-profile "<role|path>"
+   ```
+   It prints that profile's context (a sensitive handoff only in the profile's own repo) and says which
+   profile it restored; an unknown role or path restores nothing and lists the profiles found.
 5. **Contrast the handoff, do not believe it** — starting from `state.json`, which the session hook may already have compared for you. If the branch it declares no longer exists, if the commit it cites has been superseded, if what it lists as pending is already merged, or if the manifest's commit differs from the one recorded, **say the handoff has aged, and say which parts**, before presenting any of it as current. An aged handoff is not an error; believing it silently is.
 6. **Cross open questions against the decision log** before repeating them (`karvey-decisions cross`). Most "blocked on a decision" items are already answered; re-asking costs the human the same answer twice.
 7. **Summarize where everything stands**: identity, board, branch, last commit, pending work, standing decisions.

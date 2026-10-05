@@ -388,7 +388,6 @@
       }
      },
      "files": {
-      "docs/spec/agent/handoff.md": "HANDOFF-TEXT\n",
       "docs/spec/team.json": {
        "ops_repo": "repo",
        "roles": {
@@ -413,7 +412,8 @@
     "session",
     "REQ-W1-046",
     "BUG-19"
-   ]
+   ],
+   "note": "BUG-140: no solo docs/spec/agent/ here any more; with it the repo has two profiles (solo and team) and gets none (REQ-HF-021)"
   },
   {
    "id": "ss-09-board-40-open-rows",
@@ -1185,6 +1185,400 @@
     "session",
     "REQ-W1-048",
     "BUG-21"
+   ]
+  },
+  {
+   "id": "ss-hf-01-ancestor-folder-profile-not-injected",
+   "guard": "session",
+   "given": {
+    "outer_files": {
+     "team/docs/spec/agent/handoff.md": "OTHER-HANDOFF\n",
+     "team/docs/spec/agent/manifest.md": "OTHER-MANIFEST\n"
+    },
+    "repo": {
+     "at": "team/app-web",
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "app-web"
+      ],
+      "spec_repo": "app-web",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "profile not loaded",
+     "restore --profile"
+    ],
+    "context_not_contains": [
+     "OTHER-HANDOFF",
+     "OTHER-MANIFEST"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-HF-020",
+    "BUG-140",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-hf-02-team-folder-not-a-repo-gets-nothing",
+   "guard": "session",
+   "given": {
+    "outer_files": {
+     "team/docs/spec/team.json": {
+      "code": "x",
+      "ops_repo": "",
+      "roles": {
+       "app-web": "web",
+       "app-ops": "ops",
+       "team": "ceo"
+      }
+     },
+     "team/docs/spec/agents/ceo/handoff.md": "CEO-HANDOFF\n",
+     "team/docs/spec/agents/ceo/manifest.md": "CEO-MANIFEST\n",
+     "team/docs/spec/agents/web/handoff.md": "WEB-HANDOFF\n",
+     "team/docs/spec/agents/web/manifest.md": "WEB-MANIFEST\n"
+    },
+    "dir": "team"
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "profile not loaded",
+    "context_not_contains": [
+     "CEO-HANDOFF",
+     "CEO-MANIFEST"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-HF-020",
+    "BUG-140",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-hf-03-unmapped-repo-no-default-role",
+   "guard": "session",
+   "given": {
+    "outer_files": {
+     "team/docs/spec/team.json": {
+      "code": "x",
+      "ops_repo": "",
+      "roles": {
+       "app-web": "web",
+       "app-ops": "ops",
+       "team": "ceo"
+      }
+     },
+     "team/docs/spec/agents/ceo/handoff.md": "CEO-HANDOFF\n",
+     "team/docs/spec/agents/ceo/manifest.md": "CEO-MANIFEST\n",
+     "team/docs/spec/agents/web/handoff.md": "WEB-HANDOFF\n",
+     "team/docs/spec/agents/web/manifest.md": "WEB-MANIFEST\n"
+    },
+    "repo": {
+     "at": "team/app-tools",
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "app-web"
+      ],
+      "spec_repo": "app-web",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     }
+    }
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "profile not loaded",
+    "context_not_contains": [
+     "CEO-HANDOFF",
+     "CEO-MANIFEST",
+     "WEB-HANDOFF"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-HF-020",
+    "BUG-140",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-hf-04-mapped-repo-gets-its-profile",
+   "guard": "session",
+   "given": {
+    "outer_files": {
+     "team/docs/spec/team.json": {
+      "code": "x",
+      "ops_repo": "",
+      "roles": {
+       "app-web": "web",
+       "app-ops": "ops",
+       "team": "ceo"
+      }
+     },
+     "team/docs/spec/agents/ceo/handoff.md": "CEO-HANDOFF\n",
+     "team/docs/spec/agents/ceo/manifest.md": "CEO-MANIFEST\n",
+     "team/docs/spec/agents/web/handoff.md": "WEB-HANDOFF\n",
+     "team/docs/spec/agents/web/manifest.md": "WEB-MANIFEST\n"
+    },
+    "repo": {
+     "at": "team/app-web",
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "app-web"
+      ],
+      "spec_repo": "app-web",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     }
+    },
+    "cwd": "src"
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "WEB-HANDOFF",
+     "(role: web)"
+    ],
+    "context_not_contains": [
+     "CEO-HANDOFF",
+     "profile not loaded"
+    ]
+   },
+   "expect_nopy": {
+    "decision": "allow",
+    "context_contains": "profile not loaded",
+    "context_not_contains": [
+     "CEO-HANDOFF",
+     "WEB-HANDOFF"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-HF-020",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-hf-05-cwd-changed-to-another-repo-ambiguous",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "at": "team/app-web",
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "app-web"
+      ],
+      "spec_repo": "app-web",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "WEB-HANDOFF\n"
+     }
+    },
+    "outer_files": {
+     "team/app-api/docs/spec/agent/handoff.md": "API-HANDOFF\n"
+    },
+    "setup": "git init -q {{tmp}}/team/app-api",
+    "env": {
+     "CLAUDE_PROJECT_DIR": "{{tmp}}/team/app-api"
+    }
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "profile not loaded",
+     "app-web",
+     "app-api",
+     "/karvey-checkpoint restore --profile"
+    ],
+    "context_not_contains": [
+     "WEB-HANDOFF",
+     "API-HANDOFF"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-HF-021",
+    "BUG-140",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-hf-06-two-candidates-inject-nothing",
+   "guard": "session",
+   "given": {
+    "outer_files": {
+     "team/docs/spec/team.json": {
+      "code": "x",
+      "ops_repo": "",
+      "roles": {
+       "app-web": "web",
+       "app-ops": "ops",
+       "team": "ceo"
+      }
+     },
+     "team/docs/spec/agents/ceo/handoff.md": "CEO-HANDOFF\n",
+     "team/docs/spec/agents/ceo/manifest.md": "CEO-MANIFEST\n",
+     "team/docs/spec/agents/web/handoff.md": "WEB-HANDOFF\n",
+     "team/docs/spec/agents/web/manifest.md": "WEB-MANIFEST\n"
+    },
+    "repo": {
+     "at": "team/app-web",
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "app-web"
+      ],
+      "spec_repo": "app-web",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "SOLO-HANDOFF\n"
+     }
+    }
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": [
+     "profile not loaded",
+     "candidates"
+    ],
+    "context_not_contains": [
+     "SOLO-HANDOFF",
+     "WEB-HANDOFF"
+    ]
+   },
+   "expect_nopy": {
+    "decision": "allow",
+    "context_contains": "profile not loaded",
+    "context_not_contains": [
+     "SOLO-HANDOFF",
+     "WEB-HANDOFF"
+    ]
+   },
+   "tags": [
+    "session",
+    "REQ-HF-021",
+    "BUG-140",
+    "nopy"
+   ]
+  },
+  {
+   "id": "ss-hf-07-sensitive-handoff-shown-in-own-repo",
+   "guard": "session",
+   "given": {
+    "repo": {
+     "at": "app-ops",
+     "project_json": {
+      "git_platform": "github",
+      "repos": [
+       "app-web"
+      ],
+      "spec_repo": "app-web",
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "notifications": {
+       "channel": "none"
+      },
+      "management": {
+       "tool": "markdown"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "---\nsensitive: true\n---\nSECRET-HANDOFF\n"
+     }
+    }
+   },
+   "input": {
+    "source": "resume"
+   },
+   "expect": {
+    "decision": "allow",
+    "context_contains": "SECRET-HANDOFF"
+   },
+   "tags": [
+    "session",
+    "REQ-HF-022",
+    "nopy"
    ]
   }
  ]
