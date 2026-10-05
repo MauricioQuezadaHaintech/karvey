@@ -586,10 +586,21 @@ def checkpoint_paths(ctx, root):
             res = livestate_mod().resolve_session_profile(rr, rr)
             if res.get("status") == "ok":
                 pr = res["profile"]
-                _n, profile, board = kh.profile_paths(pr["kind"], pr["root"], pr["cfg"], pr["role"])
-                for f in ("handoff.md", "state.json"):
-                    out.add(posixpath.normpath(os.path.join(profile, f)))
-                out.add(posixpath.normpath(board))  # solo: <profile>/board.md; team: <ops>/board/<role>.md
+                role = pr["role"]
+                if pr["kind"] != "solo" and not re.match(r"^[a-z0-9][a-z0-9_-]{0,62}$", str(role)):
+                    return out  # a role that is a path (../src/main) exempts nothing (D1 delta, M1)
+                _n, profile, board = kh.profile_paths(pr["kind"], pr["root"], pr["cfg"], role)
+                profile, board = os.path.realpath(profile), os.path.realpath(board)
+                base = os.path.dirname(profile) if pr["kind"] == "solo" else os.path.dirname(os.path.dirname(profile))
+                files = [os.path.join(profile, "handoff.md"), os.path.join(profile, "state.json"), board]
+                ok_dirs = (profile, os.path.join(base, "board")) if pr["kind"] != "solo" else (profile,)
+                rb = os.path.realpath(base)
+                inside = rb == rr or rb.startswith(rr + "/")
+                if pr["kind"] != "solo" and inside and os.path.realpath(base) != os.path.join(rr, "docs", "spec"):
+                    return out  # an ops area inside the code repo, other than docs/spec (D1 delta, L1)
+                for f in files:
+                    if os.path.dirname(f) in ok_dirs:
+                        out.add(f)
         except Exception:
             pass  # no profile resolved: only the checkpoint files are exempt
         return out

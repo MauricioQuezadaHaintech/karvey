@@ -98,3 +98,17 @@ deviation requests needed. PASS.
 - A live `gh pr merge --repo` and an Azure REST completion against real hosts (the gate's host lookups were
   exercised with stubs): first real release of 3.12.1.
 - A session started in one repo and resumed in another, in a real Claude Code session (hook cwd semantics).
+
+## Addendum — D1 on the BUG-154 delta (`50b2d0d`), 2026-10-05
+
+Security review of the plan-gate checkpoint exemption only. **Gate PASS** (no Critical/High).
+- Blocked as intended: extra redirections, second writes (`;`, `&&`, `>|`, `&>`), `tee` with a second file or a
+  process substitution, `cd` tricks, `..`, case changes, approvals/spec.json paths, `sed -i`, symlinked profile
+  folder or file, another agent's handoff; the no-python branch blocks symlinked folders, files and changes.
+- M1 (Medium): a `team.json` role or `ops_repo` that is a path could exempt code files → fixed: a role must be a
+  plain name, an ops area inside the code repo other than `docs/spec` exempts nothing, and an exempt file must sit
+  directly in the profile folder or the ops board folder (`test_plangate_checkpoint.py`
+  test_d1_role_or_ops_that_points_into_code_exempts_nothing, red on 50b2d0d).
+- L1 (Low): `ops_repo` naming the code repo → covered by the same fix.
+- L2 (Low, pre-existing, not widened by the exemption): the plan-gate never classified `cp` or `python -c` writes;
+  superseded by D-47 (the plan-gate is re-scoped to consequential actions).

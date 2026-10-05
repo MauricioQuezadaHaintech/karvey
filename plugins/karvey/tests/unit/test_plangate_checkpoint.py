@@ -52,5 +52,15 @@ class TeamLayout(unittest.TestCase):
         self.assertEqual(self.edit(self.web / "docs/spec/project.json")[0], 2)
 
 
+    def test_d1_role_or_ops_that_points_into_code_exempts_nothing(self):
+        team = self.web.parent
+        g.write(team, "docs/spec/team.json", {"code": "x", "ops_repo": "ops", "roles": {"app-web": "../../app-web/src/main"}})
+        self.assertEqual(self.edit(self.web / "src/main.md")[0], 2)
+        self.assertEqual(self.edit(self.web / "src/main/state.json")[0], 2)
+        g.write(team, "docs/spec/team.json", {"code": "x", "ops_repo": "app-web", "roles": {"app-web": "web"}})
+        self.assertEqual(self.edit(self.web / "board/web.md")[0], 2)
+        self.assertEqual(self.edit(self.web / "agents/web/handoff.md")[0], 2)
+
+
 if __name__ == "__main__":
     unittest.main()
