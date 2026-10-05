@@ -2156,10 +2156,10 @@ the literal path must end with the physical relative path, and the folder left b
 `consume_on_close` (3.12.0, REQ-W1-016) tied a plan approval's life to one phase.
 
 ### Fix
-a phase close only writes an audit record; `advance … archived` consumes the change's own marker; a session-wide approval stays bound to its session (BUG-155) until a stop. The production ledger keeps D-35. Hotfix 3.12.1.
+a phase close only writes an audit record; `advance … archived` consumes the change's own marker; a session-wide approval stays bound to its session (BUG-155) until a stop; a phase approval cites a marker as evidence only when it was typed during that phase (D1 on the fix: otherwise `evidence.marker = none` with a warning, the marker still being the plan approval). The production ledger keeps D-35. Hotfix 3.12.1.
 
 ### Regression test
-`plugins/karvey/tests/unit/test_plangate_checkpoint.py` (ApprovalSurvivesPhases.test_one_approval_covers_the_phases_and_the_implementation, the exact repro, with the stop); `plugins/karvey/tests/unit/test_state_approve.py` (Consumption.*); red on aa8a368. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+`plugins/karvey/tests/unit/test_plangate_checkpoint.py` (ApprovalSurvivesPhases.test_one_approval_covers_the_phases_and_the_implementation, the exact repro, with the stop); `plugins/karvey/tests/unit/test_state_approve.py` (Consumption.*, incl. test_bug157_d1_a_message_evidences_only_the_phase_it_was_typed_in, red on aee008e); red on aa8a368. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
 
 ### State history
 | Date | State | By (human + AI model) | Note |

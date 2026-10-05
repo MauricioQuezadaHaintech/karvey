@@ -212,6 +212,18 @@ class Consumption(Base):
         self.assertEqual(env["result"]["consumed"], [])
         self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
 
+    def test_bug157_d1_a_message_evidences_only_the_phase_it_was_typed_in(self):
+        d = self.read()
+        d["phase_history"][-1]["entered_at"] = "2026-10-05T10:00:00-03:00"
+        self.f.write_text(json.dumps(d), encoding="utf-8")
+        ap.write_marker(self.root, "plan", "feat-a", "aprobado los requisitos",
+                        now=ap.parse_dt("2026-10-05T09:00:00-03:00"))
+        c, env = self.st("approve", "feat-a", "qa", "--by", "M", "--role", "human", "--ref", "D-20")
+        self.assertEqual(c, 0, env)
+        self.assertEqual([w["code"] for w in env["warnings"]], ["state.marker_predates_phase"])
+        self.assertEqual(self.read()["approvals"]["qa"]["evidence"], {"marker": "none"})
+        self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])  # still the plan approval
+
     @property
     def _state(self):
         from _state import state

@@ -362,6 +362,7 @@ INDEX = {
         ("unit", "test_plangate_checkpoint.py", "ApprovalSurvivesPhases.test_one_approval_covers_the_phases_and_the_implementation"),
         ("unit", "test_state_approve.py", "Consumption.test_phase_close_keeps_the_plan_approval"),
         ("unit", "test_state_approve.py", "Consumption.test_project_marker_used_as_evidence_is_kept"),
+        ("unit", "test_state_approve.py", "Consumption.test_bug157_d1_a_message_evidences_only_the_phase_it_was_typed_in"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

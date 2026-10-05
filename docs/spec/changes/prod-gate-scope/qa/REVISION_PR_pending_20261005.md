@@ -125,3 +125,10 @@ Security review of the plan-gate checkpoint exemption only. **Gate PASS** (no Cr
   `rm -rf` free only inside the temp folder outside a repository; `EXEC` by a name heuristic with
   `db_write_procs`/`db_read_procs`; «no, espera» is a stop. Residual: a stop does not reach clones the project does
   not list (BL-67).
+
+## Addendum — BUG-157 delta (`aee008e`), 2026-10-05
+
+D1: **PASS** (no Critical/High). M1 (Medium): with markers no longer consumed at a phase close, one message became
+the evidence of every later phase approval → fixed: a phase approval cites a marker only when it was typed during
+that phase; otherwise `evidence.marker = none` with a warning (the marker remains the plan approval). Test red on
+`aee008e`.

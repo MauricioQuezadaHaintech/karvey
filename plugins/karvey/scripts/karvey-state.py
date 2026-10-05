@@ -1454,7 +1454,21 @@ def cmd_approve(args, root):
                                                                                      rec["expires_at"])
     marker, scope, _ = approval.find_valid(root, args.change, kinds=("plan", "prod"), ttl_min=reviewed_ttl(root))
     warnings = []
-    if marker is None:
+    if marker is not None:  # BUG-157 D1: a message evidences only the phase that was current when it was typed
+        _, loaded_now = load_change(root, args.change)
+        entered = None
+        for e in reversed(loaded_now.data.get("phase_history") or []):
+            if isinstance(e, dict) and _key_of(e.get("phase")) == key:
+                entered = parse_dt(e.get("entered_at"))
+                break
+        created = parse_dt(marker.get("created_at"))
+        if entered is not None and created is not None and created < entered:
+            warnings.append(kl.issue("state.marker_predates_phase", "the approval marker of %s was typed before %s "
+                                     "began (it approved an earlier step): recorded with evidence.marker = none; it "
+                                     "still counts as the plan approval for the plan-gate (D-47)" % (scope, key),
+                                     severity="warning", path="$.approvals.%s.evidence" % key))
+            marker, scope = None, None
+    if marker is None and not warnings:
         warnings.append(kl.issue("state.no_marker", "no valid approval marker for %s: recorded with "
                                  "evidence.marker = none (a warning in 3.12.0)" % args.change,
                                  severity="warning", path="$.approvals.%s.evidence" % key))
