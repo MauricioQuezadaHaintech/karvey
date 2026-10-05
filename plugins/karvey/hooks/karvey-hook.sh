@@ -158,7 +158,11 @@ nopy_plan_gate() {
       dir="$(cd "$(dirname "$fp")" 2>/dev/null && pwd -P)"
       real="$dir/$(basename "$fp")"; rel="${real#"$rr"/}"
       # the path inside the project must resolve to itself (a symlink above the project is harmless)
-      if [ -n "$rr" ] && [ -n "$dir" ] && [ "$rel" != "$real" ] && { [ "${fp#"$root"/}" = "$rel" ] || [ "$fp" = "$real" ]; }; then
+      # the literal path must end with that same relative path, under a folder that resolves to the project
+      # (a symlinked /tmp -> /private/tmp above the project is fine; a symlink inside it is not)
+      local lroot="${fp%/"$rel"}"
+      if [ -n "$rr" ] && [ -n "$dir" ] && [ "$rel" != "$real" ] && [ "$lroot" != "$fp" ] &&
+         [ "$(cd "$lroot" 2>/dev/null && pwd -P)" = "$rr" ]; then
         if printf '%s' "$rel" | grep -Eq '^docs/spec/(agent/(handoff\.md|board\.md|state\.json)|checkpoint\.md|changes/[a-z0-9][a-z0-9-]{1,62}/checkpoint\.md)$'; then
           return 0
         fi

@@ -2107,3 +2107,33 @@ global options skipped before the verb; SQL literals stripped, `EXEC` gated by a
 | 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-24, karvey-qa on the D-47 delta |
 | 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
 | 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression tests red on 92d85d5, green after |
+
+## BUG-156 — Without python, a checkpoint save was blocked when a folder above the project is a symlink (macOS)
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/hooks/karvey-hook.sh (`nopy_plan_gate`)
+- **Change / origin:** prod-gate-scope — finding F-25 (CI of PR #28 on 08b17fa, macOS jobs)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+CI macOS (temp folders live under `/var`, a symlink to `/private/var`): the no-python runs of `plan-gate` cp-01..04 (Write of the profile handoff, state, change and project checkpoint) were blocked. On Linux: run the rows with `TMPDIR` pointing through a symlink.
+
+### Actual vs expected
+- Actual: "decision block, expected allow" for the checkpoint saves without python.
+- Expected: a checkpoint save needs no approval wherever the project lives.
+
+### Root cause
+`karvey_root` returns the physical project path (`pwd -P`), while the payload's `file_path` keeps the logical one; the check stripped the physical root from the logical path, so the relative path never matched.
+
+### Fix
+the literal path must end with the physical relative path, and the folder left before it must resolve (`pwd -P`) to the project root: a symlink above the project is accepted, a symlink inside it still is not. Hotfix 3.12.1.
+
+### Regression test
+`plugins/karvey/tests/unit/test_plangate_symlinked_tmp.py` (SymlinkedTemp.test_checkpoint_rows_pass_under_a_symlinked_temp_folder); red on 08b17fa. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-25, CI macOS on 08b17fa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above, reproduced on Linux with a symlinked TMPDIR |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on 08b17fa, green after |

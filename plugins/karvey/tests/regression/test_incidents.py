@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-155 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-156 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -356,6 +356,8 @@ INDEX = {
         ("unit", "test_plangate_checkpoint.py", "ProjectMarkerSession.test_same_session_proceeds_another_session_is_gated"),
         ("unit", "test_marker.py", "TTL.test_d47_stop_withdraws_and_prod_use_keeps_the_plan"),
     ],
+    "BUG-156": [("unit", "test_plangate_symlinked_tmp.py",
+                 "SymlinkedTemp.test_checkpoint_rows_pass_under_a_symlinked_temp_folder")],  # F-25
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}
 
