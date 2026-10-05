@@ -124,6 +124,31 @@ def search_dirs(anchors):
         if pj.is_karvey_project(t):
             for p in _project_paths(t):
                 add(p)
+    # BUG-145: a session in a folder that holds the repos (not a repo itself) — its children, two levels
+    budget = [SIBLINGS_MAX * 2]
+
+    def kids_of(d, depth):
+        if depth == 0 or budget[0] <= 0:
+            return
+        try:
+            names = sorted(os.listdir(d))
+        except OSError:
+            return
+        for k in names:
+            if budget[0] <= 0:
+                return
+            p = os.path.join(d, k)
+            if k.startswith(".") or not os.path.isdir(p):
+                continue
+            budget[0] -= 1
+            if os.path.exists(os.path.join(p, ".git")):
+                add(os.path.realpath(p))
+            else:
+                kids_of(p, depth - 1)
+
+    for a in anchors:
+        if a and os.path.isdir(a) and not toplevel(a):
+            kids_of(os.path.realpath(a), 2)
     parents = []
     for a in [x for x in anchors if x] + tops:
         par = os.path.dirname(os.path.realpath(str(a)))
@@ -141,13 +166,29 @@ def search_dirs(anchors):
     return out
 
 
-def find_clone(anchors, target):
-    """The first local clone (top level) that answers to ``target``, or None."""
+def find_clones(anchors, target):
+    """Every local clone (top level) that answers to ``target``, in search order (BUG-145: a look-alike
+    clone must not shadow the real one)."""
+    out = []
     for d in search_dirs(anchors):
         t = toplevel(d)
-        if t and answers_to(t, target):
-            return t
-    return None
+        if t and t not in out and answers_to(t, target):
+            out.append(t)
+    return out
+
+
+def find_clone(anchors, target):
+    """The first local clone (top level) that answers to ``target``, or None."""
+    found = find_clones(anchors, target)
+    return found[0] if found else None
+
+
+def has_commit(top, sha):
+    """True when the clone at ``top`` holds commit ``sha`` (identity by history, BUG-145)."""
+    if not top or not isinstance(sha, str) or not re.match(r"^[0-9a-f]{40}([0-9a-f]{24})?$", sha):
+        return False
+    rc, _ = pj.git(["cat-file", "-e", sha + "^{commit}"], top)
+    return rc == 0
 
 
 def find_owner(anchors, change):
@@ -169,13 +210,13 @@ def karvey_named(root, target):
     data, _ = pj.load_project_json(root)
     listed = [r for r in ((data or {}).get("repos") or []) if isinstance(r, str)]
     for c in pj.list_changes(root):
-        spec = _read_spec(Path(c["dir"]) / "spec.json")
+        spec = read_spec(Path(c["dir"]) / "spec.json")
         if isinstance(spec, dict) and isinstance(spec.get("repos"), list):
             listed += [r for r in spec["repos"] if isinstance(r, str)]
     return any(short(os.path.basename(r.rstrip("/"))) == t for r in listed)
 
 
-def _read_spec(path):
+def read_spec(path):
     try:
         return json.loads(Path(path).read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):

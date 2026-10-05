@@ -1840,9 +1840,15 @@ def l36_impl_logical_dependencies(ctx):
 
 
 # --------------------------------------------------------------------------- L-80
-QTOOL_RE = re.compile(r"AskUserQuestion|\bquestion[- ]tool\b", re.I)
-PROD_OK_RE = re.compile(r"\bprod(?:uction)?\s+(?:ok|approval|marker)\b", re.I)
-QTOOL_NEG_RE = re.compile(r"\b(never|not|no|don't|do not)\b[^.;:]*$", re.I)
+QTOOL_RE = re.compile(r"AskUserQuestion|\bquestion[- ]tool\b|\bherramienta de preguntas?\b", re.I)
+PROD_OK_RE = re.compile(r"\bprod(?:uction)?\s+(?:ok|approval|marker|release\s+approval)\b|"
+                        r"\b(?:release|deploy|merge)\s+to\s+prod(?:uction)?\b|\bgo[- ]live\s+approval\b|"
+                        r"\bok\s+(?:de|a|para)\s+producci[oó]n\b|\baprobaci[oó]n\s+(?:de|a|para)\s+"
+                        r"producci[oó]n\b|\bpaso\s+a\s+producci[oó]n\b", re.I)
+# BUG-149: only a negation that governs the tool counts ("never use AskUserQuestion", "no uses la herramienta")
+QTOOL_NEG_RE = re.compile(r"\b(never|do not|don't|not|no|nunca|jam[aá]s)\s+(?:(?:use|uses|usar|uses|ask|asks|with|"
+                          r"a|an|the|la|el|una|un|through|via|por|con|question|tool|herramienta|de|preguntas?)\s+)*"
+                          r"\(?`?$", re.I)
 
 
 def _paragraphs(ctx, path):
@@ -1870,16 +1876,19 @@ def _paragraphs(ctx, path):
 def l80_prod_ok_not_by_question_tool(ctx):
     for path in ctx.text_files():
         for n, para in _paragraphs(ctx, path):
-            if not PROD_OK_RE.search(para):
-                continue
-            for m in QTOOL_RE.finditer(para):
-                sentence = re.split(r"[.!?]\s", para[:m.start()])[-1]
-                if QTOOL_NEG_RE.search(sentence):
+            # BUG-149: the tool and the production OK must meet in the same sentence
+            for sentence in re.split(r"(?<=[.!?;])\s+", para):
+                if not PROD_OK_RE.search(sentence):
                     continue
-                yield (path, n, "asks for the production OK through a question tool (%s); its answer never reaches "
-                                "the approval hook, so no prod marker is recorded. Ask in plain text and show the "
-                                "phrase the human types (BUG-142)" % m.group(0))
-                break
+                found = list(QTOOL_RE.finditer(sentence))
+                # a sentence that negates the tool ("never use a question tool (`AskUserQuestion`)") passes
+                hit = None if any(QTOOL_NEG_RE.search(sentence[:m.start()]) for m in found) else \
+                    (found[0] if found else None)
+                if hit is not None:
+                    yield (path, n, "asks for the production OK through a question tool (%s); its answer never "
+                                    "reaches the approval hook, so no prod marker is recorded. Ask in plain text and "
+                                    "show the phrase the human types (BUG-142)" % hit.group(0))
+                    break
 
 
 # --------------------------------------------------------------------------- --paths globs

@@ -707,6 +707,11 @@ _TOKEN = re.compile(r"(?<![\w-])([a-z0-9]+(?:-[a-z0-9]+)+)(?![\w-])")
 _ES_TERMS = ("aprobado", "apruebo", "aprueba", "dale", "ejecuta", "adelante", "procede", "perfecto", "si",
              "produccion", "publica", "libera", "pasa", "sube")
 REF_SCAN_MAX = 50
+# hyphenated words of a release conversation that are not change ids (a token found nowhere else is refused
+# as a possible typo of a change id, REQ-HF-002; these never are)
+COMMON_HYPHENATED = frozenset({"go-live", "hot-fix", "follow-up", "roll-back", "roll-out", "e-mail", "re-deploy",
+                               "re-run", "check-in", "sign-off", "pre-prod", "post-deploy", "read-only",
+                               "end-to-end", "on-call", "q-a", "fast-forward", "no-ff", "ff-only"})
 
 
 def suggested_phrase(cleaned, change=None):
@@ -732,30 +737,38 @@ def _named_ids(cleaned, ids):
     found = []
     for cid in sorted(ids, key=len, reverse=True):
         if valid_scope(cid) and cid != SCOPE_PROJECT and re.search(
-                r"(?<![\w-])%s(?![\w-])" % re.escape(cid.casefold()), cleaned) and \
-                not any(cid in f for f in found):
+                r"(?<![\w-])%s(?![\w-])" % re.escape(cid.casefold()), cleaned):
             found.append(cid)
     return found
 
 
-def _where_else(root, token):
-    """``("worktree", path)`` / ``("branch", ref)`` holding change ``token``, else ``(None, None)``."""
+def ids_elsewhere(root):
+    """``{change id: (kind, where)}`` of the changes other worktrees and branches of this clone hold
+    (BUG-148: any id, with or without a hyphen). At most ``REF_SCAN_MAX`` refs are read."""
+    out = {}
     here = os.path.realpath(str(root))
-    rc, out = pj.git(["worktree", "list", "--porcelain"], root)
-    if rc == 0:
-        for ln in out.splitlines():
-            if ln.startswith("worktree "):
-                wt = ln[len("worktree "):].strip()
-                if os.path.realpath(wt) != here and \
-                        os.path.isfile(os.path.join(wt, "docs", "spec", "changes", token, "spec.json")):
-                    return "worktree", os.path.realpath(wt)
-    rc, out = pj.git(["for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes"], root)
-    if rc == 0:
-        for ref in [r for r in out.splitlines() if r and not r.endswith("/HEAD")][:REF_SCAN_MAX]:
-            rc2, _ = pj.git(["cat-file", "-e", "%s:docs/spec/changes/%s/spec.json" % (ref, token)], root)
-            if rc2 == 0:
-                return "branch", ref
-    return None, None
+    rc, wts = pj.git(["worktree", "list", "--porcelain"], root)
+    for ln in (wts.splitlines() if rc == 0 else []):
+        if ln.startswith("worktree "):
+            wt = ln[len("worktree "):].strip()
+            if os.path.realpath(wt) == here:
+                continue
+            base = os.path.join(wt, "docs", "spec", "changes")
+            try:
+                names = os.listdir(base)
+            except OSError:
+                continue
+            for n in names:
+                if os.path.isfile(os.path.join(base, n, "spec.json")):
+                    out.setdefault(n, ("worktree", os.path.realpath(wt)))
+    rc, refs = pj.git(["for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes"], root)
+    for ref in [r for r in (refs.splitlines() if rc == 0 else []) if r and not r.endswith("/HEAD")][:REF_SCAN_MAX]:
+        rc2, listing = pj.git(["ls-tree", "-d", "--name-only", "%s:docs/spec/changes" % ref], root)
+        for n in (listing.splitlines() if rc2 == 0 else []):
+            n = n.strip()
+            if n and n != "archive":
+                out.setdefault(n, ("branch", ref))
+    return out
 
 
 def resolve_prod_scope(root, cleaned, ids, active):
@@ -772,9 +785,15 @@ def resolve_prod_scope(root, cleaned, ids, active):
         res["scope"] = named[0]
         return res
     idset = set(ids)
-    tokens = [t for t in dict.fromkeys(_TOKEN.findall(cleaned)) if 3 <= len(t) <= 63 and t not in idset]
+    elsewhere = ids_elsewhere(root)
+    words = [w for w in dict.fromkeys(re.findall(r"(?<![\w-])[a-z0-9][a-z0-9-]{1,62}(?![\w-])", cleaned))
+             if w not in idset]
+    tokens = [w for w in words if w in elsewhere] + [  # BUG-148: an id elsewhere, hyphen or not
+        t for t in dict.fromkeys(_TOKEN.findall(cleaned))
+        if 3 <= len(t) <= 63 and t not in idset and t not in elsewhere and t not in COMMON_HYPHENATED and
+        not any(seg.isdigit() for seg in t.split("-"))]
     for tok in tokens:
-        kind, where = _where_else(root, tok)
+        kind, where = elsewhere.get(tok, (None, None))
         res["candidates"] = [tok]
         if kind == "worktree":
             res["why"] = ("change %s is not in this working tree; approve it in the worktree that holds it: %s"
@@ -786,9 +805,11 @@ def resolve_prod_scope(root, cleaned, ids, active):
             continue
         return res
     if tokens:
-        res["candidates"] = [tokens[0]]
-        res["why"] = ("change %s is not in this working tree and no worktree or branch holds it; check the id, or "
-                      "open the session in the tree or branch that holds the change" % tokens[0])
+        act = (active or {}).get("change")
+        res["candidates"] = [act] if act else []  # the phrase never suggests the unknown word (BUG-148)
+        res["why"] = ("%s is not a change of this working tree and no worktree or branch holds it; if it is a "
+                      "change id, check it or open the session where the change lives; if it is not, name the "
+                      "change" % tokens[0])
         return res
     act = active or {}
     cands = list(act.get("candidates") or [])

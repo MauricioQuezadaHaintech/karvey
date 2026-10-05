@@ -24,6 +24,7 @@ class RestGate(World):
         self.assertTrue(any("--org" in c[0] for c in self.calls))
 
     def test_github_merge_of_a_non_karvey_repo_warns(self):
+        self.gh_pr("main", "x", "c" * 40, url="https://github.com/org/static-site/pull/3")
         res = self.run_gate("curl -X PUT https://api.github.com/repos/org/static-site/pulls/3/merge", self.web)
         self.assertAllow(res, "org/static-site is not a Karvey repo")
 

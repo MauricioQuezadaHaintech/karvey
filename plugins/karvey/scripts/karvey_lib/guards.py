@@ -928,12 +928,12 @@ class Candidate:
     """A production-merge candidate: the command, the repo it acts on and how to find its base."""
 
     __slots__ = ("kind", "seg", "dir", "selector", "repo_arg", "dst", "src", "target", "fail", "deferred", "bound",
-                 "repo_name", "org", "rest")
+                 "repo_name", "org", "rest", "info")
 
     def __init__(self, kind, seg, **kw):
         self.kind, self.seg = kind, seg
         for k in ("dir", "selector", "repo_arg", "dst", "src", "target", "fail", "deferred", "bound", "repo_name",
-                  "org", "rest"):
+                  "org", "rest", "info"):
             setattr(self, k, kw.get(k))
 
 
@@ -1238,6 +1238,8 @@ def pr_info(c, cwd, budget):
         data, err = _run_cli(argv, cwd, budget)
         keys = ("target_branch", "source_branch", "title")
         sha = (data or {}).get("sha")
+        if isinstance(data, dict) and isinstance(data.get("web_url"), str):
+            data["url"] = data["web_url"]
     if err:
         return None, err
     base, head, title = (data.get(k) for k in keys)
@@ -1365,29 +1367,105 @@ def _not_karvey(name, why):
                           record={"decision_detail": "not-karvey-target", "reason": why, "target": name}, audit=True)
 
 
+def _karvey_context(ctx, c):
+    """The Karvey project roots of this call: the command's directory, the payload's cwd, the session project."""
+    out = []
+    for r in ((pj.find_root(start=c.dir) if c.dir and os.path.isdir(c.dir) else None), ctx.root,
+              _project_dir_root(ctx)):
+        if r is not None and str(r) not in [str(x) for x in out]:
+            out.append(r)
+    return out
+
+
 def resolve_target(ctx, c):
-    """BUG-141 (REQ-HF-014, 024, 026): ``(root, decision)`` for the repo a candidate names. ``root`` is the
-    target's local Karvey clone; ``decision`` short-circuits (a warning for a non-Karvey target, a block for a
-    Karvey repo with no local clone). ``(None, None)`` when the candidate names no repo."""
+    """BUG-141/145 (REQ-HF-014, 024, 026): ``(root, decision)`` for the repo a candidate names.
+
+    Every local clone that answers to the name is considered and a Karvey one wins (a look-alike clone never
+    shadows it). With none, and a Karvey context around the call, the decision is ``"host"``: the host's
+    answer (canonical repo, PR head) identifies the repo. ``"unresolved"``: a Karvey repo with no local
+    clone. A warning (allow) only when no Karvey context exists or the host shows another repo."""
     name = c.repo_name
-    if not name or "$" in name or "`" in name:
-        if name:
-            return None, _pg_block(None, "target", "cannot verify the production approval: the target repo is "
-                                                   "built from variables; write it out")
+    if not name:
         return None, None
+    if "$" in name or "`" in name:
+        return None, _pg_block(None, "target", "cannot verify the production approval: the target repo is "
+                                               "built from variables; write it out")
+    tops = _memo(ctx, ("clones-of", name), lambda: clones.find_clones(_anchors(ctx, c), name))
     cwd_top = clones.toplevel(c.dir) if c.dir else None
-    tgt = cwd_top if cwd_top and clones.answers_to(cwd_top, name) else None
-    if tgt is None:
-        tgt = _memo(ctx, ("clone-of", name), lambda: clones.find_clone(_anchors(ctx, c), name))
-    if tgt is not None:
-        root = pj.find_root(start=tgt)
-        if root is None:
-            return None, _not_karvey(name, "its local clone %s is not a Karvey project" % tgt)
-        return root, None
-    session = ctx.root or _project_dir_root(ctx)
-    if clones.karvey_named(session, name):
+    tops = sorted(tops, key=lambda t: t != cwd_top)
+    for t in tops:
+        root = pj.find_root(start=t)
+        if root is not None:
+            return root, None
+    kctx = _karvey_context(ctx, c)
+    if any(clones.karvey_named(k, name) for k in kctx):
         return None, "unresolved"
-    return None, _not_karvey(name, "no local clone, and neither project.json nor any change names it")
+    if not kctx:
+        why = ("its local clone %s is not a Karvey project" % tops[0]) if tops else \
+            "no local clone and no Karvey project around the command"
+        return None, _not_karvey(name, why)
+    return None, "host"
+
+
+def _identify_via_host(ctx, c, deadline):
+    """BUG-145: no Karvey clone answers to the name, but the call runs in a Karvey context. The host's answer
+    decides: its canonical repo or the PR head commit ties it to a local Karvey clone (renames, forks, repo
+    GUIDs); a repo the project names is blocked; only a repo the host shows to be another passes with the
+    warning. Returns ``(root, info, decision)``."""
+    if c.kind == "gh-ref":
+        if c.dst is None or c.dst in ALWAYS_PRODUCTION or c.dst == "production":
+            return None, None, _pg_block(None, "target", "cannot verify the production approval: a branch write to "
+                                                         "%s in %s, which is not a local clone; run it from the clone "
+                                                         "or merge through a PR" % (c.dst or "?", c.repo_name))
+        return None, None, _not_karvey(c.repo_name, "no local clone; branch %s is not production-named" % c.dst)
+    if not c.selector:
+        return None, None, _pg_block(None, "target", "cannot verify the production approval: %s is not a local "
+                                                     "clone and the command names no PR" % c.repo_name)
+    budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
+    cwd = c.dir if c.dir and os.path.isdir(c.dir) else os.getcwd()
+    info, err = pr_info(c, cwd, budget)
+    if err:
+        return None, None, _pg_block(None, "target", "cannot verify the production approval: %s is not a local "
+                                                     "clone and the host lookup failed (%s)" % (c.repo_name, err))
+    kctx = _karvey_context(ctx, c)
+    canonical = _host_repo(info.get("url"))
+    if canonical:
+        for t in clones.find_clones(_anchors(ctx, c) + [str(k) for k in kctx], canonical):
+            root = pj.find_root(start=t)
+            if root is not None:
+                return root, info, None
+    for k in kctx:
+        if info.get("sha") and clones.has_commit(str(k), info["sha"]):
+            info = dict(info, identified_by_commit=True)  # a rename or a fork: the history ties it
+            return k, info, None
+    if any(clones.karvey_named(k, canonical or c.repo_name) for k in kctx):
+        return None, info, _unresolved_base(ctx, c, info, kctx)
+    return None, info, _not_karvey(canonical or c.repo_name, "the host shows %s, which no local Karvey clone "
+                                                             "answers to" % (canonical or c.repo_name))
+
+
+def _host_repo(url):
+    """The repo a host's PR answer names (``owner/name`` for GitHub/GitLab web URLs, ``name`` for Azure)."""
+    if not isinstance(url, str) or not url:
+        return None
+    if "/_git/" in url:
+        return url.rsplit("/_git/", 1)[-1].split("/", 1)[0] or None
+    return _url_repo(url)
+
+
+def _unresolved_base(ctx, c, info, kctx):
+    """BUG-145 (REQ-HF-014): a Karvey repo with no local clone passes only into the project's own integration
+    branch; every other base, or an unknown one, is blocked."""
+    integ, prod = None, None
+    for k in kctx:
+        wc, _ = project_wc(ctx, k)
+        _p, integ, prod = pj.branch_flow(wc or {})
+        break
+    base = (info or {}).get("base")
+    if base and integ and base == integ and integ != prod and base not in ALWAYS_PRODUCTION:
+        return Decision.allow()
+    return _pg_block(None, "target", "cannot tie %s to a local clone; run it from the clone (%s)"
+                     % (c.repo_name, "base %s" % base if base else "base unknown"))
 
 
 def _evaluate_candidate(ctx, c, deadline):
@@ -1402,10 +1480,12 @@ def _evaluate_candidate(ctx, c, deadline):
         root, early = resolve_target(ctx, c)
         if early == "unresolved":
             return _unresolved_karvey_target(ctx, c, deadline)
+        if early == "host":
+            root, c.info, early = _identify_via_host(ctx, c, deadline)
         if early is not None:
-            return early
+            return early if early.decision == "block" or early.stdout else None
     if root is not None:
-        pass
+        pass  # the target repo's clone (BUG-141)
     elif c.kind == "git-push":
         t = c.target
         if t.unresolved:
@@ -1499,13 +1579,13 @@ def _evaluate_candidate(ctx, c, deadline):
         released = shas.pop()
     else:
         budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
-        info, err = pr_info(c, str(root), budget)
+        info, err = (c.info, None) if c.info else pr_info(c, str(root), budget)
         if err:
             return _pg_block(None, "base", "cannot verify the production approval: cannot resolve the PR base (%s)"
                              % err)
-        if c.repo_name and info.get("url"):  # BUG-141: the host answered for another repo
-            got = _url_repo(info["url"]) or (info["url"].rsplit("/_git/", 1)[-1] if "/_git/" in info["url"] else None)
-            if got and clones.short(got) != clones.short(c.repo_name):
+        if c.repo_name and info.get("url"):  # BUG-141/145: the host answered for another repo
+            got = _host_repo(info["url"])
+            if got and not clones.answers_to(str(root), got) and not info.get("identified_by_commit"):
                 return _pg_block(None, "target", "cannot verify the production approval: the command names %s but "
                                                  "the host answered for %s; the two disagree" % (c.repo_name, got))
         if info["base"] not in prods:
@@ -1592,7 +1672,7 @@ def _owner_release(ctx, c, root, head, title, prefix, released, base):
                                        "clone holding it was found (looked in: %s). Clone the owning repo next to "
                                        "this one, or list its path in this repo's project.json repos"
                          % (cid, here, ", ".join(looked) or "nothing"))
-    spec = clones._read_spec(os.path.join(owner, "docs", "spec", "changes", cid, "spec.json")) or {}
+    spec = clones.read_spec(os.path.join(owner, "docs", "spec", "changes", cid, "spec.json")) or {}
     declared = [r for r in (spec.get("repos") or []) if isinstance(r, str)] if isinstance(spec, dict) else []
     names = clones.names(root)
     match = next((r for r in declared if clones.short(r) in {n.rsplit("/", 1)[-1] for n in names}), None)
@@ -1624,15 +1704,17 @@ def _owner_release(ctx, c, root, head, title, prefix, released, base):
 
 
 def _unresolved_karvey_target(ctx, c, deadline):
-    """REQ-HF-014: a Karvey repo named by the project with no local clone: blocked unless the host says the
-    base is not a production-named branch."""
+    """REQ-HF-014 / BUG-145: a Karvey repo the project names, with no local clone: passes only into the
+    project's integration branch (by the host's answer); anything else is blocked."""
+    if c.kind == "gh-ref" or not c.selector:
+        return _pg_block(None, "target", "cannot tie %s to a local clone; run it from the clone" % c.repo_name)
     budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
-    info, err = (None, "no PR number") if not c.selector else pr_info(c, c.dir if c.dir and os.path.isdir(c.dir)
-                                                                       else os.getcwd(), budget)
-    if info is not None and info["base"] not in ALWAYS_PRODUCTION and info["base"] != "production":
-        return None
-    return _pg_block(None, "target", "cannot tie %s to a local clone; run it from the clone (%s)"
-                     % (c.repo_name, "base %s" % info["base"] if info else err))
+    info, err = pr_info(c, c.dir if c.dir and os.path.isdir(c.dir) else os.getcwd(), budget)
+    if err:
+        return _pg_block(None, "target", "cannot tie %s to a local clone; run it from the clone (%s)"
+                         % (c.repo_name, err))
+    d = _unresolved_base(ctx, c, info, _karvey_context(ctx, c))
+    return None if d.decision == "allow" else d
 
 
 def _run_of(c, approval_id, budget):
@@ -1667,20 +1749,31 @@ def _evaluate_pipeline(ctx, c, deadline):
     if (ctx.root or _project_dir_root(ctx)) is None and not pj.find_root(start=c.dir or "."):
         return None
     allow = None
+    url_repo = c.repo_name
     for ident in (c.rest.approvals or [c.rest.run]):
-        budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
-        branch, sha, repo, err = _run_of(c, ident, budget)
+        left = deadline - time.monotonic()
+        if left < 0.5:  # REQ-HF-018: never past the pre-bash budget
+            return _pg_block(None, "run", "cannot verify the production approval: time budget exhausted before the "
+                                          "approval %s was resolved; approve one run per command" % ident)
+        branch, sha, repo, err = _run_of(c, ident, min(NET_BUDGET_S, left))
         if err or not isinstance(branch, str) or not isinstance(sha, str):
             return _pg_block(None, "run", "cannot verify the production approval: cannot resolve the run of the "
                                           "approval %s (%s)" % (ident, err or "no branch or commit"))
         branch = _strip_heads(branch.replace("refs/heads/", ""))
         sha = sha.lower()
-        c.repo_name = c.repo_name or repo
+        c.repo_name = url_repo or repo
         root, early = resolve_target(ctx, c) if c.repo_name else (None, None)
         if early == "unresolved":
             return _pg_block(None, "target", "cannot tie %s to a local clone; run it from the clone" % c.repo_name)
+        if early == "host":  # BUG-145: the run's commit ties it to a local Karvey clone, else it is another repo
+            root = next((k for k in _karvey_context(ctx, c) if clones.has_commit(str(k), sha)), None)
+            early = None if root is not None else _not_karvey(c.repo_name, "no local Karvey clone holds the run's "
+                                                                           "commit %s" % sha[:12])
         if early is not None:
-            return early
+            if early.decision == "block":
+                return early
+            allow = allow or early
+            continue
         root = root or ctx.root or _project_dir_root(ctx)
         if root is None:
             return None
@@ -1808,8 +1901,9 @@ def approval_hook(ctx):
                       "reason": "approval-hook error: %s: %s" % (type(exc).__name__, exc)})
         try:
             if approval.prod_shaped(text):  # REQ-HF-018/029: say it, even on an error
-                return Decision.allow(stdout=["[karvey] prod approval NOT recorded: internal error (%s)"
-                                              % type(exc).__name__])
+                return Decision.allow(stdout=["[karvey] prod approval NOT recorded: internal error (%s) \u2014 type: "
+                                              "\u00ab%s\u00bb" % (type(exc).__name__, approval.suggested_phrase(
+                                                  approval.normalise(text), None))])
         except Exception:
             pass
         return None

@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-144 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-150 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -288,6 +288,42 @@ INDEX = {
     "BUG-144": [  # F-09: the approve refusal did not name the markers found
         ("unit", "test_state_repos.py", "Refusal.test_refusal_lists_markers_and_missing_piece"),
         ("unit", "test_state_repos.py", "Refusal.test_refusal_with_no_marker"),
+    ],
+    "BUG-145": [  # F-12: the not-a-Karvey-repo warning reachable for Karvey targets
+        ("unit", "test_prodgate_identity.py", "Identity.test_look_alike_clone_in_the_cwd_does_not_bypass"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_look_alike_sibling_does_not_shadow_the_real_clone"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_renamed_repo_is_identified_by_the_host"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_fork_upstream_is_identified_by_the_head_commit"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_azure_repo_guid_is_resolved_by_the_host"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_session_in_the_folder_that_holds_the_repos"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_named_repo_without_a_clone_passes_only_into_integration"),
+    ],
+    "BUG-146": [  # F-13: REST parser evasions
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_every_url_is_classified"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_unknown_or_value_options_do_not_hide_the_url"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_curl_config_fails_closed"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_wget_separate_option_values"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_branch_writes_through_other_endpoints"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_here_documents_and_encoded_paths"),
+    ],
+    "BUG-147": [  # F-14: a token in a fail-closed message
+        ("unit", "test_karvey_hooks.py", "Dispatch.test_bug147_exception_text_never_reaches_the_message"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_httpie_auth_is_not_the_url_and_is_not_kept"),
+    ],
+    "BUG-148": [  # F-15: approval scope gaps after BUG-138
+        ("unit", "test_approval_scope.py", "ProdScope.test_bug148_change_id_without_hyphen_on_a_branch"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_bug148_versions_and_release_names_are_not_change_ids"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_bug148_unknown_word_is_never_the_suggested_change"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_bug148_two_named_ids_one_inside_the_other"),
+    ],
+    "BUG-149": [  # F-16: L-80 wordings and negations
+        ("lint", "L-80"),
+        ("unit", "test_lint_plugin.py", "L80Bug149.test_spanish_and_other_wordings_fail"),
+        ("unit", "test_lint_plugin.py", "L80Bug149.test_unrelated_not_is_not_a_negation"),
+        ("unit", "test_lint_plugin.py", "L80Bug149.test_other_question_in_the_same_paragraph_passes"),
+    ],
+    "BUG-150": [  # F-17: a worktree of the same repo read as two repos
+        ("unit", "test_session_profile.py", "SessionProfile.test_bug150_session_moved_into_a_worktree_of_the_same_repo"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

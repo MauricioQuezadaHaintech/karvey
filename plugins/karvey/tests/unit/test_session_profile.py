@@ -79,6 +79,16 @@ class SessionProfile(unittest.TestCase):
         out = self.text(wt)
         self.assertIn("WEB-HANDOFF", out)
 
+    def test_bug150_session_moved_into_a_worktree_of_the_same_repo(self):
+        team(self.t, {"app-web": "web"})
+        web = self.repo("app-web")
+        gr.commit_all(web)
+        wt = self.t / "app-web-wt"
+        gr.run(["worktree", "add", "-q", "-b", "wt", str(wt)], web)
+        out = self.text(web, cwd=wt)
+        self.assertIn("WEB-HANDOFF", out)
+        self.assertNotIn("profile not loaded", out)
+
     def test_plain_folder_without_any_profile_stays_silent(self):
         plain = self.tmp.path / "plain"
         plain.mkdir()

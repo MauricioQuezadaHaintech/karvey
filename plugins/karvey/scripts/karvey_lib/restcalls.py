@@ -40,30 +40,46 @@ CURL_LONG_ARG = {"--request", "--data", "--data-raw", "--data-binary", "--data-a
 CURL_DATA = {"-d", "--data", "--data-raw", "--data-binary", "--data-ascii", "--data-urlencode", "--json"}
 
 _AZ_PR = re.compile(r"/_apis/git/repositories/([^/]+)/pullrequests/(\d+)/?$", re.I)
+_AZ_PUSHES = re.compile(r"/_apis/git/repositories/([^/]+)/pushes/?$", re.I)
+_GH_CONTENTS = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/contents(?:/.*)?$", re.I)
+_GL_REPO_WRITE = re.compile(r"/projects/(.+?)/repository/(files/.+|commits)/?$", re.I)
+_GRAPHQL = re.compile(r"/graphql/?$", re.I)
 _AZ_REFS = re.compile(r"/_apis/git/repositories/([^/]+)/refs/?$", re.I)
 _AZ_APPROVALS = re.compile(r"/_apis/pipelines/approvals(?:/([^/]+))?/?$", re.I)
 _AZ_RELEASE = re.compile(r"/_apis/release/approvals", re.I)
-_GH_MERGE = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/pulls/(\d+)/merge/?$")
-_GH_REFS = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/git/refs(?:/heads)?/?(.*)$")
-_GH_MERGES = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/merges/?$")
-_GH_PENDING = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/actions/runs/(\d+)/pending_deployments/?$")
-_GH_REVIEW = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/actions/runs/(\d+)/(approve|deployment_protection_rule)/?$")
-_GL_MERGE = re.compile(r"/projects/([^/]+)/merge_requests/(\d+)/merge/?$")
-_GL_DEPLOY = re.compile(r"/projects/([^/]+)/deployments/(\d+)/approval/?$")
+_GH_MERGE = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/pulls/(\d+)/merge/?$", re.I)
+_GH_REFS = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/git/refs(?:/heads)?/?(.*)$", re.I)
+_GH_MERGES = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/merges/?$", re.I)
+_GH_PENDING = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/actions/runs/(\d+)/pending_deployments/?$", re.I)
+_GH_REVIEW = re.compile(r"(?:^|/)repos/([^/]+/[^/]+)/actions/runs/(\d+)/(approve|deployment_protection_rule)/?$", re.I)
+_GL_MERGE = re.compile(r"/projects/(.+?)/merge_requests/(\d+)/merge/?$", re.I)
+_GL_DEPLOY = re.compile(r"/projects/(.+?)/deployments/(\d+)/approval/?$", re.I)
 # what an inline script or an unparsed body may call (REQ-HF-015)
-_ENDPOINT_TEXT = re.compile(r"pullrequests/\d+|pulls/\d+/merge|merge_requests/\d+/merge|pipelines/approvals|"
-                            r"pending_deployments|release/approvals|git/refs|/merges\b|deployments/\d+/approval",
-                            re.I)
+_SEG = r"[^/\s\"'?]+"
+_ENDPOINT_TEXT = re.compile(r"pullrequests/%(s)s|pulls/%(s)s/merge|merge_requests/%(s)s/merge|pipelines/approvals|"
+                            r"pending_deployments|release/approvals|repos/%(s)s/%(s)s/git/refs|repos/%(s)s/%(s)s/merges|"
+                            r"repos/%(s)s/%(s)s/contents/|_apis/git/repositories/%(s)s/(refs|pushes)|"
+                            r"deployments/%(s)s/approval|/graphql\b|repository/(files|commits)" % {"s": _SEG}, re.I)
+_GRAPHQL_WRITE = re.compile(r"\b(mergePullRequest|enablePullRequestAutoMerge|updateRef|updateRefs|"
+                            r"createCommitOnBranch|deleteRef|mergeBranch|updatePullRequestBranch)\b")
+_WRITE_VERB = re.compile(r"\b(patch|put|post|delete)\b|-X\s*(PATCH|PUT|POST|DELETE)|method\s*[:=]", re.I)
+_URL_TOKEN = re.compile(r"https?://\S+", re.I)
 _COMPLETING_TEXT = re.compile(r"""["']?status["']?\s*[:=]\s*["']?(completed|approved)|autoCompleteSetBy|"""
                               r"""["']?state["']?\s*[:=]\s*["']?approved""", re.I)
 
 
 class Request:
-    __slots__ = ("client", "method", "url", "body", "body_text", "unreadable", "variable")
+    __slots__ = ("client", "method", "url", "urls", "body", "body_text", "unreadable", "variable")
 
     def __init__(self, client):
-        self.client, self.method, self.url = client, None, None
+        self.client, self.method, self.url, self.urls = client, None, None, []
         self.body, self.body_text, self.unreadable, self.variable = None, None, None, False
+
+
+def _scheme_urls(args):
+    """BUG-146: every argument that is an http(s) URL is a request target, whatever option precedes it."""
+    return [a for a in args if isinstance(a, str) and (re.match(r"^https?://", a, re.I) or
+                                                       re.match(r"^[\"']?(\$|`)", a))]
 
 
 class Call:
@@ -99,9 +115,18 @@ def clean_url(raw):
     if parts.scheme.lower() not in ("http", "https"):
         return None
     host = parts.hostname or ""
-    if parts.port:
-        host += ":%d" % parts.port
-    return "%s://%s%s" % (parts.scheme.lower(), host.lower(), parts.path)
+    try:
+        if parts.port:
+            host += ":%d" % parts.port
+    except ValueError:
+        return None
+    path = parts.path
+    for _ in range(3):  # BUG-146: %70ulls/… is pulls/… on the host
+        dec = unquote(path)
+        if dec == path:
+            break
+        path = dec
+    return "%s://%s%s" % (parts.scheme.lower(), host.lower(), re.sub(r"/{2,}", "/", path))
 
 
 def _read_body(arg, cwd):
@@ -124,15 +149,13 @@ def _read_body(arg, cwd):
 
 
 def _parse_curl(seg):
+    """curl: every URL argument (BUG-146: unknown options, -D, several URLs, --next), the last explicit method,
+    the bodies; ``-K``/``--config`` hides the request."""
     r = Request("curl")
     a = seg.argv[1:]
-    data, urls, i, get = [], [], 0, False
-    upload = False
+    data, explicit, i, get, upload = [], [], 0, False, False
     while i < len(a):
         x = a[i]
-        if x == "--":
-            urls += a[i + 1:]
-            break
         if x.startswith("--"):
             name, eq, val = x.partition("=")
             if name in CURL_LONG_ARG:
@@ -144,7 +167,7 @@ def _parse_curl(seg):
                 elif name in CURL_DATA:
                     data.append(val)
                 elif name == "--url":
-                    urls.append(val)
+                    explicit.append(val)
                 elif name == "--upload-file":
                     upload = True
                 elif name == "--config":
@@ -176,9 +199,9 @@ def _parse_curl(seg):
                 j += 1
             i += 1
             continue
-        urls.append(x)
         i += 1
-    r.url = urls[0] if urls else None
+    r.urls = list(dict.fromkeys(explicit + _scheme_urls(a)))
+    r.url = r.urls[0] if r.urls else None
     texts = []
     for d in data:
         t, why = _read_body(d, seg.cwd)
@@ -187,44 +210,86 @@ def _parse_curl(seg):
         elif t is not None:
             texts.append(t)
     r.body_text = "&".join(texts) if texts else None
-    r.variable = _has_var(r.url) or any(_has_var(d) for d in data)
+    r.variable = any(_has_var(u) for u in r.urls) or any(_has_var(d) for d in data)
     if r.method is None:
         r.method = "GET" if get else ("PUT" if upload else ("POST" if data else "GET"))
     return r
 
 
+WGET_WITH_ARG = {"--method", "--body-data", "--body-file", "--post-data", "--post-file", "--header", "-O",
+                 "--output-document", "-o", "--output-file", "-a", "--append-output", "-e", "--execute", "-U",
+                 "--user-agent", "--user", "--password", "-P", "--directory-prefix", "-i", "--input-file", "-t",
+                 "--tries", "-T", "--timeout", "--load-cookies", "--save-cookies", "--referer"}
+
+
 def _parse_wget(seg):
     r = Request("wget")
-    body = []
-    for x in seg.argv[1:]:
-        if x.startswith("--method="):
-            r.method = x.split("=", 1)[1].upper()
-        elif x.startswith(("--body-data=", "--post-data=")):
-            body.append(x.split("=", 1)[1])
-            r.method = r.method or "POST"
-        elif x.startswith(("--body-file=", "--post-file=")):
-            t, why = _read_body("@" + x.split("=", 1)[1], seg.cwd)
-            r.unreadable = r.unreadable or why
-            if t is not None:
-                body.append(t)
-            r.method = r.method or "POST"
-        elif not x.startswith("-") and r.url is None:
-            r.url = x
+    a = seg.argv[1:]
+    body, i = [], 0
+    while i < len(a):
+        x = a[i]
+        name, eq, val = x.partition("=")
+        if name in WGET_WITH_ARG:
+            if not eq:
+                i += 1
+                val = a[i] if i < len(a) else ""
+            if name == "--method":
+                r.method = val.upper()
+            elif name in ("--body-data", "--post-data"):
+                body.append(val)
+                r.method = r.method or "POST"
+            elif name in ("--body-file", "--post-file"):
+                t, why = _read_body("@" + val, seg.cwd)
+                r.unreadable = r.unreadable or why
+                if t is not None:
+                    body.append(t)
+                r.method = r.method or "POST"
+            elif name in ("-i", "--input-file", "-e", "--execute"):
+                r.unreadable = "wget %s hides the request" % name
+        i += 1
+    r.urls = _scheme_urls(a)
+    r.url = r.urls[0] if r.urls else None
     r.method = r.method or "GET"
     r.body_text = "&".join(body) if body else None
-    r.variable = _has_var(r.url) or any(_has_var(b) for b in body)
+    r.variable = any(_has_var(u) for u in r.urls) or any(_has_var(b) for b in body)
     return r
 
 
+HTTPIE_WITH_ARG = {"-a", "--auth", "-A", "--auth-type", "--session", "--session-read-only", "-o", "--output",
+                   "--verify", "--cert", "--cert-key", "--proxy", "--timeout", "--max-redirects", "--style", "-s",
+                   "--print", "-p", "--pretty", "--format-options", "--response-charset", "--response-mime",
+                   "--boundary", "--raw", "-m", "--method"}
+
+
 def _parse_httpie(seg):
+    """HTTPie / xh / httpx-style: ``[METHOD] URL [items]``; option values (``-a user:token``) are never the URL."""
     r = Request("httpie")
-    pos = [x for x in seg.argv[1:] if not x.startswith("-")]
+    a = seg.argv[1:]
+    pos, i = [], 0
+    while i < len(a):
+        x = a[i]
+        name, eq, val = x.partition("=")
+        if x.startswith("-"):
+            if name in HTTPIE_WITH_ARG and not eq:
+                if name in ("-m", "--method") and i + 1 < len(a):
+                    r.method = a[i + 1].upper()
+                i += 2
+                continue
+            if name in ("-m", "--method") and eq:
+                r.method = val.upper()
+            i += 1
+            continue
+        pos.append(x)
+        i += 1
     if pos and pos[0].upper() in METHODS:
         r.method = pos.pop(0).upper()
     if pos:
-        r.url = pos.pop(0)
-        if not re.match(r"^[a-z]+://", r.url, re.I):
-            r.url = ("https://" if seg.argv0 in ("https", "xhs") else "http://") + r.url
+        u = pos.pop(0)
+        if not re.match(r"^[a-z]+://", u, re.I) and not _has_var(u):
+            u = ("https://" if seg.argv0 in ("https", "xhs") else "http://") + u
+        r.urls = [u]
+    r.urls += [u for u in _scheme_urls(pos) if u not in r.urls]
+    r.url = r.urls[0] if r.urls else None
     body = {}
     for item in pos:
         m = re.match(r"^([^:=@]+)(:=|=|==|:|@)(.*)$", item, re.S)
@@ -243,7 +308,7 @@ def _parse_httpie(seg):
     if body:
         r.body = body
     r.method = r.method or ("POST" if body else "GET")
-    r.variable = r.variable or _has_var(r.url)
+    r.variable = r.variable or any(_has_var(u) for u in r.urls)
     return r
 
 
@@ -277,6 +342,7 @@ def _parse_cli_api(seg, tool):
             t, why = _read_body(b, seg.cwd)
             r.unreadable, r.body_text = why, t
         r.variable = _has_var(r.url) or _has_var(b)
+        r.urls = [r.url] if r.url else []
         return r
     rest = a[1:]  # after "api"
     fields = _fields(rest, ("-f", "-F", "--field", "--raw-field"))
@@ -294,21 +360,22 @@ def _parse_cli_api(seg, tool):
         r.body = fields
     r.method = (m or ("POST" if fields or inp else "GET")).upper()
     r.variable = _has_var(r.url) or any(_has_var(v) for v in fields.values())
-    if r.url and not re.match(r"^[a-z]+://", r.url, re.I):
+    if r.url and not re.match(r"^[a-z]+://", r.url, re.I) and not _has_var(r.url.split("/", 1)[0]):
         host = "api.github.com" if tool == "gh" else "gitlab.invalid/api/v4"
         r.url = "https://%s/%s" % (host, r.url.lstrip("/"))
+    r.urls = [r.url] if r.url else []
     return r
 
 
 def parse_request(seg):
     """The :class:`Request` of an HTTP-client segment, or None."""
-    name = seg.argv0
+    name = posix_base(seg.argv0)
     a = seg.argv[1:]
     if name == "curl":
         return _parse_curl(seg)
     if name == "wget":
         return _parse_wget(seg)
-    if name in ("http", "https", "xh", "xhs"):
+    if name in ("http", "https", "xh", "xhs", "httpx", "curlie"):
         return _parse_httpie(seg)
     if name == "az" and a[:1] == ["rest"]:
         return _parse_cli_api(seg, "az")
@@ -346,7 +413,7 @@ def _walk(obj):
 
 
 def _eq(v, word):
-    return isinstance(v, str) and v.strip().lower() == word
+    return (isinstance(v, str) and v.strip().lower() == word) or (isinstance(v, (int, str)) and _num_status(v, word))
 
 
 def _azure_org(url):
@@ -361,12 +428,30 @@ def _azure_org(url):
 
 
 def classify(r):
-    """The :class:`Call` a request makes, or None (a read, a non-completing update, a rejection, another API)."""
-    raw = r.url or ""
+    """The :class:`Call` a request makes (the first ``fail``, else the first candidate over every URL), or None."""
+    if r.unreadable and not r.urls:
+        return Call("fail", client=r.client, reason="cannot verify the request: %s" % r.unreadable)
+    found = None
+    for u in (r.urls or [None]):
+        c = _classify_one(r, u)
+        if c is not None and c.kind == "fail":
+            return c
+        found = found or c
+    return found
+
+
+def _num_status(v, word):
+    """Azure enums may come as numbers: PR status completed = 3, approval status approved = 4."""
+    return (word == "completed" and str(v) == "3") or (word == "approved" and str(v) == "4")
+
+
+def _classify_one(r, raw):
+    raw = raw or ""
     url = clean_url(raw) if not _has_var(raw) else None
     method = (r.method or "GET").upper()
     if url is None:
         if _has_var(raw) and (_ENDPOINT_TEXT.search(raw) or _COMPLETING_TEXT.search(r.body_text or "") or
+                              _GRAPHQL_WRITE.search(r.body_text or "") or
                               _COMPLETING_TEXT.search(json.dumps(r.body) if r.body else "")):
             return Call("fail", reason="the request URL is built from variables; write the URL out in full",
                         client=r.client)
@@ -384,6 +469,26 @@ def classify(r):
                                                                      "its body is built from variables"))
     body = _body_obj(r)
     dicts = list(_walk(body)) if body is not None else []
+    if _GRAPHQL.search(path):  # BUG-146: a GraphQL mutation that merges or writes a branch
+        text = (r.body_text or "") + (json.dumps(r.body) if r.body else "")
+        if _GRAPHQL_WRITE.search(text):
+            return Call("fail", url=url, client=r.client, reason="a GraphQL mutation that merges or writes a branch "
+                                                                 "cannot be verified; merge through the PR command")
+        return None
+    m = _GH_CONTENTS.search(path)
+    if m and method in ("PUT", "DELETE"):  # BUG-146: a file written straight into a branch
+        branch = next((d.get("branch") for d in dicts if isinstance(d.get("branch"), str)), None)
+        return Call("ref-write", host="github", repo=m.group(1), branch=branch, url=url, client=r.client)
+    m = _AZ_PUSHES.search(path)
+    if m and method == "POST":
+        names = [d.get("name") for d in dicts if isinstance(d.get("name"), str) and d["name"].startswith("refs/")]
+        heads = [n[len("refs/heads/"):] for n in names if n.startswith("refs/heads/")]
+        return Call("ref-write", host="azure", repo=unquote(m.group(1)), url=url, client=r.client,
+                    branch=heads[0] if len(heads) == 1 else None)
+    m = _GL_REPO_WRITE.search(path)
+    if m and method in ("POST", "PUT", "DELETE"):
+        branch = next((d.get("branch") for d in dicts if isinstance(d.get("branch"), str)), None)
+        return Call("ref-write", host="gitlab", repo=unquote(m.group(1)), branch=branch, url=url, client=r.client)
     # Azure Repos: complete or set auto-complete on a PR
     m = _AZ_PR.search(path)
     if m and method == "PATCH":
@@ -466,20 +571,48 @@ def classify(r):
     return None
 
 
+def _inline_hits(script):
+    """An inline script that calls a completion/approval endpoint with a write (BUG-146: precedence, reads)."""
+    if not script:
+        return False
+    called = _ENDPOINT_TEXT.search(script) or re.search(r"Invoke-(RestMethod|WebRequest)", script, re.I)
+    return bool(called and (_COMPLETING_TEXT.search(script) or _WRITE_VERB.search(script) or
+                            _GRAPHQL_WRITE.search(script)))
+
+
 def inline_call(seg):
-    """A ``fail`` :class:`Call` for an inline script that calls a completion or approval endpoint."""
-    opts = INLINE.get(seg.argv0)
+    """A ``fail`` :class:`Call` for an inline script (``-c``/``-e`` or a here-document) that calls a completion
+    or approval endpoint."""
+    opts = INLINE.get(posix_base(seg.argv0))
     if not opts:
         return None
     a = seg.argv[1:]
-    for i, x in enumerate(a):
-        if x in opts and i + 1 < len(a):
-            script = a[i + 1]
-            if _ENDPOINT_TEXT.search(script) or re.search(r"Invoke-(RestMethod|WebRequest)", script, re.I) and \
-                    _COMPLETING_TEXT.search(script):
-                return Call("fail", client=seg.argv0,
-                            reason="an inline %s script calls a PR completion or approval endpoint, which the gate "
-                                   "cannot read; send the request with curl, gh, az or glab instead" % seg.argv0)
+    scripts = [a[i + 1] for i, x in enumerate(a) if x in opts and i + 1 < len(a)]
+    scripts += [getattr(rd, "body", None) or "" for rd in seg.redirects if rd.op in ("<<", "<<-", "<<<")]
+    if any(_inline_hits(sc) for sc in scripts):
+        return Call("fail", client=seg.argv0,
+                    reason="an inline %s script calls a PR completion or approval endpoint, which the gate cannot "
+                           "read; send the request with curl, gh, az or glab instead" % posix_base(seg.argv0))
+    return None
+
+
+def posix_base(name):
+    return (name or "").rsplit("/", 1)[-1]
+
+
+def unknown_client_call(seg):
+    """BUG-146: a command this module does not parse that names a completion/approval endpoint URL together
+    with a write method fails closed."""
+    args = seg.argv[1:]
+    urls = [u for u in args if _URL_TOKEN.match(u) and _ENDPOINT_TEXT.search(unquote(u))]
+    if not urls:
+        return None
+    joined = " ".join(args)
+    if re.search(r"(?i)(^|\s)(PUT|PATCH|POST|DELETE)(\s|$)", joined) or re.search(
+            r"(?i)(-X|--request|-m|--method)[= ]?\s*(PUT|PATCH|POST|DELETE)", joined):
+        return Call("fail", client=seg.argv0, url=urls[0],
+                    reason="%s sends a write to %s, which the gate cannot read; use curl, gh, az or glab"
+                           % (posix_base(seg.argv0), urls[0].split("?")[0]))
     return None
 
 
@@ -492,10 +625,7 @@ def classify_segment(seg):
         return c
     r = parse_request(seg)
     if r is None:
-        return None
+        if posix_base(seg.argv0) in ("git", "gh", "glab", "az"):
+            return None
+        return unknown_client_call(seg)
     return classify(r)
-
-
-def target_of(call):
-    """The repo name a call targets (``owner/name`` or ``name``), or None."""
-    return call.repo if call is not None else None

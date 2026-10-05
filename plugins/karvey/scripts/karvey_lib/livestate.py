@@ -135,6 +135,13 @@ def git_top(path):
     return os.path.realpath(top) if rc == 0 and top else None
 
 
+def _common(top):
+    rc, common = git(top, "rev-parse", "--git-common-dir", timeout=TOP_TIMEOUT_S)
+    if rc != 0 or not common:
+        return None
+    return os.path.realpath(common if os.path.isabs(common) else os.path.join(str(top), common))
+
+
 def repo_name(top):
     """The name a repo answers to: the basename of its main clone (a linked worktree maps by it)."""
     rc, common = git(top, "rev-parse", "--git-common-dir", timeout=TOP_TIMEOUT_S)
@@ -240,6 +247,8 @@ def resolve_session_profile(start, cwd):
         if os.path.isdir(d) and d not in tops:
             tops[d] = git_top(d)
     top_s, top_c = tops.get(start), tops.get(cwd, tops.get(start))
+    if top_s != top_c and top_s and top_c and _common(top_s) == _common(top_c):
+        top_s = top_c  # BUG-150: a worktree of the same repo is the same repo
     if top_s != top_c:
         labels = []
         for t in (top_s, top_c):
@@ -247,7 +256,7 @@ def resolve_session_profile(start, cwd):
                 continue
             n = repo_name(t)
             cands = repo_candidates(t, n)
-            labels += [c["label"] for c in cands] or ["%s (no profile)" % n]
+            labels += [c["label"] for c in cands if c["label"] not in labels] or ["%s (no profile)" % n]
         res.update(status="ambiguous", candidates=labels,
                    reason="the session started in one repo and now works in another")
         return res

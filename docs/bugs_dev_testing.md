@@ -1777,3 +1777,183 @@ the refusal printed `find_valid`'s per-scope reason only.
 | 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-09, real use |
 | 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
 | 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-145 — The prod-gate's "not a Karvey repo" warning was reachable for Karvey targets
+- **Priority:** critical
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`resolve_target`), clones.py
+- **Change / origin:** prod-gate-scope — finding F-12 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+From a look-alike clone with the target's remote, from the Karvey repo itself naming its renamed or upstream name, an Azure REST completion with the repo GUID, or a session in the folder that holds the repos: `gh pr merge 12 --repo org/<repo>` / `curl -X PATCH …/repositories/<GUID>/pullrequests/12`.
+
+### Actual vs expected
+- Actual: allowed with "not a Karvey repo — not gated" (3.12.0 blocked several of these).
+- Expected: a Karvey clone answering to the name always wins; in a Karvey context the host's answer (canonical repo, PR head commit) identifies the repo; a repo the project names without a clone passes only into the integration branch; the warning only for a repo shown to be another.
+
+### Root cause
+the first clone that answered to the name decided; the Karvey context and the host's answer were ignored; children of a non-repo folder were not searched.
+
+### Fix
+`resolve_target` (all clones, Karvey first), `_identify_via_host`, `_unresolved_base`, `clones.find_clones`/`has_commit`, children search; the host check compares the canonical repo for gh, az and glab. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_prodgate_identity.py`; red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-12, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-146 — REST forms slipped past the prod-gate's parser
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/restcalls.py
+- **Change / origin:** prod-gate-scope — finding F-13 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`curl -X PUT https://example.com/ <merge-url>`, `curl --max-redirs 3 -X PUT <merge-url>`, `curl -K cfg`, `wget --method PUT <merge-url>`, `http -a u:t PUT <merge-url>`, `gh api -X PUT repos/o/r/contents/x -f branch=main`, a GraphQL `mergePullRequest`, `python3 - <<EOF … EOF`, `…/%70ulls/12/merge`, `…/pulls/$N/merge`.
+
+### Actual vs expected
+- Actual: allowed without an approval.
+- Expected: each is a candidate or blocked with the reason.
+
+### Root cause
+the parser took the first positional as the URL, knew only some value options, and matched literal, undecoded paths.
+
+### Fix
+every http(s) argument is a target; `-K`/`wget -i` fail closed; option tables for wget/HTTPie; decoded paths; contents/pushes/GitLab files and GraphQL writes; here-documents and unknown clients with a write to an endpoint fail closed; inline scripts need a write as well as an endpoint. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_restcalls_evasions.py`; red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-13, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-147 — A fail-closed message carried a token from the command
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/karvey_hooks.py (`dispatch`), restcalls.py
+- **Change / origin:** prod-gate-scope — finding F-14 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`http -a bot:<token> PUT <merge-url>`.
+
+### Actual vs expected
+- Actual: the ValueError text with the token in stderr and in the audit log.
+- Expected: only the exception type.
+
+### Root cause
+the dispatcher interpolated the exception text; HTTPie's `-a` value was read as the URL.
+
+### Fix
+fail-closed and fail-open messages keep the type only; HTTPie option values are skipped; a bad port is no exception. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_karvey_hooks.py` (Dispatch.test_bug147_exception_text_never_reaches_the_message); red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-14, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-148 — Approval scope gaps after BUG-138
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`resolve_prod_scope`)
+- **Change / origin:** prod-gate-scope — finding F-15 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+«aprobado para producción billing» with `billing` only on another branch; «aprobado para producción 3.12.1-hotfix»; «… cross-tenant»; «… login y api-login».
+
+### Actual vs expected
+- Actual: the active change recorded for `billing`; valid approvals refused for version words; a suggested phrase naming a non-change; two named ids read as one.
+- Expected: any id held elsewhere (hyphen or not) refuses with its location; numeric and common hyphenated words are not ids; the phrase names the active change or `<change-id>`; both ids count.
+
+### Root cause
+only hyphenated tokens were looked up elsewhere; a substring filter merged ids; the phrase used the unknown token.
+
+### Fix
+`ids_elsewhere` (worktrees and branches, every id), numeric-segment and common-word exclusions, phrase and error line fixes. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_approval_scope.py` (test_bug148_*); red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-15, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-149 — L-80 missed wordings and misread negations
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/lint-plugin.py (L-80)
+- **Change / origin:** prod-gate-scope — finding F-16 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+«Pide el OK de producción con `AskUserQuestion`», "If the PR is not green, use AskUserQuestion for the prod OK", and a paragraph that types the production approval and uses the question tool for the QA verdict.
+
+### Actual vs expected
+- Actual: two false negatives and one false positive.
+- Expected: sentence-level check, Spanish and other wordings, a negation only when it governs the tool.
+
+### Root cause
+paragraph-level co-occurrence and a negation anywhere before the tool.
+
+### Fix
+sentence split, wider production-OK and tool patterns, scoped negation. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_lint_plugin.py` (L80Bug149); red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-16, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-150 — A worktree of the same repo was reported as an ambiguous identity
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/livestate.py (`resolve_session_profile`)
+- **Change / origin:** prod-gate-scope — finding F-17 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A session started in `app-web` that works in a linked worktree of `app-web`.
+
+### Actual vs expected
+- Actual: "profile not loaded … started in one repo and now works in another" with duplicate candidates.
+- Expected: the same repo: the profile is injected.
+
+### Root cause
+top levels were compared instead of the repository (common git dir).
+
+### Fix
+same common dir = same repo; candidate labels de-duplicated. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_session_profile.py` (SessionProfile.test_bug150_session_moved_into_a_worktree_of_the_same_repo); red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-17, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |

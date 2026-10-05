@@ -1086,6 +1086,27 @@ class L80(LintCase):
         self.assertPasses("L-80")
 
 
+class L80Bug149(LintCase):
+    """BUG-149: L-80 read the whole paragraph, missed Spanish and other wordings, and took any "not" as a negation."""
+
+    def test_spanish_and_other_wordings_fail(self):
+        for text in ("Pide el OK de producción con `AskUserQuestion`.",
+                     "Use AskUserQuestion to confirm the release to production.",
+                     "Collect the go-live approval with a question tool."):
+            self.t.write(RULES + "/release.md", "# Release\n\n%s\n" % text)
+            self.assertFails("L-80", "question tool", file=RULES + "/release.md")
+
+    def test_unrelated_not_is_not_a_negation(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nIf the PR is not green, use AskUserQuestion for the "
+                                            "prod OK.\n")
+        self.assertFails("L-80", "question tool", file=RULES + "/release.md")
+
+    def test_other_question_in_the_same_paragraph_passes(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nThe production approval is typed by the human. Use "
+                                            "AskUserQuestion for the QA verdict only.\n")
+        self.assertPasses("L-80")
+
+
 class ListAll(unittest.TestCase):
     def test_list_names_l01_to_l36(self):
         code, out, _ = run_cli("--root", str(_path.REPO_ROOT), "--list")

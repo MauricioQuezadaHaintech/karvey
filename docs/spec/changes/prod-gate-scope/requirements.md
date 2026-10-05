@@ -283,17 +283,19 @@ GIVEN no approval
 WHEN the PATCH also carries `"status": "completed"`
 THEN it is blocked.
 
-### 3.5 REQ-HF-014 — Commands outside a repository are tied to the repo they name *(revised, rev 1, D-45)*
+### 3.5 REQ-HF-014 — Commands outside a repository are tied to the repo they name *(revised, rev 1, D-45; rev 2)*
 WHEN a production merge candidate (CLI or REST) runs in a directory that is not inside a Karvey project (for
 example after `cd /tmp`), the prod-gate SHALL tie it to a local clone by the repository the command names (its
 repo option, the PR URL, the request URL, the PR the host reports) among the session's project, its worktrees,
 the repos its `project.json` and its changes' `spec.json:repos` name, and the command's directory; a Karvey
 clone SHALL get the full check (REQ-HF-024, 025); a target that is not a Karvey repo SHALL pass with the warning
 of REQ-HF-026; IF the command names a Karvey repo (by `project.json` or a change's `spec.json:repos`) of which no
-local clone is found, and the PR's base is a production branch or cannot be determined, THEN the prod-gate SHALL
-block with the reason and say to run the command from the repo's clone.
+local clone is found, THEN the prod-gate SHALL allow it only when the host reports the PR's base as the project's
+integration branch, and otherwise (any other base, or one that cannot be determined) SHALL block with the reason
+and say to run the command from the repo's clone. The search also covers the folders below a session directory
+that is not a repo. *(rev 2, QA F-12: a production branch not named main/master was let through.)*
 
-Traces to PRD: O-3, O-6, S-3, S-7, AC-3, AC-7 · F-03, F-10 · Decision: D-43, D-45 · AMENDS REQ-W1-024
+Traces to PRD: O-3, O-6, S-3, S-7, AC-3, AC-7 · F-03, F-10, F-12 · Decision: D-43, D-45 · AMENDS REQ-W1-024
 
 #### Scenario: Success
 GIVEN a session in the clone `app-web` (Karvey) with a live approval bound to the PR head
@@ -534,14 +536,20 @@ GIVEN the same, but the PR's base is `main` and no approval exists in `app-api`
 WHEN the merge runs
 THEN it is blocked.
 
-### 7.3 REQ-HF-026 — A target that is not a Karvey repo passes with a warning
+### 7.3 REQ-HF-026 — A target that is not a Karvey repo passes with a warning *(revised, rev 2)*
 WHEN a production merge candidate or a production pipeline approval (CLI or REST) targets a repo that is not a
 Karvey repo — its local clone is not a Karvey project, or no local clone exists and neither the session's
 `project.json` nor any change's `spec.json:repos` names it — the prod-gate SHALL allow it and SHALL print exactly
 one warning line naming the target repo and saying it is not gated because it is not a Karvey repo; a target the
-gate cannot identify at all keeps REQ-HF-015.
+gate cannot identify at all keeps REQ-HF-015. *(rev 2, QA F-12)* Every local clone that answers to the name is
+considered and a Karvey one always wins (a look-alike clone never decides). WHEN the call runs in a Karvey
+context (its directory, the payload's cwd or the session project is a Karvey project) and no local Karvey clone
+answers to the name, the prod-gate SHALL ask the host for the PR and SHALL treat the target as that Karvey repo
+when the host's canonical repo answers to a local Karvey clone or the PR head commit is in one (renames, forks,
+repo GUIDs); IF the host lookup fails, THEN it SHALL block. The warning applies only when the host shows another
+repo.
 
-Traces to PRD: O-6, S-7, AC-7 · F-10 · Decision: D-45 · AMENDS REQ-W1-024
+Traces to PRD: O-6, S-7, AC-7 · F-10, F-12 · Decision: D-45 · AMENDS REQ-W1-024
 
 #### Scenario: Success
 GIVEN a session in `app-web` and no local clone of `org/static-site`, not named by `project.json` or any change
@@ -666,4 +674,5 @@ prod marker for app-login; the human types «aprobado para producción app-login
 
 | Rev | Date | Ref | Requirements | Why |
 |---|---|---|---|---|
+| 2 | 2026-10-05 | QA F-12..F-17 | REVISED REQ-HF-014 (a Karvey repo with no clone passes only into the integration branch; folders below a non-repo session directory searched), REQ-HF-026 (a Karvey clone wins over look-alikes; in a Karvey context the host's answer decides; a failed lookup blocks) | The QA review (security, code, D7 second opinion) found the warning path reachable for Karvey targets. Tightened in place in the QA loop (stricter, fail closed); the owner confirms it with the QA approval. |
 | 1 | 2026-10-05 | D-45 · F-05..F-11 | ADDED REQ-HF-020..030; REVISED REQ-HF-014 (non-Karvey targets warn), REQ-HF-017 (BUG-138..144), REQ-HF-018 (session hook, approval-hook error line); BUG-53/54 renumbered to BUG-138/139 | The owner widened the hotfix with the defects found in use (D-45). BUG-53/54 were already used by another unmerged branch (F-11). Ripple: prd.md (problems 5-9, O-5..O-8, S-6..S-9, AC-6..AC-9), findings.md, spec-delta.md, PLAN.md, spec.json, backlog BL-64. Revised in place while requirements are generated and not approved. |

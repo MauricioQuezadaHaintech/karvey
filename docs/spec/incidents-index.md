@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO with a regression test red on e2acfab)
+Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO with a regression test red on e2acfab; QA BUG-145..150 red on a9cd831)
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -66,6 +66,12 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | BUG-142 | karvey | high | The deploy skill asked for the production OK through a question tool | prod-gate-scope / F-07 | RESUELTO | plugins/karvey/tests/ L-80; test_lint_plugin.py (L80) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 | BUG-143 | karvey | medium | A production-shaped phrase that recorded nothing printed nothing | prod-gate-scope / F-08 | RESUELTO | plugins/karvey/tests/ approval.json ap-hf-07/09/10 (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 | BUG-144 | karvey | medium | The `approve … prod` refusal did not say which marker it found | prod-gate-scope / F-09 | RESUELTO | plugins/karvey/tests/ test_state_repos.py (Refusal) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-145 | karvey | critical | The prod-gate's "not a Karvey repo" warning was reachable for Karvey targets | prod-gate-scope / F-12 | RESUELTO | plugins/karvey/tests/unit/test_prodgate_identity.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-146 | karvey | high | REST forms slipped past the prod-gate's parser | prod-gate-scope / F-13 | RESUELTO | plugins/karvey/tests/unit/test_restcalls_evasions.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-147 | karvey | medium | A fail-closed message carried a token from the command | prod-gate-scope / F-14 | RESUELTO | plugins/karvey/tests/unit/test_karvey_hooks.py (Dispatch) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-148 | karvey | high | Approval scope gaps after BUG-138 | prod-gate-scope / F-15 | RESUELTO | plugins/karvey/tests/unit/test_approval_scope.py (bug148) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-149 | karvey | medium | L-80 missed wordings and misread negations | prod-gate-scope / F-16 | RESUELTO | plugins/karvey/tests/unit/test_lint_plugin.py (L80Bug149) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-150 | karvey | medium | A worktree of the same repo was reported as an ambiguous identity | prod-gate-scope / F-17 | RESUELTO | plugins/karvey/tests/unit/test_session_profile.py (bug150) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 
 ## Summary by state
 
@@ -74,7 +80,7 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 58 | BUG-01 .. BUG-51, BUG-138 .. BUG-144 |
+| RESUELTO | 64 | BUG-01 .. BUG-51, BUG-138 .. BUG-150 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-145** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).
+Next number: **BUG-151** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).

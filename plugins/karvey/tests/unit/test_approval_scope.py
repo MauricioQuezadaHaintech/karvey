@@ -71,6 +71,37 @@ class ProdScope(unittest.TestCase):
         self.assertIsNone(r["scope"])
         self.assertIn("one message per change", r["why"])
 
+    def test_common_hyphenated_words_are_not_change_ids(self):
+        r = self.resolve("aprobado para producción, go-live hoy")
+        self.assertEqual(r["scope"], "team-adapters")
+        self.assertTrue(r["implicit"])
+
+    def test_bug148_change_id_without_hyphen_on_a_branch(self):
+        g.run(["checkout", "-q", "-b", "feature/billing"], self.root)
+        _change(self.root, "billing", "deploying")
+        g.commit_all(self.root, "billing")
+        g.run(["checkout", "-q", "main"], self.root)
+        r = self.resolve("aprobado para producción billing")
+        self.assertIsNone(r["scope"])
+        self.assertIn("feature/billing", r["why"])
+
+    def test_bug148_versions_and_release_names_are_not_change_ids(self):
+        for text in ("aprobado para producción 3.12.1-hotfix", "ok merge a prod la PR release-3.13",
+                     "aprobado para producción, roll-out hoy"):
+            r = self.resolve(text)
+            self.assertEqual(r["scope"], "team-adapters", text)
+
+    def test_bug148_unknown_word_is_never_the_suggested_change(self):
+        r = self.resolve("aprobado para producción del fix cross-tenant")
+        self.assertIsNone(r["scope"])
+        self.assertEqual(r["candidates"], ["team-adapters"])
+
+    def test_bug148_two_named_ids_one_inside_the_other(self):
+        _change(self.root, "login")
+        _change(self.root, "api-login")
+        r = self.resolve("aprobado para producción login y api-login")
+        self.assertIsNone(r["scope"])
+
     def test_phrase_language(self):
         self.assertEqual(approval.suggested_phrase("aprobado para produccion", "x"), "aprobado para producción x")
         self.assertEqual(approval.suggested_phrase("approved, ship it to production", None),

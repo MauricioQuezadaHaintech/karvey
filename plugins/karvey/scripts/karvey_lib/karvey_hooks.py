@@ -298,14 +298,15 @@ def dispatch(event, stdin_text, env=None, only=None, force_enabled=False, out=No
             d = g.run(ctx)
         except Exception as exc:
             if g.fail == "closed":
-                msg = "[karvey] BLOCK %s: cannot evaluate: %s: %s (fail closed)" % (g.name, type(exc).__name__, exc)
+                # BUG-147: the exception text can carry a value of the command (a token): only its type is kept
+                msg = "[karvey] BLOCK %s: cannot evaluate: %s (fail closed)" % (g.name, type(exc).__name__)
                 err.write(msg + "\n")
                 _audit_block(ctx, g.name, msg)
                 return HOOK_BLOCK
             if g.name == "spec-write":
                 err.write("[karvey] spec.json not validated: %s: %s\n" % (type(exc).__name__, exc))
             elif g.name != "pending-sync":  # pending-sync is silent (§3.2); archive recomputes from git
-                err.write("[karvey] %s not evaluated: %s\n" % (g.name, exc))
+                err.write("[karvey] %s not evaluated: %s\n" % (g.name, type(exc).__name__))  # BUG-147
             continue
         if d is None:
             continue
@@ -388,50 +389,6 @@ def bound_text(text, path, max_bytes):
         cut = cut[:cut.rfind("\n")]
     return "%s\n\u2026 truncated (%.1f KB of %.1f KB) \u2014 full file: %s" % (
         cut, len(cut.encode("utf-8")) / 1024.0, len(data) / 1024.0, path)
-
-
-def _legacy_kv(cfg):
-    kv = {}
-    for ln in (_read(cfg) or "").splitlines():
-        if "=" in ln and not ln.lstrip().startswith("#"):
-            k, _, v = ln.partition("=")
-            kv.setdefault(k.strip(), v.strip())
-    return kv
-
-
-def resolve_profile(root, cfg, kind, top):
-    """``(name, role, profile, board)`` — the 3.11.4 resolution (BUG-19 layouts)."""
-    name, role = "", "solo"
-    profile = os.path.join(root, "docs", "spec", "agent")
-    board = os.path.join(profile, "board.md")
-    if kind == "team":
-        try:
-            d = json.loads(_read(cfg) or "")
-        except ValueError:
-            d = None
-        if isinstance(d, dict):
-            roles = d.get("roles") if isinstance(d.get("roles"), dict) else {}
-            role = roles.get(top) or (roles.get(os.path.basename(root)) if not top else None) or "ceo"
-            names = d.get("display_names") if isinstance(d.get("display_names"), dict) else {}
-            name = names.get(role) or "agent-%s-%s" % (d.get("code", ""), role)
-            ops = str(d.get("ops_repo", "") or "")
-        else:
-            role, ops = "ceo", ""
-        if ops and ops != os.path.basename(root) and os.path.isdir(os.path.join(root, ops)):
-            opsdir = os.path.join(root, ops)
-        else:
-            opsdir = os.path.dirname(cfg)
-        profile = os.path.join(opsdir, "agents", role)
-        board = os.path.join(opsdir, "board", role + ".md")
-    elif kind == "legacy":
-        kv = _legacy_kv(cfg)
-        code = kv.get("CODIGO") or kv.get("CODE") or ""
-        ops = kv.get("OPS", "")
-        role = kv.get("AGENTE_%s" % top) or kv.get("AGENT_%s" % top) or "ceo"
-        name = kv.get("NOMBRE_%s" % role) or kv.get("NAME_%s" % role) or "agent-%s-%s" % (code, role)
-        profile = os.path.join(root, ops, "agents", role)
-        board = os.path.join(root, ops, "board", role + ".md")
-    return name or os.path.basename(root), role, profile, board
 
 
 def live_state(state_path, root):
@@ -567,7 +524,7 @@ def profile_paths(kind, root, cfg, role):
         else:
             opsdir = os.path.dirname(cfg)
         return name, os.path.join(opsdir, "agents", role), os.path.join(opsdir, "board", role + ".md")
-    kv = _legacy_kv(cfg)
+    kv = livestate.legacy_kv(cfg)
     code, ops = kv.get("CODIGO") or kv.get("CODE") or "", kv.get("OPS", "")
     name = kv.get("NOMBRE_%s" % role) or kv.get("NAME_%s" % role) or "agent-%s-%s" % (code, role)
     return name, os.path.join(root, ops, "agents", role), os.path.join(root, ops, "board", role + ".md")
