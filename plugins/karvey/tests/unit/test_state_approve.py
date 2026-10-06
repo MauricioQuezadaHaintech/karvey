@@ -180,24 +180,30 @@ class CheckProd(Base):
 
 
 class Consumption(Base):
-    def test_advance_consumes_the_marker_of_the_closing_phase(self):
-        m = ap.write_marker(self.root, "plan", "feat-a", "aprobado, ejecuta")
+    """BUG-157 (REQ-HF-037, D-47): a phase close never consumes a plan approval; a change's approval lasts until
+    the change is archived, a session-wide one for its session, and a stop revokes both."""
+
+    def test_phase_close_keeps_the_plan_approval(self):
+        ap.write_marker(self.root, "plan", "feat-a", "aprobado, ejecuta")
         self.st("approve", "feat-a", "qa", "--by", "M", "--role", "human", "--ref", "D-20")
-        self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
         c, env = self.st("advance", "feat-a", "deploying")
         self.assertEqual(c, 0, env)
-        self.assertEqual(env["result"]["consumed"], ["feat-a"])
-        got, _ = ap.read_marker(self.root, "feat-a")
-        self.assertIsNotNone(got["consumed_at"])
-        self.assertIsNone(ap.find_valid(self.root, "feat-a")[0])
+        self.assertEqual(env["result"]["consumed"], [])
+        self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
 
-    def test_project_marker_used_as_evidence_is_consumed(self):
+    def test_project_marker_used_as_evidence_is_kept(self):
         ap.write_marker(self.root, "plan", "_project", "ok")
         self.st("approve", "feat-a", "qa", "--by", "M", "--role", "human", "--ref", "D-20")
         self.assertEqual(self.read()["approvals"]["qa"]["evidence"]["marker"], "approvals/_project.json")
         c, env = self.st("advance", "feat-a", "deploying")
-        self.assertEqual(env["result"]["consumed"], ["_project"])
-        self.assertIsNone(ap.find_valid(self.root, "feat-a")[0])
+        self.assertEqual(env["result"]["consumed"], [])
+        self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
+
+    def test_archive_ends_the_change_approval(self):
+        ap.write_marker(self.root, "plan", "feat-a", "aprobado")
+        consumed = self._state.consume_on_archive(self.root, "feat-a")
+        self.assertEqual(consumed, ["feat-a"])
+        self.assertIsNone(ap.find_valid(self.root, "feat-a", project_scope=False)[0])
 
     def test_unrelated_project_marker_is_kept(self):
         self.st("approve", "feat-a", "qa", "--by", "M", "--role", "human", "--ref", "D-20")
@@ -205,6 +211,24 @@ class Consumption(Base):
         c, env = self.st("advance", "feat-a", "deploying")
         self.assertEqual(env["result"]["consumed"], [])
         self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
+
+    def test_bug157_d1_a_message_evidences_only_the_phase_it_was_typed_in(self):
+        d = self.read()
+        d["phase_history"][-1]["entered_at"] = "2026-10-05T10:00:00-03:00"
+        self.f.write_text(json.dumps(d), encoding="utf-8")
+        ap.write_marker(self.root, "plan", "feat-a", "aprobado los requisitos",
+                        now=ap.parse_dt("2026-10-05T09:00:00-03:00"))
+        c, env = self.st("approve", "feat-a", "qa", "--by", "M", "--role", "human", "--ref", "D-20")
+        self.assertEqual(c, 0, env)
+        self.assertEqual([w["code"] for w in env["warnings"]], ["state.marker_predates_phase"])
+        self.assertEqual(self.read()["approvals"]["qa"]["evidence"], {"marker": "none"})
+        self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])  # still the plan approval
+
+    @property
+    def _state(self):
+        from _state import state
+        return state
+
 
 class ProdMarkerScope(Base):
     """BUG-41: one project-wide prod marker ("aprobado, pasa a prod" with no single active change) approved
@@ -215,13 +239,16 @@ class ProdMarkerScope(Base):
         self.refused(("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20"),
                      "prod-kind approval marker")
 
-    def test_prod_marker_is_consumed_by_the_approval(self):
+    def test_prod_marker_is_used_once_by_the_approval(self):
+        """BUG-41 kept (one production approval, one change); D-47: the message stays the plan approval."""
         ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
         c, env = self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
         self.assertEqual(c, 0, env)
         m, status = ap.read_marker(self.root, "feat-a")
         self.assertEqual(status, "ok")
-        self.assertIsNotNone(m["consumed_at"])
+        self.assertIsNotNone(m["prod_used_at"])
+        self.assertIsNone(ap.find_valid(self.root, "feat-a", kinds=("prod",), project_scope=False)[0])
+        self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
 
 
 class ConsumeOnlyWhatClosed(Base):
