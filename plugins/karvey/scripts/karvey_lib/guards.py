@@ -31,7 +31,7 @@ import shlex
 import subprocess
 import time
 
-from . import PLUGIN_ROOT, SCRIPTS_DIR, approval, audit, hookio
+from . import PLUGIN_ROOT, SCRIPTS_DIR, approval, audit, clones, hookio, restcalls
 from . import project as pj
 
 
@@ -312,6 +312,35 @@ def _free_text_args(seg):
     return out
 
 
+# BL-64 / BUG-139 (REQ-HF-016): segments that may sit beside a read-only listing of a protected path —
+# they neither write nor take a path from it. Wrappers that run their input (xargs, tee, a shell) are absent.
+LISTING_TEXT = frozenset({"echo", "printf", "true", ":"})
+LISTING_FORMATTERS = frozenset({"jq", "sort", "uniq", "column", "head", "tail", "wc", "cut", "tr", "nl"})
+_PY_FORMATTERS = (("-m", "json.tool"),)
+
+
+def _listing_safe(seg):
+    """True when ``seg`` cannot write: a READ_ONLY command, text output, a path-less formatter or a read-only
+    ``git`` subcommand, each without a write redirection (``/dev/null`` aside)."""
+    for r in seg.redirects:
+        if r.target and r.op in (">", ">>", ">|", "&>", "&>>", "<>") and r.target not in ("/dev/null",):
+            return False
+        if r.op == ">&" and r.target and not r.target.isdigit() and r.target not in ("-", "/dev/null"):
+            return False
+    name = seg.argv0
+    args = seg.argv[1:]
+    if name in READ_ONLY or name in LISTING_TEXT:
+        return True
+    if name in LISTING_FORMATTERS:
+        return all(a.startswith("-") or name in ("jq", "cut", "tr") for a in args) and not any(
+            a in ("-i", "--in-place", "-o", "--output") or a.startswith("--output=") for a in args)
+    if name in ("python3", "python") and tuple(args) in _PY_FORMATTERS:
+        return True
+    if name == "git" and seg.git and (seg.git.get("sub") or "") in READ_ONLY_GIT:
+        return True
+    return False
+
+
 def protect_paths(ctx):
     env = ctx.env
     needles = _state_needles(env)
@@ -383,14 +412,15 @@ def protect_paths(ctx):
         reduced += [w.raw for i, w in enumerate(tail) if i not in free]
         reduced += [r.target for r in seg.redirects if r.target]
     if _hits(_unquote(env_expand(" ".join(reduced), env)), [n for n in needles if "/" in n]) and not all(
-            s.argv0 in READ_ONLY for s in parsed.segments):
+            _listing_safe(s) for s in parsed.segments):
         return Decision.block(PROTECT_MSG, record={"reason": "command names a protected path"})
     return None
 
 
 # --------------------------------------------------------------------------- plan-gate (§3.4)
-PLAN_MSG = ("[karvey] BLOCK plan-gate: %s. Present the plan and wait for the human's approval; "
-            "the approval hook records it.")
+PLAN_MSG = ("[karvey] BLOCK plan-gate: %s. This is a consequential action (D-47): present the plan with it and "
+            "wait for the human's approval; the approval hook records it and it lasts until the plan ends or the human "
+            "says stop.")
 NULL_TARGETS = frozenset({"/dev/null", "/dev/stdout", "/dev/stderr", "/dev/tty", "-"})
 WRITE_OPS = frozenset({">", ">>", ">|", "&>", "&>>", "<>"})
 SQL_CLIENTS = frozenset({"psql", "mysql", "mariadb", "sqlcmd", "sqlite3", "sqlplus", "bq", "clickhouse-client",
@@ -417,20 +447,99 @@ def _is_write_redirect(r):
 
 def _sql_text(seg):
     parts = list(seg.argv[1:])
+    for i, a in enumerate(seg.argv[1:-1], start=1):  # D-47: a script file is read (unreadable: gated)
+        if a in ("-i", "-f", "--file", "--input-file") or (seg.argv0 == "sqlite3" and a == ".read"):
+            path = seg.argv[i + 1]
+            full = path if os.path.isabs(path) else os.path.join(seg.cwd or os.getcwd(), path)
+            try:
+                with open(full, encoding="utf-8", errors="replace") as fh:
+                    parts.append(fh.read(512 * 1024))
+            except OSError:
+                parts.append("EXEC unreadable-script")
+    for r in seg.redirects:  # mysql < script.sql
+        if r.op == "<" and r.target:
+            full = r.target if os.path.isabs(r.target) else os.path.join(seg.cwd or os.getcwd(), r.target)
+            try:
+                with open(full, encoding="utf-8", errors="replace") as fh:
+                    parts.append(fh.read(512 * 1024))
+            except OSError:
+                parts.append("EXEC unreadable-script")
     parts += [r.body for r in seg.redirects if getattr(r, "body", None)]
     parts += [r.target for r in seg.redirects if r.op == "<<<" and r.target]
     return "\n".join(p for p in parts if isinstance(p, str))
 
 
-def _sql_class(text):
+_SQL_WRITE = re.compile(r"\b(insert\s+into|update\s+[\w.\[\]\"`]+\s+set|delete\s+from|merge\s+into|drop|truncate|"
+                        r"alter|create|grant|revoke|exec|execute|call|replace\s+into|upsert|copy\s+[\w.\"]+\s+from|"
+                        r"vacuum|reindex)\b", re.I)
+
+
+def _proc_patterns(ctx):
+    """``(write, read)`` procedure-name patterns: ``enforcement.db_write_procs`` (working copy or reviewed line:
+    it only adds gating) and ``enforcement.db_read_procs`` (reviewed line only: it frees procedures)."""
+    if ctx is None:
+        return [], []
+    root = ctx.root
+
+    def pats(v):
+        return [re.compile(x, re.I) for x in (v or []) if isinstance(x, str) and x.strip() and len(x) <= 200
+                and _compiles(x)] if isinstance(v, list) else []
+    wc, _ = project_wc(ctx, root) if root is not None else (None, None)
+    write = pats(pj.enforcement_of(wc).get("db_write_procs")) + pats(reviewed_setting(ctx, "db_write_procs", root)
+                                                                    if root is not None else None)
+    read = pats(reviewed_setting(ctx, "db_read_procs", root)) if root is not None else []
+    return write, read
+
+
+def _compiles(x):
+    try:
+        re.compile(x)
+        return True
+    except re.error:
+        return False
+
+
+def _sql_class(text, ctx=None):
+    """D-47: a statement that writes data or schema (a SELECT or a SHOW is free)."""
     if _SQL_DROP.search(text):
         return "SQL DROP"
     if _SQL_TRUNC.search(text):
         return "SQL TRUNCATE"
-    for m in _SQL_DELETE.finditer(text):
-        if not re.search(r"\bwhere\b", m.group("rest"), re.I):
+    for d in _SQL_DELETE.finditer(text):
+        if not re.search(r"\bwhere\b", d.group("rest"), re.I):
             return "SQL DELETE without WHERE"
+    body = _strip_sql_literals(_strip_sql_comments(text))
+    for m in _SQL_WRITE.finditer(body):
+        word = m.group(1).split()[0].lower()
+        if word in ("exec", "execute", "call"):  # D-47: a read procedure is investigation; a write one is not
+            name = re.match(r"\s*(?:@\w+\s*=\s*)?([\w.\[\]\"]+)", body[m.end():])
+            proc = (name.group(1) if name else "").lower()
+            short_name = proc.rsplit(".", 1)[-1].strip("[]\"")
+            write_p, read_p = _proc_patterns(ctx)
+            if proc and any(r.search(short_name) for r in write_p):
+                return "SQL %s %s (a write procedure, enforcement.db_write_procs)" % (word.upper(), proc)
+            if proc and any(r.search(short_name) for r in read_p):
+                continue
+            if not proc or _WRITE_PROC.search(short_name):
+                return "SQL %s %s (may write data)" % (word.upper(), proc or "?")
+            continue
+        return "SQL %s (writes data or schema)" % word.upper()
+    if re.search(r"(^|\s)(\\i|\\ir|\\include|source|\.read)\s", text or ""):
+        return "SQL script included by the client (cannot be read)"
     return None
+
+
+_WRITE_PROC = re.compile(r"(post|put|ins|upd|del|set|save|create|delete|update|merge|import|purge|clean|fix|"
+                         r"load|sync|write|drop|insert|remove|alter|grant|reset|migrat|seed|truncat|archive|move|"
+                         r"close|approve|send)", re.I)
+
+
+def _strip_sql_literals(text):
+    return re.sub(r"'(?:[^']|'')*'|N'(?:[^']|'')*'", "''", text or "")
+
+
+def _strip_sql_comments(text):
+    return re.sub(r"--[^\n]*|/\*.*?\*/", " ", text or "", flags=re.S)
 
 
 def _flag(args, short, long=()):
@@ -490,6 +599,298 @@ def destructive_class(seg):
     return None
 
 
+_PKG = {"apt": ("install", "remove", "purge", "upgrade", "dist-upgrade", "full-upgrade", "autoremove"),
+        "apt-get": ("install", "remove", "purge", "upgrade", "dist-upgrade", "autoremove"),
+        "dnf": ("install", "remove", "erase", "upgrade", "update"), "yum": ("install", "remove", "erase", "update"),
+        "zypper": ("install", "in", "remove", "rm", "update", "up"), "apk": ("add", "del", "upgrade"),
+        "pacman": ("-S", "-R", "-U", "-Syu"), "brew": ("install", "uninstall", "remove", "upgrade", "reinstall"),
+        "winget": ("install", "uninstall", "upgrade"), "choco": ("install", "uninstall", "upgrade"),
+        "scoop": ("install", "uninstall", "update"), "snap": ("install", "remove", "refresh"),
+        "flatpak": ("install", "uninstall", "update"), "gem": ("install", "uninstall", "update"),
+        "cargo": ("install", "uninstall"), "go": ("install",), "pipx": ("install", "uninstall", "upgrade", "inject"),
+        "dotnet": ("tool",)}
+_DEPLOY = [("func", "azure", "functionapp", "publish"), ("az", "webapp", "deploy"), ("az", "webapp", "up"),
+           ("az", "functionapp", "deploy"), ("az", "functionapp", "deployment"), ("az", "containerapp", "up"),
+           ("az", "containerapp", "update"), ("az", "acr", "build"), ("az", "staticwebapp", "deploy"),
+           ("az", "deployment"), ("az", "stack"), ("docker", "push"), ("podman", "push"), ("helm", "install"),
+           ("helm", "upgrade"), ("helm", "uninstall"), ("helm", "rollback"), ("firebase", "deploy"),
+           ("gcloud", "app", "deploy"), ("gcloud", "run", "deploy"), ("gcloud", "functions", "deploy"),
+           ("pulumi", "up"), ("pulumi", "destroy"), ("serverless", "deploy"), ("sls", "deploy"), ("cdk", "deploy"),
+           ("cdk", "destroy"), ("fly", "deploy"), ("flyctl", "deploy"), ("heroku", "releases:rollback"),
+           ("eb", "deploy"), ("swa", "deploy"), ("azd", "up"), ("azd", "deploy"), ("azd", "provision"),
+           ("azd", "down")]
+_INFRA_VERBS = re.compile(r"^(create|delete|update|set|add|remove|purge|restore|start|stop|restart|scale|swap|"
+                          r"assign|import|move|rotate|regenerate|reset|renew|deploy|apply|attach|detach|"
+                          r"create-or-update|delete-.*|config)$")
+_GIT_HISTORY = ("filter-branch", "filter-repo", "replace")
+_VENV_BIN = re.compile(r"(^|/)[^/]*venv[^/]*/(bin|Scripts)/")
+
+
+def _tracked(seg, paths):
+    """The arguments of ``seg`` that are git-tracked files or folders (D-47: deleting tracked work)."""
+    out = []
+    for p in paths:
+        if not p or p.startswith("-") or "$" in p:
+            continue
+        full = p if os.path.isabs(p) else os.path.join(seg.cwd or os.getcwd(), p)
+        d = full if os.path.isdir(full) else os.path.dirname(full) or "."
+        if not os.path.isdir(d):
+            continue
+        rc, out_ = pj.git(["ls-files", "--error-unmatch", "--", full], d)
+        if rc == 0 and out_.strip():
+            out.append(p)
+    return out
+
+
+_READ_VERBS = frozenset({"show", "list", "get", "describe", "status", "logs", "log", "top", "version", "history",
+                         "diff", "explain", "api-resources", "cluster-info", "wait", "query", "check", "export",
+                         "download", "view", "search", "lint", "template", "plan", "validate", "output", "fmt",
+                         "init", "graph", "providers", "tail", "list-*", "ls", "cat", "events", "inspect", "info"})
+_TF_GLOBAL = re.compile(r"^-(chdir|help|version)")
+_GLOBAL_WITH_ARG = {"kubectl": {"-n", "--namespace", "--context", "--kubeconfig", "--cluster", "--user", "-s",
+                                "--server", "--token", "-l", "--selector"},
+                    "helm": {"-n", "--namespace", "--kube-context", "--kubeconfig", "--repository-config"},
+                    "docker": {"-H", "--host", "--context", "-c", "--config", "-l", "--log-level"}}
+_MIGRATE = [("alembic", "upgrade"), ("alembic", "downgrade"), ("flyway", "migrate"), ("flyway", "clean"),
+            ("liquibase", "update"), ("liquibase", "rollback"), ("dbmate", "up"), ("dbmate", "down"),
+            ("sqlpackage", "/a:publish"), ("sqlpackage", "/action:publish")]
+_HOSTS_LOCAL = re.compile(r"^https?://(localhost|127\.|0\.0\.0\.0|\[::1\])", re.I)
+
+
+def _is_scratch(path, seg, ctx):
+    """A path inside the temp folder (``/tmp``, ``$TMPDIR``) — scratch work, never the project."""
+    if not path or "$" in path or "*" in path or ".." in path.split("/"):
+        return False
+    full = os.path.realpath(path if os.path.isabs(path) else os.path.join(seg.cwd or os.getcwd(), path))
+    bases = {os.path.realpath("/tmp"), os.path.realpath("/var/tmp")}
+    if ctx is not None and ctx.env.get("TMPDIR"):
+        bases.add(os.path.realpath(ctx.env["TMPDIR"]))
+    if not any(full.startswith(b + "/") for b in bases):
+        return False
+    d = full if os.path.isdir(full) else os.path.dirname(full)
+    while d and not os.path.isdir(d):
+        d = os.path.dirname(d)
+    return clones.toplevel(d) is None  # a repository under the temp folder is not scratch
+
+
+def _verb(n, args):
+    """The first positional word of a CLI after its global options (D1 on D-47: `terraform -chdir=x apply`,
+    `kubectl --context c -n ns apply`)."""
+    with_arg = _GLOBAL_WITH_ARG.get(n, set())
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a.startswith("-"):
+            i += 2 if (a in with_arg and "=" not in a) else 1
+            continue
+        return a, args[i + 1:]
+    return "", []
+
+
+def _venv_in(seg, ctx):
+    """pip/uv run inside a virtual environment: a venv executable, ``VIRTUAL_ENV``, an activate earlier in the
+    same call, ``uv`` (always a project venv), or a ``.venv``/``venv`` folder in the command's directory; never
+    with ``--prefix``/``--root``/``--target``/``--user``/``--system``/``--break-system-packages``."""
+    args = seg.argv[1:]
+    if any(a in ("--prefix", "--root", "--target", "-t", "--user", "--system", "--break-system-packages") or
+           a.startswith(("--prefix=", "--root=", "--target=")) for a in args):
+        return False
+    exe = seg.argv[0] if seg.argv else ""
+    if _VENV_BIN.search(exe):
+        real = os.path.realpath(os.path.join(seg.cwd or os.getcwd(), exe)) if not os.path.isabs(exe) else \
+            os.path.realpath(exe)
+        return bool(_VENV_BIN.search(real))
+    if posixpath.basename(exe) == "uv":
+        return True
+    if ctx is not None and ctx.env.get("VIRTUAL_ENV"):
+        return True
+    if ctx is not None and re.search(r"(^|[;&|]\s*)(source|\.)\s+\S*(venv|\.venv)\S*/bin/activate",
+                                     ctx.payload.command or ""):
+        return True
+    cwd = seg.cwd or os.getcwd()
+    return any(os.path.isfile(os.path.join(cwd, d, "pyvenv.cfg")) for d in (".venv", "venv"))
+
+
+def consequential_class(seg, ctx=None):
+    """D-47 (REQ-HF-032): the consequential class of one segment, or None (free)."""
+    n = posixpath.basename(seg.argv0 or "")
+    args = seg.argv[1:]
+    if n in ("sudo", "doas", "env", "command", "nice", "nohup", "time", "timeout") and args:
+        return None  # the wrapped command is its own segment
+    if n in SQL_CLIENTS and seg.op == "|" and ctx is not None:  # SQL from a pipe (D1 on D-47)
+        segs = ctx.parsed.segments
+        k = segs.index(seg) if seg in segs else -1
+        prev = segs[k - 1] if k > 0 else None
+        if prev is not None and posixpath.basename(prev.argv0 or "") in ("echo", "printf"):
+            c = _sql_class(" ".join(prev.argv[1:]))
+            return c
+        return "SQL from a pipe (cannot be read)"
+    if n in SQL_CLIENTS:  # with the project's procedure patterns
+        c = _sql_class(_sql_text(seg), ctx)
+        if c:
+            return c
+    c = destructive_class(seg)
+    if c in ("sed -i", "perl -i"):
+        c = None  # an in-place edit is a file edit (plan_gate_edits)
+    if c == "truncate":
+        c = "truncate of a tracked file" if _tracked(seg, [a for a in args if not a.startswith("-")]) else None
+    if c == "recursive rm":  # D-47: rm -rf is consequential, except inside a scratch location (D7)
+        targets = [a for a in args if not a.startswith("-")]
+        if targets and all(_is_scratch(t, seg, ctx) for t in targets):
+            c = None
+    if c:
+        return c
+    if n in ("rm", "unlink", "shred") and _tracked(seg, args):
+        return "delete of a tracked file"
+    if n == "mv" and _tracked(seg, [a for a in args if not a.startswith("-")]):
+        return "move or overwrite of a tracked file"
+    if n == "xargs" and any(posixpath.basename(a) in ("rm", "unlink", "shred", "git") for a in args):
+        return "xargs delete (targets cannot be read)"
+    if n == "git" and seg.git:
+        sub, ga = seg.git.get("sub"), seg.git.get("args") or []
+        if sub == "rm":
+            return "git rm"
+        if sub in _GIT_HISTORY:
+            return "git %s (history rewrite)" % sub
+        if sub == "rebase" and any(a in ("-i", "--interactive", "--root") for a in ga):
+            return "git rebase (history rewrite)"
+        if sub == "push" and any(a.startswith(":") or a == "--delete" or a == "-d" for a in ga):
+            return "git push that deletes a remote branch or tag"
+        if sub == "tag" and any(a in ("-d", "--delete") for a in ga):
+            return None
+    if re.match(r"^(pip3?(\.\d+)?|uv|poetry|conda|mamba|pipx)$", n) or (
+            re.match(r"^python3?(\.\d+)?$", n) and args[:2] == ["-m", "pip"]):
+        rest = args[2:] if n.startswith("python") else args
+        verb = next((a for a in rest if not a.startswith("-")), "")
+        if n == "uv":
+            sub = [a for a in rest if not a.startswith("-")][:2]
+            if sub[:1] == ["tool"] and sub[1:2] == ["install"]:
+                return "uv tool install (software change)"
+            if sub[:1] != ["pip"] or sub[1:2] not in (["install"], ["uninstall"]):
+                return None
+            verb = sub[1]
+        if verb in ("install", "uninstall", "add", "remove", "update", "upgrade", "inject"):
+            if n == "pipx" or n in ("conda", "mamba") and "-n" not in args and "--prefix" not in args:
+                return "%s %s (software change)" % (n, verb)
+            return None if _venv_in(seg, ctx) else "%s %s outside a virtual environment (software change)" % (n, verb)
+    if n in ("npm", "pnpm", "yarn", "bun") and (any(a in ("-g", "--global", "global") for a in args)):
+        if any(a in ("install", "i", "add", "uninstall", "remove", "rm", "update", "upgrade", "link") for a in args):
+            return "%s global install (software change)" % n
+    if n in ("npm", "pnpm", "yarn") and args[:1] == ["publish"]:
+        return "%s publish" % n
+    if n in _PKG:
+        verb = next((a for a in args if not a.startswith("-") or n == "pacman"), "")
+        if verb in _PKG[n]:
+            return "%s %s (software change)" % (n, verb)
+    if n in ("az", "gh") and args[:1] == ["extension"] and len(args) > 1 and args[1] in (
+            "add", "remove", "update", "install", "upgrade"):
+        return "%s extension %s (software change)" % (n, args[1])
+    if n == "code" and any(a in ("--install-extension", "--uninstall-extension") for a in args):
+        return "editor extension change"
+    for d in _DEPLOY:
+        if (n,) + tuple(args[:len(d) - 1]) == d:
+            return "deploy (%s)" % " ".join(d)
+    if n in ("vercel", "netlify") and "--prod" in args:
+        return "%s production deploy" % n
+    for tool, verb in _MIGRATE:
+        if n == tool and any(a.lower() == verb for a in args):
+            return "%s %s (schema migration)" % (n, verb)
+    if n in ("python", "python3") and "manage.py" in " ".join(args[:1]) and "migrate" in args:
+        return "Django migrate (schema migration)"
+    if n in ("npx", "prisma") and "prisma" in (args[:1] + [n]) and "migrate" in args and \
+            any(a in ("deploy", "dev", "reset") for a in args):
+        return "prisma migrate (schema migration)"
+    if n == "dotnet" and args[:3] == ["ef", "database", "update"]:
+        return "dotnet ef database update (schema migration)"
+    if n in ("terraform", "tofu", "terragrunt"):
+        verb, _r = _verb(n, args)
+        if verb in ("apply", "destroy", "import", "state", "taint", "untaint", "run-all"):
+            return "%s %s (infrastructure)" % (n, verb)
+        return None
+    if n in ("kubectl", "helm", "docker"):
+        verb, rest = _verb(n, args)
+        if n == "kubectl" and verb in ("apply", "delete", "patch", "scale", "replace", "create", "edit", "set",
+                                       "label", "annotate", "drain", "cordon", "taint") or \
+                n == "kubectl" and verb == "rollout" and rest[:1] and rest[0] in ("restart", "undo"):
+            return "kubectl %s (infrastructure)" % verb
+        if n == "helm" and verb in ("install", "upgrade", "uninstall", "rollback", "delete"):
+            return "helm %s (infrastructure)" % verb
+        if n == "docker" and (verb in ("push", "rmi") or verb == "system" and rest[:1] == ["prune"] or
+                              verb in ("volume", "image", "container", "network") and rest[:1] in (["prune"], ["rm"])):
+            return "docker %s (infrastructure)" % " ".join([verb] + rest[:1])
+        return None
+    if n in ("az", "gcloud") and len(args) >= 2:
+        words = [a for a in args if not a.startswith("-")][:6]
+        if words and words[0] in ("login", "logout", "account", "config", "auth", "version", "help", "find",
+                                  "upgrade", "rest", "devops", "boards", "repos", "pipelines", "artifacts", "alias",
+                                  "feedback", "survey", "interactive", "bicep") and not (
+                n == "gcloud" and words[0] == "config" and False):
+            return None
+        if any(w in _READ_VERBS or w.startswith(("list-", "show-", "get-", "describe-")) for w in words[1:]):
+            return None  # D7 on D-47: `az webapp config appsettings list` reads
+        if any(_INFRA_VERBS.match(w) for w in words[1:]):
+            return "%s %s (infrastructure)" % (n, " ".join(words[:3]))
+    if n == "gcloud" and args[:2] == ["storage", "rm"] or n == "gsutil" and args[:1] in (["rm"], ["rb"]):
+        return "bucket delete (infrastructure)"
+    if n == "aws" and len(args) >= 2:
+        if args[0] == "s3":
+            if args[1] in ("rm", "rb", "mb") or args[1] in ("cp", "sync", "mv") and any(
+                    a.startswith("s3://") for a in args[3:4] + args[-1:]):
+                return "aws s3 %s (writes a bucket)" % args[1]
+        elif re.match(r"^(create|delete|update|put|modify|terminate|run|start|stop|attach|detach|associate|"
+                      r"disassociate|reboot|restore|import|register|deregister)", args[1]):
+            return "aws %s %s (infrastructure)" % (args[0], args[1])
+    if n == "gh" and args[:2] in (["repo", "delete"], ["repo", "archive"], ["release", "create"],
+                                  ["release", "delete"], ["secret", "set"], ["secret", "delete"],
+                                  ["variable", "set"], ["variable", "delete"], ["workflow", "run"]):
+        return "gh %s (consequential)" % " ".join(args[:2])
+    if n == "gam" and re.search(r"\b(delete|suspend|undelete|update|create|add|remove|transfer|wipe|deprov)\b",
+                                " ".join(args)) and not re.search(r"\b(print|show|info|report)\b", " ".join(args[:3])):
+        return "Workspace admin change (gam)"
+    if n == "crontab" and any(a in ("-r", "-e") or not a.startswith("-") for a in args):
+        return "crontab change"
+    if n in ("systemctl", "service") and re.search(r"\b(stop|start|restart|reload|disable|enable|mask|kill)\b",
+                                                   " ".join(args)):
+        return "service change"
+    if n in ("curl", "wget", "http", "https", "xh", "httpx") and ctx is not None:
+        r = restcalls.parse_request(seg)
+        if r is not None and (r.method or "GET").upper() == "DELETE" and not all(
+                _HOSTS_LOCAL.match(u or "") for u in (r.urls or [r.url])):
+            return "HTTP DELETE to a remote service"
+    if re.match(r"^(python3?(\.\d+)?|node|ruby|perl|pwsh|powershell)$", n):
+        script = " ".join(args)
+        if re.search(r"(?i)\b(execute|exec|query|run|cursor)\w*\s*\(", script) and \
+                _sql_class(script.replace("\\'", "'")):
+            return "SQL write inside an inline script"
+    if n in ("mongosh", "mongo") and re.search(r"\b(insert|update|delete|replace|drop|createIndex|"
+                                                r"bulkWrite|remove)\w*\s*\(", " ".join(args)):
+        return "MongoDB write"
+    if n in ("redis-cli",) and any(a.upper() in ("DEL", "FLUSHALL", "FLUSHDB", "SET", "HSET", "EXPIRE", "UNLINK")
+                                   for a in args):
+        return "Redis write"
+    if ctx is not None and n in ("gh", "glab", "az"):
+        base = None
+        if n == "gh" and args[:2] == ["pr", "create"]:
+            base = _opt(args, "-B", "--base")
+        elif n == "glab" and args[:2] == ["mr", "create"]:
+            base = _opt(args, "-b", "--target-branch")
+        elif n == "az" and args[:3] == ["repos", "pr", "create"]:
+            base = _opt(args, "-t", "--target-branch")
+        if args[:2] in (["pr", "create"], ["mr", "create"]) or args[:3] == ["repos", "pr", "create"]:
+            if base is None:
+                return "PR without an explicit base (it may target production)"
+            base = _strip_heads(base.replace("refs/heads/", ""))
+            root = ctx.root
+            prods = set(ALWAYS_PRODUCTION)
+            if root is not None:
+                wc, _ = project_wc(ctx, root)
+                _p, integ, prod = pj.branch_flow(wc or {})
+                prods = production_set(ctx, root, integ, prod)
+            if base in prods:
+                return "PR to production (%s)" % base
+    return None
+
+
 def write_class(seg):
     for r in seg.redirects:
         if _is_write_redirect(r):
@@ -501,24 +902,39 @@ def write_class(seg):
     return None
 
 
+def plan_edits_enabled(ctx):
+    """D-47: file edits and write redirections are gated only with ``enforcement.plan_gate_edits: true``."""
+    return opt_in_enabled(ctx, "plan_gate_edits", _gate_root(ctx)) if not ctx.force_enabled else \
+        bool(ctx.env.get("KARVEY_PLAN_GATE_EDITS"))
+
+
 def plan_classes(ctx):
-    """The gated classes of this tool call (empty = not gated)."""
+    """The gated classes of this tool call (empty = not gated). D-47 (REQ-HF-032): consequential actions only;
+    file edits and write redirections too when the project opts in with ``plan_gate_edits``."""
+    edits = plan_edits_enabled(ctx)
     if ctx.event == "pre-edit":
-        return ["file edit (%s)" % (ctx.payload.tool_name or "Edit")]
+        return ["file edit (%s)" % (ctx.payload.tool_name or "Edit")] if edits else []
     cmd = ctx.payload.command or ""
     if not cmd.strip():
         return []
     parsed = ctx.parsed
     if parsed.unparsed:  # conservative regex over the raw string (§3.2)
-        if _RAW_DESTRUCTIVE.search(cmd) or _RAW_WRITE.search(cmd):
-            return ["unparsable command that may write or destroy"]
+        if _RAW_DESTRUCTIVE.search(cmd) or _RAW_CONSEQUENTIAL.search(cmd) or (edits and _RAW_WRITE.search(cmd)):
+            return ["unparsable command that may be consequential"]
         return []
     out = []
     for seg in parsed.segments:
-        c = destructive_class(seg) or write_class(seg)
+        c = consequential_class(seg, ctx) or (edits and (destructive_class(seg) or write_class(seg))) or None
         if c:
             out.append(c)
     return out
+
+
+_RAW_CONSEQUENTIAL = re.compile(r"\b(pip3?|npm|apt(-get)?|brew|winget|choco)\s+(install|uninstall|remove)|"
+                                r"\b(terraform|tofu)\s+(apply|destroy)|\bkubectl\s+(apply|delete)|"
+                                r"\bfunc\s+azure\s+functionapp\s+publish|\bgit\s+rm\b|"
+                                r"\b(insert\s+into|update\s+\S+\s+set|delete\s+from|drop\s+table|alter\s+table)\b",
+                                re.I)
 
 
 def _gate_root(ctx):
@@ -535,14 +951,108 @@ def plan_gate_enabled(ctx):
     return opt_in_enabled(ctx, "plan_gate_hook", _gate_root(ctx))
 
 
+# BUG-154 (REQ-HF-031): saving a checkpoint or a handoff never needs a plan approval. Only these exact files,
+# reached without a symlink or a ".." step, are exempt; markers, ledger, spec.json, decisions and code never are.
+_CHANGE_CHECKPOINT = re.compile(r"^docs/spec/changes/[a-z0-9][a-z0-9-]{1,62}/checkpoint\.md$")
+
+
+def _literal_abs(path, cwd):
+    p = path if posixpath.isabs(path) else posixpath.join(cwd or os.getcwd(), path)
+    return posixpath.normpath(p)
+
+
+def checkpoint_paths(ctx, root):
+    """The real paths a checkpoint save writes: the resolved profile's handoff, board and state (solo, team or
+    legacy layout) and the project checkpoint; change checkpoints are matched by pattern."""
+    def build():
+        out = set()
+        rr = os.path.realpath(str(root))
+        out.add(posixpath.join(rr, "docs", "spec", "checkpoint.md"))
+        try:
+            from . import karvey_hooks as kh  # lazy: karvey_hooks imports this module
+            res = livestate_mod().resolve_session_profile(rr, rr)
+            if res.get("status") == "ok":
+                pr = res["profile"]
+                role = pr["role"]
+                if pr["kind"] != "solo" and not re.match(r"^[a-z0-9][a-z0-9_-]{0,62}$", str(role)):
+                    return out  # a role that is a path (../src/main) exempts nothing (D1 delta, M1)
+                _n, profile, board = kh.profile_paths(pr["kind"], pr["root"], pr["cfg"], role)
+                profile, board = os.path.realpath(profile), os.path.realpath(board)
+                base = os.path.dirname(profile) if pr["kind"] == "solo" else os.path.dirname(os.path.dirname(profile))
+                files = [os.path.join(profile, "handoff.md"), os.path.join(profile, "state.json"), board]
+                ok_dirs = (profile, os.path.join(base, "board")) if pr["kind"] != "solo" else (profile,)
+                rb = os.path.realpath(base)
+                inside = rb == rr or rb.startswith(rr + "/")
+                if pr["kind"] != "solo" and inside and os.path.realpath(base) != os.path.join(rr, "docs", "spec"):
+                    return out  # an ops area inside the code repo, other than docs/spec (D1 delta, L1)
+                for f in files:
+                    if os.path.dirname(f) in ok_dirs:
+                        out.add(f)
+        except Exception:
+            pass  # no profile resolved: only the checkpoint files are exempt
+        return out
+    return _memo(ctx, ("checkpoint-paths", str(root)), build)
+
+
+def livestate_mod():
+    from . import livestate
+    return livestate
+
+
+def _is_checkpoint_write(ctx, root, raw_path, cwd):
+    if not raw_path or "$" in raw_path or "`" in raw_path or any(c in raw_path for c in "*?["):
+        return False
+    if ".." in raw_path.replace("\\", "/").split("/"):
+        return False
+    # the real path must be one of the exact files below (built from the real project root without resolving
+    # anything inside it): a symlinked file or folder inside the project resolves elsewhere and is gated, while
+    # a symlinked folder above the project (/tmp -> /private/tmp) is harmless
+    path = os.path.realpath(_literal_abs(raw_path, cwd))
+    rr = os.path.realpath(str(root))
+    rel = posixpath.relpath(path, rr) if path.startswith(rr + "/") else None
+    if rel is not None and _CHANGE_CHECKPOINT.match(rel):
+        return True
+    return path in checkpoint_paths(ctx, root)
+
+
+def checkpoint_only(ctx, root):
+    """True when every write of this tool call is a checkpoint/handoff save (BUG-154) and nothing else is gated."""
+    if root is None:
+        return False
+    if ctx.event == "pre-edit":
+        return _is_checkpoint_write(ctx, root, ctx.payload.file_path_raw or ctx.payload.file_path, ctx.payload.cwd)
+    parsed = ctx.parsed
+    if parsed.unparsed:
+        return False
+    seen = False
+    for seg in parsed.segments:
+        if destructive_class(seg):
+            return False
+        targets = [r.target for r in seg.redirects if _is_write_redirect(r)]
+        if seg.argv0 == "tee":
+            targets += [a for a in seg.argv[1:] if not a.startswith("-") and a not in NULL_TARGETS]
+        for t in targets:
+            if not _is_checkpoint_write(ctx, root, t, seg.cwd):
+                return False
+            seen = True
+    return seen
+
+
 def plan_gate(ctx):
     classes = plan_classes(ctx)
     if not classes:
+        return None
+    if checkpoint_only(ctx, _gate_root(ctx) or ctx.root):  # BUG-154: a checkpoint save needs no approval
         return None
     root = _gate_root(ctx)
     base = root or ctx.payload.cwd
     change = active_change(ctx, root)["change"] if root else None
     marker, scope, reasons = approval.find_valid(base, change=change, ttl_min=ttl_min(ctx, root) if root else None)
+    if marker is not None and scope == approval.SCOPE_PROJECT and marker.get("session_id") and \
+            ctx.payload.session_id and marker["session_id"] != ctx.payload.session_id:
+        # D7 on D-47: a project-wide approval has no phase to close; it belongs to the session that gave it
+        reasons[scope] = "a project-wide approval of another session"
+        marker = None
     if marker is not None:
         approval.cross_check(base, marker, ctx.payload.transcript_path)
         return None
@@ -898,11 +1408,13 @@ _STATE_MOD = None
 class Candidate:
     """A production-merge candidate: the command, the repo it acts on and how to find its base."""
 
-    __slots__ = ("kind", "seg", "dir", "selector", "repo_arg", "dst", "src", "target", "fail", "deferred", "bound")
+    __slots__ = ("kind", "seg", "dir", "selector", "repo_arg", "dst", "src", "target", "fail", "deferred", "bound",
+                 "repo_name", "org", "rest", "info")
 
     def __init__(self, kind, seg, **kw):
         self.kind, self.seg = kind, seg
-        for k in ("dir", "selector", "repo_arg", "dst", "src", "target", "fail", "deferred", "bound"):
+        for k in ("dir", "selector", "repo_arg", "dst", "src", "target", "fail", "deferred", "bound", "repo_name",
+                  "org", "rest", "info"):
             setattr(self, k, kw.get(k))
 
 
@@ -979,13 +1491,16 @@ def _gh_candidate(seg, a, env, depth=0):
         rest = a[2:]
         pos = _positional(rest, {"-R", "--repo", "-t", "--subject", "-b", "--body", "-F", "--body-file",
                                  "--match-head-commit", "-A", "--author-email"})
-        return Candidate("gh", seg, dir=seg.cwd, selector=pos[0] if pos else None, repo_arg=_opt(rest, "-R", "--repo"),
+        sel = pos[0] if pos else None
+        repo_arg = _opt(rest, "-R", "--repo")
+        return Candidate("gh", seg, dir=seg.cwd, selector=sel, repo_arg=repo_arg,
+                         repo_name=repo_arg or _url_repo(sel),  # BUG-141: the PR's own repo
                          deferred="--auto" in rest, bound=_opt(rest, "--match-head-commit"))  # BUG-48
     if a[:1] == ["api"]:
         joined = " ".join(a[1:])
         m = _PULL_MERGE.search(joined)
         if m:
-            return Candidate("gh", seg, dir=seg.cwd, selector=m.group(2), repo_arg=m.group(1))
+            return Candidate("gh", seg, dir=seg.cwd, selector=m.group(2), repo_arg=m.group(1), repo_name=m.group(1))
         if _GRAPHQL_MERGE.search(joined) or ("graphql" in a[1:2] and "@" in joined):
             return Candidate("gh", seg, dir=seg.cwd, fail="a GraphQL merge mutation cannot be resolved to a PR base; "
                                                           "merge through gh pr merge")
@@ -998,8 +1513,9 @@ def _gh_candidate(seg, a, env, depth=0):
                 dst = next((f.split("=", 1)[1] for f in a if f.startswith("base=")), None)
             else:
                 dst = _strip_heads((r.group(2) or "").strip("/")) or None
-            return Candidate("gh-ref", seg, dir=seg.cwd, dst=dst)
-        return None
+            rm = re.search(r"repos/([^/\s]+/[^/\s]+)/", joined)
+            return Candidate("gh-ref", seg, dir=seg.cwd, dst=dst, repo_name=rm.group(1) if rm else None)
+        return _rest_candidate(seg)  # pending deployments and other REST forms (REQ-HF-012)
     if depth == 0 and a and a[0] not in GH_BUILTINS:  # BUG-28: gh aliases
         exp = gh_aliases(env).get(a[0])
         if exp:
@@ -1095,13 +1611,46 @@ def prod_candidates(ctx):
             status, auto = _opt(a, "--status"), _opt(a, "--auto-complete")
             if (status or "").lower() == "completed" or (auto or "").lower() in ("true", "yes", "1"):
                 out.append(Candidate("az", seg, dir=seg.cwd, selector=_opt(a, "--id"),
+                                     repo_name=_opt(a, "--repository"), org=_opt(a, "--org", "--organization"),
                                      deferred=(status or "").lower() != "completed"))  # BUG-48
         elif seg.argv0 == "glab" and a[:2] == ["mr", "merge"]:
             pos = _positional(a[2:], {"-m", "--message", "--sha", "-R", "--repo"})
             # BUG-48: glab merges when the pipeline succeeds by default; only --sha binds the merged commit
             out.append(Candidate("glab", seg, dir=seg.cwd, selector=pos[0] if pos else None,
-                                 repo_arg=_opt(a[2:], "-R", "--repo"), deferred=True, bound=_opt(a[2:], "--sha")))
+                                 repo_arg=_opt(a[2:], "-R", "--repo"), repo_name=_opt(a[2:], "-R", "--repo"),
+                                 deferred=True, bound=_opt(a[2:], "--sha")))
+        else:
+            c = _rest_candidate(seg, ctx.payload.command)  # REQ-HF-010..015: HTTP clients, az rest, glab api
+            if c is not None:
+                out.append(c)
     return out
+
+
+_URL_PR = re.compile(r"^https?://[^/]+/(?:(?P<gh>[^/]+/[^/]+)/pull/\d+|.*/_git/(?P<az>[^/]+)/pullrequest/\d+|"
+                     r"(?P<gl>.+?)/-/merge_requests/\d+)/?$")
+
+
+def _url_repo(selector):
+    """The repo a PR URL selector names (``owner/name`` or ``name``), else None."""
+    m = _URL_PR.match(selector or "")
+    if not m:
+        return None
+    return m.group("gh") or m.group("az") or m.group("gl")
+
+
+def _rest_candidate(seg, raw=None):
+    call = restcalls.classify_segment(seg, raw)
+    if call is None:
+        return None
+    if call.kind == "fail":
+        return Candidate("rest", seg, dir=seg.cwd, fail=call.reason, rest=call)
+    if call.kind == "ref-write":
+        return Candidate("gh-ref", seg, dir=seg.cwd, dst=call.branch, repo_name=call.repo, rest=call)
+    if call.kind == "pipeline-approve":
+        return Candidate("pipeline", seg, dir=seg.cwd, repo_name=call.repo, org=call.org, rest=call)
+    kind = {"github": "gh", "azure": "az", "gitlab": "glab"}[call.host]
+    return Candidate(kind, seg, dir=seg.cwd, selector=call.number, repo_arg=call.repo if kind != "az" else None,
+                     repo_name=call.repo, org=call.org, deferred=bool(call.deferred), bound=call.bound, rest=call)
 
 
 ALWAYS_PRODUCTION = ("master", "main")
@@ -1152,14 +1701,15 @@ def pr_info(c, cwd, budget):
     if c.kind == "gh":
         argv = ["gh", "pr", "view"] + ([c.selector] if c.selector else []) + \
                (["-R", c.repo_arg] if c.repo_arg else []) + \
-            ["--json", "baseRefName,headRefName,headRefOid,title,number"]
+            ["--json", "baseRefName,headRefName,headRefOid,title,number,url"]
         data, err = _run_cli(argv, cwd, budget)
         keys = ("baseRefName", "headRefName", "title")
         sha = (data or {}).get("headRefOid")
     elif c.kind == "az":
         if not c.selector:
             return None, "az repos pr update without --id"
-        data, err = _run_cli(["az", "repos", "pr", "show", "--id", c.selector, "--output", "json"], cwd, budget)
+        data, err = _run_cli(["az", "repos", "pr", "show", "--id", c.selector, "--output", "json"] +
+                             (["--org", c.org] if c.org else []), cwd, budget)
         keys = ("targetRefName", "sourceRefName", "title")
         lm = (data or {}).get("lastMergeSourceCommit")
         sha = lm.get("commitId") if isinstance(lm, dict) else None
@@ -1169,14 +1719,21 @@ def pr_info(c, cwd, budget):
         data, err = _run_cli(argv, cwd, budget)
         keys = ("target_branch", "source_branch", "title")
         sha = (data or {}).get("sha")
+        if isinstance(data, dict) and isinstance(data.get("web_url"), str):
+            data["url"] = data["web_url"]
     if err:
         return None, err
     base, head, title = (data.get(k) for k in keys)
     if not isinstance(base, str) or not base:
         return None, "the %s answer has no %s" % (c.kind, keys[0])
+    url = data.get("url") if isinstance(data.get("url"), str) else None
+    if c.kind == "az":  # BUG-151: data.url is the API URL; the repository names the repo
+        repo = data.get("repository") if isinstance(data.get("repository"), dict) else {}
+        url = repo.get("webUrl") if isinstance(repo.get("webUrl"), str) and "/_git/" in repo["webUrl"] else (
+            "/_git/%s" % repo["name"] if isinstance(repo.get("name"), str) and repo["name"] else None)
     return {"base": _strip_heads(base.replace("refs/heads/", "")),
             "head": _strip_heads(head.replace("refs/heads/", "")) if isinstance(head, str) else None,
-            "title": title if isinstance(title, str) else "",
+            "title": title if isinstance(title, str) else "", "url": url,
             "sha": sha.lower() if isinstance(sha, str) and _SHA.match(sha.lower()) else None}, None
 
 
@@ -1272,9 +1829,172 @@ def prod_gate_setting(ctx, root):
     return on, _PG_WHY[code]
 
 
+def _project_dir_root(ctx):
+    pd = ctx.env.get("CLAUDE_PROJECT_DIR") if hasattr(ctx, "env") else None
+    if not pd or not os.path.isdir(pd):
+        return None
+    return _memo(ctx, ("root-of", pd), lambda: pj.find_root(start=pd))
+
+
+def _anchors(ctx, c):
+    out = []
+    for a in (c.dir, str(ctx.root) if ctx.root else None, ctx.env.get("CLAUDE_PROJECT_DIR")):
+        if a and a not in out:
+            out.append(a)
+    return out
+
+
+def _not_karvey(name, why):
+    return Decision.allow(stdout=["[karvey] prod-gate WARNING: %s is not a Karvey repo \u2014 not gated (%s)"
+                                  % (name, why)],
+                          record={"decision_detail": "not-karvey-target", "reason": why, "target": name}, audit=True)
+
+
+def trusted_roots(ctx):
+    """BUG-151: the clones whose settings may switch the gate off: the session project (``CLAUDE_PROJECT_DIR``),
+    its worktrees and the paths its ``project.json:repos`` lists. A clone reached only by the command's
+    directory (the agent can ``cd`` anywhere) is not trusted to weaken the gate."""
+    def build():
+        out = set()
+        r = _project_dir_root(ctx)
+        if r is None:
+            return out
+        out.add(os.path.realpath(str(r)))
+        rc, wts = pj.git(["worktree", "list", "--porcelain"], r)
+        for ln in (wts.splitlines() if rc == 0 else []):
+            if ln.startswith("worktree "):
+                out.add(os.path.realpath(ln[len("worktree "):].strip()))
+        for p in clones.project_paths(str(r)):
+            out.add(os.path.realpath(p))
+        return out
+    return _memo(ctx, ("trusted-roots",), build)
+
+
+def _karvey_context(ctx, c):
+    """The Karvey project roots of this call: the command's directory, the payload's cwd, the session project."""
+    out = []
+    for r in ((pj.find_root(start=c.dir) if c.dir and os.path.isdir(c.dir) else None), ctx.root,
+              _project_dir_root(ctx)):
+        if r is not None and str(r) not in [str(x) for x in out]:
+            out.append(r)
+    return out
+
+
+def resolve_target(ctx, c):
+    """BUG-141/145 (REQ-HF-014, 024, 026): ``(root, decision)`` for the repo a candidate names.
+
+    Every local clone that answers to the name is considered and a Karvey one wins (a look-alike clone never
+    shadows it). With none, and a Karvey context around the call, the decision is ``"host"``: the host's
+    answer (canonical repo, PR head) identifies the repo. ``"unresolved"``: a Karvey repo with no local
+    clone. A warning (allow) only when no Karvey context exists or the host shows another repo."""
+    name = c.repo_name
+    if not name:
+        return None, None
+    if "$" in name or "`" in name:
+        return None, _pg_block(None, "target", "cannot verify the production approval: the target repo is "
+                                               "built from variables; write it out")
+    tops = _memo(ctx, ("clones-of", name), lambda: clones.find_clones(_anchors(ctx, c), name))
+    karvey = []
+    for t in tops:
+        root = pj.find_root(start=t)
+        if root is not None and str(pj.git_common_dir(root)) not in [str(pj.git_common_dir(k)) for k in karvey]:
+            karvey.append(root)
+    if len(karvey) > 1:  # BUG-151: two different Karvey clones answer to the name; none may decide alone
+        return None, _pg_block(None, "target", "cannot verify the production approval: several local clones answer "
+                                               "to %s (%s); run the command from the session's own clone"
+                               % (name, ", ".join(str(k) for k in karvey)))
+    if karvey:
+        return karvey[0], None
+    kctx = _karvey_context(ctx, c)
+    if any(clones.karvey_named(k, name) for k in kctx):
+        return None, "unresolved"
+    if not kctx:
+        why = ("its local clone %s is not a Karvey project" % tops[0]) if tops else \
+            "no local clone and no Karvey project around the command"
+        return None, _not_karvey(name, why)
+    return None, "host"
+
+
+def _identify_via_host(ctx, c, deadline):
+    """BUG-145: no Karvey clone answers to the name, but the call runs in a Karvey context. The host's answer
+    decides: its canonical repo or the PR head commit ties it to a local Karvey clone (renames, forks, repo
+    GUIDs); a repo the project names is blocked; only a repo the host shows to be another passes with the
+    warning. Returns ``(root, info, decision)``."""
+    if c.kind == "gh-ref":
+        if c.dst is None or c.dst in ALWAYS_PRODUCTION or c.dst == "production":
+            return None, None, _pg_block(None, "target", "cannot verify the production approval: a branch write to "
+                                                         "%s in %s, which is not a local clone; run it from the clone "
+                                                         "or merge through a PR" % (c.dst or "?", c.repo_name))
+        return None, None, _not_karvey(c.repo_name, "no local clone; branch %s is not production-named" % c.dst)
+    if not c.selector:
+        return None, None, _pg_block(None, "target", "cannot verify the production approval: %s is not a local "
+                                                     "clone and the command names no PR" % c.repo_name)
+    budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
+    cwd = c.dir if c.dir and os.path.isdir(c.dir) else os.getcwd()
+    info, err = pr_info(c, cwd, budget)
+    if err:
+        return None, None, _pg_block(None, "target", "cannot verify the production approval: %s is not a local "
+                                                     "clone and the host lookup failed (%s)" % (c.repo_name, err))
+    kctx = _karvey_context(ctx, c)
+    canonical = _host_repo(info.get("url"))
+    if canonical:
+        for t in clones.find_clones(_anchors(ctx, c) + [str(k) for k in kctx], canonical):
+            root = pj.find_root(start=t)
+            if root is not None:
+                return root, info, None
+    for k in kctx:
+        if info.get("sha") and clones.has_commit(str(k), info["sha"]):
+            info = dict(info, identified_by_commit=True)  # a rename or a fork: the history ties it
+            return k, info, None
+    if any(clones.karvey_named(k, canonical or c.repo_name) for k in kctx):
+        return None, info, _unresolved_base(ctx, c, info, kctx)
+    return None, info, _not_karvey(canonical or c.repo_name, "the host shows %s, which no local Karvey clone "
+                                                             "answers to" % (canonical or c.repo_name))
+
+
+def _host_repo(url):
+    """The repo a host's PR answer names (``owner/name`` for GitHub/GitLab web URLs, ``name`` for Azure)."""
+    if not isinstance(url, str) or not url:
+        return None
+    if "/_git/" in url:
+        return url.rsplit("/_git/", 1)[-1].split("/", 1)[0] or None
+    return _url_repo(url)
+
+
+def _unresolved_base(ctx, c, info, kctx):
+    """BUG-145 (REQ-HF-014): a Karvey repo with no local clone passes only into the project's own integration
+    branch; every other base, or an unknown one, is blocked."""
+    integ, prod = None, None
+    for k in kctx:
+        wc, _ = project_wc(ctx, k)
+        _p, integ, prod = pj.branch_flow(wc or {})
+        break
+    base = (info or {}).get("base")
+    if base and integ and base == integ and integ != prod and base not in ALWAYS_PRODUCTION:
+        return Decision.allow()
+    return _pg_block(None, "target", "cannot tie %s to a local clone; run it from the clone (%s)"
+                     % (c.repo_name, "base %s" % base if base else "base unknown"))
+
+
 def _evaluate_candidate(ctx, c, deadline):
     root = None
-    if c.kind == "git-push":
+    if c.kind == "rest" and c.fail:  # REQ-HF-015: what cannot be read is blocked in a Karvey context
+        if (ctx.root or _project_dir_root(ctx)) is None and not pj.find_root(start=c.dir or "."):
+            return None
+        return _pg_block(None, "request", "cannot verify the production approval: " + c.fail)
+    if c.kind == "pipeline":
+        return _evaluate_pipeline(ctx, c, deadline)
+    if c.kind != "git-push" and c.repo_name:
+        root, early = resolve_target(ctx, c)
+        if early == "unresolved":
+            return _unresolved_karvey_target(ctx, c, deadline)
+        if early == "host":
+            root, c.info, early = _identify_via_host(ctx, c, deadline)
+        if early is not None:
+            return early if early.decision == "block" or early.stdout else None
+    if root is not None:
+        pass  # the target repo's clone (BUG-141)
+    elif c.kind == "git-push":
         t = c.target
         if t.unresolved:
             return _pg_block(None, "target", "cannot verify the production approval: the push target cannot be "
@@ -1282,10 +2002,14 @@ def _evaluate_candidate(ctx, c, deadline):
         root = _memo(ctx, ("root-of", t.config_dir()), lambda: pj.find_root(start=t.config_dir()))
     elif c.dir:
         root = _memo(ctx, ("root-of", c.dir), lambda: pj.find_root(start=c.dir)) if os.path.isdir(c.dir) else None
-    root = root or (ctx.root if c.kind != "git-push" else None)
+    root = root or (ctx.root if c.kind != "git-push" and not c.repo_name else None)
     if root is None:
         return None  # not a Karvey project: inert and silent
     on, why = prod_gate_setting(ctx, root)
+    if not on and os.path.realpath(str(root)) not in trusted_roots(ctx) and (
+            _project_dir_root(ctx) is not None or c.repo_name):
+        on = True  # BUG-151: a clone outside the session project cannot switch the gate off
+        why = "on (switched off only in %s, which is not the session's project)" % root
     if not on:
         return Decision.allow(stdout=["[karvey] prod-gate DISABLED for this project (project.json)"],
                               record={"decision_detail": "disabled", "reason": why}, audit=True)
@@ -1367,10 +2091,15 @@ def _evaluate_candidate(ctx, c, deadline):
         released = shas.pop()
     else:
         budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
-        info, err = pr_info(c, str(root), budget)
+        info, err = (c.info, None) if c.info else pr_info(c, str(root), budget)
         if err:
             return _pg_block(None, "base", "cannot verify the production approval: cannot resolve the PR base (%s)"
                              % err)
+        if c.repo_name and info.get("url"):  # BUG-141/145: the host answered for another repo
+            got = _host_repo(info["url"])
+            if got and not clones.answers_to(str(root), got) and not info.get("identified_by_commit"):
+                return _pg_block(None, "target", "cannot verify the production approval: the command names %s but "
+                                                 "the host answered for %s; the two disagree" % (c.repo_name, got))
         if info["base"] not in prods:
             return None  # e.g. a PR into the integration branch: allow, silent
         head, base, title = info["head"], info["base"], info["title"]
@@ -1381,6 +2110,10 @@ def _evaluate_candidate(ctx, c, deadline):
                                       "(%s) can move the commit it releases; run the release command on its own"
                          % moved)
     cid, others = released_change(root, head, title, prefix)
+    if cid is None and c.kind != "git-push":
+        owned = _owner_release(ctx, c, root, head, title, prefix, released, base)
+        if owned is not None:
+            return owned
     if cid is None:
         return _pg_block(None, "change", "cannot verify the production approval: cannot determine the change being "
                                          "released into %s (head %s; name the branch %s<id> or title the PR "
@@ -1427,11 +2160,173 @@ def _evaluate_candidate(ctx, c, deadline):
                                          % (cid, res.get("by"), res.get("ref"), released[:12])], record=rec, audit=True)
 
 
+def _change_id_of(head, title, prefix):
+    if head and prefix and head.startswith(prefix):
+        cid = head[len(prefix):]
+        if approval.valid_scope(cid):
+            return cid
+    m = _DEPLOY_TITLE.match(title or "")
+    return m.group(1) if m else None
+
+
+def _owner_release(ctx, c, root, head, title, prefix, released, base):
+    """REQ-HF-007, 008: a ``[Deploy] <id>`` PR in a repo that does not hold the change, released under the
+    owning repo's approval bound to this repo's commit. None when the PR names no change id."""
+    cid = _change_id_of(head, title, prefix)
+    if cid is None:
+        return None
+    anchors = [str(root)] + _anchors(ctx, c)
+    owner = clones.find_owner(anchors, cid)
+    here = clones.main_name(root)
+    if owner is None:
+        looked = clones.search_dirs(anchors)
+        return _pg_block(cid, "owner", "cannot verify the production approval: change %s is not in %s and no local "
+                                       "clone holding it was found (looked in: %s). Clone the owning repo next to "
+                                       "this one, or list its path in this repo's project.json repos"
+                         % (cid, here, ", ".join(looked) or "nothing"))
+    spec = clones.read_spec(os.path.join(owner, "docs", "spec", "changes", cid, "spec.json")) or {}
+    declared = [r for r in (spec.get("repos") or []) if isinstance(r, str)] if isinstance(spec, dict) else []
+    names = clones.names(root)
+    match = next((r for r in declared if clones.short(r) in {n.rsplit("/", 1)[-1] for n in names}), None)
+    if match is None:
+        return _pg_block(cid, "repo", "cannot verify the production approval: change %s (owning repo %s) does not "
+                                      "declare %s in spec.json repos (%s)" % (cid, owner, here,
+                                                                               ", ".join(declared) or "none"))
+    if released is None:
+        return _pg_block(cid, "sha", "cannot verify the production approval: the %s answer has no head commit"
+                         % c.kind)
+    if c.deferred and (c.bound or "").strip().lower() != released:  # BUG-48
+        return _pg_block(cid, "sha", "cannot verify the production approval: a deferred merge (%s) lands later; "
+                                     "bind it to the approved commit or merge now" % c.kind)
+    try:
+        res = state_tool().check_prod(owner, cid, sha=released, repo=match)
+    except Exception as exc:
+        return _pg_block(cid, "valid spec.json", "cannot verify the production approval: %s" % exc)
+    if not res.get("ok"):
+        how = (". To release: in a session of the owning repo %s, the human approves production of %s in their own "
+               "message, then run there: karvey-state.py approve %s prod --by \"<human>\" --role human --ref <D-NN> "
+               "--sha <its head>, and karvey-state.py approve %s prod --by \"<human>\" --role human --ref <D-NN> "
+               "--repo %s --sha %s" % (owner, cid, cid, cid, match, released))
+        return _pg_block(cid, ",".join(res.get("missing") or ["?"]), (res.get("reason") or "no production approval")
+                         + how)
+    rec = {"change": cid, "approver": res.get("by"), "ref": res.get("ref"), "branch": base, "reason": "owner-repo",
+           "sha": released, "owner": owner}
+    return Decision.allow(stdout=["[karvey] prod-gate ALLOW change=%s by=%s ref=%s commit=%s owner=%s"
+                                  % (cid, res.get("by"), res.get("ref"), released[:12], owner)], record=rec, audit=True)
+
+
+def _unresolved_karvey_target(ctx, c, deadline):
+    """REQ-HF-014 / BUG-145: a Karvey repo the project names, with no local clone: passes only into the
+    project's integration branch (by the host's answer); anything else is blocked."""
+    if c.kind == "gh-ref" or not c.selector:
+        return _pg_block(None, "target", "cannot tie %s to a local clone; run it from the clone" % c.repo_name)
+    budget = max(0.5, min(NET_BUDGET_S, deadline - time.monotonic()))
+    info, err = pr_info(c, c.dir if c.dir and os.path.isdir(c.dir) else os.getcwd(), budget)
+    if err:
+        return _pg_block(None, "target", "cannot tie %s to a local clone; run it from the clone (%s)"
+                         % (c.repo_name, err))
+    d = _unresolved_base(ctx, c, info, _karvey_context(ctx, c))
+    return None if d.decision == "allow" else d
+
+
+def _run_of(c, approval_id, budget):
+    """``(branch, sha, repo, error)`` of the run a pipeline approval releases (REQ-HF-012)."""
+    call = c.rest
+    if call.host == "azure":
+        if not (call.org and call.project):
+            return None, None, None, "the approval URL names no organization and project"
+        data, err = _run_cli(["az", "rest", "--method", "get", "--url",
+                              "%s/%s/_apis/pipelines/approvals/%s?$expand=steps&api-version=7.1"
+                              % (call.org, call.project, approval_id)], os.getcwd(), budget)
+        if err:
+            return None, None, None, err
+        owner = ((data.get("pipeline") or {}).get("owner") or {}) if isinstance(data.get("pipeline"), dict) else {}
+        run = owner.get("id") if isinstance(owner, dict) else None
+        if run is None:
+            return None, None, None, "the approval names no run"
+        data, err = _run_cli(["az", "pipelines", "runs", "show", "--id", str(run), "--org", call.org, "--project",
+                              call.project, "--output", "json"], os.getcwd(), budget)
+        if err:
+            return None, None, None, err
+        repo = (data.get("repository") or {}).get("name") if isinstance(data.get("repository"), dict) else None
+        return data.get("sourceBranch"), data.get("sourceVersion"), repo, None
+    data, err = _run_cli(["gh", "api", "repos/%s/actions/runs/%s" % (call.repo, call.run)], os.getcwd(), budget)
+    if err:
+        return None, None, None, err
+    return data.get("head_branch"), data.get("head_sha"), call.repo, None
+
+
+def _evaluate_pipeline(ctx, c, deadline):
+    """REQ-HF-012: a production run is approved only when a change's live approval covers its commit."""
+    if (ctx.root or _project_dir_root(ctx)) is None and not pj.find_root(start=c.dir or "."):
+        return None
+    allow = None
+    url_repo = c.repo_name
+    for ident in (c.rest.approvals or [c.rest.run]):
+        left = deadline - time.monotonic()
+        if left < 0.5:  # REQ-HF-018: never past the pre-bash budget
+            return _pg_block(None, "run", "cannot verify the production approval: time budget exhausted before the "
+                                          "approval %s was resolved; approve one run per command" % ident)
+        branch, sha, repo, err = _run_of(c, ident, min(NET_BUDGET_S, left))
+        if err or not isinstance(branch, str) or not isinstance(sha, str):
+            return _pg_block(None, "run", "cannot verify the production approval: cannot resolve the run of the "
+                                          "approval %s (%s)" % (ident, err or "no branch or commit"))
+        branch = _strip_heads(branch.replace("refs/heads/", ""))
+        sha = sha.lower()
+        c.repo_name = url_repo or repo
+        root, early = resolve_target(ctx, c) if c.repo_name else (None, None)
+        if early == "unresolved":
+            return _pg_block(None, "target", "cannot tie %s to a local clone; run it from the clone" % c.repo_name)
+        if early == "host":  # BUG-145: the run's commit ties it to a local Karvey clone, else it is another repo
+            root = next((k for k in _karvey_context(ctx, c) if clones.has_commit(str(k), sha)), None)
+            early = None if root is not None else _not_karvey(c.repo_name, "no local Karvey clone holds the run's "
+                                                                           "commit %s" % sha[:12])
+        if early is not None:
+            if early.decision == "block":
+                return early
+            allow = allow or early
+            continue
+        root = root or ctx.root or _project_dir_root(ctx)
+        if root is None:
+            return None
+        wc, _ = project_wc(ctx, root)
+        _p, integ, prod = pj.branch_flow(wc or {})
+        if branch not in production_set(ctx, root, integ, prod):
+            continue  # a run of a non-production branch
+        rc, parents = pj.git(["rev-list", "--parents", "-n", "1", sha], root)
+        if rc != 0:
+            return _pg_block(None, "sha", "cannot verify the production approval: the run's commit %s is not in the "
+                                          "local clone %s; fetch it and retry" % (sha[:12], root))
+        covered = set(parents.split())
+        hit = None
+        for ch in pj.list_changes(root):
+            try:
+                res = state_tool().check_prod(root, ch["id"])
+            except Exception:
+                continue
+            if res.get("ok") and res.get("head_sha") in covered:
+                hit = (ch["id"], res)
+                break
+        if hit is None:
+            return _pg_block(None, "approval", "cannot verify the production approval: no change's live production "
+                                               "approval covers the run's commit %s (the approved head or a merge of "
+                                               "it) on %s" % (sha[:12], branch))
+        cid, res = hit
+        allow = Decision.allow(stdout=["[karvey] prod-gate ALLOW change=%s by=%s ref=%s commit=%s (pipeline run)"
+                                       % (cid, res.get("by"), res.get("ref"), sha[:12])],
+                               record={"change": cid, "approver": res.get("by"), "ref": res.get("ref"),
+                                       "branch": branch, "reason": "approved-run", "sha": sha}, audit=True)
+    return allow
+
+
 def prod_gate_enabled(ctx):
     """Runs on any command that could be a production merge (cheap test); the per-project
     switch (§3.5) is decided per candidate, so a disabled gate still prints its notice."""
     cmd = ctx.payload.command or ""
-    return bool(_RAW_MERGE.search(cmd) or _MAYBE_MERGE.search(cmd))
+    return bool(_RAW_MERGE.search(cmd) or _MAYBE_MERGE.search(cmd) or _RAW_REST.search(cmd))
+
+
+_RAW_REST = re.compile(r"\b(curl|wget|https?|xhs?|python3?|node|ruby|perl|pwsh|powershell|deno|bun)\b", re.I)
 
 
 def prod_gate(ctx):
@@ -1462,8 +2357,8 @@ def _audit(root, record):
 
 
 def approval_hook(ctx):
-    """UserPromptSubmit (REQ-W1-017, 019; D-01, D-10, D-11). Silent unless it records a marker;
-    it never blocks the prompt. Outside a Karvey project it does nothing."""
+    """UserPromptSubmit (REQ-W1-017, 019; D-01, D-10, D-11; REQ-HF-001..004, 029). Silent unless it records a
+    marker or the prompt is production-shaped (one line then); it never blocks the prompt. Outside a Karvey project it does nothing."""
     root = ctx.root
     text = ctx.payload.prompt
     if root is None or not isinstance(text, str) or not text.strip():
@@ -1480,19 +2375,65 @@ def approval_hook(ctx):
             created = approval.parse_dt(nm["created_at"])
             lines.append("[karvey] notification destination confirmation recorded (%s, expires %s)"
                          % (code, (created + approval.timedelta(minutes=nm["ttl_min"])).strftime("%H:%M")))
+        if approval.is_stop(text):  # D-47 (REQ-HF-033): "detente" / "stop" withdraws the plan approval
+            gone = approval.withdraw_all(root)
+            for other in clones.project_paths(str(root)):  # the clones this project lists (D1 on D-47)
+                try:
+                    if pj.find_root(start=other) is not None:
+                        gone += approval.withdraw_all(other)
+                except Exception:
+                    pass
+            lines.append("[karvey] plan approval withdrawn (stop)%s \u2014 a consequential action needs a new "
+                         "approval" % ((": " + ", ".join(gone)) if gone else ""))
+            return Decision.allow(stdout=lines)
         verdict = approval.classify(text, vocab)
+        shaped = approval.prod_shaped(text, vocab)
         if verdict["approved"]:
             ids = [c["id"] for c in pj.list_changes(root)]
-            scope = approval.scope_for(verdict["cleaned"], ids, active_change(ctx)["change"])
+            note = ""
+            if verdict["kind"] == "prod":  # REQ-HF-001..004 (BUG-138)
+                res = approval.resolve_prod_scope(root, verdict["cleaned"], ids, active_change(ctx))
+                if res["scope"] is None:
+                    cand = res["candidates"][0] if len(res["candidates"]) == 1 else None
+                    lines.append("[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
+                                 % (res["why"], approval.suggested_phrase(verdict["cleaned"], cand)))
+                    _audit(root, {"guard": "approval", "event": "prompt", "decision": "not-recorded",
+                                  "reason": res["why"]})
+                    return Decision.allow(stdout=lines)
+                scope = res["scope"]
+                if res["implicit"]:
+                    note = " \u2014 %s; your message named none" % res["why"]
+            else:
+                scope = approval.scope_for(verdict["cleaned"], ids, active_change(ctx)["change"])
             marker = approval.write_marker(root, verdict["kind"], scope, text, session_id=ctx.payload.session_id,
                                            ttl_min=ttl, compat=ctx.env.get(approval.COMPAT_ENV, ""))
             created = approval.parse_dt(marker["created_at"])
             expires = (created + approval.timedelta(minutes=marker["ttl_min"])).strftime("%H:%M")
-            lines.append("[karvey] approval recorded (%s, %s, expires %s)" % (verdict["kind"], scope, expires))
+            if verdict["kind"] == "plan":  # D-47: no time limit
+                line = "[karvey] approval recorded (plan, %s%s, until the plan ends or you say stop)" % (scope, note)
+            else:
+                prod_until = (created + approval.timedelta(hours=approval.PROD_VALID_H)).strftime("%H:%M")
+                line = "[karvey] approval recorded (prod, %s%s, expires %s tomorrow; it is also the plan approval)" % (
+                    scope, note, prod_until)
+            if verdict["kind"] == "plan" and shaped:  # REQ-HF-029: never let a plan pass for a prod OK
+                line += " \u2014 a plan approval, NOT a production one; type: \u00ab%s\u00bb" % \
+                    approval.suggested_phrase(verdict["cleaned"], None if scope == approval.SCOPE_PROJECT else scope)
+            lines.append(line)
+        elif shaped:  # REQ-HF-029 (BUG-143): a production-shaped phrase always gets its line
+            cleaned = approval.normalise(approval.strip_quoted(text))
+            lines.append("[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
+                         % (verdict["reason"], approval.suggested_phrase(cleaned, active_change(ctx)["change"])))
         return Decision.allow(stdout=lines) if lines else None
     except Exception as exc:  # fail open: no marker is the safe side (§3.2)
         _audit(root, {"guard": "approval", "event": "prompt", "decision": "error",
                       "reason": "approval-hook error: %s: %s" % (type(exc).__name__, exc)})
+        try:
+            if approval.prod_shaped(text):  # REQ-HF-018/029: say it, even on an error
+                return Decision.allow(stdout=["[karvey] prod approval NOT recorded: internal error (%s) \u2014 type: "
+                                              "\u00ab%s\u00bb" % (type(exc).__name__, approval.suggested_phrase(
+                                                  approval.normalise(text), None))])
+        except Exception:
+            pass
         return None
 
 

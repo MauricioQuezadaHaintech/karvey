@@ -1567,3 +1567,603 @@ the dry-run early exit ran before the unknown-option check and never saw the neg
 | 2026-09-26 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-96, karvey-qa re-run D7 second opinion re-check (N-5, N-6) |
 | 2026-09-26 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | karvey-iterate: root cause above |
 | 2026-09-26 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on feature/wave1-hardening; regression test red on d0153c2, green after |
+
+## BUG-138 — The prod approval was recorded for the active change, not the change the phrase named
+- **Priority:** high
+- **Detected:** 2026-09-29 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`scope_for`), guards.py (`approval_hook`)
+- **Change / origin:** prod-gate-scope — finding F-01 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+In a working tree where only `team-adapters` is open, the human writes «aprobado para producción project-upgrade 3.13.0»; `project-upgrade` lives on another branch.
+
+### Actual vs expected
+- Actual: a prod marker `(prod, team-adapters)`: an approval of a change the human did not name.
+- Expected: a named change wins; a named change that is not in this tree records nothing and names the worktree or branch that holds it; several named changes or no resolvable change record nothing; the single active change is said out loud.
+
+### Root cause
+`approval.scope_for` only matched ids present in the tree; anything else fell back to the active change.
+
+### Fix
+`approval.resolve_prod_scope` (named here → that change; named elsewhere → worktree/branch lookup, nothing recorded; several named → nothing; none → the single active change, said in the line). Plan approvals keep the 3.12.0 rule. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/approval.json` ap-hf-02, ap-hf-03, ap-hf-05, ap-hf-06; `plugins/karvey/tests/unit/test_approval_scope.py`; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-29 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-01, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-139 — protect-paths blocked read-only listings of the state paths (BL-64)
+- **Priority:** low
+- **Detected:** 2026-09-29 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`protect_paths`)
+- **Change / origin:** prod-gate-scope — finding F-04 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`ls -la .git/karvey/approvals/ 2>/dev/null; echo done`, `cat .git/karvey/ledger/x.json | python3 -m json.tool`, `ls "$(git rev-parse --git-common-dir)/karvey/approvals/"`.
+
+### Actual vs expected
+- Actual: blocked although nothing is written.
+- Expected: allowed; any write form (mutator, redirection into the path, `xargs`, `tee`) stays blocked.
+
+### Root cause
+the last check (a needle split by quoting) required every segment to be in READ_ONLY; `echo`, a formatter and a read-only `git` subcommand are not.
+
+### Fix
+`_listing_safe`: READ_ONLY, text output, path-less formatters and read-only `git` subcommands without a write redirection count as safe beside a listing. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/protect-paths.json` pp-hf-01, pp-hf-02, pp-hf-03; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-09-29 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-04, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-140 — The session hook injected another agent's profile, including a sensitive handoff
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/livestate.py, karvey_hooks.py (`session_text`), hooks/karvey-session-context.sh
+- **Change / origin:** prod-gate-scope — finding F-05 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A session starts (or resumes) in a folder of another agent, in a team folder above the repos, or in a repo the team configuration does not map.
+
+### Actual vs expected
+- Actual: the hook walked up the folder tree and injected the profile it found first (or the default `ceo` role): manifest, board and handoff of another agent, one of them a sensitive handoff.
+- Expected: a profile only from the repo the session works in (its git top level), mapped by exact name; otherwise, or when ambiguous, nothing and one line with the explicit restore command; a sensitive handoff only in its own repo.
+
+### Root cause
+`find_team_root` walked up from the starting directory, the role was taken from the first folder below the team root with a `ceo` fallback, and a handoff had no sensitivity mark.
+
+### Fix
+`livestate.resolve_session_profile` (git top level, explicit mapping, no default role, ambiguity → nothing), `handoff_sensitive` / `profile_repos`, `karvey_hooks.py restore-profile`, `/karvey-checkpoint restore --profile`, `save --sensitive`; the bash degraded path mirrors it. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/session.json` ss-hf-01, ss-hf-02, ss-hf-03, ss-hf-05, ss-hf-06; `plugins/karvey/tests/unit/test_session_profile.py`; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-05, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-141 — The prod-gate decided by the session's repo instead of the PR's repo
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_evaluate_candidate`), clones.py
+- **Change / origin:** prod-gate-scope — finding F-06 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+From repo A, `gh pr merge <n> --repo <owner>/<B>` (or a PR URL) on a PR into B's integration branch.
+
+### Actual vs expected
+- Actual: evaluated with A's flow, production set and ledger: blocked as a production merge.
+- Expected: the target repo is the one the command names; its local clone gives flow, production set and ledger; an integration base passes; a non-Karvey target passes with a warning.
+
+### Root cause
+`root` came from the command's directory; `--repo` only reached the PR lookup.
+
+### Fix
+`resolve_target` (clone lookup by name in `clones.py`), host-answer URL check, owner-repo release, non-Karvey warning. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_prodgate_target.py`; `plugins/karvey/tests/hooks/tables/prod-gate.json` pg-hf-01; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-06, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-142 — The deploy skill asked for the production OK through a question tool
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/skills/karvey-deploy/SKILL.md (2.9), lint-plugin.py
+- **Change / origin:** prod-gate-scope — finding F-07 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Run `karvey-deploy` to step 2.9 and answer the question tool with the production OK.
+
+### Actual vs expected
+- Actual: the answer never reaches the UserPromptSubmit hook: no prod marker, and `approve … prod` is refused.
+- Expected: the OK is typed by the human from a phrase the agent shows (change id, PR, version, head SHA); lint forbids a question tool for it.
+
+### Root cause
+the skill text said to ask with `AskUserQuestion`; a question-tool answer is not a prompt.
+
+### Fix
+2.9 rewritten; lint L-80. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+L-80; `plugins/karvey/tests/unit/test_lint_plugin.py`; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-07, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-143 — A production-shaped phrase that recorded nothing printed nothing
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`approval_hook`), approval.py
+- **Change / origin:** prod-gate-scope — finding F-08 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Write «aprobado para producción, no hay más cambios», or a production phrase late in a long prompt, or with several active changes.
+
+### Actual vs expected
+- Actual: no line at all; the owner learnt of it from the later "kind plan does not satisfy prod".
+- Expected: exactly one line: recorded (kind, change) or NOT recorded with the reason and the phrase to type.
+
+### Root cause
+the hook printed only when it wrote a marker.
+
+### Fix
+`approval.prod_shaped`, `suggested_phrase`; the hook prints the NOT-recorded line (also on an internal error). Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/approval.json` ap-hf-07, ap-hf-09, ap-hf-10; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-08, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-144 — The `approve … prod` refusal did not say which marker it found
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey-state.py (`cmd_approve`), approval.py
+- **Change / origin:** prod-gate-scope — finding F-09 (real use; D-43/D-45)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`approve <id> prod …` with only a plan marker, an expired prod marker, or a marker of another change.
+
+### Actual vs expected
+- Actual: "kind plan does not satisfy prod" and nothing else.
+- Expected: each marker found (kind, change, age, state), the missing piece, and the phrase to type.
+
+### Root cause
+the refusal printed `find_valid`'s per-scope reason only.
+
+### Fix
+`approval.describe_markers` and `marker_report`. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_state_repos.py`; red on e2acfab (3.12.0). Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-09, real use |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above (requirements revision 1, D-45) |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on e2acfab, green after |
+
+## BUG-145 — The prod-gate's "not a Karvey repo" warning was reachable for Karvey targets
+- **Priority:** critical
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`resolve_target`), clones.py
+- **Change / origin:** prod-gate-scope — finding F-12 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+From a look-alike clone with the target's remote, from the Karvey repo itself naming its renamed or upstream name, an Azure REST completion with the repo GUID, or a session in the folder that holds the repos: `gh pr merge 12 --repo org/<repo>` / `curl -X PATCH …/repositories/<GUID>/pullrequests/12`.
+
+### Actual vs expected
+- Actual: allowed with "not a Karvey repo — not gated" (3.12.0 blocked several of these).
+- Expected: a Karvey clone answering to the name always wins; in a Karvey context the host's answer (canonical repo, PR head commit) identifies the repo; a repo the project names without a clone passes only into the integration branch; the warning only for a repo shown to be another.
+
+### Root cause
+the first clone that answered to the name decided; the Karvey context and the host's answer were ignored; children of a non-repo folder were not searched.
+
+### Fix
+`resolve_target` (all clones, Karvey first), `_identify_via_host`, `_unresolved_base`, `clones.find_clones`/`has_commit`, children search; the host check compares the canonical repo for gh, az and glab. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_prodgate_identity.py`; red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-12, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-146 — REST forms slipped past the prod-gate's parser
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/restcalls.py
+- **Change / origin:** prod-gate-scope — finding F-13 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`curl -X PUT https://example.com/ <merge-url>`, `curl --max-redirs 3 -X PUT <merge-url>`, `curl -K cfg`, `wget --method PUT <merge-url>`, `http -a u:t PUT <merge-url>`, `gh api -X PUT repos/o/r/contents/x -f branch=main`, a GraphQL `mergePullRequest`, `python3 - <<EOF … EOF`, `…/%70ulls/12/merge`, `…/pulls/$N/merge`.
+
+### Actual vs expected
+- Actual: allowed without an approval.
+- Expected: each is a candidate or blocked with the reason.
+
+### Root cause
+the parser took the first positional as the URL, knew only some value options, and matched literal, undecoded paths.
+
+### Fix
+every http(s) argument is a target; `-K`/`wget -i` fail closed; option tables for wget/HTTPie; decoded paths; contents/pushes/GitLab files and GraphQL writes; here-documents and unknown clients with a write to an endpoint fail closed; inline scripts need a write as well as an endpoint. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_restcalls_evasions.py`; red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-13, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-147 — A fail-closed message carried a token from the command
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/karvey_hooks.py (`dispatch`), restcalls.py
+- **Change / origin:** prod-gate-scope — finding F-14 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`http -a bot:<token> PUT <merge-url>`.
+
+### Actual vs expected
+- Actual: the ValueError text with the token in stderr and in the audit log.
+- Expected: only the exception type.
+
+### Root cause
+the dispatcher interpolated the exception text; HTTPie's `-a` value was read as the URL.
+
+### Fix
+fail-closed and fail-open messages keep the type only; HTTPie option values are skipped; a bad port is no exception. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_karvey_hooks.py` (Dispatch.test_bug147_exception_text_never_reaches_the_message); red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-14, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-148 — Approval scope gaps after BUG-138
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`resolve_prod_scope`)
+- **Change / origin:** prod-gate-scope — finding F-15 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+«aprobado para producción billing» with `billing` only on another branch; «aprobado para producción 3.12.1-hotfix»; «… cross-tenant»; «… login y api-login».
+
+### Actual vs expected
+- Actual: the active change recorded for `billing`; valid approvals refused for version words; a suggested phrase naming a non-change; two named ids read as one.
+- Expected: any id held elsewhere (hyphen or not) refuses with its location; numeric and common hyphenated words are not ids; the phrase names the active change or `<change-id>`; both ids count.
+
+### Root cause
+only hyphenated tokens were looked up elsewhere; a substring filter merged ids; the phrase used the unknown token.
+
+### Fix
+`ids_elsewhere` (worktrees and branches, every id), numeric-segment and common-word exclusions, phrase and error line fixes. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_approval_scope.py` (test_bug148_*); red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-15, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-149 — L-80 missed wordings and misread negations
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/lint-plugin.py (L-80)
+- **Change / origin:** prod-gate-scope — finding F-16 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+«Pide el OK de producción con `AskUserQuestion`», "If the PR is not green, use AskUserQuestion for the prod OK", and a paragraph that types the production approval and uses the question tool for the QA verdict.
+
+### Actual vs expected
+- Actual: two false negatives and one false positive.
+- Expected: sentence-level check, Spanish and other wordings, a negation only when it governs the tool.
+
+### Root cause
+paragraph-level co-occurrence and a negation anywhere before the tool.
+
+### Fix
+sentence split, wider production-OK and tool patterns, scoped negation. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_lint_plugin.py` (L80Bug149); red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-16, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-150 — A worktree of the same repo was reported as an ambiguous identity
+- **Priority:** medium
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/livestate.py (`resolve_session_profile`)
+- **Change / origin:** prod-gate-scope — finding F-17 (QA of 3.12.1: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A session started in `app-web` that works in a linked worktree of `app-web`.
+
+### Actual vs expected
+- Actual: "profile not loaded … started in one repo and now works in another" with duplicate candidates.
+- Expected: the same repo: the profile is injected.
+
+### Root cause
+top levels were compared instead of the repository (common git dir).
+
+### Fix
+same common dir = same repo; candidate labels de-duplicated. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_session_profile.py` (SessionProfile.test_bug150_session_moved_into_a_worktree_of_the_same_repo); red on a9cd831. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-17, karvey-qa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a9cd831, green after |
+
+## BUG-151 — QA re-check: a fake Karvey clone could decide or switch the gate off, and REST forms still slipped
+- **Priority:** critical
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`resolve_target`, `pr_info`, prod-gate switch), restcalls.py, clones.py, lint-plugin.py (L-80)
+- **Change / origin:** prod-gate-scope — finding F-19 (QA re-check of bd81fae: security review, code review, D7 second opinion)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A Karvey clone made by the agent (`zz-fk`, `enforcement.prod_gate_hook: false` on its own origin, remote set to the real repo): `cd zz-fk && gh pr merge 12 --repo org/app-web`. `curl -X PUT '…/pulls/{12}/merge'`, `…/pulls/12/./merge`, `printf 'PUT /repos/…/pulls/12/merge …' | openssl s_client …`. An Azure PR whose host answer names another repository. A Karvey repo in another wrapper folder (`Dev/<wrapper>/<repo>`). `curl -u "$USER:$PAT" -X PATCH -d '{"title":"x"}' <PR url>` and `echo POST <PR url>` (blocked by the first QA loop). «Usa AskUserQuestion para que el dueño apruebe el pase a producción».
+
+### Actual vs expected
+- Actual: "prod-gate DISABLED" from the fake clone; globbed, dot-segment and hand-written requests allowed; the Azure repo check dead; the wrapper-folder repo warned as not Karvey; non-completing updates and plain text blocked; one Spanish wording not flagged.
+- Expected: two different Karvey clones answering to one name block; only the session project, its worktrees and the paths its project.json lists may switch the gate off; curl globs expanded (or blocked), dot segments removed, raw HTTP to a socket blocked; the Azure answer's repository decides; wrapper folders searched; variables in credential/header options and text output are not requests; the wording flagged.
+
+### Root cause
+the first Karvey clone found decided and its own settings were trusted; the parser read URLs literally and treated any variable argument as a URL; the az answer's API URL hid the repository; the clone search stopped at siblings.
+
+### Fix
+`trusted_roots`, several-clones block, az `repository.webUrl/name`, `expand_curl_glob`, `remove_dot_segments`, `--path-as-is` fail, raw-HTTP-to-socket fail, credential/header option values skipped, text commands not requests unless sent to a socket, wrapper-folder search, L-80 wordings. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_prodgate_identity.py` (test_bug151_*, test_karvey_repo_in_another_wrapper_folder_is_found), `plugins/karvey/tests/unit/test_restcalls_evasions.py` (test_bug151_*); red on bd81fae. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-19, karvey-qa re-check |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on bd81fae, green after |
+
+## BUG-152 — curl `--request-target` and `--variable`/`--expand-*` hid a merge; a named fake clone could switch the gate off
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/restcalls.py (`_parse_curl`, `classify`), guards.py (prod-gate switch)
+- **Change / origin:** prod-gate-scope — finding F-20 (final QA re-check of 434c307, security review)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`curl -X PUT --request-target /repos/org/app-web/pulls/12/merge https://api.github.com/`; `curl --variable p=pulls --expand-url 'https://api.github.com/repos/org/app-web/{{p}}/12/merge' -X PUT`; a Karvey clone with `prod_gate_hook: false` named by `--repo` from a session whose project is not a Karvey project.
+
+### Actual vs expected
+- Actual: allowed silently; "prod-gate DISABLED" from the named clone.
+- Expected: the request target is the path classified; a variable-expanded request to a code host fails closed; a clone reached by name cannot switch the gate off without a trusted session project.
+
+### Root cause
+the parser classified only the URL argument and did not know curl's expansion options; the switch-off trust rule applied only with a Karvey session project.
+
+### Fix
+`--request-target` replaces the URL path; `--variable`/`--expand-*` mark the request unreadable, and an unreadable request to a code-host API fails closed; a named target's switch-off needs a trusted root. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_restcalls_evasions.py` (Evasions.test_bug152_request_target_and_variable_expansion), `plugins/karvey/tests/unit/test_prodgate_identity.py` (Identity.test_bug152_switch_off_of_a_named_clone_needs_a_trusted_session); red on 434c307. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-20, karvey-qa final re-check |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on 434c307, green after |
+
+## BUG-153 — A scheme-less curl or wget URL hid a merge
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/restcalls.py (`_scheme_urls`)
+- **Change / origin:** prod-gate-scope — finding F-21 (QA re-check of a5ad33f, security review)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`curl -X PUT --proto-default https api.github.com/repos/org/app-web/pulls/12/merge`; `curl -L -X PUT api.github.com/repos/org/app-web/pulls/12/merge`; `wget --method=PUT api.github.com/…/pulls/12/merge`.
+
+### Actual vs expected
+- Actual: allowed silently (curl sends it over https, or http and follows the redirect keeping the PUT).
+- Expected: classified like the same URL with a scheme.
+
+### Root cause
+only arguments starting with `http(s)://` were taken as URLs.
+
+### Fix
+a `host.domain/path` argument (not a credential or output value) is a URL with `https://`. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_restcalls_evasions.py` (Evasions.test_bug153_scheme_less_urls); red on a5ad33f. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-21, karvey-qa re-check |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression test red on a5ad33f, green after |
+
+## BUG-154 — A checkpoint save was blocked by the plan-gate
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`plan_gate`), hooks/karvey-hook.sh (no-python plan-gate), skills/karvey-checkpoint
+- **Change / origin:** prod-gate-scope — finding F-22 (real use, owner, D-46)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+A repo with `enforcement.plan_gate_hook: true` and a plan marker older than its TTL: `/karvey-checkpoint save` writes `docs/spec/agent/handoff.md`.
+
+### Actual vs expected
+- Actual: "BLOCK plan-gate: file edit (Write) … marker _project: expired"; the human had to approve a save.
+- Expected: a save of the checkpoint/handoff state files needs no approval; everything else stays gated.
+
+### Root cause
+the plan-gate gated every file edit and every write redirection, with no exemption for the method's own state files.
+
+### Fix
+`checkpoint_only`: the change and project `checkpoint.md` and the resolved profile's `handoff.md`, `state.json` and board, named directly (no symlink, no `..`, no variable or glob), pass with no marker when nothing else in the call writes or destroys; the no-python path exempts the solo profile and checkpoints the same way; the checkpoint skill says a save never needs a plan approval. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/plan-gate.json` cp-01-handoff-save-needs-no-approval .. cp-11 (cp-05..08, 10, 11 keep the gate); `plugins/karvey/tests/unit/test_plangate_checkpoint.py`; red on 8d6c361. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-22, owner report (D-46) |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on 8d6c361, green after |
+
+## BUG-155 — The D-47 plan-gate gated daily reads and missed consequential actions; a project-wide approval never ended
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`consequential_class`, `_sql_class`, `plan_gate`), approval.py (`is_stop`, `withdraw_all`)
+- **Change / origin:** prod-gate-scope — finding F-24 (QA of the D-47 delta: security D1, second opinion D7)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+On 92d85d5 with `plan_gate_hook: true` and no approval: `az webapp config appsettings list` and `sqlcmd -Q "SELECT … LIKE '%create%'"` blocked; `terraform -chdir=x apply`, `kubectl --context c apply`, `cat q.sql | sqlcmd`, `alembic upgrade head`, `gh repo delete`, `curl -X DELETE …`, `xargs rm`, `python3.12 -m pip install` allowed; a `_project` plan approval 40 days old from another session allowed `rm src/a.py`; «para, espera un momento» and «no sigas» did not withdraw.
+
+### Actual vs expected
+- Actual: investigation gated, consequential actions free, an approval with no end.
+- Expected: D-47 — investigation free, consequential actions gated, approval ends with the plan, the session or a stop.
+
+### Root cause
+fixed-position verbs, SQL keywords matched inside literals, no read-verb list, a narrow software/infra list, and no owner for a project-wide approval.
+
+### Fix
+global options skipped before the verb; SQL literals stripped, `EXEC` gated by a write-procedure name; read verbs free; migrations, repo/bucket deletes, HTTP DELETE, prunes, `xargs rm`, inline SQL writes, cron and service changes, release/tag deletes gated; venv detection by activate/uv/`.venv`/real path; SQL from a pipe read when it is literal, else gated; `rm -rf` free only inside the temp folder outside a repository; a project-wide approval bound to its session; stop phrases widened and withdrawn in the project's listed clones too. Hotfix 3.12.1, branch `hotfix/3.12.1-prod-gate`.
+
+### Regression test
+`plugins/karvey/tests/hooks/tables/plan-gate.json` d47-22..50; `plugins/karvey/tests/unit/test_marker.py` (TTL.test_d47_stop_withdraws_and_prod_use_keeps_the_plan); `plugins/karvey/tests/unit/test_plangate_checkpoint.py` (ProjectMarkerSession); red on 92d85d5. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-24, karvey-qa on the D-47 delta |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | QA loop on hotfix/3.12.1-prod-gate; regression tests red on 92d85d5, green after |
+
+## BUG-156 — Without python, a checkpoint save was blocked when a folder above the project is a symlink (macOS)
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/hooks/karvey-hook.sh (`nopy_plan_gate`)
+- **Change / origin:** prod-gate-scope — finding F-25 (CI of PR #28 on 08b17fa, macOS jobs)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+CI macOS (temp folders live under `/var`, a symlink to `/private/var`): the no-python runs of `plan-gate` cp-01..04 (Write of the profile handoff, state, change and project checkpoint) were blocked. On Linux: run the rows with `TMPDIR` pointing through a symlink.
+
+### Actual vs expected
+- Actual: "decision block, expected allow" for the checkpoint saves without python.
+- Expected: a checkpoint save needs no approval wherever the project lives.
+
+### Root cause
+`karvey_root` returns the physical project path (`pwd -P`), while the payload's `file_path` keeps the logical one; the check stripped the physical root from the logical path, so the relative path never matched.
+
+### Fix
+the literal path must end with the physical relative path, and the folder left before it must resolve (`pwd -P`) to the project root: a symlink above the project is accepted, a symlink inside it still is not. Hotfix 3.12.1.
+
+### Regression test
+`plugins/karvey/tests/unit/test_plangate_symlinked_tmp.py` (SymlinkedTemp.test_checkpoint_rows_pass_under_a_symlinked_temp_folder); red on 08b17fa. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-25, CI macOS on 08b17fa |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above, reproduced on Linux with a symlinked TMPDIR |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on 08b17fa, green after |
+
+## BUG-157 — A phase close consumed the plan approval, so one approval could not cover approving phases and implementing
+- **Priority:** high
+- **Detected:** 2026-10-05 · **Component:** plugins/karvey/scripts/karvey-state.py (`consume_on_close`)
+- **Change / origin:** prod-gate-scope — finding F-26 (real use, owner, D-47)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`plan_gate_hook: true`. The owner writes «apruebo» (session-wide marker); the agent records `approve` for design_graphic and advances three changes; minutes later three implementation subagents are blocked on their first Write with «marker _project: consumed».
+
+### Actual vs expected
+- Actual: every phase close consumed the marker used as evidence of its approval and the change's marker.
+- Expected (D-47): an approved plan runs to the end; it ends when the change is archived or the human says stop.
+
+### Root cause
+`consume_on_close` (3.12.0, REQ-W1-016) tied a plan approval's life to one phase.
+
+### Fix
+a phase close only writes an audit record; `advance … archived` consumes the change's own marker; a session-wide approval stays bound to its session (BUG-155) until a stop; a phase approval cites a marker as evidence only when it was typed during that phase (D1 on the fix: otherwise `evidence.marker = none` with a warning, the marker still being the plan approval). The production ledger keeps D-35. Hotfix 3.12.1.
+
+### Regression test
+`plugins/karvey/tests/unit/test_plangate_checkpoint.py` (ApprovalSurvivesPhases.test_one_approval_covers_the_phases_and_the_implementation, the exact repro, with the stop); `plugins/karvey/tests/unit/test_state_approve.py` (Consumption.*, incl. test_bug157_d1_a_message_evidences_only_the_phase_it_was_typed_in, red on aee008e); red on aa8a368. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-26, owner report |
+| 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
+| 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on aa8a368, green after |

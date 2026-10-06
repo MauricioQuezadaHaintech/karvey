@@ -41,11 +41,12 @@ the plugin's own files are never written by the agent.
 
 An approval exists only when the human types it. The hook reads the human's prompt, strips quoted material
 (code, `>` lines, pasted logs), applies negation and question precedence, and records a marker under
-`<git-common-dir>/karvey/approvals/` with kind, scope (the active change) and a TTL
-(`plan_marker_ttl_min`, default from `karvey_lib/defaults.json`). `karvey-state.py advance` consumes it when
-the phase it approved closes.
+`<git-common-dir>/karvey/approvals/` with kind and scope (the active change). A plan approval has no time
+limit (D-47): a phase close never consumes it; an approval of a change lasts until the change is archived, a
+session-wide one (no change named) for that session, and either ends earlier if the human says stop. A production approval counts 24 h (D-35) and is also the plan approval.
 
-- An approval word prints `[karvey] approval recorded (<kind>, <scope>, expires hh:mm)`. <!-- guard-case: ap-01-approval-aprobado, ap-02-approval-ok -->
+- An approval word prints `[karvey] approval recorded (plan, <scope>, until the plan ends or you say stop)`. <!-- guard-case: ap-01-approval-aprobado, ap-02-approval-ok -->
+- «detente», «para», «stop» (alone or opening the message) withdraws every plan approval and prints `[karvey] plan approval withdrawn (stop)`. <!-- guard-case: ap-d47-01-stop-withdraws-the-plan-approval, ap-d47-03-para-inside-a-sentence-is-not-stop -->
 - A negation, a question or quoted text records nothing and prints nothing. <!-- guard-case: ap-08-negation-or-question, ap-15-quoted-code-fence, ap-16-quoted-blockquote -->
 - A prod-kind marker needs an approval word **and** a production word naming the change (D-10). <!-- guard-case: ap-19-prod-kind-d10, ap-22-prod-word-with-negation -->
 - With `KARVEY_COMPAT_MARKER` set, the hook also writes that path (D-11). <!-- guard-case: ap-32-compat-marker-written-d11 -->
@@ -93,11 +94,34 @@ branch names whole.
 - Allows commits and pushes on a feature branch and a merge on the integration branch. <!-- guard-case: gf-03-commit-on-feature, gf-11-bare-push-on-feature, gf-29-merge-on-dev-allowed -->
 - Trunk flow: blocks commits and direct pushes on `main`. <!-- guard-case: gf-50-trunk-commit-on-main, gf-52-trunk-bare-push-on-main -->
 
+## Asking for approval (D-47)
+
+The human is there for important decisions, not to authorise each step.
+
+- Investigation never needs an approval and is never put to the human: reading, searching, read-only queries
+  (`SELECT`), running bash or python, creating and running scratch scripts.
+- Housekeeping never needs an approval: checkpoint, handoff, board, notes, scratch files.
+- Only consequential actions need an approved plan (the plan-gate list below). Present them in the plan; once the
+  human approves it, carry out everything the plan lists, at any depth, until the plan ends or a real blocker
+  appears. Do not stop to ask again inside an approved plan.
+- An approval already given is never asked again, and pending work is not re-explained as a way to ask again.
+- When the plan's approval message names production and the change, it is also the production OK (D-10): record it
+  with `karvey-state.py approve <id> prod …`; ask for the production OK only when that command refuses.
+- If the human says stop («detente», «para», «stop»), stop: the hook withdraws the plan approval.
+
 ## plan-gate (PreToolUse on Bash and Edit/Write, opt-in)
 
-- Blocks Edit/Write and the write and destructive shell classes (redirections, `tee`, `rm`, `git clean`, `find -delete`, `sed -i` …) without a valid marker. <!-- guard-case: pg-43-edit-without-marker, pg-09-write, pg-15-destructive -->
-- Allows read-only commands and `2>/dev/null`. <!-- guard-case: pg-01-not-a-write, pg-37-allowed -->
-- A marker of another project or change, expired or consumed, still blocks. <!-- guard-case: pg-48-marker-of-another-project, pg-49-marker-121-min-old, pg-50-consumed-marker, pg-52-marker-of-another-change -->
+- Blocks only consequential actions without an approved plan (D-47): deleting tracked files, discarding or rewriting history, database writes, software changes, PRs and merges to production, deploys, infrastructure. <!-- guard-case: pg-15-destructive, d47-03-update-is-gated, d47-05-pip-install-is-gated, d47-09-rm-of-a-tracked-file-is-gated, d47-11-functionapp-publish-is-gated, d47-15-pr-to-production-is-gated -->
+- Allows investigation and dev work: reads, searches, `SELECT`, scripts, redirections and file edits. <!-- guard-case: pg-01-not-a-write, d47-01-scratch-script-with-redirect-free, d47-02-select-is-free, d47-17-edit-is-free-by-default -->
+- With `enforcement.plan_gate_edits: true` it also blocks Edit/Write and write redirections. <!-- guard-case: d47-18-edit-gated-with-plan-gate-edits, pg-43-edit-without-marker -->
+- A marker of another project or change, consumed or withdrawn, still blocks. <!-- guard-case: pg-48-marker-of-another-project, pg-50-consumed-marker, pg-52-marker-of-another-change -->
+- A plan approval has no time limit: a three-day-old approval still allows the plan's actions. <!-- guard-case: d47-19-plan-approval-has-no-time-limit -->
+- A checkpoint save never needs an approval (BUG-154). <!-- guard-case: cp-01-handoff-save-needs-no-approval -->
+- Read verbs of cloud CLIs (`list`, `show`, `get`, `status` …), `SELECT`, `EXEC` of a read procedure, `rm -rf` inside the temp folder and `pip`/`uv` inside a virtual environment are free. <!-- guard-case: d47-35-az-config-list-is-free, d47-32-select-with-create-in-a-literal-is-free, d47-33-exec-of-a-read-procedure-is-free, d47-31-rm-rf-scratch-is-free, d47-38-venv-activate-then-pip-is-free -->
+- Schema migrations, repo and bucket deletes, HTTP DELETE to a remote service, `docker system prune`, `xargs rm`, SQL writes inside inline scripts, `crontab -r`, service restarts and release or tag deletes are gated. <!-- guard-case: d47-40-alembic-upgrade-is-gated, d47-41-gh-repo-delete-is-gated, d47-43-curl-delete-is-gated, d47-46-inline-python-sql-delete-is-gated, d47-49-push-deleting-a-tag-is-gated -->
+- A project-wide plan approval (no change named) belongs to the session that gave it; an approval of a change lasts until the change is archived (BUG-157).
+- `EXEC` of a stored procedure is gated by name (known limit): a name containing post, put, ins, upd, del, set, save, create, delete, update, merge, import, purge, clean, fix, load, sync, write, drop, insert, remove, alter, grant, reset, migrat, seed, truncat, archive, move, close, approve or send is a write; any other name is a read. A project adds write patterns with `enforcement.db_write_procs` (working copy or reviewed line) and frees read procedures with `enforcement.db_read_procs` (reviewed line only), both lists of regular expressions. <!-- guard-case: d47-34-exec-of-a-write-procedure-is-gated, d47-51-db-write-procs-gates-a-neutral-name -->
+- Known limits: a script file that writes (`python3 fix_data.py --apply`) is not read; a change-scoped plan approval lasts until the change is archived, and a stop withdraws approvals only in this project and the clones its `project.json` lists.
 - A valid marker of the active change allows the write. <!-- guard-case: pg-47-valid-project-marker-10min, pg-53-marker-of-the-active-change -->
 - Limitation: a write done inside an interpreter (`python -c`, `node -e`) is allowed; the gate does not parse programs. <!-- guard-case: pg-57-interpreter-write-python, pg-58-interpreter-write-node -->
 
@@ -127,4 +151,4 @@ templates into `settings.json`; they call the dispatcher, so they enforce the sa
 `karvey-guard` detects those entries and offers to remove them.
 
 - The git-flow shim blocks a commit on the production branch. <!-- guard-case: shim-01-git-flow-commit-on-master-blocks -->
-- The plan-gate shim blocks a write without a marker. <!-- guard-case: shim-03-plan-gate-write-without-marker-blocks -->
+- The plan-gate shim blocks a consequential command without a marker. <!-- guard-case: shim-03-plan-gate-consequential-without-marker-blocks -->

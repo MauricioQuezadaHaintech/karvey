@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimension review and the second opinion, all RESUELTO with a regression test red on 4c9b7c0)
+Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO with a regression test red on e2acfab; QA BUG-145..150 red on a9cd831)
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
@@ -59,6 +59,26 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | BUG-49 | karvey | low | `reopen` superseded the ledger prod approval after writing spec.json | wave1-hardening / F-94 | RESUELTO | plugins/karvey/tests/unit/test_state_approve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-50 | karvey | high | prod-gate push parser missed `refs/*` wildcards, `-o` clusters, abbreviated long options and remote names with a slash | wave1-hardening / F-95 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-13..17 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
 | BUG-51 | karvey | high | prod-gate trusted `--dry-run` cancelled by `--no-dry-run` and ignored `--repo` | wave1-hardening / F-96 | RESUELTO | plugins/karvey/tests/hooks/tables/prod-gate.json pg6-18..20 (indexed in plugins/karvey/tests/regression/test_incidents.py) | wave1-hardening (done on feature/wave1-hardening, ships in 3.12.0) |
+| BUG-138 | karvey | high | The prod approval was recorded for the active change, not the change the phrase named | prod-gate-scope / F-01 | RESUELTO | plugins/karvey/tests/ approval.json ap-hf-02/03/05/06; test_approval_scope.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-139 | karvey | low | protect-paths blocked read-only listings of the state paths (BL-64) | prod-gate-scope / F-04 | RESUELTO | plugins/karvey/tests/ protect-paths.json pp-hf-01..03 (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-140 | karvey | high | The session hook injected another agent's profile, including a sensitive handoff | prod-gate-scope / F-05 | RESUELTO | plugins/karvey/tests/ session.json ss-hf-01..06; test_session_profile.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-141 | karvey | high | The prod-gate decided by the session's repo instead of the PR's repo | prod-gate-scope / F-06 | RESUELTO | plugins/karvey/tests/ test_prodgate_target.py; prod-gate.json pg-hf-01 (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-142 | karvey | high | The deploy skill asked for the production OK through a question tool | prod-gate-scope / F-07 | RESUELTO | plugins/karvey/tests/ L-80; test_lint_plugin.py (L80) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-143 | karvey | medium | A production-shaped phrase that recorded nothing printed nothing | prod-gate-scope / F-08 | RESUELTO | plugins/karvey/tests/ approval.json ap-hf-07/09/10 (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-144 | karvey | medium | The `approve … prod` refusal did not say which marker it found | prod-gate-scope / F-09 | RESUELTO | plugins/karvey/tests/ test_state_repos.py (Refusal) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-145 | karvey | critical | The prod-gate's "not a Karvey repo" warning was reachable for Karvey targets | prod-gate-scope / F-12 | RESUELTO | plugins/karvey/tests/unit/test_prodgate_identity.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-146 | karvey | high | REST forms slipped past the prod-gate's parser | prod-gate-scope / F-13 | RESUELTO | plugins/karvey/tests/unit/test_restcalls_evasions.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-147 | karvey | medium | A fail-closed message carried a token from the command | prod-gate-scope / F-14 | RESUELTO | plugins/karvey/tests/unit/test_karvey_hooks.py (Dispatch) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-148 | karvey | high | Approval scope gaps after BUG-138 | prod-gate-scope / F-15 | RESUELTO | plugins/karvey/tests/unit/test_approval_scope.py (bug148) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-149 | karvey | medium | L-80 missed wordings and misread negations | prod-gate-scope / F-16 | RESUELTO | plugins/karvey/tests/unit/test_lint_plugin.py (L80Bug149) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-150 | karvey | medium | A worktree of the same repo was reported as an ambiguous identity | prod-gate-scope / F-17 | RESUELTO | plugins/karvey/tests/unit/test_session_profile.py (bug150) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-151 | karvey | critical | QA re-check: a fake Karvey clone could decide or switch the gate off, and REST forms still slipped | prod-gate-scope / F-19 | RESUELTO | plugins/karvey/tests/unit/test_prodgate_identity.py, test_restcalls_evasions.py (bug151) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-152 | karvey | high | curl `--request-target` and `--variable`/`--expand-*` hid a merge; a named fake clone could switch the gate off | prod-gate-scope / F-20 | RESUELTO | plugins/karvey/tests/unit/test_restcalls_evasions.py, test_prodgate_identity.py (bug152) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-153 | karvey | high | A scheme-less curl or wget URL hid a merge | prod-gate-scope / F-21 | RESUELTO | plugins/karvey/tests/unit/test_restcalls_evasions.py (bug153) (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-154 | karvey | high | A checkpoint save was blocked by the plan-gate | prod-gate-scope / F-22 | RESUELTO | plugins/karvey/tests/hooks/tables/plan-gate.json cp-01..11; plugins/karvey/tests/unit/test_plangate_checkpoint.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-155 | karvey | high | The D-47 plan-gate gated daily reads and missed consequential actions; a project-wide approval never ended | prod-gate-scope / F-24 | RESUELTO | plugins/karvey/tests/hooks/tables/plan-gate.json d47-22..50; test_marker.py, test_plangate_checkpoint.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-156 | karvey | high | Without python, a checkpoint save was blocked when a folder above the project is a symlink (macOS) | prod-gate-scope / F-25 | RESUELTO | plugins/karvey/tests/unit/test_plangate_symlinked_tmp.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
+| BUG-157 | karvey | high | A phase close consumed the plan approval, so one approval could not cover approving phases and implementing | prod-gate-scope / F-26 | RESUELTO | plugins/karvey/tests/unit/test_plangate_checkpoint.py, test_state_approve.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | prod-gate-scope (hotfix 3.12.1) |
 
 ## Summary by state
 
@@ -67,7 +87,7 @@ Last updated: 2026-09-25 (wave1-hardening QA: BUG-27..46 found by the 9-dimensio
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 51 | BUG-01 .. BUG-51 |
+| RESUELTO | 71 | BUG-01 .. BUG-51, BUG-138 .. BUG-157 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-52**.
+Next number: **BUG-158** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).
