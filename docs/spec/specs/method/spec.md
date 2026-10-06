@@ -77,7 +77,7 @@ Traced to `prd.md`.
 
 ## ADDED by `prod-gate-scope` (3.12.1, merged 2026-10-06)
 
-Traced to `docs/spec/changes/prod-gate-scope/prd.md`.
+Traced to `docs/spec/changes/archive/2026-10-06-prod-gate-scope/prd.md`.
 
 ### The prod approval is bound to the change the phrase names (F-01, BUG-138)
 
