@@ -146,7 +146,7 @@
     "client_tag": ""
   },
   "schema_version": 1,
-  "phase": "deployed",
+  "phase": "archived",
   "phase_history": [
     {
       "phase": "init",
@@ -198,10 +198,15 @@
     {
       "phase": "deployed",
       "entered_at": "2026-10-06T17:49:15+00:00",
+      "exited_at": "2026-10-06T17:49:55+00:00",
       "evidence": {
         "pipeline_run": "https://github.com/MauricioQuezadaHaintech/karvey/actions/runs/37505128788",
         "post_deploy_check": "pass"
       }
+    },
+    {
+      "phase": "archived",
+      "entered_at": "2026-10-06T17:49:55+00:00"
     }
   ],
   "approvals": {
@@ -266,7 +271,7 @@
     }
   },
   "created_at": "2026-09-29T16:40:39+00:00",
-  "updated_at": "2026-10-06T17:49:15+00:00",
+  "updated_at": "2026-10-06T17:49:55+00:00",
   "skipped": {
     "mockup": "hotfix lane, no UI: the change touches hooks, the prod-gate and the state tool only",
     "design_graphic": "no UI (hooks and CLI text only)",
