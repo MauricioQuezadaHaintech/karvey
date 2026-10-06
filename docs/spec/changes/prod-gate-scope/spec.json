@@ -146,7 +146,7 @@
     "client_tag": ""
   },
   "schema_version": 1,
-  "phase": "deploying",
+  "phase": "deployed",
   "phase_history": [
     {
       "phase": "init",
@@ -192,7 +192,16 @@
     {
       "phase": "deploying",
       "entered_at": "2026-10-05T13:37:16+00:00",
+      "exited_at": "2026-10-06T17:49:15+00:00",
       "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "deployed",
+      "entered_at": "2026-10-06T17:49:15+00:00",
+      "evidence": {
+        "pipeline_run": "https://github.com/MauricioQuezadaHaintech/karvey/actions/runs/37505128788",
+        "post_deploy_check": "pass"
+      }
     }
   ],
   "approvals": {
@@ -239,10 +248,25 @@
       "evidence": {
         "marker": "none"
       }
+    },
+    "prod": {
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-06T17:38:25+00:00",
+      "ref": "D-48",
+      "evidence": {
+        "marker": "approvals/prod-gate-scope.json",
+        "marker_created_at": "2026-10-06T17:38:18+00:00",
+        "prompt_excerpt": "aprobado para producción prod-gate-scope PR #28 v3.12.1",
+        "session": "230c83a0-0d38-4e1d-b3f9-392e52ef6101",
+        "prompt_sha256": "39d3cdbb4224bf640446e4477be09b9a1f1970c020ee513471b46ad15029d431"
+      },
+      "head_sha": "19abd0d3b01eb748e13ab215aaed080789782391",
+      "expires_at": "2026-10-07T17:38:18+00:00"
     }
   },
   "created_at": "2026-09-29T16:40:39+00:00",
-  "updated_at": "2026-10-05T13:37:16+00:00",
+  "updated_at": "2026-10-06T17:49:15+00:00",
   "skipped": {
     "mockup": "hotfix lane, no UI: the change touches hooks, the prod-gate and the state tool only",
     "design_graphic": "no UI (hooks and CLI text only)",

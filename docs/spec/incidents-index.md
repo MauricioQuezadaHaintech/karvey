@@ -4,7 +4,7 @@ Project-wide view of every `BUG-NN` (`plugins/karvey/skills/karvey/rules/inciden
 project has a single repo, so every incident lives in `docs/bugs_dev_testing.md` (repo `karvey`). Update
 the state here on every transition recorded there.
 
-Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO with a regression test red on e2acfab; QA BUG-145..150 red on a9cd831)
+Last updated: 2026-10-06 (prod-gate-scope shipped in 3.12.1 and archived, D-48; hotfix 3.12.1: BUG-138..144 RESUELTO with a regression test red on e2acfab; QA BUG-145..150 red on a9cd831)
 
 | BUG | Repo | Priority | Title | Change / finding | Current state | Regression test | Fix planned in |
 |-----|------|----------|-------|------------------|---------------|-----------------|----------------|
