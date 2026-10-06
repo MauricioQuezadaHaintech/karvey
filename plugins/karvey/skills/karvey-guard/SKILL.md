@@ -23,7 +23,8 @@ copied into the project and `settings.json` is never edited: a guard is on or of
 |---|---|---|
 | `enforcement.prod_gate_hook` | on | a merge to production needs a recorded human prod approval |
 | `enforcement.git_flow_hook` | off (opt-in) | no commit on integration/production, no direct push to production, no manual deploy |
-| `enforcement.plan_gate_hook` | off (opt-in) | edits and destructive commands need an approval marker (`plan_marker_ttl_min`) |
+| `enforcement.plan_gate_hook` | off (opt-in) | consequential actions (deleting tracked files, history rewrites, DB writes, software changes, PR/merge to production, deploys, infrastructure) need an approved plan; the approval lasts until the plan ends or the human says stop (D-47) |
+| `enforcement.plan_gate_edits` | off (opt-in) | with the plan-gate on, file edits and write redirections need an approved plan too |
 
 **Approval comes only from the human's message.** The approval hook records the marker when the human
 types it; this skill never creates, touches or extends a marker, and has no override.

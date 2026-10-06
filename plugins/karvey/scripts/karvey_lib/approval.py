@@ -213,13 +213,17 @@ def check_marker(marker, root, scope=None, ttl_min=None, now=None, kinds=KINDS):
         return False, "bad prompt_sha256"
     if marker.get("consumed_at") is not None:
         return False, "consumed"
+    if marker.get("stopped_at") is not None:
+        return False, "withdrawn (the human said stop)"
+    if "plan" not in kinds and marker.get("prod_used_at") is not None:
+        return False, "consumed"  # BUG-41: one production approval, one change; it stays a plan approval (D-47)
     created = parse_dt(marker.get("created_at"))
     if created is None:
         return False, "bad created_at"
     now = now or now_dt()
-    ttl = clamp_ttl(ttl_min if ttl_min is not None else marker.get("ttl_min"))
-    if now - created > timedelta(minutes=ttl):
-        return False, "expired (older than %d min)" % ttl
+    if "plan" not in kinds:  # D-47 / D-35: a production OK counts 24 h; a plan approval has no time limit
+        if now - created > timedelta(hours=PROD_VALID_H):
+            return False, "expired (older than %d h)" % PROD_VALID_H
     if created - now > timedelta(minutes=5):
         return False, "created in the future"
     return True, "ok"
@@ -267,6 +271,55 @@ def consume(root, scope, now=None, created_at=None):
     _write_private(marker_path(root, scope), m)
     _audit(root, {"guard": "approval", "event": "marker", "decision": "consumed", "change": scope})
     return True
+
+
+def mark_prod_used(root, scope, created_at=None, now=None):
+    """D-47 (REQ-HF-034): ``approve … prod`` uses the production OK once (BUG-41) but the same message stays the
+    plan approval until the plan ends."""
+    m, status = read_marker(root, scope)
+    if status != "ok" or m.get("consumed_at") is not None or m.get("prod_used_at") is not None:
+        return False
+    if created_at is not None and m.get("created_at") != created_at:
+        return False
+    m["prod_used_at"] = iso(now or now_dt())
+    _write_private(marker_path(root, scope), m)
+    _audit(root, {"guard": "approval", "event": "marker", "decision": "prod-used", "change": scope})
+    return True
+
+
+def withdraw_all(root, now=None):
+    """D-47 (REQ-HF-033): the human said stop — every live plan approval of this clone is withdrawn."""
+    out = []
+    d = approvals_dir(root, create=False)
+    if not d.is_dir():
+        return out
+    for p in sorted(d.glob("*.json")):
+        m, status = read_marker(root, p.stem)
+        if status != "ok" or m.get("kind") not in KINDS or m.get("consumed_at") or m.get("stopped_at"):
+            continue
+        m["stopped_at"] = iso(now or now_dt())
+        _write_private(marker_path(root, p.stem), m)
+        out.append(p.stem)
+    if out:
+        _audit(root, {"guard": "approval", "event": "marker", "decision": "withdrawn", "reason": "stop",
+                      "change": ",".join(out)})
+    return out
+
+
+_STOP_LEAD = re.compile(r"^((please|por favor|hey|oye|ok|okay|ya|ojo)[,!.]?\s+|(no|espera|wait)[,!.]\s+)+")
+_STOP_WORD = r"(detente|detenete|deten|stop|alto|basta|cancela|cancelalo|cancel|halt|frena|pausa|pause|abort|aborta|" \
+             r"no sigas|no continues|dont continue|don't continue|hold on|hold|wait|espera|para|paralo|paren)"
+_STOP = re.compile(r"^%s(\s*[,.!;:]|\s*$|\s+(ya|todo|ahora|now|please|por favor|un momento|el|la|los|las|eso|"
+                   r"esto|aqui|ahi|alli|it|that|this|everything|all|the|right|there)\b)" % _STOP_WORD)
+
+
+def is_stop(prompt):
+    """The human's own message tells the agent to stop (quoted material aside)."""
+    cleaned = normalise(strip_quoted(prompt if isinstance(prompt, str) else ""))
+    if not cleaned or cleaned.endswith("?") or "\u00bf" in cleaned:
+        return False
+    rest = _STOP_LEAD.sub("", cleaned)
+    return bool(_STOP.match(rest))
 
 
 def gc(root, now=None):
@@ -705,3 +758,156 @@ def scope_for(prompt_cleaned, change_ids, active=None):
     if active and valid_scope(active):
         return active
     return SCOPE_PROJECT
+
+
+# --------------------------------------------------------------------------- prod scope (REQ-HF-001..004, 029)
+_TOKEN = re.compile(r"(?<![\w-])([a-z0-9]+(?:-[a-z0-9]+)+)(?![\w-])")
+_ES_TERMS = ("aprobado", "apruebo", "aprueba", "dale", "ejecuta", "adelante", "procede", "perfecto", "si",
+             "produccion", "publica", "libera", "pasa", "sube")
+REF_SCAN_MAX = 50
+# hyphenated words of a release conversation that are not change ids (a token found nowhere else is refused
+# as a possible typo of a change id, REQ-HF-002; these never are)
+COMMON_HYPHENATED = frozenset({"go-live", "hot-fix", "follow-up", "roll-back", "roll-out", "e-mail", "re-deploy",
+                               "re-run", "check-in", "sign-off", "pre-prod", "post-deploy", "read-only",
+                               "end-to-end", "on-call", "q-a", "fast-forward", "no-ff", "ff-only"})
+
+
+def suggested_phrase(cleaned, change=None):
+    """The phrase the human types to approve production of ``change`` (BUG-143), in the prompt's language."""
+    words = set(re.findall(r"[a-z]+", cleaned or ""))
+    cid = change or "<change-id>"
+    if words & set(_ES_TERMS):
+        return "aprobado para producción %s" % cid
+    return "approved for production %s" % cid
+
+
+def prod_shaped(prompt, vocab=None):
+    """An approval term and a production term anywhere in the human's own words (quoted material aside)."""
+    vocab = vocab or default_vocabulary()
+    cleaned = normalise(strip_quoted(prompt if isinstance(prompt, str) else ""))
+    if not cleaned:
+        return False
+    approve = [t for t in vocab["approve"] if normalise(t) != "si"]
+    return bool(find_term(cleaned, approve) and find_term(cleaned, vocab["prod_terms"]))
+
+
+def _named_ids(cleaned, ids):
+    found = []
+    for cid in sorted(ids, key=len, reverse=True):
+        if valid_scope(cid) and cid != SCOPE_PROJECT and re.search(
+                r"(?<![\w-])%s(?![\w-])" % re.escape(cid.casefold()), cleaned):
+            found.append(cid)
+    return found
+
+
+def ids_elsewhere(root):
+    """``{change id: (kind, where)}`` of the changes other worktrees and branches of this clone hold
+    (BUG-148: any id, with or without a hyphen). At most ``REF_SCAN_MAX`` refs are read."""
+    out = {}
+    here = os.path.realpath(str(root))
+    rc, wts = pj.git(["worktree", "list", "--porcelain"], root)
+    for ln in (wts.splitlines() if rc == 0 else []):
+        if ln.startswith("worktree "):
+            wt = ln[len("worktree "):].strip()
+            if os.path.realpath(wt) == here:
+                continue
+            base = os.path.join(wt, "docs", "spec", "changes")
+            try:
+                names = os.listdir(base)
+            except OSError:
+                continue
+            for n in names:
+                if os.path.isfile(os.path.join(base, n, "spec.json")):
+                    out.setdefault(n, ("worktree", os.path.realpath(wt)))
+    rc, refs = pj.git(["for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes"], root)
+    for ref in [r for r in (refs.splitlines() if rc == 0 else []) if r and not r.endswith("/HEAD")][:REF_SCAN_MAX]:
+        rc2, listing = pj.git(["ls-tree", "-d", "--name-only", "%s:docs/spec/changes" % ref], root)
+        for n in (listing.splitlines() if rc2 == 0 else []):
+            n = n.strip()
+            if n and n != "archive":
+                out.setdefault(n, ("branch", ref))
+    return out
+
+
+def resolve_prod_scope(root, cleaned, ids, active):
+    """The change a production approval is for (REQ-HF-001..004). Returns ``{scope, why, implicit,
+    candidates}``; ``scope`` is None when no marker may be written, ``why`` then says how to fix it."""
+    res = {"scope": None, "why": "", "implicit": False, "candidates": []}
+    named = _named_ids(cleaned, ids)
+    if len(named) > 1:
+        res["why"] = ("it names %d changes (%s); one production approval covers one change: send one message "
+                      "per change" % (len(named), ", ".join(sorted(named))))
+        res["candidates"] = sorted(named)
+        return res
+    if len(named) == 1:
+        res["scope"] = named[0]
+        return res
+    idset = set(ids)
+    elsewhere = ids_elsewhere(root)
+    words = [w for w in dict.fromkeys(re.findall(r"(?<![\w-])[a-z0-9][a-z0-9-]{1,62}(?![\w-])", cleaned))
+             if w not in idset]
+    tokens = [w for w in words if w in elsewhere] + [  # BUG-148: an id elsewhere, hyphen or not
+        t for t in dict.fromkeys(_TOKEN.findall(cleaned))
+        if 3 <= len(t) <= 63 and t not in idset and t not in elsewhere and t not in COMMON_HYPHENATED and
+        not any(seg.isdigit() for seg in t.split("-"))]
+    for tok in tokens:
+        kind, where = elsewhere.get(tok, (None, None))
+        res["candidates"] = [tok]
+        if kind == "worktree":
+            res["why"] = ("change %s is not in this working tree; approve it in the worktree that holds it: %s"
+                          % (tok, where))
+        elif kind == "branch":
+            res["why"] = ("change %s is not in this working tree; the branch %s holds it: open the session in a "
+                          "tree of that branch and approve there" % (tok, where))
+        else:
+            continue
+        return res
+    if tokens:
+        act = (active or {}).get("change")
+        res["candidates"] = [act] if act else []  # the phrase never suggests the unknown word (BUG-148)
+        res["why"] = ("%s is not a change of this working tree and no worktree or branch holds it; if it is a "
+                      "change id, check it or open the session where the change lives; if it is not, name the "
+                      "change" % tokens[0])
+        return res
+    act = active or {}
+    cands = list(act.get("candidates") or [])
+    if act.get("change") and valid_scope(act["change"]):
+        res.update(scope=act["change"], implicit=True, candidates=[act["change"]],
+                   why="the active change of this branch" if act.get("reason") == "branch"
+                   else "the only active change")
+        return res
+    res["candidates"] = cands
+    res["why"] = ("no change named and %d active (%s); name the change" % (len(cands), ", ".join(cands))
+                  if cands else "no change named and none active; name the change")
+    return res
+
+
+def describe_markers(root, ttl_min=None, now=None):
+    """Every marker file of this clone as ``{kind, scope, age_min, state}`` (BUG-144), newest first."""
+    out = []
+    try:
+        d = approvals_dir(root, create=False)
+        files = sorted(Path(d).glob("*.json")) if Path(d).is_dir() else []
+    except Exception:
+        files = []
+    now = now or now_dt()
+    for f in files:
+        try:
+            m = json.loads(f.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, UnicodeDecodeError):
+            out.append({"kind": "?", "scope": f.stem, "age_min": None, "state": "unreadable"})
+            continue
+        if not isinstance(m, dict) or m.get("kind") not in KINDS:
+            continue
+        created = parse_dt(m.get("created_at"))
+        age = int((now - created).total_seconds() // 60) if created else None
+        if m.get("consumed_at"):
+            state = "consumed"
+        else:
+            ok, why = check_marker(m, root, ttl_min=ttl_min, now=now,
+                                   kinds=("prod",) if m.get("kind") == "prod" else KINDS)
+            state = "live" if ok else ("expired" if why.startswith("expired") else
+                                       "used" if why == "consumed" and m.get("prod_used_at") else why)
+        out.append({"kind": m.get("kind"), "scope": m.get("scope") or f.stem, "age_min": age, "state": state})
+    out.sort(key=lambda x: (x["age_min"] is None, x["age_min"] or 0))
+    return out

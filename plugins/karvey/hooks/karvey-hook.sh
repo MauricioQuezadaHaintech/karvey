@@ -148,12 +148,38 @@ nopy_plan_gate() {
   root="$(karvey_root)"
   if [ "$FORCE" != "1" ]; then [ -z "$root" ] && return 0; flag_on "$root" plan_gate_hook || return 0; fi
   if [ "$EVENT" = "pre-edit" ]; then
+    # D-47 (REQ-HF-032): file edits are gated only when the project opts in with plan_gate_edits
+    if [ "$FORCE" != "1" ] && ! flag_on "$root" plan_gate_edits; then return 0; fi
+    # BUG-154: a checkpoint/handoff save needs no approval (solo profile and checkpoints only; no symlink, no ..)
+    local fp rr dir real rel
+    fp="$(json_field file_path)"
+    if [ -n "$root" ] && [ -n "$fp" ] && ! printf '%s' "$fp" | grep -q '\.\.' && [ ! -L "$fp" ]; then
+      rr="$(cd "$root" 2>/dev/null && pwd -P)"
+      dir="$(cd "$(dirname "$fp")" 2>/dev/null && pwd -P)"
+      real="$dir/$(basename "$fp")"; rel="${real#"$rr"/}"
+      # the path inside the project must resolve to itself (a symlink above the project is harmless)
+      # the literal path must end with that same relative path, under a folder that resolves to the project
+      # (a symlinked /tmp -> /private/tmp above the project is fine; a symlink inside it is not)
+      local lroot="${fp%/"$rel"}"
+      if [ -n "$rr" ] && [ -n "$dir" ] && [ "$rel" != "$real" ] && [ "$lroot" != "$fp" ] &&
+         [ "$(cd "$lroot" 2>/dev/null && pwd -P)" = "$rr" ]; then
+        if printf '%s' "$rel" | grep -Eq '^docs/spec/(agent/(handoff\.md|board\.md|state\.json)|checkpoint\.md|changes/[a-z0-9][a-z0-9-]{1,62}/checkpoint\.md)$'; then
+          return 0
+        fi
+      fi
+    fi
     echo "[karvey] BLOCK plan-gate: file edit, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
     return 2
   fi
   cmd="$(json_field command)"
-  if printf '%s' "$cmd" | grep -Eiq '(^|[^0-9&>])>>?\|?[[:space:]]*([^&[:space:]/]|/([^d]|d[^e]|de[^v]))|\brm[[:space:]]+-[a-zA-Z]*[rR]|\bgit[[:space:]]+(clean|reset[[:space:]]+--hard|push[[:space:]].*(--force|-f\b))|\bsed[[:space:]]+-[a-zA-Z]*i|\btruncate\b|\bfind\b.*-(delete|exec)|\bdrop[[:space:]]+(table|database)|\bterraform[[:space:]]+destroy|\b(az|gcloud|kubectl)\b.*[[:space:]]delete\b'; then
-    echo "[karvey] BLOCK plan-gate: command may write or destroy, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
+  # D-47 (REQ-HF-032): only consequential actions; write redirections and sed -i only with plan_gate_edits
+  local edits=0; { [ "$FORCE" = "1" ] || flag_on "$root" plan_gate_edits; } && edits=1
+  if printf '%s' "$cmd" | grep -Eiq '\brm[[:space:]]+-[a-zA-Z]*[rR]|\bgit[[:space:]]+(rm|clean|reset[[:space:]]+--hard|push[[:space:]].*(--force|-f\b)|filter-(branch|repo))\b|\bfind\b.*-(delete|exec)|\b(insert[[:space:]]+into|update[[:space:]]+[^[:space:]]+[[:space:]]+set|delete[[:space:]]+from|merge[[:space:]]+into|drop|truncate|alter[[:space:]]+table|create[[:space:]]+table)\b|\b(pip3?|pipx|npm[[:space:]].*-g|apt(-get)?|dnf|yum|brew|winget|choco|snap)[[:space:]]+(install|uninstall|remove|purge|upgrade)\b|\b(az|gh)[[:space:]]+extension[[:space:]]+(add|remove|update|install)|\b(terraform|tofu)[[:space:]]+(apply|destroy|import)|\bkubectl[[:space:]]+(apply|delete|patch|scale|replace)|\bhelm[[:space:]]+(install|upgrade|uninstall)|\bfunc[[:space:]]+azure[[:space:]]+functionapp[[:space:]]+publish|\baz[[:space:]]+(deployment|webapp[[:space:]]+(deploy|up)|functionapp[[:space:]]+deploy)|\b(az|gcloud)\b.*[[:space:]](create|delete|update|deploy)\b|\bdocker[[:space:]]+push|\b(gh[[:space:]]+pr|glab[[:space:]]+mr|az[[:space:]]+repos[[:space:]]+pr)[[:space:]]+create'; then
+    echo "[karvey] BLOCK plan-gate: consequential command, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
+    return 2
+  fi
+  if [ "$edits" = "1" ] && printf '%s' "$cmd" | grep -Eiq '(^|[^0-9&>])>>?\|?[[:space:]]*([^&[:space:]/]|/([^d]|d[^e]|de[^v]))|\bsed[[:space:]]+-[a-zA-Z]*i|\btruncate\b'; then
+    echo "[karvey] BLOCK plan-gate: command may write, and the approval marker cannot be verified without python. Present the plan and wait for the human's approval." >&2
     return 2
   fi
   return 0
@@ -177,14 +203,14 @@ nopy_git_flow() {
   return 0
 }
 
-# prod-gate without python (§3.2): fail closed. Any PR/MR merge is blocked (its base cannot be
+# prod-gate without python (§3.2): fail closed. Any PR/MR merge (CLI or REST, REQ-HF-010/012) is blocked (its base cannot be
 # resolved); a git push is blocked when it names master/main/the production branch, has no
 # refspec, or has a wildcard or matching (`:`) refspec (BUG-47). Off only if prod_gate_hook is false in the working copy AND on origin/<production>.
 nopy_prod_gate() {
   local root cmd pj prod kind rest n w
   root="$(karvey_root)"; [ -z "$root" ] && return 0
   cmd="$(json_field command)"
-  if printf '%s' "$cmd" | grep -Eq 'gh +pr +merge|az +repos +pr +update.*(completed|auto-complete)|glab +mr +merge|gh +api.*(pulls/[0-9]+/merge|mergePullRequest|enablePullRequestAutoMerge)'; then kind=pr
+  if printf '%s' "$cmd" | grep -Eq 'gh +pr +merge|az +repos +pr +update.*(completed|auto-complete)|glab +mr +merge|gh +api.*(pulls/[0-9]+/merge|mergePullRequest|enablePullRequestAutoMerge)|pullrequests/[0-9]+.*(completed|autoCompleteSetBy)|pulls/[0-9]+/merge|merge_requests/[0-9]+/merge|pipelines/approvals|pending_deployments'; then kind=pr
   elif printf '%s' "$cmd" | grep -Eq '(^|[^[:alnum:]_-])git[^;&|]*[[:space:]]push([[:space:]]|$)'; then kind=push
   else return 0; fi
   pj="$root/docs/spec/project.json"

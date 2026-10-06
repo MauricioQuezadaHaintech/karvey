@@ -100,6 +100,19 @@ class Dispatch(unittest.TestCase):
             kh.REGISTRY.remove(boom)
             kh.REGISTRY.remove(soft)
 
+    def test_bug147_exception_text_never_reaches_the_message(self):
+        def leak(ctx):
+            raise ValueError("Port could not be cast to integer value as 'ghp_SECRETVALUE'")
+        boom = kh.Guard("boom-leak", ("pre-bash",), "closed", True, wired=True, run=leak)
+        kh.REGISTRY.append(boom)
+        try:
+            code, _, err = run("pre-bash", {"tool_name": "Bash", "tool_input": {"command": "ls"}})
+            self.assertEqual(code, 2)
+            self.assertIn("cannot evaluate: ValueError", err)
+            self.assertNotIn("SECRETVALUE", err)
+        finally:
+            kh.REGISTRY.remove(boom)
+
     def test_crash_outside_a_guard_applies_the_fail_mode(self):
         """BUG-34: an exception before any guard runs (e.g. ``os.getcwd()`` in a deleted directory) made the
         interpreter exit 1, which the harness does not treat as a block: prod-gate failed open."""

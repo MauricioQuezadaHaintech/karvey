@@ -150,14 +150,17 @@ class Release(Base):
         self.assertIsNone(ap.read_ledger(self.root, "feat-a")[0])
 
     def test_release_gate_consumes_the_prod_marker(self):
-        """BUG-70 (F-41): one approval, one change — the marker is consumed once prod is written."""
+        """BUG-70 (F-41): one approval, one change — the production OK is used once prod is written; D-47
+        (REQ-HF-034): the same message stays the plan approval."""
         self.put(self.spec())
         ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
         c, env = self.gate("release")
         self.assertEqual(c, 0, env)
         m, status = ap.read_marker(self.root, "feat-a")
         self.assertEqual(status, "ok")
-        self.assertIsNotNone(m["consumed_at"])
+        self.assertIsNotNone(m["prod_used_at"])
+        self.assertIsNone(ap.find_valid(self.root, "feat-a", kinds=("prod",), project_scope=False)[0])
+        self.assertIsNotNone(ap.find_valid(self.root, "feat-a")[0])
 
     def test_auto_release_without_prod_marker_records_qa(self):
         self.put(self.spec())
@@ -290,7 +293,7 @@ class ProdManifest(Base):
             self.assertEqual((led["prod"]["by"], led["prod"]["ref"]), ("owner", "D-8"))
         self.assertEqual(env["result"]["consumed"], ["_project"])
         m, _ = ap.read_marker(self.root, "_project")
-        self.assertIsNotNone(m["consumed_at"])
+        self.assertIsNotNone(m["prod_used_at"])  # D-47: used once for production, still the plan approval
         self.assertNotIn("prod", self.read().get("approvals", {}))  # D-03
 
     def test_D37_one_ok_covers_every_manifest_change_for_check_prod(self):
@@ -435,7 +438,7 @@ class ProdManifest(Base):
         def boom(root, scope, now=None, created_at=None):
             calls.append((scope, created_at))
             raise OSError("disk full")
-        with mock.patch.object(ap, "consume", boom):
+        with mock.patch.object(ap, "mark_prod_used", boom):  # D-47: the prod OK is marked used, not consumed
             c, env = self.approve()
         self.assertEqual(c, 0, env)
         self.assertEqual(env["result"]["consumed"], [])

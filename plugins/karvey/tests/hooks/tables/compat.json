@@ -3042,54 +3042,6 @@
    ]
   },
   {
-   "id": "compat-pg-37-allowed",
-   "guard": "plan-gate",
-   "given": {
-    "repo": {
-     "project_json": {
-      "branch_flow": {
-       "feature_prefix": "feature/",
-       "integration": "main",
-       "production": "main"
-      },
-      "enforcement": {
-       "plan_gate_hook": true
-      },
-      "checks": {
-       "release.manifest": "warn",
-       "lane.diff": "warn",
-       "coverage.requirements": "warn",
-       "judges.mode": "advisory",
-       "security.tools": "advisory",
-       "postdeploy.contract": "advisory"
-      },
-      "gates": "granular"
-     },
-     "spec": {
-      "feat-a": {
-       "change_id": "feat-a",
-       "phase": "impl"
-      }
-     }
-    }
-   },
-   "input": {
-    "tool_name": "Bash",
-    "tool_input": {
-     "command": "psql -c 'DELETE FROM t WHERE id=1'"
-    }
-   },
-   "expect": {
-    "decision": "allow"
-   },
-   "tags": [
-    "compat",
-    "plan-gate",
-    "REQ-W1-015",
-    "REQ-W2-084"
-   ]
-  },
-  {
    "id": "compat-pg-38-allowed",
    "guard": "plan-gate",
    "given": {
@@ -4632,6 +4584,1893 @@
     "compat",
     "plan-gate",
     "limitation",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-pg-hf-01-repo-flag-names-a-non-karvey-repo",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "git_config": {
+      "remote.hosted.url": "https://github.com/o/r.git"
+     }
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "main",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 12 -R other/static-site --merge"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": "[karvey] prod-gate WARNING: other/static-site is not a Karvey repo"
+   },
+   "tags": [
+    "compat",
+    "prod-gate",
+    "REQ-HF-026",
+    "BUG-141",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-pg-hf-02-merge-into-integration-of-the-named-repo",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "git_config": {
+      "remote.hosted.url": "https://github.com/o/r.git"
+     }
+    },
+    "stubs": {
+     "gh": {
+      "stdout": {
+       "baseRefName": "dev",
+       "headRefName": "feature/feat-a",
+       "title": "Deploy",
+       "number": 12
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr merge 12 -R o/r --merge"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "prod-gate",
+    "REQ-HF-025",
+    "BUG-141",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-pg-hf-04-curl-azure-completion-with-ledger",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "git_config": {
+      "remote.hosted.url": "https://github.com/o/r.git"
+     },
+     "ledger": {
+      "feat-a": {
+       "@approved": {
+        "by": "Owner Name",
+        "ref": "D-08"
+       }
+      }
+     }
+    },
+    "stubs": {
+     "az": {
+      "stdout": {
+       "targetRefName": "refs/heads/main",
+       "sourceRefName": "refs/heads/feature/feat-a",
+       "title": "Deploy",
+       "lastMergeSourceCommit": {
+        "commitId": "{{head}}"
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "curl -s -X PATCH 'https://dev.azure.com/org/proj/_apis/git/repositories/r/pullrequests/12?api-version=7.1' -d '{\"status\":\"completed\"}'"
+    }
+   },
+   "expect": {
+    "decision": "allow",
+    "stdout_contains": "[karvey] prod-gate ALLOW change=feat-a by=Owner Name ref=D-08"
+   },
+   "tags": [
+    "compat",
+    "prod-gate",
+    "REQ-HF-010",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-pg-hf-05-curl-read-of-a-pr-passes",
+   "guard": "prod-gate",
+   "given": {
+    "repo": {
+     "default_branch": "main",
+     "remote_branches": [
+      "dev"
+     ],
+     "branch": "feature/feat-a",
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "dev",
+       "production": "main"
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "deploying"
+      }
+     },
+     "git_config": {
+      "remote.hosted.url": "https://github.com/o/r.git"
+     }
+    },
+    "stubs": {
+     "az": {
+      "stdout": {
+       "targetRefName": "refs/heads/main",
+       "sourceRefName": "refs/heads/feature/feat-a",
+       "title": "Deploy",
+       "lastMergeSourceCommit": {
+        "commitId": "{{head}}"
+       }
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "curl -s 'https://dev.azure.com/org/proj/_apis/git/repositories/r/pullrequests/12?api-version=7.1'"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "prod-gate",
+    "REQ-HF-013",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-pg-09-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x > notes.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-W1-014",
+    "REQ-W2-084"
+   ],
+   "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
+  },
+  {
+   "id": "compat-pg-10-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x >> log.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-W1-014",
+    "REQ-W2-084"
+   ],
+   "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
+  },
+  {
+   "id": "compat-pg-11-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<EOF > f.txt\nhi\nEOF"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-W1-014",
+    "REQ-W2-084"
+   ],
+   "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
+  },
+  {
+   "id": "compat-pg-12-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "date | tee out.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-W1-014",
+    "REQ-W2-084"
+   ],
+   "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
+  },
+  {
+   "id": "compat-pg-13-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x >| forced.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-W1-014",
+    "REQ-W2-084"
+   ],
+   "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
+  },
+  {
+   "id": "compat-pg-14-write",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "make &> build.log"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-W1-014",
+    "REQ-W2-084"
+   ],
+   "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
+  },
+  {
+   "id": "compat-pg-22-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i 's/a/b/' f.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10",
+    "REQ-W2-084"
+   ],
+   "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
+  },
+  {
+   "id": "compat-pg-23-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -e 's/a/b/' f.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10",
+    "REQ-W2-084"
+   ],
+   "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
+  },
+  {
+   "id": "compat-pg-24-destructive",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "truncate -s 0 app.log"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-W1-015",
+    "H-10",
+    "REQ-W2-084"
+   ],
+   "note": "D-47 (REQ-HF-032): a write or an in-place edit of an untracked file is not consequential; not gated"
+  },
+  {
+   "id": "compat-cp-01-handoff-save-needs-no-approval",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true,
+       "plan_gate_edits": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "old\n",
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/agent/handoff.md",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-031",
+    "BUG-154",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-cp-02-board-and-state-need-no-approval",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true,
+       "plan_gate_edits": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "old\n",
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/agent/state.json",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-031",
+    "BUG-154",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-cp-03-change-checkpoint-needs-no-approval",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true,
+       "plan_gate_edits": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "old\n",
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/changes/feat-a/checkpoint.md",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-031",
+    "BUG-154",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-cp-04-project-checkpoint-needs-no-approval",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true,
+       "plan_gate_edits": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "old\n",
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Write",
+    "tool_input": {
+     "file_path": "{{root}}/docs/spec/checkpoint.md",
+     "content": "x"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-031",
+    "BUG-154",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-cp-09-heredoc-into-handoff-needs-no-approval",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true,
+       "plan_gate_edits": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "docs/spec/agent/handoff.md": "old\n",
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat > docs/spec/agent/handoff.md <<'EOF'\nx\nEOF"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-031",
+    "BUG-154",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-01-scratch-script-with-redirect-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 scratch.py > out.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-02-select-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "psql -c 'SELECT * FROM t'"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-16-pr-to-integration-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "gh pr create --base dev --title x --body y"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-19-plan-approval-has-no-time-limit",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     },
+     "marker": {
+      "_project": {
+       "@valid": "plan",
+       "age_min": 4320
+      }
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "rm -rf build"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "REQ-HF-033",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-20-pip-in-a-venv-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": ".venv/bin/pip install pytest"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-21-grep-and-find-are-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -rn TODO . && find . -name '*.py'"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-29-sql-select-from-a-pipe-of-echo-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo 'SELECT 1' | sqlcmd -S s"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d1",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-30-kubectl-get-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "kubectl --context prod get pods"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d1",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-31-rm-rf-scratch-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "rm -rf /tmp/claude-x/work"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d7",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-32-select-with-create-in-a-literal-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sqlcmd -Q \"SELECT name FROM t WHERE name LIKE '%create%'\""
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d7",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-33-exec-of-a-read-procedure-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sqlcmd -Q \"EXEC dbo.sp_get_cases @id=1\""
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d7",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-35-az-config-list-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "az webapp config appsettings list -g rg -n app"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d7",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-36-kubectl-rollout-status-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "kubectl rollout status deploy/api"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d7",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-37-aws-s3-download-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "aws s3 cp s3://b/k ./k"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d7",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-38-venv-activate-then-pip-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "source .venv/bin/activate && pip install -r requirements.txt"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d7",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-39-uv-pip-is-free",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "uv pip install x"
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
+    "qa-d7",
+    "REQ-W2-084"
+   ]
+  },
+  {
+   "id": "compat-d47-52-neutral-name-free-by-default",
+   "guard": "plan-gate",
+   "given": {
+    "repo": {
+     "project_json": {
+      "branch_flow": {
+       "feature_prefix": "feature/",
+       "integration": "main",
+       "production": "main"
+      },
+      "enforcement": {
+       "plan_gate_hook": true
+      },
+      "checks": {
+       "release.manifest": "warn",
+       "lane.diff": "warn",
+       "coverage.requirements": "warn",
+       "judges.mode": "advisory",
+       "security.tools": "advisory",
+       "postdeploy.contract": "advisory"
+      },
+      "gates": "granular"
+     },
+     "spec": {
+      "feat-a": {
+       "change_id": "feat-a",
+       "phase": "impl"
+      }
+     },
+     "files": {
+      "src/a.py": "x\n"
+     }
+    }
+   },
+   "input": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sqlcmd -Q \"EXEC dbo.sp_case_flow @id=1\""
+    }
+   },
+   "expect": {
+    "decision": "allow"
+   },
+   "tags": [
+    "compat",
+    "plan-gate",
+    "REQ-HF-032",
+    "D-47",
     "REQ-W2-084"
    ]
   }

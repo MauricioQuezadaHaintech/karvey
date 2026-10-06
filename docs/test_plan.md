@@ -60,3 +60,24 @@ Second pass after the architecture revision (D-19, revision 1), the E1.F17 fixes
 | BM-02 | Dispatcher latency: `pre-bash` again, `pre-agent` new | as in the benchmark row above, n=20 | baseline comparison |
 
 E2E-04 (release PR through the prod-gate) and E2E-05 (archive) stay in `karvey-deploy` and `karvey-archive`.
+
+---
+
+# Test Plan: prod-gate-scope (hotfix 3.12.1)
+
+Contract: `docs/spec/changes/prod-gate-scope/architecture.md` §6. Target `cli` (Claude Code plugin); every
+case runs the real dispatcher (`hooks/karvey-hook.sh`) or the library in process, in throw-away git worlds.
+
+| Area | Requirements | Cases |
+|---|---|---|
+| Approval hook scope and line | HF-001..004, 029 | `tables/approval.json` ap-hf-01..10, ap-19/21 (line wording); unit `test_approval_scope.py` (worktree / branch lookup) |
+| State tool | HF-005, 006, 009, 030 | unit `test_state_repos.py` (schema, binding, check-prod --repo, refusal text) |
+| Prod-gate target | HF-014, 024..026 | unit `test_prodgate_target.py`; `tables/prod-gate.json` pg-hf-01, pg-hf-02 |
+| Multi-repo release | HF-007, 008 | unit `test_prodgate_multirepo.py` |
+| REST and pipelines | HF-010..013, 015 | unit `test_restcalls.py`, `test_prodgate_pipeline.py`; `tables/prod-gate.json` pg-hf-03..09 (09 without python) |
+| Protect-paths listings | HF-016 | `tables/protect-paths.json` pp-hf-01..09 |
+| Session identity | HF-020..023 | `tables/session.json` ss-hf-01..07 (python and no-python runs); unit `test_session_profile.py` |
+| Typed production OK | HF-027, 028 | unit `test_lint_plugin.py` (L80); lint on the real tree |
+| Regression / fail modes | HF-017, 018 | `tests/regression/test_incidents.py` BUG-138..144; session error path, approval-hook error line, CLI time-outs |
+| Release | HF-019 | release gate (versions, CHANGELOG, full suites, CI) |
+| Benchmark | Constraints | `karvey-hook.sh pre-bash` latency, n=20, for `ls`, `curl` (now pre-filtered into the prod-gate) and `python3 -c` |

@@ -148,12 +148,12 @@ az repos pr policy list --id "{pr}" -o table   # Azure Repos
 
 Bypassing a policy is the human's call and responsibility — never the agent's initiative to unblock itself.
 
-**2.9 — Prod OK from the human ⇒ merge ⇒ PROD pipeline.** First read the PR head SHA and show it in the question:
+**2.9 — Prod OK from the human ⇒ merge ⇒ PROD pipeline.** First read the PR head SHA and show it in the request:
 ```bash
 gh pr view "{pr}" --json headRefOid -q .headRefOid                                    # GitHub
 az repos pr show --id "{pr}" --query lastMergeSourceCommit.commitId -o tsv            # Azure Repos
 ```
-Ask with `AskUserQuestion`, naming every change of the manifest and the head SHA; the human answers in their own words, with an approval word **and** a production word (D-10), so the approval hook records a prod marker and its audit line (D-34). The production OK lives, in this order (REQ-W2-052):
+If the human's approval of the release plan already named production and this change (the hook printed `[karvey] approval recorded (prod, {change-id}, …)`), that message is the production OK (D-47): go straight to step 2 below and record it; ask only when `approve … prod` refuses. Otherwise ask in plain text and show the exact phrase for the human to type, naming every change of the manifest, with the PR head SHA: «aprobado para producción {change-id} PR #{pr} v{version}» (head `{pr head}`). The human types it, or their own words with an approval word **and** a production word naming the change (D-10), so the approval hook records a prod marker and prints `[karvey] approval recorded (prod, {change-id}, …)` with its audit line. Never use a question tool (`AskUserQuestion`) for this OK: its answer does not pass through the prompt hook, so no prod marker can exist and `approve … prod` is refused (BUG-142, D-45). If the hook prints `prod approval NOT recorded`, show its reason and the phrase again. The production OK lives, in this order (REQ-W2-052):
 1. **At deploy — in the PR.** Reserve the decision number with `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-id.py" next D` and put its text (who, when, the words verbatim, the head SHA) in the PR body or the PR approval. Nothing is committed on the integration or production branch for it.
 2. **At deploy — in the release ledger** — never in a commit on the integration branch. On the release-manifest path, one OK covers every change the manifest and the PR body list (D-37): `--manifest` consumes the one prod marker once and records the same approval, bound to the head SHA, for each of them. Every other path is one OK per change:
    ```bash

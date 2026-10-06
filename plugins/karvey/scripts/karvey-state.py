@@ -1141,32 +1141,25 @@ def transact(root, change, mutate):
 
 
 def consume_on_close(root, change, data, closing):
-    """Consume the markers of the phase that closed (REQ-W1-016, §3.3 control 7): the marker its
-    approval recorded as evidence, and the change's marker created while that phase was current."""
+    """BUG-157 (REQ-HF-037, D-47): a phase close never consumes a plan approval — an approved plan runs until the
+    change is archived or the human says stop. The close is audited; the markers are untouched. Returns ``[]``."""
+    try:
+        approval._audit(root, {"guard": "approval", "event": "phase-close", "decision": "kept", "change": change,
+                               "reason": "plan approval kept at the close of %s (D-47)" % closing})
+        approval.gc(root)
+    except (approval.ApprovalError, atomicio.AtomicIOError, OSError):
+        pass
+    return []
+
+
+def consume_on_archive(root, change):
+    """BUG-157: the change's own approval (plan or prod marker) ends when the change is archived. A session-wide
+    approval (``_project``) is not the change's and is kept (it ends with its session or a stop)."""
     consumed = []
     try:
-        pdef = phase_def(closing)
-        key = pdef["approval"] if pdef else None
-        aps = data.get("approvals") if isinstance(data.get("approvals"), dict) else {}
-        ev = (aps.get(key) or {}).get("evidence") if key and isinstance(aps.get(key), dict) else None
-        if isinstance(ev, dict) and isinstance(ev.get("marker"), str) and ev["marker"].startswith("approvals/"):
-            scope = ev["marker"][len("approvals/"):-len(".json")] if ev["marker"].endswith(".json") else ""
-            if approval.valid_scope(scope) and approval.consume(root, scope, created_at=ev.get("marker_created_at")):
-                consumed.append(scope)
-        entered = None
-        for e in reversed(data.get("phase_history") or []):
-            if isinstance(e, dict) and e.get("phase") == closing:
-                entered = parse_dt(e.get("entered_at"))
-                break
         m, status = approval.read_marker(root, change)
-        # BUG-43: only a phase that has an approval consumes the change's marker, never a prod one
-        if key and change not in consumed and status == "ok" and m.get("consumed_at") is None \
-                and m.get("kind") != "prod":
-            created = parse_dt(m.get("created_at"))
-            if created is not None and (entered is None or created >= entered):
-                if approval.consume(root, change):
-                    consumed.append(change)
-        approval.gc(root)
+        if status == "ok" and m.get("consumed_at") is None and approval.consume(root, change):
+            consumed.append(change)
     except (approval.ApprovalError, atomicio.AtomicIOError, OSError):
         pass
     return consumed
@@ -1243,6 +1236,8 @@ def cmd_advance(args, root):
     info.clear()
     path, res, _ = transact(root, args.change, mutate)
     res["consumed"] = consume_on_close(root, args.change, loaded.data, res["from"])
+    if res.get("to") == "archived":
+        res["consumed"] += consume_on_archive(root, args.change)
     res["file"] = rel(root, path)
     return kl.EXIT_OK, res, [], [], "%s: %s → %s" % (args.change, res["from"], res["to"])
 
@@ -1533,7 +1528,7 @@ def _prod_evidence_scope(root, change, prod, ev):
     return scope, None
 
 
-def check_prod(root, change, sha=None, now=None):
+def check_prod(root, change, sha=None, now=None, repo=None):
     """The prod-gate's question, in-process (§1.2 check-prod). Raises :class:`NotFound`.
 
     A ledger approval counts only when its evidence names this change's marker and the approval
@@ -1580,6 +1575,19 @@ def check_prod(root, change, sha=None, now=None):
         if not (isinstance(head, str) and SHA_RE.match(head)):  # D-35
             res["missing"].append("sha")
             reasons.append("it names no approved commit")
+        elif repo is not None:  # REQ-HF-007/009: a declared repo releases the commit bound for it
+            bound = (prod.get("repos") or {}).get(repo) if isinstance(prod.get("repos"), dict) else None
+            if not (isinstance(bound, str) and SHA_RE.match(bound)):
+                res["missing"].append("repo")
+                reasons.append("the repo %s is not bound to a commit in this approval; run, in the owning repo: "
+                               "approve %s prod --by <human> --role human --ref %s --repo %s --sha <its PR head>"
+                               % (repo, change, prod.get("ref") or "<D-NN>", repo))
+            elif sha is not None and sha != bound:
+                res["missing"].append("repo")
+                reasons.append("the released commit %s of %s is not the bound commit %s; a new commit needs a new "
+                               "OK" % (str(sha)[:12], repo, bound[:12]))
+            else:
+                res["repo_sha"] = bound
         elif sha is not None and sha != head:
             res["missing"].append("sha")
             reasons.append("the released commit %s is not the approved commit %s; a new commit needs a new OK"
@@ -1611,7 +1619,9 @@ def cmd_check_prod(args, root):
     sha = None
     if args.sha:
         sha = resolve_commit(root, args.sha) or args.sha.strip()
-    res = check_prod(root, args.change, sha=sha)
+    if args.repo:  # another repo's commit: never resolved here
+        sha = (args.sha or "").strip().lower() or None
+    res = check_prod(root, args.change, sha=sha, repo=args.repo or None)
     human = ("prod approval OK: %s by %s ref %s (%s)" % (args.change, res["by"], res["ref"], res["source"])
              if res["ok"] else "prod approval MISSING for %s: %s (%s)" % (
                  args.change, ", ".join(res["missing"]), res.get("reason", "")))
@@ -1703,8 +1713,9 @@ def _approve_prod_manifest(args, root, by, date, ref, head_sha):
         approval.record_prod(root, cid, approval.prod_record(marker, scope, by, ref, date, head_sha, manifest=cover))
         written.append(cid)
     consumed, warnings = [], []
-    try:  # BUG-73 (F-62): bound to the marker that approved; a failure is reported, never swallowed
-        if approval.consume(root, scope, created_at=marker.get("created_at")):
+    try:  # BUG-73 (F-62): bound to the marker that approved; a failure is reported, never swallowed.
+        # D-47 (REQ-HF-034): the production OK is used once; the same message stays the plan approval
+        if approval.mark_prod_used(root, scope, created_at=marker.get("created_at")):
             consumed.append(scope)
     except (approval.ApprovalError, atomicio.AtomicIOError, OSError) as exc:
         warnings.append(kl.issue("state.marker_not_consumed", "the prod marker of %s could not be consumed "
@@ -1716,6 +1727,59 @@ def _approve_prod_manifest(args, root, by, date, ref, head_sha):
             len(written), ", ".join(ids), ref, head_sha[:12], scope, ", ".join(consumed) or "none")
 
 
+def marker_report(root, change):
+    """BUG-144 (REQ-HF-030): the markers this clone holds and the piece a production approval misses."""
+    found = approval.describe_markers(root, ttl_min=reviewed_ttl(root))
+    items = ["%s %s %s min (%s)" % (m["kind"], m["scope"], "?" if m["age_min"] is None else m["age_min"], m["state"])
+             for m in found]
+    mine = [m for m in found if m["scope"] == change]
+    if any(m["kind"] == "prod" and m["state"] == "expired" for m in mine):
+        why = "the prod marker for %s expired" % change
+    elif any(m["kind"] == "prod" and m["state"] == "consumed" for m in mine):
+        why = "the prod marker for %s was already used by an approval" % change
+    elif any(m["kind"] == "plan" for m in mine):
+        why = "the marker for %s is a plan approval (no production word)" % change
+    elif any(m["kind"] == "prod" for m in found):
+        why = "the prod marker found is for another change"
+    else:
+        why = "no prod marker was recorded"
+    return "found: %s \u2014 missing: a live prod marker for %s (%s); the human types \u00abaprobado para " \
+           "producci\u00f3n %s PR #<n> v<version>\u00bb in their own message" % (
+               "; ".join(items) if items else "no approval marker", change, why, change)
+
+
+def _approve_prod_bind_repo(args, root):
+    """REQ-HF-006: bind a declared repo's release commit into the change's live production approval."""
+    repo = args.repo.strip()
+    sha = (args.sha or "").strip().lower()
+    _, loaded = load_change(root, args.change)
+    declared = loaded.data.get("repos") if isinstance(loaded.data.get("repos"), list) else []
+    if repo not in declared:
+        raise Refused("the repo %r is not declared by %s (spec.json repos: %s)"
+                      % (repo, args.change, ", ".join(declared) or "none"), code="state.repo_undeclared")
+    if not SHA_RE.match(sha):
+        raise Refused("--sha must be the full commit id of the %s PR head (40 or 64 hex), got %r" % (repo, args.sha),
+                      code="state.prod_sha")
+    res = check_prod(root, args.change)
+    if not res["ok"]:
+        raise Refused("no complete, unexpired production approval of %s to bind %s into (%s: %s)"
+                      % (args.change, repo, ", ".join(res["missing"]), res.get("reason", "")),
+                      code="state.no_prod_approval")
+    ledger, _ = approval.read_ledger(root, args.change)
+    prod = dict(ledger["prod"])
+    repos = dict(prod.get("repos") or {}) if isinstance(prod.get("repos"), dict) else {}
+    if repos.get(repo) not in (None, sha):
+        raise Refused("%s is already bound to %s in this approval; a new commit needs a new OK (D-35)"
+                      % (repo, repos[repo][:12]), code="state.repo_bound")
+    repos[repo] = sha
+    prod["repos"] = repos
+    approval.record_prod(root, args.change, prod)
+    out = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "repo": repo,
+           "sha": sha, "expires_at": prod.get("expires_at")}
+    return kl.EXIT_OK, out, [], [], "%s: %s bound to %s in the production approval (expires %s)" % (
+        args.change, repo, sha[:12], prod.get("expires_at"))
+
+
 def cmd_approve(args, root):
     key = "prod" if args.phase in ("prod", "deployed") else _key_of(args.phase)
     if key is None:
@@ -1724,6 +1788,8 @@ def cmd_approve(args, root):
         raise Usage("--write-spec is only for prod")
     if args.sha and key != "prod":
         raise Usage("--sha is only for prod")
+    if getattr(args, "repo", None) and (key != "prod" or args.write_spec):
+        raise Usage("--repo is only for prod (without --write-spec)")
     change_spec_path(root, args.change)  # exit 4 if the change does not exist
     if key == "prod" and args.write_spec:
         return _approve_prod_write_spec(args, root)
@@ -1739,6 +1805,8 @@ def cmd_approve(args, root):
             raise Refused("production approval is never delegated", code="state.delegated")
         if not PROD_REF.match(ref):
             raise Refused("prod --ref must be a D-NN or a PR approval URL (got %r)" % ref, code="state.ref")
+        if args.repo:
+            return _approve_prod_bind_repo(args, root)
         head_sha = resolve_commit(root, args.sha or "HEAD")  # D-35
         if head_sha is None:
             raise Refused("cannot bind the production approval to a commit: %r is not a commit of this repository "
@@ -1750,12 +1818,13 @@ def cmd_approve(args, root):
                                                      project_scope=False)  # BUG-41
         if marker is None:
             raise Refused("production approval needs a prod-kind approval marker: the human's own message must "
-                          "contain an approval word and a production word (D-10); none is valid for %s (%s)"
-                          % (args.change, ", ".join("%s: %s" % kv for kv in sorted(reasons.items()))),
-                          code="state.no_prod_marker")
+                          "contain an approval word and a production word (D-10); none is valid for %s (%s). %s"
+                          % (args.change, ", ".join("%s: %s" % kv for kv in sorted(reasons.items())),
+                             marker_report(root, args.change)), code="state.no_prod_marker")
         rec = approval.prod_record(marker, scope, by, ref, date, head_sha)
         approval.record_prod(root, args.change, rec)
-        approval.consume(root, scope, created_at=marker.get("created_at"))  # BUG-41: one approval, one change
+        # BUG-41: one production approval, one change; D-47: the same message stays the plan approval
+        approval.mark_prod_used(root, scope, created_at=marker.get("created_at"))
         res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
         return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s, commit %s, " \
                                         "expires %s); spec.json untouched (D-03)" % (args.change, ref, head_sha[:12],
@@ -1765,7 +1834,21 @@ def cmd_approve(args, root):
     _, loaded = load_change(root, args.change)
     refuse_imported_without_marker(loaded.data, [key], marker, args.role)
     warnings = []
-    if marker is None:
+    if marker is not None:  # BUG-157 D1: a message evidences only the phase that was current when it was typed
+        _, loaded_now = load_change(root, args.change)
+        entered = None
+        for e in reversed(loaded_now.data.get("phase_history") or []):
+            if isinstance(e, dict) and _key_of(e.get("phase")) == key:
+                entered = parse_dt(e.get("entered_at"))
+                break
+        created = parse_dt(marker.get("created_at"))
+        if entered is not None and created is not None and created < entered:
+            warnings.append(kl.issue("state.marker_predates_phase", "the approval marker of %s was typed before %s "
+                                     "began (it approved an earlier step): recorded with evidence.marker = none; it "
+                                     "still counts as the plan approval for the plan-gate (D-47)" % (scope, key),
+                                     severity="warning", path="$.approvals.%s.evidence" % key))
+            marker, scope = None, None
+    if marker is None and not warnings:
         warnings.append(kl.issue("state.no_marker", "no valid approval marker for %s: recorded with "
                                  "evidence.marker = none (a warning in 3.12.0)" % args.change,
                                  severity="warning", path="$.approvals.%s.evidence" % key))
@@ -2183,7 +2266,8 @@ def cmd_approve_gate(args, root):
     if write_prod:  # after the spec.json write: the ledger never runs ahead of the phases it closes
         approval.record_prod(root, args.change,
                              approval.prod_record(pmarker, pscope, by, ref, date, head_sha))  # D-34, D-35
-        approval.consume(root, pscope, created_at=pmarker.get("created_at"))  # BUG-70: one approval, one change
+        # BUG-70: one approval, one change; D-47 (REQ-HF-034): the same message stays the plan approval
+        approval.mark_prod_used(root, pscope, created_at=pmarker.get("created_at"))
     res = {"change": args.change, "gate": args.gate, "approved": covered, "already_approved": already,
            "skipped": passed, "prod": res_prod, "file": rel(root, path)}
     human = "%s: %s gate approved by %s (%s, ref %s): %s" % (args.change, args.gate, by, args.role, ref,
@@ -2372,9 +2456,12 @@ def build_parser():
     dr.add_argument("--evidence", help="path of the deploy evidence (e.g. deploy_evidence.md)")
     dr.add_argument("--date", help="ISO 8601 with time and zone (default: now)")
     apv.add_argument("--sha", help="prod only: the head commit the human approved (default HEAD; D-35)")
+    apv.add_argument("--repo", help="prod only: bind this declared repo's release commit (--sha, full id) into "
+                                    "the change's live production approval (REQ-HF-006)")
     cp = sub.add_parser("check-prod", parents=[common], help="is a human prod approval recorded? (prod-gate)")
     cp.add_argument("change")
     cp.add_argument("--sha", help="the commit being released; it must be the approved one (D-35)")
+    cp.add_argument("--repo", help="a declared repo: its bound commit must be --sha (REQ-HF-009)")
     return p
 
 

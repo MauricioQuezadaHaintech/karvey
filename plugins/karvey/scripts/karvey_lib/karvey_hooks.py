@@ -300,14 +300,15 @@ def dispatch(event, stdin_text, env=None, only=None, force_enabled=False, out=No
             d = g.run(ctx)
         except Exception as exc:
             if g.fail == "closed":
-                msg = "[karvey] BLOCK %s: cannot evaluate: %s: %s (fail closed)" % (g.name, type(exc).__name__, exc)
+                # BUG-147: the exception text can carry a value of the command (a token): only its type is kept
+                msg = "[karvey] BLOCK %s: cannot evaluate: %s (fail closed)" % (g.name, type(exc).__name__)
                 err.write(msg + "\n")
                 _audit_block(ctx, g.name, msg)
                 return HOOK_BLOCK
             if g.name == "spec-write":
                 err.write("[karvey] spec.json not validated: %s: %s\n" % (type(exc).__name__, exc))
             elif g.name != "pending-sync":  # pending-sync is silent (§3.2); archive recomputes from git
-                err.write("[karvey] %s not evaluated: %s\n" % (g.name, exc))
+                err.write("[karvey] %s not evaluated: %s\n" % (g.name, type(exc).__name__))  # BUG-147
             continue
         if d is None:
             continue
@@ -390,50 +391,6 @@ def bound_text(text, path, max_bytes):
         cut = cut[:cut.rfind("\n")]
     return "%s\n\u2026 truncated (%.1f KB of %.1f KB) \u2014 full file: %s" % (
         cut, len(cut.encode("utf-8")) / 1024.0, len(data) / 1024.0, path)
-
-
-def _legacy_kv(cfg):
-    kv = {}
-    for ln in (_read(cfg) or "").splitlines():
-        if "=" in ln and not ln.lstrip().startswith("#"):
-            k, _, v = ln.partition("=")
-            kv.setdefault(k.strip(), v.strip())
-    return kv
-
-
-def resolve_profile(root, cfg, kind, top):
-    """``(name, role, profile, board)`` — the 3.11.4 resolution (BUG-19 layouts)."""
-    name, role = "", "solo"
-    profile = os.path.join(root, "docs", "spec", "agent")
-    board = os.path.join(profile, "board.md")
-    if kind == "team":
-        try:
-            d = json.loads(_read(cfg) or "")
-        except ValueError:
-            d = None
-        if isinstance(d, dict):
-            roles = d.get("roles") if isinstance(d.get("roles"), dict) else {}
-            role = roles.get(top) or (roles.get(os.path.basename(root)) if not top else None) or "ceo"
-            names = d.get("display_names") if isinstance(d.get("display_names"), dict) else {}
-            name = names.get(role) or "agent-%s-%s" % (d.get("code", ""), role)
-            ops = str(d.get("ops_repo", "") or "")
-        else:
-            role, ops = "ceo", ""
-        if ops and ops != os.path.basename(root) and os.path.isdir(os.path.join(root, ops)):
-            opsdir = os.path.join(root, ops)
-        else:
-            opsdir = os.path.dirname(cfg)
-        profile = os.path.join(opsdir, "agents", role)
-        board = os.path.join(opsdir, "board", role + ".md")
-    elif kind == "legacy":
-        kv = _legacy_kv(cfg)
-        code = kv.get("CODIGO") or kv.get("CODE") or ""
-        ops = kv.get("OPS", "")
-        role = kv.get("AGENTE_%s" % top) or kv.get("AGENT_%s" % top) or "ceo"
-        name = kv.get("NOMBRE_%s" % role) or kv.get("NAME_%s" % role) or "agent-%s-%s" % (code, role)
-        profile = os.path.join(root, ops, "agents", role)
-        board = os.path.join(root, ops, "board", role + ".md")
-    return name or os.path.basename(root), role, profile, board
 
 
 def live_state(state_path, root):
@@ -550,25 +507,46 @@ def _legacy_line(legacy, where):
             "to migrate them." % (", ".join(legacy), where))
 
 
-def session_text(mode, env):
-    """The SessionStart context as text ('' when there is nothing to say)."""
-    start = env.get("CLAUDE_PROJECT_DIR") or env.get("PWD") or os.getcwd()
-    try:
-        start = os.path.realpath(os.path.abspath(start))
-    except (OSError, ValueError):
-        return ""
-    if not os.path.isdir(start):
-        return ""
-    cfg_d = defaults().get("session", {})
-    max_rows, max_bytes = int(cfg_d.get("board_rows_max", 40)), int(cfg_d.get("handoff_bytes_max", 6144))
-    root, cfg, kind = livestate.find_team_root(start)
-    out = []
-    if root is None:
-        n = settings_notice(start, None, mode, env)
-        return n or ""
-    rel = os.path.relpath(start, root) if start != root else ""
-    top = rel.split(os.sep, 1)[0] if rel and not rel.startswith("..") else ""
-    name, role, profile, board = resolve_profile(root, cfg, kind, top)
+def profile_paths(kind, root, cfg, role):
+    """``(name, profile, board)`` of a resolved profile (the 3.11.4 layouts, BUG-19; no default role)."""
+    if kind == "solo":
+        profile = os.path.join(root, "docs", "spec", "agent")
+        return os.path.basename(root), profile, os.path.join(profile, "board.md")
+    if kind == "team":
+        try:
+            d = json.loads(_read(cfg) or "")
+        except ValueError:
+            d = None
+        d = d if isinstance(d, dict) else {}
+        names = d.get("display_names") if isinstance(d.get("display_names"), dict) else {}
+        name = names.get(role) or "agent-%s-%s" % (d.get("code", ""), role)
+        ops = str(d.get("ops_repo", "") or "")
+        if ops and ops != os.path.basename(root) and os.path.isdir(os.path.join(root, ops)):
+            opsdir = os.path.join(root, ops)
+        else:
+            opsdir = os.path.dirname(cfg)
+        return name, os.path.join(opsdir, "agents", role), os.path.join(opsdir, "board", role + ".md")
+    kv = livestate.legacy_kv(cfg)
+    code, ops = kv.get("CODIGO") or kv.get("CODE") or "", kv.get("OPS", "")
+    name = kv.get("NOMBRE_%s" % role) or kv.get("NAME_%s" % role) or "agent-%s-%s" % (code, role)
+    return name, os.path.join(root, ops, "agents", role), os.path.join(root, ops, "board", role + ".md")
+
+
+RESTORE_HINT = "run /karvey-checkpoint restore --profile <role|path> in the repo you work in"
+
+
+def _not_loaded_line(res):
+    line = "[karvey] profile not loaded: %s" % res.get("reason", "?")
+    if res.get("candidates"):
+        line += " \u2014 candidates %s" % ", ".join(res["candidates"])
+    return line + "; " + RESTORE_HINT + "."
+
+
+def _profile_body(out, kind, root, cfg, role, working_repo, max_rows, max_bytes):
+    """Append the profile's context (identity, manifest, checklist, board, handoff, live state) to ``out``.
+    A sensitive handoff is shown only when ``working_repo`` is one of the profile's repos (REQ-HF-022).
+    Returns ``(handoff_present, drift)``."""
+    name, profile, board = profile_paths(kind, root, cfg, role)
     handoff, state = os.path.join(profile, "handoff.md"), os.path.join(profile, "state.json")
     out.append("=== Karvey \u2014 session context (%s) ===" % kind)
     out.append("You are `%s`%s. Profile: %s" % (name, " (role: %s)" % role if role != "solo" else "", profile))
@@ -600,7 +578,13 @@ def session_text(mode, env):
         emit(board, "Board", bound_board(btext, board, max_rows))
     htext = _read(handoff)
     if htext is not None:
-        emit(handoff, "Handoff", bound_text(htext, handoff, max_bytes))
+        owners = livestate.profile_repos(kind, root, cfg, role) if livestate.handoff_sensitive(htext) else None
+        if owners is not None and working_repo not in owners:
+            out.append("")
+            out.append("(sensitive handoff withheld: it can be restored only in %s)"
+                       % (", ".join(owners) if owners else "the profile's own repo, which cannot be determined"))
+        else:
+            emit(handoff, "Handoff", bound_text(htext, handoff, max_bytes))
     drift = False
     if os.path.isfile(state):
         out.append("")
@@ -611,6 +595,33 @@ def session_text(mode, env):
         out.append("")
         out.append("(no state.json beside the handoff: nothing was measured, so treat every claim in it as unverified)")
         drift = True
+    return os.path.isfile(handoff), drift
+
+
+def session_text(mode, env, cwd=None):
+    """The SessionStart context as text ('' when there is nothing to say).
+
+    BUG-140 (REQ-HF-020, 021): the profile comes from the repo the session works in; a folder above it, an
+    unmapped repo or an ambiguous identity injects nothing but one line."""
+    try:
+        cwd = os.path.realpath(os.path.abspath(cwd or os.getcwd()))
+        start = os.path.realpath(os.path.abspath(env.get("CLAUDE_PROJECT_DIR") or cwd))
+    except (OSError, ValueError):
+        return ""
+    if not os.path.isdir(start):
+        return ""
+    cfg_d = defaults().get("session", {})
+    max_rows, max_bytes = int(cfg_d.get("board_rows_max", 40)), int(cfg_d.get("handoff_bytes_max", 6144))
+    res = livestate.resolve_session_profile(start, cwd)
+    if res["status"] != "ok":
+        n = settings_notice(start, None, mode, env)
+        lines = ([_not_loaded_line(res)] if res["legacy_hit"] else []) + ([n] if n else [])
+        return "\n".join(lines)
+    prof = res["profile"]
+    out = []
+    has_handoff, drift = _profile_body(out, prof["kind"], prof["root"], prof["cfg"], prof["role"], res["repo"],
+                                       max_rows, max_bytes)
+    root = prof["root"]
     kroot = root if pj.is_karvey_project(root) else pj.find_root(start=start)
     act = pj.active_change(kroot) if kroot else {"change": None, "reason": "none", "candidates": []}
     n = settings_notice(start, root, mode, env)
@@ -618,7 +629,7 @@ def session_text(mode, env):
         out.append(n)
     out.append("")
     out.append("=== First action ===")
-    if act["change"] or drift or not os.path.isfile(handoff):
+    if act["change"] or drift or not has_handoff:
         line = "Run `/karvey-checkpoint restore` BEFORE anything else"
         if act["change"]:
             line += " (active change: %s)" % act["change"]
@@ -630,6 +641,53 @@ def session_text(mode, env):
     if act["reason"] == "several":
         out.append("(several active changes: %s \u2014 none selected)" % ", ".join(act["candidates"]))
     return "\n".join(out)
+
+
+def _known_profiles(top):
+    """``[(label, kind, root, cfg, role)]`` the session can restore explicitly from ``top``."""
+    found = []
+    if top and os.path.isdir(os.path.join(top, "docs", "spec", "agent")):
+        found.append(("solo", "solo", top, os.path.join(top, "docs", "spec", "agent"), "solo"))
+    root, cfg, kind = livestate.find_team_config(top) if top else (None, None, None)
+    if cfg is not None:
+        for role in sorted(set(livestate.config_roles(cfg, kind).values())):
+            found.append((role, kind, root, cfg, role))
+    return found
+
+
+def restore_profile(arg, cwd=None, out=None):
+    """``restore-profile <role|path>`` (REQ-HF-023): print a named profile's context, the sensitive-handoff
+    rule applied; an unknown one prints the profiles found and returns 1."""
+    out = out or sys.stdout
+    cwd = os.path.realpath(cwd or os.getcwd())
+    top = livestate.git_top(cwd)
+    working = livestate.repo_name(top) if top else None
+    known = _known_profiles(top or cwd)
+    pick = None
+    cand = os.path.realpath(os.path.join(cwd, arg)) if arg else None
+    if cand and os.path.isdir(cand):
+        for label, kind, root, cfg, role in known:
+            if os.path.realpath(profile_paths(kind, root, cfg, role)[1]) == cand:
+                pick = (label, kind, root, cfg, role)
+                break
+        if pick is None and os.path.basename(cand) == "agent" and \
+                os.path.basename(os.path.dirname(cand)) == "spec":
+            r = os.path.dirname(os.path.dirname(os.path.dirname(cand)))
+            pick = ("solo", "solo", r, cand, "solo")
+    if pick is None:
+        pick = next((k for k in known if k[0] == arg), None)
+    if pick is None:
+        out.write("[karvey] no profile %r; profiles found: %s\n"
+                  % (arg, ", ".join(k[0] for k in known) or "none"))
+        return 1
+    cfg_d = defaults().get("session", {})
+    lines = []
+    _profile_body(lines, pick[1], pick[2], pick[3], pick[4], working, int(cfg_d.get("board_rows_max", 40)),
+                  int(cfg_d.get("handoff_bytes_max", 6144)))
+    lines.append("")
+    lines.append("[karvey] restored profile %s (%s)" % (pick[0], profile_paths(*pick[1:])[1]))
+    out.write("\n".join(lines) + "\n")
+    return 0
 
 
 def session_main(mode, env=None, out=None):
@@ -657,6 +715,8 @@ def main(argv=None):
     except SystemExit:
         sys.stderr.write("[karvey] hook dispatcher: bad arguments (not blocking)\n")
         return HOOK_ALLOW
+    if args.event == "restore-profile":  # REQ-HF-023, called by /karvey-checkpoint restore --profile
+        return restore_profile(args.rest[0] if args.rest else "")
     if args.event not in EVENTS:
         sys.stderr.write("[karvey] unknown hook event %r (not blocking)\n" % args.event)
         return HOOK_ALLOW
