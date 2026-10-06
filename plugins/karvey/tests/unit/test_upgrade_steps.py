@@ -130,11 +130,13 @@ SHIM = ".claude/hooks/plan-gate.sh"
 
 class LegacyShims(FixtureCase):
     def dispatch_write(self):
-        payload = {"session_id": "s", "cwd": str(self.root), "hook_event_name": "PreToolUse", "tool_name": "Write",
-                   "tool_input": {"file_path": str(self.root / "src" / "a.py"), "content": "x"}}
+        # D-47 (3.12.1): file edits are free unless plan_gate_edits; a consequential action (a software change)
+        # is what the plan-gate keeps gating, so the kept behaviour is checked on one
+        payload = {"session_id": "s", "cwd": str(self.root), "hook_event_name": "PreToolUse", "tool_name": "Bash",
+                   "tool_input": {"command": "pip install requests"}}
         env = dict(os.environ, CLAUDE_PROJECT_DIR=str(self.root))
         env.pop("KARVEY_COMPAT_MARKER", None)
-        return subprocess.run(["bash", str(_path.PLUGIN_ROOT / "hooks" / "karvey-hook.sh"), "pre-edit"],
+        return subprocess.run(["bash", str(_path.PLUGIN_ROOT / "hooks" / "karvey-hook.sh"), "pre-bash"],
                               input=json.dumps(payload).encode(), cwd=str(self.root), env=env,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
 

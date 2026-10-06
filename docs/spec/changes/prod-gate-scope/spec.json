@@ -1,0 +1,251 @@
+{
+  "change_id": "prod-gate-scope",
+  "capability": "method",
+  "description": "Hotfix 3.12.1 of the prod-gate (D-43): a prod approval is bound to the change the human's phrase names; an approval in the repo that owns a change covers the [Deploy] <id> PRs of the repos it declares; REST calls that complete a PR or approve a production pipeline, and commands run outside a repo, pass the same SHA-bound gate; a read-only listing of the state paths is not blocked (BL-64); widened by D-45: the session hook loads only the working repo's profile and withholds sensitive handoffs elsewhere, the prod-gate decides on the PR's own repo and base (non-Karvey targets warn), the production OK is always typed (never a question tool), a production-shaped phrase always gets one hook line, and the approve refusal names the markers it found.",
+  "goal": "A production approval reaches exactly the change and the commits the human approved, whatever repo, working tree or command form the release goes through.",
+  "layers": [
+    "Backend"
+  ],
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 2,
+  "security_tier_reason": "changes the approval hook and the prod-gate, the guards that stand between an agent and a production merge",
+  "type": "hotfix",
+  "lane": "hotfix",
+  "links": {
+    "parent": "",
+    "children": []
+  },
+  "decisions": [
+    "D-15",
+    "D-34",
+    "D-35",
+    "D-36",
+    "D-37",
+    "D-43",
+    "D-45",
+    "D-21",
+    "D-46",
+    "D-47"
+  ],
+  "inputs": {},
+  "iteration_count": 4,
+  "revision_history": [
+    {
+      "date": "2026-10-05",
+      "by": "Mauricio Quezada Ibáñez",
+      "reason": "owner widened the hotfix with defects found in use (D-45): profile injected from another agent's folder, prod-gate decided by the session's cwd repo, prod OK asked through a question tool, silent approval hook, opaque approve error; REST to non-Karvey repos warns; BUG-53/54 renumbered to BUG-138/139 (held by another branch)",
+      "decision": "D-45",
+      "added": [
+        "REQ-HF-020",
+        "REQ-HF-021",
+        "REQ-HF-022",
+        "REQ-HF-023",
+        "REQ-HF-024",
+        "REQ-HF-025",
+        "REQ-HF-026",
+        "REQ-HF-027",
+        "REQ-HF-028",
+        "REQ-HF-029",
+        "REQ-HF-030"
+      ],
+      "revised": [
+        "REQ-HF-014",
+        "REQ-HF-017",
+        "REQ-HF-018"
+      ],
+      "findings": [
+        "F-05",
+        "F-06",
+        "F-07",
+        "F-08",
+        "F-09",
+        "F-10",
+        "F-11"
+      ],
+      "ripple": [
+        "prd.md",
+        "findings.md",
+        "spec-delta.md",
+        "PLAN.md",
+        "docs/spec/backlog.md (BL-64)"
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "by": "Mauricio Quezada Ibáñez",
+      "reason": "owner reported a checkpoint save blocked by the plan-gate (D-46); routed through karvey-iterate",
+      "decision": "D-46",
+      "added": [
+        "REQ-HF-031"
+      ],
+      "revised": [],
+      "findings": [
+        "F-22"
+      ],
+      "ripple": [
+        "spec-delta.md",
+        "karvey-checkpoint skill",
+        "plan-gate"
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "by": "Mauricio Quezada Ibáñez",
+      "reason": "owner instruction D-47: approval model (investigation free, consequential actions need an approved plan, no TTL, stop withdraws, one message approves plan and production)",
+      "decision": "D-47",
+      "added": [
+        "REQ-HF-032",
+        "REQ-HF-033",
+        "REQ-HF-034",
+        "REQ-HF-035",
+        "REQ-HF-036"
+      ],
+      "revised": [],
+      "findings": [
+        "F-23"
+      ],
+      "ripple": [
+        "plan-gate",
+        "approval hook",
+        "approval.py",
+        "karvey-deploy",
+        "rules",
+        "lint",
+        "owner personal files (diff only)"
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "by": "Mauricio Quezada Ibáñez",
+      "reason": "real use: a phase close consumed the plan approval (BUG-157)",
+      "decision": "D-47",
+      "added": [
+        "REQ-HF-037"
+      ],
+      "revised": [
+        "REQ-HF-033"
+      ],
+      "findings": [
+        "F-26"
+      ],
+      "ripple": [
+        "karvey-state.py consume_on_close",
+        "rules/enforcement.md"
+      ]
+    }
+  ],
+  "seed_backlog_id": [
+    "BL-64"
+  ],
+  "clickup": {
+    "epic_id": "",
+    "feature_ids": [],
+    "task_ids": {},
+    "backlog_list_id": "",
+    "client_tag": ""
+  },
+  "schema_version": 1,
+  "phase": "deploying",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-09-29T16:40:39+00:00",
+      "exited_at": "2026-09-29T16:41:26+00:00",
+      "by": "Mauricio Quezada Ibáñez"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-09-29T16:41:26+00:00",
+      "exited_at": "2026-10-05T05:56:08+00:00"
+    },
+    {
+      "phase": "architecture",
+      "entered_at": "2026-10-05T05:56:08+00:00",
+      "exited_at": "2026-10-05T06:01:50+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "tasks",
+      "entered_at": "2026-10-05T06:01:50+00:00",
+      "exited_at": "2026-10-05T06:02:40+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "impl",
+      "entered_at": "2026-10-05T06:02:40+00:00",
+      "exited_at": "2026-10-05T06:19:29+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "test",
+      "entered_at": "2026-10-05T06:19:29+00:00",
+      "exited_at": "2026-10-05T06:22:04+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "qa",
+      "entered_at": "2026-10-05T06:22:04+00:00",
+      "exited_at": "2026-10-05T13:37:16+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "deploying",
+      "entered_at": "2026-10-05T13:37:16+00:00",
+      "by": "agent (hotfix lane)"
+    }
+  ],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-05T05:55:40+00:00",
+      "ref": "D-45",
+      "evidence": {
+        "marker": "none"
+      }
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-05T06:01:41+00:00",
+      "ref": "D-21",
+      "evidence": {
+        "marker": "none"
+      }
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-05T06:02:31+00:00",
+      "ref": "D-21",
+      "evidence": {
+        "marker": "none"
+      }
+    },
+    "qa": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-05T12:53:23+00:00",
+      "ref": "D-46",
+      "evidence": {
+        "marker": "none"
+      }
+    }
+  },
+  "created_at": "2026-09-29T16:40:39+00:00",
+  "updated_at": "2026-10-05T13:37:16+00:00",
+  "skipped": {
+    "mockup": "hotfix lane, no UI: the change touches hooks, the prod-gate and the state tool only",
+    "design_graphic": "no UI (hooks and CLI text only)",
+    "infra": "no cloud and no pipeline change: plugin code and docs only"
+  }
+}

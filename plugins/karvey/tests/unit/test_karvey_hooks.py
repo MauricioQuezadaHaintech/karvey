@@ -99,6 +99,19 @@ class Dispatch(unittest.TestCase):
             kh.REGISTRY.remove(boom)
             kh.REGISTRY.remove(soft)
 
+    def test_bug147_exception_text_never_reaches_the_message(self):
+        def leak(ctx):
+            raise ValueError("Port could not be cast to integer value as 'ghp_SECRETVALUE'")
+        boom = kh.Guard("boom-leak", ("pre-bash",), "closed", True, wired=True, run=leak)
+        kh.REGISTRY.append(boom)
+        try:
+            code, _, err = run("pre-bash", {"tool_name": "Bash", "tool_input": {"command": "ls"}})
+            self.assertEqual(code, 2)
+            self.assertIn("cannot evaluate: ValueError", err)
+            self.assertNotIn("SECRETVALUE", err)
+        finally:
+            kh.REGISTRY.remove(boom)
+
     def test_crash_outside_a_guard_applies_the_fail_mode(self):
         """BUG-34: an exception before any guard runs (e.g. ``os.getcwd()`` in a deleted directory) made the
         interpreter exit 1, which the harness does not treat as a block: prod-gate failed open."""
@@ -245,7 +258,7 @@ class UpgradeOffer(unittest.TestCase):
     def test_any_exception_is_one_line_and_the_session_text_is_still_produced(self):
         with mock.patch.object(upgrade, "read_seen", side_effect=RuntimeError("boom")):
             self.assertEqual(self.offer(self.legacy), ["[karvey] upgrade offer unavailable: RuntimeError: boom"])
-            text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)})
+            text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)}, cwd=str(self.legacy))
         self.assertIn("team settings not set", text)
         self.assertIn("upgrade offer unavailable: RuntimeError: boom", text)
 
@@ -284,13 +297,13 @@ class UpgradeOffer(unittest.TestCase):
         self.assertFalse(state.exists(), "nothing under the home's state dir")
 
     def test_session_text_places_the_offer(self):
-        text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)})
+        text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)}, cwd=str(self.legacy))
         lines = text.splitlines()
         self.assertTrue(lines[0].startswith("Karvey (info): team settings"))
         self.assertTrue(lines[1].startswith("Karvey (upgrade): "))
         g.write(self.legacy, "docs/spec/agent/manifest.md", "# me\n")
-        text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)})
+        text = kh.session_text("startup", {"CLAUDE_PROJECT_DIR": str(self.legacy)}, cwd=str(self.legacy))
         first = text.split("=== First action ===", 1)[1].strip().splitlines()
         self.assertTrue(first[0].startswith("Run `/karvey-checkpoint restore`"))
         self.assertTrue(first[3].startswith("Karvey (upgrade): "), first)
-        self.assertEqual(kh.session_text("resume", {"CLAUDE_PROJECT_DIR": str(self.legacy)}).count("(upgrade)"), 0)
+        self.assertEqual(kh.session_text("resume", {"CLAUDE_PROJECT_DIR": str(self.legacy)}, cwd=str(self.legacy)).count("(upgrade)"), 0)

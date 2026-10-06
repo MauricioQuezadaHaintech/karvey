@@ -158,7 +158,7 @@ The skills' bodies are in English (what Claude reads), but **artifacts are gener
 
 Updating the plugin never changes your project by itself. **When you are asked:** the first session that starts
 in a Karvey project in git after an update (once per clone, worktrees included) asks one question — *"Karvey
-3.12.0 → 3.13.0: do you want a plan to upgrade this project?"* — but only when some upgrade step applies;
+3.12.1 → 3.13.0: do you want a plan to upgrade this project?"* — but only when some upgrade step applies;
 otherwise it records the version as seen and says nothing.
 
 - **Yes** runs `/karvey:karvey-upgrade`: a plan computed from the project's state (legacy file shapes, copied

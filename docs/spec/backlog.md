@@ -63,6 +63,8 @@
 | BL-59 | 2026-09-25 | wave1-hardening / F-84 | spec-gap (deferred) | med | spec-merge item format: blank lines inside an item, `### REQ-` headings in ADDED | open | — | — |
 | BL-60 | 2026-09-25 | wave1-hardening / F-85 | spec-gap (deferred) | med | project.json ban line in every skill that dispatches subagents | open | — | — |
 | BL-61 | 2026-09-25 | wave1-hardening / F-86 | emergent | low | Factor duplicated helpers (now_iso, parse_dt, git) and the TTL literals into karvey_lib | open | — | — |
+| BL-64 | 2026-09-29 | real use (owner) | bug | low | protect-paths blocks a read-only listing of the approval/state paths | promoted | BUG-139 | prod-gate-scope |
+| BL-67 | 2026-10-05 | prod-gate-scope / F-18 | emergent | low | Prod-gate leftovers from the 3.12.1 QA: ref scan cap note, owner clone choice, no-python REST mentions, live host response shapes | open | — | — |
 
 ## BL-01 — Run graphify over the repo at the end of all the changes
 - **Origin:** owner request (Mauricio Quezada Ibáñez), 2026-09-22, after publishing 3.8.0 / 3.9.0 and during the 3.9.1 docs sync.
@@ -381,4 +383,15 @@
 ## BL-63 — A reopen from `deploying` (D-36 in the documented flow)
 - **Origin:** change `wave1-hardening`, QA re-run finding F-91 (spec-gap (deferred)).
 - **Why:** The deploy skill records the prod approval in `deploying`, where `reopen` is refused ("allowed up to qa"), so D-36 only supersedes approvals recorded earlier. The SHA binding and the 24 h expiry limit the damage (a rework is a new commit and needs a new OK). Decide whether a spec-gap found in `deploying` reopens (and supersedes), or whether `approve prod` is restricted to `deploying` and documented as such.
+- **Status:** open
+
+## BL-64 — protect-paths blocks a read-only listing of the approval/state paths
+- **Origin:** real use, 2026-09-29 (owner); promoted to change `prod-gate-scope` (hotfix 3.12.1) as BUG-139 (finding F-04).
+- **Why:** `ls <state dir> 2>/dev/null; echo done`, `cat <ledger> | python3 -m json.tool` and `ls "$(git rev-parse --git-common-dir)/karvey/approvals/"` are blocked although nothing is written: the last protect-paths check requires every segment of the call to be read-only.
+- **Status:** promoted (BUG-139)
+
+## BL-67 — Prod-gate leftovers from the 3.12.1 QA (F-18)
+- **Origin:** QA of `prod-gate-scope` (hotfix 3.12.1), 2026-10-05; Low items not fixed in the hotfix.
+- **What:** (1) the approval hook reads at most 50 refs when it looks for a named change elsewhere and does not say when it stopped; (2) `find_owner` takes the first local clone that holds the change, so two clones of the owning repo can read different ledgers; (3) without python, any command that mentions `pipelines/approvals` or `pending_deployments` is blocked, reads included; (4) the real response shapes of `az pipelines runs show` and the Azure approvals API are assumed, not captured from a host. (5) pre-existing since 3.12.0: with a session project that is not a Karvey project, an agent-made Karvey clone whose own origin carries `prod_gate_hook: false`, entered with `cd` and merged without naming a repo, switches the gate off; a switch-off could require the clone's origin to be the host URL the PR lives on. (6) residual limits of reading commands as text: URLs built by string concatenation inside scripts, raw HTTP sent other than through a socket tool. (7) D-47: a stop withdraws plan approvals only in the project and the clones its project.json lists; a change-scoped plan approval in an unlisted clone survives a stop. (8) D-47: script files that write data (`python3 fix_data.py --apply`) are not read by the plan-gate.
+- **Why:** (1)-(4) fail closed or are cosmetic; (5) and (6) are known limits, recorded so they are decided, not forgotten.
 - **Status:** open

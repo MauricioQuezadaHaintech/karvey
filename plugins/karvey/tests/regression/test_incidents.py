@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-157 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -196,7 +196,7 @@ INDEX = {
     ],
     "BUG-41": [  # F-70 (QA D7 second opinion (X-1))
         ("unit", "test_state_approve.py", "ProdMarkerScope.test_project_wide_prod_marker_is_not_a_prod_approval_of_a_change"),
-        ("unit", "test_state_approve.py", "ProdMarkerScope.test_prod_marker_is_consumed_by_the_approval"),
+        ("unit", "test_state_approve.py", "ProdMarkerScope.test_prod_marker_is_used_once_by_the_approval"),
     ],
     "BUG-42": [  # F-71 (QA D7 second opinion (X-2))
         ("unit", "test_approval_vocab.py", "ConditionalSi.test_conditional_si_is_not_an_approval"),
@@ -247,6 +247,122 @@ INDEX = {
         ("table", "prod-gate", "pg6-18-dry-run-cancelled-by-no-dry-run"),
         ("table", "prod-gate", "pg6-19-repo-option-names-a-mirror-remote"),
         ("table", "prod-gate", "pg6-20-repo-option-names-a-wildcard-remote"),
+    ],
+    # hotfix 3.12.1 (prod-gate-scope, D-43/D-45); BUG-52..137 are held by other branches
+    "BUG-138": [  # F-01: prod approval bound to the active change instead of the named one
+        ("table", "approval", "ap-hf-02-named-change-only-on-a-branch-records-nothing"),
+        ("table", "approval", "ap-hf-03-named-change-nowhere-records-nothing"),
+        ("table", "approval", "ap-hf-05-several-active-records-nothing"),
+        ("table", "approval", "ap-hf-06-several-named-records-nothing"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_named_change_in_a_worktree_is_named_as_the_fix"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_named_change_on_a_branch_names_the_branch"),
+    ],
+    "BUG-139": [  # F-04 / BL-64: read-only listings of the state paths blocked
+        ("table", "protect-paths", "pp-hf-01-ls-then-echo"),
+        ("table", "protect-paths", "pp-hf-02-cat-into-json-tool"),
+        ("table", "protect-paths", "pp-hf-03-ls-of-rev-parse-substitution"),
+    ],
+    "BUG-140": [  # F-05: another agent's profile (and a sensitive handoff) injected
+        ("table", "session", "ss-hf-01-ancestor-folder-profile-not-injected"),
+        ("table", "session", "ss-hf-02-team-folder-not-a-repo-gets-nothing"),
+        ("table", "session", "ss-hf-03-unmapped-repo-no-default-role"),
+        ("table", "session", "ss-hf-05-cwd-changed-to-another-repo-ambiguous"),
+        ("table", "session", "ss-hf-06-two-candidates-inject-nothing"),
+        ("unit", "test_session_profile.py", "SessionProfile.test_bug140_sensitive_handoff_withheld_on_explicit_restore_elsewhere"),
+    ],
+    "BUG-141": [  # F-06: prod-gate decided by the session's repo, not the PR's
+        ("unit", "test_prodgate_target.py", "Target.test_merge_into_the_target_integration_branch_passes"),
+        ("unit", "test_prodgate_target.py", "Target.test_production_merge_is_checked_on_the_target_ledger"),
+        ("unit", "test_prodgate_target.py", "Target.test_non_karvey_target_passes_with_a_warning"),
+        ("table", "prod-gate", "pg-hf-01-repo-flag-names-a-non-karvey-repo"),
+    ],
+    "BUG-142": [  # F-07: production OK asked through a question tool
+        ("lint", "L-80"),
+        ("unit", "test_lint_plugin.py", "L80.test_question_tool_for_prod_ok_fails"),
+    ],
+    "BUG-143": [  # F-08: a production-shaped phrase that recorded nothing printed nothing
+        ("table", "approval", "ap-hf-07-negated-prod-phrase-says-why"),
+        ("table", "approval", "ap-hf-09-late-prod-phrase-says-why"),
+        ("table", "approval", "ap-hf-10-not-recorded-line-suggests-the-phrase"),
+    ],
+    "BUG-144": [  # F-09: the approve refusal did not name the markers found
+        ("unit", "test_state_repos.py", "Refusal.test_refusal_lists_markers_and_missing_piece"),
+        ("unit", "test_state_repos.py", "Refusal.test_refusal_with_no_marker"),
+    ],
+    "BUG-145": [  # F-12: the not-a-Karvey-repo warning reachable for Karvey targets
+        ("unit", "test_prodgate_identity.py", "Identity.test_look_alike_clone_in_the_cwd_does_not_bypass"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_look_alike_sibling_does_not_shadow_the_real_clone"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_renamed_repo_is_identified_by_the_host"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_fork_upstream_is_identified_by_the_head_commit"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_azure_repo_guid_is_resolved_by_the_host"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_session_in_the_folder_that_holds_the_repos"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_named_repo_without_a_clone_passes_only_into_integration"),
+    ],
+    "BUG-146": [  # F-13: REST parser evasions
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_every_url_is_classified"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_unknown_or_value_options_do_not_hide_the_url"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_curl_config_fails_closed"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_wget_separate_option_values"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_branch_writes_through_other_endpoints"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_here_documents_and_encoded_paths"),
+    ],
+    "BUG-147": [  # F-14: a token in a fail-closed message
+        ("unit", "test_karvey_hooks.py", "Dispatch.test_bug147_exception_text_never_reaches_the_message"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_httpie_auth_is_not_the_url_and_is_not_kept"),
+    ],
+    "BUG-148": [  # F-15: approval scope gaps after BUG-138
+        ("unit", "test_approval_scope.py", "ProdScope.test_bug148_change_id_without_hyphen_on_a_branch"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_bug148_versions_and_release_names_are_not_change_ids"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_bug148_unknown_word_is_never_the_suggested_change"),
+        ("unit", "test_approval_scope.py", "ProdScope.test_bug148_two_named_ids_one_inside_the_other"),
+    ],
+    "BUG-149": [  # F-16: L-80 wordings and negations
+        ("lint", "L-80"),
+        ("unit", "test_lint_plugin.py", "L80Bug149.test_spanish_and_other_wordings_fail"),
+        ("unit", "test_lint_plugin.py", "L80Bug149.test_unrelated_not_is_not_a_negation"),
+        ("unit", "test_lint_plugin.py", "L80Bug149.test_other_question_in_the_same_paragraph_passes"),
+    ],
+    "BUG-150": [  # F-17: a worktree of the same repo read as two repos
+        ("unit", "test_session_profile.py", "SessionProfile.test_bug150_session_moved_into_a_worktree_of_the_same_repo"),
+    ],
+    "BUG-151": [  # F-19: QA re-check — fake Karvey clone, curl globs, dot segments, raw HTTP, Azure repo answer
+        ("unit", "test_prodgate_identity.py", "Identity.test_bug151_fake_karvey_clone_cannot_decide_or_switch_the_gate_off"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_bug151_azure_host_answer_names_the_repo"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_karvey_repo_in_another_wrapper_folder_is_found"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_curl_globs_and_dot_segments"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_raw_http_by_hand"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_credentials_in_variables_do_not_block_a_non_completing_update"),
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug151_text_output_is_not_a_request"),
+    ],
+    "BUG-152": [  # F-20: curl request-target / variable expansion; named fake clone switch-off
+        ("unit", "test_restcalls_evasions.py", "Evasions.test_bug152_request_target_and_variable_expansion"),
+        ("unit", "test_prodgate_identity.py", "Identity.test_bug152_switch_off_of_a_named_clone_needs_a_trusted_session"),
+    ],
+    "BUG-153": [("unit", "test_restcalls_evasions.py", "Evasions.test_bug153_scheme_less_urls")],  # F-21
+    "BUG-154": [  # F-22: a checkpoint save blocked by the plan-gate
+        ("table", "plan-gate", "cp-01-handoff-save-needs-no-approval"),
+        ("table", "plan-gate", "cp-03-change-checkpoint-needs-no-approval"),
+        ("table", "plan-gate", "cp-07-symlinked-handoff-gated"),
+        ("table", "plan-gate", "cp-10-handoff-write-with-another-write-gated"),
+        ("unit", "test_plangate_checkpoint.py", "TeamLayout.test_own_team_profile_files_need_no_approval"),
+        ("unit", "test_plangate_checkpoint.py", "TeamLayout.test_another_agents_profile_and_other_files_stay_gated"),
+    ],
+    "BUG-155": [  # F-24: QA of the D-47 delta
+        ("table", "plan-gate", "d47-22-terraform-global-flag-before-verb"),
+        ("table", "plan-gate", "d47-26-sql-from-a-pipe-is-gated"),
+        ("table", "plan-gate", "d47-35-az-config-list-is-free"),
+        ("table", "plan-gate", "d47-40-alembic-upgrade-is-gated"),
+        ("table", "plan-gate", "d47-43-curl-delete-is-gated"),
+        ("unit", "test_plangate_checkpoint.py", "ProjectMarkerSession.test_same_session_proceeds_another_session_is_gated"),
+        ("unit", "test_marker.py", "TTL.test_d47_stop_withdraws_and_prod_use_keeps_the_plan"),
+    ],
+    "BUG-156": [("unit", "test_plangate_symlinked_tmp.py",
+                 "SymlinkedTemp.test_checkpoint_rows_pass_under_a_symlinked_temp_folder")],  # F-25
+    "BUG-157": [  # F-26: a phase close consumed the plan approval
+        ("unit", "test_plangate_checkpoint.py", "ApprovalSurvivesPhases.test_one_approval_covers_the_phases_and_the_implementation"),
+        ("unit", "test_state_approve.py", "Consumption.test_phase_close_keeps_the_plan_approval"),
+        ("unit", "test_state_approve.py", "Consumption.test_project_marker_used_as_evidence_is_kept"),
+        ("unit", "test_state_approve.py", "Consumption.test_bug157_d1_a_message_evidences_only_the_phase_it_was_typed_in"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

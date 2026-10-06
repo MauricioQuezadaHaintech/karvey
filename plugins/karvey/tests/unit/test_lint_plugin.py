@@ -1052,13 +1052,92 @@ class L36(LintCase):
         self.assertPasses("L-36")
 
 
+DEPLOY = SKILLS + "/karvey-deploy/SKILL.md"
+
+
+class L80(LintCase):
+    """BUG-142, REQ-HF-028: the production OK is typed by the human, never answered through a question tool."""
+
+    def test_pass(self):
+        self.assertPasses("L-80")
+
+    def test_question_tool_for_prod_ok_fails(self):
+        self.t.append(DEPLOY, "\n**2.9 — Prod OK.** Ask with `AskUserQuestion` for the production approval of the PR.\n")
+        fs = self.assertFails("L-80", "question tool", file=DEPLOY)
+        self.assertTrue(all(f["line"] > 1 for f in fs))
+
+    def test_question_tool_words_in_a_rule_fail(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nGet the prod OK through a question tool and record "
+                                            "the prod marker.\n")
+        self.assertFails("L-80", "production OK", file=RULES + "/release.md")
+
+    def test_negated_instruction_passes(self):
+        self.t.append(DEPLOY, "\nNever use `AskUserQuestion` for the prod OK: its answer never reaches the "
+                              "approval hook. Show the phrase for the human to type.\n")
+        self.assertPasses("L-80")
+
+    def test_question_tool_for_another_question_passes(self):
+        self.t.append(DEPLOY, "\nAsk with `AskUserQuestion` which canary percentage to use.\n\nThe production "
+                              "approval is typed by the human.\n")
+        self.assertPasses("L-80")
+
+    def test_code_block_is_ignored(self):
+        self.t.append(DEPLOY, "\n```text\nAskUserQuestion: prod OK?\n```\n")
+        self.assertPasses("L-80")
+
+
+class L80Bug149(LintCase):
+    """BUG-149: L-80 read the whole paragraph, missed Spanish and other wordings, and took any "not" as a negation."""
+
+    def test_spanish_and_other_wordings_fail(self):
+        for text in ("Pide el OK de producción con `AskUserQuestion`.",
+                     "Use AskUserQuestion to confirm the release to production.",
+                     "Collect the go-live approval with a question tool.",
+                     "Usa AskUserQuestion para que el dueño apruebe el pase a producción."):
+            self.t.write(RULES + "/release.md", "# Release\n\n%s\n" % text)
+            self.assertFails("L-80", "question tool", file=RULES + "/release.md")
+
+    def test_unrelated_not_is_not_a_negation(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nIf the PR is not green, use AskUserQuestion for the "
+                                            "prod OK.\n")
+        self.assertFails("L-80", "question tool", file=RULES + "/release.md")
+
+    def test_other_question_in_the_same_paragraph_passes(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nThe production approval is typed by the human. Use "
+                                            "AskUserQuestion for the QA verdict only.\n")
+        self.assertPasses("L-80")
+
+
+class L81(LintCase):
+    """D-47 (REQ-HF-035): no skill or rule asks for approval before reading, searching or investigating."""
+
+    def test_pass(self):
+        self.assertPasses("L-81")
+
+    def test_approval_before_searching_fails(self):
+        for text in ("Ask the user for approval before searching the repository.",
+                     "Request permission before running a read-only query.",
+                     "Pide aprobación antes de investigar el repositorio."):
+            self.t.write(RULES + "/explore.md", "# Explore\n\n%s\n" % text)
+            self.assertFails("L-81", "investigation", file=RULES + "/explore.md")
+
+    def test_never_ask_passes(self):
+        self.t.write(RULES + "/explore.md", "# Explore\n\nNever ask for approval before searching or reading.\n")
+        self.assertPasses("L-81")
+
+    def test_approval_for_a_consequential_action_passes(self):
+        self.t.write(RULES + "/explore.md", "# Explore\n\nAsk for approval before deleting tracked files.\n")
+        self.assertPasses("L-81")
+
+
 class ListAll(unittest.TestCase):
     def test_list_names_l01_to_l36(self):
         code, out, _ = run_cli("--root", str(_path.REPO_ROOT), "--list")
         self.assertEqual(code, 0, out)
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)])
+        self.assertIn("L-80 ", out)
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)] + ["L-80", "L-81"])
 
 
 if __name__ == "__main__":

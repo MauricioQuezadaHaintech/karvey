@@ -35,13 +35,8 @@ fi
 START="${CLAUDE_PROJECT_DIR:-$PWD}"
 # absolute path: a relative CLAUDE_PROJECT_DIR made the dirname loops below spin forever on "."
 START=$(cd "$START" 2>/dev/null && pwd -P) || exit 0
-DIR="$START"; ROOT=""; CFG=""; KIND=""
-while [ "$DIR" != "/" ] && [ -n "$DIR" ]; do
-  if [ -f "$DIR/docs/spec/team.json" ]; then ROOT="$DIR"; CFG="$DIR/docs/spec/team.json"; KIND="team"; break; fi
-  if [ -f "$DIR/.ceo-agentes" ];        then ROOT="$DIR"; CFG="$DIR/.ceo-agentes";        KIND="legacy"; break; fi
-  if [ -d "$DIR/docs/spec/agent" ];     then ROOT="$DIR"; CFG="$DIR/docs/spec/agent";     KIND="solo"; break; fi
-  DIR=$(dirname "$DIR")
-done
+CWD=$(pwd -P 2>/dev/null) || CWD="$START"
+ROOT=""; CFG=""; KIND=""
 # Team settings nudge (REQ-ADP-003): only inside a Karvey project (has docs/spec/), never elsewhere.
 settings_nudge() {
   [ "$MODE" = "startup" ] || return 0   # REQ-W1-050: on session start only
@@ -68,6 +63,7 @@ print(' + '.join(k for k in ('notifications','management') if not isinstance(d.g
   fi
   [ -n "$missing" ] && printf 'Karvey (info): team settings not set (%s). To set them, the user can run `/karvey:karvey-init --settings` — settings only, it creates no change and nothing in any tracker.\n' "$missing"
 }
+
 # The once-per-version upgrade offer needs python (it evaluates the step catalogue): without it, one line,
 # only on startup inside a Karvey project (project-upgrade REQ-UP-006).
 upgrade_unavailable() {
@@ -82,40 +78,75 @@ upgrade_unavailable() {
   done
 }
 
-[ -z "$ROOT" ] && { settings_nudge; upgrade_unavailable; exit 0; }
+# BUG-140 (REQ-HF-020, 021): the profile comes from the repo the session works in (its git top level), never
+# from a folder above it and never by a default role; ambiguity injects nothing but one line. The 3.12.0 walk
+# up the folder tree only decides whether that line is printed (elsewhere the hook stays silent).
+old_walk() {
+  local d="$1"
+  while [ "$d" != "/" ] && [ -n "$d" ]; do
+    if [ -f "$d/docs/spec/team.json" ] || [ -f "$d/.ceo-agentes" ] || [ -d "$d/docs/spec/agent" ]; then return 0; fi
+    d=$(dirname "$d")
+  done
+  return 1
+}
+HIT=0; old_walk "$START" && HIT=1; old_walk "$CWD" && HIT=1
+TO=""; command -v timeout >/dev/null 2>&1 && TO="timeout 2"
+gtop() { local t; t=$($TO git -C "$1" rev-parse --show-toplevel 2>/dev/null | head -1); [ -n "$t" ] && (cd "$t" 2>/dev/null && pwd -P); }
+rname() {
+  local c b; c=$($TO git -C "$1" rev-parse --git-common-dir 2>/dev/null | head -1)
+  case "$c" in "") basename "$1"; return ;; /*) ;; *) c="$1/$c" ;; esac
+  c=$(cd "$c" 2>/dev/null && pwd -P) || { basename "$1"; return; }
+  b=$(basename "$c")
+  if [ "$b" = ".git" ]; then basename "$(dirname "$c")"; else printf '%s\n' "${b%.git}"; fi
+}
+not_loaded() {
+  [ "$HIT" -eq 1 ] && printf '[karvey] profile not loaded: %s; run /karvey-checkpoint restore --profile <role|path> in the repo you work in.\n' "$1"
+  settings_nudge
+  upgrade_unavailable
+  exit 0
+}
+TS=$(gtop "$START"); TC=$(gtop "$CWD")
+if [ "$TS" != "$TC" ]; then
+  L=""
+  for t in "$TS" "$TC"; do
+    [ -n "$t" ] || continue
+    n=$(rname "$t")
+    if [ -d "$t/docs/spec/agent" ]; then L="${L:+$L, }solo ($n)"; else L="${L:+$L, }$n (no profile)"; fi
+  done
+  not_loaded "the session started in one repo and now works in another — candidates $L"
+fi
+[ -z "$TC" ] && not_loaded "the session's directory is not inside a git repository"
+T="$TC"; N=$(rname "$T"); NC=0; L=""
+if [ -d "$T/docs/spec/agent" ]; then NC=$((NC+1)); KIND="solo"; ROOT="$T"; CFG="$T/docs/spec/agent"; L="solo ($N)"; fi
+d="$T"; TEAMCFG=""; LEGCFG=""
+while [ "$d" != "/" ] && [ -n "$d" ]; do
+  if [ -f "$d/docs/spec/team.json" ]; then TEAMCFG="$d/docs/spec/team.json"; break; fi
+  if [ -f "$d/.ceo-agentes" ]; then LEGCFG="$d/.ceo-agentes"; break; fi
+  d=$(dirname "$d")
+done
+[ -n "$TEAMCFG" ] && not_loaded "the team mapping in $TEAMCFG needs python3${L:+ (candidates $L, a team role)}"
+LROLE=""
+if [ -n "$LEGCFG" ]; then
+  LROLE=$(awk -F= -v k="$N" '$1=="AGENTE_"k || $1=="AGENT_"k { print substr($0, index($0, "=") + 1); exit }' "$LEGCFG")
+  if [ -n "$LROLE" ]; then
+    NC=$((NC+1)); L="${L:+$L, }$LROLE ($N)"
+    [ "$NC" -eq 1 ] && { KIND="legacy"; ROOT=$(dirname "$LEGCFG"); CFG="$LEGCFG"; }
+  fi
+fi
+[ "$NC" -eq 0 ] && not_loaded "no profile claims the repo $N (no docs/spec/agent/ in it and no team mapping for its name)"
+[ "$NC" -gt 1 ] && not_loaded "more than one profile claims the repo $N — candidates $L"
 
-REL="${START#"$ROOT"/}"; [ "$REL" = "$START" ] && REL=""
-TOP="${REL%%/*}"
 NAME=""; ROLE="solo"; PROFILE="$ROOT/docs/spec/agent"; BOARD="$PROFILE/board.md"
-
-case "$KIND" in
-  team)
-    eval "$(python3 - "$CFG" "$TOP" "$(basename "$ROOT")" <<'PY'
-import json, sys, shlex
-try:    d = json.load(open(sys.argv[1], encoding='utf-8'))
-except Exception: sys.exit(0)
-roles = d.get('roles') or {}
-# the session may start at the team root itself (TOP empty): then the root's own name is the key
-role = roles.get(sys.argv[2]) or (roles.get(sys.argv[3]) if not sys.argv[2] else None) or 'ceo'
-name = (d.get('display_names') or {}).get(role) or f"agent-{d.get('code','')}-{role}"
-print(f"ROLE={shlex.quote(role)}"); print(f"NAME={shlex.quote(name)}")
-print(f"OPS={shlex.quote(str(d.get('ops_repo','')))}")
-PY
-)"
-    # ops_repo is a sibling repo under the team root — unless team.json lives inside the repo it names
-    # (ops_repo = this repo, or empty): then the ops area is the folder that holds team.json (docs/spec/),
-    # which is where karvey-checkpoint save writes agents/<role>/ and board/<role>.md.
-    if [ -n "${OPS:-}" ] && [ "$OPS" != "$(basename "$ROOT")" ] && [ -d "$ROOT/$OPS" ]; then OPSDIR="$ROOT/$OPS"
-    else OPSDIR=$(dirname "$CFG"); fi
-    PROFILE="$OPSDIR/agents/${ROLE}"; BOARD="$OPSDIR/board/${ROLE}.md" ;;
-  legacy)
-    CODE=$(grep -E '^(CODIGO|CODE)=' "$CFG" | head -1 | cut -d= -f2-)
-    OPS=$(grep -E '^OPS=' "$CFG" | head -1 | cut -d= -f2-)
-    ROLE=$(grep -E "^(AGENTE|AGENT)_${TOP}=" "$CFG" | head -1 | cut -d= -f2-); [ -z "${ROLE:-}" ] && ROLE="ceo"
-    NAME=$(grep -E "^(NOMBRE|NAME)_${ROLE}=" "$CFG" | head -1 | cut -d= -f2-); [ -z "${NAME:-}" ] && NAME="agent-${CODE}-${ROLE}"
-    PROFILE="$ROOT/${OPS:-}/agents/${ROLE}"; BOARD="$ROOT/${OPS:-}/board/${ROLE}.md" ;;
-esac
+if [ "$KIND" = "legacy" ]; then
+  CODE=$(grep -E '^(CODIGO|CODE)=' "$CFG" | head -1 | cut -d= -f2-)
+  OPS=$(grep -E '^OPS=' "$CFG" | head -1 | cut -d= -f2-)
+  ROLE="$LROLE"
+  NAME=$(grep -E "^(NOMBRE|NAME)_${ROLE}=" "$CFG" | head -1 | cut -d= -f2-); [ -z "${NAME:-}" ] && NAME="agent-${CODE}-${ROLE}"
+  PROFILE="$ROOT/${OPS:-}/agents/${ROLE}"; BOARD="$ROOT/${OPS:-}/board/${ROLE}.md"
+fi
 [ -z "$NAME" ] && NAME=$(basename "$ROOT")
+# REQ-HF-022: here the profile always belongs to the working repo (solo: the repo itself; legacy: the role
+# its own name maps to), so a sensitive handoff is the session's own.
 
 HANDOFF="$PROFILE/handoff.md"; STATE="$PROFILE/state.json"
 
