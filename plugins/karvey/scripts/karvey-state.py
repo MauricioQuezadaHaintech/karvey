@@ -1370,8 +1370,10 @@ def marker_report(root, change):
         why = "the prod marker found is for another change"
     else:
         why = "no prod marker was recorded"
+    # BUG-159: only the approval word, the production word and the change id count (D-10); the approval binds to
+    # the commit passed with --sha (D-35), so a PR number or a version is never part of the phrase
     return "found: %s \u2014 missing: a live prod marker for %s (%s); the human types \u00abaprobado para " \
-           "producci\u00f3n %s PR #<n> v<version>\u00bb in their own message" % (
+           "producci\u00f3n %s\u00bb in their own message (a PR number or version is optional)" % (
                "; ".join(items) if items else "no approval marker", change, why, change)
 
 

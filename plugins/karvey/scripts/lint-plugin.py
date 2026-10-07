@@ -1919,6 +1919,27 @@ def l81_no_approval_for_investigation(ctx):
                 break
 
 
+# --------------------------------------------------------------------------- L-82
+# a quoted phrase («…», `…`, "…") is read to its closing mark; an unquoted mention only to the end of its clause
+PROD_PHRASE_RE = re.compile(r"(?:(?P<q>[«`\"])|(?<![«`\"]))(?:aprobado\s+para\s+producci[oó]n|approved\s+for\s+"
+                            r"production)(?P<rest>(?(q)[^»`\"\n]*|[^»`\"\n;,.(]*))", re.I)
+PHRASE_EXTRA_RE = re.compile(r"\bPR\b|#\s*[{<\d]|(?<![\w-])v(?:\{|<|\d+\.\d+)|(?<![\w.-])\d+\.\d+\.\d+\b", re.I)
+
+
+@check("L-82", "the production phrase shown to the human holds only the approval word, the production word and the "
+               "change id: no PR number or version inside it (BUG-159, REQ-AN-012)")
+def l82_minimal_prod_phrase(ctx):
+    for path in ctx.text_files():
+        for n, para in _paragraphs(ctx, path):
+            for m in PROD_PHRASE_RE.finditer(para):
+                extra = PHRASE_EXTRA_RE.search(m.group("rest"))
+                if extra:
+                    yield (path, n, "the production phrase carries a PR number or a version (%s); only the approval "
+                                    "word, the production word and the change id are required, the approval binds "
+                                    "to the commit passed with approve --sha (BUG-159)" % extra.group(0))
+                    break
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""
@@ -2567,7 +2588,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser():
-    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-39, L-80, L-81).")
+    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-39, L-80..L-82).")
     p.add_argument("--root", help="repository root (default: git top level)")
     p.add_argument("--plugin", help="plugin directory (default: <root>/plugins/karvey)")
     p.add_argument("--only", help="comma list of check ids (L-NN)")

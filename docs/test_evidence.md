@@ -235,3 +235,58 @@ through the CLI stubs and patched CLI answers; the release PR's CI is the live c
 | validate --all | 0 errors |
 
 Versions 3.12.1 agree (plugin.json, marketplace.json, project.json, CHANGELOG `[3.12.1]`, page). REQ-HF-019: ✅.
+
+# Test evidence: approval-by-name (hotfix 3.13.1) — 2026-10-07
+
+Head `8deb0c5` on `hotfix/3.13.1-approval-by-name` (Linux, Python 3, node). Red-first: the BUG-158/159 checks
+failed on `97595af` (3.13.0 code + the new tests) before the fix: 9 of 12 `test_approval_by_name`, 5 in
+`test_approval_scope` / `test_state_repos` / L82, tables ap-an-01, ap-an-02, ap-hf-03.
+
+### Full suite
+
+| Suite | Result |
+|---|---|
+| `python3 -m unittest discover -s plugins/karvey/tests/unit` | 1076 tests, OK (1 skipped) |
+| `python3 -m unittest discover -s plugins/karvey/tests/regression` | 10 tests, OK (BUG-158, 159 indexed) |
+| `run_tables.py` | 517 cases, 614 runs (97 without python), 614 passed |
+| `KARVEY_SKIP_TABLES=1 test-hooks.sh` | 67 passed |
+| `node --test plugins/karvey/tests/page/` | 22 passed |
+| `lint-plugin.py` | 0 errors, 4 warnings (42 checks; L-82 new) |
+| `karvey-state.py validate --all` | 0 errors |
+
+### PASS/FAIL per requirement
+
+| Requirements | Evidence | Status |
+|---|---|---|
+| AN-001, 002 (BUG-158) | sibling clone recorded there (marker, audit line, none in the session clone, path in the line), owner's `find_valid` accepts it, worktree of the same clone, ap-an-01 | ✅ PASS |
+| AN-003 | two owning clones listed, nothing recorded; ap-an-02 | ✅ PASS |
+| AN-004 | unknown word → «… <change-id>»; negated phrase never names the active change; test_approval_scope | ✅ PASS |
+| AN-005 | here wins over a clone with the same id; single active said out loud; several named; ap-hf-01..09 | ✅ PASS |
+| AN-006 | outside a Karvey project: one owner records, nothing named stays silent | ✅ PASS |
+| AN-007 | search error fails open with the line, no marker; benchmark below | ✅ PASS |
+| AN-010, 011 (BUG-159) | refusal text test; deploy skill, rules, hooks README updated (lint L-16/L-82 on the tree) | ✅ PASS |
+| AN-012 | L82 tests (pass, 4 failing phrasings, PR outside the phrase passes) | ✅ PASS |
+
+### Benchmark (prompt hook, n=10, 14 sibling folders)
+
+| Prompt | Median / max |
+|---|---|
+| `revisa el log` (no approval) | 134 / 150 ms |
+| production approval naming a sibling clone's change | 185 / 204 ms |
+| production approval naming an unknown id | 180 / 187 ms |
+
+### Release gate 3.13.1 (2026-10-07)
+
+QA loop added BUG-160, BUG-161 (D1 / D7, three rounds; D1 re-check of `cb90ed4` PASS at `5512954`).
+
+| Suite | Result |
+|---|---|
+| unit | 1088 tests, OK |
+| regression | 10 tests, OK (BUG-05..51, 138..161 indexed) |
+| guard tables | 518 cases, 615 runs (97 without python), 615 passed |
+| `test-hooks.sh` | 67 passed |
+| node page tests | 22 passed |
+| lint | 0 errors (42 checks; L-82 new), upgrade-surface fingerprint refreshed to 3.13.1 |
+| validate --all | 0 errors |
+
+Versions 3.13.1 agree (plugin.json, marketplace.json, project.json, CHANGELOG `[3.13.1]`, page).

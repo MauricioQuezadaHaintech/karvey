@@ -4,6 +4,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+## [3.13.1] - 2026-10-07 — hotfix
+
+### Why
+Real use of 3.13.0: the owner typed «aprobado para producción <change-a>» in a session whose directory was another
+repo holding `<change-b>`; the approval hook refused, saying no worktree or branch held `<change-a>`, and suggested
+approving `<change-b>` — it discarded the change the human named and proposed another one. And the phrase shown to
+the human carried a PR number and a version that read as mandatory, while only the approval word, the production
+word and the change id count (D-10) and the approval binds to the commit passed with `approve … --sha` (D-35). The
+owner decided to ship both fixes as hotfix 3.13.1 (D-47). The QA security review and second opinion found and fixed
+two more defects in the new code (BUG-160, 161); every incident ships with a regression test.
+
+- Unchanged from 3.12.0: notification destinations come only from `project.json`; projects that took them from tables in a `CLAUDE.md` file declare them under `notifications`.
+- No project upgrade needed: the approval hook, the state tool's refusal text, a skill, the rules and a lint check change; no stored format or setting changes.
+
+### Fixed
+- approval-by-name E1.F1.T2 (BUG-158) — a production approval naming a change that is not in the session's working tree is looked up in the local clones the prod-gate's discovery finds (`approval.clones_holding`, `resolve_named_elsewhere`); exactly one owning clone receives the marker and its audit line and the hook line names it (`approval recorded (prod, <id>, clone <path>, …)`); two or more owning clones, or several named changes, record nothing and are listed; the not-recorded line suggests the named change or `<change-id>`, never the session's active change (`approval.phrase_change`); outside a Karvey project a change owned by exactly one clone is recorded there; the search fails open with the line. Why: the owner's «aprobado para producción <change-a>» in a session on another repo was refused and the hook proposed approving `<change-b>` (REQ-AN-001..007).
+- approval-by-name E1.F2.T2 (BUG-159) — the phrase shown by the state tool's `approve … prod` refusal, the hook and `karvey-deploy` 2.9 is «aprobado para producción <change-id>»; PR number and version are optional and informational; `rules/enforcement.md`, `hooks/README.md` and the deploy skill say the approval binds to the commit passed with `approve … --sha` (a PR recreated with the same head stays approved, a new commit needs a new OK); new lint check L-82 fails a skill or rule that puts a PR number or a version inside the phrase. Why: the phrase with `PR #<n> v<version>` read as a mandatory format while only the approval word, the production word and the change id count (D-10, REQ-AN-010..012).
+- approval-by-name QA (BUG-160, BUG-161) — only a change-like word or the word right after the production term names a change of another clone (approval, production and negation words never do), only a change committed on that clone's HEAD counts, and without such a word the active-change fallback stays; one id here plus one elsewhere records nothing; the suggestion is `<change-id>` whenever the prompt names a change elsewhere; L-82 reads a quoted phrase to its closing mark (bare versions included) and an unquoted mention to the end of its clause. Why: the QA security review and second opinion showed any word (`produccion`, `release`, `deploy`) of a sibling clone could take the human's approval. A change id without a hyphen held only by another clone is never recorded from the session (it may be an ordinary word a decoy clone holds, such as `now` or `hoy`): the hook says to approve it in a session inside that clone; a change present but not committed there is named as such. Another clone is reached only by the id typed right after the production word («aprobado para producción <id>»); a change-like word elsewhere in the message refuses with that phrase.
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5
+> 🔗 Change: approval-by-name · Karvey phase: impl, test, qa, deploy · Apache 2.0
+
 ## [3.13.0] - 2026-10-06
 
 ### Why

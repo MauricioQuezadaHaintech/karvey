@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-157 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-161 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -363,6 +363,36 @@ INDEX = {
         ("unit", "test_state_approve.py", "Consumption.test_phase_close_keeps_the_plan_approval"),
         ("unit", "test_state_approve.py", "Consumption.test_project_marker_used_as_evidence_is_kept"),
         ("unit", "test_state_approve.py", "Consumption.test_bug157_d1_a_message_evidences_only_the_phase_it_was_typed_in"),
+    ],
+    "BUG-158": [  # approval-by-name F-01: a change of another clone was refused, the active change suggested
+        ("unit", "test_approval_by_name.py", "ByName.test_bug158_named_change_of_a_sibling_clone_is_recorded_there"),
+        ("unit", "test_approval_by_name.py", "ByName.test_bug158_two_owning_clones_record_nothing_and_are_listed"),
+        ("unit", "test_approval_by_name.py", "ByName.test_bug158_unknown_word_never_suggests_the_active_change"),
+        ("unit", "test_approval_by_name.py",
+         "ByName.test_bug158_negated_phrase_naming_another_clone_never_suggests_the_active_change"),
+        ("table", "approval", "ap-an-01-named-change-of-a-sibling-clone-recorded-there"),
+        ("table", "approval", "ap-an-02-two-clones-hold-the-named-change-records-nothing"),
+    ],
+    "BUG-159": [  # approval-by-name F-02: PR and version in the phrase read as mandatory
+        ("unit", "test_state_repos.py", "Refusal.test_refusal_lists_markers_and_missing_piece"),
+        ("lint", "L-82"),
+    ],
+    "BUG-160": [  # approval-by-name F-03 (QA D1 H1): any word routed the approval to another clone
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d1_a_vocabulary_word_never_names_a_change_of_another_clone"),
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d1_c_an_ordinary_word_never_names_a_change_of_another_clone"),
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d1_e_outside_a_project_a_vocabulary_word_records_nothing"),
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d1_an_uncommitted_change_of_another_clone_does_not_count"),
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d7_f1_common_words_never_route_to_another_clone"),
+        ("unit", "test_approval_by_name.py",
+         "D1OnBug158.test_d1_h1b_a_hyphenless_id_of_another_clone_is_never_recorded_from_here"),
+        ("unit", "test_approval_by_name.py",
+         "D1OnBug158.test_d1_another_clone_is_reached_only_by_the_id_after_the_production_word"),
+        ("table", "approval", "ap-an-03-common-word-never-routes-to-another-clone"),
+    ],
+    "BUG-161": [  # approval-by-name F-04 (QA D7 F2, F3)
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d7_f2_one_id_here_and_one_in_another_clone_records_nothing"),
+        ("unit", "test_approval_by_name.py",
+         "D1OnBug158.test_d7_f3_negated_phrase_naming_a_hyphenless_id_elsewhere_never_suggests_the_active_change"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

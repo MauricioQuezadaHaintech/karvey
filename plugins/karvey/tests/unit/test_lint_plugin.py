@@ -1108,6 +1108,33 @@ class L80Bug149(LintCase):
         self.assertPasses("L-80")
 
 
+class L82(LintCase):
+    """BUG-159 (REQ-AN-012): the production phrase shows only the approval word, the production word and the
+    change id; a PR number or a version inside it reads as mandatory."""
+
+    def test_pass(self):
+        self.assertPasses("L-82")
+
+    def test_pr_or_version_inside_the_phrase_fails(self):
+        for text in ("Show the phrase: «aprobado para producción {change-id} PR #{pr} v{version}».",
+                     "The human types «aprobado para producción feat-a PR #<n> v<version>».",
+                     "Type `approved for production {change-id} v3.2.1`.",
+                     "Ask for «aprobado para produccion {change-id} #{pr}».",
+                     "Type «aprobado para producción {change-id} (3.13.1)»."):
+            self.t.write(RULES + "/release.md", "# Release\n\n%s\n" % text)
+            self.assertFails("L-82", "PR number or a version", file=RULES + "/release.md")
+
+    def test_unquoted_mention_ends_at_its_clause(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nThe human types approved for production <id>; a PR "
+                                            "number is optional.\n")
+        self.assertPasses("L-82")
+
+    def test_minimal_phrase_and_pr_outside_it_pass(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nShow «aprobado para producción {change-id}» and, apart, "
+                                            "the PR #{pr} head `{sha}` for v{version}.\n")
+        self.assertPasses("L-82")
+
+
 class L81(LintCase):
     """D-47 (REQ-HF-035): no skill or rule asks for approval before reading, searching or investigating."""
 
@@ -1137,7 +1164,7 @@ class ListAll(unittest.TestCase):
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
         self.assertIn("L-80 ", out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)] + ["L-80", "L-81"])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)] + ["L-80", "L-81", "L-82"])
 
 
 if __name__ == "__main__":

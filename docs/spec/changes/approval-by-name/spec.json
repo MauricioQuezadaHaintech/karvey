@@ -1,0 +1,164 @@
+{
+  "change_id": "approval-by-name",
+  "capability": "method",
+  "description": "Hotfix 3.13.1: a production approval that names a change is recorded in the local clone that owns that change, found the way the prod-gate finds clones, even when the session's working tree holds another change; two clones holding the id record nothing and are listed; the hook never suggests a change other than the one named. The phrase the hook, the state tool and the deploy skill show is «aprobado para producción <change-id>»: PR number and version are optional and informational, the approval binds to the commit passed with approve --sha.",
+  "goal": "The human's production OK reaches the change the human named, wherever the session runs, and the phrase shown asks for nothing more than the approval word, the production word and the change id.",
+  "layers": [
+    "Backend"
+  ],
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 2,
+  "security_tier_reason": "changes where the approval hook records a production marker, the evidence the prod-gate requires before a production merge",
+  "type": "hotfix",
+  "lane": "hotfix",
+  "links": {
+    "parent": "prod-gate-scope",
+    "children": []
+  },
+  "decisions": [
+    "D-10",
+    "D-35",
+    "D-47"
+  ],
+  "inputs": {},
+  "iteration_count": 2,
+  "revision_history": [
+    {
+      "date": "2026-10-07",
+      "by": "agent (QA loop)",
+      "reason": "QA D1/D7: any word of the prompt (vocabulary words included) could route the approval to a change of another clone; one id here plus one elsewhere was recorded; the suggestion could still name the active change; L-82 precision. REQ-AN-001 narrows what names a change elsewhere (change-like word or the word after the production term; committed on HEAD); REQ-AN-005 refuses one id here plus one elsewhere.",
+      "decision": "D-47",
+      "revised": [
+        "REQ-AN-001",
+        "REQ-AN-005"
+      ],
+      "findings": [
+        "F-03",
+        "F-04",
+        "F-05"
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "by": "agent (QA loop)",
+      "reason": "QA D1 re-check H1b / D7 R1: the word after the production term could be a decoy change committed in a sibling clone; a hyphenless id found only in another clone is now refused with the clone to approve it from; an uncommitted change elsewhere is named as such (R2).",
+      "decision": "D-47",
+      "revised": [
+        "REQ-AN-001"
+      ],
+      "findings": [
+        "F-07",
+        "F-08"
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "phase": "deploying",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-10-07T15:14:32+00:00",
+      "exited_at": "2026-10-07T15:16:21+00:00",
+      "by": "owner (D-47)"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-10-07T15:16:21+00:00",
+      "exited_at": "2026-10-07T15:17:12+00:00"
+    },
+    {
+      "phase": "architecture",
+      "entered_at": "2026-10-07T15:17:12+00:00",
+      "exited_at": "2026-10-07T15:17:13+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "tasks",
+      "entered_at": "2026-10-07T15:17:13+00:00",
+      "exited_at": "2026-10-07T15:17:13+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "impl",
+      "entered_at": "2026-10-07T15:17:13+00:00",
+      "exited_at": "2026-10-07T15:27:25+00:00",
+      "by": "agent (hotfix lane)"
+    },
+    {
+      "phase": "test",
+      "entered_at": "2026-10-07T15:27:25+00:00",
+      "exited_at": "2026-10-07T15:27:25+00:00"
+    },
+    {
+      "phase": "qa",
+      "entered_at": "2026-10-07T15:27:25+00:00",
+      "exited_at": "2026-10-07T15:51:54+00:00"
+    },
+    {
+      "phase": "deploying",
+      "entered_at": "2026-10-07T15:51:54+00:00"
+    }
+  ],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-07T15:16:56+00:00",
+      "ref": "D-47",
+      "evidence": {
+        "marker": "none"
+      }
+    },
+    "architecture": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-07T15:16:56+00:00",
+      "ref": "D-47",
+      "evidence": {
+        "marker": "approvals/_project.json",
+        "marker_created_at": "2026-10-05T13:04:20+00:00",
+        "prompt_excerpt": "apruebo estos cambios",
+        "session": "230c83a0-0d38-4e1d-b3f9-392e52ef6101",
+        "prompt_sha256": "e3488f8490d75d9472a2365649313c7df409a348c8d364556f3e46bfbec3a970"
+      }
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-07T15:16:56+00:00",
+      "ref": "D-47",
+      "evidence": {
+        "marker": "approvals/_project.json",
+        "marker_created_at": "2026-10-05T13:04:20+00:00",
+        "prompt_excerpt": "apruebo estos cambios",
+        "session": "230c83a0-0d38-4e1d-b3f9-392e52ef6101",
+        "prompt_sha256": "e3488f8490d75d9472a2365649313c7df409a348c8d364556f3e46bfbec3a970"
+      }
+    },
+    "qa": {
+      "generated": true,
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-07T15:51:18+00:00",
+      "ref": "D-47",
+      "evidence": {
+        "marker": "none"
+      }
+    }
+  },
+  "created_at": "2026-10-07T15:14:32+00:00",
+  "updated_at": "2026-10-07T15:51:54+00:00",
+  "skipped": {
+    "mockup": "hotfix lane, no UI: approval hook, state tool text and skill text only",
+    "design_graphic": "no UI (hook and CLI text only)",
+    "infra": "no cloud and no pipeline change: plugin code and docs only"
+  }
+}

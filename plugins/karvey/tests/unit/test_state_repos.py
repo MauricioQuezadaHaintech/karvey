@@ -83,7 +83,9 @@ class Refusal(Base):
         self.assertIn("plan feat-a 0 min (live)", msg)
         self.assertIn("prod feat-b 1500 min (expired)", msg)
         self.assertIn("missing: a live prod marker for feat-a", msg)
-        self.assertIn("aprobado para producción feat-a PR #<n> v<version>", msg)
+        self.assertIn("\u00abaprobado para producción feat-a\u00bb", msg)  # BUG-159: no PR, no version
+        self.assertNotIn("PR #", msg)
+        self.assertNotIn("v<version>", msg)
 
     def test_refusal_with_no_marker(self):
         env = self.refused(("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20"),
