@@ -2246,10 +2246,10 @@ Session in `app-web` (active `web-search`); the sibling clone `app-api` holds a 
 The first BUG-158 fix reused the BUG-148 word list (meant for branches of the same clone) for the cross-clone search.
 
 ### Fix
-`approval.elsewhere_candidates` (change-like words + the word after a production term, vocabulary excluded); no search without a candidate; `clones_holding` requires the spec committed on HEAD (`git cat-file -e`). Hotfix 3.13.1.
+`approval.elsewhere_candidates` (change-like words + the word after a production term, vocabulary excluded); no search without a candidate; `clones_holding` requires the spec committed on HEAD (`git cat-file -e`); QA re-check (F-07): a change id without a hyphen found only in another clone is never recorded from the session — the hook refuses and names the clone to approve it from. Hotfix 3.13.1.
 
 ### Regression test
-`plugins/karvey/tests/unit/test_approval_by_name.py` (D1OnBug158.test_d1_a_*, test_d1_c_*, test_d1_e_*, test_d1_an_uncommitted_*, test_d7_f1_*); table `ap-an-03`; red on f09725c. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+`plugins/karvey/tests/unit/test_approval_by_name.py` (D1OnBug158.test_d1_a_*, test_d1_c_*, test_d1_e_*, test_d1_an_uncommitted_*, test_d7_f1_*, test_d1_h1b_* red on 952f858); table `ap-an-03`; red on f09725c. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
@@ -2257,6 +2257,8 @@ The first BUG-158 fix reused the BUG-148 word list (meant for branches of the sa
 | 2026-10-07 | DETECTADO | owner / Claude Opus 5.5 | F-03, QA D1 and D7 |
 | 2026-10-07 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
 | 2026-10-07 | RESUELTO | owner / Claude Opus 5.5 | fixed in the QA loop; regression tests red on f09725c, green after |
+| 2026-10-07 | REABIERTO | owner / Claude Opus 5.5 | F-07, QA D1 re-check: the word after the production term could be a decoy |
+| 2026-10-07 | RESUELTO | owner / Claude Opus 5.5 | hyphenless ids of other clones refused; test_d1_h1b red on 952f858, green after |
 
 ## BUG-161 — One id here plus one elsewhere was recorded, and a negated phrase could still suggest the active change
 - **Priority:** medium

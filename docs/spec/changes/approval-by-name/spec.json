@@ -22,7 +22,7 @@
     "D-47"
   ],
   "inputs": {},
-  "iteration_count": 1,
+  "iteration_count": 2,
   "revision_history": [
     {
       "date": "2026-10-07",
@@ -37,6 +37,19 @@
         "F-03",
         "F-04",
         "F-05"
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "by": "agent (QA loop)",
+      "reason": "QA D1 re-check H1b / D7 R1: the word after the production term could be a decoy change committed in a sibling clone; a hyphenless id found only in another clone is now refused with the clone to approve it from; an uncommitted change elsewhere is named as such (R2).",
+      "decision": "D-47",
+      "revised": [
+        "REQ-AN-001"
+      ],
+      "findings": [
+        "F-07",
+        "F-08"
       ]
     }
   ],

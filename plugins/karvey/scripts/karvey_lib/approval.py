@@ -888,6 +888,7 @@ def clones_holding(anchors, ids):
     once whatever number of its worktrees hold the change. Also returns how many clones were searched."""
     want = [i for i in dict.fromkeys(ids) if valid_scope(i) and i != SCOPE_PROJECT]
     out, seen = {}, set()
+    clones_holding.uncommitted = {}
     for d in clones.search_dirs([a for a in anchors if a]):
         top = clones.toplevel(d)
         if not top or top in seen:
@@ -897,9 +898,13 @@ def clones_holding(anchors, ids):
             continue
         rid = None
         for cid in want:
-            if (Path(top) / pj.CHANGES_DIR / cid / "spec.json").is_file() and _committed(top, cid):
-                rid = rid or repo_id(top)
-                out.setdefault(cid, {}).setdefault(rid, top)
+            if not (Path(top) / pj.CHANGES_DIR / cid / "spec.json").is_file():
+                continue
+            if not _committed(top, cid):  # D7 R2: said in the reason, never recorded
+                clones_holding.uncommitted.setdefault(cid, []).append(top)
+                continue
+            rid = rid or repo_id(top)
+            out.setdefault(cid, {}).setdefault(rid, top)
     return out, len(seen)
 
 
@@ -913,6 +918,12 @@ def resolve_named_elsewhere(cleaned, anchors, exclude=()):
     found = [w for w in cands if w in index]
     res = {"scope": None, "owner": None, "why": "", "candidates": [], "implicit": False, "searched": searched}
     if not found:
+        loose = [w for w in cands if w in getattr(clones_holding, "uncommitted", {}) and _TOKEN.fullmatch(w)]
+        if loose:  # D7 R2: the right reason, nothing recorded
+            res["candidates"] = [loose[0]]
+            res["why"] = ("change %s is held by %s but not committed on its HEAD; commit the change there, then "
+                          "approve again" % (loose[0], ", ".join(clones_holding.uncommitted[loose[0]])))
+            return res
         return None
     if len(found) > 1:
         res["candidates"] = sorted(found)
@@ -925,6 +936,12 @@ def resolve_named_elsewhere(cleaned, anchors, exclude=()):
     if len(owners) > 1:
         res["why"] = ("change %s is held by %d clones (%s); approve it in a session inside the one you mean, "
                       "or remove the copy" % (cid, len(owners), ", ".join(owners)))
+        return res
+    if not _TOKEN.fullmatch(cid):
+        # D1 H1b: an id without a hyphen may be an ordinary word ("now", "hoy") that another clone holds as a
+        # change; it is never recorded from a session outside that clone: refuse and say where to approve it
+        res["why"] = ("change %s is held by clone %s; an id without a hyphen is recorded only in a session inside "
+                      "its clone (it may be an ordinary word): approve it there" % (cid, owners[0]))
         return res
     res.update(scope=cid, owner=owners[0], why="held by clone %s" % owners[0])
     return res

@@ -34,14 +34,16 @@ discovery, anchored at the working tree, the session's directory and the session
 whatever number of its worktrees hold the change. A word *names* a change of another clone only when it looks like a change id
 (hyphenated, not a version, not a common hyphenated word) or is the word typed right after the production term
 («… producción <id>»), and never when it is an approval, production or negation word; the change counts only when
-its `spec.json` is committed on that clone's HEAD (QA revision 1, F-03).
+its `spec.json` is committed on that clone's HEAD (QA revision 1, F-03). A change id without a hyphen found only in
+another clone is never recorded from the session: the hook refuses and names the clone to approve it from (QA
+revision 2, F-07); a change present there but not committed is named as such.
 
 *Trace: O-1, S-1, AC-1 · F-01 · BUG-158 · D-47 · AMENDS REQ-HF-002*
 
 **Scenarios**
 - Given a session in `app-web` (active change `web-search`) and a sibling clone `app-api` holding `api-rate-limit`,
   when the human types «aprobado para producción api-rate-limit», then the hook finds `app-api`.
-- Given the id in a second worktree of the working tree's clone, then that clone is the owner (one clone).
+- Given the id committed in a second worktree of the working tree's clone, then that clone is the owner (one clone).
 
 ### 1.2 REQ-AN-002 — One owning clone: the marker and its audit line are written there
 WHEN exactly one clone owns the named change, the approval hook SHALL write the production marker in that clone's

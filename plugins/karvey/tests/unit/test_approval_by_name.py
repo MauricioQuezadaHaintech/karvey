@@ -174,11 +174,30 @@ class D1OnBug158(Base):
         self.assertIn("prod approval NOT recorded", out)
         self.assertIsNone(marker(self.api, "api-quota"))
 
-    def test_d1_a_hyphenless_id_right_after_the_production_word_is_named(self):
+    def test_d1_h1b_a_hyphenless_id_of_another_clone_is_never_recorded_from_here(self):
+        for cid, text, cwd in (("now", "approved for production now", None),
+                               ("hoy", "aprobado para producción hoy", None),
+                               ("please", "approved for production please", None),
+                               ("deploy", 'aprobado para producción "web-search" deploy', None),
+                               ("now", "approved for production now", "dev")):
+            if not (self.api / "docs/spec/changes" / cid).exists():
+                self.add(self.api, cid)
+            out = self.prompt(text, cwd=self.dev if cwd else None)
+            self.assertIsNone(marker(self.api, cid), text)
+            self.assertIsNone(marker(self.web, "web-search"), text)
+            self.assertIn("prod approval NOT recorded", out, text)
+            self.assertIn("recorded only in a session inside its clone", out, text)
+
+    def test_d1_a_hyphenless_id_is_recorded_in_a_session_inside_its_clone(self):
         self.add(self.api, "billing")
-        out = self.prompt("aprobado para producción billing")
-        self.assertIn("[karvey] approval recorded (prod, billing, clone %s" % self.api, out)
+        out = self.prompt("aprobado para producción billing", cwd=self.api)
+        self.assertIn("[karvey] approval recorded (prod, billing, expires", out)
         self.assertIsNotNone(marker(self.api, "billing"))
+
+    def test_d7_r2_an_uncommitted_change_elsewhere_says_so(self):
+        self.add(self.api, "api-quota", commit=False)
+        out = self.prompt("aprobado para producción api-quota")
+        self.assertIn("not committed on its HEAD", out)
 
 
     def test_d7_f1_common_words_never_route_to_another_clone(self):
