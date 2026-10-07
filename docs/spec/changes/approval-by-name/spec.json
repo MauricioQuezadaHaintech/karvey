@@ -136,10 +136,14 @@
         "session": "230c83a0-0d38-4e1d-b3f9-392e52ef6101",
         "prompt_sha256": "e3488f8490d75d9472a2365649313c7df409a348c8d364556f3e46bfbec3a970"
       }
+    },
+    "qa": {
+      "generated": true,
+      "approved": false
     }
   },
   "created_at": "2026-10-07T15:14:32+00:00",
-  "updated_at": "2026-10-07T15:27:25+00:00",
+  "updated_at": "2026-10-07T15:51:00+00:00",
   "skipped": {
     "mockup": "hotfix lane, no UI: approval hook, state tool text and skill text only",
     "design_graphic": "no UI (hook and CLI text only)",
