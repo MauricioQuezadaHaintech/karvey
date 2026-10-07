@@ -34,7 +34,8 @@ discovery, anchored at the working tree, the session's directory and the session
 whatever number of its worktrees hold the change. A word *names* a change of another clone only when it looks like a change id
 (hyphenated, not a version, not a common hyphenated word) or is the word typed right after the production term
 («… producción <id>»), and never when it is an approval, production or negation word; the change counts only when
-its `spec.json` is committed on that clone's HEAD (QA revision 1, F-03). A change id without a hyphen found only in
+its `spec.json` is committed on that clone's HEAD (QA revision 1, F-03). Another clone is reached only by the id typed right after
+the production term; a change-like word elsewhere in the message refuses with the phrase. A change id without a hyphen found only in
 another clone is never recorded from the session: the hook refuses and names the clone to approve it from (QA
 revision 2, F-07); a change present there but not committed is named as such.
 

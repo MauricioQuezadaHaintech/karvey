@@ -943,6 +943,12 @@ def resolve_named_elsewhere(cleaned, anchors, exclude=()):
         res["why"] = ("change %s is held by clone %s; an id without a hyphen is recorded only in a session inside "
                       "its clone (it may be an ordinary word): approve it there" % (cid, owners[0]))
         return res
+    if cid not in _after_prod_term(cleaned):
+        # D1 re-check (residual): another clone is reached only by the id typed right after the production term;
+        # a change-like word elsewhere in the sentence ("the real-time fix") never routes the approval there
+        res["why"] = ("change %s is held by clone %s and the message does not name it as the change to release; "
+                      "type it right after the production word" % (cid, owners[0]))
+        return res
     res.update(scope=cid, owner=owners[0], why="held by clone %s" % owners[0])
     return res
 

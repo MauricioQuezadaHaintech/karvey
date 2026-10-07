@@ -194,6 +194,15 @@ class D1OnBug158(Base):
         self.assertIn("[karvey] approval recorded (prod, billing, expires", out)
         self.assertIsNotNone(marker(self.api, "billing"))
 
+    def test_d1_another_clone_is_reached_only_by_the_id_after_the_production_word(self):
+        self.add(self.api, "real-time")
+        out = self.prompt("approved for production, the real-time fix looks good")
+        self.assertIsNone(marker(self.api, "real-time"))
+        self.assertIsNone(marker(self.web, "web-search"))
+        self.assertIn("\u00abapproved for production real-time\u00bb", out)
+        out = self.prompt("approved for production real-time")
+        self.assertIsNotNone(marker(self.api, "real-time"))
+
     def test_d7_r2_an_uncommitted_change_elsewhere_says_so(self):
         self.add(self.api, "api-quota", commit=False)
         out = self.prompt("aprobado para producción api-quota")

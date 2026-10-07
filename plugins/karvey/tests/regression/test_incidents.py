@@ -385,6 +385,8 @@ INDEX = {
         ("unit", "test_approval_by_name.py", "D1OnBug158.test_d7_f1_common_words_never_route_to_another_clone"),
         ("unit", "test_approval_by_name.py",
          "D1OnBug158.test_d1_h1b_a_hyphenless_id_of_another_clone_is_never_recorded_from_here"),
+        ("unit", "test_approval_by_name.py",
+         "D1OnBug158.test_d1_another_clone_is_reached_only_by_the_id_after_the_production_word"),
         ("table", "approval", "ap-an-03-common-word-never-routes-to-another-clone"),
     ],
     "BUG-161": [  # approval-by-name F-04 (QA D7 F2, F3)
