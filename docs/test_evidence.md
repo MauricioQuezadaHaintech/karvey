@@ -274,3 +274,19 @@ failed on `97595af` (3.13.0 code + the new tests) before the fix: 9 of 12 `test_
 | `revisa el log` (no approval) | 134 / 150 ms |
 | production approval naming a sibling clone's change | 185 / 204 ms |
 | production approval naming an unknown id | 180 / 187 ms |
+
+### Release gate 3.13.1 (2026-10-07)
+
+QA loop added BUG-160, BUG-161 (D1 / D7, three rounds; D1 re-check of `cb90ed4` PASS at `5512954`).
+
+| Suite | Result |
+|---|---|
+| unit | 1088 tests, OK |
+| regression | 10 tests, OK (BUG-05..51, 138..161 indexed) |
+| guard tables | 518 cases, 615 runs (97 without python), 615 passed |
+| `test-hooks.sh` | 67 passed |
+| node page tests | 22 passed |
+| lint | 0 errors (42 checks; L-82 new), upgrade-surface fingerprint refreshed to 3.13.1 |
+| validate --all | 0 errors |
+
+Versions 3.13.1 agree (plugin.json, marketplace.json, project.json, CHANGELOG `[3.13.1]`, page).

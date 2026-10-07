@@ -359,7 +359,7 @@ footer.site .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1
       <h1 id="en-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> is a word of the <strong>Ona</strong> language of the <strong>Selknam</strong> people of Patagonia, meaning <strong>Afán</strong> — zeal, the drive to get things done.</p>
       <ul class="badges" aria-label="Plugin facts">
-        <li class="badge v">v3.13.0</li>
+        <li class="badge v">v3.13.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">stack-agnostic</li>
@@ -1123,7 +1123,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="en-t-ver">Version history</h2>
   <p class="lede">Why does the history start at <strong>3.0.0</strong>? Pure whim: our flagship software, <strong>Paáutin</strong>, was at version 3 when we built the plugin, so Karvey was born as a 3 too. There never was a 1.x or a 2.x.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.13.0</span><span class="date">2026-10-06</span><br>After a plugin update, the first session in a Karvey project asks once per clone whether to build a project upgrade plan (only when a step applies); <code>/karvey:karvey-upgrade</code> turns the picked steps into one reviewable pull request. Every later release that changes what projects rely on must declare how they upgrade.</li>
+    <li class="now"><span class="ver">3.13.1</span><span class="date">2026-10-07</span><br>Hotfix: a production approval that names a change is recorded in the local clone that owns that change, even when the session runs in another repo; the hook never suggests a change other than the one named. The approval phrase needs only the approval word, the production word and the change id; PR number and version are optional.</li>
+    <li><span class="ver">3.13.0</span><span class="date">2026-10-06</span><br>After a plugin update, the first session in a Karvey project asks once per clone whether to build a project upgrade plan (only when a step applies); <code>/karvey:karvey-upgrade</code> turns the picked steps into one reviewable pull request. Every later release that changes what projects rely on must declare how they upgrade.</li>
     <li><span class="ver">3.12.1</span><span class="date">2026-10-05</span><br>Hotfix: a production approval reaches exactly the change and the commits the human named, whatever repo or command form; the prod-gate decides on the PR’s own repo and sees REST completions and pipeline approvals; the session loads only the profile of the repo it works in; the production OK is always typed; investigation is free and an approved plan runs to the end (only consequential actions need it).</li>
     <li><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>Wave 1 hardening: phase state through one tool over a schema-checked <code>spec.json</code>; approvals recorded by a hook from the human's own words; a prod-gate (on by default) that lets a production merge through only with a human approval bound to the PR's head commit; notification destinations only from <code>project.json</code>; the linter checks the plugin's text against its files.</li>
     <li><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>Hotfix: the live-state check finds the repo when the team lives inside it, and recognises git worktrees — no more false "not found" drift.</li>
@@ -1192,7 +1193,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="es-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> es una palabra del <strong>ona</strong>, la lengua del pueblo <strong>selknam</strong> de la Patagonia, que significa <strong>Afán</strong> (de hacer).</p>
       <ul class="badges" aria-label="Datos del plugin">
-        <li class="badge v">v3.13.0</li>
+        <li class="badge v">v3.13.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">agnóstico de stack</li>
@@ -1956,7 +1957,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="es-t-ver">Historial de versiones</h2>
   <p class="lede">¿Por qué el historial parte en la <strong>3.0.0</strong>? Por puro capricho: nuestro software emblema, <strong>Paáutin</strong>, estaba en la versión 3 cuando hicimos el plugin, así que Karvey nació también como 3. Nunca existieron una 1.x ni una 2.x.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.13.0</span><span class="date">06-10-2026</span><br>Tras actualizar el plugin, la primera sesión en un proyecto Karvey pregunta una vez por clon si armar un plan de actualización del proyecto (solo cuando algún paso aplica); <code>/karvey:karvey-upgrade</code> convierte los pasos elegidos en un único pull request revisable. Cada versión posterior que cambie aquello de lo que dependen los proyectos debe declarar cómo se actualizan.</li>
+    <li class="now"><span class="ver">3.13.1</span><span class="date">07-10-2026</span><br>Hotfix: una aprobación de producción que nombra un cambio se registra en el clon local dueño de ese cambio, aunque la sesión esté en otro repo; el hook nunca sugiere otro cambio que el nombrado. La frase de aprobación solo necesita la palabra de aprobación, la de producción y el id del cambio; el número de PR y la versión son opcionales.</li>
+    <li><span class="ver">3.13.0</span><span class="date">06-10-2026</span><br>Tras actualizar el plugin, la primera sesión en un proyecto Karvey pregunta una vez por clon si armar un plan de actualización del proyecto (solo cuando algún paso aplica); <code>/karvey:karvey-upgrade</code> convierte los pasos elegidos en un único pull request revisable. Cada versión posterior que cambie aquello de lo que dependen los proyectos debe declarar cómo se actualizan.</li>
     <li><span class="ver">3.12.1</span><span class="date">05-10-2026</span><br>Hotfix: una aprobación de producción llega exactamente al cambio y a los commits que nombró el humano, sea cual sea el repo o la forma del comando; el prod-gate decide sobre el repo del PR y ve los cierres por REST y las aprobaciones de pipeline; la sesión carga solo el perfil del repo en que trabaja; el OK de producción siempre se escribe; investigar es libre y un plan aprobado se ejecuta hasta el final (solo las acciones con consecuencias lo necesitan).</li>
     <li><span class="ver">3.12.0</span><span class="date">26-09-2026</span><br>Endurecimiento, ola 1: el estado de fase pasa por una sola herramienta sobre un <code>spec.json</code> validado por esquema; las aprobaciones las registra un hook a partir de las palabras del humano; un prod-gate (activo por defecto) deja pasar un merge a producción solo con una aprobación humana ligada al commit de cabeza del PR; los destinos de notificación salen solo de <code>project.json</code>; el linter contrasta el texto del plugin con sus archivos.</li>
     <li><span class="ver">3.11.4</span><span class="date">23-09-2026</span><br>Hotfix: la comparación de estado encuentra el repo cuando el equipo vive dentro de él y reconoce los worktrees de git — se acaba el falso drift "no encontrado".</li>
@@ -2024,7 +2026,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="pt-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> é uma palavra da língua <strong>Ona</strong> do povo <strong>Selknam</strong> da Patagônia, que significa <strong>Afán</strong> — empenho, o ímpeto de fazer as coisas acontecerem.</p>
       <ul class="badges" aria-label="Dados do plugin">
-        <li class="badge v">v3.13.0</li>
+        <li class="badge v">v3.13.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · orientado a especificação</li>
         <li class="badge">agnóstico de stack</li>
@@ -2788,7 +2790,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="pt-t-ver">Histórico de versões</h2>
   <p class="lede">Por que o histórico começa na <strong>3.0.0</strong>? Por puro capricho: nosso software emblemático, o <strong>Paáutin</strong>, estava na versão 3 quando criamos o plugin, então o Karvey também nasceu como 3. Nunca existiram uma 1.x nem uma 2.x.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.13.0</span><span class="date">2026-10-06</span><br>Após atualizar o plugin, a primeira sessão num projeto Karvey pergunta uma vez por clone se deve montar um plano de atualização do projeto (só quando algum passo se aplica); <code>/karvey:karvey-upgrade</code> transforma os passos escolhidos num único pull request revisável. Cada versão seguinte que mude aquilo de que os projetos dependem deve declarar como eles se atualizam.</li>
+    <li class="now"><span class="ver">3.13.1</span><span class="date">2026-10-07</span><br>Hotfix: uma aprovação de produção que nomeia uma mudança é registrada no clone local dono dessa mudança, mesmo que a sessão esteja em outro repositório; o hook nunca sugere outra mudança além da nomeada. A frase de aprovação precisa só da palavra de aprovação, da palavra de produção e do id da mudança; número do PR e versão são opcionais.</li>
+    <li><span class="ver">3.13.0</span><span class="date">2026-10-06</span><br>Após atualizar o plugin, a primeira sessão num projeto Karvey pergunta uma vez por clone se deve montar um plano de atualização do projeto (só quando algum passo se aplica); <code>/karvey:karvey-upgrade</code> transforma os passos escolhidos num único pull request revisável. Cada versão seguinte que mude aquilo de que os projetos dependem deve declarar como eles se atualizam.</li>
     <li><span class="ver">3.12.1</span><span class="date">2026-10-05</span><br>Hotfix: uma aprovação de produção chega exatamente à mudança e aos commits que o humano nomeou, seja qual for o repositório ou a forma do comando; o prod-gate decide sobre o repositório do PR e vê conclusões por REST e aprovações de pipeline; a sessão carrega apenas o perfil do repositório em que trabalha; o OK de produção é sempre digitado; investigar é livre e um plano aprovado é executado até o fim (só ações com consequências precisam dele).</li>
     <li><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>Endurecimento, onda 1: o estado de fase passa por uma única ferramenta sobre um <code>spec.json</code> validado por esquema; as aprovações são registradas por um hook a partir das palavras do humano; um prod-gate (ativo por padrão) só deixa passar um merge para produção com uma aprovação humana vinculada ao commit de topo do PR; os destinos de notificação vêm apenas do <code>project.json</code>; o linter confere o texto do plugin com seus arquivos.</li>
     <li><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>Hotfix: a verificação de estado encontra o repositório quando a equipe vive dentro dele e reconhece worktrees do git — fim do falso drift "não encontrado".</li>
@@ -2856,7 +2859,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="de-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> ist ein Wort aus der <strong>Ona</strong>-Sprache des <strong>Selknam</strong>-Volkes in Patagonien und bedeutet <strong>Afán</strong> — Eifer, der Antrieb, Dinge zu erledigen.</p>
       <ul class="badges" aria-label="Eckdaten des Plugins">
-        <li class="badge v">v3.13.0</li>
+        <li class="badge v">v3.13.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · spec-driven</li>
         <li class="badge">stack-agnostisch</li>
@@ -3620,7 +3623,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="de-t-ver">Versionshistorie</h2>
   <p class="lede">Warum beginnt die Historie bei <strong>3.0.0</strong>? Aus reiner Laune: Unsere Vorzeigesoftware <strong>Paáutin</strong> war bei Version 3, als wir das Plugin gebaut haben, also kam auch Karvey als 3 zur Welt. Eine 1.x oder 2.x hat es nie gegeben.</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.13.0</span><span class="date">2026-10-06</span><br>Nach einem Plugin-Update fragt die erste Sitzung in einem Karvey-Projekt einmal pro Klon, ob ein Upgrade-Plan für das Projekt erstellt werden soll (nur wenn ein Schritt zutrifft); <code>/karvey:karvey-upgrade</code> macht aus den gewählten Schritten einen einzigen prüfbaren Pull Request. Jede spätere Version, die ändert, worauf Projekte sich stützen, muss angeben, wie sie aktualisiert werden.</li>
+    <li class="now"><span class="ver">3.13.1</span><span class="date">2026-10-07</span><br>Hotfix: Eine Produktionsfreigabe, die einen Change nennt, wird in dem lokalen Klon erfasst, dem dieser Change gehört – auch wenn die Sitzung in einem anderen Repo läuft; der Hook schlägt nie einen anderen Change als den genannten vor. Die Freigabe-Formulierung braucht nur das Freigabewort, das Produktionswort und die Change-ID; PR-Nummer und Version sind optional.</li>
+    <li><span class="ver">3.13.0</span><span class="date">2026-10-06</span><br>Nach einem Plugin-Update fragt die erste Sitzung in einem Karvey-Projekt einmal pro Klon, ob ein Upgrade-Plan für das Projekt erstellt werden soll (nur wenn ein Schritt zutrifft); <code>/karvey:karvey-upgrade</code> macht aus den gewählten Schritten einen einzigen prüfbaren Pull Request. Jede spätere Version, die ändert, worauf Projekte sich stützen, muss angeben, wie sie aktualisiert werden.</li>
     <li><span class="ver">3.12.1</span><span class="date">2026-10-05</span><br>Hotfix: eine Produktionsfreigabe erreicht genau die Änderung und die Commits, die der Mensch genannt hat, egal über welches Repo oder welche Befehlsform; das Prod-Gate entscheidet über das Repo des PR und sieht REST-Abschlüsse und Pipeline-Freigaben; die Sitzung lädt nur das Profil des Repos, in dem sie arbeitet; das Produktions-OK wird immer getippt; Recherche ist frei und ein freigegebener Plan läuft bis zum Ende (nur folgenreiche Aktionen brauchen ihn).</li>
     <li><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>Härtung, Welle 1: der Phasenzustand läuft über ein einziges Werkzeug auf einer schemageprüften <code>spec.json</code>; Freigaben zeichnet ein Hook aus den eigenen Worten des Menschen auf; ein Prod-Gate (standardmäßig aktiv) lässt einen Merge in die Produktion nur mit einer menschlichen Freigabe durch, die an den Head-Commit des PR gebunden ist; Benachrichtigungsziele nur aus <code>project.json</code>; der Linter prüft den Text des Plugins gegen seine Dateien.</li>
     <li><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>Hotfix: der Zustandsabgleich findet das Repository, wenn das Team darin lebt, und erkennt Git-Worktrees — kein falscher „nicht gefunden“-Drift mehr.</li>
@@ -3688,7 +3692,7 @@ claude plugin update karvey@karvey-methods</code></pre>
       <h1 id="zh-t-hero">Karvey</h1>
       <p class="meaning"><em>Karvey</em> 是巴塔哥尼亚<strong>塞尔克南人</strong>（Selknam）<strong>欧纳语</strong>（Ona）中的一个词，意为 <strong>Afán</strong>——热忱，把事情做成的干劲。</p>
       <ul class="badges" aria-label="插件概况">
-        <li class="badge v">v3.13.0</li>
+        <li class="badge v">v3.13.1</li>
         <li class="badge">Apache-2.0</li>
         <li class="badge">SDD · 规格驱动</li>
         <li class="badge">技术栈无关</li>
@@ -4452,7 +4456,8 @@ claude plugin update karvey@karvey-methods</code></pre>
   <h2 id="zh-t-ver">版本历史</h2>
   <p class="lede">为什么版本历史从 <strong>3.0.0</strong> 开始？纯属心血来潮：我们开发这个插件时，我们的旗舰软件 <strong>Paáutin</strong> 正处于第 3 版，所以 Karvey 也从 3 起步。从来没有 1.x 或 2.x。</p>
   <ol class="timeline">
-    <li class="now"><span class="ver">3.13.0</span><span class="date">2026-10-06</span><br>插件更新后，Karvey 项目中的第一次会话会在每个克隆中询问一次是否生成项目升级计划（仅当有步骤适用时）；<code>/karvey:karvey-upgrade</code> 把选中的步骤变成一个可审查的拉取请求。此后每个改变项目所依赖内容的版本都必须声明项目如何升级。</li>
+    <li class="now"><span class="ver">3.13.1</span><span class="date">2026-10-07</span><br>热修复：点名某个变更的生产批准会记录在拥有该变更的本地克隆中，即使会话位于另一个仓库；钩子绝不会建议点名之外的其他变更。批准短语只需要批准词、生产词和变更 ID；PR 编号和版本是可选的。</li>
+    <li><span class="ver">3.13.0</span><span class="date">2026-10-06</span><br>插件更新后，Karvey 项目中的第一次会话会在每个克隆中询问一次是否生成项目升级计划（仅当有步骤适用时）；<code>/karvey:karvey-upgrade</code> 把选中的步骤变成一个可审查的拉取请求。此后每个改变项目所依赖内容的版本都必须声明项目如何升级。</li>
     <li><span class="ver">3.12.1</span><span class="date">2026-10-05</span><br>热修复：生产审批只作用于人所指明的变更和提交，无论经由哪个仓库或何种命令形式；prod-gate 依据 PR 所属仓库判断，并能识别经 REST 完成的合并与流水线审批；会话只加载其工作仓库的配置；生产 OK 始终由人输入；调查不受限制，获批的计划执行到底（只有有后果的操作才需要审批）。</li>
     <li><span class="ver">3.12.0</span><span class="date">2026-09-26</span><br>加固第一波：阶段状态统一经由一个工具、基于经过模式校验的 <code>spec.json</code>；审批由钩子根据人的原话记录；prod-gate（默认开启）只在存在绑定到 PR 头部提交的人工审批时才放行生产合并；通知目标只来自 <code>project.json</code>；linter 将插件文本与其文件逐一核对。</li>
     <li><span class="ver">3.11.4</span><span class="date">2026-09-23</span><br>热修复：当团队配置位于仓库内部时，状态比对能找到该仓库，并能识别 git worktree——不再出现虚假的“未找到”漂移。</li>

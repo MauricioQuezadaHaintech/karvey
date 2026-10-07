@@ -20,5 +20,5 @@ the way the prod-gate finds clones; it never suggests another change; the phrase
 | E1.F2.T1 red tests (phrase, L-82) | ✅ |
 | E1.F2.T2 phrase text + L-82 | ✅ |
 | E1.F3.T0 BUG records + regression index | ✅ |
-| E1.F3.T1 release 3.13.1 | ⬜ |
+| E1.F3.T1 release 3.13.1 | ✅ |
 | E1.F3.T2 test plan / evidence | ✅ |

@@ -1,6 +1,6 @@
 {
   "$comment": "Release-surface fingerprint (lint check L-37): the files whose change can require a project upgrade, hashed (BOM stripped, LF) as of `release`. A release that changes them must add an upgrade step with since = that release or a 'No project upgrade needed: <reason>' line, then refresh this file with `karvey-upgrade.py surface --write` (karvey-deploy, at the release).",
-  "release": "3.13.0",
+  "release": "3.13.1",
   "globs": [
     "plugins/karvey/schemas/*.json",
     "plugins/karvey/skills/karvey/rules/*.md",
@@ -20,9 +20,9 @@
     "plugins/karvey/schemas/spec.schema.json": "67fe728a562449e6622b76a6636019916940f9228c6029f1d1785bcaad8b9e3c",
     "plugins/karvey/schemas/state-machine.json": "585aa4a03d427d46e70f82855012545f511c4cb16b17582d6fb967e3ae0568dd",
     "plugins/karvey/schemas/upgrade-steps.schema.json": "af289115e385e183738e550e338b78242605e8130002f82096be59098fd89f0a",
-    "plugins/karvey/scripts/karvey_lib/approval.py": "473517987dfea0d688ede0f67a6cfe69ca3aa81f708e4fe6f885f62d32b9ba9f",
+    "plugins/karvey/scripts/karvey_lib/approval.py": "4e2cba3ae32981fb4f0c658c18c559c42d55e46ec972044ea3352ae75bcbe8f1",
     "plugins/karvey/scripts/karvey_lib/defaults.json": "98aa293d3646072ad06696978ace1d59be51031cb004bd56faebbf5cf144c9bd",
-    "plugins/karvey/scripts/karvey_lib/guards.py": "8561ff28ccef25c20ed2ac54c193f0b244c0efdb627eb23ee154cdcb06566153",
+    "plugins/karvey/scripts/karvey_lib/guards.py": "b71b0853229689ecea676baf8f5b6ded98524d4ea038f488a377396aa2fa00e7",
     "plugins/karvey/scripts/karvey_lib/karvey_hooks.py": "df3792de44c3bff406577116240e4354086a4cd3ce5ba541bbd33c21109ff11e",
     "plugins/karvey/scripts/karvey_lib/project.py": "831b667bb775a16db16bbc248e72f7ecf1e682253aa3bd5804b9bd4f82dc9392",
     "plugins/karvey/scripts/karvey_lib/vocabulary.json": "d079452e5e07ca955df910d93ac8dc4973f461787c586343341dd8c5cdc194a5",
@@ -33,7 +33,7 @@
     "plugins/karvey/skills/karvey/rules/clickup-protocol.md": "832e1b3293d6483a92a70e5f9dd691e4c9152d90222b9fed6468ffc038baa9e6",
     "plugins/karvey/skills/karvey/rules/deploy-workflow.md": "d059a74fa5d1bf644cb65e1a7db3f1b0cfba4044f2e6802095127f9c3b9c0c86",
     "plugins/karvey/skills/karvey/rules/ears-format.md": "319ff63d644310e15b7a401d43dbdee1fe48ce7245a7334fcbf155c486903dd7",
-    "plugins/karvey/skills/karvey/rules/enforcement.md": "725f0e8863dec9307eb916730b9c578743ce1302996f8c1d52fe3e2731ad352f",
+    "plugins/karvey/skills/karvey/rules/enforcement.md": "4733e6763988bb109b0b765fecdea0819e251f475b3ea10ab87df1a23934b8ad",
     "plugins/karvey/skills/karvey/rules/engineering-standards.md": "b506833b87969e747f7a58b9f9f4936a8af494d6254cc8fc7a3f9d99a5d51a9b",
     "plugins/karvey/skills/karvey/rules/incident-tracking.md": "b10e187334f685b12648384216a9d68fa100365fc84d6c4284302826f9ea5557",
     "plugins/karvey/skills/karvey/rules/iteration-loop.md": "d4f4377eb64a1abed61b02436c591eae3eef3349918e7e0f7ab644da223c6b0a",
