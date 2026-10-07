@@ -22,8 +22,24 @@
     "D-47"
   ],
   "inputs": {},
-  "iteration_count": 0,
-  "revision_history": [],
+  "iteration_count": 1,
+  "revision_history": [
+    {
+      "date": "2026-10-07",
+      "by": "agent (QA loop)",
+      "reason": "QA D1/D7: any word of the prompt (vocabulary words included) could route the approval to a change of another clone; one id here plus one elsewhere was recorded; the suggestion could still name the active change; L-82 precision. REQ-AN-001 narrows what names a change elsewhere (change-like word or the word after the production term; committed on HEAD); REQ-AN-005 refuses one id here plus one elsewhere.",
+      "decision": "D-47",
+      "revised": [
+        "REQ-AN-001",
+        "REQ-AN-005"
+      ],
+      "findings": [
+        "F-03",
+        "F-04",
+        "F-05"
+      ]
+    }
+  ],
   "schema_version": 1,
   "phase": "qa",
   "phase_history": [

@@ -1119,9 +1119,15 @@ class L82(LintCase):
         for text in ("Show the phrase: «aprobado para producción {change-id} PR #{pr} v{version}».",
                      "The human types «aprobado para producción feat-a PR #<n> v<version>».",
                      "Type `approved for production {change-id} v3.2.1`.",
-                     "Ask for «aprobado para produccion {change-id} #{pr}»."):
+                     "Ask for «aprobado para produccion {change-id} #{pr}».",
+                     "Type «aprobado para producción {change-id} (3.13.1)»."):
             self.t.write(RULES + "/release.md", "# Release\n\n%s\n" % text)
             self.assertFails("L-82", "PR number or a version", file=RULES + "/release.md")
+
+    def test_unquoted_mention_ends_at_its_clause(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nThe human types approved for production <id>; a PR "
+                                            "number is optional.\n")
+        self.assertPasses("L-82")
 
     def test_minimal_phrase_and_pr_outside_it_pass(self):
         self.t.write(RULES + "/release.md", "# Release\n\nShow «aprobado para producción {change-id}» and, apart, "

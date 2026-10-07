@@ -14,11 +14,11 @@ Summary: **ADDED 10** (REQ-AN-001..007, REQ-AN-010..012) · **MODIFIED 0** · **
 Traced to `docs/spec/changes/approval-by-name/prd.md`.
 
 ### A production approval is recorded in the clone that owns the named change (F-01, BUG-158)
-- **REQ-AN-001** — WHEN a production approval names a change id that is not in the working tree, the approval hook SHALL look for it in the clones found by the prod-gate's clone discovery, counting a clone once whatever number of its worktrees hold it. *(Traces: O-1, S-1, AC-1 · F-01 · BUG-158 · D-47 · amends REQ-HF-002)*
+- **REQ-AN-001** — WHEN a production approval names a change id that is not in the working tree, the approval hook SHALL look for it in the clones found by the prod-gate's clone discovery, counting a clone once whatever number of its worktrees hold it; only a change-like word or the word right after the production term (never a vocabulary word) names a change elsewhere, and only a change committed on that clone's HEAD counts. *(Traces: O-1, S-1, AC-1 · F-01 · BUG-158 · D-47 · amends REQ-HF-002)*
 - **REQ-AN-002** — WHEN exactly one clone owns it, the approval hook SHALL write the production marker and its audit line in that clone, none in the working tree's clone, and print the owning clone's path. *(Traces: O-1, S-1, AC-1 · F-01 · BUG-158 · D-34, D-47)*
 - **REQ-AN-003** — IF two or more clones own it, THEN the approval hook SHALL record nothing and list every owning clone. *(Traces: O-1, AC-2 · F-01 · BUG-158)*
 - **REQ-AN-004** — The suggested phrase SHALL name the change the prompt named (or `<change-id>`), never the active change nor another change. *(Traces: O-2, AC-3 · F-01 · BUG-158 · amends REQ-HF-029)*
-- **REQ-AN-005** — The working tree keeps precedence for an id it holds; with no change named the single active change is used, said out loud; several named record nothing; a branch-only id keeps its message. *(Traces: O-1, AC-4 · amends REQ-HF-001..004)*
+- **REQ-AN-005** — The working tree keeps precedence for an id it holds; with no change named the single active change is used, said out loud; several named (one here and one elsewhere included) record nothing; a branch-only id keeps its message. *(Traces: O-1, AC-4 · amends REQ-HF-001..004)*
 - **REQ-AN-006** — Outside a Karvey project, a production approval naming a change owned by exactly one discovered clone is recorded there; two or more owners print the not-recorded line; otherwise silent. *(Traces: O-1, S-1 · F-01 · BUG-158)*
 - **REQ-AN-007** — The clone search runs only for a production approval whose named id is not in the working tree, uses the bounded discovery, and fails open with the not-recorded line. *(Traces: O-1 · amends REQ-HF-018)*
 

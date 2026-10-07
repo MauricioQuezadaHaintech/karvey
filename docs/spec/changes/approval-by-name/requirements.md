@@ -31,7 +31,10 @@ change id.*
 WHEN the human's prompt is a production approval (D-10) and names a change id that does not exist in the working
 tree where the approval hook runs, the approval hook SHALL look for that id in the clones found by clone
 discovery, anchored at the working tree, the session's directory and the session project, counting a clone once
-whatever number of its worktrees hold the change.
+whatever number of its worktrees hold the change. A word *names* a change of another clone only when it looks like a change id
+(hyphenated, not a version, not a common hyphenated word) or is the word typed right after the production term
+(«… producción <id>»), and never when it is an approval, production or negation word; the change counts only when
+its `spec.json` is committed on that clone's HEAD (QA revision 1, F-03).
 
 *Trace: O-1, S-1, AC-1 · F-01 · BUG-158 · D-47 · AMENDS REQ-HF-002*
 
@@ -71,7 +74,8 @@ question).
 ### 1.5 REQ-AN-005 — The working tree and the active change keep their precedence
 WHEN the named id exists in the working tree, the approval hook SHALL record it there without searching other
 clones (REQ-HF-001); WHEN the prompt names no change, it SHALL keep the fallback to the working tree's single
-active change, said out loud (REQ-HF-003); several ids named (here or elsewhere) SHALL record nothing (REQ-HF-004);
+active change, said out loud (REQ-HF-003); several ids named (here, in another clone or on a branch) SHALL record nothing, also when one of them is
+in this tree (REQ-HF-004, F-04);
 an id held only by a branch of this clone keeps its message (REQ-HF-002).
 
 *Trace: O-1, S-1, AC-4 · F-01 · AMENDS REQ-HF-001..004*

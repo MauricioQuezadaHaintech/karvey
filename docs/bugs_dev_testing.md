@@ -2227,3 +2227,63 @@ the state tool refusal, the hook and `karvey-deploy` show «aprobado para produc
 | 2026-10-07 | DETECTADO | owner / Claude Opus 5.5 | F-02, owner report |
 | 2026-10-07 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
 | 2026-10-07 | RESUELTO | owner / Claude Opus 5.5 | fix on hotfix/3.13.1-approval-by-name; regression tests red on 97595af, green after |
+
+## BUG-160 — Any word of a production approval could send it to a change of another clone
+- **Priority:** high
+- **Detected:** 2026-10-07 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`resolve_named_elsewhere`, `clones_holding`)
+- **Change / origin:** approval-by-name — finding F-03 (QA: D1 H1, D7 F1)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Session in `app-web` (active `web-search`); the sibling clone `app-api` holds a change named `produccion` (or `release`, `search`, `deploy`). The human types «aprobado para producción»: the hook records `(prod, produccion, clone …/app-api)` and nothing for `web-search`.
+
+### Actual vs expected
+- Actual: every word of the prompt, approval and production words included, was looked up in the other clones before the active-change fallback, and a `spec.json` written on disk (not committed) counted.
+- Expected: only a change-like word (hyphenated, not a version or common word) or the word right after the production term names a change elsewhere, never a vocabulary word; only a change committed on the clone's HEAD counts; with no such word the active-change fallback stays.
+
+### Root cause
+The first BUG-158 fix reused the BUG-148 word list (meant for branches of the same clone) for the cross-clone search.
+
+### Fix
+`approval.elsewhere_candidates` (change-like words + the word after a production term, vocabulary excluded); no search without a candidate; `clones_holding` requires the spec committed on HEAD (`git cat-file -e`). Hotfix 3.13.1.
+
+### Regression test
+`plugins/karvey/tests/unit/test_approval_by_name.py` (D1OnBug158.test_d1_a_*, test_d1_c_*, test_d1_e_*, test_d1_an_uncommitted_*, test_d7_f1_*); table `ap-an-03`; red on f09725c. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-07 | DETECTADO | owner / Claude Opus 5.5 | F-03, QA D1 and D7 |
+| 2026-10-07 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
+| 2026-10-07 | RESUELTO | owner / Claude Opus 5.5 | fixed in the QA loop; regression tests red on f09725c, green after |
+
+## BUG-161 — One id here plus one elsewhere was recorded, and a negated phrase could still suggest the active change
+- **Priority:** medium
+- **Detected:** 2026-10-07 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`resolve_prod_scope`, `phrase_change`)
+- **Change / origin:** approval-by-name — finding F-04 (QA: D7 F2, F3)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+«aprobado para producción web-search y api-rate-limit» (`api-rate-limit` in a sibling clone) recorded `web-search`; «no apruebo producción ratelimit todavía» (`ratelimit` in a sibling) suggested «aprobado para producción web-search».
+
+### Actual vs expected
+- Actual: an id of this tree returned before other named changes were looked up; the suggestion ignored hyphenless ids of other clones.
+- Expected: two changes named record nothing (one message per change); the suggestion never names a change other than the one named.
+
+### Root cause
+`resolve_prod_scope` stopped at the first id of this tree; `phrase_change` only knew this tree's ids and hyphenated words.
+
+### Fix
+With one id here, the other candidates are checked against this clone's branches/worktrees and the other clones: any hit refuses; `phrase_change` returns `<change-id>` when any candidate word is present. Hotfix 3.13.1.
+
+### Regression test
+`plugins/karvey/tests/unit/test_approval_by_name.py` (test_d7_f2_*, test_d7_f3_*); red on f09725c. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-07 | DETECTADO | owner / Claude Opus 5.5 | F-04, QA D7 |
+| 2026-10-07 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
+| 2026-10-07 | RESUELTO | owner / Claude Opus 5.5 | fixed in the QA loop; regression tests red on f09725c, green after |

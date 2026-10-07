@@ -1878,7 +1878,7 @@
           }
         },
         "setup": [
-          "mkdir -p '{{tmp}}/app-api/docs/spec/changes/api-rate-limit' && cd '{{tmp}}/app-api' && git init -q && printf '{\"change_id\": \"api-rate-limit\", \"phase\": \"deploying\"}' > docs/spec/changes/api-rate-limit/spec.json"
+          "mkdir -p '{{tmp}}/app-api/docs/spec/changes/api-rate-limit' && cd '{{tmp}}/app-api' && git init -q && printf '{\"change_id\": \"api-rate-limit\", \"phase\": \"deploying\"}' > docs/spec/changes/api-rate-limit/spec.json && git add -A && git -c user.name=t -c user.email=t@example.invalid -c commit.gpgsign=false commit -q -m c"
         ]
       },
       "input": {
@@ -1916,8 +1916,8 @@
           }
         },
         "setup": [
-          "mkdir -p '{{tmp}}/app-api/docs/spec/changes/api-rate-limit' && cd '{{tmp}}/app-api' && git init -q && printf '{\"change_id\": \"api-rate-limit\", \"phase\": \"deploying\"}' > docs/spec/changes/api-rate-limit/spec.json",
-          "mkdir -p '{{tmp}}/app-api-copy/docs/spec/changes/api-rate-limit' && cd '{{tmp}}/app-api-copy' && git init -q && printf '{\"change_id\": \"api-rate-limit\", \"phase\": \"deploying\"}' > docs/spec/changes/api-rate-limit/spec.json"
+          "mkdir -p '{{tmp}}/app-api/docs/spec/changes/api-rate-limit' && cd '{{tmp}}/app-api' && git init -q && printf '{\"change_id\": \"api-rate-limit\", \"phase\": \"deploying\"}' > docs/spec/changes/api-rate-limit/spec.json && git add -A && git -c user.name=t -c user.email=t@example.invalid -c commit.gpgsign=false commit -q -m c",
+          "mkdir -p '{{tmp}}/app-api-copy/docs/spec/changes/api-rate-limit' && cd '{{tmp}}/app-api-copy' && git init -q && printf '{\"change_id\": \"api-rate-limit\", \"phase\": \"deploying\"}' > docs/spec/changes/api-rate-limit/spec.json && git add -A && git -c user.name=t -c user.email=t@example.invalid -c commit.gpgsign=false commit -q -m c"
         ]
       },
       "input": {
@@ -1932,6 +1932,48 @@
         "approval",
         "REQ-AN-003",
         "BUG-158"
+      ]
+    },
+    {
+      "id": "ap-an-03-common-word-never-routes-to-another-clone",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "web-search": {
+              "change_id": "web-search",
+              "phase": "impl"
+            }
+          }
+        },
+        "setup": [
+          "mkdir -p '{{tmp}}/app-api/docs/spec/changes/deploy' && cd '{{tmp}}/app-api' && git init -q && printf '{\"change_id\": \"deploy\", \"phase\": \"deploying\"}' > docs/spec/changes/deploy/spec.json && git add -A && git -c user.name=t -c user.email=t@example.invalid -c commit.gpgsign=false commit -q -m c"
+        ]
+      },
+      "input": {
+        "prompt": "aprobado deploy a producción"
+      },
+      "expect": {
+        "decision": "allow",
+        "marker_created": true,
+        "stdout_contains": "[karvey] approval recorded (prod, web-search — the only active change",
+        "marker": {
+          "scope": "web-search",
+          "kind": "prod"
+        }
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-001",
+        "REQ-AN-005",
+        "BUG-160"
       ]
     },
     {

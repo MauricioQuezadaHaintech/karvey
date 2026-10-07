@@ -842,8 +842,48 @@ def _change_like(cleaned, exclude=()):
             not any(seg.isdigit() for seg in t.split("-"))]
 
 
+def _vocab_words(vocab=None):
+    v = vocab or default_vocabulary()
+    out = set()
+    for key in ("approve", "prod_terms", "negate"):
+        for term in v.get(key) or []:
+            out.update(normalise(term).split())
+    return out | set(_ES_TERMS)
+
+
+def _after_prod_term(cleaned, vocab=None):
+    """The word typed right after a production term («… producción <id>», "… production <id>"), separated by
+    spaces only: the one place a change id without a hyphen counts as named for another clone (D1 on BUG-158)."""
+    v = vocab or default_vocabulary()
+    out = []
+    for term in v.get("prod_terms") or []:
+        rx = _term_re(term)
+        if rx is None:
+            continue
+        for m in rx.finditer(cleaned or ""):
+            nxt = re.match(r"[ \t]+([a-z0-9][a-z0-9-]{2,62})(?![\w-])", cleaned[m.end():])
+            if nxt:
+                out.append(nxt.group(1))
+    return out
+
+
+def elsewhere_candidates(cleaned, exclude=(), vocab=None):
+    """D1 on BUG-158: the words that may name a change of another clone — change-like (hyphenated, not a version,
+    not a common word) or the word right after a production term — never an approval / production word. Any other
+    word of the message never routes the approval to another clone."""
+    ex = set(exclude) | _vocab_words(vocab)
+    cands = _change_like(cleaned, ex) + [w for w in _after_prod_term(cleaned, vocab) if w not in ex]
+    return [w for w in dict.fromkeys(cands) if valid_scope(w) and w != SCOPE_PROJECT]
+
+
+def _committed(top, cid):
+    """The change's spec.json is committed on the clone's HEAD (a file the agent just wrote does not count)."""
+    rc, _ = pj.git(["cat-file", "-e", "HEAD:%s/%s/spec.json" % (Path(pj.CHANGES_DIR).as_posix(), cid)], top)
+    return rc == 0
+
+
 def clones_holding(anchors, ids):
-    """BUG-158 (REQ-AN-001): ``{id: {clone id: top level}}`` for each of ``ids`` held in the working tree of a
+    """BUG-158 (REQ-AN-001): ``{id: {clone id: top level}}`` for each of ``ids`` committed in the working tree of a
     Karvey clone found by the prod-gate's discovery (``clones.search_dirs``); a clone (its git common dir) counts
     once whatever number of its worktrees hold the change. Also returns how many clones were searched."""
     want = [i for i in dict.fromkeys(ids) if valid_scope(i) and i != SCOPE_PROJECT]
@@ -853,11 +893,11 @@ def clones_holding(anchors, ids):
         if not top or top in seen:
             continue
         seen.add(top)
-        if not pj.is_karvey_project(top):
+        if not want or not pj.is_karvey_project(top):
             continue
         rid = None
         for cid in want:
-            if (Path(top) / pj.CHANGES_DIR / cid / "spec.json").is_file():
+            if (Path(top) / pj.CHANGES_DIR / cid / "spec.json").is_file() and _committed(top, cid):
                 rid = rid or repo_id(top)
                 out.setdefault(cid, {}).setdefault(rid, top)
     return out, len(seen)
@@ -866,8 +906,11 @@ def clones_holding(anchors, ids):
 def resolve_named_elsewhere(cleaned, anchors, exclude=()):
     """REQ-AN-001..003: the one change the prompt names among the local clones, or None when it names none of
     theirs. ``{scope, owner, why, candidates, searched}``; ``scope`` None = record nothing (``why`` says why)."""
-    index, searched = clones_holding(anchors, _words(cleaned, exclude))
-    found = [w for w in _words(cleaned, exclude) if w in index]
+    cands = elsewhere_candidates(cleaned, exclude)
+    if not cands:  # nothing in the message names a change: the active-change fallback stays (REQ-AN-005)
+        return None
+    index, searched = clones_holding(anchors, cands)
+    found = [w for w in cands if w in index]
     res = {"scope": None, "owner": None, "why": "", "candidates": [], "implicit": False, "searched": searched}
     if not found:
         return None
@@ -892,9 +935,10 @@ def phrase_change(cleaned, ids, active):
     (``<change-id>``) when it names anything else that looks like a change; the active change only when the
     prompt names nothing."""
     named = _named_ids(cleaned, ids)
+    others = elsewhere_candidates(cleaned, exclude=named)  # D7 F3: a word that may name a change elsewhere
     if named:
-        return named[0] if len(named) == 1 else None
-    if _change_like(cleaned):
+        return named[0] if len(named) == 1 and not others else None
+    if others or _change_like(cleaned):
         return None
     return active
 
@@ -910,10 +954,27 @@ def resolve_prod_scope(root, cleaned, ids, active, anchors=None):
                       "per change" % (len(named), ", ".join(sorted(named))))
         res["candidates"] = sorted(named)
         return res
+    idset = set(ids)
     if len(named) == 1:
+        # D7 F2: one id here and another change named elsewhere (a clone, a branch) is two changes: refuse
+        others = elsewhere_candidates(cleaned, exclude=idset)
+        if others:
+            try:
+                held = set(ids_elsewhere(root))
+                if anchors is not None:
+                    held |= set(clones_holding([str(root)] + list(anchors), others)[0])
+            except Exception as exc:  # REQ-AN-007: fail open (no marker) with the line
+                res["why"] = "the search for the named change failed (%s)" % type(exc).__name__
+                return res
+            extra = sorted(w for w in others if w in held)
+            if extra:
+                both = sorted(named + extra)
+                res["candidates"] = both
+                res["why"] = ("it names %d changes (%s); one production approval covers one change: send one "
+                              "message per change" % (len(both), ", ".join(both)))
+                return res
         res["scope"] = named[0]
         return res
-    idset = set(ids)
     searched = None
     if anchors is not None:  # BUG-158: the clone that owns the named change, found as the prod-gate finds it
         try:

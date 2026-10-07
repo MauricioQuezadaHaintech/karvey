@@ -115,6 +115,7 @@ class ByName(Base):
         wt = self.dev / "app-web-wt"
         g.run(["worktree", "add", "-q", "-b", "feature/web-export", str(wt)], self.web)
         g.write(wt, "docs/spec/changes/web-export/spec.json", {"change_id": "web-export", "phase": "deploying"})
+        g.commit_all(wt, "web-export")
         out = self.prompt("aprobado para producción web-export")
         self.assertIn("[karvey] approval recorded (prod, web-export", out)
         self.assertIsNotNone(marker(self.web, "web-export"))  # one clone: the state dir is shared
@@ -140,6 +141,65 @@ class ByName(Base):
         self.assertIn("prod approval NOT recorded", out)
         self.assertIsNone(marker(self.api, "api-rate-limit"))
         self.assertNotIn("web-search", out)
+
+class D1OnBug158(Base):
+    """QA D1 (H1): only a change-like word, or the word right after the production term, may route the approval to
+    another clone, and only a change committed there counts."""
+
+    def add(self, root, cid, commit=True):
+        g.write(root, "docs/spec/changes/%s/spec.json" % cid, {"change_id": cid, "phase": "impl"})
+        if commit:
+            g.commit_all(root, cid)
+
+    def test_d1_a_vocabulary_word_never_names_a_change_of_another_clone(self):
+        self.add(self.api, "produccion")
+        out = self.prompt("aprobado para producción")
+        self.assertIn("(prod, web-search \u2014 the only active change", out)
+        self.assertIsNone(marker(self.api, "produccion"))
+
+    def test_d1_c_an_ordinary_word_never_names_a_change_of_another_clone(self):
+        self.add(self.api, "search")
+        out = self.prompt("approved for production, ship the search fix")
+        self.assertIsNone(marker(self.api, "search"))
+        self.assertNotIn("clone", out)
+
+    def test_d1_e_outside_a_project_a_vocabulary_word_records_nothing(self):
+        self.add(self.api, "para")
+        self.assertEqual(self.prompt("aprobado para producción", cwd=self.dev), "")
+        self.assertIsNone(marker(self.api, "para"))
+
+    def test_d1_an_uncommitted_change_of_another_clone_does_not_count(self):
+        self.add(self.api, "api-quota", commit=False)
+        out = self.prompt("aprobado para producción api-quota")
+        self.assertIn("prod approval NOT recorded", out)
+        self.assertIsNone(marker(self.api, "api-quota"))
+
+    def test_d1_a_hyphenless_id_right_after_the_production_word_is_named(self):
+        self.add(self.api, "billing")
+        out = self.prompt("aprobado para producción billing")
+        self.assertIn("[karvey] approval recorded (prod, billing, clone %s" % self.api, out)
+        self.assertIsNotNone(marker(self.api, "billing"))
+
+
+    def test_d7_f1_common_words_never_route_to_another_clone(self):
+        for cid, text in (("release", "ok aprobado para producción, sube el release"),
+                          ("deploy", "aprobado deploy a producción")):
+            self.add(self.api, cid)
+            out = self.prompt(text)
+            self.assertIn("(prod, web-search \u2014 the only active change", out, text)
+            self.assertIsNone(marker(self.api, cid))
+
+    def test_d7_f2_one_id_here_and_one_in_another_clone_records_nothing(self):
+        out = self.prompt("aprobado para producción web-search y api-rate-limit")
+        self.assertIn("prod approval NOT recorded", out)
+        self.assertIn("one message per change", out)
+        self.assertIsNone(marker(self.web, "web-search"))
+
+    def test_d7_f3_negated_phrase_naming_a_hyphenless_id_elsewhere_never_suggests_the_active_change(self):
+        self.add(self.api, "ratelimit")
+        out = self.prompt("no apruebo producción ratelimit todavía")
+        self.assertNotIn("web-search", out)
+        self.assertIn("<change-id>", out)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-159 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-161 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -376,6 +376,19 @@ INDEX = {
     "BUG-159": [  # approval-by-name F-02: PR and version in the phrase read as mandatory
         ("unit", "test_state_repos.py", "Refusal.test_refusal_lists_markers_and_missing_piece"),
         ("lint", "L-82"),
+    ],
+    "BUG-160": [  # approval-by-name F-03 (QA D1 H1): any word routed the approval to another clone
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d1_a_vocabulary_word_never_names_a_change_of_another_clone"),
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d1_c_an_ordinary_word_never_names_a_change_of_another_clone"),
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d1_e_outside_a_project_a_vocabulary_word_records_nothing"),
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d1_an_uncommitted_change_of_another_clone_does_not_count"),
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d7_f1_common_words_never_route_to_another_clone"),
+        ("table", "approval", "ap-an-03-common-word-never-routes-to-another-clone"),
+    ],
+    "BUG-161": [  # approval-by-name F-04 (QA D7 F2, F3)
+        ("unit", "test_approval_by_name.py", "D1OnBug158.test_d7_f2_one_id_here_and_one_in_another_clone_records_nothing"),
+        ("unit", "test_approval_by_name.py",
+         "D1OnBug158.test_d7_f3_negated_phrase_naming_a_hyphenless_id_elsewhere_never_suggests_the_active_change"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

@@ -2399,7 +2399,9 @@ def _approval_outside_project(ctx, text):
 
 def approval_hook(ctx):
     """UserPromptSubmit (REQ-W1-017, 019; D-01, D-10, D-11; REQ-HF-001..004, 029). Silent unless it records a
-    marker or the prompt is production-shaped (one line then); it never blocks the prompt. Outside a Karvey project it does nothing."""
+    marker or the prompt is production-shaped (one line then); it never blocks the prompt. A production approval naming
+    a change of another local clone is recorded in that clone (BUG-158); outside a Karvey project only that case acts
+    (REQ-AN-006)."""
     root = ctx.root
     text = ctx.payload.prompt
     if not isinstance(text, str) or not text.strip():

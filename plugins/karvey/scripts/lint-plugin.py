@@ -1920,8 +1920,10 @@ def l81_no_approval_for_investigation(ctx):
 
 
 # --------------------------------------------------------------------------- L-82
-PROD_PHRASE_RE = re.compile(r"(?:aprobado\s+para\s+producci[oó]n|approved\s+for\s+production)([^»`\"\n]*)", re.I)
-PHRASE_EXTRA_RE = re.compile(r"\bPR\b|#\s*[{<\d]|(?<![\w-])v(?:\{|<|\d+\.\d+)", re.I)
+# a quoted phrase («…», `…`, "…") is read to its closing mark; an unquoted mention only to the end of its clause
+PROD_PHRASE_RE = re.compile(r"(?:(?P<q>[«`\"])|(?<![«`\"]))(?:aprobado\s+para\s+producci[oó]n|approved\s+for\s+"
+                            r"production)(?P<rest>(?(q)[^»`\"\n]*|[^»`\"\n;,.(]*))", re.I)
+PHRASE_EXTRA_RE = re.compile(r"\bPR\b|#\s*[{<\d]|(?<![\w-])v(?:\{|<|\d+\.\d+)|(?<![\w.-])\d+\.\d+\.\d+\b", re.I)
 
 
 @check("L-82", "the production phrase shown to the human holds only the approval word, the production word and the "
@@ -1930,7 +1932,7 @@ def l82_minimal_prod_phrase(ctx):
     for path in ctx.text_files():
         for n, para in _paragraphs(ctx, path):
             for m in PROD_PHRASE_RE.finditer(para):
-                extra = PHRASE_EXTRA_RE.search(m.group(1))
+                extra = PHRASE_EXTRA_RE.search(m.group("rest"))
                 if extra:
                     yield (path, n, "the production phrase carries a PR number or a version (%s); only the approval "
                                     "word, the production word and the change id are required, the approval binds "
