@@ -41,19 +41,48 @@
   "approvals": {
     "requirements": {
       "generated": true,
-      "approved": false
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-07T15:16:56+00:00",
+      "ref": "D-47",
+      "evidence": {
+        "marker": "none"
+      }
     },
     "architecture": {
       "generated": true,
-      "approved": false
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-07T15:16:56+00:00",
+      "ref": "D-47",
+      "evidence": {
+        "marker": "approvals/_project.json",
+        "marker_created_at": "2026-10-05T13:04:20+00:00",
+        "prompt_excerpt": "apruebo estos cambios",
+        "session": "230c83a0-0d38-4e1d-b3f9-392e52ef6101",
+        "prompt_sha256": "e3488f8490d75d9472a2365649313c7df409a348c8d364556f3e46bfbec3a970"
+      }
     },
     "tasks": {
       "generated": true,
-      "approved": false
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-07T15:16:56+00:00",
+      "ref": "D-47",
+      "evidence": {
+        "marker": "approvals/_project.json",
+        "marker_created_at": "2026-10-05T13:04:20+00:00",
+        "prompt_excerpt": "apruebo estos cambios",
+        "session": "230c83a0-0d38-4e1d-b3f9-392e52ef6101",
+        "prompt_sha256": "e3488f8490d75d9472a2365649313c7df409a348c8d364556f3e46bfbec3a970"
+      }
     }
   },
   "created_at": "2026-10-07T15:14:32+00:00",
-  "updated_at": "2026-10-07T15:16:21+00:00",
+  "updated_at": "2026-10-07T15:16:56+00:00",
   "skipped": {
     "mockup": "hotfix lane, no UI: approval hook, state tool text and skill text only",
     "design_graphic": "no UI (hook and CLI text only)",
