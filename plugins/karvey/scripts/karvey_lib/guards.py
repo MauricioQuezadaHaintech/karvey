@@ -30,6 +30,7 @@ import re
 import shlex
 import subprocess
 import time
+from pathlib import Path
 
 from . import PLUGIN_ROOT, SCRIPTS_DIR, approval, audit, clones, hookio, restcalls
 from . import project as pj
@@ -2356,13 +2357,55 @@ def _audit(root, record):
         pass
 
 
+def _prompt_anchors(ctx):
+    """Where the approval hook looks for the clone that owns a named change: the prod-gate's anchors (BUG-158)."""
+    out = []
+    for a in (str(ctx.root) if ctx.root else None, ctx.payload.cwd, ctx.env.get("CLAUDE_PROJECT_DIR")):
+        if a and a not in out:
+            out.append(a)
+    return out
+
+
+def _approval_outside_project(ctx, text):
+    """REQ-AN-006: a session outside a Karvey project. Only a production approval that names a change held by the
+    local clones is acted on; anything else stays silent, as before."""
+    try:
+        verdict = approval.classify(text)
+        if not verdict["approved"] or verdict["kind"] != "prod":
+            return None
+        res = approval.resolve_named_elsewhere(verdict["cleaned"], _prompt_anchors(ctx))
+        if res is None:
+            return None
+        if res["scope"] is None:
+            cand = res["candidates"][0] if len(res["candidates"]) == 1 else None
+            return Decision.allow(stdout=["[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
+                                          % (res["why"], approval.suggested_phrase(verdict["cleaned"], cand))])
+        owner = res["owner"]
+        marker = approval.write_marker(owner, "prod", res["scope"], text, session_id=ctx.payload.session_id,
+                                       ttl_min=ttl_min(ctx, Path(owner)), compat=ctx.env.get(approval.COMPAT_ENV, ""))
+        created = approval.parse_dt(marker["created_at"])
+        until = (created + approval.timedelta(hours=approval.PROD_VALID_H)).strftime("%H:%M")
+        return Decision.allow(stdout=["[karvey] approval recorded (prod, %s, clone %s, expires %s tomorrow; it is "
+                                      "also the plan approval)" % (res["scope"], owner, until)])
+    except Exception:  # fail open: no marker is the safe side
+        try:
+            if approval.prod_shaped(text):
+                return Decision.allow(stdout=["[karvey] prod approval NOT recorded: internal error \u2014 type: "
+                                              "\u00ab%s\u00bb" % approval.suggested_phrase(approval.normalise(text))])
+        except Exception:
+            pass
+        return None
+
+
 def approval_hook(ctx):
     """UserPromptSubmit (REQ-W1-017, 019; D-01, D-10, D-11; REQ-HF-001..004, 029). Silent unless it records a
     marker or the prompt is production-shaped (one line then); it never blocks the prompt. Outside a Karvey project it does nothing."""
     root = ctx.root
     text = ctx.payload.prompt
-    if root is None or not isinstance(text, str) or not text.strip():
+    if not isinstance(text, str) or not text.strip():
         return None
+    if root is None:
+        return _approval_outside_project(ctx, text)
     try:
         vocab = approval.vocabulary(reviewed_setting(ctx, "approval_vocabulary"))
         approval.gc(root)
@@ -2391,8 +2434,10 @@ def approval_hook(ctx):
         if verdict["approved"]:
             ids = [c["id"] for c in pj.list_changes(root)]
             note = ""
+            target = None
             if verdict["kind"] == "prod":  # REQ-HF-001..004 (BUG-138)
-                res = approval.resolve_prod_scope(root, verdict["cleaned"], ids, active_change(ctx))
+                res = approval.resolve_prod_scope(root, verdict["cleaned"], ids, active_change(ctx),
+                                                  anchors=_prompt_anchors(ctx))
                 if res["scope"] is None:
                     cand = res["candidates"][0] if len(res["candidates"]) == 1 else None
                     lines.append("[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
@@ -2403,10 +2448,15 @@ def approval_hook(ctx):
                 scope = res["scope"]
                 if res["implicit"]:
                     note = " \u2014 %s; your message named none" % res["why"]
+                if res.get("owner"):  # BUG-158 (REQ-AN-002): the marker and its audit line go to the owning clone
+                    target = res["owner"]
+                    note = ", clone %s" % target
             else:
                 scope = approval.scope_for(verdict["cleaned"], ids, active_change(ctx)["change"])
-            marker = approval.write_marker(root, verdict["kind"], scope, text, session_id=ctx.payload.session_id,
-                                           ttl_min=ttl, compat=ctx.env.get(approval.COMPAT_ENV, ""))
+            target = target if verdict["kind"] == "prod" and target else root
+            marker = approval.write_marker(target, verdict["kind"], scope, text, session_id=ctx.payload.session_id,
+                                           ttl_min=ttl if target == root else ttl_min(ctx, Path(target)),
+                                           compat=ctx.env.get(approval.COMPAT_ENV, ""))
             created = approval.parse_dt(marker["created_at"])
             expires = (created + approval.timedelta(minutes=marker["ttl_min"])).strftime("%H:%M")
             if verdict["kind"] == "plan":  # D-47: no time limit
@@ -2421,8 +2471,10 @@ def approval_hook(ctx):
             lines.append(line)
         elif shaped:  # REQ-HF-029 (BUG-143): a production-shaped phrase always gets its line
             cleaned = approval.normalise(approval.strip_quoted(text))
+            ids = [c["id"] for c in pj.list_changes(root)]  # BUG-158: never a change other than the one named
             lines.append("[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
-                         % (verdict["reason"], approval.suggested_phrase(cleaned, active_change(ctx)["change"])))
+                         % (verdict["reason"], approval.suggested_phrase(
+                             cleaned, approval.phrase_change(cleaned, ids, active_change(ctx)["change"]))))
         return Decision.allow(stdout=lines) if lines else None
     except Exception as exc:  # fail open: no marker is the safe side (§3.2)
         _audit(root, {"guard": "approval", "event": "prompt", "decision": "error",

@@ -4,6 +4,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+### Fixed
+- approval-by-name E1.F1.T2 (BUG-158) — a production approval naming a change that is not in the session's working tree is looked up in the local clones the prod-gate's discovery finds (`approval.clones_holding`, `resolve_named_elsewhere`); exactly one owning clone receives the marker and its audit line and the hook line names it (`approval recorded (prod, <id>, clone <path>, …)`); two or more owning clones, or several named changes, record nothing and are listed; the not-recorded line suggests the named change or `<change-id>`, never the session's active change (`approval.phrase_change`); outside a Karvey project a change owned by exactly one clone is recorded there; the search fails open with the line. Why: the owner's «aprobado para producción <change-a>» in a session on another repo was refused and the hook proposed approving `<change-b>` (REQ-AN-001..007).
+
 ## [3.13.0] - 2026-10-06
 
 ### Why
