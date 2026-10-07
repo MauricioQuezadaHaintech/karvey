@@ -2173,7 +2173,7 @@ a phase close only writes an audit record; `advance … archived` consumes the c
 - **Detected:** 2026-10-07 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`resolve_prod_scope`), guards.py (`approval_hook`)
 - **Change / origin:** approval-by-name — finding F-01 (real use, owner, D-47)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 A session whose directory is the repo `app-web` (active change `web-search`); the sibling clone `app-api` holds `api-rate-limit`. The human types «aprobado para producción api-rate-limit». The hook prints "prod approval NOT recorded: api-rate-limit is not a change of this working tree and no worktree or branch holds it … type: «aprobado para producción web-search»".
@@ -2186,23 +2186,24 @@ A session whose directory is the repo `app-web` (active change `web-search`); th
 `approval.resolve_prod_scope` searched only the working tree, the worktrees of its clone and its branches; the clone discovery the prod-gate uses (`clones.search_dirs`, 3.12.1) was never consulted, and its unknown-word branch set the active change as the only candidate (BUG-148 avoided suggesting the unknown word by suggesting the active change instead).
 
 ### Fix
-(pending)
+a production approval naming a change that is not in the working tree is looked up in the clones the prod-gate's discovery finds (`clones.search_dirs`; a clone counts once whatever its worktrees); one owning clone receives the marker and its audit line and the hook prints its path; two or more record nothing and are listed; several named ids record nothing; the unknown-word line and the production-shaped non-approval line suggest the named change or `<change-id>`, never the active change; outside a Karvey project a change owned by exactly one clone is recorded there; a search error fails open with the line. Hotfix 3.13.1.
 
 ### Regression test
-(pending)
+`plugins/karvey/tests/unit/test_approval_by_name.py` (ByName.*, the exact repro in test_bug158_named_change_of_a_sibling_clone_is_recorded_there); tables `ap-an-01`, `ap-an-02`, `ap-hf-03` (updated); `test_approval_scope.py` (unknown word → no candidate); red on 97595af. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-10-07 | DETECTADO | owner / Claude Opus 5.5 | F-01, owner report |
 | 2026-10-07 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
+| 2026-10-07 | RESUELTO | owner / Claude Opus 5.5 | fix on hotfix/3.13.1-approval-by-name; regression tests red on 97595af, green after |
 
 ## BUG-159 — The suggested production phrase carried a PR number and a version that read as mandatory
 - **Priority:** medium
 - **Detected:** 2026-10-07 · **Component:** plugins/karvey/scripts/karvey-state.py (`marker_report`), skills/karvey-deploy/SKILL.md (2.9)
 - **Change / origin:** approval-by-name — finding F-02 (real use, owner, D-47)
 - **Tracker:** —
-- **Current state:** DIAGNOSTICADO
+- **Current state:** RESUELTO
 
 ### Reproduction
 `approve <id> prod` without a prod marker; the refusal and the deploy skill show «aprobado para producción <id> PR #<n> v<version>».
@@ -2215,13 +2216,14 @@ A session whose directory is the repo `app-web` (active change `web-search`); th
 The phrase was written as a template for the human to copy in 3.12.1 (BUG-144), mixing the binding facts (PR, version) into the words the hook needs (D-10).
 
 ### Fix
-(pending)
+the state tool refusal, the hook and `karvey-deploy` show «aprobado para producción <change-id>»; PR number and version are described as optional and informational; the deploy skill and `rules/enforcement.md` say the approval binds to the commit passed with `approve … --sha` (a PR recreated with the same head stays approved, a new commit needs a new OK); lint check L-82 fails a skill or rule that puts a PR number or a version inside the phrase. Hotfix 3.13.1.
 
 ### Regression test
-(pending)
+`plugins/karvey/tests/unit/test_state_repos.py` (Refusal.test_refusal_lists_markers_and_missing_piece); `test_lint_plugin.py` (L82.*); red on 97595af. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
 
 ### State history
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-10-07 | DETECTADO | owner / Claude Opus 5.5 | F-02, owner report |
 | 2026-10-07 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
+| 2026-10-07 | RESUELTO | owner / Claude Opus 5.5 | fix on hotfix/3.13.1-approval-by-name; regression tests red on 97595af, green after |
