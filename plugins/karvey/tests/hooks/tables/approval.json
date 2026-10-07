@@ -1634,7 +1634,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": false,
-        "stdout_contains": "no worktree or branch holds it"
+        "stdout_contains": "no worktree, branch or local clone holds it"
       },
       "tags": [
         "approval",
@@ -1856,6 +1856,82 @@
         "approval",
         "REQ-HF-029",
         "BUG-143"
+      ]
+    },
+    {
+      "id": "ap-an-01-named-change-of-a-sibling-clone-recorded-there",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "web-search": {
+              "change_id": "web-search",
+              "phase": "impl"
+            }
+          }
+        },
+        "setup": [
+          "mkdir -p '{{tmp}}/app-api/docs/spec/changes/api-rate-limit' && cd '{{tmp}}/app-api' && git init -q && printf '{\"change_id\": \"api-rate-limit\", \"phase\": \"deploying\"}' > docs/spec/changes/api-rate-limit/spec.json"
+        ]
+      },
+      "input": {
+        "prompt": "aprobado para producción api-rate-limit"
+      },
+      "expect": {
+        "decision": "allow",
+        "marker_created": false,
+        "stdout_contains": "[karvey] approval recorded (prod, api-rate-limit, clone "
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-001",
+        "REQ-AN-002",
+        "BUG-158"
+      ]
+    },
+    {
+      "id": "ap-an-02-two-clones-hold-the-named-change-records-nothing",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "web-search": {
+              "change_id": "web-search",
+              "phase": "impl"
+            }
+          }
+        },
+        "setup": [
+          "mkdir -p '{{tmp}}/app-api/docs/spec/changes/api-rate-limit' && cd '{{tmp}}/app-api' && git init -q && printf '{\"change_id\": \"api-rate-limit\", \"phase\": \"deploying\"}' > docs/spec/changes/api-rate-limit/spec.json",
+          "mkdir -p '{{tmp}}/app-api-copy/docs/spec/changes/api-rate-limit' && cd '{{tmp}}/app-api-copy' && git init -q && printf '{\"change_id\": \"api-rate-limit\", \"phase\": \"deploying\"}' > docs/spec/changes/api-rate-limit/spec.json"
+        ]
+      },
+      "input": {
+        "prompt": "aprobado para producción api-rate-limit"
+      },
+      "expect": {
+        "decision": "allow",
+        "marker_created": false,
+        "stdout_contains": "held by 2 clones"
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-003",
+        "BUG-158"
       ]
     },
     {
