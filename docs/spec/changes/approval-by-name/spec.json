@@ -1,0 +1,62 @@
+{
+  "change_id": "approval-by-name",
+  "capability": "method",
+  "description": "Hotfix 3.13.1: a production approval that names a change is recorded in the local clone that owns that change, found the way the prod-gate finds clones, even when the session's working tree holds another change; two clones holding the id record nothing and are listed; the hook never suggests a change other than the one named. The phrase the hook, the state tool and the deploy skill show is «aprobado para producción <change-id>»: PR number and version are optional and informational, the approval binds to the commit passed with approve --sha.",
+  "goal": "The human's production OK reaches the change the human named, wherever the session runs, and the phrase shown asks for nothing more than the approval word, the production word and the change id.",
+  "layers": [
+    "Backend"
+  ],
+  "language": "en",
+  "management": "markdown",
+  "security_tier": 2,
+  "security_tier_reason": "changes where the approval hook records a production marker, the evidence the prod-gate requires before a production merge",
+  "type": "hotfix",
+  "lane": "hotfix",
+  "links": {
+    "parent": "prod-gate-scope",
+    "children": []
+  },
+  "decisions": [
+    "D-10",
+    "D-35",
+    "D-47"
+  ],
+  "inputs": {},
+  "iteration_count": 0,
+  "revision_history": [],
+  "schema_version": 1,
+  "phase": "requirements",
+  "phase_history": [
+    {
+      "phase": "init",
+      "entered_at": "2026-10-07T15:14:32+00:00",
+      "exited_at": "2026-10-07T15:16:21+00:00",
+      "by": "owner (D-47)"
+    },
+    {
+      "phase": "requirements",
+      "entered_at": "2026-10-07T15:16:21+00:00"
+    }
+  ],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": false
+    },
+    "architecture": {
+      "generated": true,
+      "approved": false
+    },
+    "tasks": {
+      "generated": true,
+      "approved": false
+    }
+  },
+  "created_at": "2026-10-07T15:14:32+00:00",
+  "updated_at": "2026-10-07T15:16:21+00:00",
+  "skipped": {
+    "mockup": "hotfix lane, no UI: approval hook, state tool text and skill text only",
+    "design_graphic": "no UI (hook and CLI text only)",
+    "infra": "no cloud and no pipeline change: plugin code and docs only"
+  }
+}

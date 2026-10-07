@@ -2167,3 +2167,61 @@ a phase close only writes an audit record; `advance … archived` consumes the c
 | 2026-10-05 | DETECTADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | F-26, owner report |
 | 2026-10-05 | DIAGNOSTICADO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | root cause above |
 | 2026-10-05 | RESUELTO | Mauricio Quezada Ibáñez / Claude Opus 5.5 | fix on hotfix/3.12.1-prod-gate; regression test red on aa8a368, green after |
+
+## BUG-158 — A production approval naming a change of another local clone was refused, and the hook suggested approving the session's own change
+- **Priority:** high
+- **Detected:** 2026-10-07 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`resolve_prod_scope`), guards.py (`approval_hook`)
+- **Change / origin:** approval-by-name — finding F-01 (real use, owner, D-47)
+- **Tracker:** —
+- **Current state:** DIAGNOSTICADO
+
+### Reproduction
+A session whose directory is the repo `app-web` (active change `web-search`); the sibling clone `app-api` holds `api-rate-limit`. The human types «aprobado para producción api-rate-limit». The hook prints "prod approval NOT recorded: api-rate-limit is not a change of this working tree and no worktree or branch holds it … type: «aprobado para producción web-search»".
+
+### Actual vs expected
+- Actual: the named change is discarded and the phrase suggests the session's active change.
+- Expected: the marker is recorded in the one clone that owns `api-rate-limit` (found as the prod-gate finds clones), the line names that clone; two owning clones record nothing and are listed; the suggestion never names another change.
+
+### Root cause
+`approval.resolve_prod_scope` searched only the working tree, the worktrees of its clone and its branches; the clone discovery the prod-gate uses (`clones.search_dirs`, 3.12.1) was never consulted, and its unknown-word branch set the active change as the only candidate (BUG-148 avoided suggesting the unknown word by suggesting the active change instead).
+
+### Fix
+(pending)
+
+### Regression test
+(pending)
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-07 | DETECTADO | owner / Claude Opus 5.5 | F-01, owner report |
+| 2026-10-07 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
+
+## BUG-159 — The suggested production phrase carried a PR number and a version that read as mandatory
+- **Priority:** medium
+- **Detected:** 2026-10-07 · **Component:** plugins/karvey/scripts/karvey-state.py (`marker_report`), skills/karvey-deploy/SKILL.md (2.9)
+- **Change / origin:** approval-by-name — finding F-02 (real use, owner, D-47)
+- **Tracker:** —
+- **Current state:** DIAGNOSTICADO
+
+### Reproduction
+`approve <id> prod` without a prod marker; the refusal and the deploy skill show «aprobado para producción <id> PR #<n> v<version>».
+
+### Actual vs expected
+- Actual: PR number and version look required; a PR recreated with the same head seems to need a new phrase.
+- Expected: «aprobado para producción <change-id>»; PR and version optional and informational; the approval binds to the commit passed with `approve … --sha`.
+
+### Root cause
+The phrase was written as a template for the human to copy in 3.12.1 (BUG-144), mixing the binding facts (PR, version) into the words the hook needs (D-10).
+
+### Fix
+(pending)
+
+### Regression test
+(pending)
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-07 | DETECTADO | owner / Claude Opus 5.5 | F-02, owner report |
+| 2026-10-07 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
