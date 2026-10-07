@@ -139,11 +139,18 @@
     },
     "qa": {
       "generated": true,
-      "approved": false
+      "approved": true,
+      "by": "Mauricio Quezada Ibáñez",
+      "role": "human",
+      "date": "2026-10-07T15:51:18+00:00",
+      "ref": "D-47",
+      "evidence": {
+        "marker": "none"
+      }
     }
   },
   "created_at": "2026-10-07T15:14:32+00:00",
-  "updated_at": "2026-10-07T15:51:00+00:00",
+  "updated_at": "2026-10-07T15:51:18+00:00",
   "skipped": {
     "mockup": "hotfix lane, no UI: approval hook, state tool text and skill text only",
     "design_graphic": "no UI (hook and CLI text only)",
