@@ -24,6 +24,7 @@ In addition to the 13 pipeline phases (0–12) (linear, with gates), Karvey has 
 | `karvey-decisions` | Decision log | Single numbered registry (`D-NN` business, `C-NN` direction) that changes cite; **`cross` checks a question against the log before anything is declared blocked**. | — (Karvey) |
 | `karvey-context` | Dashboard (read-only) | Any time: project config, capabilities, active/archived changes, deploy queue / landing report, open backlog count and **live branches** (absorbed vs carrying unreleased work). Never writes. | — (Karvey) |
 | `karvey-standards` | Standards uplift | Distill the team's engineering golden paths (db/backend/frontend…) from the **real system** into the team's standards repo (`project.json:standards`), in the `engineering-standards.md` format. Re-runnable to refresh. Never writes into the public plugin. | — (Karvey) |
+| `karvey-upgrade` | Project upgrade | After a plugin update (the first startup offers it once per clone) or any time: relays `karvey-upgrade.py` — a plan computed from the project's state, the person's pick, the dry-run diff, the picked steps applied on an upgrade branch and one PR. Never merges, never writes under the user's home. | — (Karvey) |
 
 ## Invocation rules
 

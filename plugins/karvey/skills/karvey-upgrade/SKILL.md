@@ -1,0 +1,149 @@
+---
+name: karvey-upgrade
+description: Karvey support — project upgrade after a plugin update: state-based plan, dry-run, picked steps on a branch, one PR — when offered or any time. Triggers include "karvey upgrade", "actualizar proyecto karvey", "plan de actualización karvey".
+allowed-tools: Read, Bash, AskUserQuestion
+argument-hint: (none)
+---
+
+# Karvey Upgrade
+
+A **cross-cutting** skill of the Karvey Method: a support layer, **NOT a phase**. It does not advance or modify any change's lifecycle and never touches `spec.json:phase`.
+
+## Purpose
+
+Updating the plugin never changed the project by itself. After an update, the first session in a Karvey project asks once (per clone) whether to build a **project upgrade plan**. This skill turns a "yes" into one reviewable pull request: the plan is computed from the project's state by the upgrade tool, the person picks the steps, sees the exact diff, and only the picked steps are applied on an upgrade branch, in one commit that names them and who picked them.
+
+The skill **relays the tool**. It never computes, adds, reorders or skips a step, and never edits a project file itself: every write goes through `karvey-upgrade.py` (the engine confines, previews and writes). If the tool is missing, the skill says so and stops; it never does the steps by hand.
+
+It is invocable at any time and behaves the same with or without an offer.
+
+## The tool
+
+```bash
+UP="${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py"
+test -f "$UP" || echo "karvey-upgrade.py not found in this plugin: stop, nothing is done by hand"
+```
+
+Subcommands: `plan` · `branch` · `apply` · `commit` · `seen` (each with `--json`). Exit codes: 0 ok · 1 a check failed / a step failed · 2 usage · 3 refused (nothing changed) · 4 not found.
+
+## Steps
+
+### 1. Locate the tool
+
+Run the block above. Missing → tell the person "the upgrade tool is not in this Karvey install; update the plugin" and **stop**.
+
+### 2. Compute the plan (writes nothing)
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" plan --json
+```
+
+- Exit 3 (not a Karvey project) → say so and **stop** without writing anything.
+- `in_git: false` (a Karvey project outside git): show the plan, say that the upgrade needs a git repository (it
+  goes through a branch and a PR) and **stop**. Nothing is recorded there (`seen` refuses outside git).
+- Exit 4 (the step catalogue is unreadable) → relay the message and stop.
+- Every step `nothing` ("nothing to do") → run `seen --empty`, tell the person the project is already current, and stop:
+  ```bash
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" seen --empty
+  ```
+
+### 3. Show the table exactly as returned
+
+One row per step that is not `nothing`: step · what changes (`summary`) · dry-run · risk · needs human. List the satisfied steps on one line and relay the `warnings`. Do not reword the summaries into promises. When `computed_on` is not the integration branch, add one line: "the plan is recomputed on the upgrade branch".
+
+### 4. One question: which steps
+
+One multi-select question (AskUserQuestion, the person's language). Every listed step is an option; the steps with `risk: low` that are not human are marked **(Recommended)**; human and report steps are labelled **"shown, not applied"** (they print instructions or a diff; nothing is performed, and no answer changes that).
+
+- You cannot ask (a non-interactive session) or there is no answer → stop after the table and record nothing:
+  the offer comes back next session.
+- The person picks **none** → record the decline and stop (no branch, no commit):
+  ```bash
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" seen --decline
+  ```
+  Tell them the offer comes back with the **next Karvey version** (not the next session), and that
+  `/karvey:karvey-upgrade` runs the plan at any time.
+- The person picks **one or more** →
+  ```bash
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" seen --accept
+  ```
+
+### 5. Values for `needs-input` steps
+
+For each picked step whose status is `needs-input`, ask its `inputs_needed` (one question per step). The answers are passed to the tool **on stdin** in step 8, as JSON shaped `{"<step-id>": {"<key>": "<value>"}}` inside a **quoted** heredoc (`<<'JSON'`): the person's words never reach a shell command line, and no file is written (a redirect to a file is a write the plan-gate may block). The tool accepts only the keys the plan proposed and checks every value through its safe-value rules, refusing an unsafe one by name.
+
+A step handed to `/karvey:karvey-init --settings` (no `project.json`) is not answered here: tell the person to run that skill first.
+
+### 6. The upgrade branch
+
+Fetch the integration branch and, if another clone already pushed it, the upgrade branch of this version, when a remote exists (the tool itself never fetches); then create or switch to the upgrade branch. `<version>` is the plan's `to`, written literally:
+
+```bash
+INTEG=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get branch_flow.integration --shell 2>/dev/null) || INTEG=""
+if git remote get-url origin >/dev/null 2>&1; then
+  git fetch origin ${INTEG:+"$INTEG"}
+  git fetch --prune origin '+refs/heads/chore/karvey-upgrade-<version>*:refs/remotes/origin/chore/karvey-upgrade-<version>*'
+fi
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" branch --json
+```
+
+An undeclared `branch_flow.integration` is not an error here: the tool falls back to `origin/HEAD`, and the `integration` it returns names the branch the PR targets. Keep the `branch` it returns (`chore/karvey-upgrade-<version>`): steps 9–10 write it **literally**. A dirty tree, or neither the key nor `origin/HEAD`, is refused by the tool with the paths / the key to set: relay it and stop.
+
+The second fetch is a pattern: it brings the remote upgrade branch when another clone pushed it (also after a force-push) and drops a stale local copy once it was deleted on the remote; it is not an error when there is none. `remote: true` means another clone (another person, or this person elsewhere) already pushed this upgrade: the branch starts from theirs, or a local upgrade branch behind it is fast-forwarded, so what they applied is already there and the push of step 10 is a fast-forward. Show the person `remote_commits` and `remote_files` as returned (what the other clone brings) and tell them a PR for it may already be open. A remote upgrade branch that does not build on the integration branch is refused by the tool: relay it and stop. When the dry-run of step 7 then says "nothing to do" for every pick, say that the upgrade is already on that branch and stop (no commit).
+
+### 7. Dry-run: show every diff
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" apply --steps "a,b" --dry-run --json
+```
+
+Run it on the upgrade branch (after step 6): off it, the tool refuses a dry-run whose tree differs from the branch's base, because the preview would not be what `apply` writes. Show each step's unified diff **verbatim** (one diff block per step, not a summary of it) and the human and report output as returned. A step with `dry_run: false` has no preview: it gets **its own confirmation question**. Then **one** confirmation question: "Apply these changes?". No → stop (the branch stays, without commits). Keep the returned `preview` id.
+
+### 8. Apply exactly what was previewed
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" apply --steps "a,b" --preview "<preview id>" --json
+```
+
+When step 5 collected values, add `--values -` and the JSON as a quoted heredoc:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" apply --steps "a,b" --preview "<preview id>" --values - --json <<'JSON'
+{"team-settings": {"notifications.channel": "slack", "notifications.target": "#team-channel"}}
+JSON
+```
+
+(the dry-run of step 7 takes the same `--values -` heredoc). Add `--confirm-no-preview <id>` for each step confirmed on its own. Exit 3 "the tree changed since the preview" → run the dry-run again (step 7). Exit 1 → relay `applied` / `failed` / `not_run` and stop: the person decides whether to fix and re-run (`plan` then lists only what is left).
+
+### 9. One commit, written by the tool
+
+```bash
+BODY="$(mktemp "${TMPDIR:-/tmp}/karvey-upgrade-pr.XXXXXX")"
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-upgrade.py" commit --picked-by '<the person>' --answer-file - \
+  --pr-body-file "$BODY" --trailer 'Co-Authored-By=<the session attribution line>' --json <<'ANSWER'
+<their words, short>
+ANSWER
+```
+
+The person's words go only through the quoted heredoc and their name in single quotes (a name containing `'` is written without it): nothing they typed is expanded by the shell. The tool stages exactly the files it wrote and writes the message (`chore(karvey): project upgrade <from> → <to>`, `Steps`, `Picked-by`, `Picked-at`, `Answer`, the trailers). It prints `pr_title` and writes `pr_body` to `$BODY`.
+
+### 10. Push and open one PR — never merge
+
+```bash
+git push -u origin chore/karvey-upgrade-<version>
+```
+
+Write the branch returned by step 6 literally (above, `<version>` is the installed version): Karvey's own
+prod-gate refuses a push whose destination is a shell variable ("the push destination cannot be resolved").
+
+Open **one** PR from the upgrade branch to the integration branch with `pr_title` (single-quoted: it is the tool's fixed text) and the body file, using the repository's host (`project.json:git_platform`, or the `origin` URL): `gh pr create --base <integration> --head chore/karvey-upgrade-<version> --title '<pr_title>' --body-file "$BODY"` · `az repos pr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> --title '<pr_title>' --description "$(cat "$BODY")"` · `glab mr create --target-branch <integration> --source-branch chore/karvey-upgrade-<version> --title '<pr_title>' --description "$(cat "$BODY")"`. Never paste `pr_body` into a double-quoted argument: it contains backticks. No PR tooling or no remote → print the exact commands for the person. When step 6 returned `remote: true` and the host says a PR from this branch already exists, do not open a second one: the push added the commit to it. A rejected push → report it with the retry command; the commit stays local. **Never merge**: the PR goes through the project's normal review.
+
+## What this skill never does
+
+- Compute, add, reorder or skip a step, or edit a project file by hand.
+- Write under the user's home: human steps print the stable statusline command or a diff for the person to apply.
+- Record a decline or an acceptance the person did not give (an unanswered question records nothing; the offer comes back next session).
+- Merge the upgrade PR.
+
+---
+*Part of the Karvey™ Method · Apache 2.0 · see `karvey/LICENSE` and `../karvey/TRADEMARK.md`.*

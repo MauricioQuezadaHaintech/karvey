@@ -64,6 +64,20 @@ print(' + '.join(k for k in ('notifications','management') if not isinstance(d.g
   [ -n "$missing" ] && printf 'Karvey (info): team settings not set (%s). To set them, the user can run `/karvey:karvey-init --settings` — settings only, it creates no change and nothing in any tracker.\n' "$missing"
 }
 
+# The once-per-version upgrade offer needs python (it evaluates the step catalogue): without it, one line,
+# only on startup inside a Karvey project (project-upgrade REQ-UP-006).
+upgrade_unavailable() {
+  [ "$MODE" = "startup" ] || return 0
+  local d="${ROOT:-$START}"
+  while [ -n "$d" ] && [ "$d" != "/" ]; do
+    if [ -f "$d/docs/spec/project.json" ] || [ -d "$d/docs/spec/changes" ]; then
+      printf '[karvey] upgrade offer unavailable: python 3 not found\n'; return 0
+    fi
+    [ -n "$ROOT" ] && return 0
+    d=$(dirname "$d")
+  done
+}
+
 # BUG-140 (REQ-HF-020, 021): the profile comes from the repo the session works in (its git top level), never
 # from a folder above it and never by a default role; ambiguity injects nothing but one line. The 3.12.0 walk
 # up the folder tree only decides whether that line is printed (elsewhere the hook stays silent).
@@ -88,6 +102,7 @@ rname() {
 not_loaded() {
   [ "$HIT" -eq 1 ] && printf '[karvey] profile not loaded: %s; run /karvey-checkpoint restore --profile <role|path> in the repo you work in.\n' "$1"
   settings_nudge
+  upgrade_unavailable
   exit 0
 }
 TS=$(gtop "$START"); TC=$(gtop "$CWD")
@@ -241,6 +256,7 @@ for c in "$ROOT"/docs/spec/changes/*/; do
 done
 [ "$NACT" -ne 1 ] && ACTIVE=""
 settings_nudge
+upgrade_unavailable
 printf '\n=== First action ===\n'
 if [ -n "$ACTIVE" ] || [ "$DRIFT" -eq 1 ] || [ ! -f "$HANDOFF" ]; then
   printf 'Run `/karvey-checkpoint restore` BEFORE anything else'

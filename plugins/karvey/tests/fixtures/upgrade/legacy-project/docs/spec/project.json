@@ -1,0 +1,18 @@
+{
+  "project": "…",
+  "git_platform": "github",
+  "repos": [
+    "repo-a"
+  ],
+  "spec_repo": "repo-a",
+  "branch_flow": {
+    "feature_prefix": "feature/",
+    "integration": "dev",
+    "production": "main"
+  },
+  "enforcement": {
+    "git_flow_hook": false
+  },
+  "management": "markdown",
+  "schema_mode": "strict"
+}

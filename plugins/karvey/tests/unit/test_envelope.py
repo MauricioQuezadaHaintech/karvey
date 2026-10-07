@@ -50,7 +50,9 @@ class Defaults(unittest.TestCase):
         self.assertEqual(d["plan_marker_ttl_min"], 120)      # D-07
         self.assertEqual(d["stall_days"], 7)                 # D-07
         self.assertEqual(d["calibration"], {"threshold_pct": 30, "window": 3})  # D-07
-        self.assertEqual(d["session"], {"board_rows_max": 40, "handoff_bytes_max": 6144})
+        self.assertEqual({k: v for k, v in d["session"].items() if k != "$comment"},
+                         {"board_rows_max": 40, "handoff_bytes_max": 6144, "upgrade_probe_ms": 1500,
+                          "offer_line_max": 300})
         self.assertEqual(d["plan_marker_ttl_bounds"], {"minimum": 5, "maximum": 1440})
 
     def test_copy_is_isolated(self):
