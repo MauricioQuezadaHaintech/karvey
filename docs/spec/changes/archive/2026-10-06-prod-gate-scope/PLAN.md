@@ -1,7 +1,7 @@
 # Plan: prod-gate-scope
 
 **Capability:** method | **Security Tier:** 2 | **Layers:** Backend
-**Created:** 2026-09-29 | **Status:** 🔄 in_progress
+**Created:** 2026-09-29 | **Status:** ✅ Completed and archived
 **Lane:** hotfix (`type: hotfix`; fix + BUG-NN + regression test in the same PR) · **Skipped:** mockup, design_graphic (no UI), infra (no cloud)
 **Release target:** 3.12.1 · **Flow:** trunk (`hotfix/3.12.1-prod-gate` → PR → `main`) · **Decisions:** D-43, D-45 (D-34, D-35, D-36, D-37 unchanged)
 
@@ -51,6 +51,7 @@ See `tasks.md` (24 tasks, E1.F1..F9, 690 min). Status per task is updated here a
 - 2026-09-29 — change opened in the hotfix lane (D-43).
 - 2026-10-05 — requirements revision 1 (D-45): F-05..F-11, REQ-HF-020..030 added, REQ-HF-014/017/018 revised,
   BUG-53/54 renumbered to BUG-138/139 (held by another branch).
+- 2026-10-06 — production OK (D-48), PR #28 merged as 415826e, CI green; deployed and archived.
 
 ## QA Review
 
@@ -63,3 +64,9 @@ requirements revision 2), release prep 3.12.1.
 QA approved (D-46). D-47 delta QA: D1 PASS (conditional), D7 PASS WITH FINDINGS (Lows fixed or documented).
 Versions 3.12.1, CHANGELOG `[3.12.1]`, page entry; full gate green. Next: PR to `main`, CI, the production OK
 (typed by the owner), merge.
+
+## Archive
+
+| Date | Step | Note |
+|---|---|---|
+| 2026-10-06 | archive | Spec merged (method: 37 added) and archived; findings closed; BL-67 kept open in the backlog |

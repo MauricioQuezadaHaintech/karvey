@@ -65,7 +65,7 @@ E2E-04 (release PR through the prod-gate) and E2E-05 (archive) stay in `karvey-d
 
 # Test Plan: prod-gate-scope (hotfix 3.12.1)
 
-Contract: `docs/spec/changes/prod-gate-scope/architecture.md` §6. Target `cli` (Claude Code plugin); every
+Contract: `docs/spec/changes/archive/2026-10-06-prod-gate-scope/architecture.md` §6. Target `cli` (Claude Code plugin); every
 case runs the real dispatcher (`hooks/karvey-hook.sh`) or the library in process, in throw-away git worlds.
 
 | Area | Requirements | Cases |
