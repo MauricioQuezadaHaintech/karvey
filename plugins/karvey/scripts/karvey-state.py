@@ -22,6 +22,9 @@ Commands:
                                         unless --write-spec (archive branch, REQ-W1-032);
                                         bound to the approved head commit, valid 24 h (D-35)
   check-prod <change> [--sha SHA]       the prod-gate's question (REQ-W1-023; D-34, D-35)
+  propose-release --change ID [--repo PATH|NAME] --pr N --sha REV [--effect TEXT] [--change …]…
+                                        D-50: one pending release proposal and its «Esta aprobación
+                                        implica:» block; the human's next approval word approves all of it
 """
 import argparse
 import copy
@@ -36,7 +39,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import karvey_lib as kl  # noqa: E402
-from karvey_lib import approval, atomicio, project as pj, schema_lite as sl  # noqa: E402
+from karvey_lib import approval, atomicio, clones, project as pj, schema_lite as sl  # noqa: E402
 
 TOOL = "karvey-state"
 SCHEMA_VERSION = 1
@@ -1270,6 +1273,10 @@ def check_prod(root, change, sha=None, now=None, repo=None):
         if not (isinstance(head, str) and SHA_RE.match(head)):  # D-35
             res["missing"].append("sha")
             reasons.append("it names no approved commit")
+        elif ev.get("proposal_sha") is not None and ev.get("proposal_sha") != head:  # D-50
+            res["missing"].append("sha")
+            reasons.append("the approved commit %s is not the one the release proposal listed (%s)"
+                           % (head[:12], str(ev.get("proposal_sha"))[:12]))
         elif repo is not None:  # REQ-HF-007/009: a declared repo releases the commit bound for it
             bound = (prod.get("repos") or {}).get(repo) if isinstance(prod.get("repos"), dict) else None
             if not (isinstance(bound, str) and SHA_RE.match(bound)):
@@ -1370,9 +1377,13 @@ def marker_report(root, change):
         why = "the prod marker found is for another change"
     else:
         why = "no prod marker was recorded"
-    return "found: %s \u2014 missing: a live prod marker for %s (%s); the human types \u00abaprobado para " \
-           "producci\u00f3n %s PR #<n> v<version>\u00bb in their own message" % (
-               "; ".join(items) if items else "no approval marker", change, why, change)
+    # BUG-159: only the approval word, the production word and the change id count (D-10); the approval binds to
+    # the commit passed with --sha (D-35), so a PR number or a version is never part of the phrase
+    # D-50: the agent runs propose-release, shows its block and the human replies with a plain approval word
+    return "found: %s \u2014 missing: a live prod marker for %s (%s); run propose-release --change %s --pr <n> " \
+           "--sha <head>, show its \u00abEsta aprobaci\u00f3n implica:\u00bb block and ask for a plain approval " \
+           "(\u00abapruebo\u00bb); naming it also works: \u00abaprobado para producci\u00f3n %s\u00bb" % (
+               "; ".join(items) if items else "no approval marker", change, why, change, change)
 
 
 def _approve_prod_bind_repo(args, root):
@@ -1432,18 +1443,25 @@ def cmd_approve(args, root):
             raise Refused("prod --ref must be a D-NN or a PR approval URL (got %r)" % ref, code="state.ref")
         if args.repo:
             return _approve_prod_bind_repo(args, root)
-        head_sha = resolve_commit(root, args.sha or "HEAD")  # D-35
-        if head_sha is None:
-            raise Refused("cannot bind the production approval to a commit: %r is not a commit of this repository "
-                          "(D-35; pass --sha with the head the human approved)" % (args.sha or "HEAD"),
-                          code="state.prod_sha")
         marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root),
                                                      project_scope=False)  # BUG-41
         if marker is None:
-            raise Refused("production approval needs a prod-kind approval marker: the human's own message must "
-                          "contain an approval word and a production word (D-10); none is valid for %s (%s). %s"
+            raise Refused("production approval needs a prod-kind approval marker: the human's own approval of the "
+                          "release proposal, or a message with an approval word and a production word naming the "
+                          "change (D-10, D-50); none is valid for %s (%s). %s"
                           % (args.change, ", ".join("%s: %s" % kv for kv in sorted(reasons.items())),
                              marker_report(root, args.change)), code="state.no_prod_marker")
+        listed = marker.get("sha") if isinstance(marker.get("sha"), str) and SHA_RE.match(marker["sha"]) else None
+        head_sha = resolve_commit(root, args.sha or listed or "HEAD")  # D-35
+        if head_sha is None:
+            raise Refused("cannot bind the production approval to a commit: %r is not a commit of this repository "
+                          "(D-35; pass --sha with the head the human approved)" % (args.sha or listed or "HEAD"),
+                          code="state.prod_sha")
+        if listed is not None and head_sha != listed:  # D-50: the human approved the commit the proposal listed
+            raise Refused("the human approved %s at commit %s (release proposal %s); %s is another commit: a new "
+                          "commit needs a new proposal and a new approval (D-35, D-50)"
+                          % (args.change, listed[:12], str(marker.get("proposal") or "")[:12], head_sha[:12]),
+                          code="state.prod_sha")
         rec = approval.prod_record(marker, scope, by, ref, date, head_sha)
         approval.record_prod(root, args.change, rec)
         # BUG-41: one production approval, one change; D-47: the same message stays the plan approval
@@ -1488,9 +1506,104 @@ def cmd_approve(args, root):
         args.change, key, by, args.role, ref)
 
 
+# --------------------------------------------------------------------------- release proposal (D-50)
+class _ItemStart(argparse.Action):
+    """``--change`` opens a new item; the options after it (``--repo --pr --sha --effect``) belong to it."""
+
+    def __call__(self, parser, ns, values, option_string=None):
+        items = list(getattr(ns, "items", None) or [])
+        items.append({"change": values})
+        ns.items = items
+
+
+class _ItemField(argparse.Action):
+    def __call__(self, parser, ns, values, option_string=None):
+        items = getattr(ns, "items", None) or []
+        if not items:
+            parser.error("%s comes after the --change it belongs to" % option_string)
+        if self.dest in items[-1]:
+            parser.error("%s given twice for --change %s" % (option_string, items[-1]["change"]))
+        items[-1][self.dest] = values
+
+
+def _proposal_owner(session_root, anchor, cid, repo):
+    """The clone (top level) that holds change ``cid``: ``--repo`` (a path, or a clone name the prod-gate's
+    discovery finds), else the session's project, else the one local clone that holds it committed."""
+    anchors = [a for a in (session_root and str(session_root), anchor, os.environ.get("CLAUDE_PROJECT_DIR"),
+                           os.getcwd()) if a]
+    if repo:
+        if os.path.isdir(os.path.expanduser(repo)):
+            top = clones.toplevel(os.path.expanduser(repo))
+            if not top:
+                raise Refused("--repo %s is not a git clone" % repo, code="state.proposal_repo")
+            cands = [top]
+        else:
+            cands = clones.find_clones(anchors, repo)
+            if not cands:
+                raise Refused("no local clone answers to --repo %s" % repo, code="state.proposal_repo")
+        held = [t for t in cands if (Path(t) / pj.CHANGES_DIR / cid / "spec.json").is_file()]
+        if not held:
+            raise Refused("change %s is not in %s" % (cid, ", ".join(cands)), code="state.proposal_change")
+        if len(held) > 1:
+            raise Refused("change %s is held by %d clones named %s (%s); pass --repo with the path"
+                          % (cid, len(held), repo, ", ".join(held)), code="state.proposal_change")
+        return held[0]
+    if session_root is not None and (Path(session_root) / pj.CHANGES_DIR / cid / "spec.json").is_file():
+        return clones.toplevel(str(session_root)) or os.path.realpath(str(session_root))
+    index, searched = approval.clones_holding(anchors, [cid])
+    owners = sorted((index.get(cid) or {}).values())
+    if len(owners) == 1:
+        return owners[0]
+    if len(owners) > 1:
+        raise Refused("change %s is held by %d clones (%s); pass --repo with the one you mean"
+                      % (cid, len(owners), ", ".join(owners)), code="state.proposal_change")
+    loose = (getattr(approval.clones_holding, "uncommitted", {}) or {}).get(cid)
+    raise Refused("change %s is not in this project nor committed in any of the %d local clones searched%s; pass "
+                  "--repo" % (cid, searched, (" (uncommitted in %s)" % ", ".join(loose)) if loose else ""),
+                  code="state.proposal_change")
+
+
+def cmd_propose_release(args, root):
+    items = getattr(args, "items", None) or []
+    if not items:
+        raise Usage("propose-release needs at least one --change")
+    anchor = approval.session_anchor(root, os.getcwd())
+    seen, out = set(), []
+    for it in items:
+        cid = (it.get("change") or "").strip()
+        if not approval.valid_scope(cid) or cid == approval.SCOPE_PROJECT:
+            raise Usage("invalid change id %r" % cid)
+        missing = [f for f in ("pr", "sha") if not (it.get(f) or "").strip()]
+        if missing:
+            raise Usage("--change %s needs %s" % (cid, " and ".join("--" + f for f in missing)))
+        pr = it["pr"].strip().lstrip("#")
+        if not re.match(r"^[0-9]{1,9}$", pr):
+            raise Usage("--pr must be the PR number (got %r)" % it["pr"])
+        owner = _proposal_owner(root, anchor, cid, (it.get("repo") or "").strip() or None)
+        if (cid, owner) in seen:
+            raise Usage("change %s is listed twice" % cid)
+        seen.add((cid, owner))
+        sha = resolve_commit(owner, it["sha"])
+        if sha is None:
+            raise Refused("--sha %s is not a commit of %s (fetch the PR head there first)" % (it["sha"], owner),
+                          code="state.prod_sha")
+        effect = (it.get("effect") or "").strip() or (
+            "merge a producci\u00f3n; el pipeline despliega" if args.lang == "es" else
+            "merge to production; the pipeline deploys")
+        out.append({"change": cid, "repo": owner, "pr": int(pr), "sha": sha, "effect": effect[:200]})
+    p = approval.write_proposal(anchor, out, ttl_min=args.expires_min)
+    block = approval.proposal_block(p, lang=args.lang)
+    res = {"proposal": p["id"], "shown_id": p["id"][:approval.PROPOSAL_ID_SHOWN], "expires_at": p["expires_at"],
+           "items": p["items"], "block": block}
+    note = ("\n\nShow the block above to the human verbatim, then ask for a plain approval. Their next own message "
+            "with an approval word records a production approval for every change listed; the agent cannot "
+            "approve it.")
+    return kl.EXIT_OK, res, [], [], block + note
+
+
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
-            "check-prod": cmd_check_prod}
+            "check-prod": cmd_check_prod, "propose-release": cmd_propose_release}
 
 
 def build_parser():
@@ -1546,6 +1659,16 @@ def build_parser():
     apv.add_argument("--sha", help="prod only: the head commit the human approved (default HEAD; D-35)")
     apv.add_argument("--repo", help="prod only: bind this declared repo's release commit (--sha, full id) into "
                                     "the change's live production approval (REQ-HF-006)")
+    pr_ = sub.add_parser("propose-release", parents=[common],
+                         help="D-50: list what a production approval carries out (one pending proposal)")
+    pr_.add_argument("--change", action=_ItemStart, dest="items", metavar="ID", help="a change to release (repeat)")
+    pr_.add_argument("--repo", action=_ItemField, metavar="PATH|NAME", help="the clone that holds that change")
+    pr_.add_argument("--pr", action=_ItemField, metavar="N", help="its pull request number")
+    pr_.add_argument("--sha", action=_ItemField, metavar="REV", help="its PR head commit")
+    pr_.add_argument("--effect", action=_ItemField, metavar="TEXT", help="what the approval carries out")
+    pr_.add_argument("--lang", choices=["es", "en"], default="es", help="language of the block (default es)")
+    pr_.add_argument("--expires-min", type=int, default=approval.PROPOSAL_TTL_MIN,
+                     help="minutes the proposal stays approvable (5..240, default 60)")
     cp = sub.add_parser("check-prod", parents=[common], help="is a human prod approval recorded? (prod-gate)")
     cp.add_argument("change")
     cp.add_argument("--sha", help="the commit being released; it must be the approved one (D-35)")
@@ -1567,7 +1690,10 @@ def main(argv=None):
         parser.print_help(sys.stderr)
         return kl.EXIT_USAGE
     try:
-        root = resolve_root(args)
+        if args.command == "propose-release":  # D-50: a session outside a Karvey project may release one
+            root = pj.find_root(start=os.getcwd(), root=getattr(args, "root", None))
+        else:
+            root = resolve_root(args)
         code, result, errors, warnings, human = COMMANDS[args.command](args, root)
     except Usage as exc:
         return kl.emit(kl.envelope(TOOL, kl.EXIT_USAGE, errors=[kl.issue("usage", str(exc))]), args.json)

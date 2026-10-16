@@ -200,7 +200,7 @@ Screens included ({N} total):
     - {modal/panel 2}
 
 What feedback do you have? Describe the changes and I'll generate Iteration {N+1}.
-Or type "approved" to advance to graphic design.
+Or approve (any short reply: "ok", "apruebo") to advance to graphic design.
 ```
 
 ### Step 6 — Iteration cycle

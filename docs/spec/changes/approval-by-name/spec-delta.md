@@ -1,0 +1,44 @@
+# Spec Delta: approval-by-name
+
+Against the living spec `docs/spec/specs/method/spec.md` (capability `method`). Scenarios are in
+`requirements.md`. The 3.12.1 requirements this change amends (REQ-HF-001..004, 018, 029) reach the living spec
+through `prod-gate-scope`'s spec-delta; they are cited as *amends* and the amendment is ADDED, so the merge order
+of the two changes does not matter.
+
+Summary: **ADDED 22** (REQ-AN-001..007, REQ-AN-010..024; revision 3, D-47: REQ-AN-013..015; revision 4, D-50: REQ-AN-016..024; REQ-AN-010, 011, 014 annotated by revision 4) · **MODIFIED 0** · **REMOVED 0**.
+
+## ADDED Requirements
+
+### ADDED by `approval-by-name` (3.13.1)
+
+Traced to `docs/spec/changes/approval-by-name/prd.md`.
+
+### A production approval is recorded in the clone that owns the named change (F-01, BUG-158)
+- **REQ-AN-001** — WHEN a production approval names a change id that is not in the working tree, the approval hook SHALL look for it in the clones found by the prod-gate's clone discovery, counting a clone once whatever number of its worktrees hold it; only a change-like word or the word right after the production term (never a vocabulary word) names a change elsewhere, and only a change committed on that clone's HEAD counts. *(Traces: O-1, S-1, AC-1 · F-01 · BUG-158 · D-47 · amends REQ-HF-002)*
+- **REQ-AN-002** — WHEN exactly one clone owns it, the approval hook SHALL write the production marker and its audit line in that clone, none in the working tree's clone, and print the owning clone's path. *(Traces: O-1, S-1, AC-1 · F-01 · BUG-158 · D-34, D-47)*
+- **REQ-AN-003** — IF two or more clones own it, THEN the approval hook SHALL record nothing and list every owning clone. *(Traces: O-1, AC-2 · F-01 · BUG-158)*
+- **REQ-AN-004** — The suggested phrase SHALL name the change the prompt named (or `<change-id>`), never the active change nor another change. *(Traces: O-2, AC-3 · F-01 · BUG-158 · amends REQ-HF-029)*
+- **REQ-AN-005** — The working tree keeps precedence for an id it holds; with no change named the single active change is used, said out loud; several named (one here and one elsewhere included) record nothing; a branch-only id keeps its message. *(Traces: O-1, AC-4 · amends REQ-HF-001..004)*
+- **REQ-AN-006** — Outside a Karvey project, a production approval naming a change owned by exactly one discovered clone is recorded there; two or more owners print the not-recorded line; otherwise silent. *(Traces: O-1, S-1 · F-01 · BUG-158)*
+- **REQ-AN-007** — The clone search runs only for a production approval whose named id is not in the working tree, uses the bounded discovery, and fails open with the not-recorded line. *(Traces: O-1 · amends REQ-HF-018)*
+
+### The phrase asks only for what counts (F-02, BUG-159)
+- **REQ-AN-010** — The hook, the state tool refusal and `karvey-deploy` show «aprobado para producción <change-id>» with no PR number and no version. *(Traces: O-3, S-2, AC-5 · F-02 · BUG-159 · D-10)*
+- **REQ-AN-011** — The rules, the hooks README and `karvey-deploy` state that only the approval word, the production word and the change id are required, PR and version are informational, and the approval binds to the commit passed with `approve … prod --sha`. *(Traces: O-3, S-2 · F-02 · BUG-159 · D-10, D-35)*
+- **REQ-AN-012** — Lint check L-82 fails a skill or rule that shows the production phrase with a PR number or a version inside it. *(Traces: O-3, S-2, AC-5 · F-02 · BUG-159)*
+
+### A plan or gate approval is a short reply (F-10)
+- **REQ-AN-013** — A short approval reply («apruebo», «ok», «dale», «aprobado», «sí») to what the agent presented records a plan approval, never a production one. *(Traces: F-10 · D-01, D-47)*
+- **REQ-AN-014** — Rules and skills never instruct the agent to give the human a composed sentence to approve a plan or gate; only the production OK has a phrase. *(Traces: F-10 · D-47)*
+- **REQ-AN-015** — Lint check L-83 fails a skill or rule that gives the human a composed approval phrase other than the production phrase. *(Traces: F-10 · D-47)*
+
+### Production approval by a listed proposal (F-11, F-12 — D-50)
+- **REQ-AN-016** — `karvey-state.py propose-release` writes one pending, hash-identified, 60-min proposal (changes across clones · PR · commit · effect) and prints the «Esta aprobación implica:» block. *(Traces: F-11 · D-50)*
+- **REQ-AN-017** — The human's next own approval word records a prod marker for every listed change, in its clone, bound to its listed commit (24 h). *(Traces: F-11 · D-50 · D-35)*
+- **REQ-AN-018** — The hook echoes exactly what it recorded: `production approval recorded: <id>@<sha7>, …`. *(Traces: F-11 · D-50)*
+- **REQ-AN-019** — A non-approval leaves it pending and silent; a stop cancels it; naming production + a change keeps the D-10 path. *(Traces: F-11 · D-50)*
+- **REQ-AN-020** — The agent can only propose; only the prompt hook records. *(Traces: F-11 · D-50 · D-01)*
+- **REQ-AN-021** — Tampered (hash), late, stale, foreign or unshown proposals record nothing for production. *(Traces: F-11 · D-50)*
+- **REQ-AN-022** — `approve … prod` binds the listed commit; `check-prod` refuses a mismatch. *(Traces: F-11 · D-50 · D-35)*
+- **REQ-AN-023** — Talk about approvals is silent; only an approval attempt gets a not-recorded line. *(Traces: F-12 · BUG-162)*
+- **REQ-AN-024** — Deploy skill and rules show the block and ask for a plain approval; L-82 forbids instructing the exact phrase. *(Traces: F-11 · D-50)*

@@ -1108,6 +1108,76 @@ class L80Bug149(LintCase):
         self.assertPasses("L-80")
 
 
+class L82(LintCase):
+    """BUG-159 (REQ-AN-012): the production phrase shows only the approval word, the production word and the
+    change id; a PR number or a version inside it reads as mandatory."""
+
+    def test_pass(self):
+        self.assertPasses("L-82")
+
+    def test_pr_or_version_inside_the_phrase_fails(self):
+        for text in ("Show the phrase: «aprobado para producción {change-id} PR #{pr} v{version}».",
+                     "The human types «aprobado para producción feat-a PR #<n> v<version>».",
+                     "Type `approved for production {change-id} v3.2.1`.",
+                     "Ask for «aprobado para produccion {change-id} #{pr}».",
+                     "Type «aprobado para producción {change-id} (3.13.1)»."):
+            self.t.write(RULES + "/release.md", "# Release\n\n%s\n" % text)
+            self.assertFails("L-82", "PR number or a version", file=RULES + "/release.md")
+
+    def test_unquoted_mention_ends_at_its_clause(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nNaming the change also works: the human types approved "
+                                            "for production <id>; a PR number is optional.\n")
+        self.assertPasses("L-82")
+
+    def test_minimal_phrase_and_pr_outside_it_pass(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nOptionally, show «aprobado para producción {change-id}» "
+                                            "and, apart, the PR #{pr} head `{sha}` for v{version}.\n")
+        self.assertPasses("L-82")
+
+
+class L82ExactPhrase(LintCase):
+    """D-50 (REQ-AN-022): no skill or rule instructs the human to type the exact production phrase; the agent shows
+    the propose-release block and asks for a plain approval; naming the change stays an optional alternative."""
+
+    def test_instructing_the_exact_phrase_fails(self):
+        for text in ("Ask in plain text and show the phrase for the human to type, «aprobado para producción "
+                     "{change-id}».",
+                     "The human types «aprobado para producción {change-id}» in their own message.",
+                     "Pide que escriba «aprobado para producción {change-id}».",
+                     "Reply with `approved for production {change-id}` to release."):
+            self.t.write(RULES + "/release.md", "# Release\n\n%s\n" % text)
+            self.assertFails("L-82", "exact production phrase", file=RULES + "/release.md")
+
+    def test_the_implica_block_flow_and_an_optional_phrase_pass(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nRun `propose-release`, show its «Esta aprobación "
+                                            "implica:» block and ask for a plain approval («apruebo»). Naming the "
+                                            "change also works: «aprobado para producción {change-id}».\n")
+        self.assertPasses("L-82")
+
+    def test_the_deploy_skill_must_use_the_proposal(self):
+        self.t.replace(DEPLOY, "propose-release", "propose-something")
+        self.assertFails("L-82", "propose-release", file=DEPLOY)
+
+
+class L83(LintCase):
+    """D-47 (REQ-AN-014, 015): no skill or rule gives the human a composed phrase to approve a plan or a gate."""
+
+    def test_pass(self):
+        self.assertPasses("L-83")
+
+    def test_composed_plan_phrase_fails(self):
+        for text in ("Ask the human to type «apruebo el plan completo: documentar, resolver y borrar».",
+                     "Show the exact phrase \"approved, run tasks E1 to E3\" for the human to type.",
+                     "Pide que escriba «aprobado el diseño con los cambios de color»."):
+            self.t.write(RULES + "/gate.md", "# Gate\n\n%s\n" % text)
+            self.assertFails("L-83", "composed phrase", file=RULES + "/gate.md")
+
+    def test_short_reply_and_production_phrase_pass(self):
+        self.t.write(RULES + "/gate.md", "# Gate\n\nThe human replies «apruebo» or \"ok\". For production they "
+                                          "may also type «aprobado para producción {change-id}».\n")
+        self.assertPasses("L-83")
+
+
 class L81(LintCase):
     """D-47 (REQ-HF-035): no skill or rule asks for approval before reading, searching or investigating."""
 
@@ -1137,7 +1207,7 @@ class ListAll(unittest.TestCase):
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
         self.assertIn("L-80 ", out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)] + ["L-80", "L-81"])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)] + ["L-80", "L-81", "L-82", "L-83"])
 
 
 if __name__ == "__main__":

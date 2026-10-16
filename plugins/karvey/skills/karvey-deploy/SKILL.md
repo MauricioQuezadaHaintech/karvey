@@ -116,15 +116,20 @@ Bypassing a policy is the human's call and responsibility — never the agent's 
 gh pr view "{pr}" --json headRefOid -q .headRefOid                                    # GitHub
 az repos pr show --id "{pr}" --query lastMergeSourceCommit.commitId -o tsv            # Azure Repos
 ```
-If the human's approval of the release plan already named production and this change (the hook printed `[karvey] approval recorded (prod, {change-id}, …)`), that message is the production OK (D-47): go straight to step 2 below and record it; ask only when `approve … prod` refuses. Otherwise ask in plain text and show the exact phrase for the human to type, with the PR head SHA: «aprobado para producción {change-id} PR #{pr} v{version}» (head `{pr head}`). The human types it, or their own words with an approval word **and** a production word naming the change (D-10), so the approval hook records a prod marker and prints `[karvey] approval recorded (prod, {change-id}, …)` with its audit line. Never use a question tool (`AskUserQuestion`) for this OK: its answer does not pass through the prompt hook, so no prod marker can exist and `approve … prod` is refused (BUG-142, D-45). If the hook prints `prod approval NOT recorded`, show its reason and the phrase again. Then:
-1. Allocate the decision `D-NN` and put its text (who, when, the words verbatim) in the PR body or a PR comment. It is written into `docs/spec/decisions.md` at archive, on `chore/archive-{change-id}` (D-03).
-2. Record it in the release ledger — never in a commit on the integration branch:
+If the human's approval of the release plan already recorded production for this change (the hook printed `[karvey] production approval recorded: {change-id}@…` or `[karvey] approval recorded (prod, {change-id}, …)`), that message is the production OK (D-47): go straight to step 2 below and record it. Otherwise, before asking, list what the OK carries out (D-50) — every change this release merges, one proposal for all of them:
+```bash
+python3 "$S" propose-release --change "{change-id}" --pr "{pr}" --sha "{pr head}" --effect "merge to $P; the pipeline deploys {version}" \
+                             --change "{other-id}" --repo "{its clone}" --pr "{its pr}" --sha "{its head}"   # repeat per change
+```
+Show its «Esta aprobación implica:» block to the human verbatim (numbered: change · clone · PR · head · effect), then ask in plain text for a plain approval: «apruebo», «ok» or «dale» approves every change listed — never ask for a typed exact phrase, and never one change at a time when the proposal lists several. The human's next own message with an approval word makes the approval hook record a prod marker for each listed change, in the clone that holds it, bound to its listed head, and print `[karvey] production approval recorded: <id>@<sha7>, … (expires …)`; a stop word cancels the proposal and any other message leaves it pending (60 min). You cannot approve your own proposal: only the human's prompt records from it. Naming the change also works as an alternative («aprobado para producción {change-id}», PR and version informational). Never use a question tool (`AskUserQuestion`) for this OK: its answer does not pass through the prompt hook, so no prod marker can exist and `approve … prod` is refused (BUG-142, D-45). If the hook prints `NOT approved` or `NOT recorded`, show its reason, run `propose-release` again (a new push needs a new proposal) and show the new block. Then:
+1. Allocate the decision `D-NN` and put its text (who, when, the words verbatim, the block they approved) in the PR body or a PR comment. It is written into `docs/spec/decisions.md` at archive, on `chore/archive-{change-id}` (D-03).
+2. Record it in the release ledger — never in a commit on the integration branch; for each listed change, in the clone that holds it (`--root "{its clone}"`):
    ```bash
    python3 "$S" approve "{change-id}" prod --by "{human name}" --role human --ref "D-NN" --sha "{pr head}"
    python3 "$S" check-prod "{change-id}" --sha "{pr head}"   # what the prod-gate reads
    ```
    Refused (no prod marker, missing `--by`/`--ref`) → do not merge; ask the human again. The prod approval is never delegated (`role` is always `human`).
-   The approval covers **that SHA only, for 24 h** (D-35): a new push to the PR, or a merge the next day, needs a new OK. A `reopen` of the change supersedes it (D-36).
+   The approval covers **that SHA only, for 24 h** (D-35): it binds to the `--sha` passed here, not to a PR number, so a PR recreated with the same head stays approved, while a new push to the PR, or a merge the next day, needs a new OK. A `reopen` of the change supersedes it (D-36).
 3. Merge (the prod-gate hook lets it through only with the ledger entry for the PR's current head), as its own command — not chained after a push or a branch move:
    ```bash
    gh pr merge "{pr}" --merge                          # GitHub      ⇒ PROD pipeline

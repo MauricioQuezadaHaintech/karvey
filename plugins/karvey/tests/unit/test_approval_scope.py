@@ -51,7 +51,8 @@ class ProdScope(unittest.TestCase):
     def test_typo_is_found_nowhere(self):
         r = self.resolve("aprobado para producción proyect-upgrade")
         self.assertIsNone(r["scope"])
-        self.assertIn("no worktree or branch holds it", r["why"])
+        self.assertIn("no worktree, branch or local clone holds it", r["why"])
+        self.assertEqual(r["candidates"], [])  # BUG-158: never the active change
 
     def test_named_change_here_wins(self):
         _change(self.root, "project-upgrade")
@@ -94,7 +95,7 @@ class ProdScope(unittest.TestCase):
     def test_bug148_unknown_word_is_never_the_suggested_change(self):
         r = self.resolve("aprobado para producción del fix cross-tenant")
         self.assertIsNone(r["scope"])
-        self.assertEqual(r["candidates"], ["team-adapters"])
+        self.assertEqual(r["candidates"], [])  # BUG-158: nor the active change: «… <change-id>»
 
     def test_bug148_two_named_ids_one_inside_the_other(self):
         _change(self.root, "login")

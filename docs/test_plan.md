@@ -81,3 +81,15 @@ case runs the real dispatcher (`hooks/karvey-hook.sh`) or the library in process
 | Regression / fail modes | HF-017, 018 | `tests/regression/test_incidents.py` BUG-138..144; session error path, approval-hook error line, CLI time-outs |
 | Release | HF-019 | release gate (versions, CHANGELOG, full suites, CI) |
 | Benchmark | Constraints | `karvey-hook.sh pre-bash` latency, n=20, for `ls`, `curl` (now pre-filtered into the prod-gate) and `python3 -c` |
+
+# Test Plan: approval-by-name (hotfix 3.13.1)
+
+Contract: `docs/spec/changes/approval-by-name/architecture.md` §6. Target `cli`; every case runs the real
+dispatcher (`karvey_hooks.dispatch` / `hooks/karvey-hook.sh`) in throw-away git worlds with sibling clones.
+
+| Area | Requirements | Cases |
+|---|---|---|
+| Approval by named change across clones | AN-001..007 | unit `test_approval_by_name.py` (12); `tables/approval.json` ap-an-01, ap-an-02, ap-hf-03 (updated); unit `test_approval_scope.py` |
+| Minimal phrase | AN-010..012 | unit `test_state_repos.py` (refusal text); `test_lint_plugin.py` L82 (3); lint on the real tree |
+| Regression | — | `tests/regression/test_incidents.py` BUG-158, BUG-159 |
+| Benchmark | AN-007 | prompt hook latency, n=10, plain prompt vs a production approval searched across 14 sibling folders |

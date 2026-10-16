@@ -20,4 +20,4 @@ INTEGRATION=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-config.py" get branc
 git push origin "$INTEGRATION"
 ```
 
-The prod OK is recorded as a D-NN and in the PR; it is never a commit on integration.
+The prod OK is recorded as a D-NN and in the PR; it is never a commit on integration. Before asking, run `propose-release` and show its «Esta aprobación implica:» block; the human answers with a plain approval («apruebo»).

@@ -48,13 +48,16 @@ The table below is generated from `state-machine.json`; do not edit it by hand (
 
 - A phase is entered only when every earlier phase with an approval key is **approved or skipped**. A refusal
   names the phase that is missing (`requirements not approved or skipped`) and leaves the file byte-identical.
+- The human's approval of a gate is any short approval reply to what the agent presented («apruebo», «ok»,
+  «dale», «sí»); the agent never asks for a composed sentence. The production OK is a plain approval of the
+  release proposal the agent showed (`propose-release`, D-50).
 - An approval needs `--by`, `--role` and `--ref` (a `D-NN` or a URL). A non-prod approval without a fresh
   marker from the approval hook is recorded with a warning (`evidence.marker: none`).
 - `reopen` is a backward edge up to `qa`: the approvals of the reopened phase and every later one move to
   `revision_history`, so the downstream gates run again. The release-ledger prod approval is superseded
   too (D-36): the human gives it again after the rework.
-- A prod approval (`approve … prod [--sha <head>]`) is bound to the head commit the human approved and is
-  valid 24 h after the OK (D-35); `check-prod … --sha <commit>` answers whether that commit may be released.
+- A prod approval (`approve … prod [--sha <head>]`) is bound to the head commit the human approved (the one
+  the release proposal listed, D-50) and is valid 24 h after the OK (D-35); `check-prod … --sha <commit>` answers whether that commit may be released.
 - `validate` checks the file against the schema and the graph; `validate --fix` migrates legacy shapes after
   printing the diff.
 
