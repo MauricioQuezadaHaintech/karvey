@@ -48,6 +48,8 @@ The table below is generated from `state-machine.json`; do not edit it by hand (
 
 - A phase is entered only when every earlier phase with an approval key is **approved or skipped**. A refusal
   names the phase that is missing (`requirements not approved or skipped`) and leaves the file byte-identical.
+- The human's approval of a gate is any short approval reply to what the agent presented («apruebo», «ok»,
+  «dale», «sí»); the agent never asks for a composed sentence (only the production OK has a phrase).
 - An approval needs `--by`, `--role` and `--ref` (a `D-NN` or a URL). A non-prod approval without a fresh
   marker from the approval hook is recorded with a warning (`evidence.marker: none`).
 - `reopen` is a backward edge up to `qa`: the approvals of the reopened phase and every later one move to

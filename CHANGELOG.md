@@ -13,10 +13,14 @@ approving `<change-b>` — it discarded the change the human named and proposed 
 the human carried a PR number and a version that read as mandatory, while only the approval word, the production
 word and the change id count (D-10) and the approval binds to the commit passed with `approve … --sha` (D-35). The
 owner decided to ship both fixes as hotfix 3.13.1 (D-47). The QA security review and second opinion found and fixed
-two more defects in the new code (BUG-160, 161); every incident ships with a regression test.
+two more defects in the new code (BUG-160, 161); every incident ships with a regression test. Folded in by the
+owner (D-47): agents asked for long composed sentences to approve a plan; a plan or gate approval is any short reply.
 
 - Unchanged from 3.12.0: notification destinations come only from `project.json`; projects that took them from tables in a `CLAUDE.md` file declare them under `notifications`.
 - No project upgrade needed: the approval hook, the state tool's refusal text, a skill, the rules and a lint check change; no stored format or setting changes.
+
+### Changed
+- approval-by-name F-10 (D-47) — a plan or gate approval is any short approval reply («apruebo», «ok», «dale», «aprobado», «sí») to the plan or phase the agent presented; `rules/enforcement.md`, `phase-close.md`, `state-machine.md`, `verification.md` and `karvey-mockup` say so and that the only phrase with a format is the production OK; new lint check L-83 fails a skill or rule that gives the human a composed approval phrase to type; tests pin that a bare «apruebo» / «ok» / «dale» records a plan approval (tables ap-an-04, ap-an-05). Why: agents were asking the owner to type sentences restating the plan (REQ-AN-013..015).
 
 ### Fixed
 - approval-by-name E1.F1.T2 (BUG-158) — a production approval naming a change that is not in the session's working tree is looked up in the local clones the prod-gate's discovery finds (`approval.clones_holding`, `resolve_named_elsewhere`); exactly one owning clone receives the marker and its audit line and the hook line names it (`approval recorded (prod, <id>, clone <path>, …)`); two or more owning clones, or several named changes, record nothing and are listed; the not-recorded line suggests the named change or `<change-id>`, never the session's active change (`approval.phrase_change`); outside a Karvey project a change owned by exactly one clone is recorded there; the search fails open with the line. Why: the owner's «aprobado para producción <change-a>» in a session on another repo was refused and the hook proposed approving `<change-b>` (REQ-AN-001..007).

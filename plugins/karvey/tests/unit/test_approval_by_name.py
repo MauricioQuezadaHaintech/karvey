@@ -230,5 +230,22 @@ class D1OnBug158(Base):
         self.assertIn("<change-id>", out)
 
 
+class ShortReplyIsAPlanApproval(Base):
+    """D-47 (REQ-AN-013): a plan or gate approval is any short approval reply; no composed sentence is needed."""
+
+    def test_bare_short_replies_record_a_plan_approval(self):
+        for word in ("apruebo", "ok", "dale", "aprobado", "sí", "Apruebo.", "ok, dale"):
+            out = self.prompt(word)
+            self.assertIn("[karvey] approval recorded (plan, web-search, until the plan ends or you say stop", out,
+                          word)
+            m = marker(self.web, "web-search")
+            self.assertEqual(m["kind"], "plan", word)
+            self.assertEqual(m["prompt_excerpt"], word)
+
+    def test_a_short_reply_is_never_a_production_approval(self):
+        self.prompt("apruebo")
+        self.assertEqual(marker(self.web, "web-search")["kind"], "plan")
+
+
 if __name__ == "__main__":
     unittest.main()

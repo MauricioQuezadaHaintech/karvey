@@ -1977,6 +1977,80 @@
       ]
     },
     {
+      "id": "ap-an-04-bare-apruebo-is-a-plan-approval",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          }
+        }
+      },
+      "input": {
+        "prompt": "apruebo"
+      },
+      "expect": {
+        "decision": "allow",
+        "marker_created": true,
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
+        "marker": {
+          "scope": "feat-a",
+          "kind": "plan"
+        }
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-013"
+      ]
+    },
+    {
+      "id": "ap-an-05-bare-dale-is-a-plan-approval",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "impl"
+            }
+          }
+        }
+      },
+      "input": {
+        "prompt": "dale"
+      },
+      "expect": {
+        "decision": "allow",
+        "marker_created": true,
+        "stdout_contains": "[karvey] approval recorded (plan, feat-a, until the plan ends or you say stop",
+        "marker": {
+          "scope": "feat-a",
+          "kind": "plan"
+        }
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-013"
+      ]
+    },
+    {
       "id": "ap-hf-10-not-recorded-line-suggests-the-phrase",
       "guard": "approval",
       "given": {

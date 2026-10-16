@@ -1940,6 +1940,37 @@ def l82_minimal_prod_phrase(ctx):
                     break
 
 
+# --------------------------------------------------------------------------- L-83
+PLAN_QUOTE_RE = re.compile(r"«([^»\n]+)»|\"([^\"\n]+)\"|`([^`\n]+)`")
+APPROVE_WORD_RE = re.compile(r"\b(apruebo|aprobad[oa]s?|apruebas?|approved?|approving|ok|dale|lgtm|go ahead|proceed|"
+                             r"procede|adelante)\b", re.I)
+PROD_WORD_RE = re.compile(r"\bproducci[oó]n\b|\bproduction\b|\bprod\b", re.I)
+ASK_TYPE_RE = re.compile(r"\b(type|types|typed|typing|write|writes|reply|replies|say|says|phrase|sentence|escrib\w*|"
+                         r"tecle\w*|frase|responde\w*|digit\w*)\b", re.I)
+
+
+@check("L-83", "a plan or gate approval is a short reply: no skill or rule gives the human a composed phrase to type "
+               "to approve a plan or a gate (only the production OK has a phrase) (D-47)")
+def l83_no_composed_plan_approval_phrase(ctx):
+    for path in ctx.text_files():
+        for n, para in _paragraphs(ctx, path):
+            for sentence in re.split(r"(?<=[.!?;])\s+", para):
+                if not ASK_TYPE_RE.search(sentence):
+                    continue
+                for m in PLAN_QUOTE_RE.finditer(sentence):
+                    q = next(g for g in m.groups() if g)
+                    words = q.split()
+                    if len(words) <= 2 or not APPROVE_WORD_RE.match(q.strip()) or PROD_WORD_RE.search(q):
+                        continue
+                    yield (path, n, "gives the human a composed phrase to approve a plan or gate (%r); a plan "
+                                    "approval is any short reply («apruebo», «ok», «dale»), only the production OK has "
+                                    "a phrase (D-47)" % q[:60])
+                    break
+                else:
+                    continue
+                break
+
+
 # --------------------------------------------------------------------------- --paths globs
 def expand_braces(pattern):
     """``a/{b,c}/d`` → ``[a/b/d, a/c/d]`` (nested braces supported)."""
@@ -2588,7 +2619,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser():
-    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-39, L-80..L-82).")
+    p = _Parser(prog="lint-plugin.py", description="Karvey plugin linter (L-01..L-39, L-80..L-83).")
     p.add_argument("--root", help="repository root (default: git top level)")
     p.add_argument("--plugin", help="plugin directory (default: <root>/plugins/karvey)")
     p.add_argument("--only", help="comma list of check ids (L-NN)")

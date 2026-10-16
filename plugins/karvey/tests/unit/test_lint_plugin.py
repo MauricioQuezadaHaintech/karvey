@@ -1135,6 +1135,25 @@ class L82(LintCase):
         self.assertPasses("L-82")
 
 
+class L83(LintCase):
+    """D-47 (REQ-AN-014, 015): no skill or rule gives the human a composed phrase to approve a plan or a gate."""
+
+    def test_pass(self):
+        self.assertPasses("L-83")
+
+    def test_composed_plan_phrase_fails(self):
+        for text in ("Ask the human to type «apruebo el plan completo: documentar, resolver y borrar».",
+                     "Show the exact phrase \"approved, run tasks E1 to E3\" for the human to type.",
+                     "Pide que escriba «aprobado el diseño con los cambios de color»."):
+            self.t.write(RULES + "/gate.md", "# Gate\n\n%s\n" % text)
+            self.assertFails("L-83", "composed phrase", file=RULES + "/gate.md")
+
+    def test_short_reply_and_production_phrase_pass(self):
+        self.t.write(RULES + "/gate.md", "# Gate\n\nThe human replies «apruebo» or \"ok\". For production they "
+                                          "type «aprobado para producción {change-id}».\n")
+        self.assertPasses("L-83")
+
+
 class L81(LintCase):
     """D-47 (REQ-HF-035): no skill or rule asks for approval before reading, searching or investigating."""
 
@@ -1164,7 +1183,7 @@ class ListAll(unittest.TestCase):
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
         self.assertIn("L-80 ", out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)] + ["L-80", "L-81", "L-82"])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)] + ["L-80", "L-81", "L-82", "L-83"])
 
 
 if __name__ == "__main__":

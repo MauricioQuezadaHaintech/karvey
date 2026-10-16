@@ -5,7 +5,7 @@ Against the living spec `docs/spec/specs/method/spec.md` (capability `method`). 
 through `prod-gate-scope`'s spec-delta; they are cited as *amends* and the amendment is ADDED, so the merge order
 of the two changes does not matter.
 
-Summary: **ADDED 10** (REQ-AN-001..007, REQ-AN-010..012) · **MODIFIED 0** · **REMOVED 0**.
+Summary: **ADDED 13** (REQ-AN-001..007, REQ-AN-010..015; revision 3, D-47: REQ-AN-013..015) · **MODIFIED 0** · **REMOVED 0**.
 
 ## ADDED Requirements
 
@@ -26,3 +26,8 @@ Traced to `docs/spec/changes/approval-by-name/prd.md`.
 - **REQ-AN-010** — The hook, the state tool refusal and `karvey-deploy` show «aprobado para producción <change-id>» with no PR number and no version. *(Traces: O-3, S-2, AC-5 · F-02 · BUG-159 · D-10)*
 - **REQ-AN-011** — The rules, the hooks README and `karvey-deploy` state that only the approval word, the production word and the change id are required, PR and version are informational, and the approval binds to the commit passed with `approve … prod --sha`. *(Traces: O-3, S-2 · F-02 · BUG-159 · D-10, D-35)*
 - **REQ-AN-012** — Lint check L-82 fails a skill or rule that shows the production phrase with a PR number or a version inside it. *(Traces: O-3, S-2, AC-5 · F-02 · BUG-159)*
+
+### A plan or gate approval is a short reply (F-10)
+- **REQ-AN-013** — A short approval reply («apruebo», «ok», «dale», «aprobado», «sí») to what the agent presented records a plan approval, never a production one. *(Traces: F-10 · D-01, D-47)*
+- **REQ-AN-014** — Rules and skills never instruct the agent to give the human a composed sentence to approve a plan or gate; only the production OK has a phrase. *(Traces: F-10 · D-47)*
+- **REQ-AN-015** — Lint check L-83 fails a skill or rule that gives the human a composed approval phrase other than the production phrase. *(Traces: F-10 · D-47)*

@@ -122,3 +122,28 @@ The plugin linter SHALL fail (check L-82) when a skill or rule shows the product
 producción …» / «approved for production …») with a PR number or a version inside it.
 
 *Trace: O-3, S-2, AC-5 · F-02 · BUG-159*
+
+---
+
+## Requirement 3: A plan or gate approval is a short reply (F-10, D-47 — requirements revision 3)
+
+### 3.1 REQ-AN-013 — Short replies approve a plan
+WHEN the human replies to a plan or a phase the agent presented with a short approval reply («apruebo», «ok»,
+«dale», «aprobado», «sí»), the approval hook SHALL record a plan approval and print
+`approval recorded (plan, …)`; such a reply SHALL never record a production approval.
+
+*Trace: F-10 · D-01, D-10, D-47*
+
+### 3.2 REQ-AN-014 — No composed phrase for a plan or gate
+The rules (`enforcement.md`, `phase-close.md`, `state-machine.md`, `verification.md`) and the skills that ask for an
+approval SHALL say that a plan or gate approval is any short reply and SHALL never instruct the agent to give the
+human a composed sentence to type; the only phrase with a format is the production OK «aprobado para producción
+<change-id>».
+
+*Trace: F-10 · D-47*
+
+### 3.3 REQ-AN-015 — Lint keeps it so
+The plugin linter SHALL fail (check L-83) when a skill or rule gives the human a quoted phrase of more than two words
+that starts with an approval word to type or reply for an approval, unless it is the production phrase.
+
+*Trace: F-10 · D-47*

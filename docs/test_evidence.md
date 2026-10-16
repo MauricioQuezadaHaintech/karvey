@@ -290,3 +290,5 @@ QA loop added BUG-160, BUG-161 (D1 / D7, three rounds; D1 re-check of `cb90ed4` 
 | validate --all | 0 errors |
 
 Versions 3.13.1 agree (plugin.json, marketplace.json, project.json, CHANGELOG `[3.13.1]`, page).
+
+Folded into 3.13.1 (F-10, D-47): REQ-AN-013 — `ShortReplyIsAPlanApproval` (apruebo, ok, dale, aprobado, sí, "Apruebo.", "ok, dale" record a plan approval, never prod) and tables ap-an-04/05 ✅; REQ-AN-014 — rules and mockup skill updated ✅; REQ-AN-015 — L83 tests (pass, 3 composed phrasings fail, short reply + production phrase pass) and L-83 on the real tree ✅.

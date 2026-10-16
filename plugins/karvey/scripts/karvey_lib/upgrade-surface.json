@@ -33,7 +33,7 @@
     "plugins/karvey/skills/karvey/rules/clickup-protocol.md": "832e1b3293d6483a92a70e5f9dd691e4c9152d90222b9fed6468ffc038baa9e6",
     "plugins/karvey/skills/karvey/rules/deploy-workflow.md": "d059a74fa5d1bf644cb65e1a7db3f1b0cfba4044f2e6802095127f9c3b9c0c86",
     "plugins/karvey/skills/karvey/rules/ears-format.md": "319ff63d644310e15b7a401d43dbdee1fe48ce7245a7334fcbf155c486903dd7",
-    "plugins/karvey/skills/karvey/rules/enforcement.md": "4733e6763988bb109b0b765fecdea0819e251f475b3ea10ab87df1a23934b8ad",
+    "plugins/karvey/skills/karvey/rules/enforcement.md": "a9ea94a4c963603ac95ef2a76d1a3bec3a3616a3156a614b617f0fcf9a22c242",
     "plugins/karvey/skills/karvey/rules/engineering-standards.md": "b506833b87969e747f7a58b9f9f4936a8af494d6254cc8fc7a3f9d99a5d51a9b",
     "plugins/karvey/skills/karvey/rules/incident-tracking.md": "b10e187334f685b12648384216a9d68fa100365fc84d6c4284302826f9ea5557",
     "plugins/karvey/skills/karvey/rules/iteration-loop.md": "d4f4377eb64a1abed61b02436c591eae3eef3349918e7e0f7ab644da223c6b0a",
@@ -42,14 +42,14 @@
     "plugins/karvey/skills/karvey/rules/management-adapters.md": "5580ebaa6284e54869cb3d414ecc36d52f0590978b70005eff732672c68f7c17",
     "plugins/karvey/skills/karvey/rules/multi-agent.md": "33d0c6d5e70e2f7e0ecf566e8b13d7372658e8c8b9518f1f5859d7474a339313",
     "plugins/karvey/skills/karvey/rules/notifications.md": "1b10d8803d972200cbed8254504f435431f49fcbe6fa923a2f1aed44bead224b",
-    "plugins/karvey/skills/karvey/rules/phase-close.md": "e18fded47eb78371510ca927f4e16c731fec1c2765d1cbe698756e421512c9f0",
+    "plugins/karvey/skills/karvey/rules/phase-close.md": "32eec5db382e74ec6ae4e52d75a9c5ddb63fae7ec412088221c488ed7a568351",
     "plugins/karvey/skills/karvey/rules/project-config.md": "789b0b1c1b006906a1fc28f4046bba75e5a1858ee2418efa75fbd1cd5c45c09e",
     "plugins/karvey/skills/karvey/rules/security-tiers.md": "3e201623fd5d841daa7b8519391ebb941e1df20db4e61db3222fd5db0bdc6012",
-    "plugins/karvey/skills/karvey/rules/state-machine.md": "bbb3710662cd5f54760639d9efa86dd04d40536f56ed3202a6b11542a75ce84f",
+    "plugins/karvey/skills/karvey/rules/state-machine.md": "2a108c7c2da27faec6a40da12e330e9a214891bfe3d59139bf8fb11ebb59b40a",
     "plugins/karvey/skills/karvey/rules/support-skills.md": "868abbe7bbd16c8f85405b0c8362b4587a9b8c39f1a9204cdf3b8ec017f8578c",
     "plugins/karvey/skills/karvey/rules/targets.md": "e851766ae78e1f7f4b54701b97c4a5d6a65d90ea9b9d0bd8a1022c8b33e75f69",
     "plugins/karvey/skills/karvey/rules/team.md": "911653968eaa021ed155b458bd2de4587efbf90dd92ecca9006935d04e848cb7",
-    "plugins/karvey/skills/karvey/rules/verification.md": "ed29519300a620c10657d80d13fff245831e7791968adb1f3d817c291b700363",
+    "plugins/karvey/skills/karvey/rules/verification.md": "eac194e789ca49d66ab6ce2730d2e64974379e61e4724278d4e3f42d56474185",
     "plugins/karvey/skills/karvey/rules/versioning.md": "e6de16c4ba68b2d57ce0f6d1290bba751b56e2e2a7eeedbe7a0550f182071524"
   }
 }

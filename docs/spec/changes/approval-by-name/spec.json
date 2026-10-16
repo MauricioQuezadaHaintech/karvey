@@ -22,7 +22,7 @@
     "D-47"
   ],
   "inputs": {},
-  "iteration_count": 2,
+  "iteration_count": 3,
   "revision_history": [
     {
       "date": "2026-10-07",
@@ -50,6 +50,20 @@
       "findings": [
         "F-07",
         "F-08"
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "by": "owner instruction (D-47), recorded by the agent",
+      "reason": "Agents asked the owner to type composed sentences to approve a plan; a plan or gate approval is any short reply, only the production OK has a phrase; folded into 3.13.1.",
+      "decision": "D-47",
+      "added": [
+        "REQ-AN-013",
+        "REQ-AN-014",
+        "REQ-AN-015"
+      ],
+      "findings": [
+        "F-10"
       ]
     }
   ],

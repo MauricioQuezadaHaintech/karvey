@@ -46,6 +46,7 @@ limit (D-47): a phase close never consumes it; an approval of a change lasts unt
 session-wide one (no change named) for that session, and either ends earlier if the human says stop. A production approval counts 24 h (D-35) and is also the plan approval.
 
 - An approval word prints `[karvey] approval recorded (plan, <scope>, until the plan ends or you say stop)`. <!-- guard-case: ap-01-approval-aprobado, ap-02-approval-ok -->
+- A plan or gate approval is any short approval reply to the plan or phase the agent presented — «apruebo», «ok», «dale», «aprobado», «sí» — and the hook prints `approval recorded (plan, …)` for it. An agent never asks the human to type a composed sentence to approve a plan or a gate; the only phrase with a format is the production OK «aprobado para producción <change-id>» (lint L-83). <!-- guard-case: ap-an-04-bare-apruebo-is-a-plan-approval, ap-an-05-bare-dale-is-a-plan-approval, ap-02-approval-ok -->
 - «detente», «para», «stop» (alone or opening the message) withdraws every plan approval and prints `[karvey] plan approval withdrawn (stop)`. <!-- guard-case: ap-d47-01-stop-withdraws-the-plan-approval, ap-d47-03-para-inside-a-sentence-is-not-stop -->
 - A negation, a question or quoted text records nothing and prints nothing. <!-- guard-case: ap-08-negation-or-question, ap-15-quoted-code-fence, ap-16-quoted-blockquote -->
 - A prod-kind marker needs an approval word **and** a production word naming the change (D-10). <!-- guard-case: ap-19-prod-kind-d10, ap-22-prod-word-with-negation -->
