@@ -319,3 +319,15 @@ Propuesta 739c4b3bad9c · vence 14:55. Responde «apruebo» (u «ok», «dale»)
 web-search: prod approval recorded in the release ledger (ref D-50, commit f9c109c99f44, …)
 prod approval OK: web-search by Owner ref D-50 (ledger)
 ```
+
+## approval-by-name — hotfix 3.13.2 (BUG-163, D-52) — 2026-10-16
+
+| REQ | Evidence | Result |
+|---|---|---|
+| REQ-AN-025 | `test_bug163_approve_once.ApproveOnce` (follow-up PR carried without a human message; expired and archived not carried), `test_release_proposal.StateTool.test_a_later_commit_of_the_change_is_carried_without_a_new_proposal`, `test_state_repos.test_bind_refusals` (repo moved as follow-up) | ✅ |
+| REQ-AN-026 | `ApproveOnce.first_release` (a summary naming the change approves), `test_a_summary_that_names_nothing_is_still_refused`, `Security.test_the_transcript_must_show_the_proposal` | ✅ |
+| REQ-AN-027 | `VersionDrift` (older cache copy sees the installed one, said once, dev checkout never counts, re-exec target and no loop) | ✅ |
+| REQ-AN-028 | `L84` lint tests; L-84 on the real tree | ✅ |
+
+Red first: `ApproveOnce` failed on 595473e (3 failures: the dialogue, expired, archived); `VersionDrift` needs the new module.
+Full gate: unit OK, regression OK, tables 622/622, test-hooks 68, page 22, lint 0 errors, validate 0 errors.

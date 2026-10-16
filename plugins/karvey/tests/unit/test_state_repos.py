@@ -59,10 +59,15 @@ class Repos(Base):
             self.assertEqual(c, 3, env)
             self.assertIn(needle, env["errors"][0]["message"])
         self.assertEqual(self.bind("app-api")[0], 0)
+        # BUG-163: a follow-up commit of the same change moves within the live approval, the human is not asked
         c, env = self.bind("app-api", "b" * 40)
-        self.assertEqual(c, 3, env)
-        self.assertIn("new OK", env["errors"][0]["message"])
-        self.assertEqual(ap.read_ledger(self.root, "feat-a")[0]["prod"]["repos"], {"app-api": SHA_API})
+        self.assertEqual(c, 0, env)
+        self.assertTrue(env["result"]["followup"])
+        prod = ap.read_ledger(self.root, "feat-a")[0]["prod"]
+        self.assertEqual(prod["repos"], {"app-api": "b" * 40})
+        self.assertEqual([(f["from"], f["to"], f["repo"]) for f in prod["followups"]], [(SHA_API, "b" * 40, "app-api")])
+        c, env = self.st("check-prod", "feat-a", "--repo", "app-api", "--sha", "b" * 40)
+        self.assertEqual(c, 0, env)
 
     def test_check_prod_without_binding_names_repo(self):
         self.declare(["app-web", "app-api"])

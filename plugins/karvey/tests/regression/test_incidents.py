@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-162 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-163 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -398,6 +398,13 @@ INDEX = {
         ("unit", "test_release_proposal.py", "Bug162Silence.test_talk_about_approvals_is_silent"),
         ("unit", "test_release_proposal.py", "Bug162Silence.test_an_approval_attempt_still_says_why"),
         ("table", "approval", "ap-an-10-talk-about-approvals-is-silent"),
+    ],
+    "BUG-163": [  # approval-by-name F-13 (D-52): one change, one OK
+        ("unit", "test_bug163_approve_once.py", "ApproveOnce.test_the_dialogue_asks_the_human_once"),
+        ("unit", "test_bug163_approve_once.py", "ApproveOnce.test_a_summary_that_names_nothing_is_still_refused"),
+        ("unit", "test_bug163_approve_once.py", "ApproveOnce.test_an_expired_approval_does_not_carry"),
+        ("unit", "test_bug163_approve_once.py", "VersionDrift.test_an_older_cached_copy_sees_the_installed_one"),
+        ("unit", "test_bug163_approve_once.py", "VersionDrift.test_reexec_targets_the_installed_script"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

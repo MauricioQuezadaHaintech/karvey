@@ -2319,3 +2319,33 @@ REQ-HF-029 (BUG-143) keyed the line on `prod_shaped`, which matches the two term
 | 2026-10-16 | DETECTADO | owner / Claude Opus 5.5 | owner report with D-50 |
 | 2026-10-16 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
 | 2026-10-16 | RESUELTO | owner / Claude Opus 5.5 | regression tests red on 241bc39, green after |
+
+## BUG-163 — One change asked the human for the production OK four times
+- **Priority:** high
+- **Detected:** 2026-10-16 · **Component:** plugins/karvey/scripts/karvey-state.py (`approve … prod`, `check-prod`), plugins/karvey/scripts/karvey_lib/approval.py (`proposal_shown`), plugins/karvey/scripts/karvey_lib/guards.py (`approval_hook`)
+- **Change / origin:** approval-by-name — finding F-13 (owner report, D-52)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+On 3.13.1, an agent released a change, merged it, then found two files left out and opened a follow-up PR. It asked the owner for the production OK again; the owner's «ok» was refused because the agent had summarised the release proposal instead of copying its id; a second proposal and a second «ok» were needed. The session also ran the 3.13.0 scripts it had loaded before the update, so its first request named a command that version lacked.
+
+### Actual vs expected
+- Actual: the production approval was spent by the first merge and bound to one commit; a summary of the proposal did not count as shown; a session never learned it ran an older Karvey.
+- Expected: the human approves the change once; a follow-up commit of the same change is carried by the agent while the approval is live (24 h, not archived); a summary that names the change shows the proposal; a stale session is told once and its scripts run the installed version.
+
+### Root cause
+BUG-41 / D-35 / D-50 bound the approval to one merge and one commit ("a new commit needs a new OK"); `proposal_shown` required the 12-hex proposal id in the agent's text; nothing compared the running version with the installed one, and the skills' script paths were expanded into the version folder at session start.
+
+### Fix
+`karvey-state.py approve … prod --sha <new>` (and `--repo … --sha …`) carries a later commit into a live approval of the same change (`followups` in the ledger, audit `prod-followup`), also when the human approved a listed commit and the head moved before the merge; `check-prod` accepts it and its refusal names that command; `proposal_shown` also counts a message naming a listed change written after the proposal; `karvey_lib/pluginver.py` prints a once-per-session drift line in the prompt hook and re-runs the scripts from the installed version (cache copies only); rules, `karvey-deploy` and lint L-84 say a follow-up is never asked again.
+
+### Regression test
+`plugins/karvey/tests/unit/test_bug163_approve_once.py` (ApproveOnce, VersionDrift), `test_release_proposal.py` (StateTool.test_a_later_commit_of_the_change_is_carried_without_a_new_proposal), `test_state_repos.py` (test_bind_refusals), L-84 tests; red on 595473e. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-16 | DETECTADO | owner / Claude Opus 5.5 | owner report with the agent dialogue |
+| 2026-10-16 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
+| 2026-10-16 | RESUELTO | owner / Claude Opus 5.5 | regression tests red on 595473e, green after |

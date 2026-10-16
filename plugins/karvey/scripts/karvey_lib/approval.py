@@ -1240,11 +1240,15 @@ def _assistant_texts(obj):
     return []
 
 
-def proposal_shown(transcript_path, pid, max_bytes=64 * 1024 * 1024):
-    """``shown`` · ``not-shown`` · ``unverified``: the agent's own text in the transcript carries the proposal id
-    (tool output does not count: the human sees what the agent writes)."""
+def proposal_shown(transcript_path, pid, max_bytes=64 * 1024 * 1024, change_ids=(), since=None):
+    """``shown`` · ``not-shown`` · ``unverified``: the agent's own text in the transcript carries the proposal id,
+    or — BUG-163 — names a change the proposal lists in a message written after the proposal was created (an agent
+    that summarises the block in its own words still put that change in front of the human). Tool output does not
+    count: the human sees what the agent writes."""
     if not transcript_path or not pid:
         return "unverified"
+    ids = [c for c in (change_ids or ()) if isinstance(c, str) and c]
+    since_dt = parse_dt(since) if isinstance(since, str) else since
     try:
         fh = open(transcript_path, "rb")
     except OSError:
@@ -1259,9 +1263,22 @@ def proposal_shown(transcript_path, pid, max_bytes=64 * 1024 * 1024):
                 obj = json.loads(line.decode("utf-8"))
             except (UnicodeDecodeError, ValueError):
                 continue
-            if any(pid in t for t in _assistant_texts(obj)):
+            texts = _assistant_texts(obj)
+            if not texts:
+                continue
+            if any(pid in t for t in texts):
                 return "shown"
+            if ids:
+                at = parse_dt(obj.get("timestamp")) if isinstance(obj, dict) else None
+                if since_dt is not None and at is not None and at < since_dt - timedelta(seconds=5):  # clock grain
+                    continue
+                if any(_names_change(t, c) for t in texts for c in ids):
+                    return "shown"
     return "not-shown"
+
+
+def _names_change(text, change):
+    return re.search(r"(?<![A-Za-z0-9-])%s(?![A-Za-z0-9-])" % re.escape(change), text) is not None
 
 
 # --------------------------------------------------------------------------- approval attempt (BUG-162)

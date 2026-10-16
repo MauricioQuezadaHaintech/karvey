@@ -55,6 +55,11 @@
 - **E1.F4.T3 [Backend] 30 min** — `karvey-deploy` 2.9, rules, hooks README; L-80 / L-82 in `lint-plugin.py`;
   BUG-162 records; CHANGELOG; evidence. Done: whole-repo gate green.
 
+- **E1.F5.T1 [Backend] 60 min** — BUG-163: `karvey-state.py` follow-up carry (`_followup`, approve and
+  `--repo` binding, `check-prod`), `approval.proposal_shown` by change id, `karvey_lib/pluginver.py` drift notice and
+  re-exec; rules, `karvey-deploy`, lint L-84; regression `tests/regression/test_bug163_approve_once.py`. Done: red
+  before, whole gate green.
+
 ## Coverage
 
 | REQ | Tasks |
@@ -62,3 +67,4 @@
 | AN-001..007 | E1.F1.T1, E1.F1.T2 |
 | AN-010..012 | E1.F2.T1, E1.F2.T2 |
 | AN-016..024 | E1.F4.T1, E1.F4.T2, E1.F4.T3 |
+| AN-025..028 | E1.F5.T1 |

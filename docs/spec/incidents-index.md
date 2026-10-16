@@ -84,6 +84,7 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | BUG-160 | karvey | high | Any word of a production approval could send it to a change of another clone | approval-by-name / F-03 | RESUELTO | plugins/karvey/tests/unit/test_approval_by_name.py, table ap-an-03 (indexed in plugins/karvey/tests/regression/test_incidents.py) | approval-by-name (hotfix 3.13.1) |
 | BUG-161 | karvey | medium | One id here plus one elsewhere was recorded, and a negated phrase could still suggest the active change | approval-by-name / F-04 | RESUELTO | plugins/karvey/tests/unit/test_approval_by_name.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | approval-by-name (hotfix 3.13.1) |
 | BUG-162 | karvey | medium | The approval hook printed a not-recorded line on a message that only discussed approvals | approval-by-name / F-12 | RESUELTO | plugins/karvey/tests/unit/test_release_proposal.py, table ap-an-10 (indexed in plugins/karvey/tests/regression/test_incidents.py) | approval-by-name (hotfix 3.13.1) |
+| BUG-163 | karvey | high | One change asked the human for the production OK four times (follow-up PR, summarised proposal, session on the old version) | approval-by-name / F-13 | RESUELTO | plugins/karvey/tests/unit/test_bug163_approve_once.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | approval-by-name (hotfix 3.13.2) |
 
 ## Summary by state
 
@@ -92,7 +93,7 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 76 | BUG-01 .. BUG-51, BUG-138 .. BUG-162 |
+| RESUELTO | 77 | BUG-01 .. BUG-51, BUG-138 .. BUG-163 |
 | REABIERTO | 0 | — |
 
 Next number: **BUG-163** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).

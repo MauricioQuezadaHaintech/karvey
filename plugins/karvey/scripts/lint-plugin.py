@@ -1965,6 +1965,24 @@ def l82_minimal_prod_phrase(ctx):
                           "\u00abEsta aprobaci\u00f3n implica:\u00bb block before asking (D-50)")
 
 
+# --------------------------------------------------------------------------- L-84
+ASK_AGAIN_RE = re.compile(r"\bnew\s+(?:commit|push|head|sha)\b[^.;\n]{0,60}\bneeds?\s+a\s+new\s+(?:OK|approval|proposal)\b|"
+                          r"\bnuevo\s+(?:commit|push)\b[^.;\n]{0,60}\b(?:requiere|necesita|exige)\s+(?:un|una)\s+"
+                          r"(?:nuev[oa]\s+)?(?:OK|aprobaci[oó]n|propuesta)\b", re.I)
+
+
+@check("L-84", "the production OK is of the change: no skill or rule says a new commit of the same change needs a "
+               "new OK, approval or proposal — the agent carries it with approve --sha (BUG-163)")
+def l84_no_second_ok_for_the_same_change(ctx):
+    for path in ctx.text_files():
+        for n, para in _paragraphs(ctx, path):
+            m = ASK_AGAIN_RE.search(para)
+            if m:
+                yield (path, n, "says a new commit needs a new production OK (%r); a follow-up commit of the same "
+                                "change is carried with approve … prod --sha <new head>, the human is not asked "
+                                "again (BUG-163)" % m.group(0)[:60])
+
+
 # --------------------------------------------------------------------------- L-83
 PLAN_QUOTE_RE = re.compile(r"«([^»\n]+)»|\"([^\"\n]+)\"|`([^`\n]+)`")
 APPROVE_WORD_RE = re.compile(r"\b(apruebo|aprobad[oa]s?|apruebas?|approved?|approving|ok|dale|lgtm|go ahead|proceed|"
