@@ -42,7 +42,7 @@ Markdown: a history row in `PLAN.md`.
 
 ## Gate before advancing
 
-Do not ask "Shall we advance to the next phase?" until actions 1–4 are done. When you ask, the human approves with any short reply («apruebo», «ok», «dale», «sí»): never ask them to type a composed sentence that restates the plan; the only phrase with a format is the production OK «aprobado para producción <change-id>» (`enforcement.md`). If a tracker update failed (API
+Do not ask "Shall we advance to the next phase?" until actions 1–4 are done. When you ask, the human approves with any short reply («apruebo», «ok», «dale», «sí»): never ask them to type a composed sentence that restates the plan; the production OK too is a plain approval, of the release proposal the agent showed (`enforcement.md`, D-50). If a tracker update failed (API
 error, missing location, unmapped status), **say so** and leave it in the outbox — do not pretend the phase
 closed cleanly.
 

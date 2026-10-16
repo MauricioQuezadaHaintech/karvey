@@ -105,7 +105,8 @@ prod-gate's bounded discovery (no network), and any error in it SHALL record no 
 ### 2.1 REQ-AN-010 — One phrase everywhere
 The phrase the approval hook, the state tool's `approve … prod` refusal and `karvey-deploy` show to the human
 SHALL be «aprobado para producción <change-id>» (English: «approved for production <change-id>»), with no PR
-number and no version inside it.
+number and no version inside it. *Revision 4 (D-50): this phrase is the optional alternative; the hook, the
+refusal and `karvey-deploy` lead with the release proposal and a plain approval (REQ-AN-024).*
 
 *Trace: O-3, S-2, AC-5 · F-02 · BUG-159 · D-10*
 
@@ -113,7 +114,8 @@ number and no version inside it.
 `rules/enforcement.md`, `hooks/README.md` and `karvey-deploy` SHALL state that a production OK needs only an
 approval word, a production word and the change id; that a PR number or a version the human adds is informational;
 and that the approval binds to the head commit the agent passes with `approve … prod --sha`, so a PR recreated
-with the same head stays approved and a new commit needs a new OK.
+with the same head stays approved and a new commit needs a new OK. *Revision 4 (D-50): a production OK is also —
+and by default — a plain approval of the release proposal (REQ-AN-017); naming the change stays an alternative.*
 
 *Trace: O-3, S-2, AC-5 · F-02 · BUG-159 · D-10, D-35*
 
@@ -137,8 +139,8 @@ WHEN the human replies to a plan or a phase the agent presented with a short app
 ### 3.2 REQ-AN-014 — No composed phrase for a plan or gate
 The rules (`enforcement.md`, `phase-close.md`, `state-machine.md`, `verification.md`) and the skills that ask for an
 approval SHALL say that a plan or gate approval is any short reply and SHALL never instruct the agent to give the
-human a composed sentence to type; the only phrase with a format is the production OK «aprobado para producción
-<change-id>».
+human a composed sentence to type. *Revision 4 (D-50): the production OK is a plain approval too, of the release
+proposal the agent showed; «aprobado para producción <change-id>» stays only as an optional alternative.*
 
 *Trace: F-10 · D-47*
 
@@ -147,3 +149,82 @@ The plugin linter SHALL fail (check L-83) when a skill or rule gives the human a
 that starts with an approval word to type or reply for an approval, unless it is the production phrase.
 
 *Trace: F-10 · D-47*
+
+---
+
+## Requirement 4: Production approval by a listed proposal and a bare «apruebo» (F-11, D-50 — requirements revision 4)
+
+`reopen` was refused by the state tool (`reopen is allowed up to qa; approval-by-name is in deploying`), so the
+owner's decision is folded into the open hotfix as revision 4, like revision 3 (D-47).
+
+### 4.1 REQ-AN-016 — The agent lists what the approval carries out
+WHEN the agent is about to ask for a production OK, the state tool SHALL offer `propose-release --change <id>
+[--repo <path|name>] --pr <n> --sha <rev> [--effect <text>]`, repeatable for several changes across local clones
+(found by clone discovery; `--repo` picks one; a change held by two clones, absent, or a `--sha` that is not a
+commit of its clone is refused), SHALL write ONE pending proposal for the session's project in the clone-local
+state dir (`approvals/proposals/`, a protected path written only by the tool; a newer proposal replaces it), whose
+id is the sha256 of its content and which expires after 60 min (5..240), and SHALL print the block «Esta
+aprobación implica:» with one numbered line per change — change · clone · PR · commit (7) · effect — and the
+proposal id, for the agent to show the human verbatim.
+
+*Trace: F-11 · D-50 · D-35*
+
+### 4.2 REQ-AN-017 — A bare approval word approves every listed change
+WHEN a live proposal exists for the session's project and the human's own message is an approval (an approval
+word in position, no negation, no question, no stop; no production word and no change id required), the approval
+hook SHALL write a prod marker for EVERY listed change, in the clone that holds it, carrying its listed commit and
+the proposal id (valid 24 h, D-35), with the approval hook's audit line in that clone, and SHALL mark the proposal
+approved.
+
+*Trace: F-11 · D-50 · D-10, D-34, D-35*
+
+### 4.3 REQ-AN-018 — The echo lists exactly what was recorded
+WHEN the hook records from a proposal, it SHALL print one line `[karvey] production approval recorded:
+<id>@<sha7>, <id>@<sha7> (expires …)` listing exactly the markers it wrote, and a second line `production
+approval NOT recorded: <id> (<why>)` for any listed change it could not record.
+
+*Trace: F-11 · D-50*
+
+### 4.4 REQ-AN-019 — Pending, cancelled, and the named form
+WHILE a proposal is pending, a message that is not an approval SHALL leave it pending and print nothing; a stop
+word SHALL cancel it (`[karvey] release proposal cancelled (stop)`); a message that names production and a change
+SHALL keep the D-10 path for that change and leave the proposal pending (backward compatible).
+
+*Trace: F-11 · D-50 · D-47*
+
+### 4.5 REQ-AN-020 — The agent can only propose
+The agent SHALL NOT be able to approve its own proposal: only the approval hook, on the human's prompt, records
+from it; `approve … prod` without that marker SHALL be refused and say to run `propose-release` and ask.
+
+*Trace: F-11 · D-50 · D-01 (security D1)*
+
+### 4.6 REQ-AN-021 — Integrity, freshness, display
+IF the proposal's id is not the hash of its content (changed after it was shown), it was created after the
+human's message, it is older than its expiry, it belongs to another session tree, or — with a readable transcript —
+the agent's own text never showed its id, THEN the hook SHALL record no production approval and SHALL print
+`[karvey] release proposal <id> NOT approved: <why>`; the message still counts as a plan approval.
+
+*Trace: F-11 · D-50 (security D1, D7)*
+
+### 4.7 REQ-AN-022 — The state tool binds the listed commit
+WHEN `approve <id> prod` finds a marker from a proposal, it SHALL bind the listed commit (default `--sha`) and
+SHALL refuse another commit ("a new commit needs a new proposal"); `check-prod` SHALL accept the ledger approval
+it writes and SHALL refuse one whose approved commit differs from the proposal's.
+
+*Trace: F-11 · D-50 · D-35*
+
+### 4.8 REQ-AN-023 — Talk about approvals is silent (BUG-162)
+The approval hook SHALL print a `prod approval NOT recorded` line only for a production approval attempt: an
+approval word opening the message or a clause, followed (at most three connector words apart) by a production
+word. A message that only discusses approvals SHALL print nothing.
+
+*Trace: F-12 · BUG-162 · REQ-HF-029*
+
+### 4.9 REQ-AN-024 — Rules, skill and lint ask for a plain approval
+`karvey-deploy` 2.9 and the rules SHALL run `propose-release`, show its block and ask for a plain approval
+(«apruebo»), one approval for every listed change; they SHALL NOT instruct the human to type the exact
+production phrase, which stays documented only as an optional alternative. Lint check L-82 SHALL fail a skill or
+rule that instructs the exact phrase (unless marked optional / alternative) and a deploy skill without
+`propose-release`; L-80's message points to the proposal.
+
+*Trace: F-11 · D-50 · L-80, L-82*

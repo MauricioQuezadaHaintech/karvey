@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-161 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-162 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -393,6 +393,11 @@ INDEX = {
         ("unit", "test_approval_by_name.py", "D1OnBug158.test_d7_f2_one_id_here_and_one_in_another_clone_records_nothing"),
         ("unit", "test_approval_by_name.py",
          "D1OnBug158.test_d7_f3_negated_phrase_naming_a_hyphenless_id_elsewhere_never_suggests_the_active_change"),
+    ],
+    "BUG-162": [  # approval-by-name F-12 (D-50): talk about approvals printed a not-recorded line
+        ("unit", "test_release_proposal.py", "Bug162Silence.test_talk_about_approvals_is_silent"),
+        ("unit", "test_release_proposal.py", "Bug162Silence.test_an_approval_attempt_still_says_why"),
+        ("table", "approval", "ap-an-10-talk-about-approvals-is-silent"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

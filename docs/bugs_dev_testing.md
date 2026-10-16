@@ -2289,3 +2289,33 @@ With one id here, the other candidates are checked against this clone's branches
 | 2026-10-07 | DETECTADO | owner / Claude Opus 5.5 | F-04, QA D7 |
 | 2026-10-07 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
 | 2026-10-07 | RESUELTO | owner / Claude Opus 5.5 | fixed in the QA loop; regression tests red on f09725c, green after |
+
+## BUG-162 — The approval hook printed "prod approval NOT recorded: negation: no" on a message that only discussed approvals
+- **Priority:** medium
+- **Detected:** 2026-10-16 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`approval_hook`), plugins/karvey/scripts/karvey_lib/approval.py
+- **Change / origin:** approval-by-name — finding F-12 (owner report, D-50)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With no approval intended, a message such as «el approve prod no funcionó ayer, revisa el log» (an approval word, a production word and "no" anywhere in it) made the hook print `[karvey] prod approval NOT recorded: negation: no — type: «…»`.
+
+### Actual vs expected
+- Actual: any message holding an approval term and a production term anywhere (`prod_shaped`) that was not an approval got the not-recorded line with its reason.
+- Expected: the line only for a production approval attempt; a message that discusses approvals stays silent.
+
+### Root cause
+REQ-HF-029 (BUG-143) keyed the line on `prod_shaped`, which matches the two terms anywhere in the human's words, so ordinary talk about approvals looked like a failed attempt.
+
+### Fix
+`approval.production_phrase_attempt`: an approval term opening the message or a clause, followed at most three connector words apart by a production term; the hook prints the not-recorded line (and the plan-not-prod note) only for such an attempt. Hotfix 3.13.1 (D-50).
+
+### Regression test
+`plugins/karvey/tests/unit/test_release_proposal.py` (Bug162Silence), `test_approval_by_name.py` (test_d7_f3_*), table ap-an-10-talk-about-approvals-is-silent; red on 241bc39. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-16 | DETECTADO | owner / Claude Opus 5.5 | owner report with D-50 |
+| 2026-10-16 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
+| 2026-10-16 | RESUELTO | owner / Claude Opus 5.5 | regression tests red on 241bc39, green after |

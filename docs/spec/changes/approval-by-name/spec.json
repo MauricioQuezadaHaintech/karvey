@@ -19,10 +19,11 @@
   "decisions": [
     "D-10",
     "D-35",
-    "D-47"
+    "D-47",
+    "D-50"
   ],
   "inputs": {},
-  "iteration_count": 3,
+  "iteration_count": 4,
   "revision_history": [
     {
       "date": "2026-10-07",
@@ -64,6 +65,32 @@
       ],
       "findings": [
         "F-10"
+      ]
+    },
+    {
+      "date": "2026-10-16",
+      "by": "owner decision (D-50), recorded by the agent",
+      "reason": "Production approval by a listed release proposal and a bare «apruebo» covering every listed change; the hook stays silent on talk about approvals (BUG-162). The state tool refused reopen (approval-by-name is in deploying), so it is folded into 3.13.1 like revision 3.",
+      "decision": "D-50",
+      "added": [
+        "REQ-AN-016",
+        "REQ-AN-017",
+        "REQ-AN-018",
+        "REQ-AN-019",
+        "REQ-AN-020",
+        "REQ-AN-021",
+        "REQ-AN-022",
+        "REQ-AN-023",
+        "REQ-AN-024"
+      ],
+      "revised": [
+        "REQ-AN-010",
+        "REQ-AN-011",
+        "REQ-AN-014"
+      ],
+      "findings": [
+        "F-11",
+        "F-12"
       ]
     }
   ],

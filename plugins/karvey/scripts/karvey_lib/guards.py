@@ -2366,10 +2366,84 @@ def _prompt_anchors(ctx):
     return out
 
 
+PROD_HINT = ("the agent shows the release proposal (karvey-state.py propose-release) and you reply \u00abapruebo\u00bb; "
+             "or name the change: \u00ab%s\u00bb")
+
+
+def _prod_hint(cleaned, change=None):
+    """D-50: how a production approval is given — a plain approval of the listed proposal; naming the change in
+    the production phrase is the optional alternative (never a required exact phrase)."""
+    return PROD_HINT % approval.suggested_phrase(cleaned, change)
+
+
+def _session_anchor(ctx):
+    return approval.session_anchor(ctx.root, ctx.payload.cwd or ctx.env.get("CLAUDE_PROJECT_DIR"))
+
+
+def _proposal_approval(ctx, text, vocab):
+    """D-50 (REQ-AN-016..022): the human's own approval word approves the live release proposal of this session's
+    project. Returns ``(lines, done)``: ``done`` when the proposal was approved; otherwise the message goes the usual
+    way (``lines`` then says why a proposal was refused, or is None when none applies).
+
+    Only this path records from a proposal: the agent can only propose. The proposal must be intact (its id is the
+    hash of its content), of this project, created before this message, unexpired and, when the transcript can be
+    read, shown by the agent. Each listed change gets a prod marker in the clone that holds it, bound to its listed
+    commit; the line lists exactly what was recorded."""
+    anchor = _session_anchor(ctx)
+    p, status = approval.read_proposal(anchor)
+    if status == "missing" or (status == "ok" and not approval.proposal_pending(p)):
+        return None, False
+    verdict = approval.classify(text, vocab)
+    if not verdict["approved"]:
+        return None, False  # not an approval: the proposal stays pending, nothing printed
+    pids = [i.get("change") for i in (p or {}).get("items") or [] if isinstance(i, dict)]
+    ids = [c["id"] for c in pj.list_changes(ctx.root)] if ctx.root is not None else []
+    if approval._named_ids(verdict["cleaned"], set(ids) | {x for x in pids if isinstance(x, str)}):
+        return None, False  # a message naming a change keeps the D-10 path (backward compatible)
+    shown = ((p or {}).get("id") or "")[:approval.PROPOSAL_ID_SHOWN]
+    ok, why = (False, "forged or corrupt proposal") if status != "ok" else approval.check_proposal(p, anchor)
+    if ok and approval.proposal_shown(ctx.payload.transcript_path, shown) == "not-shown":
+        ok, why = False, "the agent never showed this proposal to you"
+    if not ok:  # refused: nothing for production; the message still goes the usual way (a plan approval)
+        if status != "ok" or not approval.close_proposal(anchor, "refused", reason=why):
+            _audit(anchor, {"guard": "approval", "event": "proposal", "decision": "refused", "reason": why})
+        return ["[karvey] release proposal %s NOT approved: %s \u2014 nothing recorded for production; the agent "
+                "runs propose-release again and shows the new block" % (shown or "?", why)], False
+    recorded, failed, until = [], [], None
+    for item in p["items"]:
+        cid, owner, sha = item["change"], item["repo"], item["sha"]
+        try:
+            if not (Path(owner) / pj.CHANGES_DIR / cid / "spec.json").is_file():
+                raise approval.ApprovalError("%s no longer holds it" % owner)
+            m = approval.write_marker(owner, "prod", cid, text, session_id=ctx.payload.session_id,
+                                      ttl_min=ttl_min(ctx, Path(owner)), compat=ctx.env.get(approval.COMPAT_ENV, ""),
+                                      extra={"sha": sha, "proposal": p["id"], "pr": item.get("pr")})
+            created = approval.parse_dt(m["created_at"])
+            until = until or (created + approval.timedelta(hours=approval.PROD_VALID_H)).strftime("%H:%M")
+            recorded.append("%s@%s" % (cid, sha[:7]))
+        except Exception as exc:  # the line says what was not recorded
+            failed.append("%s (%s)" % (cid, exc if isinstance(exc, approval.ApprovalError) else type(exc).__name__))
+    approval.close_proposal(anchor, "approved", recorded=recorded)
+    lines = []
+    if recorded:
+        lines.append("[karvey] production approval recorded: %s (expires %s tomorrow; proposal %s; it is also the "
+                     "plan approval)" % (", ".join(recorded), until, shown))
+    if failed:
+        lines.append("[karvey] production approval NOT recorded: %s" % ", ".join(failed))
+    return lines, True
+
+
 def _approval_outside_project(ctx, text):
     """REQ-AN-006: a session outside a Karvey project. Only a production approval that names a change held by the
     local clones is acted on; anything else stays silent, as before."""
     try:
+        if approval.is_stop(text):  # D-50: a stop cancels the pending release proposal
+            if approval.close_proposal(_session_anchor(ctx), "cancelled", reason="stop"):
+                return Decision.allow(stdout=["[karvey] release proposal cancelled (stop)"])
+            return None
+        plines, done = _proposal_approval(ctx, text, approval.default_vocabulary())
+        if done or plines:
+            return Decision.allow(stdout=plines)
         verdict = approval.classify(text)
         if not verdict["approved"] or verdict["kind"] != "prod":
             return None
@@ -2378,8 +2452,8 @@ def _approval_outside_project(ctx, text):
             return None
         if res["scope"] is None:
             cand = res["candidates"][0] if len(res["candidates"]) == 1 else None
-            return Decision.allow(stdout=["[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
-                                          % (res["why"], approval.suggested_phrase(verdict["cleaned"], cand))])
+            return Decision.allow(stdout=["[karvey] prod approval NOT recorded: %s \u2014 %s"
+                                          % (res["why"], _prod_hint(verdict["cleaned"], cand))])
         owner = res["owner"]
         marker = approval.write_marker(owner, "prod", res["scope"], text, session_id=ctx.payload.session_id,
                                        ttl_min=ttl_min(ctx, Path(owner)), compat=ctx.env.get(approval.COMPAT_ENV, ""))
@@ -2389,9 +2463,9 @@ def _approval_outside_project(ctx, text):
                                       "also the plan approval)" % (res["scope"], owner, until)])
     except Exception:  # fail open: no marker is the safe side
         try:
-            if approval.prod_shaped(text):
-                return Decision.allow(stdout=["[karvey] prod approval NOT recorded: internal error \u2014 type: "
-                                              "\u00ab%s\u00bb" % approval.suggested_phrase(approval.normalise(text))])
+            if approval.production_phrase_attempt(text):
+                return Decision.allow(stdout=["[karvey] prod approval NOT recorded: internal error \u2014 %s"
+                                              % _prod_hint(approval.normalise(text))])
         except Exception:
             pass
         return None
@@ -2430,9 +2504,15 @@ def approval_hook(ctx):
                     pass
             lines.append("[karvey] plan approval withdrawn (stop)%s \u2014 a consequential action needs a new "
                          "approval" % ((": " + ", ".join(gone)) if gone else ""))
+            if approval.close_proposal(_session_anchor(ctx), "cancelled", reason="stop"):  # D-50
+                lines.append("[karvey] release proposal cancelled (stop)")
+            return Decision.allow(stdout=lines)
+        plines, done = _proposal_approval(ctx, text, vocab)  # D-50: a plain approval of the listed proposal
+        lines += plines or []
+        if done:
             return Decision.allow(stdout=lines)
         verdict = approval.classify(text, vocab)
-        shaped = approval.prod_shaped(text, vocab)
+        attempt = approval.production_phrase_attempt(text, vocab)  # BUG-162
         if verdict["approved"]:
             ids = [c["id"] for c in pj.list_changes(root)]
             note = ""
@@ -2442,8 +2522,8 @@ def approval_hook(ctx):
                                                   anchors=_prompt_anchors(ctx))
                 if res["scope"] is None:
                     cand = res["candidates"][0] if len(res["candidates"]) == 1 else None
-                    lines.append("[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
-                                 % (res["why"], approval.suggested_phrase(verdict["cleaned"], cand)))
+                    lines.append("[karvey] prod approval NOT recorded: %s \u2014 %s"
+                                 % (res["why"], _prod_hint(verdict["cleaned"], cand)))
                     _audit(root, {"guard": "approval", "event": "prompt", "decision": "not-recorded",
                                   "reason": res["why"]})
                     return Decision.allow(stdout=lines)
@@ -2467,25 +2547,24 @@ def approval_hook(ctx):
                 prod_until = (created + approval.timedelta(hours=approval.PROD_VALID_H)).strftime("%H:%M")
                 line = "[karvey] approval recorded (prod, %s%s, expires %s tomorrow; it is also the plan approval)" % (
                     scope, note, prod_until)
-            if verdict["kind"] == "plan" and shaped:  # REQ-HF-029: never let a plan pass for a prod OK
-                line += " \u2014 a plan approval, NOT a production one; type: \u00ab%s\u00bb" % \
-                    approval.suggested_phrase(verdict["cleaned"], None if scope == approval.SCOPE_PROJECT else scope)
+            if verdict["kind"] == "plan" and attempt:  # REQ-HF-029: never let a plan pass for a prod OK
+                line += " \u2014 a plan approval, NOT a production one: %s" % _prod_hint(
+                    verdict["cleaned"], None if scope == approval.SCOPE_PROJECT else scope)
             lines.append(line)
-        elif shaped:  # REQ-HF-029 (BUG-143): a production-shaped phrase always gets its line
+        elif attempt:  # REQ-HF-029 (BUG-143): a production approval attempt gets its line; BUG-162: talk does not
             cleaned = approval.normalise(approval.strip_quoted(text))
             ids = [c["id"] for c in pj.list_changes(root)]  # BUG-158: never a change other than the one named
-            lines.append("[karvey] prod approval NOT recorded: %s \u2014 type: \u00ab%s\u00bb"
-                         % (verdict["reason"], approval.suggested_phrase(
+            lines.append("[karvey] prod approval NOT recorded: %s \u2014 %s"
+                         % (verdict["reason"], _prod_hint(
                              cleaned, approval.phrase_change(cleaned, ids, active_change(ctx)["change"]))))
         return Decision.allow(stdout=lines) if lines else None
     except Exception as exc:  # fail open: no marker is the safe side (§3.2)
         _audit(root, {"guard": "approval", "event": "prompt", "decision": "error",
                       "reason": "approval-hook error: %s: %s" % (type(exc).__name__, exc)})
         try:
-            if approval.prod_shaped(text):  # REQ-HF-018/029: say it, even on an error
-                return Decision.allow(stdout=["[karvey] prod approval NOT recorded: internal error (%s) \u2014 type: "
-                                              "\u00ab%s\u00bb" % (type(exc).__name__, approval.suggested_phrase(
-                                                  approval.normalise(text), None))])
+            if approval.production_phrase_attempt(text):  # REQ-HF-018/029: say it, even on an error
+                return Decision.allow(stdout=["[karvey] prod approval NOT recorded: internal error (%s) \u2014 %s"
+                                              % (type(exc).__name__, _prod_hint(approval.normalise(text)))])
         except Exception:
             pass
         return None

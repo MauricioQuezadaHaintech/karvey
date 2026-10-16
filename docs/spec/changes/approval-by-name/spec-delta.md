@@ -5,7 +5,7 @@ Against the living spec `docs/spec/specs/method/spec.md` (capability `method`). 
 through `prod-gate-scope`'s spec-delta; they are cited as *amends* and the amendment is ADDED, so the merge order
 of the two changes does not matter.
 
-Summary: **ADDED 13** (REQ-AN-001..007, REQ-AN-010..015; revision 3, D-47: REQ-AN-013..015) · **MODIFIED 0** · **REMOVED 0**.
+Summary: **ADDED 22** (REQ-AN-001..007, REQ-AN-010..024; revision 3, D-47: REQ-AN-013..015; revision 4, D-50: REQ-AN-016..024; REQ-AN-010, 011, 014 annotated by revision 4) · **MODIFIED 0** · **REMOVED 0**.
 
 ## ADDED Requirements
 
@@ -31,3 +31,14 @@ Traced to `docs/spec/changes/approval-by-name/prd.md`.
 - **REQ-AN-013** — A short approval reply («apruebo», «ok», «dale», «aprobado», «sí») to what the agent presented records a plan approval, never a production one. *(Traces: F-10 · D-01, D-47)*
 - **REQ-AN-014** — Rules and skills never instruct the agent to give the human a composed sentence to approve a plan or gate; only the production OK has a phrase. *(Traces: F-10 · D-47)*
 - **REQ-AN-015** — Lint check L-83 fails a skill or rule that gives the human a composed approval phrase other than the production phrase. *(Traces: F-10 · D-47)*
+
+### Production approval by a listed proposal (F-11, F-12 — D-50)
+- **REQ-AN-016** — `karvey-state.py propose-release` writes one pending, hash-identified, 60-min proposal (changes across clones · PR · commit · effect) and prints the «Esta aprobación implica:» block. *(Traces: F-11 · D-50)*
+- **REQ-AN-017** — The human's next own approval word records a prod marker for every listed change, in its clone, bound to its listed commit (24 h). *(Traces: F-11 · D-50 · D-35)*
+- **REQ-AN-018** — The hook echoes exactly what it recorded: `production approval recorded: <id>@<sha7>, …`. *(Traces: F-11 · D-50)*
+- **REQ-AN-019** — A non-approval leaves it pending and silent; a stop cancels it; naming production + a change keeps the D-10 path. *(Traces: F-11 · D-50)*
+- **REQ-AN-020** — The agent can only propose; only the prompt hook records. *(Traces: F-11 · D-50 · D-01)*
+- **REQ-AN-021** — Tampered (hash), late, stale, foreign or unshown proposals record nothing for production. *(Traces: F-11 · D-50)*
+- **REQ-AN-022** — `approve … prod` binds the listed commit; `check-prod` refuses a mismatch. *(Traces: F-11 · D-50 · D-35)*
+- **REQ-AN-023** — Talk about approvals is silent; only an approval attempt gets a not-recorded line. *(Traces: F-12 · BUG-162)*
+- **REQ-AN-024** — Deploy skill and rules show the block and ask for a plain approval; L-82 forbids instructing the exact phrase. *(Traces: F-11 · D-50)*

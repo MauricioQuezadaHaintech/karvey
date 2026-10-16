@@ -1888,8 +1888,9 @@ def l80_prod_ok_not_by_question_tool(ctx):
                     (found[0] if found else None)
                 if hit is not None:
                     yield (path, n, "asks for the production OK through a question tool (%s); its answer never "
-                                    "reaches the approval hook, so no prod marker is recorded. Ask in plain text and "
-                                    "show the phrase the human types (BUG-142)" % hit.group(0))
+                                    "reaches the approval hook, so no prod marker is recorded. Show the "
+                                    "propose-release block and ask in plain text for a plain approval (BUG-142, "
+                                    "D-50)" % hit.group(0))
                     break
 
 
@@ -1926,8 +1927,17 @@ PROD_PHRASE_RE = re.compile(r"(?:(?P<q>[«`\"])|(?<![«`\"]))(?:aprobado\s+para\
 PHRASE_EXTRA_RE = re.compile(r"\bPR\b|#\s*[{<\d]|(?<![\w-])v(?:\{|<|\d+\.\d+)|(?<![\w.-])\d+\.\d+\.\d+\b", re.I)
 
 
-@check("L-82", "the production phrase shown to the human holds only the approval word, the production word and the "
-               "change id: no PR number or version inside it (BUG-159, REQ-AN-012)")
+# D-50: an instruction to type / show / reply the production phrase, unless it is offered as an alternative
+PHRASE_INSTRUCT_RE = re.compile(r"\b(type[sd]?|typing|write|writes|reply|replies|say|says|show|shows|ask(?:s)?\s+for|"
+                                r"escrib\w*|tecle\w*|respond\w*|digit\w*|pide|muestra|phrase|frase)\b", re.I)
+PHRASE_OPTIONAL_RE = re.compile(r"\b(optional|optionally|alternative|alternatively|also|instead|opcional\w*|"
+                                r"alternativ\w*|tambi[eé]n|en vez|never|nunca|not required|no hace falta|may)\b", re.I)
+DEPLOY_SKILL = "skills/karvey-deploy/SKILL.md"
+
+
+@check("L-82", "the production OK is a plain approval of the release proposal: no skill or rule instructs the human "
+               "to type the exact production phrase (naming the change stays optional), the deploy skill runs "
+               "propose-release, and the phrase never carries a PR number or a version (BUG-159, D-50)")
 def l82_minimal_prod_phrase(ctx):
     for path in ctx.text_files():
         for n, para in _paragraphs(ctx, path):
@@ -1938,6 +1948,21 @@ def l82_minimal_prod_phrase(ctx):
                                     "word, the production word and the change id are required, the approval binds "
                                     "to the commit passed with approve --sha (BUG-159)" % extra.group(0))
                     break
+            else:
+                for sentence in re.split(r"(?<=[.!?;])\s+", para):
+                    if not PROD_PHRASE_RE.search(sentence) or not PHRASE_INSTRUCT_RE.search(sentence):
+                        continue
+                    if PHRASE_OPTIONAL_RE.search(sentence):
+                        continue
+                    yield (path, n, "instructs the human to type the exact production phrase; run propose-release, "
+                                    "show its \u00abEsta aprobaci\u00f3n implica:\u00bb block and ask for a plain "
+                                    "approval (\u00abapruebo\u00bb); naming the change is only an optional "
+                                    "alternative (D-50)")
+                    break
+    deploy = ctx.plugin / DEPLOY_SKILL
+    if deploy.is_file() and "propose-release" not in "\n".join(ctx.lines(deploy)):
+        yield (deploy, 1, "the deploy skill asks for the production OK without propose-release: show the "
+                          "\u00abEsta aprobaci\u00f3n implica:\u00bb block before asking (D-50)")
 
 
 # --------------------------------------------------------------------------- L-83

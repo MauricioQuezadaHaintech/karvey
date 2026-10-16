@@ -139,7 +139,7 @@ def marker_rel(scope):
     return "approvals/%s.json" % scope
 
 
-def write_marker(root, kind, scope, prompt, session_id="", ttl_min=None, now=None, compat=None):
+def write_marker(root, kind, scope, prompt, session_id="", ttl_min=None, now=None, compat=None, extra=None):
     """Write the marker of ``scope`` (only the approval hook calls this). Returns the marker.
 
     With ``KARVEY_COMPAT_MARKER`` set (D-11) the same content is also written to that path, so
@@ -154,6 +154,9 @@ def write_marker(root, kind, scope, prompt, session_id="", ttl_min=None, now=Non
         "session_id": session_id or "", "prompt_sha256": prompt_hash(prompt),
         "prompt_excerpt": (prompt or "")[:EXCERPT_MAX], "consumed_at": None,
     }
+    for k, val in (extra or {}).items():  # D-50: a proposal's marker carries its listed commit and proposal id
+        if k in ("sha", "proposal", "pr") and k not in marker:
+            marker[k] = val
     path = marker_path(root, scope)
     _write_private(path, marker)
     compat = os.environ.get(COMPAT_ENV) if compat is None else compat
@@ -169,7 +172,7 @@ def write_marker(root, kind, scope, prompt, session_id="", ttl_min=None, now=Non
     _audit(root, {"guard": "approval", "event": "marker", "decision": "recorded", "reason": kind,
                   "change": scope, "session_id": session_id or "", "prompt_excerpt": marker["prompt_excerpt"],
                   "prompt_sha256": marker["prompt_sha256"], "created_at": marker["created_at"],
-                  "compat": compat_written})
+                  "compat": compat_written, "sha": marker.get("sha"), "proposal": marker.get("proposal")})
     return marker
 
 
@@ -402,9 +405,13 @@ def evidence(marker, scope):
     """The ``evidence`` object an approval records for ``marker`` (§2.2 evidence)."""
     if not marker:
         return {"marker": "none"}
-    return {"marker": marker_rel(scope), "marker_created_at": marker.get("created_at", ""),
-            "prompt_excerpt": (marker.get("prompt_excerpt") or "")[:EXCERPT_MAX],
-            "session": marker.get("session_id", ""), "prompt_sha256": marker.get("prompt_sha256", "")}
+    ev = {"marker": marker_rel(scope), "marker_created_at": marker.get("created_at", ""),
+          "prompt_excerpt": (marker.get("prompt_excerpt") or "")[:EXCERPT_MAX],
+          "session": marker.get("session_id", ""), "prompt_sha256": marker.get("prompt_sha256", "")}
+    if isinstance(marker.get("proposal"), str) and isinstance(marker.get("sha"), str):  # D-50
+        ev["proposal"] = marker["proposal"]
+        ev["proposal_sha"] = marker["sha"]
+    return ev
 
 
 def audit_record_of(root, scope, ev):
@@ -1075,3 +1082,203 @@ def describe_markers(root, ttl_min=None, now=None):
         out.append({"kind": m.get("kind"), "scope": m.get("scope") or f.stem, "age_min": age, "state": state})
     out.sort(key=lambda x: (x["age_min"] is None, x["age_min"] or 0))
     return out
+
+
+# --------------------------------------------------------------------------- release proposal (D-50)
+# The agent lists what a production approval will carry out (``karvey-state.py propose-release``): every change, its
+# clone, PR, head commit and effect. The proposal is written only by the state tool under the protected state dir of
+# the session's project; the approval hook alone turns the human's next own approval word into one prod marker per
+# listed change (each bound to its listed commit) and consumes the proposal. Its id is the hash of its content, shown
+# to the human in the «Esta aprobación implica:» block: a proposal changed after it was shown no longer matches.
+PROPOSAL_VERSION = 1
+PROPOSAL_KIND = "release-proposal"
+PROPOSAL_TTL_MIN = 60
+PROPOSAL_TTL_BOUNDS = (5, 240)
+PROPOSAL_ID_SHOWN = 12
+_SHA_FULL = re.compile(r"^[0-9a-f]{40}([0-9a-f]{24})?$")
+
+
+def session_anchor(root=None, cwd=None):
+    """The session's project as the proposal knows it: the Karvey root, else the git top level of ``cwd``, else
+    ``cwd`` (realpaths). The state tool and the approval hook compute it the same way."""
+    if root is not None:
+        return os.path.realpath(str(root))
+    base = cwd or os.getcwd()
+    try:
+        top = pj.git_toplevel(base) if os.path.isdir(str(base)) else None
+    except Exception:
+        top = None
+    return os.path.realpath(str(top or base))
+
+
+def proposal_path(anchor, create=True):
+    key = hashlib.sha256(os.path.realpath(str(anchor)).encode("utf-8")).hexdigest()[:16]
+    d = approvals_dir(anchor, create) / "proposals"
+    if create:
+        d.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return d / ("release-%s.json" % key)
+
+
+def _proposal_content(p):
+    return {k: p.get(k) for k in ("v", "kind", "session_tree", "created_at", "expires_at", "items")}
+
+
+def proposal_id(p):
+    """sha256 of the canonical JSON of the proposal's content (everything but its id and its state)."""
+    raw = json.dumps(_proposal_content(p), sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def write_proposal(anchor, items, ttl_min=None, now=None):
+    """Write the one pending release proposal of the session's project (only ``karvey-state.py propose-release``
+    calls this); a newer proposal replaces the pending one. ``items``: ``[{change, repo, pr, sha, effect}]``."""
+    now = now or now_dt()
+    lo, hi = PROPOSAL_TTL_BOUNDS
+    ttl = PROPOSAL_TTL_MIN if not isinstance(ttl_min, int) or isinstance(ttl_min, bool) else max(lo, min(hi, ttl_min))
+    p = {"v": PROPOSAL_VERSION, "kind": PROPOSAL_KIND, "session_tree": os.path.realpath(str(anchor)),
+         "created_at": now.isoformat(timespec="microseconds"),
+         "expires_at": (now + timedelta(minutes=ttl)).isoformat(timespec="microseconds"),
+         "items": [{"change": i["change"], "repo": i["repo"], "pr": i["pr"], "sha": i["sha"],
+                    "effect": i.get("effect") or ""} for i in items]}
+    p["id"] = proposal_id(p)
+    p["state"] = {"status": "pending"}
+    _write_private(proposal_path(anchor), p)
+    _audit(anchor, {"guard": "approval", "event": "proposal", "decision": "proposed", "reason": p["id"][:PROPOSAL_ID_SHOWN],
+                    "change": ",".join(i["change"] for i in p["items"]), "created_at": p["created_at"]})
+    return p
+
+
+def read_proposal(anchor):
+    """``(proposal, status)``; status ``ok`` · ``missing`` · ``corrupt``."""
+    try:
+        path = proposal_path(anchor, create=False)
+        data = json.loads(path.read_bytes().decode("utf-8-sig"))
+    except FileNotFoundError:
+        return None, "missing"
+    except (OSError, UnicodeDecodeError, ValueError):
+        return None, "corrupt"
+    return (data, "ok") if isinstance(data, dict) else (None, "corrupt")
+
+
+def proposal_pending(p):
+    return isinstance(p, dict) and isinstance(p.get("state"), dict) and p["state"].get("status") == "pending"
+
+
+def check_proposal(p, anchor, now=None):
+    """``(ok, reason)``: the proposal is intact (its id is the hash of its content), of this session's project,
+    created before the human's message and not expired."""
+    if not isinstance(p, dict) or p.get("v") != PROPOSAL_VERSION or p.get("kind") != PROPOSAL_KIND:
+        return False, "forged or corrupt proposal"
+    if not isinstance(p.get("id"), str) or p["id"] != proposal_id(p):
+        return False, "the proposal changed after it was shown (hash mismatch)"
+    if p.get("session_tree") != os.path.realpath(str(anchor)):
+        return False, "the proposal belongs to another project"
+    items = p.get("items")
+    if not isinstance(items, list) or not items or not all(
+            isinstance(i, dict) and valid_scope(i.get("change")) and i.get("change") != SCOPE_PROJECT and
+            isinstance(i.get("repo"), str) and isinstance(i.get("sha"), str) and _SHA_FULL.match(i["sha"])
+            for i in items):
+        return False, "forged or corrupt proposal"
+    created, expires = parse_dt(p.get("created_at")), parse_dt(p.get("expires_at"))
+    if created is None or expires is None:
+        return False, "forged or corrupt proposal"
+    now = now or now_dt()
+    if created > now:
+        return False, "the proposal was created after your message"
+    if now > expires:
+        return False, "the proposal expired at %s" % expires.strftime("%H:%M")
+    return True, "ok"
+
+
+def close_proposal(anchor, status, now=None, recorded=None, reason=None):
+    """Mark the pending proposal ``approved`` · ``cancelled`` · ``refused`` (the file is kept for audit)."""
+    p, st = read_proposal(anchor)
+    if st != "ok" or not proposal_pending(p):
+        return False
+    p["state"] = {"status": status, "at": iso(now or now_dt())}
+    if recorded is not None:
+        p["state"]["recorded"] = recorded
+    if reason:
+        p["state"]["reason"] = reason
+    _write_private(proposal_path(anchor), p)
+    _audit(anchor, {"guard": "approval", "event": "proposal", "decision": status,
+                    "reason": reason or (p.get("id") or "")[:PROPOSAL_ID_SHOWN],
+                    "change": ",".join(recorded or [])})
+    return True
+
+
+def proposal_block(p, lang="es"):
+    """The «Esta aprobación implica:» block the agent shows the human verbatim."""
+    pid = (p.get("id") or "")[:PROPOSAL_ID_SHOWN]
+    exp = parse_dt(p.get("expires_at"))
+    until = exp.strftime("%H:%M") if exp else "?"
+    lines = ["Esta aprobación implica:" if lang == "es" else "This approval implies:"]
+    for n, i in enumerate(p.get("items") or [], 1):
+        lines.append("  %d. %s · %s · PR #%s · commit %s · %s" % (n, i["change"], i["repo"], i["pr"], i["sha"][:7],
+                                                              i.get("effect") or ""))
+    if lang == "es":
+        lines.append("Propuesta %s · vence %s. Responde «apruebo» (u «ok», «dale») para aprobarla completa; "
+                     "«detente» la cancela." % (pid, until))
+    else:
+        lines.append("Proposal %s · expires %s. Reply «apruebo» (or «ok», «dale») to approve all of it; «stop» "
+                     "cancels it." % (pid, until))
+    return "\n".join(lines)
+
+
+def _assistant_texts(obj):
+    if not isinstance(obj, dict):
+        return []
+    msg = obj.get("message") if isinstance(obj.get("message"), dict) else {}
+    if obj.get("type") != "assistant" and msg.get("role") != "assistant":
+        return []
+    content = msg.get("content", obj.get("content"))
+    if isinstance(content, str):
+        return [content]
+    if isinstance(content, list):
+        return [b["text"] for b in content if isinstance(b, dict) and b.get("type") == "text"
+                and isinstance(b.get("text"), str)]
+    return []
+
+
+def proposal_shown(transcript_path, pid, max_bytes=64 * 1024 * 1024):
+    """``shown`` · ``not-shown`` · ``unverified``: the agent's own text in the transcript carries the proposal id
+    (tool output does not count: the human sees what the agent writes)."""
+    if not transcript_path or not pid:
+        return "unverified"
+    try:
+        fh = open(transcript_path, "rb")
+    except OSError:
+        return "unverified"
+    read = 0
+    with fh:
+        for line in fh:
+            read += len(line)
+            if read > max_bytes:
+                return "unverified"
+            try:
+                obj = json.loads(line.decode("utf-8"))
+            except (UnicodeDecodeError, ValueError):
+                continue
+            if any(pid in t for t in _assistant_texts(obj)):
+                return "shown"
+    return "not-shown"
+
+
+# --------------------------------------------------------------------------- approval attempt (BUG-162)
+_CONNECT = r"(?:(?:para|a|al|en|de|del|la|el|to|for|in|into|the|on|pr|merge|pase|paso|pasa)\s+){0,3}"
+
+
+def production_phrase_attempt(text, vocab=None):
+    """BUG-162: the message tries a production approval — an approval term that opens the message or a clause,
+    followed (at most three connector words apart) by a production term («aprobado para producción»,
+    "approved for production", "ok, merge a main"). A message that only discusses approvals is not one."""
+    v = vocab or default_vocabulary()
+    cleaned = normalise(strip_quoted(text if isinstance(text, str) else ""))
+    if not cleaned:
+        return False
+    alt = lambda terms: "|".join(re.escape(normalise(t)) for t in sorted(terms, key=len, reverse=True)
+                                 if normalise(t))
+    approve = [t for t in v.get("approve") or [] if normalise(t) != "si"]
+    rx = re.compile(r"(?:^|[.,;:!?\n\u00bf\u00a1]\s*|\by\s+|\band\s+)(?:%s)(?![\w'])[\s,.:;!-]*%s(?:%s)(?![\w'])"
+                    % (alt(approve), _CONNECT, alt(v.get("prod_terms") or [])))
+    return bool(rx.search(cleaned))

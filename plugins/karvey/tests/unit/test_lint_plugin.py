@@ -1125,14 +1125,38 @@ class L82(LintCase):
             self.assertFails("L-82", "PR number or a version", file=RULES + "/release.md")
 
     def test_unquoted_mention_ends_at_its_clause(self):
-        self.t.write(RULES + "/release.md", "# Release\n\nThe human types approved for production <id>; a PR "
-                                            "number is optional.\n")
+        self.t.write(RULES + "/release.md", "# Release\n\nNaming the change also works: the human types approved "
+                                            "for production <id>; a PR number is optional.\n")
         self.assertPasses("L-82")
 
     def test_minimal_phrase_and_pr_outside_it_pass(self):
-        self.t.write(RULES + "/release.md", "# Release\n\nShow «aprobado para producción {change-id}» and, apart, "
-                                            "the PR #{pr} head `{sha}` for v{version}.\n")
+        self.t.write(RULES + "/release.md", "# Release\n\nOptionally, show «aprobado para producción {change-id}» "
+                                            "and, apart, the PR #{pr} head `{sha}` for v{version}.\n")
         self.assertPasses("L-82")
+
+
+class L82ExactPhrase(LintCase):
+    """D-50 (REQ-AN-022): no skill or rule instructs the human to type the exact production phrase; the agent shows
+    the propose-release block and asks for a plain approval; naming the change stays an optional alternative."""
+
+    def test_instructing_the_exact_phrase_fails(self):
+        for text in ("Ask in plain text and show the phrase for the human to type, «aprobado para producción "
+                     "{change-id}».",
+                     "The human types «aprobado para producción {change-id}» in their own message.",
+                     "Pide que escriba «aprobado para producción {change-id}».",
+                     "Reply with `approved for production {change-id}` to release."):
+            self.t.write(RULES + "/release.md", "# Release\n\n%s\n" % text)
+            self.assertFails("L-82", "exact production phrase", file=RULES + "/release.md")
+
+    def test_the_implica_block_flow_and_an_optional_phrase_pass(self):
+        self.t.write(RULES + "/release.md", "# Release\n\nRun `propose-release`, show its «Esta aprobación "
+                                            "implica:» block and ask for a plain approval («apruebo»). Naming the "
+                                            "change also works: «aprobado para producción {change-id}».\n")
+        self.assertPasses("L-82")
+
+    def test_the_deploy_skill_must_use_the_proposal(self):
+        self.t.replace(DEPLOY, "propose-release", "propose-something")
+        self.assertFails("L-82", "propose-release", file=DEPLOY)
 
 
 class L83(LintCase):
@@ -1150,7 +1174,7 @@ class L83(LintCase):
 
     def test_short_reply_and_production_phrase_pass(self):
         self.t.write(RULES + "/gate.md", "# Gate\n\nThe human replies «apruebo» or \"ok\". For production they "
-                                          "type «aprobado para producción {change-id}».\n")
+                                          "may also type «aprobado para producción {change-id}».\n")
         self.assertPasses("L-83")
 
 

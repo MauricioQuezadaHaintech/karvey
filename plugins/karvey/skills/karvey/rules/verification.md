@@ -82,8 +82,8 @@ symptoms because that is how they show up — all of them passed a check that fe
 
 Verification never needs the human to restate the plan: a plan or gate approval is any short approval reply
 («apruebo», «ok», «dale», «sí») to what the agent showed. Do not ask the human to type a composed sentence to
-prove they read it; show the evidence instead. The only phrase with a format is the production OK
-«aprobado para producción <change-id>».
+prove they read it; show the evidence instead. The production OK is a plain approval too, of the
+«Esta aprobación implica:» block the agent showed (`propose-release`, D-50).
 
 ## How it is applied
 

@@ -22,3 +22,6 @@ the way the prod-gate finds clones; it never suggests another change; the phrase
 | E1.F3.T0 BUG records + regression index | ✅ |
 | E1.F3.T1 release 3.13.1 | ✅ |
 | E1.F3.T2 test plan / evidence | ✅ |
+| E1.F4.T1 red tests (proposal, BUG-162, L-82) | ✅ |
+| E1.F4.T2 proposal store, propose-release, hook | ✅ |
+| E1.F4.T3 skill, rules, lint, records | ✅ |

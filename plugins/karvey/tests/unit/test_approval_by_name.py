@@ -226,6 +226,8 @@ class D1OnBug158(Base):
     def test_d7_f3_negated_phrase_naming_a_hyphenless_id_elsewhere_never_suggests_the_active_change(self):
         self.add(self.api, "ratelimit")
         out = self.prompt("no apruebo producción ratelimit todavía")
+        self.assertEqual(out, "")  # BUG-162: a refusal is not an approval attempt: silent, never the active change
+        out = self.prompt("aprobado para producción ratelimit, no todavía")
         self.assertNotIn("web-search", out)
         self.assertIn("<change-id>", out)
 

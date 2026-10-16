@@ -45,9 +45,20 @@
   fingerprint (L-37). Done: whole-repo gate green (unit, regression, tables, test-hooks, page, lint, validate).
 - **E1.F3.T2 [Test] 25 min** — `test_plan.md` / `test_evidence.md` entries. Done: evidence recorded.
 
+## E1.F4 — Release proposal and silence (REQ-AN-016..024 · D-50 · BUG-162)
+
+- **E1.F4.T1 [Test] 30 min** — Red: `tests/unit/test_release_proposal.py` (propose, human approves, security,
+  state tool, BUG-162 silence), tables ap-an-06..10, L-82 exact-phrase tests. Done: red on 241bc39.
+- **E1.F4.T2 [Backend] 60 min** — `approval.py` proposal store and checks, `production_phrase_attempt`;
+  `karvey-state.py propose-release`, approve / check-prod binding; `guards._proposal_approval`. Done: unit and
+  tables green.
+- **E1.F4.T3 [Backend] 30 min** — `karvey-deploy` 2.9, rules, hooks README; L-80 / L-82 in `lint-plugin.py`;
+  BUG-162 records; CHANGELOG; evidence. Done: whole-repo gate green.
+
 ## Coverage
 
 | REQ | Tasks |
 |---|---|
 | AN-001..007 | E1.F1.T1, E1.F1.T2 |
 | AN-010..012 | E1.F2.T1, E1.F2.T2 |
+| AN-016..024 | E1.F4.T1, E1.F4.T2, E1.F4.T3 |

@@ -121,3 +121,31 @@ prompt ──classify──▶ prod? ──no──▶ (plan path unchanged)
 
 None: no stored format changes. Release 3.13.1 (rev bump); the CHANGELOG entry carries
 `- No project upgrade needed: approval hook and text only.` if the upgrade surface moved.
+
+## 8. Revision 4 — release proposal (D-50, REQ-AN-016..024)
+
+**Components.** `approval.write_proposal / read_proposal / check_proposal / close_proposal / proposal_block /
+proposal_shown / session_anchor` (store and checks); `karvey-state.py propose-release` (the only writer:
+resolves each change's clone by `--repo` or clone discovery, resolves `--sha` in that clone, prints the block);
+`guards._proposal_approval` (the only reader that records: one prod marker per listed change, extra fields `sha`,
+`proposal`, `pr`, audit line with `sha`); `cmd_approve` binds the marker's `sha`; `check_prod` compares
+`evidence.proposal_sha` with `head_sha`; `approval.production_phrase_attempt` gates the not-recorded line
+(BUG-162).
+
+**Data.** `<state dir of the session project>/approvals/proposals/release-<sha256(session tree)[:16]>.json`:
+`{v, kind: release-proposal, session_tree, created_at, expires_at, items: [{change, repo, pr, sha, effect}], id,
+state: {status: pending|approved|cancelled|refused, at, recorded?, reason?}}`; `id = sha256(canonical content)`.
+One file per session tree, so a second worktree of the same clone never approves another session's proposal.
+Markers gain optional `sha`, `proposal`, `pr`; ledger evidence gains `proposal`, `proposal_sha`.
+
+**Security (Tier 2, D1 / D7).**
+
+| Threat | Control |
+|---|---|
+| The agent approves its own proposal | It can only write the proposal (protected dir, tool-only); a prod marker comes only from the UserPromptSubmit payload (D-01); `approve … prod` without it is refused (REQ-AN-020). |
+| The proposal is changed after the human saw it | `id = sha256(content)`; the shown block carries the id; a mismatch refuses (REQ-AN-021). |
+| A proposal created after the human's message | `created_at > hook time` refuses (REQ-AN-021). |
+| A stale or foreign proposal | 60-min expiry; `session_tree` must equal the hook's session tree (REQ-AN-021). |
+| A proposal never shown to the human | With a readable transcript, the id must appear in the agent's own text (tool output does not count) (REQ-AN-021). |
+| Echo hides what was recorded | The line lists exactly the markers written; failures are listed apart (REQ-AN-018). |
+| A different commit released | Each marker carries its listed commit; `approve` refuses another; `check-prod` refuses a mismatch (REQ-AN-022). |

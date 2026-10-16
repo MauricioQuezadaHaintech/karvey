@@ -292,3 +292,30 @@ QA loop added BUG-160, BUG-161 (D1 / D7, three rounds; D1 re-check of `cb90ed4` 
 Versions 3.13.1 agree (plugin.json, marketplace.json, project.json, CHANGELOG `[3.13.1]`, page).
 
 Folded into 3.13.1 (F-10, D-47): REQ-AN-013 — `ShortReplyIsAPlanApproval` (apruebo, ok, dale, aprobado, sí, "Apruebo.", "ok, dale" record a plan approval, never prod) and tables ap-an-04/05 ✅; REQ-AN-014 — rules and mockup skill updated ✅; REQ-AN-015 — L83 tests (pass, 3 composed phrasings fail, short reply + production phrase pass) and L-83 on the real tree ✅.
+
+Folded into 3.13.1 (F-11, F-12 — D-50; requirements revision 4, `reopen` refused in `deploying`):
+
+| Requirement | Evidence | Result |
+|---|---|---|
+| REQ-AN-016 | `test_release_proposal.Propose` (block, one pending proposal, id = hash, refusals, `--repo`, two clones) | ✅ |
+| REQ-AN-017, 018 | `HumanApproves.test_bare_apruebo_records_every_listed_change_bound_to_its_commit`, `test_other_approval_words`, `Security.test_the_echo_lists_exactly_what_was_recorded`; table ap-an-06 | ✅ |
+| REQ-AN-019 | `test_not_an_approval_leaves_it_pending_and_silent`, `test_stop_cancels_it`, `test_naming_production_and_a_change_still_works`, outside-project and second-worktree cases; tables ap-an-07, ap-an-08 | ✅ |
+| REQ-AN-020, 021 | `Security` (own proposal refused, created after the message, tampered → hash mismatch, stale, never shown in the transcript); table ap-an-09 | ✅ |
+| REQ-AN-022 | `StateTool` (approve binds the listed commit, check-prod OK; another commit → new proposal) | ✅ |
+| REQ-AN-023 (BUG-162) | `Bug162Silence`, `test_approval_by_name` d7_f3 (silent refusal); table ap-an-10 | ✅ |
+| REQ-AN-024 | `L82ExactPhrase` (exact-phrase instructions fail, block flow passes, deploy without propose-release fails); L-82 on the real tree | ✅ |
+
+Red first: the 22 tests of `test_release_proposal.py` and tables ap-an-06..10 / ap-hf-10 failed on 241bc39 (22 failures/errors; 6 table failures); the L-82 exact-phrase tests failed before the check.
+
+Dry run (scratch clones `app-web`, `app-api`):
+
+```text
+Esta aprobación implica:
+  1. web-search · …/work/app-web · PR #30 · commit f9c109c · merge a main; el pipeline despliega 3.13.1
+  2. api-rate-limit · …/work/app-api · PR #12 · commit 1a47ab1 · merge a producción; el pipeline despliega
+Propuesta 739c4b3bad9c · vence 14:55. Responde «apruebo» (u «ok», «dale») para aprobarla completa; «detente» la cancela.
+> apruebo
+[karvey] production approval recorded: web-search@f9c109c, api-rate-limit@1a47ab1 (expires 13:55 tomorrow; proposal 739c4b3bad9c; it is also the plan approval)
+web-search: prod approval recorded in the release ledger (ref D-50, commit f9c109c99f44, …)
+prod approval OK: web-search by Owner ref D-50 (ledger)
+```

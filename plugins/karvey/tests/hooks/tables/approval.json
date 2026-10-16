@@ -2051,6 +2051,221 @@
       ]
     },
     {
+      "id": "ap-an-06-proposal-bare-apruebo-records-every-listed-change",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "deploying"
+            },
+            "feat-b": {
+              "change_id": "feat-b",
+              "phase": "deploying"
+            }
+          }
+        },
+        "setup": [
+          "{{python}} {{plugin}}/scripts/karvey-state.py propose-release --change feat-a --pr 3 --sha HEAD --change feat-b --pr 4 --sha HEAD"
+        ]
+      },
+      "input": {
+        "prompt": "apruebo"
+      },
+      "expect": {
+        "decision": "allow",
+        "marker_created": true,
+        "stdout_contains": [
+          "[karvey] production approval recorded: feat-a@",
+          "feat-b@"
+        ],
+        "marker": {
+          "scope": "feat-b",
+          "kind": "prod"
+        }
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-017",
+        "REQ-AN-018",
+        "D-50"
+      ]
+    },
+    {
+      "id": "ap-an-07-proposal-not-an-approval-stays-pending",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "deploying"
+            },
+            "feat-b": {
+              "change_id": "feat-b",
+              "phase": "deploying"
+            }
+          }
+        },
+        "setup": [
+          "{{python}} {{plugin}}/scripts/karvey-state.py propose-release --change feat-a --pr 3 --sha HEAD --change feat-b --pr 4 --sha HEAD"
+        ]
+      },
+      "input": {
+        "prompt": "muéstrame el diff primero"
+      },
+      "expect": {
+        "decision": "allow",
+        "marker_created": false,
+        "stdout_empty": true
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-019",
+        "D-50"
+      ]
+    },
+    {
+      "id": "ap-an-08-proposal-stop-cancels-it",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "deploying"
+            },
+            "feat-b": {
+              "change_id": "feat-b",
+              "phase": "deploying"
+            }
+          }
+        },
+        "setup": [
+          "{{python}} {{plugin}}/scripts/karvey-state.py propose-release --change feat-a --pr 3 --sha HEAD --change feat-b --pr 4 --sha HEAD"
+        ]
+      },
+      "input": {
+        "prompt": "detente"
+      },
+      "expect": {
+        "decision": "allow",
+        "marker_created": false,
+        "stdout_contains": "[karvey] release proposal cancelled (stop)"
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-019",
+        "D-50"
+      ]
+    },
+    {
+      "id": "ap-an-09-tampered-proposal-is-refused",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "deploying"
+            },
+            "feat-b": {
+              "change_id": "feat-b",
+              "phase": "deploying"
+            }
+          }
+        },
+        "setup": [
+          "{{python}} {{plugin}}/scripts/karvey-state.py propose-release --change feat-a --pr 3 --sha HEAD --change feat-b --pr 4 --sha HEAD",
+          "{{python}} -c \"import json,glob;p=glob.glob('{{repo}}/karvey/approvals/proposals/*.json')[0];d=json.load(open(p));d['items'][0]['pr']=99;open(p,'w').write(json.dumps(d))\""
+        ]
+      },
+      "input": {
+        "prompt": "apruebo"
+      },
+      "expect": {
+        "decision": "allow",
+        "stdout_contains": "NOT approved: the proposal changed after it was shown (hash mismatch)",
+        "stdout_not_contains": "production approval recorded",
+        "marker": {
+          "scope": "_project",
+          "kind": "plan"
+        }
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-021",
+        "D-50"
+      ]
+    },
+    {
+      "id": "ap-an-10-talk-about-approvals-is-silent",
+      "guard": "approval",
+      "given": {
+        "repo": {
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "main",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "deploying"
+            },
+            "feat-b": {
+              "change_id": "feat-b",
+              "phase": "deploying"
+            }
+          }
+        }
+      },
+      "input": {
+        "prompt": "el approve prod no funcionó ayer, revisa el log"
+      },
+      "expect": {
+        "decision": "allow",
+        "marker_created": false,
+        "stdout_empty": true
+      },
+      "tags": [
+        "approval",
+        "REQ-AN-023",
+        "BUG-162"
+      ]
+    },
+    {
       "id": "ap-hf-10-not-recorded-line-suggests-the-phrase",
       "guard": "approval",
       "given": {
@@ -2080,7 +2295,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": false,
-        "stdout_contains": "type: «aprobado para producción <change-id>»"
+        "stdout_contains": "or name the change: «aprobado para producción <change-id>»"
       },
       "tags": [
         "approval",
