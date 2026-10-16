@@ -1273,7 +1273,8 @@ def check_prod(root, change, sha=None, now=None, repo=None):
         if not (isinstance(head, str) and SHA_RE.match(head)):  # D-35
             res["missing"].append("sha")
             reasons.append("it names no approved commit")
-        elif ev.get("proposal_sha") is not None and ev.get("proposal_sha") != head:  # D-50
+        elif ev.get("proposal_sha") is not None and ev.get("proposal_sha") != head and \
+                head not in _followup_heads(prod):  # D-50; BUG-163: a follow-up commit of the same change
             res["missing"].append("sha")
             reasons.append("the approved commit %s is not the one the release proposal listed (%s)"
                            % (head[:12], str(ev.get("proposal_sha"))[:12]))
@@ -1286,14 +1287,18 @@ def check_prod(root, change, sha=None, now=None, repo=None):
                                % (repo, change, prod.get("ref") or "<D-NN>", repo))
             elif sha is not None and sha != bound:
                 res["missing"].append("repo")
-                reasons.append("the released commit %s of %s is not the bound commit %s; a new commit needs a new "
-                               "OK" % (str(sha)[:12], repo, bound[:12]))
+                reasons.append("the released commit %s of %s is not the bound commit %s; if it is a follow-up of "
+                               "the same change, carry it without asking the human: approve %s prod --by <the "
+                               "approver> --role human --ref %s --repo %s --sha %s (BUG-163)"
+                               % (str(sha)[:12], repo, bound[:12], change, prod.get("ref") or "<D-NN>", repo, sha))
             else:
                 res["repo_sha"] = bound
         elif sha is not None and sha != head:
             res["missing"].append("sha")
-            reasons.append("the released commit %s is not the approved commit %s; a new commit needs a new OK"
-                           % (str(sha)[:12], head[:12]))
+            reasons.append("the released commit %s is not the approved commit %s; if it is a follow-up of the same "
+                           "change, carry it without asking the human: approve %s prod --by <the approver> --role "
+                           "human --ref %s --sha %s (BUG-163)"
+                           % (str(sha)[:12], head[:12], change, prod.get("ref") or "<D-NN>", sha))
         exp = approval.parse_dt(prod.get("expires_at"))
         if exp is None:
             res["missing"].append("expired")
@@ -1386,6 +1391,49 @@ def marker_report(root, change):
                "; ".join(items) if items else "no approval marker", change, why, change, change)
 
 
+def _followup_heads(prod):
+    """The commits a live production approval was carried to after its first one (BUG-163)."""
+    fol = prod.get("followups") if isinstance(prod, dict) and isinstance(prod.get("followups"), list) else []
+    return {f.get("to") for f in fol if isinstance(f, dict) and isinstance(f.get("to"), str)}
+
+
+def _followup(root, change, new_sha, by, repo=None):
+    """BUG-163 (D-47, D-52): the human approves the change, not one merge. While the change's production approval
+    is complete and unexpired and the change is not archived, a later commit of the same change (a follow-up PR, a
+    missing file) is carried into it without asking the human again. Each move is kept in ``followups`` and in the
+    audit log. Returns the updated record, or None when the approval cannot carry it."""
+    _, loaded = load_change(root, change)
+    if loaded.data.get("phase") == "archived":
+        return None
+    res = check_prod(root, change)
+    if not res["ok"]:
+        return None
+    ledger, _ = approval.read_ledger(root, change)
+    prod = dict(ledger["prod"])
+    fol = list(prod.get("followups") or []) if isinstance(prod.get("followups"), list) else []
+    if repo is None:
+        old = prod.get("head_sha")
+        if old == new_sha:
+            return prod
+        prod["head_sha"] = new_sha
+    else:
+        repos = dict(prod.get("repos") or {}) if isinstance(prod.get("repos"), dict) else {}
+        old = repos.get(repo)
+        if old == new_sha:
+            return prod
+        repos[repo] = new_sha
+        prod["repos"] = repos
+    entry = {"from": old, "to": new_sha, "at": approval.iso(approval.now_dt()), "by": by}
+    if repo is not None:
+        entry["repo"] = repo
+    fol.append(entry)
+    prod["followups"] = fol
+    approval.record_prod(root, change, prod)
+    approval._audit(root, {"guard": "approval", "event": "prod-followup", "decision": "carried", "change": change,
+                           "reason": "%s -> %s%s" % (str(old)[:12], new_sha[:12], (" (%s)" % repo) if repo else "")})
+    return prod
+
+
 def _approve_prod_bind_repo(args, root):
     """REQ-HF-006: bind a declared repo's release commit into the change's live production approval."""
     repo = args.repo.strip()
@@ -1406,9 +1454,15 @@ def _approve_prod_bind_repo(args, root):
     ledger, _ = approval.read_ledger(root, args.change)
     prod = dict(ledger["prod"])
     repos = dict(prod.get("repos") or {}) if isinstance(prod.get("repos"), dict) else {}
-    if repos.get(repo) not in (None, sha):
-        raise Refused("%s is already bound to %s in this approval; a new commit needs a new OK (D-35)"
-                      % (repo, repos[repo][:12]), code="state.repo_bound")
+    if repos.get(repo) not in (None, sha):  # BUG-163: a follow-up commit of the same change, no new OK
+        moved = _followup(root, args.change, sha, args.by.strip() if args.by else "agent", repo=repo)
+        if moved is None:
+            raise Refused("%s is already bound to %s and the approval cannot carry a new commit (expired, "
+                          "incomplete or archived change)" % (repo, repos[repo][:12]), code="state.repo_bound")
+        return kl.EXIT_OK, {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger",
+                            "repo": repo, "sha": sha, "followup": True, "expires_at": moved.get("expires_at")}, [], [], \
+            "%s: %s moved to %s within the same production approval (follow-up, expires %s)" % (
+                args.change, repo, sha[:12], moved.get("expires_at"))
     repos[repo] = sha
     prod["repos"] = repos
     approval.record_prod(root, args.change, prod)
@@ -1445,7 +1499,14 @@ def cmd_approve(args, root):
             return _approve_prod_bind_repo(args, root)
         marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root),
                                                      project_scope=False)  # BUG-41
-        if marker is None:
+        if marker is None:  # BUG-163: the change's live approval carries a follow-up commit
+            cand = resolve_commit(root, args.sha or "HEAD")
+            moved = _followup(root, args.change, cand, by) if cand else None
+            if moved is not None:
+                return kl.EXIT_OK, {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger",
+                                    "prod": moved, "followup": True}, [], [], \
+                    "%s: commit %s carried into the existing production approval (follow-up of the same change, " \
+                    "expires %s); the human is not asked again" % (args.change, cand[:12], moved.get("expires_at"))
             raise Refused("production approval needs a prod-kind approval marker: the human's own approval of the "
                           "release proposal, or a message with an approval word and a production word naming the "
                           "change (D-10, D-50); none is valid for %s (%s). %s"
@@ -1457,15 +1518,16 @@ def cmd_approve(args, root):
             raise Refused("cannot bind the production approval to a commit: %r is not a commit of this repository "
                           "(D-35; pass --sha with the head the human approved)" % (args.sha or listed or "HEAD"),
                           code="state.prod_sha")
-        if listed is not None and head_sha != listed:  # D-50: the human approved the commit the proposal listed
-            raise Refused("the human approved %s at commit %s (release proposal %s); %s is another commit: a new "
-                          "commit needs a new proposal and a new approval (D-35, D-50)"
-                          % (args.change, listed[:12], str(marker.get("proposal") or "")[:12], head_sha[:12]),
-                          code="state.prod_sha")
+        carry = None
+        if listed is not None and head_sha != listed:  # D-50: the human approved the commit the proposal listed;
+            carry, head_sha = head_sha, listed       # BUG-163: a later commit of the change is carried as a follow-up
         rec = approval.prod_record(marker, scope, by, ref, date, head_sha)
         approval.record_prod(root, args.change, rec)
         # BUG-41: one production approval, one change; D-47: the same message stays the plan approval
         approval.mark_prod_used(root, scope, created_at=marker.get("created_at"))
+        if carry is not None:
+            rec = _followup(root, args.change, carry, by) or rec
+            head_sha = rec.get("head_sha") or head_sha
         res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
         return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s, commit %s, " \
                                         "expires %s); spec.json untouched (D-03)" % (args.change, ref, head_sha[:12],
@@ -1715,4 +1777,6 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    from karvey_lib import pluginver  # noqa: E402
+    pluginver.maybe_reexec(__file__)  # BUG-163: an older cached copy runs the installed version
     sys.exit(main())

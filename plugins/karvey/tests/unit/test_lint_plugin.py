@@ -1178,6 +1178,20 @@ class L83(LintCase):
         self.assertPasses("L-83")
 
 
+class L84(LintCase):
+    """BUG-163: the production OK is of the change; no text says a new commit needs a new OK."""
+
+    def test_pass(self):
+        self.assertPasses("L-84")
+
+    def test_second_ok_fails(self):
+        for text in ("A new push to the PR needs a new OK.",
+                     "Then a new commit needs a new proposal and a new approval.",
+                     "Un nuevo commit requiere una nueva aprobación."):
+            self.t.write(RULES + "/release.md", "# Release\n\n%s\n" % text)
+            self.assertFails("L-84", "carried", file=RULES + "/release.md")
+
+
 class L81(LintCase):
     """D-47 (REQ-HF-035): no skill or rule asks for approval before reading, searching or investigating."""
 
@@ -1207,7 +1221,7 @@ class ListAll(unittest.TestCase):
         for i in range(1, 37):
             self.assertIn("L-%02d " % i, out)
         self.assertIn("L-80 ", out)
-        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)] + ["L-80", "L-81", "L-82", "L-83"])
+        self.assertEqual([c.id for c in lp.registry()], ["L-%02d" % i for i in range(1, 40)] + ["L-80", "L-81", "L-82", "L-83", "L-84"])
 
 
 if __name__ == "__main__":

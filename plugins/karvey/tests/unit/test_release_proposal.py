@@ -269,7 +269,9 @@ class StateTool(Base):
                                  "D-50", "--sha", head(self.api), cwd=self.api)
         self.assertEqual(c, 0, env)
 
-    def test_another_commit_needs_a_new_proposal(self):
+    def test_a_later_commit_of_the_change_is_carried_without_a_new_proposal(self):
+        """BUG-163 (supersedes the D-50 refusal): the human approved the change; a commit added before the merge is
+        carried into the approval as a follow-up and recorded as such."""
         self.propose_both()
         self.prompt("apruebo")
         listed = head(self.web)
@@ -277,9 +279,11 @@ class StateTool(Base):
         g.commit_all(self.web)
         c, env = _state.run_json("approve", "web-search", "prod", "--by", "M", "--role", "human", "--ref", "D-50",
                                  "--sha", "HEAD", cwd=self.web)
-        self.assertEqual(c, 3)
-        self.assertIn("new proposal", env["errors"][0]["message"])
-        self.assertIn(listed[:12], env["errors"][0]["message"])
+        self.assertEqual(c, 0, env)
+        prod = env["result"]["prod"]
+        self.assertEqual((prod["head_sha"], prod["followups"][0]["from"]), (head(self.web), listed))
+        c, env = _state.run_json("check-prod", "web-search", "--sha", head(self.web), cwd=self.web)
+        self.assertEqual(c, 0, env)
 
 
 class Bug162Silence(Base):

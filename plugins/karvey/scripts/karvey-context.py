@@ -936,4 +936,6 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    from karvey_lib import pluginver  # noqa: E402
+    pluginver.maybe_reexec(__file__)  # BUG-163: an older cached copy runs the installed version
     sys.exit(main())

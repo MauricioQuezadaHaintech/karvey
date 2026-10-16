@@ -4,6 +4,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+## [3.13.2] - 2026-10-16 — hotfix
+
+### Why
+Real use of 3.13.1: an agent asked the owner for the production OK of one change four times. After the first
+merge it found two files left out and opened a follow-up PR; the approval had been spent by that merge and bound
+to its commit, so it asked again. The owner's «ok» was then refused because the agent summarised the release
+proposal in its own words instead of copying its id, and a second proposal and a second «ok» were needed. The
+session also ran the 3.13.0 scripts it had loaded before the update. The owner decided (D-52) that the human
+approves a change once, and to ship it as hotfix 3.13.2 (BUG-163).
+
+- Unchanged from 3.12.0: notification destinations come only from `project.json`; projects that took them from tables in a `CLAUDE.md` file declare them under `notifications`.
+- No project upgrade needed: the state tool, the approval hook, a new library module, skills, rules and a lint check change; the follow-up record lives in the release ledger in the clone-local state dir; no project file or setting changes.
+
+### Fixed
+- approval-by-name F-13 (BUG-163, D-52) — a live production approval (complete, unexpired, change not archived) carries a later commit of the same change: `approve <id> prod --sha <new head>` (and `--repo <r> --sha <new head>`) moves it without a new marker, records the move in `followups` and an audit line `prod-followup`, also when the head moved after the human approved a listed commit; `check-prod` accepts it and its refusal names that command. The proposal-shown check also counts the agent's message that names a listed change after the proposal was created. A session running an older cached Karvey than the installed one gets a one-line notice from the prompt hook (once per session and version), and the Karvey scripts re-run themselves from the installed version (`karvey_lib/pluginver.py`; cache copies only, never twice). `rules/enforcement.md` and `karvey-deploy` say a follow-up is never asked again; lint check L-84 fails a skill or rule saying a new commit needs a new OK. Why: the owner was asked four times for one change (REQ-AN-025..028).
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5
+> 🔗 Change: approval-by-name · Karvey phase: impl, test, qa, deploy · Apache 2.0
+
 ## [3.13.1] - 2026-10-07 — hotfix
 
 ### Why

@@ -20,10 +20,11 @@
     "D-10",
     "D-35",
     "D-47",
-    "D-50"
+    "D-50",
+    "D-52"
   ],
   "inputs": {},
-  "iteration_count": 4,
+  "iteration_count": 5,
   "revision_history": [
     {
       "date": "2026-10-07",
@@ -91,6 +92,24 @@
       "findings": [
         "F-11",
         "F-12"
+      ]
+    },
+    {
+      "date": "2026-10-16",
+      "by": "owner decision (D-52), recorded by the agent",
+      "reason": "After 3.13.1 an agent asked the owner for the production OK of one change four times (follow-up PR, a summarised proposal, a session on the old version). The human approves a change once: follow-up commits are carried, a summary naming the change shows the proposal, a stale session is told and its scripts run the installed version. Folded into the open change as hotfix 3.13.2.",
+      "decision": "D-52",
+      "added": [
+        "REQ-AN-025",
+        "REQ-AN-026",
+        "REQ-AN-027",
+        "REQ-AN-028"
+      ],
+      "revised": [
+        "REQ-AN-022"
+      ],
+      "findings": [
+        "F-13"
       ]
     }
   ],

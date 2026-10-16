@@ -2402,7 +2402,8 @@ def _proposal_approval(ctx, text, vocab):
         return None, False  # a message naming a change keeps the D-10 path (backward compatible)
     shown = ((p or {}).get("id") or "")[:approval.PROPOSAL_ID_SHOWN]
     ok, why = (False, "forged or corrupt proposal") if status != "ok" else approval.check_proposal(p, anchor)
-    if ok and approval.proposal_shown(ctx.payload.transcript_path, shown) == "not-shown":
+    if ok and approval.proposal_shown(ctx.payload.transcript_path, shown, change_ids=pids,
+                                      since=p.get("created_at")) == "not-shown":
         ok, why = False, "the agent never showed this proposal to you"
     if not ok:  # refused: nothing for production; the message still goes the usual way (a plan approval)
         if status != "ok" or not approval.close_proposal(anchor, "refused", reason=why):
@@ -2472,6 +2473,23 @@ def _approval_outside_project(ctx, text):
 
 
 def approval_hook(ctx):
+    """The approval guard plus, once per session, the notice that the session runs an older Karvey than the one
+    installed (BUG-163)."""
+    dec = _approval_hook_core(ctx)
+    try:
+        from karvey_lib import pluginver
+        line = pluginver.drift_line(ctx.payload.session_id)
+    except Exception:
+        line = None
+    if line:
+        if dec is None:
+            return Decision.allow(stdout=[line])
+        if dec.decision == "allow":
+            dec.stdout.append(line)
+    return dec
+
+
+def _approval_hook_core(ctx):
     """UserPromptSubmit (REQ-W1-017, 019; D-01, D-10, D-11; REQ-HF-001..004, 029). Silent unless it records a
     marker or the prompt is production-shaped (one line then); it never blocks the prompt. A production approval naming
     a change of another local clone is recorded in that clone (BUG-158); outside a Karvey project only that case acts

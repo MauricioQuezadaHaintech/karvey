@@ -208,7 +208,8 @@ the agent's own text never showed its id, THEN the hook SHALL record no producti
 
 ### 4.7 REQ-AN-022 — The state tool binds the listed commit
 WHEN `approve <id> prod` finds a marker from a proposal, it SHALL bind the listed commit (default `--sha`) and
-SHALL refuse another commit ("a new commit needs a new proposal"); `check-prod` SHALL accept the ledger approval
+SHALL carry a later commit of the same change into it as a follow-up (REQ-AN-025, superseding the refusal of
+3.13.1); `check-prod` SHALL accept the ledger approval
 it writes and SHALL refuse one whose approved commit differs from the proposal's.
 
 *Trace: F-11 · D-50 · D-35*
@@ -228,3 +229,34 @@ rule that instructs the exact phrase (unless marked optional / alternative) and 
 `propose-release`; L-80's message points to the proposal.
 
 *Trace: F-11 · D-50 · L-80, L-82*
+
+## Requirement 5: The human approves a change once (BUG-163, D-52, hotfix 3.13.2)
+
+### 5.1 REQ-AN-025 — A follow-up commit is carried, not asked again
+WHILE a change's production approval is complete, unexpired (24 h) and the change is not archived, WHEN the agent
+runs `approve <id> prod --sha <new head>` (or `--repo <r> --sha <new head>`) for another commit of that change, the
+state tool SHALL move the approval to that commit without a new marker, keep the move in `followups`
+(`from`, `to`, `at`, `by`, `repo`) and write an audit line `prod-followup`; `check-prod` SHALL accept the new
+commit. An expired approval, an archived change or a `reopen` SHALL still need the human (D-35, D-36).
+
+*Trace: F-13 · BUG-163 · D-52 · D-35*
+
+### 5.2 REQ-AN-026 — A summary that names the change shows the proposal
+The proposal-shown check SHALL count the agent's text that carries the proposal id, or that names a change the
+proposal lists in a message written after the proposal was created (5 s clock grain). A message naming neither
+SHALL still refuse the approval.
+
+*Trace: F-13 · BUG-163 · D-50*
+
+### 5.3 REQ-AN-027 — A session told when it runs an older Karvey
+WHEN the prompt hook runs from a cached Karvey older than the installed one, it SHALL say so once per session and
+installed version; WHEN a Karvey script starts from an older cached copy, it SHALL re-run itself from the installed
+version (never from a development checkout, never twice).
+
+*Trace: F-13 · BUG-163*
+
+### 5.4 REQ-AN-028 — Rules never ask twice; lint L-84
+The rules and `karvey-deploy` SHALL say the production OK is of the change and that a follow-up commit is carried
+by the agent; lint check L-84 SHALL fail a skill or rule saying a new commit needs a new OK, approval or proposal.
+
+*Trace: F-13 · BUG-163 · L-84*
