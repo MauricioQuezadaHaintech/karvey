@@ -1,51 +1,73 @@
 # Handoff — agente-karvey
 
-## 0. Verified state — 2026-09-27 (UTC)
-Captured with commands. If this does not match on startup, this handoff has aged: believe the commands.
+## 0. Verified state — 2026-10-16 (UTC)
+Captured with commands (`git worktree list`, `git status`, `gh pr list`, `claude plugin list`). If this
+does not match on startup, this handoff has aged: believe the commands.
 
-| Repo / worktree | Branch | Uncommitted | Last commit | Published? |
+`main` = **3.13.0** (merge f1cf2f8, CI green). Installed 3.13.0 in the accounts `mauricio-haintech` and
+`mauricio-m15` (the `haintech-lab` account has no Karvey). Released this cycle: 3.12.0 (wave1), 3.12.1
+(prod-gate-scope hotfix), 3.13.0 (project-upgrade).
+
+| Worktree | Branch | Uncommitted | Last commit | Published? |
 |---|---|---|---|---|
-| ~/Dev/karvey | docs/archive-wave1-hardening | 0 | 3caa33b | PR #26 open (archive of wave1), needs the owner's prod OK |
-| karvey-wt-project-upgrade | feature/project-upgrade | 0 | 6379986 | PR #25 = 3.13.0, CI 7/7 green, QA approved, **waits for the owner's prod OK** |
-| karvey-wt-wave2 | feature/wave2-structural | 0 | e2fa853 | QA approved (D-21); release after 3.13.0 |
-| karvey-wt-wave3 | feature/wave3-optimization | 0 | ac2717a | QA approved (D-21); release after wave2 |
-| karvey-wt-living-docs | feature/living-docs | 0 | 3fa85ad | spec done (what+how approved); impl after 3.13.0 is on main (needs the upgrade engine) |
-| karvey-wt-mockup | feature/mockup-conformance | 0 | dab6d20 | spec done (what+how approved); impl after living-docs (D-40) |
-
-`main` = **3.12.0** (merge e2acfab, CI 7/7), installed 3.12.0 (`claude plugin list`). `feature/wave1-hardening` deleted (absorbed).
+| ~/Dev/karvey | fix/bug53-az-pr-org | 0 | 99a30ec BUG-52 az --org | **not mine** — PR #27 by another session; do not touch |
+| karvey-wt-hf2 | hotfix/3.13.1-approval-by-name | **16 + .graph-pending** | 876e770 release 3.13.1 | PR #30, CI green on 876e770, but **WIP uncommitted** (the "no crafted plan-approval phrases" rule + lint) |
+| karvey-wt-wave2 | feature/wave2-structural | 4 | d1c6adb living-spec merge | **50 commits ahead, NOT pushed**; release prep 3.14.0 was in progress |
+| karvey-wt-mockup | feature/mockup-conformance | **157 staged (merge in progress)** | d53dff6 | merge of main/wave3 resolved but **not concluded** (`git commit` pending) |
+| karvey-wt-wave3 | feature/wave3-optimization | 0 | ac2717a QA approved | QA approved; release after wave2 |
+| karvey-wt-living-docs | feature/living-docs | 0 | 3fa85ad how approved | spec only; impl after mockup-conformance (D-44) |
+| karvey-wt-project-upgrade | feature/project-upgrade | 0 | e56c133 | merged (3.13.0) — remove worktree + branch (hygiene) |
+| karvey-wt-archive-hf | docs/archive-prod-gate-scope | 0 | 545d86f | PR #29, needs owner prod OK |
+| karvey-wt-archive-w1 | docs/archive-wave1-hardening | 0 | 7c28526 | PR #26, needs owner prod OK |
 
 ## 1. Blocking right now
-- **The owner's production OK for 3.13.0** (PR #25), typed in a session that loads 3.12.0 (any new session in ~/Dev/karvey): e.g. «ok, merge a prod project-upgrade 3.13.0». Then: `karvey-state.py approve project-upgrade prod --by … --role human --ref D-41 --sha <PR head>` → `check-prod` → `gh pr merge 25 --merge` → CI on main → `claude plugin update` → verify. D-NN is written at archive (D-03), never before the merge (it would change the approved SHA).
-- PR #26 (wave1 archive) also needs a prod OK (touches two tests).
+Nothing external. The three background subagents (3.13.1 release, wave2 release prep, mockup impl)
+died with the previous session; their worktrees hold partial work (table above). Next session:
+1. hf2: review the 16 uncommitted files (the crafted-phrase rule + lint), finish tests, commit, push → CI
+   green on the new PR #30 head → owner phrase «aprobado para producción approval-by-name».
+2. wave2: commit the 4 files, push the 50 commits, finish release prep 3.14.0 (PR, CI) → owner phrase
+   «aprobado para producción wave2-structural».
+3. mockup: conclude the merge (`git commit`), then impl (D-44: before living-docs).
 
 ## 2. Who I am
-Maintainer agent of the Karvey plugin. `manifest.md` · `board.md` · `checklist.md`. Owner approves every gate; D-21 is his standing instruction: finish every wave without stopping unless blocked; non-prod gates recorded with ref D-21; prod never delegated (D-10, D-34/35/36).
+Maintainer agent of the Karvey plugin (`manifest.md`, `board.md`, `checklist.md` in this folder). Owner
+approves the plan; inside an approved plan nothing is asked again (D-47). Production OK is the owner's
+typed phrase «aprobado para producción <change-id>», hook-recorded, SHA-bound 24 h (D-10, D-34..D-36).
 
 ## 3. Rules I work under
-`manifest.md` + the owner's global CLAUDE.md + `plugins/karvey/skills/karvey/rules/`. The owner's plan-gate hook needs a plan approval younger than 12 h: renew with `touch` only after his explicit approval in THIS session.
+`manifest.md` + the owner's global CLAUDE.md (now D-47-aligned: investigation free; consequential actions
+need an approved plan; approval lasts until the plan ends or «detente») + `plugins/karvey/skills/karvey/rules/`.
 
 ## 4. Board — open, in one place
-`board.md`. Release chain: 3.13.0 → merge main into wave2 → wave2 release (one manifest OK, D-37) → merge into wave3 → wave3 release → living-docs impl/test/QA/release → mockup-conformance impl/test/QA/release. Version numbers: proposed by release order (3.13 project-upgrade, 3.14 wave2, 3.15 wave3, 3.16 living-docs, 3.17 mockup-conformance; 4.0 reserved for defaults turning blocking, D-24) — **confirm with the owner at the wave2 release**.
+`board.md`. Release chain: 3.13.1 → 3.14.0 (wave2) → 3.15.0 (wave3) → mockup-conformance → living-docs.
+Then: final neutrality cleanup of the public repo + git-history exposure report (owner decides rewrite).
 
 ## 5. Closing checklist
-`checklist.md`.
+`checklist.md`, plus: at every release update the plugin in **every account of the machine**
+(`sudo -n -u mauricio-m15 -H bash -lc 'claude plugin update karvey@karvey-methods'`) and tell open
+sessions to restart (running sessions keep the plugin they loaded).
 
 ## 6. Standing decisions that affect me
-`docs/spec/decisions.md` D-01..D-40 (D-21 standing instruction; D-22..D-32 Wave 2/3 owner decisions; D-33 subagent-prompt guard; D-34..D-36 prod approval = hook audit record + head SHA + 24 h + reopen invalidates; D-37 one bound OK per release manifest; D-38 living-docs; D-39 prod OK of 3.12.0; D-40 mockup-conformance).
+`docs/spec/decisions.md` up to D-47 (+ D-48, D-49 written at archive of 3.12.1 / 3.13.0). Most
+load-bearing: D-47 (approval model), D-45 (prod OK only as typed text, never a question tool),
+D-44 (mockup before living-docs), D-42 (built UI equal-or-better than the approved mockup, never different).
 
 ## 7. In flight, and what I am waiting for
-- Owner: prod OK 3.13.0 (PR #25) and PR #26; `main` branch protection (E1.F16.T3: command in /tmp/claude-1002/w1rel.VVJT/protection.cmd.txt); apply the global-config diff (E1.F16.T7: /tmp/claude-1002/w1rel.VVJT/global-config.diff) — both scratch files may be gone after a reboot: regenerate from wave1 architecture §7.3.
-- A peer agent waits for the version that ships mockup-conformance to apply it in its next change with a mockup.
-- For the owner's final review list: wave2 open points 1–13 and architect decisions A-01..; wave3 open points 1–14; living-docs open points 1–10 + A-01..A-22; mockup-conformance open points + thresholds; F-85 resolution; `team-adapters` cannot be archived (its old gates never approved — owner decision); graphify full semantic update pending (the fast pass destroyed the curated graph, reverted); browser-only QA checks of wave3 (sponsor page 360/1440, method page 9 languages) — delegate to a browser agent or leave to the owner.
+- Owner: prod OK for PR #30 (after the WIP lands), #26 and #29 (docs archives), then each release.
+- Peer agents told to restart for 3.13.0 (2026-10-07). agente-claro-mediacion and agente-KH-ceo know the
+  phrase format.
+- Owner's personal D-47 diff applied 2026-10-07 (backup in the session scratchpad `backup-d47-*`).
 
 ## 8. What a new session CANNOT derive from the repo
-- **Public repo, neutral method** (owner, 2026-09-25): no secrets, no organisation/product/client names, no people as actors in method text (roles only); names in authorship records are fine. Existing leaks are NOT to be corrected until the end (owner: «no corrijas nada de eso hasta el final»); then clean + report what remains in git history (rewrite only with his decision).
-- Subagents' reviewers sometimes report to the orchestrator: relay to the owning subagent.
-- Throw-away `claude -p` sessions write transcripts under ~/.claude/projects/-tmp-claude-1002-*: delete them after manual-script runs.
-- Estimates run high; actuals recorded in each PLAN.md.
+- Each OS account has its own plugin install; a session keeps the version it loaded until restarted.
+- The approval hook resolves the change from the session's working tree (fixed by-name in 3.13.1, not
+  yet released): until then, put the session's cwd in the change's own worktree before asking the phrase.
+- A merge command must run alone (`gh pr merge N --merge`); chaining with `gh run watch` is blocked.
+- Public repo, neutral method; names allowed only in authorship records. Cleanup scheduled at the end.
+- macOS CI jobs sometimes get cancelled by the runner: `gh run rerun <id> --failed` once.
 
 ## 9. Scheduled tasks — with their full prompt
 None.
 
 ## 10. Last updated
-2026-09-27 · agente-karvey · 3.12.0 released; project-upgrade/wave2/wave3 QA approved; living-docs and mockup-conformance specs approved; waiting on the owner's prod OK for 3.13.0.
+2026-10-16 · agente-karvey · save after 3.13.0; three subagents lost with the session; partial work listed in §0/§1.
