@@ -341,5 +341,7 @@ Full gate: unit OK, regression OK, tables 622/622, test-hooks 68, page 22, lint 
 | REQ-AN-031 | `NoClock.test_te_dije_si_is_an_approval`, `test_an_unshown_proposal_stays_pending_and_the_hook_never_says_ask_again` | ✅ |
 | REQ-AN-032 | `ReadingIsFree` (find by name passes; find -delete still blocked) | ✅ |
 
-Red first: `test_bug164_one_approval` failed on ae25cfa (6 failures).
+| REQ-AN-033 | `test_prodgate_pipeline.Pipelines.test_the_approval_lookup_asks_for_an_azure_devops_token` (BUG-166) | ✅ |
+
+Red first: `test_bug164_one_approval` failed on ae25cfa (6 failures); the BUG-166 test failed without `--resource` (1 failure).
 

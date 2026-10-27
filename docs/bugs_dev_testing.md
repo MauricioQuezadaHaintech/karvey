@@ -2406,3 +2406,34 @@ No clock: `write_proposal` stores no deadline and `check_proposal` ignores any; 
 |------|-------|------------------------|------|
 | 2026-10-27 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.3 |
 
+## BUG-166 — The pipeline-approval check asked Azure DevOps without a token resource
+- **Priority:** high
+- **Detected:** 2026-10-27 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`_run_of`)
+- **Change / origin:** approval-by-name — finding F-15
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+With a valid production approval recorded, approve the production stage of an Azure Pipelines run through the
+approvals REST API → `BLOCK prod-gate: cannot resolve the run of the approval … (az printed no JSON)`.
+
+### Actual vs expected
+- Actual: `_run_of` read the approval with `az rest --method get --url <approval>` without `--resource`; `az rest`
+  attaches a token on its own only for Azure Resource Manager URLs, so Azure DevOps answered with its sign-in page,
+  the check read no run and blocked every pipeline approval since 3.13.2.
+- Expected: the lookup authenticates against Azure DevOps and the approval passes when its run's commit is approved.
+
+### Root cause
+Missing `--resource 499b84ac-1321-427f-aa17-267ca6975798` (the Azure DevOps application id) in the `az rest` call.
+
+### Fix
+`_run_of` passes `--resource` with the Azure DevOps resource id (`AZDO_RESOURCE`).
+
+### Regression test
+`plugins/karvey/tests/unit/test_prodgate_pipeline.py` (`Pipelines.test_the_approval_lookup_asks_for_an_azure_devops_token`);
+red without the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-27 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.3 |

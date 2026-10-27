@@ -290,3 +290,9 @@ protect-paths SHALL treat `find` as read-only unless it carries a writing action
 
 *Trace: F-14 · BUG-165 · D-47*
 
+### 6.5 REQ-AN-033 — The pipeline-approval lookup authenticates (BUG-166)
+WHEN the prod-gate resolves the run of an Azure Pipelines approval it SHALL call `az rest` with `--resource
+499b84ac-1321-427f-aa17-267ca6975798`, so Azure DevOps answers with JSON instead of its sign-in page.
+
+*Trace: F-15 · BUG-166 · REQ-HF-012*
+

@@ -60,7 +60,7 @@
   re-exec; rules, `karvey-deploy`, lint L-84; regression `tests/regression/test_bug163_approve_once.py`. Done: red
   before, whole gate green.
 
-- **E1.F6.T1 [Backend] 60 min** — BUG-164/165 (D-54): no clock on proposals and production approvals, the approved
+- **E1.F6.T1 [Backend] 60 min** — BUG-164/165/166 (D-54): no clock on proposals and production approvals, the approved
   plan records production, short «si», unshown proposal stays pending, `find` read-only; rules, `karvey-deploy`,
   hooks README; regression `tests/unit/test_bug164_one_approval.py`. Done: red on ae25cfa, whole gate green.
 
@@ -72,4 +72,4 @@
 | AN-010..012 | E1.F2.T1, E1.F2.T2 |
 | AN-016..024 | E1.F4.T1, E1.F4.T2, E1.F4.T3 |
 | AN-025..028 | E1.F5.T1 |
-| AN-029..032 | E1.F6.T1 |
+| AN-029..033 | E1.F6.T1 |

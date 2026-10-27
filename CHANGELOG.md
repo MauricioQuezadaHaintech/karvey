@@ -12,7 +12,8 @@ release proposal; the owner answered «Si» 80 minutes later, «Te dije si», an
 one. The proposal "expired" after 60 minutes, «te dije si» did not count, and each refusal told the agent to
 regenerate the block and ask again. The owner decided (D-54): Karvey keeps order and must never slow the work
 down — there is one approval, the plan's, and nothing the human approved expires by time (BUG-164). A read-only
-`find` was also blocked by protect-paths (BUG-165).
+`find` was also blocked by protect-paths (BUG-165), and every Azure Pipelines production approval was blocked
+because the check that resolves its run asked Azure DevOps without a token resource (BUG-166).
 
 - Unchanged from 3.12.0: notification destinations come only from `project.json`; projects that took them from tables in a `CLAUDE.md` file declare them under `notifications`.
 - No project upgrade needed: the state tool, the approval hook, protect-paths, the spec schema (a nullable `expires_at`), skills and rules change; existing ledger records with an `expires_at` keep working (the value is ignored); no project file or setting changes.
@@ -23,6 +24,7 @@ down — there is one approval, the plan's, and nothing the human approved expir
 ### Fixed
 - BUG-164 — a short affirmative ending in «si» («te dije si») approves; a proposal refused only because it was never shown stays pending and the hook tells the agent to show it once and wait, never to regenerate it or ask again; `karvey-deploy`, `rules/enforcement.md`, `state-machine.md`, `project-config.md` and the hooks README say the approved plan is the production OK.
 - BUG-165 — protect-paths treats `find` as read-only unless it writes (`-delete`, `-exec`, `-execdir`, `-ok`, `-okdir`, `-fprint*`, `-fls`): reading is never blocked (D-47).
+- BUG-166 — the prod-gate resolves the run of an Azure Pipelines approval with `az rest --resource 499b84ac-1321-427f-aa17-267ca6975798`; without it Azure DevOps answered with its sign-in page and every pipeline approval was blocked.
 
 > 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
 > 🤖 AI-assisted: Claude Opus 5.5

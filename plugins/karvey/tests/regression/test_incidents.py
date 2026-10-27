@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-165 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-166 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -416,6 +416,9 @@ INDEX = {
     "BUG-165": [  # approval-by-name F-14 (D-47): reading is never blocked
         ("unit", "test_bug164_one_approval.py", "ReadingIsFree.test_find_by_name_is_not_blocked"),
         ("unit", "test_bug164_one_approval.py", "ReadingIsFree.test_find_that_deletes_is_still_blocked"),
+    ],
+    "BUG-166": [  # approval-by-name F-15: the pipeline-approval lookup authenticates against Azure DevOps
+        ("unit", "test_prodgate_pipeline.py", "Pipelines.test_the_approval_lookup_asks_for_an_azure_devops_token"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

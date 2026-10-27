@@ -2231,13 +2231,16 @@ def _unresolved_karvey_target(ctx, c, deadline):
     return None if d.decision == "allow" else d
 
 
+AZDO_RESOURCE = "499b84ac-1321-427f-aa17-267ca6975798"  # BUG-166: without it az rest gets the sign-in page
+
+
 def _run_of(c, approval_id, budget):
     """``(branch, sha, repo, error)`` of the run a pipeline approval releases (REQ-HF-012)."""
     call = c.rest
     if call.host == "azure":
         if not (call.org and call.project):
             return None, None, None, "the approval URL names no organization and project"
-        data, err = _run_cli(["az", "rest", "--method", "get", "--url",
+        data, err = _run_cli(["az", "rest", "--method", "get", "--resource", AZDO_RESOURCE, "--url",
                               "%s/%s/_apis/pipelines/approvals/%s?$expand=steps&api-version=7.1"
                               % (call.org, call.project, approval_id)], os.getcwd(), budget)
         if err:
