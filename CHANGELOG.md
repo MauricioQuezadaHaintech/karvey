@@ -4,6 +4,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+## [3.13.3] - 2026-10-27 — hotfix
+
+### Why
+Real use of 3.13.2: a release stayed blocked although the owner had approved it three times. The agent showed a
+release proposal; the owner answered «Si» 80 minutes later, «Te dije si», and «apruebo» 89 minutes after the next
+one. The proposal "expired" after 60 minutes, «te dije si» did not count, and each refusal told the agent to
+regenerate the block and ask again. The owner decided (D-54): Karvey keeps order and must never slow the work
+down — there is one approval, the plan's, and nothing the human approved expires by time (BUG-164). A read-only
+`find` was also blocked by protect-paths (BUG-165).
+
+- Unchanged from 3.12.0: notification destinations come only from `project.json`; projects that took them from tables in a `CLAUDE.md` file declare them under `notifications`.
+- No project upgrade needed: the state tool, the approval hook, protect-paths, the spec schema (a nullable `expires_at`), skills and rules change; existing ledger records with an `expires_at` keep working (the value is ignored); no project file or setting changes.
+
+### Changed
+- approval-by-name F-14 (BUG-164, D-54) — one approval, the plan's: `approve <id> prod --sha <head>` records the production approval from the human's live plan approval when no production marker exists, without consuming the plan; the audit cross-check accepts the hook's plan line. No clock: a release proposal has no deadline (its block no longer says «vence») and stays approvable until approved, cancelled or replaced; a production approval lasts until the change is archived (`expires_at: null`; a legacy value is ignored by `check-prod`, the marker check and the prod-gate). `--expires-min` is accepted and ignored. Supersedes the 24 h of D-35 and the 60 min of D-50.
+
+### Fixed
+- BUG-164 — a short affirmative ending in «si» («te dije si») approves; a proposal refused only because it was never shown stays pending and the hook tells the agent to show it once and wait, never to regenerate it or ask again; `karvey-deploy`, `rules/enforcement.md`, `state-machine.md`, `project-config.md` and the hooks README say the approved plan is the production OK.
+- BUG-165 — protect-paths treats `find` as read-only unless it writes (`-delete`, `-exec`, `-execdir`, `-ok`, `-okdir`, `-fprint*`, `-fls`): reading is never blocked (D-47).
+
+> 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
+> 🤖 AI-assisted: Claude Opus 5.5
+> 🔗 Change: approval-by-name · Karvey phase: impl, test, qa, deploy · Apache 2.0
+
 ## [3.13.2] - 2026-10-16 — hotfix
 
 ### Why

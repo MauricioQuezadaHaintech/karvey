@@ -2349,3 +2349,60 @@ BUG-41 / D-35 / D-50 bound the approval to one merge and one commit ("a new comm
 | 2026-10-16 | DETECTADO | owner / Claude Opus 5.5 | owner report with the agent dialogue |
 | 2026-10-16 | DIAGNOSTICADO | owner / Claude Opus 5.5 | root cause above |
 | 2026-10-16 | RESUELTO | owner / Claude Opus 5.5 | regression tests red on 595473e, green after |
+
+## BUG-164 — The human's approval expired, was refused and was asked for again four times
+- **Priority:** critical
+- **Detected:** 2026-10-27 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (proposal and marker validity, `classify`), plugins/karvey/scripts/karvey_lib/guards.py (`_proposal_approval`, prod-gate hint), plugins/karvey/scripts/karvey-state.py (`approve … prod`, `check-prod`)
+- **Change / origin:** approval-by-name — finding F-14 (owner report, D-54)
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+On 3.13.2 an agent ran `propose-release` for three changes of one PR and showed the block. The owner answered «Si» 80 minutes later: refused, "the proposal expired at 23:49". The agent regenerated it; the owner answered «Te dije si»: not an approval. The agent regenerated it again; the owner answered «apruebo» 89 minutes later: refused, expired. The agent regenerated a fourth block and asked again; the release stayed blocked.
+
+### Actual vs expected
+- Actual: a proposal expired after 60 min and a production approval after 24 h; the owner's plan approval did not count for production; «te dije si» was not an approval; the refusal told the agent to regenerate and ask again.
+- Expected: the approved plan is the approval; time never voids an approval; a short affirmative approves; the agent never asks again.
+
+### Root cause
+D-35 and D-50 put clocks on approvals (24 h, 60 min) as a safety measure, and D-10 split the plan approval from the production one; the commit binding already gives that safety, so the clocks only produced re-asking. `_affirmative_si` accepted «si» only alone or opening the reply. The refusal line instructed `propose-release again`.
+
+### Fix
+No clock: `write_proposal` stores no deadline and `check_proposal` ignores any; `prod_record` writes `expires_at: null`, `check_marker` and `check-prod` ignore age (schema allows null). `approve … prod` records from a live plan approval when no prod marker exists, without consuming it; the audit cross-check accepts the hook's plan line. A short affirmative ending in «si» approves. An unshown proposal stays pending and the hook says to show it once and wait. Rules, `karvey-deploy` and the hooks README: one approval, the plan's (D-54).
+
+### Regression test
+`plugins/karvey/tests/unit/test_bug164_one_approval.py` (NoClock, PlanIsTheApproval), `test_state_approve.py` (test_d54_the_approved_plan_is_the_production_approval, test_an_old_approval_still_counts), `test_marker.py` (test_d54_a_prod_ok_has_no_clock), `test_release_proposal.py` (test_a_proposal_answered_the_next_day_is_approved), table pg5-06-approval-older-than-24h-still-counts; red on ae25cfa. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-27 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.3 |
+
+## BUG-165 — A read-only `find` was blocked by protect-paths
+- **Priority:** medium
+- **Detected:** 2026-10-27 · **Component:** plugins/karvey/scripts/karvey_lib/guards.py (`protect_paths`, `READ_ONLY`)
+- **Change / origin:** approval-by-name — finding F-14
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+`find <plugin>/scripts/karvey_lib -iname "*approval*"` → `BLOCK protect-paths: approval comes only from the human's message`.
+
+### Actual vs expected
+- Actual: `find` was not in `READ_ONLY`, so any mention of a state path blocked it, and the branch that only gates `find -delete/-exec` was unreachable.
+- Expected: reading is never blocked (D-47); a `find` that writes still is.
+
+### Root cause
+`find` missing from `READ_ONLY` in `guards.py`.
+
+### Fix
+`find` is read-only unless it carries `-delete`, `-exec`, `-execdir`, `-ok`, `-okdir`, `-fprint`, `-fprint0`, `-fprintf` or `-fls`.
+
+### Regression test
+`plugins/karvey/tests/unit/test_bug164_one_approval.py` (ReadingIsFree); red on ae25cfa. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-27 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.3 |
+

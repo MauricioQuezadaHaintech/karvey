@@ -76,13 +76,11 @@ class TTL(Base):
         self.assertTrue(ap.check_marker(m, self.repo)[0])
         self.assertTrue(ap.check_marker(m, self.repo, ttl_min=30)[0])
 
-    def test_d47_a_prod_ok_counts_24_hours_for_approve(self):
+    def test_d54_a_prod_ok_has_no_clock(self):  # BUG-164: an approval read the next day is still an approval
         ap.write_marker(self.repo, "prod", "feat-a", "ok, merge a prod", now=ap.now_dt() - timedelta(hours=25))
         m, _ = ap.read_marker(self.repo, "feat-a")
-        ok, why = ap.check_marker(m, self.repo, kinds=("prod",))
-        self.assertFalse(ok)
-        self.assertIn("expired", why)
-        self.assertTrue(ap.check_marker(m, self.repo)[0])  # still the plan approval
+        self.assertTrue(ap.check_marker(m, self.repo, kinds=("prod",))[0])
+        self.assertTrue(ap.check_marker(m, self.repo)[0])  # and the plan approval
 
     def test_d47_stop_withdraws_and_prod_use_keeps_the_plan(self):
         ap.write_marker(self.repo, "prod", "feat-a", "ok, merge a prod")

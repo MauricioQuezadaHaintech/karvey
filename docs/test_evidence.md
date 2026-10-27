@@ -331,3 +331,15 @@ prod approval OK: web-search by Owner ref D-50 (ledger)
 
 Red first: `ApproveOnce` failed on 595473e (3 failures: the dialogue, expired, archived); `VersionDrift` needs the new module.
 Full gate: unit OK, regression OK, tables 622/622, test-hooks 68, page 22, lint 0 errors, validate 0 errors.
+
+## approval-by-name — hotfix 3.13.3 (BUG-164, BUG-165, D-54) — 2026-10-27
+
+| REQ | Evidence | Result |
+|---|---|---|
+| REQ-AN-029 | `test_bug164_one_approval.PlanIsTheApproval`, `test_state_approve.Prod.test_d54_the_approved_plan_is_the_production_approval` (plan not consumed) | ✅ |
+| REQ-AN-030 | `NoClock.test_the_dialogue_records_on_the_first_answer_even_80_minutes_later` (legacy deadline ignored), `test_the_block_names_no_deadline`, `test_release_proposal.Security.test_a_proposal_answered_the_next_day_is_approved`, `test_marker.test_d54_a_prod_ok_has_no_clock`, `test_state_approve.test_an_old_approval_still_counts`, `test_bug163_approve_once.test_an_old_approval_still_carries`, table pg5-06-approval-older-than-24h-still-counts | ✅ |
+| REQ-AN-031 | `NoClock.test_te_dije_si_is_an_approval`, `test_an_unshown_proposal_stays_pending_and_the_hook_never_says_ask_again` | ✅ |
+| REQ-AN-032 | `ReadingIsFree` (find by name passes; find -delete still blocked) | ✅ |
+
+Red first: `test_bug164_one_approval` failed on ae25cfa (6 failures).
+

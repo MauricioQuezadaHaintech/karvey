@@ -1299,14 +1299,7 @@ def check_prod(root, change, sha=None, now=None, repo=None):
                            "change, carry it without asking the human: approve %s prod --by <the approver> --role "
                            "human --ref %s --sha %s (BUG-163)"
                            % (str(sha)[:12], head[:12], change, prod.get("ref") or "<D-NN>", sha))
-        exp = approval.parse_dt(prod.get("expires_at"))
-        if exp is None:
-            res["missing"].append("expired")
-            reasons.append("it has no expiry")
-        elif (now or approval.now_dt()) > exp:
-            res["missing"].append("expired")
-            reasons.append("it expired at %s (valid %d h after the OK); the human approves again"
-                           % (prod["expires_at"], approval.PROD_VALID_H))
+        # D-54 (BUG-164): no clock; the approval of the change lasts until the change is archived
         res["ok"] = not res["missing"]
         if not res["ok"]:
             res["reason"] = "release ledger prod approval incomplete" + (": " + "; ".join(reasons) if reasons else "")
@@ -1457,19 +1450,19 @@ def _approve_prod_bind_repo(args, root):
     if repos.get(repo) not in (None, sha):  # BUG-163: a follow-up commit of the same change, no new OK
         moved = _followup(root, args.change, sha, args.by.strip() if args.by else "agent", repo=repo)
         if moved is None:
-            raise Refused("%s is already bound to %s and the approval cannot carry a new commit (expired, "
-                          "incomplete or archived change)" % (repo, repos[repo][:12]), code="state.repo_bound")
+            raise Refused("%s is already bound to %s and the approval cannot carry a new commit (incomplete "
+                          "approval or archived change)" % (repo, repos[repo][:12]), code="state.repo_bound")
         return kl.EXIT_OK, {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger",
                             "repo": repo, "sha": sha, "followup": True, "expires_at": moved.get("expires_at")}, [], [], \
-            "%s: %s moved to %s within the same production approval (follow-up, expires %s)" % (
-                args.change, repo, sha[:12], moved.get("expires_at"))
+            "%s: %s moved to %s within the same production approval (follow-up; the human is not asked again)" % (
+                args.change, repo, sha[:12])
     repos[repo] = sha
     prod["repos"] = repos
     approval.record_prod(root, args.change, prod)
     out = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "repo": repo,
            "sha": sha, "expires_at": prod.get("expires_at")}
-    return kl.EXIT_OK, out, [], [], "%s: %s bound to %s in the production approval (expires %s)" % (
-        args.change, repo, sha[:12], prod.get("expires_at"))
+    return kl.EXIT_OK, out, [], [], "%s: %s bound to %s in the production approval" % (
+        args.change, repo, sha[:12])
 
 
 def cmd_approve(args, root):
@@ -1499,14 +1492,19 @@ def cmd_approve(args, root):
             return _approve_prod_bind_repo(args, root)
         marker, scope, reasons = approval.find_valid(root, args.change, kinds=("prod",), ttl_min=reviewed_ttl(root),
                                                      project_scope=False)  # BUG-41
+        plan_ok = False
+        if marker is None:  # D-54 (BUG-164): the human's approved plan is the production approval; one approval
+            pm, pscope, _ = approval.find_valid(root, args.change, kinds=("plan",), ttl_min=reviewed_ttl(root))
+            if pm is not None and pm.get("kind") == "plan":
+                marker, scope, plan_ok = pm, pscope, True
         if marker is None:  # BUG-163: the change's live approval carries a follow-up commit
             cand = resolve_commit(root, args.sha or "HEAD")
             moved = _followup(root, args.change, cand, by) if cand else None
             if moved is not None:
                 return kl.EXIT_OK, {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger",
                                     "prod": moved, "followup": True}, [], [], \
-                    "%s: commit %s carried into the existing production approval (follow-up of the same change, " \
-                    "expires %s); the human is not asked again" % (args.change, cand[:12], moved.get("expires_at"))
+                    "%s: commit %s carried into the existing production approval (follow-up of the same change); " \
+                    "the human is not asked again" % (args.change, cand[:12])
             raise Refused("production approval needs a prod-kind approval marker: the human's own approval of the "
                           "release proposal, or a message with an approval word and a production word naming the "
                           "change (D-10, D-50); none is valid for %s (%s). %s"
@@ -1524,14 +1522,15 @@ def cmd_approve(args, root):
         rec = approval.prod_record(marker, scope, by, ref, date, head_sha)
         approval.record_prod(root, args.change, rec)
         # BUG-41: one production approval, one change; D-47: the same message stays the plan approval
-        approval.mark_prod_used(root, scope, created_at=marker.get("created_at"))
+        if not plan_ok:  # D-54: a plan approval is never consumed by a release; it lasts until the plan ends
+            approval.mark_prod_used(root, scope, created_at=marker.get("created_at"))
         if carry is not None:
             rec = _followup(root, args.change, carry, by) or rec
             head_sha = rec.get("head_sha") or head_sha
         res = {"change": args.change, "phase": "prod", "source": "ledger", "written": "ledger", "prod": rec}
         return kl.EXIT_OK, res, [], [], "%s: prod approval recorded in the release ledger (ref %s, commit %s, " \
-                                        "expires %s); spec.json untouched (D-03)" % (args.change, ref, head_sha[:12],
-                                                                                     rec["expires_at"])
+                                        "valid until the change is archived); spec.json untouched (D-03)" % (
+                                            args.change, ref, head_sha[:12])
     marker, scope, _ = approval.find_valid(root, args.change, kinds=("plan", "prod"), ttl_min=reviewed_ttl(root))
     warnings = []
     if marker is not None:  # BUG-157 D1: a message evidences only the phase that was current when it was typed
@@ -1657,7 +1656,8 @@ def cmd_propose_release(args, root):
     block = approval.proposal_block(p, lang=args.lang)
     res = {"proposal": p["id"], "shown_id": p["id"][:approval.PROPOSAL_ID_SHOWN], "expires_at": p["expires_at"],
            "items": p["items"], "block": block}
-    note = ("\n\nShow the block above to the human verbatim, then ask for a plain approval. Their next own message "
+    note = ("\n\nShow the block above to the human verbatim (as printed, in a code block), once, then wait: it never "
+            "expires, so do not regenerate it unless a commit changes. Their next own message "
             "with an approval word records a production approval for every change listed; the agent cannot "
             "approve it.")
     return kl.EXIT_OK, res, [], [], block + note
@@ -1730,7 +1730,7 @@ def build_parser():
     pr_.add_argument("--effect", action=_ItemField, metavar="TEXT", help="what the approval carries out")
     pr_.add_argument("--lang", choices=["es", "en"], default="es", help="language of the block (default es)")
     pr_.add_argument("--expires-min", type=int, default=approval.PROPOSAL_TTL_MIN,
-                     help="minutes the proposal stays approvable (5..240, default 60)")
+                     help="ignored since 3.13.3: a proposal never expires by time (D-54)")
     cp = sub.add_parser("check-prod", parents=[common], help="is a human prod approval recorded? (prod-gate)")
     cp.add_argument("change")
     cp.add_argument("--sha", help="the commit being released; it must be the approved one (D-35)")

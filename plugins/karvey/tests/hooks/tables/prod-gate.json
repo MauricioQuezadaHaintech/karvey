@@ -4700,7 +4700,7 @@
       ]
     },
     {
-      "id": "pg5-06-approval-older-than-24h",
+      "id": "pg5-06-approval-older-than-24h-still-counts",
       "guard": "prod-gate",
       "given": {
         "repo": {
@@ -4740,18 +4740,12 @@
         }
       },
       "expect": {
-        "decision": "block",
-        "stderr_contains": [
-          "[karvey] prod-gate BLOCK",
-          "missing=expired",
-          "expired"
-        ]
+        "decision": "allow"
       },
       "tags": [
         "prod-gate",
-        "REQ-W1-023",
-        "D-35",
-        "F-77"
+        "D-54",
+        "BUG-164"
       ]
     },
     {

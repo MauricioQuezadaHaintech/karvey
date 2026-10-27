@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-163 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-165 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -402,9 +402,20 @@ INDEX = {
     "BUG-163": [  # approval-by-name F-13 (D-52): one change, one OK
         ("unit", "test_bug163_approve_once.py", "ApproveOnce.test_the_dialogue_asks_the_human_once"),
         ("unit", "test_bug163_approve_once.py", "ApproveOnce.test_a_summary_that_names_nothing_is_still_refused"),
-        ("unit", "test_bug163_approve_once.py", "ApproveOnce.test_an_expired_approval_does_not_carry"),
+        ("unit", "test_bug163_approve_once.py", "ApproveOnce.test_an_old_approval_still_carries"),
         ("unit", "test_bug163_approve_once.py", "VersionDrift.test_an_older_cached_copy_sees_the_installed_one"),
         ("unit", "test_bug163_approve_once.py", "VersionDrift.test_reexec_targets_the_installed_script"),
+    ],
+    "BUG-164": [  # approval-by-name F-14 (D-54): one approval, the plan's; no clock
+        ("unit", "test_bug164_one_approval.py", "NoClock.test_the_dialogue_records_on_the_first_answer_even_80_minutes_later"),
+        ("unit", "test_bug164_one_approval.py", "NoClock.test_te_dije_si_is_an_approval"),
+        ("unit", "test_bug164_one_approval.py", "NoClock.test_an_unshown_proposal_stays_pending_and_the_hook_never_says_ask_again"),
+        ("unit", "test_bug164_one_approval.py", "PlanIsTheApproval.test_an_approved_plan_records_production_without_a_second_question"),
+        ("table", "prod-gate", "pg5-06-approval-older-than-24h-still-counts"),
+    ],
+    "BUG-165": [  # approval-by-name F-14 (D-47): reading is never blocked
+        ("unit", "test_bug164_one_approval.py", "ReadingIsFree.test_find_by_name_is_not_blocked"),
+        ("unit", "test_bug164_one_approval.py", "ReadingIsFree.test_find_that_deletes_is_still_blocked"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

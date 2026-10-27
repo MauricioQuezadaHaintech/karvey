@@ -168,9 +168,10 @@ PROTECT_MSG = ("[karvey] BLOCK protect-paths: approval comes only from the human
 # notify-last.json and approvals/notify also name the notification record and its human confirmation
 # outside git (the XDG state dir, D-16 / F-15)
 STATE_NEEDLES = ("karvey/approvals", "karvey/ledger", ".git/karvey", "notify-last.json", "approvals/notify")
-READ_ONLY = frozenset({"cat", "ls", "head", "tail", "stat", "wc", "file", "less", "more", "grep", "egrep",
+READ_ONLY = frozenset({"find", "cat", "ls", "head", "tail", "stat", "wc", "file", "less", "more", "grep", "egrep",
                        "fgrep", "rg", "jq", "test", "[", "diff", "cmp", "sha256sum", "shasum", "md5sum",
                        "readlink", "realpath", "basename", "dirname", "du", "tree"})
+_FIND_WRITES = ("-delete", "-exec", "-execdir", "-ok", "-okdir", "-fprint", "-fprint0", "-fprintf", "-fls")
 # commands that change files they name: which arguments count (None = every non-option argument)
 MUTATORS = {"cp": "last", "install": "last", "ln": "last", "rsync": "last", "mv": None, "rm": None,
             "rmdir": None, "touch": None, "tee": None, "truncate": None, "chmod": None, "chown": None,
@@ -393,7 +394,7 @@ def protect_paths(ctx):
             joined = " ".join(texts + targets)
             if _hits(joined, needles) or _hits(_unquote(joined), needles):
                 return Decision.block(PROTECT_MSG, record={"reason": "command names a protected path"})
-        elif seg.argv0 == "find" and any(a in ("-delete", "-exec", "-execdir", "-ok") for a in seg.argv):
+        elif seg.argv0 == "find" and any(a in _FIND_WRITES for a in seg.argv):
             if _hits(" ".join(texts), needles):
                 return Decision.block(PROTECT_MSG, record={"reason": "command names a protected path"})
         # the plugin root: only writes (running the plugin's own scripts is normal)
@@ -2147,10 +2148,10 @@ def _evaluate_candidate(ctx, c, deadline):
                           "may have moved; bind it to the approved commit (gh: --match-head-commit <sha>, glab: "
                           "--sha <sha>) or merge now" % c.kind)
     if not res.get("ok"):
-        how = (". To release: the human approves production in their own message (the hook prints '[karvey] approval "
-               "recorded (prod, %s, …)'), then run: karvey-state.py approve %s prod --by \"<human>\" --role human "
-               "--ref <D-NN or PR URL> --sha <the head commit the human approved>; the approval covers that commit "
-               "for 24 h" % (cid, cid))  # BUG-30, D-35
+        how = (". To release: if the human approved a plan that includes this release, that approval is the "
+               "production OK (D-54) \u2014 run: karvey-state.py approve %s prod --by \"<human>\" --role human "
+               "--ref <D-NN or PR URL> --sha <head>; it records it for the human, who is not asked again. Only "
+               "without an approved plan: present the plan (or propose-release) once and wait" % cid)  # BUG-30, BUG-164
         d = _pg_block(cid, ",".join(res.get("missing") or ["?"]),
                       (res.get("reason") or "no production approval") + note + how)
         d.stdout = warn
@@ -2406,10 +2407,13 @@ def _proposal_approval(ctx, text, vocab):
                                       since=p.get("created_at")) == "not-shown":
         ok, why = False, "the agent never showed this proposal to you"
     if not ok:  # refused: nothing for production; the message still goes the usual way (a plan approval)
-        if status != "ok" or not approval.close_proposal(anchor, "refused", reason=why):
-            _audit(anchor, {"guard": "approval", "event": "proposal", "decision": "refused", "reason": why})
+        _audit(anchor, {"guard": "approval", "event": "proposal", "decision": "refused", "reason": why})
+        if status == "ok" and why != "the agent never showed this proposal to you":
+            approval.close_proposal(anchor, "refused", reason=why)  # forged or changed: it can never be approved
+        # BUG-164: an unshown proposal stays pending, so the human's next approval word records it as it is
         return ["[karvey] release proposal %s NOT approved: %s \u2014 nothing recorded for production; the agent "
-                "runs propose-release again and shows the new block" % (shown or "?", why)], False
+                "shows that same block once, as printed, and waits: the human's next approval word records it "
+                "(never ask in other words)" % (shown or "?", why)], False
     recorded, failed, until = [], [], None
     for item in p["items"]:
         cid, owner, sha = item["change"], item["repo"], item["sha"]
@@ -2420,15 +2424,14 @@ def _proposal_approval(ctx, text, vocab):
                                       ttl_min=ttl_min(ctx, Path(owner)), compat=ctx.env.get(approval.COMPAT_ENV, ""),
                                       extra={"sha": sha, "proposal": p["id"], "pr": item.get("pr")})
             created = approval.parse_dt(m["created_at"])
-            until = until or (created + approval.timedelta(hours=approval.PROD_VALID_H)).strftime("%H:%M")
             recorded.append("%s@%s" % (cid, sha[:7]))
         except Exception as exc:  # the line says what was not recorded
             failed.append("%s (%s)" % (cid, exc if isinstance(exc, approval.ApprovalError) else type(exc).__name__))
     approval.close_proposal(anchor, "approved", recorded=recorded)
     lines = []
     if recorded:
-        lines.append("[karvey] production approval recorded: %s (expires %s tomorrow; proposal %s; it is also the "
-                     "plan approval)" % (", ".join(recorded), until, shown))
+        lines.append("[karvey] production approval recorded: %s (valid until the change is archived; proposal %s; "
+                     "it is also the plan approval)" % (", ".join(recorded), shown))
     if failed:
         lines.append("[karvey] production approval NOT recorded: %s" % ", ".join(failed))
     return lines, True
@@ -2458,10 +2461,8 @@ def _approval_outside_project(ctx, text):
         owner = res["owner"]
         marker = approval.write_marker(owner, "prod", res["scope"], text, session_id=ctx.payload.session_id,
                                        ttl_min=ttl_min(ctx, Path(owner)), compat=ctx.env.get(approval.COMPAT_ENV, ""))
-        created = approval.parse_dt(marker["created_at"])
-        until = (created + approval.timedelta(hours=approval.PROD_VALID_H)).strftime("%H:%M")
-        return Decision.allow(stdout=["[karvey] approval recorded (prod, %s, clone %s, expires %s tomorrow; it is "
-                                      "also the plan approval)" % (res["scope"], owner, until)])
+        return Decision.allow(stdout=["[karvey] approval recorded (prod, %s, clone %s, valid until the change is "
+                                      "archived; it is also the plan approval)" % (res["scope"], owner)])
     except Exception:  # fail open: no marker is the safe side
         try:
             if approval.production_phrase_attempt(text):
@@ -2562,9 +2563,8 @@ def _approval_hook_core(ctx):
             if verdict["kind"] == "plan":  # D-47: no time limit
                 line = "[karvey] approval recorded (plan, %s%s, until the plan ends or you say stop)" % (scope, note)
             else:
-                prod_until = (created + approval.timedelta(hours=approval.PROD_VALID_H)).strftime("%H:%M")
-                line = "[karvey] approval recorded (prod, %s%s, expires %s tomorrow; it is also the plan approval)" % (
-                    scope, note, prod_until)
+                line = "[karvey] approval recorded (prod, %s%s, valid until the change is archived; it is also the " \
+                    "plan approval)" % (scope, note)
             if verdict["kind"] == "plan" and attempt:  # REQ-HF-029: never let a plan pass for a prod OK
                 line += " \u2014 a plan approval, NOT a production one: %s" % _prod_hint(
                     verdict["cleaned"], None if scope == approval.SCOPE_PROJECT else scope)

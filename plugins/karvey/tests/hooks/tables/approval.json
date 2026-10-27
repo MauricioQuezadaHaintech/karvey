@@ -1503,7 +1503,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (prod, feat-a, expires ",
+        "stdout_contains": "[karvey] approval recorded (prod, feat-a, valid until ",
         "marker": {
           "scope": "feat-a",
           "kind": "prod"
@@ -1554,7 +1554,7 @@
       "expect": {
         "decision": "allow",
         "marker_created": true,
-        "stdout_contains": "[karvey] approval recorded (prod, project-upgrade, expires ",
+        "stdout_contains": "[karvey] approval recorded (prod, project-upgrade, valid until ",
         "marker": {
           "scope": "project-upgrade",
           "kind": "prod"
@@ -2412,7 +2412,7 @@
       },
       "expect": {
         "decision": "allow",
-        "stdout_contains": "[karvey] approval recorded (prod, feat-a, expires "
+        "stdout_contains": "[karvey] approval recorded (prod, feat-a, valid until "
       },
       "tags": [
         "approval",

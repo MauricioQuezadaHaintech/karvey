@@ -96,14 +96,14 @@ class ApproveOnce(unittest.TestCase):
         self.say("Listo, ¿apruebas?")
         self.assertIn("NOT approved", self.human("ok"))
 
-    def test_an_expired_approval_does_not_carry(self):
+    def test_an_old_approval_still_carries(self):  # D-54 (BUG-164): no clock
         self.first_release()
         second = self.follow_up_commit()
         ledger = approval.read_ledger(self.repo, CID)[0]
-        prod = dict(ledger["prod"], expires_at=approval.iso(approval.now_dt() - approval.timedelta(minutes=1)))
+        prod = dict(ledger["prod"], expires_at=approval.iso(approval.now_dt() - approval.timedelta(days=3)))
         approval.record_prod(self.repo, CID, prod)
         c, env = self.approve(second)
-        self.assertEqual(c, 3, env)
+        self.assertEqual(c, 0, env)
 
     def test_an_archived_change_does_not_carry(self):
         self.first_release()

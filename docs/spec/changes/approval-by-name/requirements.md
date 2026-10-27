@@ -260,3 +260,33 @@ The rules and `karvey-deploy` SHALL say the production OK is of the change and t
 by the agent; lint check L-84 SHALL fail a skill or rule saying a new commit needs a new OK, approval or proposal.
 
 *Trace: F-13 · BUG-163 · L-84*
+
+## Requirement 6: One approval, the plan's; no clock (BUG-164, BUG-165, D-54, hotfix 3.13.3)
+
+### 6.1 REQ-AN-029 — The approved plan is the production approval
+WHEN `approve <id> prod` finds no production marker but a live plan approval of that change or of the project, it
+SHALL record the production approval from it (bound to `--sha`, evidence = the plan marker) and SHALL NOT consume
+the plan approval; `check-prod` SHALL accept it when the approval hook's audit line of that plan marker exists.
+
+*Trace: F-14 · BUG-164 · D-54 (supersedes the plan ≠ production split of D-10)*
+
+### 6.2 REQ-AN-030 — No clock on an approval
+A release proposal SHALL stay approvable until it is approved, cancelled or replaced (no deadline in its block); a
+production approval SHALL stay valid until its change is archived or reopened; a legacy `expires_at` SHALL be
+ignored. This supersedes the 24 h of REQ-AN-025 and D-35 and the 60 min of REQ-AN-017.
+
+*Trace: F-14 · BUG-164 · D-54*
+
+### 6.3 REQ-AN-031 — An answer is never lost
+A short affirmative (up to three words before «si»: «te dije si») SHALL approve. A proposal refused only because
+the agent never showed it SHALL stay pending; the hook line SHALL tell the agent to show that block once and wait,
+never to regenerate it or to ask in other words.
+
+*Trace: F-14 · BUG-164*
+
+### 6.4 REQ-AN-032 — Reading is never blocked (BUG-165)
+protect-paths SHALL treat `find` as read-only unless it carries a writing action (`-delete`, `-exec`, `-execdir`,
+`-ok`, `-okdir`, `-fprint*`, `-fls`).
+
+*Trace: F-14 · BUG-165 · D-47*
+
