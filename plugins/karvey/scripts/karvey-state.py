@@ -1273,6 +1273,18 @@ def check_prod(root, change, sha=None, now=None, repo=None, qa=True):
             res["missing"].append("audit")
             reasons.append("no audit record of the approval hook matches its marker (prompt hash, session, time): "
                            "the approval was not given through the human's own message")
+        elif ev_scope == approval.SCOPE_PROJECT:  # BUG-168 (QA M1, M2): the plan of this change, still standing
+            hist = loaded.data.get("phase_history") if isinstance(loaded.data.get("phase_history"), list) else []
+            born = approval.parse_dt(hist[0].get("entered_at")) if hist and isinstance(hist[0], dict) else None
+            given = approval.parse_dt(ev.get("marker_created_at"))
+            if approval.withdrawn_since(root, ev_scope, ev.get("marker_created_at")):
+                res["missing"].append("evidence")
+                reasons.append("the human said stop after the plan approval it rests on; the next approved plan "
+                               "that includes this release is the production approval")
+            elif born is not None and (given is None or given < born):
+                res["missing"].append("evidence")
+                reasons.append("the plan approval it rests on predates change %s; the plan approved for it is the "
+                               "production approval" % change)
         head = prod.get("head_sha")
         if not (isinstance(head, str) and SHA_RE.match(head)):  # D-35
             res["missing"].append("sha")

@@ -20,7 +20,7 @@
     "plugins/karvey/schemas/spec.schema.json": "b4faf9c491bd56395bcac11efe577f50783476e3ca79eac146d9731bd6a70d71",
     "plugins/karvey/schemas/state-machine.json": "585aa4a03d427d46e70f82855012545f511c4cb16b17582d6fb967e3ae0568dd",
     "plugins/karvey/schemas/upgrade-steps.schema.json": "af289115e385e183738e550e338b78242605e8130002f82096be59098fd89f0a",
-    "plugins/karvey/scripts/karvey_lib/approval.py": "8bbe510756479b8eeaf70671268a0742c1fd60cda39a134e419c5fded42b6b54",
+    "plugins/karvey/scripts/karvey_lib/approval.py": "1e905c3899d99e28438ea6f298a0e8253ec9eeaf6e956760b2bc8442636afee5",
     "plugins/karvey/scripts/karvey_lib/defaults.json": "98aa293d3646072ad06696978ace1d59be51031cb004bd56faebbf5cf144c9bd",
     "plugins/karvey/scripts/karvey_lib/guards.py": "7b9dedcc5bc14d440b12f0f5076275a3fa9b11ecd0836aaafa8f632b894c322f",
     "plugins/karvey/scripts/karvey_lib/karvey_hooks.py": "df3792de44c3bff406577116240e4354086a4cd3ce5ba541bbd33c21109ff11e",

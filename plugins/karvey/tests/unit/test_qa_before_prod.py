@@ -90,6 +90,24 @@ class ProjectPlanIsTheProdApproval(Base):
         c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
         self.assertEqual(c, 0, env)
 
+    def test_a_stop_after_the_project_plan_withdraws_it(self):  # QA M1
+        ap.write_marker(self.root, "plan", ap.SCOPE_PROJECT, "aprobado", session_id="s9")
+        self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20", "--sha", "HEAD")
+        qa_reviewed(self.root, "feat-a", head(self.root))
+        ap.withdraw_all(self.root)
+        c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
+        self.assertEqual(env["result"]["missing"], ["evidence"], env)
+        self.assertIn("said stop", env["result"]["reason"])
+
+    def test_a_project_plan_older_than_the_change_does_not_release_it(self):  # QA M2
+        ap.write_marker(self.root, "plan", ap.SCOPE_PROJECT, "aprobado", session_id="s9",
+                        now=ap.parse_dt("2020-01-01T00:00:00+00:00"))
+        self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20", "--sha", "HEAD")
+        qa_reviewed(self.root, "feat-a", head(self.root))
+        c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
+        self.assertEqual(env["result"]["missing"], ["evidence"], env)
+        self.assertIn("predates", env["result"]["reason"])
+
 
 class QaPassRefusals(Base):
     def test_open_blocking_findings_are_refused(self):

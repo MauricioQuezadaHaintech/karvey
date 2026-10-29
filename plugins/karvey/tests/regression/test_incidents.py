@@ -430,6 +430,7 @@ INDEX = {
     "BUG-168": [  # approval-by-name F-17 (D-54): a project-wide plan is the production approval
         ("unit", "test_qa_before_prod.py",
          "ProjectPlanIsTheProdApproval.test_a_plan_approved_for_the_whole_project_releases_the_change"),
+        ("unit", "test_qa_before_prod.py", "ProjectPlanIsTheProdApproval.test_a_stop_after_the_project_plan_withdraws_it"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

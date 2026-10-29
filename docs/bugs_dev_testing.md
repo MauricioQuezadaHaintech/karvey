@@ -2493,7 +2493,9 @@ The human approves the plan with a bare «aprobado» (the hook records `plan, _p
 the evidence check in `check_prod`.
 
 ### Fix
-`check_prod` accepts the project plan marker as evidence and checks the audit line of that scope.
+`check_prod` accepts the project plan marker as evidence and checks the audit line of that scope; the delta QA asked
+for two limits, applied: a stop said after that plan withdraws it (D-47), and a plan older than the change does not
+release it.
 
 ### Regression test
 `plugins/karvey/tests/unit/test_qa_before_prod.py` (`ProjectPlanIsTheProdApproval`); red without the fix. Indexed in
