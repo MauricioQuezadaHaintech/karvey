@@ -349,7 +349,7 @@ Red first: `test_bug164_one_approval` failed on ae25cfa (6 failures); the BUG-16
 
 | REQ | Evidence | Result |
 |---|---|---|
-| REQ-AN-034 | `test_qa_before_prod` (no QA → missing qa; review of the head releases; code after the review needs a delta review; docs-only delta covered; qa-pass refusals), table `pg7-01-approved-but-no-qa-review-blocks`, fixtures of every prod-gate allow now record their QA | ✅ |
+| REQ-AN-034 | `test_qa_before_prod` (no QA → missing qa; review of the head releases; code after the review needs a delta review; docs-only delta covered; qa-pass refusals), table `pg7-01-approved-but-no-qa-review-blocks`, fixtures of every prod-gate allow now record their QA; QA of PR #33 (F1 rename/nested .md/spec.json outside docs, F2 symlink and double count, F5 undeclared repo, F7 pipeline reason) each with its test | ✅ |
 
 Red first: `test_qa_before_prod.QaBeforeProd.test_an_approved_release_without_qa_is_not_released` failed with the e0731f4 state tool.
 

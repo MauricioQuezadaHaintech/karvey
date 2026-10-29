@@ -30,6 +30,7 @@ import argparse
 import copy
 import re
 import difflib
+import hashlib
 import json
 import os
 import sys
@@ -1324,9 +1325,9 @@ def check_prod(root, change, sha=None, now=None, repo=None, qa=True):
     return res
 
 
-DOCS_ONLY = re.compile(r"^(docs/.*|.*\.md|(.*/)?spec\.json)$")  # D-55: a delta of only these needs no new QA
+DOCS_ONLY = re.compile(r"^(docs/.+|[^/]+\.md)$")  # D-55: a delta of only these (docs/**, a root *.md) needs no new QA
 QA_OPEN = re.compile(r"^\s*-?\s*Open blocking findings[^:]*:\s*(\d+)\s*$", re.M | re.I)
-QA_SHA = re.compile(r"^\s*-?\s*Reviewed commit:\s*`?([0-9a-f]{7,40})`?\s*$", re.M | re.I)
+QA_SHA = re.compile(r"^\s*-?\s*Reviewed commit:\s*`?([0-9a-f]{7,64})`?\s*$", re.M | re.I)
 
 
 def qa_covers(root, ledger, target, repo=None):
@@ -1343,7 +1344,7 @@ def qa_covers(root, ledger, target, repo=None):
         rc, _ = pj.git(["merge-base", "--is-ancestor", e["head_sha"], target], root)
         if rc != 0:
             continue
-        rc, out = pj.git(["diff", "--name-only", e["head_sha"], target], root)
+        rc, out = pj.git(["diff", "--name-only", "--no-renames", e["head_sha"], target], root)  # a rename = delete + add
         if rc == 0 and all(DOCS_ONLY.match(f) for f in (out or "").splitlines() if f.strip()):
             return True
     return False
@@ -1351,8 +1352,12 @@ def qa_covers(root, ledger, target, repo=None):
 
 def cmd_qa_pass(args, root):
     """D-55: record that a QA review (karvey-qa) covers one commit of the change, with no open blocking findings."""
-    load_change(root, args.change)
+    _, loaded = load_change(root, args.change)
     if args.repo:
+        declared = loaded.data.get("repos") if isinstance(loaded.data.get("repos"), list) else []
+        if args.repo not in declared:
+            raise Refused("the repo %r is not declared by %s (spec.json repos: %s)"
+                          % (args.repo, args.change, ", ".join(declared) or "none"), code="state.repo_undeclared")
         sha = (args.sha or "").strip().lower()
         if not SHA_RE.match(sha):
             raise Usage("--repo needs --sha with the full commit id of that repo")
@@ -1362,26 +1367,37 @@ def cmd_qa_pass(args, root):
             raise Usage("--sha %r is not a commit of this repository" % args.sha)
     qa_dir = os.path.join("docs", "spec", "changes", args.change, "qa")
     review = os.path.normpath(args.review or "")
-    if os.path.isabs(review):
-        review = os.path.relpath(review, str(root))
-    if not review.startswith(qa_dir + os.sep) or not os.path.isfile(os.path.join(str(root), review)):
+    try:
+        if os.path.isabs(review):
+            review = os.path.relpath(review, str(root))
+    except ValueError:  # another drive (Windows)
+        review = args.review or ""
+    full = os.path.join(str(root), review)
+    inside = os.path.realpath(full).startswith(os.path.realpath(os.path.join(str(root), qa_dir)) + os.sep)
+    if not review.startswith(qa_dir + os.sep) or not inside or os.path.islink(full) or not os.path.isfile(full):
         raise Refused("the QA review must be a file under %s/ (got %r)" % (qa_dir, args.review), code="state.qa_review")
-    with open(os.path.join(str(root), review), encoding="utf-8") as fh:
-        text = fh.read()
+    with open(full, "rb") as fh:
+        raw = fh.read()
+    text = raw.decode("utf-8", "replace")
     named = QA_SHA.findall(text)
     if not any(sha.startswith(n.lower()) for n in named):
         raise Refused("%s does not name the reviewed commit %s (line «- Reviewed commit: <sha>»)" % (review, sha[:12]),
                       code="state.qa_sha")
     opened = QA_OPEN.findall(text)
-    if not opened:
-        raise Refused("%s has no «- Open blocking findings (critical/high): N» line" % review, code="state.qa_open")
+    if len(opened) != 1:
+        raise Refused("%s needs exactly one «- Open blocking findings (critical/high): N» line (found %d)"
+                      % (review, len(opened)), code="state.qa_open")
     if int(opened[-1]) != 0:
         raise Refused("%s has %s open blocking findings: route them with /karvey-iterate and review again"
                       % (review, opened[-1]), code="state.qa_blocking")
-    entry = {"head_sha": sha, "review": review.replace(os.sep, "/"), "date": now_iso()}
+    entry = {"head_sha": sha, "review": review.replace(os.sep, "/"), "date": now_iso(),
+             "review_sha256": hashlib.sha256(raw).hexdigest()}
     if args.repo:
         entry["repo"] = args.repo
-    approval.record_qa(root, args.change, entry)
+    try:
+        approval.record_qa(root, args.change, entry)
+    except (approval.ApprovalError, OSError) as exc:
+        raise Refused("the QA review is not recorded: %s" % exc, code="state.ledger")
     return kl.EXIT_OK, {"change": args.change, "qa": entry}, [], [], \
         "%s: QA review %s recorded for commit %s (D-55)" % (args.change, entry["review"], sha[:12])
 

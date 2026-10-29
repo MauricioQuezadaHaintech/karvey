@@ -423,6 +423,8 @@ INDEX = {
     "BUG-167": [  # approval-by-name F-16 (D-55): no production without QA
         ("unit", "test_qa_before_prod.py", "QaBeforeProd.test_an_approved_release_without_qa_is_not_released"),
         ("unit", "test_qa_before_prod.py", "QaBeforeProd.test_a_code_commit_after_the_review_needs_its_own_review"),
+        ("unit", "test_qa_before_prod.py", "QaBeforeProd.test_a_rename_of_code_to_md_is_not_docs_only"),
+        ("unit", "test_prodgate_pipeline.py", "Pipelines.test_an_approved_run_without_qa_says_so"),
         ("table", "prod-gate", "pg7-01-approved-but-no-qa-review-blocks"),
     ],
 }

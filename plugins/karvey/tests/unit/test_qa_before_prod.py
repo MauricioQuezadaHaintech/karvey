@@ -5,6 +5,7 @@ Until 3.13.3 the prod-gate asked only for the human's approval: a hotfix lane sk
 commit of an approved change reached production without anyone reviewing it. Now ``check-prod`` (the gate's
 question) also needs a QA review recorded with ``qa-pass`` for the released commit — or for an ancestor whose delta
 touches only docs. The agent runs the review and records it; the human is not asked."""
+import os
 import unittest
 
 import _path  # noqa: F401
@@ -59,6 +60,26 @@ class QaBeforeProd(Base):
         self.assertEqual(c, 0, env)
 
 
+    def code_after_review(self, change):
+        self.approve()
+        qa_reviewed(self.root, "feat-a", head(self.root))
+        change()
+        g.commit_all(self.root, "after the review")
+        self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20", "--sha", "HEAD")
+        return self.st("check-prod", "feat-a", "--sha", head(self.root))[1]["result"]["missing"]
+
+    def test_a_rename_of_code_to_md_is_not_docs_only(self):  # QA F1
+        g.write(self.root, "src/app.py", "x = 1\n")
+        g.commit_all(self.root, "code")
+        self.assertEqual(self.code_after_review(lambda: g.run(["mv", "src/app.py", "src/app.md"], self.root)), ["qa"])
+
+    def test_a_nested_md_or_a_spec_json_outside_docs_is_code(self):  # QA F1: skills, rules, runtime config
+        self.assertEqual(self.code_after_review(lambda: g.write(self.root, "skills/x/SKILL.md", "y\n")), ["qa"])
+
+    def test_a_spec_json_outside_docs_is_code(self):
+        self.assertEqual(self.code_after_review(lambda: g.write(self.root, "src/conf/spec.json", "{}\n")), ["qa"])
+
+
 class QaPassRefusals(Base):
     def test_open_blocking_findings_are_refused(self):
         c, env = qa_reviewed(self.root, "feat-a", head(self.root), open_blocking=2)
@@ -71,6 +92,28 @@ class QaPassRefusals(Base):
         c, env = self.st("qa-pass", "feat-a", "--sha", "HEAD", "--review", rel)
         self.assertEqual(c, 3, env)
         self.assertIn("does not name the reviewed commit", env["errors"][0]["message"])
+
+    def test_two_counts_are_refused(self):  # QA F2
+        rel = "docs/spec/changes/feat-a/qa/REVISION_PR_3.md"
+        g.write(self.root, rel, "- Reviewed commit: %s\n- Open blocking findings: 5\n- Open blocking findings: 0\n"
+                % head(self.root))
+        c, env = self.st("qa-pass", "feat-a", "--sha", "HEAD", "--review", rel)
+        self.assertEqual(c, 3, env)
+        self.assertIn("exactly one", env["errors"][0]["message"])
+
+    @unittest.skipIf(os.name == "nt", "symlinks need privilege on Windows")
+    def test_a_symlink_out_of_qa_is_refused(self):  # QA F2
+        g.write(self.root, "elsewhere.md", "- Reviewed commit: %s\n- Open blocking findings: 0\n" % head(self.root))
+        d = self.root / "docs/spec/changes/feat-a/qa"
+        d.mkdir(parents=True, exist_ok=True)
+        os.symlink(str(self.root / "elsewhere.md"), str(d / "R.md"))
+        c, env = self.st("qa-pass", "feat-a", "--sha", "HEAD", "--review", "docs/spec/changes/feat-a/qa/R.md")
+        self.assertEqual(c, 3, env)
+
+    def test_an_undeclared_repo_is_refused(self):  # QA F5
+        c, env = qa_reviewed(self.root, "feat-a", "a" * 40, repo="not-declared")
+        self.assertEqual(c, 3, env)
+        self.assertIn("not declared", env["errors"][0]["message"])
 
     def test_a_review_outside_the_change_is_refused(self):
         g.write(self.root, "REVIEW.md", "- Reviewed commit: %s\n- Open blocking findings: 0\n" % head(self.root))

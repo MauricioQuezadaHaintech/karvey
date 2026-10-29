@@ -19,7 +19,7 @@ review that covers it; QA is the agent's work, never a new question to the human
 - `karvey-state.py qa-pass <change> --sha <head> --review <qa/REVISION_PR_*.md> [--repo]` — records in the release ledger that a `/karvey-qa` review covers that commit; refused when the review is outside the change's `qa/`, does not name the commit (`- Reviewed commit:`) or has open blocking findings (`- Open blocking findings (critical/high): N`).
 
 ### Changed
-- approval-by-name F-16 (BUG-167, D-55) — `check-prod` (what the prod-gate reads) requires a QA review of the released commit, or of an ancestor whose delta touches only docs; carrying or binding the approval does not. karvey-qa records `qa-pass`, takes the QA approval from the approved plan and advances to deploy without asking (D-54); karvey-deploy and the hotfix lane require the QA review (hotfix scope: Dimensions 1, 2, 4, 6 plus the regression test); `rules/enforcement.md` states it.
+- approval-by-name F-16 (BUG-167, D-55) — `check-prod` (what the prod-gate reads) requires a QA review of the released commit, or of an ancestor whose delta touches only `docs/**` or a root `*.md` (a rename counts as delete + add; skills, rules and other `.md` are code); carrying or binding the approval does not. karvey-qa records `qa-pass`, takes the QA approval from the approved plan and advances to deploy without asking (D-54); karvey-deploy and the hotfix lane require the QA review (hotfix scope: Dimensions 1, 2, 4, 6 plus the regression test); `rules/enforcement.md` states it.
 
 > 👤 Human owner: Mauricio Quezada Ibáñez <mauricio.quezada@haintech.cl>
 > 🤖 AI-assisted: Claude Opus 5.5

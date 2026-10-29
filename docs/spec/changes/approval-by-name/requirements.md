@@ -300,8 +300,8 @@ WHEN the prod-gate resolves the run of an Azure Pipelines approval it SHALL call
 
 ### 7.1 REQ-AN-034 — The released commit is covered by a QA review
 `check-prod` SHALL refuse a release (missing `qa`) unless the release ledger holds a QA review recorded with `qa-pass`
-for the released commit, or for an ancestor of it whose delta touches only `docs/**`, `*.md` or `spec.json`. `qa-pass`
-SHALL refuse a review outside `docs/spec/changes/<id>/qa/`, one that does not name the commit, and one with open
+for the released commit, or for an ancestor of it whose delta touches only `docs/**` or a `*.md` at the repo root (renames counted as delete + add). `qa-pass`
+SHALL refuse a review outside `docs/spec/changes/<id>/qa/` (symlinks included), one that does not name the commit, one with other than exactly one count line, a `--repo` the change does not declare, and one with open
 blocking findings. Carrying or binding a production approval SHALL NOT ask for QA. The refusal SHALL name the
 `qa-pass` command and say the human is not asked.
 
