@@ -80,6 +80,17 @@ class QaBeforeProd(Base):
         self.assertEqual(self.code_after_review(lambda: g.write(self.root, "src/conf/spec.json", "{}\n")), ["qa"])
 
 
+class ProjectPlanIsTheProdApproval(Base):
+    def test_a_plan_approved_for_the_whole_project_releases_the_change(self):  # BUG-168 (D-54)
+        ap.write_marker(self.root, "plan", ap.SCOPE_PROJECT, "aprobado", session_id="s9")
+        c, env = self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20", "--sha", "HEAD")
+        self.assertEqual(c, 0, env)
+        self.assertEqual(env["result"]["prod"]["evidence"]["marker"], "approvals/_project.json")
+        qa_reviewed(self.root, "feat-a", head(self.root))
+        c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
+        self.assertEqual(c, 0, env)
+
+
 class QaPassRefusals(Base):
     def test_open_blocking_findings_are_refused(self):
         c, env = qa_reviewed(self.root, "feat-a", head(self.root), open_blocking=2)

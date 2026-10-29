@@ -1265,9 +1265,11 @@ def check_prod(root, change, sha=None, now=None, repo=None, qa=True):
         if not (isinstance(prod.get("ref"), str) and PROD_REF.match(prod["ref"])):
             res["missing"].append("ref")
         ev = prod.get("evidence") if isinstance(prod.get("evidence"), dict) else {}
-        if ev.get("marker") != approval.marker_rel(change):
+        # D-54 (BUG-168): a plan approved for the whole project is the production approval of each change in it
+        ev_scope = approval.SCOPE_PROJECT if ev.get("marker") == approval.marker_rel(approval.SCOPE_PROJECT) else change
+        if ev.get("marker") != approval.marker_rel(ev_scope):
             res["missing"].append("evidence")
-        elif not approval.audit_record_of(root, change, ev):  # D-34
+        elif not approval.audit_record_of(root, ev_scope, ev):  # D-34
             res["missing"].append("audit")
             reasons.append("no audit record of the approval hook matches its marker (prompt hash, session, time): "
                            "the approval was not given through the human's own message")

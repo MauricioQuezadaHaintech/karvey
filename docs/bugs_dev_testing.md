@@ -2472,3 +2472,35 @@ Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
 |------|-------|------------------------|------|
 | 2026-10-29 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.4 |
 
+## BUG-168 — A plan approved for the whole project did not count as the production approval
+- **Priority:** high
+- **Detected:** 2026-10-29 · **Component:** plugins/karvey/scripts/karvey-state.py (`check_prod`)
+- **Change / origin:** approval-by-name — finding F-17
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+The human approves the plan with a bare «aprobado» (the hook records `plan, _project`); the agent runs
+`approve <change> prod --sha <head>` (D-54 plan fallback: recorded) → `check-prod` → `MISSING: evidence`.
+
+### Actual vs expected
+- Actual: `check_prod` required the evidence marker to be `approvals/<change>.json` and the audit line of that scope;
+  the project-wide plan marker is `approvals/_project.json`, so the D-54 path worked only when the plan named the change.
+- Expected (D-54): the approved plan is the production approval, whatever its scope.
+
+### Root cause
+3.13.3 added the plan fallback to `approve` and the plan reason to the audit cross-check, but not the project scope to
+the evidence check in `check_prod`.
+
+### Fix
+`check_prod` accepts the project plan marker as evidence and checks the audit line of that scope.
+
+### Regression test
+`plugins/karvey/tests/unit/test_qa_before_prod.py` (`ProjectPlanIsTheProdApproval`); red without the fix. Indexed in
+`plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-29 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.4 |
+
