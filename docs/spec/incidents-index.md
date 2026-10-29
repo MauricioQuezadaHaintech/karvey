@@ -88,6 +88,7 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | BUG-164 | karvey | critical | The human's approval expired, was refused and was asked for again four times | approval-by-name / F-14 | RESUELTO | plugins/karvey/tests/unit/test_bug164_one_approval.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | approval-by-name (hotfix 3.13.3) |
 | BUG-165 | karvey | medium | A read-only find was blocked by protect-paths | approval-by-name / F-14 | RESUELTO | plugins/karvey/tests/unit/test_bug164_one_approval.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | approval-by-name (hotfix 3.13.3) |
 | BUG-166 | karvey | high | The pipeline-approval check asked Azure DevOps without a token resource and blocked every approval | approval-by-name / F-15 | RESUELTO | plugins/karvey/tests/unit/test_prodgate_pipeline.py (indexed in plugins/karvey/tests/regression/test_incidents.py) | approval-by-name (hotfix 3.13.3) |
+| BUG-167 | karvey | high | A release reached production without a QA review | approval-by-name / F-16 | RESUELTO | plugins/karvey/tests/unit/test_qa_before_prod.py, table pg7-01 (indexed in plugins/karvey/tests/regression/test_incidents.py) | approval-by-name (hotfix 3.13.4) |
 
 ## Summary by state
 
@@ -96,7 +97,7 @@ Last updated: 2026-10-05 (prod-gate-scope, hotfix 3.12.1: BUG-138..144 RESUELTO 
 | DETECTADO | 0 | — |
 | DIAGNOSTICADO | 0 | — |
 | EN FIX | 0 | — |
-| RESUELTO | 80 | BUG-01 .. BUG-51, BUG-138 .. BUG-166 |
+| RESUELTO | 81 | BUG-01 .. BUG-51, BUG-138 .. BUG-167 |
 | REABIERTO | 0 | — |
 
-Next number: **BUG-166** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).
+Next number: **BUG-168** (BUG-52 .. BUG-137 are held by other branches; check every branch before adding one).

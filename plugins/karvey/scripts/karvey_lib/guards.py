@@ -2132,7 +2132,7 @@ def _evaluate_candidate(ctx, c, deadline):
         pending = []
         for o in others:
             try:
-                if not tool.check_prod(root, o)["ok"]:
+                if not tool.check_prod(root, o, qa=False)["ok"]:
                     pending.append(o)
             except Exception:
                 pending.append(o)

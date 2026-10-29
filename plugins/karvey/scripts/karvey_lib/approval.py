@@ -613,6 +613,18 @@ def record_prod(root, change, approval):
     return _update_ledger(root, change, "prod", approval)
 
 
+def record_qa(root, change, entry):
+    """D-55: append a QA review that covers one commit to the ledger's ``qa`` list."""
+    data, status = read_ledger(root, change)
+    if status == "corrupt":
+        raise ApprovalError("release ledger of %s is corrupt; not overwritten" % change)
+    qa = list(data.get("qa")) if status == "ok" and isinstance(data.get("qa"), list) else []
+    qa.append(entry)
+    _audit(root, {"guard": "approval", "event": "qa", "decision": "recorded", "reason": change,
+                  "sha": entry.get("head_sha"), "review": entry.get("review")})
+    return _update_ledger(root, change, "qa", qa)
+
+
 def supersede_prod(root, change, at, reason, ref=None):
     """D-36: a reopen moves the ledger's prod approval to ``superseded[]``. Returns the moved record,
     or None when there is none. A corrupt ledger is left alone (check-prod already refuses it)."""

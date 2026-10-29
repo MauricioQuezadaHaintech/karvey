@@ -86,6 +86,7 @@ class ApproveOnce(unittest.TestCase):
         c, env = self.approve(second)  # the agent carries it; no human message in between
         self.assertEqual(c, 0, env)
         self.assertTrue(env["result"]["followup"])
+        _state.qa_reviewed(self.repo, CID, second)  # D-55: the follow-up commit is QA-reviewed by the agent
         c, env = self.st("check-prod", CID, "--sha", second)
         self.assertEqual(c, 0, env)
         fol = approval.read_ledger(self.repo, CID)[0]["prod"]["followups"]

@@ -296,3 +296,14 @@ WHEN the prod-gate resolves the run of an Azure Pipelines approval it SHALL call
 
 *Trace: F-15 · BUG-166 · REQ-HF-012*
 
+## Requirement 7: No production without QA (BUG-167, D-55, hotfix 3.13.4)
+
+### 7.1 REQ-AN-034 — The released commit is covered by a QA review
+`check-prod` SHALL refuse a release (missing `qa`) unless the release ledger holds a QA review recorded with `qa-pass`
+for the released commit, or for an ancestor of it whose delta touches only `docs/**`, `*.md` or `spec.json`. `qa-pass`
+SHALL refuse a review outside `docs/spec/changes/<id>/qa/`, one that does not name the commit, and one with open
+blocking findings. Carrying or binding a production approval SHALL NOT ask for QA. The refusal SHALL name the
+`qa-pass` command and say the human is not asked.
+
+*Trace: F-16 · BUG-167 · D-55*
+

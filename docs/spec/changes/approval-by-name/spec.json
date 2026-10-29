@@ -22,10 +22,11 @@
     "D-47",
     "D-50",
     "D-52",
-    "D-54"
+    "D-54",
+    "D-55"
   ],
   "inputs": {},
-  "iteration_count": 6,
+  "iteration_count": 7,
   "revision_history": [
     {
       "date": "2026-10-07",
@@ -131,6 +132,13 @@
       "findings": [
         "F-14"
       ]
+    },
+    {
+      "date": "2026-10-29",
+      "finding": "F-16",
+      "bug": "BUG-167",
+      "release": "3.13.4",
+      "reason": "The owner: no PR reaches production without a QA process. The prod-gate now requires a QA review (qa-pass) covering the released commit; hotfixes and follow-up commits included; the agent does it without asking."
     }
   ],
   "schema_version": 1,

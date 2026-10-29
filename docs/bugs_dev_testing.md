@@ -2437,3 +2437,38 @@ red without the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-10-27 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.3 |
+
+## BUG-167 — A release reached production without a QA review
+- **Priority:** high
+- **Detected:** 2026-10-29 · **Component:** plugins/karvey/scripts/karvey-state.py (`check_prod`), karvey-qa, karvey-deploy
+- **Change / origin:** approval-by-name — finding F-16
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Approve a hotfix or a follow-up commit for production and merge it: the prod-gate allows it with no QA review of that
+commit (3.13.1, 3.13.2 and 3.13.3 themselves went out through the hotfix lane without `/karvey-qa`).
+
+### Actual vs expected
+- Actual: `check-prod` asked only for the human's approval bound to the commit; the hotfix lane listed fix + BUG-NN +
+  regression test, and a follow-up commit was carried into the approval with no review of its delta.
+- Expected (D-55): no commit reaches production unless a QA review recorded for it (or for an ancestor whose delta is
+  docs only) exists.
+
+### Root cause
+QA was a phase of the change's flow, not a condition of the release: nothing in the gate checked it.
+
+### Fix
+New `karvey-state.py qa-pass` records a review (it must name the commit and have 0 open blocking findings) in the
+release ledger; `check_prod` requires one covering the released commit; karvey-qa, karvey-deploy, the hotfix lane and
+`rules/enforcement.md` say so.
+
+### Regression test
+`plugins/karvey/tests/unit/test_qa_before_prod.py`, table `pg7-01-approved-but-no-qa-review-blocks`; red on e0731f4.
+Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-29 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.4 |
+
