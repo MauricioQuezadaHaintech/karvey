@@ -125,7 +125,7 @@ class HumanApproves(Base):
     def test_bare_apruebo_records_every_listed_change_bound_to_its_commit(self):
         res = self.propose_both()
         out = self.prompt("apruebo")
-        self.assertIn("[karvey] production approval recorded: web-search@%s, api-rate-limit@%s (expires "
+        self.assertIn("[karvey] production approval recorded: web-search@%s, api-rate-limit@%s (valid until "
                       % (head(self.web)[:7], head(self.api)[:7]), out)
         self.assertIn(res["shown_id"], out)
         mw, ma = marker(self.web, "web-search"), marker(self.api, "api-rate-limit")
@@ -223,11 +223,11 @@ class Security(Base):
         self.assertIn("NOT approved: the proposal changed after it was shown (hash mismatch)", out)
         self.assertNotEqual((marker(self.web, "web-search") or {}).get("kind"), "prod")
 
-    def test_a_stale_proposal_is_refused(self):
-        self._write(now=approval.now_dt() - approval.timedelta(minutes=61))
+    def test_a_proposal_answered_the_next_day_is_approved(self):  # BUG-164: no clock on a proposal
+        self._write(now=approval.now_dt() - approval.timedelta(hours=26))
         out = self.prompt("apruebo")
-        self.assertIn("NOT approved: the proposal expired", out)
-        self.assertNotEqual((marker(self.web, "web-search") or {}).get("kind"), "prod")
+        self.assertIn("[karvey] production approval recorded: web-search@", out)
+        self.assertEqual((marker(self.web, "web-search") or {}).get("kind"), "prod")
 
     def test_the_transcript_must_show_the_proposal(self):
         res = self.propose_both()
@@ -248,7 +248,7 @@ class Security(Base):
         self.propose_both()
         g.run(["rm", "-q", "-r", "docs/spec/changes/api-rate-limit"], self.api)
         out = self.prompt("apruebo")
-        self.assertIn("[karvey] production approval recorded: web-search@%s (expires" % head(self.web)[:7], out)
+        self.assertIn("[karvey] production approval recorded: web-search@%s (valid until" % head(self.web)[:7], out)
         self.assertNotIn("api-rate-limit@", out)
         self.assertIn("[karvey] production approval NOT recorded: api-rate-limit (", out)
         self.assertIsNone(marker(self.api, "api-rate-limit"))

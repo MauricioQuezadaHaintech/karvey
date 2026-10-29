@@ -57,7 +57,7 @@ The table below is generated from `state-machine.json`; do not edit it by hand (
   `revision_history`, so the downstream gates run again. The release-ledger prod approval is superseded
   too (D-36): the human gives it again after the rework.
 - A prod approval (`approve … prod [--sha <head>]`) is bound to the head commit the human approved (the one
-  the release proposal listed, D-50) and is valid 24 h after the OK (D-35); `check-prod … --sha <commit>` answers whether that commit may be released.
+  the release proposal listed, D-50) and is valid until the change is archived — no clock (D-54); `check-prod … --sha <commit>` answers whether that commit may be released.
 - `validate` checks the file against the schema and the graph; `validate --fix` migrates legacy shapes after
   printing the diff.
 

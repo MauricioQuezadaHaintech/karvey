@@ -62,6 +62,15 @@ class Pipelines(World):
         self.run_of("main", self.m)
         self.assertAllow(self.run_gate(self.cmd, self.web), "change=feat-a")
 
+    def test_the_approval_lookup_asks_for_an_azure_devops_token(self):  # BUG-166
+        self.approve(self.web, "feat-a", self.h)
+        self.run_of("main", self.m)
+        self.run_gate(self.cmd, self.web)
+        rest = [c[0] for c in self.calls if c[0][:2] == ["az", "rest"]]
+        self.assertTrue(rest)
+        self.assertIn("--resource", rest[0])
+        self.assertEqual(rest[0][rest[0].index("--resource") + 1], "499b84ac-1321-427f-aa17-267ca6975798")
+
     def test_without_approval_blocks(self):
         self.run_of("main", self.m)
         self.assertBlock(self.run_gate(self.cmd, self.web))

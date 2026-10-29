@@ -104,7 +104,7 @@ class ByName(Base):
     def test_named_change_here_wins_over_a_clone_holding_the_same_id(self):
         karvey_repo(self.dev / "app-other", "web-search")
         out = self.prompt("aprobado para producción web-search")
-        self.assertIn("[karvey] approval recorded (prod, web-search, expires", out)
+        self.assertIn("[karvey] approval recorded (prod, web-search, valid until", out)
         self.assertIsNotNone(marker(self.web, "web-search"))
 
     def test_no_change_named_keeps_the_single_active_change(self):
@@ -191,7 +191,7 @@ class D1OnBug158(Base):
     def test_d1_a_hyphenless_id_is_recorded_in_a_session_inside_its_clone(self):
         self.add(self.api, "billing")
         out = self.prompt("aprobado para producción billing", cwd=self.api)
-        self.assertIn("[karvey] approval recorded (prod, billing, expires", out)
+        self.assertIn("[karvey] approval recorded (prod, billing, valid until", out)
         self.assertIsNotNone(marker(self.api, "billing"))
 
     def test_d1_another_clone_is_reached_only_by_the_id_after_the_production_word(self):

@@ -21,10 +21,11 @@
     "D-35",
     "D-47",
     "D-50",
-    "D-52"
+    "D-52",
+    "D-54"
   ],
   "inputs": {},
-  "iteration_count": 5,
+  "iteration_count": 6,
   "revision_history": [
     {
       "date": "2026-10-07",
@@ -110,6 +111,25 @@
       ],
       "findings": [
         "F-13"
+      ]
+    },
+    {
+      "date": "2026-10-27",
+      "by": "owner decision (D-54), recorded by the agent",
+      "reason": "On 3.13.2 a release stayed blocked: the owner's «Si», «Te dije si» and «apruebo» were refused (the proposal expired after 60 min) and the agent asked again four times. One approval, the plan's; nothing the human approved expires by time; an answer is never lost; reading is never blocked. Folded into the open change as hotfix 3.13.3.",
+      "decision": "D-54",
+      "added": [
+        "REQ-AN-029",
+        "REQ-AN-030",
+        "REQ-AN-031",
+        "REQ-AN-032"
+      ],
+      "revised": [
+        "REQ-AN-017",
+        "REQ-AN-025"
+      ],
+      "findings": [
+        "F-14"
       ]
     }
   ],
@@ -215,7 +235,7 @@
     }
   },
   "created_at": "2026-10-07T15:14:32+00:00",
-  "updated_at": "2026-10-07T15:51:54+00:00",
+  "updated_at": "2026-10-27T12:00:00+00:00",
   "skipped": {
     "mockup": "hotfix lane, no UI: approval hook, state tool text and skill text only",
     "design_graphic": "no UI (hook and CLI text only)",

@@ -374,8 +374,8 @@
           "x-karvey-note": "the head commit the human approved (D-35)"
         },
         "expires_at": {
-          "type": "string",
-          "x-karvey-note": "the OK + 24 h (D-35)"
+          "type": ["string", "null"],
+          "x-karvey-note": "null since 3.13.3: no clock, valid until the change is archived (D-54); a string is a legacy value and is ignored"
         },
         "evidence": {
           "$ref": "#/$defs/evidence"

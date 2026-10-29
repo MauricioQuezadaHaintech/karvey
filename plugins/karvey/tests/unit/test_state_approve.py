@@ -94,10 +94,15 @@ class Prod(Base):
     def test_without_prod_marker_refused(self):
         self.refused(("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20"),
                      "prod-kind approval marker")
-        ap.write_marker(self.root, "plan", "feat-a", "aprobado")  # a plan marker is not a prod approval (D-10)
-        self.refused(("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20"),
-                     "prod-kind approval marker")
         self.assertEqual(ap.read_ledger(self.root, "feat-a"), (None, "missing"))
+
+    def test_d54_the_approved_plan_is_the_production_approval(self):
+        ap.write_marker(self.root, "plan", "feat-a", "aprobado")  # BUG-164: one approval, the plan's
+        c, env = self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        self.assertEqual(c, 0, env)
+        self.assertEqual(ap.read_ledger(self.root, "feat-a")[0]["prod"]["head_sha"], head(self.root))
+        m, _ = ap.read_marker(self.root, "feat-a")
+        self.assertTrue(ap.check_marker(m, self.root, kinds=("plan",))[0])  # the plan approval is not consumed
 
     def test_prose_ref_refused(self):
         ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
@@ -117,7 +122,8 @@ class Prod(Base):
 
     def test_write_spec_copies_the_ledger(self):
         ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
-        self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        c, env = self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        self.assertEqual(c, 0, env)
         c, env = self.st("approve", "feat-a", "prod", "--write-spec")
         self.assertEqual(c, 0, env)
         led, _ = ap.read_ledger(self.root, "feat-a")
@@ -337,7 +343,7 @@ class ProdShaBinding(Base):
     def test_records_head_and_expiry(self):
         m, p = self.approve()
         self.assertEqual(p["head_sha"], head(self.root))
-        self.assertEqual(ap.parse_dt(p["expires_at"]) - ap.parse_dt(m["created_at"]), ap.timedelta(hours=24))
+        self.assertIsNone(p["expires_at"])  # D-54 (BUG-164): no clock
 
     def test_sha_option_names_another_commit(self):
         first = head(self.root)
@@ -361,15 +367,13 @@ class ProdShaBinding(Base):
         self.assertIn("sha", env["result"]["missing"])
         self.assertIn("not the approved commit", env["result"]["reason"])
 
-    def test_expired_approval_refused(self):
+    def test_an_old_approval_still_counts(self):  # D-54 (BUG-164): time never voids the human's approval
         self.approve()
         led, _ = ap.read_ledger(self.root, "feat-a")
-        led["prod"]["expires_at"] = "2020-01-01T00:00:00+00:00"
+        led["prod"]["expires_at"] = "2020-01-01T00:00:00+00:00"  # a legacy 24 h stamp is ignored
         ap.record_prod(self.root, "feat-a", led["prod"])
         c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
-        self.assertEqual(c, 1)
-        self.assertIn("expired", env["result"]["missing"])
-        self.assertIn("expired", env["result"]["reason"])
+        self.assertEqual(c, 0, env)
 
     def test_ledger_without_sha_or_expiry_refused(self):
         self.approve()
@@ -378,7 +382,7 @@ class ProdShaBinding(Base):
         ap.record_prod(self.root, "feat-a", led["prod"])
         c, env = self.st("check-prod", "feat-a")
         self.assertEqual(c, 1)
-        self.assertTrue({"sha", "expired"} <= set(env["result"]["missing"]), env["result"])
+        self.assertEqual(env["result"]["missing"], ["sha"], env["result"])
 
 
 class ReopenSupersedesProd(Base):

@@ -42,7 +42,7 @@ KINDS = ("plan", "prod")
 SCOPE_PROJECT = "_project"
 EXCERPT_MAX = 80
 CONSUMED_KEEP_H = 24
-PROD_VALID_H = 24  # D-35: a prod approval is valid 24 h after the human's OK
+PROD_VALID_H = None  # D-54 (BUG-164): no clock; a prod approval lasts until it is used, withdrawn or the change is archived
 COMPAT_ENV = "KARVEY_COMPAT_MARKER"
 _SCOPE_RE = re.compile(r"^(_project|[a-z0-9][a-z0-9-]{1,62})$")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -224,9 +224,6 @@ def check_marker(marker, root, scope=None, ttl_min=None, now=None, kinds=KINDS):
     if created is None:
         return False, "bad created_at"
     now = now or now_dt()
-    if "plan" not in kinds:  # D-47 / D-35: a production OK counts 24 h; a plan approval has no time limit
-        if now - created > timedelta(hours=PROD_VALID_H):
-            return False, "expired (older than %d h)" % PROD_VALID_H
     if created - now > timedelta(minutes=5):
         return False, "created in the future"
     return True, "ok"
@@ -425,8 +422,8 @@ def audit_record_of(root, scope, ev):
     except OSError:
         return False
     for r in records:
-        if (r.get("guard"), r.get("event"), r.get("decision"), r.get("reason")) != \
-                ("approval", "marker", "recorded", "prod"):
+        if (r.get("guard"), r.get("event"), r.get("decision")) != ("approval", "marker", "recorded") or \
+                r.get("reason") not in ("prod", "plan"):  # D-54: the approved plan is the production approval
             continue
         if r.get("change") == scope and r.get("prompt_sha256") == ev["prompt_sha256"] and \
                 r.get("session_id", "") == ev.get("session", "") and r.get("created_at") == ev["marker_created_at"]:
@@ -436,10 +433,10 @@ def audit_record_of(root, scope, ev):
 
 def prod_record(marker, scope, by, ref, date, head_sha):
     """The ledger record of a human prod approval (D-03, D-34, D-35): who, when, evidence, the
-    approved head commit and ``expires_at`` = the human's OK (the marker) + 24 h."""
+    approved head commit; ``expires_at`` stays None: no clock (D-54, BUG-164)."""
     created = parse_dt((marker or {}).get("created_at")) or now_dt()
     return {"by": by, "role": "human", "date": date, "ref": ref, "head_sha": head_sha,
-            "expires_at": iso(created + timedelta(hours=PROD_VALID_H)), "evidence": evidence(marker, scope)}
+            "expires_at": None, "evidence": evidence(marker, scope)}
 
 
 # --------------------------------------------------------------------------- notify confirmation (D-16)
@@ -709,12 +706,14 @@ def find_term(text, terms):
 
 _ACCENTED_SI = re.compile(r"(?<![\w])s[\u00ed\u00cd](?![\w])")
 _BARE_SI = re.compile(r"^si(?:\s*[,.!;:]|\s*$)")
+_SHORT_SI = re.compile(r"^(?:\w+\s+){0,3}si\s*[.!]*$")  # BUG-164: «te dije si», «ya dije que si»
 
 
 def _affirmative_si(raw, cleaned):
     """BUG-42: "si" approves only as the affirmative: written "sí" (accent kept), or a bare "si" that is the
     whole reply or opens it followed by punctuation. The conditional "si" ("revisa si …") never does."""
-    return bool(_ACCENTED_SI.search(unicodedata.normalize("NFC", strip_quoted(raw)))) or bool(_BARE_SI.match(cleaned))
+    return bool(_ACCENTED_SI.search(unicodedata.normalize("NFC", strip_quoted(raw)))) or bool(_BARE_SI.match(cleaned)) \
+        or bool(_SHORT_SI.match(cleaned))
 
 
 def classify(prompt, vocab=None):
@@ -1137,7 +1136,7 @@ def write_proposal(anchor, items, ttl_min=None, now=None):
     ttl = PROPOSAL_TTL_MIN if not isinstance(ttl_min, int) or isinstance(ttl_min, bool) else max(lo, min(hi, ttl_min))
     p = {"v": PROPOSAL_VERSION, "kind": PROPOSAL_KIND, "session_tree": os.path.realpath(str(anchor)),
          "created_at": now.isoformat(timespec="microseconds"),
-         "expires_at": (now + timedelta(minutes=ttl)).isoformat(timespec="microseconds"),
+         "expires_at": None,  # D-54 (BUG-164): a proposal never expires by time
          "items": [{"change": i["change"], "repo": i["repo"], "pr": i["pr"], "sha": i["sha"],
                     "effect": i.get("effect") or ""} for i in items]}
     p["id"] = proposal_id(p)
@@ -1166,7 +1165,7 @@ def proposal_pending(p):
 
 def check_proposal(p, anchor, now=None):
     """``(ok, reason)``: the proposal is intact (its id is the hash of its content), of this session's project,
-    created before the human's message and not expired."""
+    created before the human's message. It never expires by time (D-54, BUG-164)."""
     if not isinstance(p, dict) or p.get("v") != PROPOSAL_VERSION or p.get("kind") != PROPOSAL_KIND:
         return False, "forged or corrupt proposal"
     if not isinstance(p.get("id"), str) or p["id"] != proposal_id(p):
@@ -1179,14 +1178,12 @@ def check_proposal(p, anchor, now=None):
             isinstance(i.get("repo"), str) and isinstance(i.get("sha"), str) and _SHA_FULL.match(i["sha"])
             for i in items):
         return False, "forged or corrupt proposal"
-    created, expires = parse_dt(p.get("created_at")), parse_dt(p.get("expires_at"))
-    if created is None or expires is None:
+    created = parse_dt(p.get("created_at"))
+    if created is None:
         return False, "forged or corrupt proposal"
     now = now or now_dt()
     if created > now:
         return False, "the proposal was created after your message"
-    if now > expires:
-        return False, "the proposal expired at %s" % expires.strftime("%H:%M")
     return True, "ok"
 
 
@@ -1210,18 +1207,16 @@ def close_proposal(anchor, status, now=None, recorded=None, reason=None):
 def proposal_block(p, lang="es"):
     """The «Esta aprobación implica:» block the agent shows the human verbatim."""
     pid = (p.get("id") or "")[:PROPOSAL_ID_SHOWN]
-    exp = parse_dt(p.get("expires_at"))
-    until = exp.strftime("%H:%M") if exp else "?"
     lines = ["Esta aprobación implica:" if lang == "es" else "This approval implies:"]
     for n, i in enumerate(p.get("items") or [], 1):
         lines.append("  %d. %s · %s · PR #%s · commit %s · %s" % (n, i["change"], i["repo"], i["pr"], i["sha"][:7],
                                                               i.get("effect") or ""))
     if lang == "es":
-        lines.append("Propuesta %s · vence %s. Responde «apruebo» (u «ok», «dale») para aprobarla completa; "
-                     "«detente» la cancela." % (pid, until))
+        lines.append("Propuesta %s. Responde «apruebo» (u «ok», «dale», «sí») cuando quieras para aprobarla completa; "
+                     "«detente» la cancela." % pid)
     else:
-        lines.append("Proposal %s · expires %s. Reply «apruebo» (or «ok», «dale») to approve all of it; «stop» "
-                     "cancels it." % (pid, until))
+        lines.append("Proposal %s. Reply «apruebo» (or «ok», «dale», «yes») whenever you want to approve all of it; "
+                     "«stop» cancels it." % pid)
     return "\n".join(lines)
 
 
