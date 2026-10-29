@@ -2132,7 +2132,7 @@ def _evaluate_candidate(ctx, c, deadline):
         pending = []
         for o in others:
             try:
-                if not tool.check_prod(root, o)["ok"]:
+                if not tool.check_prod(root, o, qa=False)["ok"]:
                     pending.append(o)
             except Exception:
                 pending.append(o)
@@ -2303,15 +2303,20 @@ def _evaluate_pipeline(ctx, c, deadline):
             return _pg_block(None, "sha", "cannot verify the production approval: the run's commit %s is not in the "
                                           "local clone %s; fetch it and retry" % (sha[:12], root))
         covered = set(parents.split())
-        hit = None
+        hit, no_qa = None, None
         for ch in pj.list_changes(root):
             try:
                 res = state_tool().check_prod(root, ch["id"])
             except Exception:
                 continue
-            if res.get("ok") and res.get("head_sha") in covered:
-                hit = (ch["id"], res)
-                break
+            if res.get("head_sha") in covered:
+                if res.get("ok"):
+                    hit = (ch["id"], res)
+                    break
+                if res.get("missing") == ["qa"]:  # D-55: approved, but no QA review of that commit
+                    no_qa = (ch["id"], res)
+        if hit is None and no_qa is not None:
+            return _pg_block(no_qa[0], "qa", "cannot verify the production approval: %s" % no_qa[1].get("reason"))
         if hit is None:
             return _pg_block(None, "approval", "cannot verify the production approval: no change's live production "
                                                "approval covers the run's commit %s (the approved head or a merge of "

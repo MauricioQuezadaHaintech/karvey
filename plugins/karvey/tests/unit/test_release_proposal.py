@@ -263,6 +263,7 @@ class StateTool(Base):
         self.assertEqual(c, 0, env)
         self.assertEqual(env["result"]["prod"]["head_sha"], head(self.web))
         self.assertEqual(env["result"]["prod"]["evidence"]["proposal_sha"], head(self.web))
+        _state.qa_reviewed(self.web, "web-search", head(self.web))  # D-55
         c, env = _state.run_json("check-prod", "web-search", "--sha", head(self.web), cwd=self.web)
         self.assertEqual(c, 0, env)
         c, env = _state.run_json("approve", "api-rate-limit", "prod", "--by", "M", "--role", "human", "--ref",
@@ -282,6 +283,7 @@ class StateTool(Base):
         self.assertEqual(c, 0, env)
         prod = env["result"]["prod"]
         self.assertEqual((prod["head_sha"], prod["followups"][0]["from"]), (head(self.web), listed))
+        _state.qa_reviewed(self.web, "web-search", head(self.web))  # D-55
         c, env = _state.run_json("check-prod", "web-search", "--sha", head(self.web), cwd=self.web)
         self.assertEqual(c, 0, env)
 

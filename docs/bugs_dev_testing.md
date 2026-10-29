@@ -2437,3 +2437,72 @@ red without the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-10-27 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.3 |
+
+## BUG-167 — A release reached production without a QA review
+- **Priority:** high
+- **Detected:** 2026-10-29 · **Component:** plugins/karvey/scripts/karvey-state.py (`check_prod`), karvey-qa, karvey-deploy
+- **Change / origin:** approval-by-name — finding F-16
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Approve a hotfix or a follow-up commit for production and merge it: the prod-gate allows it with no QA review of that
+commit (3.13.1, 3.13.2 and 3.13.3 themselves went out through the hotfix lane without `/karvey-qa`).
+
+### Actual vs expected
+- Actual: `check-prod` asked only for the human's approval bound to the commit; the hotfix lane listed fix + BUG-NN +
+  regression test, and a follow-up commit was carried into the approval with no review of its delta.
+- Expected (D-55): no commit reaches production unless a QA review recorded for it (or for an ancestor whose delta is
+  docs only) exists.
+
+### Root cause
+QA was a phase of the change's flow, not a condition of the release: nothing in the gate checked it.
+
+### Fix
+New `karvey-state.py qa-pass` records a review (it must name the commit and have 0 open blocking findings) in the
+release ledger; `check_prod` requires one covering the released commit; karvey-qa, karvey-deploy, the hotfix lane and
+`rules/enforcement.md` say so.
+
+### Regression test
+`plugins/karvey/tests/unit/test_qa_before_prod.py`, table `pg7-01-approved-but-no-qa-review-blocks`; red on e0731f4.
+Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-29 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.4 |
+
+## BUG-168 — A plan approved for the whole project did not count as the production approval
+- **Priority:** high
+- **Detected:** 2026-10-29 · **Component:** plugins/karvey/scripts/karvey-state.py (`check_prod`)
+- **Change / origin:** approval-by-name — finding F-17
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+The human approves the plan with a bare «aprobado» (the hook records `plan, _project`); the agent runs
+`approve <change> prod --sha <head>` (D-54 plan fallback: recorded) → `check-prod` → `MISSING: evidence`.
+
+### Actual vs expected
+- Actual: `check_prod` required the evidence marker to be `approvals/<change>.json` and the audit line of that scope;
+  the project-wide plan marker is `approvals/_project.json`, so the D-54 path worked only when the plan named the change.
+- Expected (D-54): the approved plan is the production approval, whatever its scope.
+
+### Root cause
+3.13.3 added the plan fallback to `approve` and the plan reason to the audit cross-check, but not the project scope to
+the evidence check in `check_prod`.
+
+### Fix
+`check_prod` accepts the project plan marker as evidence and checks the audit line of that scope; the delta QA asked
+for two limits, applied: a stop said after that plan withdraws it (D-47), and a plan older than the change does not
+release it.
+
+### Regression test
+`plugins/karvey/tests/unit/test_qa_before_prod.py` (`ProjectPlanIsTheProdApproval`); red without the fix. Indexed in
+`plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-10-29 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.4 |
+

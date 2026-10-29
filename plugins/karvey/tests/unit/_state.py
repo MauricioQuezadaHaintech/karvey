@@ -32,6 +32,18 @@ def run_json(*argv, cwd=None):
     return code, json.loads(out)
 
 
+def qa_reviewed(root, change, sha, repo=None, open_blocking=0):
+    """D-55: write a karvey-qa review of ``sha`` under the change and record it with ``qa-pass``."""
+    rel = "docs/spec/changes/%s/qa/REVISION_PR_1_20261029.md" % change
+    path = os.path.join(str(root), rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("# Code Review — %s\n\n## General Information\n- Reviewed commit: %s\n"
+                 "- Open blocking findings (critical/high): %d\n" % (change, sha, open_blocking))
+    return run_json(*(["qa-pass", change, "--sha", sha, "--review", rel] + (["--repo", repo] if repo else [])),
+                    cwd=root)
+
+
 GOOD_SPEC = {
     "change_id": "feat-a", "phase": "requirements", "schema_version": 1,
     "phase_history": [

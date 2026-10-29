@@ -9,7 +9,11 @@ argument-hint: <change-id> [--source <branch>] [--target <branch>]
 
 ## Purpose
 
-Code review across 9 dimensions, post-implementation. **QA observes; it never changes the code under review and never commits a fix.** Every defect becomes a finding in the change's `findings.md`, fixed later through `/karvey-iterate` → impl → test → qa. QA writes the review document, creates items in the team's tracker (`../karvey/rules/management-adapters.md`) or PLAN.md, and notifies the team's configured channel (`../karvey/rules/notifications.md`).
+Code review across 9 dimensions, post-implementation. **No PR reaches production without it (D-55):** the prod-gate
+releases a commit only when a QA review recorded with `qa-pass` covers it — the PR head, or an ancestor whose delta
+touches only docs. A follow-up commit with code after the review gets a **delta review** (this skill on
+`{reviewed}..{new head}`); a hotfix gets the **hotfix scope** (Dimensions 1, 2, 4 and 6 plus its regression test). The
+agent runs and records the review; the human is not asked for it. **QA observes; it never changes the code under review and never commits a fix.** Every defect becomes a finding in the change's `findings.md`, fixed later through `/karvey-iterate` → impl → test → qa. QA writes the review document, creates items in the team's tracker (`../karvey/rules/management-adapters.md`) or PLAN.md, and notifies the team's configured channel (`../karvey/rules/notifications.md`).
 
 ## Execution steps
 
@@ -144,6 +148,8 @@ Structure:
 - Source branch: {source}
 - Target branch: {target}
 - Date: {YYYY-MM-DD}
+- Reviewed commit: {full sha of the PR head reviewed}
+- Open blocking findings (critical/high): {N}
 - Commits included: {N}
 - Files modified: {N}
 
@@ -221,11 +227,16 @@ Add a "QA Review" section at the end of PLAN.md with the list of findings and pe
 ### Step 3C — Record the result through the state tool
 
 - **Blocking findings** (critical/high, the security gate of Dimension 1, a valid critical/high from the second model, a visual deviation that breaks accessibility/security, or a standards departure with no approved entry in `deviations.md`) → QA is not approved; route the findings (Step 3D).
-- **None** → `karvey-state.py generated "{change-id}" qa`, then ask the human for the QA approval. On their OK:
+- **None** → record the review for the head it reviewed — this is what the prod-gate reads (D-55):
   ```bash
-  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" approve "{change-id}" qa --by "{human}" --role human --ref "{D-NN or PR URL}"
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/karvey-state.py" qa-pass "{change-id}" --sha "{reviewed commit}" \
+      --review "docs/spec/changes/{change-id}/qa/REVISION_PR_{n}_{date}.md"
   ```
-  and set to `done` every Task and Feature of the change that is in `review` (`set_status`, or `👀` → `✅` in `PLAN.md`).
+  It is refused when the review does not name that commit or still has open blocking findings. Then
+  `karvey-state.py generated "{change-id}" qa`; when the human's approved plan covers this change, record the QA
+  approval from it (`approve "{change-id}" qa --by "{human}" --role human --ref "{the plan's D-NN}"`) without a new
+  question (D-54); otherwise ask once. Set to `done` every Task and Feature of the change that is in `review`
+  (`set_status`, or `👀` → `✅` in `PLAN.md`).
 
 ### Step 3D — Classify findings & route the iteration loop
 
@@ -291,7 +302,7 @@ Next step (if converged — no open bug/spec-gap, security gate passed):
 
 ## Advance to the next phase
 
-When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items (or the security gate is unresolved), the next step is `/karvey-iterate {change-id}`, not Deploy. Once converged and approved, **ask the user**: "Shall we advance to the Deploy phase now?" On their OK, run `/karvey-deploy {change-id}`; otherwise wait. In a new session, `karvey-state.py next "{change-id}"` says where the change is.
+When finishing this phase, first check convergence: if `findings.md` has open `bug`/`spec-gap` items (or the security gate is unresolved), the next step is `/karvey-iterate {change-id}`, not Deploy. Once converged and approved, advance to `/karvey-deploy {change-id}` when the human's approved plan includes the release (D-54); otherwise ask once: "Shall we advance to the Deploy phase now?" In a new session, `karvey-state.py next "{change-id}"` says where the change is.
 
 ---
 *Part of the Karvey™ Method — © HainTech, by Mauricio Quezada Ibáñez · Apache 2.0 · see `../karvey/LICENSE` and `../karvey/TRADEMARK.md`.*
