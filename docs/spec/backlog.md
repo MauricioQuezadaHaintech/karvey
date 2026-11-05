@@ -63,7 +63,11 @@
 | BL-59 | 2026-09-25 | wave1-hardening / F-84 | spec-gap (deferred) | med | spec-merge item format: blank lines inside an item, `### REQ-` headings in ADDED | open | — | — |
 | BL-60 | 2026-09-25 | wave1-hardening / F-85 | spec-gap (deferred) | med | project.json ban line in every skill that dispatches subagents | open | — | — |
 | BL-61 | 2026-09-25 | wave1-hardening / F-86 | emergent | low | Factor duplicated helpers (now_iso, parse_dt, git) and the TTL literals into karvey_lib | open | — | — |
+| BL-62 | 2026-09-26 | wave1-hardening / F-90 | spec-gap (deferred) | med | Bind the human's prod OK to the commit at the approval hook; close the check-to-run window | open | — | — |
+| BL-63 | 2026-09-26 | wave1-hardening / F-91 | spec-gap (deferred) | low | A reopen from `deploying` (D-36 in the documented flow) | open | — | — |
 | BL-64 | 2026-09-29 | real use (owner) | bug | low | protect-paths blocks a read-only listing of the approval/state paths | promoted | BUG-139 | prod-gate-scope |
+| BL-65 | 2026-09-26 | project-upgrade / F-29 | emergent | low | Duplicated git helpers across `project`, `karvey_hooks` and `upgrade` | open | — | — |
+| BL-66 | 2026-09-26 | project-upgrade / F-04 | emergent | low | Re-record the upgrade-surface fingerprint at the release that ships `project-upgrade` | open | — | — |
 | BL-67 | 2026-10-05 | prod-gate-scope / F-18 | emergent | low | Prod-gate leftovers from the 3.12.1 QA: ref scan cap note, owner clone choice, no-python REST mentions, live host response shapes | open | — | — |
 
 ## BL-01 — Run graphify over the repo at the end of all the changes
@@ -389,6 +393,16 @@
 - **Origin:** real use, 2026-09-29 (owner); promoted to change `prod-gate-scope` (hotfix 3.12.1) as BUG-139 (finding F-04).
 - **Why:** `ls <state dir> 2>/dev/null; echo done`, `cat <ledger> | python3 -m json.tool` and `ls "$(git rev-parse --git-common-dir)/karvey/approvals/"` are blocked although nothing is written: the last protect-paths check requires every segment of the call to be read-only.
 - **Status:** promoted (BUG-139)
+
+## BL-65 — Duplicated git helpers across `project`, `karvey_hooks` and `upgrade`
+- **Origin:** change `project-upgrade`, QA finding F-29 (emergent), deferred: a refactor of shared git helpers touches guard code outside that change's risk budget.
+- **Why:** `current_branch` / `_origin_head` are copies of `project` / `karvey_hooks`; four git runners with different error handling; two path normalisers; the release-number check repeated four times. No behaviour defect. Related to BL-61 (helpers in `karvey_lib`); do them together.
+- **Status:** open
+
+## BL-66 — Re-record the upgrade-surface fingerprint at the release that ships `project-upgrade`
+- **Origin:** change `project-upgrade`, finding F-04 (emergent), deferred: a release action, not code of that change.
+- **Why:** `upgrade-surface.json` is recorded for 3.11.4. With 3.12.0 released first, the merge of `project-upgrade` must re-record the fingerprint from the 3.12.0 tree (not `surface --write` on the merged tree, which would hide that change's own surface edits from the release check); otherwise L-37 errors (top release newer than the fingerprint). Owner of the step: `karvey-deploy` of the release that ships it.
+- **Status:** open
 
 ## BL-67 — Prod-gate leftovers from the 3.12.1 QA (F-18)
 - **Origin:** QA of `prod-gate-scope` (hotfix 3.12.1), 2026-10-05; Low items not fixed in the hotfix.

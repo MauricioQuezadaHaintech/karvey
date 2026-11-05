@@ -221,6 +221,11 @@ class RealDelta(unittest.TestCase):
         self.root = self.t.path
         repo = _path.REPO_ROOT
         src_change = repo / "docs/spec/changes/wave1-hardening"
+        archived = sorted((repo / "docs/spec/changes/archive").glob("*-wave1-hardening"))
+        # once archived, the living spec already holds this delta: the test checks idempotency only
+        self.merged = not src_change.is_dir() and bool(archived)
+        if self.merged:
+            src_change = archived[-1]
         dst = self.root / "docs/spec/changes/wave1-hardening"
         dst.mkdir(parents=True)
         for name in ("spec-delta.md", "spec.json"):
@@ -234,6 +239,14 @@ class RealDelta(unittest.TestCase):
         self.t.cleanup()
 
     def test_real_delta_merges_and_is_idempotent(self):
+        if self.merged:
+            before = self.target.read_text(encoding="utf-8")
+            self.assertIn("## ADDED by `wave1-hardening` (3.12.0, merged ", before)
+            code, env = run_json("wave1-hardening", "--root", str(self.root), "--date", "2026-09-27")
+            self.assertEqual(code, 0, env["errors"])
+            self.assertFalse(env["result"]["changed"])
+            self.assertEqual(self.target.read_text(encoding="utf-8"), before)
+            return
         code, env = run_json("wave1-hardening", "--root", str(self.root), "--date", "2026-09-24")
         self.assertEqual(code, 0, env["errors"])
         r = env["result"]

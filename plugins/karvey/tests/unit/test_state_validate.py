@@ -219,7 +219,10 @@ class ThisRepo(unittest.TestCase):
         self.assertIn(code, (0, 1))
         self.assertEqual(env["exit"], code)
         names = [f["file"] for f in env["result"]["files"]]
-        self.assertIn("docs/spec/changes/wave1-hardening/spec.json", names)
+        # wave1-hardening is live until its archive, then under changes/archive/{date}-wave1-hardening
+        self.assertTrue(any(n == "docs/spec/changes/wave1-hardening/spec.json" or
+                            (n.startswith("docs/spec/changes/archive/") and n.endswith("-wave1-hardening/spec.json"))
+                            for n in names), names)
         self.assertIn("docs/spec/project.json", names)
         for i in env["errors"] + env["warnings"]:
             self.assertEqual(tuple(i), ("code", "severity", "file", "path", "expected", "got", "message"))

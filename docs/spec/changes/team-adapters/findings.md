@@ -18,43 +18,43 @@ Routing (`rules/iteration-loop.md`):
 | F-02 | 2026-09-23 | qa (D1, D2, D4, D7) | bug | medium | Session-hook settings nudge: wrong scope, wrong project.json, fragile parsing, hang, imperative wording | closed | BUG-02 (RESUELTO, hotfix 3.11.2) |
 | F-03 | 2026-09-23 | qa (D1, D2, D4) | bug | medium | An odd `resets_at` takes the whole statusline down; time left truncated | closed | BUG-03 (RESUELTO, hotfix 3.11.2) |
 | F-04 | 2026-09-23 | qa (D1) | bug | medium | Statusline debug copy at a fixed, shared, world-readable /tmp path | closed | BUG-04 (RESUELTO, hotfix 3.11.2) |
-| F-05 | 2026-09-23 | qa (D4, D7) | spec-gap | high | "Missing status map -> read, confirm once" exists only in the rule; tasks/impl/qa/deploy/iterate lack it | routed | spec revision REQ-ADP-022 in wave1-hardening |
-| F-06 | 2026-09-23 | qa (D3, D4, D7) | spec-gap | high | No skill moves Tasks/Features to `done`; PLAN.md rows stay `review` forever | routed | spec revision REQ-ADP-021 in wave1-hardening |
-| F-07 | 2026-09-23 | qa (D7) | bug | high | impl decides dependencies and resume with non-logical states (`pending`, `completed`): deadlock risk | routed | BUG-05 |
-| F-08 | 2026-09-23 | qa (D3, D4) | bug | high | `project.json:management` already exists as a string in 16 repos; the `!= markdown` guard sends Markdown repos to a tracker | routed | BUG-06 |
-| F-09 | 2026-09-23 | qa (D3) | bug | medium | README and plugin.json still describe ClickUp as the tracker | routed | BUG-07 |
-| F-10 | 2026-09-23 | qa (D1) | spec-gap | medium | `project.json` values (`target`, `location`, status names) interpolated into `via: cli` shell commands with no validation | routed | spec revision REQ-ADP-010/020 in wave1-hardening |
-| F-11 | 2026-09-23 | qa (D4, D7) | spec-gap | medium | Notifications rollout: 20 of 22 HainTech repos go silent; the migration aid conflicts with REQ-ADP-012 as written | routed | spec revision REQ-ADP-012 in wave1-hardening |
-| F-12 | 2026-09-23 | qa (D7) | spec-gap | medium | "Confirm once" has no path when no human can be asked (subagents, headless) | routed | spec revision REQ-ADP-022 in wave1-hardening |
-| F-13 | 2026-09-23 | qa (D7) | spec-gap | medium | "Once" means once per checkout: settings written to the working copy with no branch/lane | routed | spec revision REQ-ADP-001/022 in wave1-hardening |
-| F-14 | 2026-09-23 | qa (D7) | spec-gap | medium | One `statuses` map per project cannot represent per-list / per-workflow states or missing states | routed | spec revision REQ-ADP-022 in wave1-hardening |
-| F-15 | 2026-09-23 | qa (D3, D7) | spec-gap | medium | No single resolution order for tracker settings (tool, location) between project.json and spec.json | routed | spec revision REQ-ADP-023 in wave1-hardening |
-| F-16 | 2026-09-23 | qa (D7) | spec-gap | medium | Tracker down mid-phase: the fallback to PLAN.md is never reconciled | routed | spec revision (management-adapters rule 4) in wave1-hardening |
-| F-17 | 2026-09-23 | qa (D7) | spec-gap | medium | No create operation is idempotent: every re-run duplicates tracker items | routed | spec revision (management-adapters operations) in wave1-hardening |
-| F-18 | 2026-09-23 | qa (D3) | spec-gap | medium | Epic cascade target contradicts itself (`review` vs `done`) | routed | spec revision REQ-ADP-021 in wave1-hardening |
-| F-19 | 2026-09-23 | qa (D3) | spec-gap | medium | `awaiting-human` / 🙋 is a sixth marker missing from every marker list | routed | spec revision REQ-ADP-021 in wave1-hardening |
-| F-20 | 2026-09-23 | qa (D4, D7) | spec-gap | medium | Canary visible-version check: one rigid DEV format, contradicts 2.4-bis, false positives with several changes in dev | routed | spec revision (versioning.md, deploy 2.7) in wave1-hardening |
+| F-05 | 2026-09-23 | qa (D4, D7) | spec-gap | high | "Missing status map -> read, confirm once" exists only in the rule; tasks/impl/qa/deploy/iterate lack it | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-022 in wave1-hardening |
+| F-06 | 2026-09-23 | qa (D3, D4, D7) | spec-gap | high | No skill moves Tasks/Features to `done`; PLAN.md rows stay `review` forever | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-021 in wave1-hardening |
+| F-07 | 2026-09-23 | qa (D7) | bug | high | impl decides dependencies and resume with non-logical states (`pending`, `completed`): deadlock risk | closed (BUG-05 RESUELTO in 3.12.0, wave1-hardening) | BUG-05 |
+| F-08 | 2026-09-23 | qa (D3, D4) | bug | high | `project.json:management` already exists as a string in 16 repos; the `!= markdown` guard sends Markdown repos to a tracker | closed (BUG-06 RESUELTO in 3.12.0, wave1-hardening) | BUG-06 |
+| F-09 | 2026-09-23 | qa (D3) | bug | medium | README and plugin.json still describe ClickUp as the tracker | closed (BUG-07 RESUELTO in 3.12.0, wave1-hardening) | BUG-07 |
+| F-10 | 2026-09-23 | qa (D1) | spec-gap | medium | `project.json` values (`target`, `location`, status names) interpolated into `via: cli` shell commands with no validation | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-010/020 in wave1-hardening |
+| F-11 | 2026-09-23 | qa (D4, D7) | spec-gap | medium | Notifications rollout: 20 of 22 HainTech repos go silent; the migration aid conflicts with REQ-ADP-012 as written | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-012 in wave1-hardening |
+| F-12 | 2026-09-23 | qa (D7) | spec-gap | medium | "Confirm once" has no path when no human can be asked (subagents, headless) | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-022 in wave1-hardening |
+| F-13 | 2026-09-23 | qa (D7) | spec-gap | medium | "Once" means once per checkout: settings written to the working copy with no branch/lane | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-001/022 in wave1-hardening |
+| F-14 | 2026-09-23 | qa (D7) | spec-gap | medium | One `statuses` map per project cannot represent per-list / per-workflow states or missing states | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-022 in wave1-hardening |
+| F-15 | 2026-09-23 | qa (D3, D7) | spec-gap | medium | No single resolution order for tracker settings (tool, location) between project.json and spec.json | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-023 in wave1-hardening |
+| F-16 | 2026-09-23 | qa (D7) | spec-gap | medium | Tracker down mid-phase: the fallback to PLAN.md is never reconciled | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision (management-adapters rule 4) in wave1-hardening |
+| F-17 | 2026-09-23 | qa (D7) | spec-gap | medium | No create operation is idempotent: every re-run duplicates tracker items | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision (management-adapters operations) in wave1-hardening |
+| F-18 | 2026-09-23 | qa (D3) | spec-gap | medium | Epic cascade target contradicts itself (`review` vs `done`) | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-021 in wave1-hardening |
+| F-19 | 2026-09-23 | qa (D3) | spec-gap | medium | `awaiting-human` / 🙋 is a sixth marker missing from every marker list | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-021 in wave1-hardening |
+| F-20 | 2026-09-23 | qa (D4, D7) | spec-gap | medium | Canary visible-version check: one rigid DEV format, contradicts 2.4-bis, false positives with several changes in dev | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision (versioning.md, deploy 2.7) in wave1-hardening |
 | F-21 | 2026-09-23 | qa (D4) | emergent | medium | Team settings are not validated (keys, enums); Tarien already drifted | routed | backlog BL-38 |
-| F-22 | 2026-09-23 | qa (D1, D2) | bug | low | Invalid `KARVEY_TZ` silently falls back to the system zone | routed | BUG-08 |
-| F-23 | 2026-09-23 | qa (D2) | bug | low | Stray separator when only the 7-day window is present | routed | BUG-09 |
-| F-24 | 2026-09-23 | qa (D1, D2) | bug | low | `docs/karvey.html`: a malformed hash throws `URIError` before the switcher binds | routed | BUG-10 |
-| F-25 | 2026-09-23 | qa (D2) | bug | low | An invalid `?lang=` saves the browser language as the viewer's choice | routed | BUG-11 |
-| F-26 | 2026-09-23 | qa (D2) | bug | low | Switching language drops the other query parameters | routed | BUG-12 |
-| F-27 | 2026-09-23 | qa (D2) | bug | low | No `hashchange` handling on the method page | routed | BUG-13 |
-| F-28 | 2026-09-23 | qa (D7) | bug | low | Without JS the language switch is shown but does nothing | routed | BUG-14 |
-| F-29 | 2026-09-23 | qa (D3) | bug | low | `clickup-sync-guard` hook referenced, but nothing installs it | routed | BUG-15 |
-| F-30 | 2026-09-23 | qa (D2, D3) | bug | low | hooks/README still says the session hook prints nothing without team/agent files | routed | BUG-16 |
-| F-31 | 2026-09-23 | qa (D3, D6) | bug | low | 3.11.1 release docs incomplete: CHANGELOG entry without "Why"; page history stops at 3.11.0 | routed | BUG-17 (EN FIX: fixed in 3.11.2, no regression check yet) |
-| F-32 | 2026-09-23 | qa (D1, D7) | spec-gap | low | The notification destination can be redirected by whoever writes `project.json` | routed | spec revision REQ-ADP-011 in wave1-hardening |
-| F-33 | 2026-09-23 | qa (D1) | spec-gap | low | QA notifications carry security findings to a team channel with no redaction rule | routed | spec revision REQ-ADP-011 in wave1-hardening |
-| F-34 | 2026-09-23 | qa (D1, D2, D4, D7) | spec-gap | low | REQ-ADP-003 text no longer matches the fixed nudge (marker, degraded mode, `{}`, startup-only) | routed | spec revision REQ-ADP-003 in wave1-hardening |
-| F-35 | 2026-09-23 | qa (D2) | spec-gap | low | A shared `?lang=` link overwrites the viewer's saved language | routed | spec revision REQ-ADP-031 in wave1-hardening |
-| F-36 | 2026-09-23 | qa (D3) | spec-gap | low | The `clickup` ids block is undocumented in management-adapters; no key for task ids | routed | spec revision REQ-ADP-023 in wave1-hardening |
-| F-37 | 2026-09-23 | qa (D3) | spec-gap | low | phase-close says "every phase", but only 3 phase skills cite it | routed | spec revision (phase-close.md) in wave1-hardening |
-| F-38 | 2026-09-23 | qa (D3) | spec-gap | low | QA Dimension 6 does not verify what versioning.md says it verifies | routed | spec revision (versioning.md, karvey-qa D6) in wave1-hardening |
-| F-39 | 2026-09-23 | qa (D3, D4) | spec-gap | low | karvey-init contradicts itself around Step 3.2; no persisted "not now" answer | routed | spec revision REQ-ADP-001/002 in wave1-hardening |
-| F-40 | 2026-09-23 | qa (D4) | spec-gap | low | `spec.json:management = "none"` exists in 9 files and is not in the enum | routed | spec revision REQ-ADP-020/023 in wave1-hardening |
-| F-41 | 2026-09-23 | qa (D4) | spec-gap | low | No setting holds the team's sprint folder/iteration | routed | spec revision REQ-ADP-020 in wave1-hardening |
+| F-22 | 2026-09-23 | qa (D1, D2) | bug | low | Invalid `KARVEY_TZ` silently falls back to the system zone | closed (BUG-08 RESUELTO in 3.12.0, wave1-hardening) | BUG-08 |
+| F-23 | 2026-09-23 | qa (D2) | bug | low | Stray separator when only the 7-day window is present | closed (BUG-09 RESUELTO in 3.12.0, wave1-hardening) | BUG-09 |
+| F-24 | 2026-09-23 | qa (D1, D2) | bug | low | `docs/karvey.html`: a malformed hash throws `URIError` before the switcher binds | closed (BUG-10 RESUELTO in 3.12.0, wave1-hardening) | BUG-10 |
+| F-25 | 2026-09-23 | qa (D2) | bug | low | An invalid `?lang=` saves the browser language as the viewer's choice | closed (BUG-11 RESUELTO in 3.12.0, wave1-hardening) | BUG-11 |
+| F-26 | 2026-09-23 | qa (D2) | bug | low | Switching language drops the other query parameters | closed (BUG-12 RESUELTO in 3.12.0, wave1-hardening) | BUG-12 |
+| F-27 | 2026-09-23 | qa (D2) | bug | low | No `hashchange` handling on the method page | closed (BUG-13 RESUELTO in 3.12.0, wave1-hardening) | BUG-13 |
+| F-28 | 2026-09-23 | qa (D7) | bug | low | Without JS the language switch is shown but does nothing | closed (BUG-14 RESUELTO in 3.12.0, wave1-hardening) | BUG-14 |
+| F-29 | 2026-09-23 | qa (D3) | bug | low | `clickup-sync-guard` hook referenced, but nothing installs it | closed (BUG-15 RESUELTO in 3.12.0, wave1-hardening) | BUG-15 |
+| F-30 | 2026-09-23 | qa (D2, D3) | bug | low | hooks/README still says the session hook prints nothing without team/agent files | closed (BUG-16 RESUELTO in 3.12.0, wave1-hardening) | BUG-16 |
+| F-31 | 2026-09-23 | qa (D3, D6) | bug | low | 3.11.1 release docs incomplete: CHANGELOG entry without "Why"; page history stops at 3.11.0 | closed (BUG-17 RESUELTO in 3.12.0, wave1-hardening) | BUG-17 (EN FIX: fixed in 3.11.2, no regression check yet) |
+| F-32 | 2026-09-23 | qa (D1, D7) | spec-gap | low | The notification destination can be redirected by whoever writes `project.json` | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-011 in wave1-hardening |
+| F-33 | 2026-09-23 | qa (D1) | spec-gap | low | QA notifications carry security findings to a team channel with no redaction rule | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-011 in wave1-hardening |
+| F-34 | 2026-09-23 | qa (D1, D2, D4, D7) | spec-gap | low | REQ-ADP-003 text no longer matches the fixed nudge (marker, degraded mode, `{}`, startup-only) | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-003 in wave1-hardening |
+| F-35 | 2026-09-23 | qa (D2) | spec-gap | low | A shared `?lang=` link overwrites the viewer's saved language | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-031 in wave1-hardening |
+| F-36 | 2026-09-23 | qa (D3) | spec-gap | low | The `clickup` ids block is undocumented in management-adapters; no key for task ids | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-023 in wave1-hardening |
+| F-37 | 2026-09-23 | qa (D3) | spec-gap | low | phase-close says "every phase", but only 3 phase skills cite it | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision (phase-close.md) in wave1-hardening |
+| F-38 | 2026-09-23 | qa (D3) | spec-gap | low | QA Dimension 6 does not verify what versioning.md says it verifies | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision (versioning.md, karvey-qa D6) in wave1-hardening |
+| F-39 | 2026-09-23 | qa (D3, D4) | spec-gap | low | karvey-init contradicts itself around Step 3.2; no persisted "not now" answer | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-001/002 in wave1-hardening |
+| F-40 | 2026-09-23 | qa (D4) | spec-gap | low | `spec.json:management = "none"` exists in 9 files and is not in the enum | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-020/023 in wave1-hardening |
+| F-41 | 2026-09-23 | qa (D4) | spec-gap | low | No setting holds the team's sprint folder/iteration | closed (amended in wave1-hardening; living spec merged at its archive) | spec revision REQ-ADP-020 in wave1-hardening |
 | F-42 | 2026-09-23 | qa (D3) | emergent | low | Documentation drift: rule-citation tables, per-phase rule lists, status notations, command spellings | routed | backlog BL-39 |
 | F-43 | 2026-09-23 | qa (D3) | emergent | low | When the version bump happens: per task/commit (impl) vs per deploy | routed | backlog BL-07 (existing, promoted to wave1-hardening) |
 | F-44 | 2026-09-23 | qa (D3) | emergent | low | Local rule copies reference sibling rules that do not exist next to them | routed | backlog BL-10 (existing, promoted to wave1-hardening) |
@@ -268,3 +268,5 @@ emergent 8 (medium 1, low 7). Critical: 0. Closed: 4 (F-01..F-04). Open high: F-
 
 ## F-48 — Notifications without deduplication
 - **Type:** emergent · **Severity:** low · **Source:** N-13 · **Routed to:** backlog BL-43.
+
+Convergence 2026-09-26: every `bug` and `spec-gap` row above is closed — BUG-05..BUG-17 RESUELTO with regression checks and the REQ-ADP amendments merged into `docs/spec/specs/method/spec.md`, both through `wave1-hardening` (3.12.0, D-04, D-39).
