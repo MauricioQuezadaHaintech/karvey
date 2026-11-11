@@ -223,6 +223,17 @@ class Security(Base):
         self.assertIn("NOT approved: the proposal changed after it was shown (hash mismatch)", out)
         self.assertNotEqual((marker(self.web, "web-search") or {}).get("kind"), "prod")
 
+    def test_a_session_on_older_hooks_accepts_the_proposal(self):  # BUG-170
+        """The state tool runs the installed version (BUG-163) while an open session keeps older hooks, which
+        refuse a proposal without a parseable future ``expires_at`` ("forged or corrupt proposal")."""
+        self.propose_both()
+        p = self.proposal()
+        expires = approval.parse_dt(p.get("expires_at"))
+        self.assertIsNotNone(expires, "older hooks read expires_at and refuse the proposal without it")
+        self.assertGreater(expires, approval.now_dt() + approval.timedelta(days=365 * 50))
+        self.assertTrue(approval.check_proposal(p, approval.session_anchor(pj.find_root(start=str(self.web)),
+                                                                             str(self.web)))[0])
+
     def test_a_proposal_answered_the_next_day_is_approved(self):  # BUG-164: no clock on a proposal
         self._write(now=approval.now_dt() - approval.timedelta(hours=26))
         out = self.prompt("apruebo")

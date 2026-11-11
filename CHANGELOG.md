@@ -4,6 +4,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/) + human/AI trace
 
 ## [Unreleased]
 
+### Fixed
+- BUG-170 — a session opened before a plugin update can approve a release proposal again: the proposal keeps a far `expires_at` that earlier hooks require (the installed state tool had dropped it, so they refused it as forged); no check reads it since D-54. Human: Mauricio Quezada Ibáñez · AI: Claude Opus 5.5.
+
 ## [3.13.3] - 2026-10-27 — hotfix
 
 ### Why

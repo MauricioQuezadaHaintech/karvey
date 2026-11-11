@@ -1094,6 +1094,10 @@ PROPOSAL_KIND = "release-proposal"
 PROPOSAL_TTL_MIN = 60
 PROPOSAL_TTL_BOUNDS = (5, 240)
 PROPOSAL_ID_SHOWN = 12
+# BUG-170: the state tool runs the installed version (BUG-163) while an open session keeps the hooks it loaded.
+# Hooks before 3.13.3 refuse a proposal without a parseable future ``expires_at``, so the proposal carries a date
+# far enough ahead that no hook reaches it; since D-54 no check reads it.
+PROPOSAL_COMPAT_EXPIRY_DAYS = 36500
 _SHA_FULL = re.compile(r"^[0-9a-f]{40}([0-9a-f]{24})?$")
 
 
@@ -1136,7 +1140,8 @@ def write_proposal(anchor, items, ttl_min=None, now=None):
     ttl = PROPOSAL_TTL_MIN if not isinstance(ttl_min, int) or isinstance(ttl_min, bool) else max(lo, min(hi, ttl_min))
     p = {"v": PROPOSAL_VERSION, "kind": PROPOSAL_KIND, "session_tree": os.path.realpath(str(anchor)),
          "created_at": now.isoformat(timespec="microseconds"),
-         "expires_at": None,  # D-54 (BUG-164): a proposal never expires by time
+         # D-54 (BUG-164): a proposal never expires by time; the far date only satisfies older hooks (BUG-170)
+         "expires_at": (now + timedelta(days=PROPOSAL_COMPAT_EXPIRY_DAYS)).isoformat(timespec="microseconds"),
          "items": [{"change": i["change"], "repo": i["repo"], "pr": i["pr"], "sha": i["sha"],
                     "effect": i.get("effect") or ""} for i in items]}
     p["id"] = proposal_id(p)

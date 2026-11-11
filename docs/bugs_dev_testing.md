@@ -2437,3 +2437,41 @@ red without the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.
 | Date | State | By (human + AI model) | Note |
 |------|-------|------------------------|------|
 | 2026-10-27 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | hotfix 3.13.3 |
+
+## BUG-170 — A session opened before a plugin update could not approve a release proposal
+- **Priority:** high
+- **Detected:** 2026-11-11 · **Component:** plugins/karvey/scripts/karvey_lib/approval.py (`write_proposal`)
+- **Change / origin:** field report — production approval of a hotfix
+- **Tracker:** —
+- **Current state:** RESUELTO
+
+### Reproduction
+Open a session on 3.13.2, update the plugin to 3.13.3 without restarting the session, run
+`karvey-state.py propose-release`, show the block and answer «apruebo» → `release proposal … NOT approved: forged or
+corrupt proposal — nothing recorded for production`. The human approves again and again with the same result.
+
+### Actual vs expected
+- Actual: since BUG-163 the state tool re-runs itself from the installed version (3.13.3), which writes the proposal
+  with `expires_at: null` (D-54); the session's hooks are still the ones it loaded (3.13.2), whose `check_proposal`
+  requires a parseable `expires_at` and refuses the proposal as forged.
+- Expected: a proposal written by the installed version is accepted by the hooks of an open session on an earlier
+  version, and the human approves once.
+
+### Root cause
+Writer and reader of the proposal ran different versions inside one session (BUG-163 re-exec for scripts, none for
+hooks), and the 3.13.3 format dropped a field the earlier reader treats as mandatory.
+
+### Fix
+`write_proposal` keeps a far `expires_at` (`PROPOSAL_COMPAT_EXPIRY_DAYS`, 100 years) that earlier hooks accept; no
+check reads it since D-54 and `propose-release` still reports `expires_at: null`. Verified against the 3.13.2
+`check_proposal`: refused before, accepted after.
+
+### Regression test
+`plugins/karvey/tests/unit/test_release_proposal.py` (`Security.test_a_session_on_older_hooks_accepts_the_proposal`);
+red without the fix. Indexed in `plugins/karvey/tests/regression/test_incidents.py`.
+
+### State history
+| Date | State | By (human + AI model) | Note |
+|------|-------|------------------------|------|
+| 2026-11-11 | RESUELTO | Mauricio Quezada Ibáñez + Claude Opus 5.5 | field report; branch `fix/bug170-proposal-older-hooks` |
+
