@@ -1654,7 +1654,7 @@ def cmd_propose_release(args, root):
         out.append({"change": cid, "repo": owner, "pr": int(pr), "sha": sha, "effect": effect[:200]})
     p = approval.write_proposal(anchor, out, ttl_min=args.expires_min)
     block = approval.proposal_block(p, lang=args.lang)
-    res = {"proposal": p["id"], "shown_id": p["id"][:approval.PROPOSAL_ID_SHOWN], "expires_at": p["expires_at"],
+    res = {"proposal": p["id"], "shown_id": p["id"][:approval.PROPOSAL_ID_SHOWN], "expires_at": None,
            "items": p["items"], "block": block}
     note = ("\n\nShow the block above to the human verbatim (as printed, in a code block), once, then wait: it never "
             "expires, so do not regenerate it unless a commit changes. Their next own message "
