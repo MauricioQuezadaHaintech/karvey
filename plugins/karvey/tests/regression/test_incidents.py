@@ -1,4 +1,4 @@
-"""Regression index BUG-05..BUG-51, BUG-138..BUG-166 (architecture §6.4, REQ-W1-107, E1.F14.T3).
+"""Regression index BUG-05..BUG-51, BUG-138..BUG-168 (architecture §6.4, REQ-W1-107, E1.F14.T3).
 
 Each incident names the check that proves its fix. This file does not re-run those checks' own suites (CI
 runs them: the unit suite, the guard tables, test-hooks.sh and the node page tests). It fails when:
@@ -419,6 +419,18 @@ INDEX = {
     ],
     "BUG-166": [  # approval-by-name F-15: the pipeline-approval lookup authenticates against Azure DevOps
         ("unit", "test_prodgate_pipeline.py", "Pipelines.test_the_approval_lookup_asks_for_an_azure_devops_token"),
+    ],
+    "BUG-167": [  # approval-by-name F-16 (D-55): no production without QA
+        ("unit", "test_qa_before_prod.py", "QaBeforeProd.test_an_approved_release_without_qa_is_not_released"),
+        ("unit", "test_qa_before_prod.py", "QaBeforeProd.test_a_code_commit_after_the_review_needs_its_own_review"),
+        ("unit", "test_qa_before_prod.py", "QaBeforeProd.test_a_rename_of_code_to_md_is_not_docs_only"),
+        ("unit", "test_prodgate_pipeline.py", "Pipelines.test_an_approved_run_without_qa_says_so"),
+        ("table", "prod-gate", "pg7-01-approved-but-no-qa-review-blocks"),
+    ],
+    "BUG-168": [  # approval-by-name F-17 (D-54): a project-wide plan is the production approval
+        ("unit", "test_qa_before_prod.py",
+         "ProjectPlanIsTheProdApproval.test_a_plan_approved_for_the_whole_project_releases_the_change"),
+        ("unit", "test_qa_before_prod.py", "ProjectPlanIsTheProdApproval.test_a_stop_after_the_project_plan_withdraws_it"),
     ],
 }
 AUTOMATED = {"lint", "table", "unit", "node", "hooks"}

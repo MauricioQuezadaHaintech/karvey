@@ -18,6 +18,8 @@ class MultiRepo(World):
             led = approval.read_ledger(web, "project-upgrade")[0]["prod"]
             led["repos"] = {"app-api": self.h_api}
             approval.record_prod(web, "project-upgrade", led)
+            approval.record_qa(web, "project-upgrade", {"head_sha": self.h_api, "repo": "app-api", "date": "x",
+                                                        "review": "docs/spec/changes/project-upgrade/qa/R.md"})
         return web
 
     def merge(self):

@@ -6,7 +6,7 @@ from unittest import mock
 
 import _path  # noqa: F401
 import _gitrepo as g
-from _state import make_project, run_json
+from _state import make_project, qa_reviewed, run_json
 from karvey_lib import approval as ap
 
 g.isolate_git()
@@ -147,6 +147,7 @@ class CheckProd(Base):
     def test_ok_from_ledger(self):
         ap.write_marker(self.root, "prod", "feat-a", "ok, merge a prod")
         self.st("approve", "feat-a", "prod", "--by", "M", "--role", "human", "--ref", "D-20")
+        qa_reviewed(self.root, "feat-a", head(self.root))  # D-55
         c, env = self.st("check-prod", "feat-a")
         self.assertEqual(c, 0)
         r = env["result"]
@@ -299,6 +300,7 @@ class ProdEvidence(Base):
         led = self.approve()
         self.assertEqual(led["prod"]["evidence"]["prompt_sha256"], ap.prompt_hash("ok, merge a prod"))
         self.assertEqual(led["prod"]["evidence"]["session"], "s9")
+        qa_reviewed(self.root, "feat-a", head(self.root))  # D-55
         c, env = self.st("check-prod", "feat-a")
         self.assertEqual((c, env["result"]["ok"]), (0, True), env)
 
@@ -359,6 +361,7 @@ class ProdShaBinding(Base):
 
     def test_check_prod_compares_the_released_sha(self):
         self.approve()
+        qa_reviewed(self.root, "feat-a", head(self.root))  # D-55
         c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
         self.assertEqual((c, env["result"]["ok"]), (0, True), env)
         g.commit_all(self.root, "unapproved")
@@ -372,6 +375,7 @@ class ProdShaBinding(Base):
         led, _ = ap.read_ledger(self.root, "feat-a")
         led["prod"]["expires_at"] = "2020-01-01T00:00:00+00:00"  # a legacy 24 h stamp is ignored
         ap.record_prod(self.root, "feat-a", led["prod"])
+        qa_reviewed(self.root, "feat-a", head(self.root))  # D-55
         c, env = self.st("check-prod", "feat-a", "--sha", head(self.root))
         self.assertEqual(c, 0, env)
 

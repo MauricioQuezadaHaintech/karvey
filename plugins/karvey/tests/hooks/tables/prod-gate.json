@@ -6749,6 +6749,79 @@
         "REQ-HF-018",
         "nopy"
       ]
+    },
+    {
+      "id": "pg7-01-approved-but-no-qa-review-blocks",
+      "guard": "prod-gate",
+      "given": {
+        "repo": {
+          "default_branch": "main",
+          "remote_branches": [
+            "dev"
+          ],
+          "branch": "feature/feat-a",
+          "project_json": {
+            "branch_flow": {
+              "feature_prefix": "feature/",
+              "integration": "dev",
+              "production": "main"
+            }
+          },
+          "spec": {
+            "feat-a": {
+              "change_id": "feat-a",
+              "phase": "deploying"
+            }
+          },
+          "ledger": {
+            "feat-a": {
+              "@approved": {
+                "by": "Owner Name",
+                "ref": "D-08",
+                "qa": false
+              }
+            }
+          }
+        },
+        "stubs": {
+          "gh": {
+            "stdout": {
+              "baseRefName": "main",
+              "headRefName": "feature/feat-a",
+              "title": "Deploy",
+              "number": 12,
+              "headRefOid": "{{head}}"
+            }
+          }
+        }
+      },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "gh pr merge 30 --merge"
+        }
+      },
+      "expect": {
+        "decision": "block",
+        "stderr_contains": [
+          "[karvey] prod-gate BLOCK",
+          "no QA review covers the released commit",
+          "qa-pass feat-a"
+        ]
+      },
+      "tags": [
+        "prod-gate",
+        "REQ-AN-034",
+        "D-55",
+        "nopy"
+      ],
+      "expect_nopy": {
+        "decision": "block",
+        "stderr_contains": [
+          "[karvey] prod-gate BLOCK",
+          "python3 not available"
+        ]
+      }
     }
   ]
 }

@@ -3,6 +3,7 @@ import json
 import unittest
 
 import _path  # noqa: F401
+import _state
 from test_state_approve import Base
 from karvey_lib import approval as ap
 
@@ -43,6 +44,7 @@ class Repos(Base):
         self.assertEqual((prod["repos"], prod["expires_at"]), ({"app-api": SHA_API}, exp))
         c, env = self.bind("app-api")  # idempotent
         self.assertEqual(c, 0, env)
+        _state.qa_reviewed(self.root, "feat-a", SHA_API, repo="app-api")  # D-55
         c, env = self.st("check-prod", "feat-a", "--repo", "app-api", "--sha", SHA_API)
         self.assertEqual(c, 0, env)
         c, env = self.st("check-prod", "feat-a", "--repo", "app-api", "--sha", "b" * 40)
@@ -66,6 +68,7 @@ class Repos(Base):
         prod = ap.read_ledger(self.root, "feat-a")[0]["prod"]
         self.assertEqual(prod["repos"], {"app-api": "b" * 40})
         self.assertEqual([(f["from"], f["to"], f["repo"]) for f in prod["followups"]], [(SHA_API, "b" * 40, "app-api")])
+        _state.qa_reviewed(self.root, "feat-a", "b" * 40, repo="app-api")  # D-55
         c, env = self.st("check-prod", "feat-a", "--repo", "app-api", "--sha", "b" * 40)
         self.assertEqual(c, 0, env)
 

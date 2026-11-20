@@ -62,6 +62,7 @@ class PlanIsTheApproval(Base):
         c, env = _state.run_json("approve", "web-search", "prod", "--by", "Owner", "--role", "human", "--ref",
                                  "D-54", "--sha", "HEAD", cwd=self.web)
         self.assertEqual(c, 0, env)
+        _state.qa_reviewed(self.web, "web-search", head(self.web))  # D-55
         c, env = _state.run_json("check-prod", "web-search", "--sha", head(self.web), cwd=self.web)
         self.assertEqual(c, 0, env)
 

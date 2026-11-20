@@ -345,3 +345,11 @@ Full gate: unit OK, regression OK, tables 622/622, test-hooks 68, page 22, lint 
 
 Red first: `test_bug164_one_approval` failed on ae25cfa (6 failures); the BUG-166 test failed without `--resource` (1 failure).
 
+## approval-by-name — hotfix 3.13.4 (BUG-167, D-55) — 2026-10-29
+
+| REQ | Evidence | Result |
+|---|---|---|
+| REQ-AN-034 | `test_qa_before_prod` (no QA → missing qa; review of the head releases; code after the review needs a delta review; docs-only delta covered; qa-pass refusals), table `pg7-01-approved-but-no-qa-review-blocks`, fixtures of every prod-gate allow now record their QA; QA of PR #33 (F1 rename/nested .md/spec.json outside docs, F2 symlink and double count, F5 undeclared repo, F7 pipeline reason) each with its test | ✅ |
+
+Red first: `test_qa_before_prod.QaBeforeProd.test_an_approved_release_without_qa_is_not_released` failed with the e0731f4 state tool; `ProjectPlanIsTheProdApproval` (BUG-168) failed without its fix.
+

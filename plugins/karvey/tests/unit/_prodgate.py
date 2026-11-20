@@ -76,11 +76,14 @@ class World(unittest.TestCase):
     def head(self, root):
         return git_out(["rev-parse", "HEAD"], root)
 
-    def approve(self, root, cid, sha):
+    def approve(self, root, cid, sha, qa=True):
         m = approval.write_marker(root, "prod", cid, "ok, merge a prod %s" % cid, session_id=SESSION, compat="")
         approval.record_prod(root, cid, approval.prod_record(m, cid, "Owner Name", "D-08", approval.iso(
             approval.now_dt()), sha))
         approval.consume(root, cid, created_at=m["created_at"])
+        if qa:  # D-55
+            approval.record_qa(root, cid, {"head_sha": sha, "review": "docs/spec/changes/%s/qa/REVISION_PR_1.md" % cid,
+                                           "date": approval.iso(approval.now_dt())})
 
     def run_gate(self, command, cwd, project_dir=None):
         out, err = io.StringIO(), io.StringIO()

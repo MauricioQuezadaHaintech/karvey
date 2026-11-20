@@ -12,7 +12,7 @@ on stdin, inside a throw-away world built for that case:
 - ``given.ledger`` / ``given.marker``: machine-local state written under
   ``<git-common-dir>/karvey/`` (a marker may be ``{"@valid": "plan|prod", "age_min": N}``, a raw
   object or ``""`` for an empty ``touch`` file; a ledger entry may be ``{"@approved": {"by", "ref",
-  "sha"?, "age_h"?}}``: a prod marker written through the approval hook's code, so its audit line
+  "sha"?, "age_h"?, "qa"?}}``: a prod marker written through the approval hook's code, so its audit line
   exists, then the ledger record of ``approve prod`` bound to ``sha`` (default ``HEAD`` when the ledger
   is written, before ``commit_files``) and expiring 24 h after the marker, D-34/D-35);
 - ``given.stubs``: canned output for the ``gh`` / ``az`` / ``glab`` stubs put first on ``PATH``;
@@ -221,6 +221,9 @@ def _finish_repo(spec, root, tmp, env, t, default):
             approval.record_prod(root, cid, approval.prod_record(m, cid, a.get("by", "Owner Name"),
                                                                  a.get("ref", "D-08"), approval.iso(created), sha))
             approval.consume(root, cid, created_at=m["created_at"])
+            if a.get("qa", True):  # D-55: an approved release was QA-reviewed unless the case says it was not
+                approval.record_qa(root, cid, {"head_sha": sha, "review": "docs/spec/changes/%s/qa/REVISION_PR_1.md"
+                                               % cid, "date": approval.iso(created)})
             continue
         d = common / "karvey" / "ledger"
         d.mkdir(parents=True, exist_ok=True, mode=0o700)

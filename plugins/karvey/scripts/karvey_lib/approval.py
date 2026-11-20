@@ -431,6 +431,24 @@ def audit_record_of(root, scope, ev):
     return False
 
 
+def withdrawn_since(root, scope, created_at):
+    """D-47: True when the human said stop after ``created_at`` and that stop withdrew ``scope``'s marker."""
+    since = parse_dt(created_at)
+    if since is None:
+        return True
+    try:
+        records = audit.read(pj.state_dir(root, create=False), include_rotated=True)
+    except OSError:
+        return False
+    for r in records:
+        if (r.get("guard"), r.get("event"), r.get("decision")) != ("approval", "marker", "withdrawn"):
+            continue
+        ts = parse_dt(r.get("ts"))
+        if ts is not None and ts >= since and scope in str(r.get("change") or "").split(","):
+            return True
+    return False
+
+
 def prod_record(marker, scope, by, ref, date, head_sha):
     """The ledger record of a human prod approval (D-03, D-34, D-35): who, when, evidence, the
     approved head commit; ``expires_at`` stays None: no clock (D-54, BUG-164)."""
@@ -611,6 +629,19 @@ def _update_ledger(root, change, key, value):
 def record_prod(root, change, approval):
     """Write the human prod approval into the ledger (never into spec.json, D-03)."""
     return _update_ledger(root, change, "prod", approval)
+
+
+def record_qa(root, change, entry):
+    """D-55: append a QA review that covers one commit to the ledger's ``qa`` list."""
+    data, status = read_ledger(root, change)
+    if status == "corrupt":
+        raise ApprovalError("release ledger of %s is corrupt; not overwritten" % change)
+    qa = list(data.get("qa")) if status == "ok" and isinstance(data.get("qa"), list) else []
+    qa.append(entry)
+    data = _update_ledger(root, change, "qa", qa)
+    _audit(root, {"guard": "approval", "event": "qa", "decision": "recorded", "reason": change,
+                  "sha": entry.get("head_sha"), "review": entry.get("review")})
+    return data
 
 
 def supersede_prod(root, change, at, reason, ref=None):

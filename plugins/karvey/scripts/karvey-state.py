@@ -30,6 +30,7 @@ import argparse
 import copy
 import re
 import difflib
+import hashlib
 import json
 import os
 import sys
@@ -1229,12 +1230,13 @@ def _require(args, fields):
                                                               ", ".join(missing)), code="state.fields")
 
 
-def check_prod(root, change, sha=None, now=None, repo=None):
+def check_prod(root, change, sha=None, now=None, repo=None, qa=True):
     """The prod-gate's question, in-process (§1.2 check-prod). Raises :class:`NotFound`.
 
     A ledger approval counts only when its evidence names this change's marker and the approval
     hook's audit line of that marker exists (D-34), it names the approved head commit and has not
-    expired (D-35), and — when ``sha`` is given — ``sha`` is that commit."""
+    expired (D-35), and — when ``sha`` is given — ``sha`` is that commit. With ``qa`` (the release question), a QA
+    review must also cover the released commit (D-55); carrying or binding the approval itself does not ask it."""
     path, loaded = load_change(root, change)
     name = rel(root, path)
     res = {"ok": False, "change": change, "by": None, "role": None, "ref": None, "date": None,
@@ -1263,12 +1265,26 @@ def check_prod(root, change, sha=None, now=None, repo=None):
         if not (isinstance(prod.get("ref"), str) and PROD_REF.match(prod["ref"])):
             res["missing"].append("ref")
         ev = prod.get("evidence") if isinstance(prod.get("evidence"), dict) else {}
-        if ev.get("marker") != approval.marker_rel(change):
+        # D-54 (BUG-168): a plan approved for the whole project is the production approval of each change in it
+        ev_scope = approval.SCOPE_PROJECT if ev.get("marker") == approval.marker_rel(approval.SCOPE_PROJECT) else change
+        if ev.get("marker") != approval.marker_rel(ev_scope):
             res["missing"].append("evidence")
-        elif not approval.audit_record_of(root, change, ev):  # D-34
+        elif not approval.audit_record_of(root, ev_scope, ev):  # D-34
             res["missing"].append("audit")
             reasons.append("no audit record of the approval hook matches its marker (prompt hash, session, time): "
                            "the approval was not given through the human's own message")
+        elif ev_scope == approval.SCOPE_PROJECT:  # BUG-168 (QA M1, M2): the plan of this change, still standing
+            hist = loaded.data.get("phase_history") if isinstance(loaded.data.get("phase_history"), list) else []
+            born = approval.parse_dt(hist[0].get("entered_at")) if hist and isinstance(hist[0], dict) else None
+            given = approval.parse_dt(ev.get("marker_created_at"))
+            if approval.withdrawn_since(root, ev_scope, ev.get("marker_created_at")):
+                res["missing"].append("evidence")
+                reasons.append("the human said stop after the plan approval it rests on; the next approved plan "
+                               "that includes this release is the production approval")
+            elif born is not None and (given is None or given < born):
+                res["missing"].append("evidence")
+                reasons.append("the plan approval it rests on predates change %s; the plan approved for it is the "
+                               "production approval" % change)
         head = prod.get("head_sha")
         if not (isinstance(head, str) and SHA_RE.match(head)):  # D-35
             res["missing"].append("sha")
@@ -1300,6 +1316,14 @@ def check_prod(root, change, sha=None, now=None, repo=None):
                            "human --ref %s --sha %s (BUG-163)"
                            % (str(sha)[:12], head[:12], change, prod.get("ref") or "<D-NN>", sha))
         # D-54 (BUG-164): no clock; the approval of the change lasts until the change is archived
+        if qa and not res["missing"]:  # D-55: no production without a QA review of the released commit
+            target = res.get("repo_sha") if repo is not None else (sha or head)
+            if not qa_covers(root, ledger, target, repo):
+                res["missing"].append("qa")
+                reasons.append("no QA review covers the released commit %s: run /karvey-qa on the PR diff and record "
+                               "it with karvey-state.py qa-pass %s --sha %s --review <its qa/REVISION_PR_*.md>%s "
+                               "(D-55; the agent does it, the human is not asked)"
+                               % (str(target)[:12], change, target, (" --repo %s" % repo) if repo else ""))
         res["ok"] = not res["missing"]
         if not res["ok"]:
             res["reason"] = "release ledger prod approval incomplete" + (": " + "; ".join(reasons) if reasons else "")
@@ -1313,6 +1337,83 @@ def check_prod(root, change, sha=None, now=None, repo=None):
     res["missing"] = ["by", "role", "ref"]
     res["reason"] = "no production approval recorded"
     return res
+
+
+DOCS_ONLY = re.compile(r"^(docs/.+|[^/]+\.md)$")  # D-55: a delta of only these (docs/**, a root *.md) needs no new QA
+QA_OPEN = re.compile(r"^\s*-?\s*Open blocking findings[^:]*:\s*(\d+)\s*$", re.M | re.I)
+QA_SHA = re.compile(r"^\s*-?\s*Reviewed commit:\s*`?([0-9a-f]{7,64})`?\s*$", re.M | re.I)
+
+
+def qa_covers(root, ledger, target, repo=None):
+    """D-55: a QA review recorded for ``target``, or for an ancestor of it whose delta touches only docs."""
+    if not (isinstance(target, str) and SHA_RE.match(target)):
+        return False
+    entries = [e for e in (ledger.get("qa") if isinstance(ledger.get("qa"), list) else [])
+               if isinstance(e, dict) and isinstance(e.get("head_sha"), str) and e.get("repo") == repo]
+    if any(e["head_sha"] == target for e in entries):
+        return True
+    if repo is not None:  # another repo's commit: no history here, only an exact match
+        return False
+    for e in entries:
+        rc, _ = pj.git(["merge-base", "--is-ancestor", e["head_sha"], target], root)
+        if rc != 0:
+            continue
+        rc, out = pj.git(["diff", "--name-only", "--no-renames", e["head_sha"], target], root)  # a rename = delete + add
+        if rc == 0 and all(DOCS_ONLY.match(f) for f in (out or "").splitlines() if f.strip()):
+            return True
+    return False
+
+
+def cmd_qa_pass(args, root):
+    """D-55: record that a QA review (karvey-qa) covers one commit of the change, with no open blocking findings."""
+    _, loaded = load_change(root, args.change)
+    if args.repo:
+        declared = loaded.data.get("repos") if isinstance(loaded.data.get("repos"), list) else []
+        if args.repo not in declared:
+            raise Refused("the repo %r is not declared by %s (spec.json repos: %s)"
+                          % (args.repo, args.change, ", ".join(declared) or "none"), code="state.repo_undeclared")
+        sha = (args.sha or "").strip().lower()
+        if not SHA_RE.match(sha):
+            raise Usage("--repo needs --sha with the full commit id of that repo")
+    else:
+        sha = resolve_commit(root, args.sha or "HEAD")
+        if sha is None:
+            raise Usage("--sha %r is not a commit of this repository" % args.sha)
+    qa_dir = os.path.join("docs", "spec", "changes", args.change, "qa")
+    review = os.path.normpath(args.review or "")
+    try:
+        if os.path.isabs(review):
+            review = os.path.relpath(review, str(root))
+    except ValueError:  # another drive (Windows)
+        review = args.review or ""
+    full = os.path.join(str(root), review)
+    inside = os.path.realpath(full).startswith(os.path.realpath(os.path.join(str(root), qa_dir)) + os.sep)
+    if not review.startswith(qa_dir + os.sep) or not inside or os.path.islink(full) or not os.path.isfile(full):
+        raise Refused("the QA review must be a file under %s/ (got %r)" % (qa_dir, args.review), code="state.qa_review")
+    with open(full, "rb") as fh:
+        raw = fh.read()
+    text = raw.decode("utf-8", "replace")
+    named = QA_SHA.findall(text)
+    if not any(sha.startswith(n.lower()) for n in named):
+        raise Refused("%s does not name the reviewed commit %s (line «- Reviewed commit: <sha>»)" % (review, sha[:12]),
+                      code="state.qa_sha")
+    opened = QA_OPEN.findall(text)
+    if len(opened) != 1:
+        raise Refused("%s needs exactly one «- Open blocking findings (critical/high): N» line (found %d)"
+                      % (review, len(opened)), code="state.qa_open")
+    if int(opened[-1]) != 0:
+        raise Refused("%s has %s open blocking findings: route them with /karvey-iterate and review again"
+                      % (review, opened[-1]), code="state.qa_blocking")
+    entry = {"head_sha": sha, "review": review.replace(os.sep, "/"), "date": now_iso(),
+             "review_sha256": hashlib.sha256(raw).hexdigest()}
+    if args.repo:
+        entry["repo"] = args.repo
+    try:
+        approval.record_qa(root, args.change, entry)
+    except (approval.ApprovalError, OSError) as exc:
+        raise Refused("the QA review is not recorded: %s" % exc, code="state.ledger")
+    return kl.EXIT_OK, {"change": args.change, "qa": entry}, [], [], \
+        "%s: QA review %s recorded for commit %s (D-55)" % (args.change, entry["review"], sha[:12])
 
 
 def cmd_check_prod(args, root):
@@ -1398,7 +1499,7 @@ def _followup(root, change, new_sha, by, repo=None):
     _, loaded = load_change(root, change)
     if loaded.data.get("phase") == "archived":
         return None
-    res = check_prod(root, change)
+    res = check_prod(root, change, qa=False)
     if not res["ok"]:
         return None
     ledger, _ = approval.read_ledger(root, change)
@@ -1439,7 +1540,7 @@ def _approve_prod_bind_repo(args, root):
     if not SHA_RE.match(sha):
         raise Refused("--sha must be the full commit id of the %s PR head (40 or 64 hex), got %r" % (repo, args.sha),
                       code="state.prod_sha")
-    res = check_prod(root, args.change)
+    res = check_prod(root, args.change, qa=False)
     if not res["ok"]:
         raise Refused("no complete, unexpired production approval of %s to bind %s into (%s: %s)"
                       % (args.change, repo, ", ".join(res["missing"]), res.get("reason", "")),
@@ -1665,7 +1766,7 @@ def cmd_propose_release(args, root):
 
 COMMANDS = {"validate": cmd_validate, "init": cmd_init, "next": cmd_next, "active": cmd_active, "advance": cmd_advance,
             "generated": cmd_generated, "skip": cmd_skip, "reopen": cmd_reopen, "approve": cmd_approve,
-            "check-prod": cmd_check_prod, "propose-release": cmd_propose_release}
+            "check-prod": cmd_check_prod, "propose-release": cmd_propose_release, "qa-pass": cmd_qa_pass}
 
 
 def build_parser():
@@ -1731,6 +1832,11 @@ def build_parser():
     pr_.add_argument("--lang", choices=["es", "en"], default="es", help="language of the block (default es)")
     pr_.add_argument("--expires-min", type=int, default=approval.PROPOSAL_TTL_MIN,
                      help="ignored since 3.13.3: a proposal never expires by time (D-54)")
+    qp = sub.add_parser("qa-pass", parents=[common], help="D-55: a QA review covers this commit (needed for prod)")
+    qp.add_argument("change")
+    qp.add_argument("--sha", help="the reviewed commit (default HEAD)")
+    qp.add_argument("--review", help="the review document under docs/spec/changes/<id>/qa/")
+    qp.add_argument("--repo", help="a declared repo: --sha is that repo's full commit id")
     cp = sub.add_parser("check-prod", parents=[common], help="is a human prod approval recorded? (prod-gate)")
     cp.add_argument("change")
     cp.add_argument("--sha", help="the commit being released; it must be the approved one (D-35)")

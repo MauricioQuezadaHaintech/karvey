@@ -28,10 +28,10 @@ BEFORE touching git, run `python3 "$S" next "{change-id}" --json` and read `docs
 
 If **anything below fails, STOP and report what is missing. Do not deploy.**
 
-1. **QA approved, no open critical/high.** Read the review from `docs/spec/changes/{change-id}/qa/` (`REVISION_PR_*.md`, the one QA wrote for this change — never the newest file at a repo root). Its security gate must show **0 critical and 0 unresolved high**.
+1. **QA covers the PR head, no open critical/high (D-55).** `check-prod` refuses a release whose head no `qa-pass` covers; a code commit after the review needs a delta review first (`/karvey-qa` on `{reviewed}..{head}`), done by the agent without asking. Read the review from `docs/spec/changes/{change-id}/qa/` (`REVISION_PR_*.md`, the one QA wrote for this change — never the newest file at a repo root). Its security gate must show **0 critical and 0 unresolved high**.
 2. **Tests PASS** for `{change-id}` in `docs/test_evidence.md`.
 3. **CHANGELOG `[Unreleased]`** in each affected repo (`../karvey/rules/changelog-policy.md`): one line per commit of the change, with the **responsible human** (never empty nor "AI"), the **AI model** and the **why**. It becomes the release entry in Step 2.4.
-4. **Hotfix lane** (`spec.json:type = "hotfix"`, `../karvey/rules/multi-agent.md` §7): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three, the test green in CI. Missing any → stop.
+4. **Hotfix lane** (`spec.json:type = "hotfix"`, `../karvey/rules/multi-agent.md` §7): the PR carries **fix + `BUG-NN` (tracker + `findings.md`) + regression test**, all three, the test green in CI, plus a **QA review in hotfix scope** recorded with `qa-pass` (D-55). Missing any → stop.
 5. **Parent/child** (`links`): a **child** deploys only its repo and reports to the parent; a **parent** has no deploy of its own — verify every child is deployed.
 
 ### Step 0-bis — Documentation-only PRs

@@ -98,7 +98,7 @@ A production defect that must be fixed now (including one discovered during an E
 - **Same PR contains all three:** the fix + the `BUG-NN` entry (tracker + `findings.md`) + the regression test that fails without the fix.
 - Root cause is still investigated (`karvey-investigate` Iron Law), but may be recorded right after the fix if the incident is live; the incident reaches `RESUELTO` only with the regression test.
 - Chained hotfixes on the same day are each a separate version (rev bump + CHANGELOG), and each one is appended to `revision_history` with its release version: `{ "date", "finding": "F-NN", "bug": "BUG-NN", "release": "x.y.z", "reason" }`.
-- The prod gate (`approvals.prod`) still applies.
+- The prod gate (`approvals.prod`) still applies, and so does QA (D-55): a `/karvey-qa` review in hotfix scope (Dimensions 1, 2, 4 and 6 plus the regression test) recorded with `qa-pass` for the PR head.
 
 ## 8. Documentation-only PRs
 
